@@ -388,27 +388,32 @@ export function usePrinterConnection() {
     
     const printer = connectionState.connectedPrinter;
     
-    // Send ^PR1 command to enable printing (HV on)
-    // Note: No space between ^PR and 1 - some firmware requires this exact format
+    // Send ^PR command to enable printing (HV on)
+    // IMPORTANT: Do NOT optimistically flip UI to green.
+    // We only show HV On after a confirmed ^SU response (V300UP:1).
     if (isElectron && window.electronAPI) {
       try {
         // sendCommand uses on-demand sockets, no need to call connect() first
-        console.log('[startPrint] Sending ^PR1...');
-        const result = await window.electronAPI.printer.sendCommand(printer.id, '^PR1');
-        console.log('[startPrint] ^PR 1 result:', JSON.stringify(result));
-        
-        if (result.success) {
-          // Optimistically set state, then confirm with status query
-          setConnectionState(prev => ({
-            ...prev,
-            status: prev.status ? { ...prev.status, isRunning: true } : null,
-          }));
-          
-          // Query actual status after a brief delay to confirm
-          setTimeout(() => queryPrinterStatus(printer), 800);
-        } else {
-          console.error('[startPrint] Command failed:', result.error);
+        const tryCommands = ['^PR 1', '^PR1'] as const;
+        let lastResult: any = null;
+
+        for (const cmd of tryCommands) {
+          console.log('[startPrint] Sending', cmd);
+          const result = await window.electronAPI.printer.sendCommand(printer.id, cmd);
+          lastResult = result;
+          console.log('[startPrint] Result for', cmd, ':', JSON.stringify(result));
+
+          // If the device reports success, stop trying formats.
+          if (result?.success) break;
         }
+
+        if (!lastResult?.success) {
+          console.error('[startPrint] ^PR command failed:', lastResult?.error);
+        }
+
+        // Always query actual status after a brief delay to confirm.
+        // This drives the HMI state (green/red) from real V300UP.
+        setTimeout(() => queryPrinterStatus(printer), 800);
       } catch (e) {
         console.error('[startPrint] Failed to send ^PR 1:', e);
       }
@@ -431,27 +436,29 @@ export function usePrinterConnection() {
     
     const printer = connectionState.connectedPrinter;
     
-    // Send ^PR0 command to disable printing (HV off)
-    // Note: No space between ^PR and 0 - some firmware requires this exact format
+    // Send ^PR command to disable printing (HV off)
+    // IMPORTANT: Do NOT optimistically flip UI.
+    // We only show HV Off after a confirmed ^SU response (V300UP:0).
     if (isElectron && window.electronAPI) {
       try {
         // sendCommand uses on-demand sockets, no need to call connect() first
-        console.log('[stopPrint] Sending ^PR0...');
-        const result = await window.electronAPI.printer.sendCommand(printer.id, '^PR0');
-        console.log('[stopPrint] ^PR 0 result:', JSON.stringify(result));
-        
-        if (result.success) {
-          // Optimistically set state, then confirm with status query
-          setConnectionState(prev => ({
-            ...prev,
-            status: prev.status ? { ...prev.status, isRunning: false } : null,
-          }));
-          
-          // Query actual status after a brief delay to confirm
-          setTimeout(() => queryPrinterStatus(printer), 800);
-        } else {
-          console.error('[stopPrint] Command failed:', result.error);
+        const tryCommands = ['^PR 0', '^PR0'] as const;
+        let lastResult: any = null;
+
+        for (const cmd of tryCommands) {
+          console.log('[stopPrint] Sending', cmd);
+          const result = await window.electronAPI.printer.sendCommand(printer.id, cmd);
+          lastResult = result;
+          console.log('[stopPrint] Result for', cmd, ':', JSON.stringify(result));
+          if (result?.success) break;
         }
+
+        if (!lastResult?.success) {
+          console.error('[stopPrint] ^PR command failed:', lastResult?.error);
+        }
+
+        // Always query actual status after a brief delay to confirm.
+        setTimeout(() => queryPrinterStatus(printer), 800);
       } catch (e) {
         console.error('[stopPrint] Failed to send ^PR 0:', e);
       }
