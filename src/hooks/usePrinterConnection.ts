@@ -190,8 +190,10 @@ export function usePrinterConnection() {
       return;
     }
 
-    const hvOn = parsed.subsystems?.v300up ?? false;
-    console.log('[handleServiceResponse] Parsed HV state (v300up):', hvOn, 'raw subsystems:', JSON.stringify(parsed.subsystems));
+    // Per v2.0 protocol, HVDeflection is the authoritative HV indicator (1=ON, 0=OFF).
+    // V300UP may remain at 1 even when HV is toggled off.
+    const hvOn = parsed.hvDeflection ?? false;
+    console.log('[handleServiceResponse] Parsed HV state (hvDeflection):', hvOn, 'raw hvDeflection:', parsed.hvDeflection);
 
     setConnectionState((prev) => {
       const previous = prev.metrics ?? mockMetrics;
@@ -282,7 +284,8 @@ export function usePrinterConnection() {
       if (result.success && result.response) {
         const parsed = parseStatusResponse(result.response);
         if (parsed) {
-          const hvOn = parsed.subsystems?.v300up ?? false;
+          // Per v2.0 protocol, HVDeflection is the authoritative HV indicator
+          const hvOn = parsed.hvDeflection ?? false;
           
           setConnectionState((prev) => ({
             ...prev,
