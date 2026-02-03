@@ -66,8 +66,9 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
     MOD_ON: extract(/MOD_ON\s*:\s*(\d)/i),
   });
 
-  // Print Status: Ready (or similar)
-  const printStatus = extract(/Print\s*Status\s*:\s*(.+?)(?:\r|\n|$)/i)?.trim() || 'Unknown';
+  // Print Status: Derive from V300UP (HV state) - printer is only ready when HV is on
+  // The printer's "Print Status" line may not update when HV toggles, so we override based on V300UP
+  const printStatus = v300up ? 'Ready' : 'Not ready';
 
   console.log('[parseStatusResponse] parsed:', {
     modulation, charge, pressure, rps, phaseQual, hvDeflection, viscosity,
