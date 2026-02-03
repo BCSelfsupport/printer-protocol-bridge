@@ -388,6 +388,7 @@ export function usePrinterConnection() {
   }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus]);
 
   const stopPrint = useCallback(async () => {
+    console.log('[stopPrint] Called, isConnected:', connectionState.isConnected, 'printer:', connectionState.connectedPrinter?.id);
     if (!connectionState.isConnected || !connectionState.connectedPrinter) return;
     
     const printer = connectionState.connectedPrinter;
@@ -396,14 +397,16 @@ export function usePrinterConnection() {
     if (isElectron && window.electronAPI) {
       try {
         // Ensure socket is connected before sending command
+        console.log('[stopPrint] Connecting to printer...');
         await window.electronAPI.printer.connect({
           id: printer.id,
           ipAddress: printer.ipAddress,
           port: printer.port,
         });
         
+        console.log('[stopPrint] Sending ^PR 0...');
         const result = await window.electronAPI.printer.sendCommand(printer.id, '^PR 0');
-        console.log('[stopPrint] ^PR 0 response:', result);
+        console.log('[stopPrint] ^PR 0 result:', JSON.stringify(result));
         
         if (result.success) {
           // Optimistically set state, then confirm with status query
@@ -414,6 +417,8 @@ export function usePrinterConnection() {
           
           // Query actual status after a brief delay to confirm
           setTimeout(() => queryPrinterStatus(printer), 800);
+        } else {
+          console.error('[stopPrint] Command failed:', result.error);
         }
       } catch (e) {
         console.error('[stopPrint] Failed to send ^PR 0:', e);
