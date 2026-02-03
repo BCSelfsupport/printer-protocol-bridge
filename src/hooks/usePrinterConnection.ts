@@ -182,15 +182,25 @@ export function usePrinterConnection() {
 
   // Stable callback for service polling – avoids effect churn
   const handleServiceResponse = useCallback((raw: string) => {
+    console.log('[handleServiceResponse] Got raw response, length:', raw.length);
     const parsed = parseStatusResponse(raw);
-    if (!parsed) return;
+    if (!parsed) {
+      console.log('[handleServiceResponse] Failed to parse response');
+      return;
+    }
+
+    console.log('[handleServiceResponse] Parsed HV state (v300up):', parsed.subsystems?.v300up);
 
     setConnectionState((prev) => {
       const previous = prev.metrics;
-      if (!previous) return prev;
+      if (!previous) {
+        console.log('[handleServiceResponse] No previous metrics, skipping update');
+        return prev;
+      }
 
       // V300UP is the HV indicator - sync isRunning with it
       const hvOn = parsed.subsystems?.v300up ?? previous.subsystems.v300up;
+      console.log('[handleServiceResponse] Setting isRunning to:', hvOn);
 
       return {
         ...prev,
@@ -385,15 +395,7 @@ export function usePrinterConnection() {
     // Send ^PR 1 command to enable printing (HV on)
     if (isElectron && window.electronAPI) {
       try {
-        // Ensure socket is connected before sending command
-        console.log('[startPrint] Connecting to printer...');
-        const connectResult = await window.electronAPI.printer.connect({
-          id: printer.id,
-          ipAddress: printer.ipAddress,
-          port: printer.port,
-        });
-        console.log('[startPrint] Connect result:', connectResult);
-        
+        // sendCommand uses on-demand sockets, no need to call connect() first
         console.log('[startPrint] Sending ^PR 1...');
         const result = await window.electronAPI.printer.sendCommand(printer.id, '^PR 1');
         console.log('[startPrint] ^PR 1 result:', JSON.stringify(result));
@@ -425,21 +427,17 @@ export function usePrinterConnection() {
 
   const stopPrint = useCallback(async () => {
     console.log('[stopPrint] Called, isConnected:', connectionState.isConnected, 'printer:', connectionState.connectedPrinter?.id);
-    if (!connectionState.isConnected || !connectionState.connectedPrinter) return;
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[stopPrint] Not connected, aborting');
+      return;
+    }
     
     const printer = connectionState.connectedPrinter;
     
     // Send ^PR 0 command to disable printing (HV off)
     if (isElectron && window.electronAPI) {
       try {
-        // Ensure socket is connected before sending command
-        console.log('[stopPrint] Connecting to printer...');
-        await window.electronAPI.printer.connect({
-          id: printer.id,
-          ipAddress: printer.ipAddress,
-          port: printer.port,
-        });
-        
+        // sendCommand uses on-demand sockets, no need to call connect() first
         console.log('[stopPrint] Sending ^PR 0...');
         const result = await window.electronAPI.printer.sendCommand(printer.id, '^PR 0');
         console.log('[stopPrint] ^PR 0 result:', JSON.stringify(result));
