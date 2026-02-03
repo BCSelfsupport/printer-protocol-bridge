@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Printer operations
   printer: {
     checkStatus: (printers) => ipcRenderer.invoke('printer:check-status', printers),
+    setMeta: (printer) => ipcRenderer.invoke('printer:set-meta', printer),
     connect: (printer) => ipcRenderer.invoke('printer:connect', printer),
     disconnect: (printerId) => ipcRenderer.invoke('printer:disconnect', printerId),
     sendCommand: (printerId, command) => 

@@ -310,6 +310,18 @@ export function usePrinterConnection() {
     if (!isElectron) {
       // Web preview: keep simulated delay (cannot reach local network printers)
       await new Promise((resolve) => setTimeout(resolve, 500));
+    } else if (window.electronAPI?.printer?.setMeta) {
+      // Register connection metadata without opening a socket.
+      // This allows polling/commands to open on-demand sockets without requiring an upfront connect.
+      try {
+        await window.electronAPI.printer.setMeta({
+          id: printer.id,
+          ipAddress: printer.ipAddress,
+          port: printer.port,
+        });
+      } catch (e) {
+        console.error('[connect] Failed to set printer meta:', e);
+      }
     }
 
     // Reflect connection immediately in the printers list (so returning to the printers page doesn't look disconnected)
