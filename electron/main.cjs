@@ -4,10 +4,14 @@ const path = require('path');
 
 let mainWindow;
 
+// Dev/prod detection
+// - When running locally via `npx electron ...`, NODE_ENV is often undefined.
+// - `app.isPackaged` is the most reliable signal.
+const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
+
 // Auto-updater (optional)
-const isDev = process.env.NODE_ENV === 'development';
 let autoUpdater;
-if (!isDev) {
+if (!isDev && app.isPackaged) {
   try {
     // electron-updater is only needed for packaged production builds.
     ({ autoUpdater } = require('electron-updater'));
@@ -32,9 +36,13 @@ function createWindow() {
 
   // In development, load from Vite dev server
   // In production, load the built files
+  const devServerUrl =
+    process.env.VITE_DEV_SERVER_URL ||
+    process.env.ELECTRON_RENDERER_URL ||
+    'http://localhost:8080';
 
   if (isDev) {
-    mainWindow.loadURL('http://localhost:8080');
+    mainWindow.loadURL(devServerUrl);
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
