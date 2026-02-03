@@ -19,10 +19,10 @@ export function Header({ isConnected, connectedIp }: HeaderProps) {
       <div className="flex items-center gap-2">
         <div className="flex items-baseline">
           <span className="text-2xl font-bold italic text-blue-600">
-            print
+            code
           </span>
           <span className="text-2xl font-bold italic text-emerald-500">
-            pulse
+            sync
           </span>
         </div>
         <div className="px-2 py-0.5 bg-gradient-to-r from-blue-600 to-emerald-500 rounded text-[10px] font-bold text-white uppercase tracking-wider">
