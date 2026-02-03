@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { PrinterMetrics } from '@/types/printer';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import {
@@ -10,9 +11,17 @@ import {
 interface ServiceScreenProps {
   metrics: PrinterMetrics | null;
   onHome: () => void;
+  onMount?: () => void;
+  onUnmount?: () => void;
 }
 
-export function ServiceScreen({ metrics, onHome }: ServiceScreenProps) {
+export function ServiceScreen({ metrics, onHome, onMount, onUnmount }: ServiceScreenProps) {
+  // Notify parent when screen is mounted/unmounted (for polling control)
+  useEffect(() => {
+    onMount?.();
+    return () => onUnmount?.();
+  }, [onMount, onUnmount]);
+
   if (!metrics) {
     return (
       <div className="flex-1 p-4 flex items-center justify-center">
