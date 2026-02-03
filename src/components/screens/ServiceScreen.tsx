@@ -1,48 +1,44 @@
 import { PrinterMetrics } from '@/types/printer';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
+import { Badge } from '@/components/ui/badge';
+import { Droplet, Gauge, Activity, Zap, ThermometerSun, Clock } from 'lucide-react';
 
 interface ServiceScreenProps {
   metrics: PrinterMetrics | null;
   onHome: () => void;
 }
 
-interface MetricRowProps {
-  label: string;
-  value: string | number;
-  unit?: string;
-  subLabel?: string;
-  subValue?: string;
-  subUnit?: string;
+function StatusBadge({ status }: { status: string }) {
+  const isReady = status.toLowerCase().includes('ready') && !status.toLowerCase().includes('not');
+  return (
+    <Badge 
+      variant={isReady ? 'default' : 'secondary'}
+      className={isReady ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'}
+    >
+      {status}
+    </Badge>
+  );
 }
 
-function MetricRow({ label, value, unit, subLabel, subValue, subUnit }: MetricRowProps) {
+function LevelBadge({ level, type }: { level: string; type: 'ink' | 'makeup' }) {
+  const isGood = level === 'FULL' || level === 'GOOD';
   return (
-    <div className="bg-card rounded-lg p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-foreground font-medium">{label}:</span>
-        <div className="flex items-center gap-2">
-          {subLabel && (
-            <>
-              <span className="text-muted-foreground">{subLabel}:</span>
-              <span className="font-bold min-w-[80px] text-right">{subValue}</span>
-              <span className="text-muted-foreground">{subUnit}</span>
-            </>
-          )}
-          {!subLabel && (
-            <>
-              <span className="font-bold min-w-[80px] text-right">{value}</span>
-              {unit && <span className="text-muted-foreground min-w-[40px]">{unit}</span>}
-            </>
-          )}
-        </div>
-      </div>
-      {subLabel && (
-        <div className="flex items-center justify-end gap-2 mt-2">
-          <span className="text-muted-foreground">Stream:</span>
-          <span className="font-bold min-w-[80px] text-right">{value}</span>
-          <span className="text-muted-foreground">{unit}</span>
-        </div>
-      )}
+    <Badge 
+      variant={isGood ? 'default' : 'destructive'}
+      className={isGood ? 'bg-green-600 hover:bg-green-700' : ''}
+    >
+      {type === 'ink' ? `INK: ${level}` : `MAKEUP: ${level}`}
+    </Badge>
+  );
+}
+
+function SubsystemIndicator({ label, active }: { label: string; active: boolean }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className={`w-2 h-2 rounded-full ${active ? 'bg-green-500' : 'bg-slate-500'}`} />
+      <span className={`text-sm ${active ? 'text-foreground' : 'text-muted-foreground'}`}>
+        {label}
+      </span>
     </div>
   );
 }
@@ -57,85 +53,109 @@ export function ServiceScreen({ metrics, onHome }: ServiceScreenProps) {
   }
 
   return (
-    <div className="flex-1 p-4 flex flex-col">
+    <div className="flex-1 p-4 flex flex-col gap-4 overflow-auto">
       <SubPageHeader title="Service" onHome={onHome} />
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* Run time hours */}
-        <div className="bg-card rounded-lg p-4">
-          <div className="text-foreground font-medium mb-2">Run time hours:</div>
-          <div className="flex justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">Power:</span>
-              <span className="font-bold">{metrics.powerHours}</span>
-              <span className="text-muted-foreground">hours</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-muted-foreground">Stream:</span>
-            <span className="font-bold">{metrics.streamHours}</span>
-            <span className="text-muted-foreground">hours</span>
-          </div>
-        </div>
+      {/* Status Row */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <StatusBadge status={metrics.printStatus} />
+        <LevelBadge level={metrics.inkLevel} type="ink" />
+        <LevelBadge level={metrics.makeupLevel} type="makeup" />
+      </div>
 
-        {/* Viscosity */}
-        <div className="bg-card rounded-lg p-4 flex items-center justify-between">
-          <span className="text-foreground font-medium">Viscosity:</span>
-          <div className="flex items-center gap-2">
-            <span className="font-bold">{metrics.viscosity.toFixed(2)}</span>
-            <span className="text-muted-foreground">cP</span>
-          </div>
-        </div>
-
-        {/* Modulation */}
-        <div className="bg-card rounded-lg p-4 flex items-center justify-between">
-          <span className="text-foreground font-medium">Modulation:</span>
-          <div className="flex items-center gap-2">
-            <span className="font-bold">{metrics.modulation}</span>
-            <span className="text-muted-foreground">Volts</span>
-          </div>
-        </div>
-
-        {/* Charge */}
-        <div className="bg-card rounded-lg p-4 flex items-center justify-between">
-          <span className="text-foreground font-medium">Charge:</span>
-          <div className="flex items-center gap-2">
-            <span className="font-bold">{metrics.charge}</span>
-            <span className="text-muted-foreground">%</span>
-          </div>
-        </div>
-
+      {/* Main Metrics Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {/* Pressure */}
-        <div className="bg-card rounded-lg p-4 flex items-center justify-between">
-          <span className="text-foreground font-medium">Pressure:</span>
-          <div className="flex items-center gap-2">
-            <span className="font-bold">{metrics.pressure}</span>
-            <span className="text-muted-foreground">PSI</span>
+        <div className="bg-card rounded-lg p-4 border border-border">
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <Gauge className="w-4 h-4" />
+            <span className="text-sm">Pressure</span>
           </div>
+          <div className="text-2xl font-bold">{metrics.pressure}</div>
+          <div className="text-xs text-muted-foreground">PSI</div>
         </div>
 
         {/* RPS */}
-        <div className="bg-card rounded-lg p-4 flex items-center justify-between">
-          <span className="text-foreground font-medium">RPS:</span>
-          <div className="flex items-center gap-2">
-            <span className="font-bold">{metrics.rps.toFixed(2)}</span>
-            <span className="text-muted-foreground">RPS</span>
+        <div className="bg-card rounded-lg p-4 border border-border">
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <Activity className="w-4 h-4" />
+            <span className="text-sm">RPS</span>
           </div>
+          <div className="text-2xl font-bold">{metrics.rps.toFixed(2)}</div>
+          <div className="text-xs text-muted-foreground">rev/sec</div>
         </div>
 
-        {/* Phase Qual */}
-        <div className="bg-card rounded-lg p-4 flex items-center justify-between">
-          <span className="text-foreground font-medium">Phase Qual:</span>
-          <div className="flex items-center gap-2">
-            <span className="font-bold">{metrics.phaseQual}</span>
-            <span className="text-muted-foreground">%</span>
+        {/* Modulation */}
+        <div className="bg-card rounded-lg p-4 border border-border">
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <Zap className="w-4 h-4" />
+            <span className="text-sm">Modulation</span>
           </div>
+          <div className="text-2xl font-bold">{metrics.modulation}</div>
+          <div className="text-xs text-muted-foreground">Volts</div>
+        </div>
+
+        {/* Charge */}
+        <div className="bg-card rounded-lg p-4 border border-border">
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <Zap className="w-4 h-4" />
+            <span className="text-sm">Charge</span>
+          </div>
+          <div className="text-2xl font-bold">{metrics.charge}</div>
+          <div className="text-xs text-muted-foreground">%</div>
+        </div>
+
+        {/* Phase Quality */}
+        <div className="bg-card rounded-lg p-4 border border-border">
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <Activity className="w-4 h-4" />
+            <span className="text-sm">Phase Quality</span>
+          </div>
+          <div className="text-2xl font-bold">{metrics.phaseQual}%</div>
+        </div>
+
+        {/* Viscosity */}
+        <div className="bg-card rounded-lg p-4 border border-border">
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <Droplet className="w-4 h-4" />
+            <span className="text-sm">Viscosity</span>
+          </div>
+          <div className="text-2xl font-bold">{metrics.viscosity.toFixed(2)}</div>
+          <div className="text-xs text-muted-foreground">cP (6 min read)</div>
         </div>
 
         {/* HV Deflection */}
-        <div className="bg-card rounded-lg p-4 flex items-center justify-between">
-          <span className="text-foreground font-medium">HV Deflection:</span>
-          <span className="font-bold">{metrics.hvDeflection ? 'On' : 'Off'}</span>
+        <div className="bg-card rounded-lg p-4 border border-border">
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <Zap className="w-4 h-4" />
+            <span className="text-sm">HV Deflection</span>
+          </div>
+          <div className={`text-2xl font-bold ${metrics.hvDeflection ? 'text-green-500' : 'text-muted-foreground'}`}>
+            {metrics.hvDeflection ? 'ON' : 'OFF'}
+          </div>
+        </div>
+
+        {/* Run Hours */}
+        <div className="bg-card rounded-lg p-4 border border-border">
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <Clock className="w-4 h-4" />
+            <span className="text-sm">Run Hours</span>
+          </div>
+          <div className="text-lg font-bold">{metrics.powerHours}</div>
+          <div className="text-xs text-muted-foreground">Power</div>
+          <div className="text-lg font-bold mt-1">{metrics.streamHours}</div>
+          <div className="text-xs text-muted-foreground">Stream</div>
+        </div>
+      </div>
+
+      {/* Subsystems */}
+      <div className="bg-card rounded-lg p-4 border border-border">
+        <div className="text-sm font-medium text-muted-foreground mb-3">Subsystems</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <SubsystemIndicator label="V300UP" active={metrics.subsystems.v300up} />
+          <SubsystemIndicator label="VLT" active={metrics.subsystems.vltOn} />
+          <SubsystemIndicator label="GUT" active={metrics.subsystems.gutOn} />
+          <SubsystemIndicator label="MOD" active={metrics.subsystems.modOn} />
         </div>
       </div>
     </div>
