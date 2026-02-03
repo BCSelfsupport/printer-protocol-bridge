@@ -494,6 +494,37 @@ export function usePrinterConnection() {
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus]);
 
+  // Jet Stop - send ^SJ 0 command to stop the ink jet
+  const jetStop = useCallback(async () => {
+    console.log('[jetStop] Called, isConnected:', connectionState.isConnected, 'printer:', connectionState.connectedPrinter?.id);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[jetStop] Not connected, aborting');
+      return;
+    }
+    
+    const printer = connectionState.connectedPrinter;
+    
+    if (isElectron && window.electronAPI) {
+      try {
+        console.log('[jetStop] Sending ^SJ 0');
+        const result = await window.electronAPI.printer.sendCommand(printer.id, '^SJ 0');
+        console.log('[jetStop] Result:', JSON.stringify(result));
+
+        if (!result?.success) {
+          console.error('[jetStop] ^SJ 0 command failed:', result?.error);
+        }
+
+        // Query status after a delay to reflect new state
+        setTimeout(() => queryPrinterStatus(printer), 1500);
+      } catch (e) {
+        console.error('[jetStop] Failed to send ^SJ 0:', e);
+      }
+    } else {
+      // Mock for web preview
+      console.log('[jetStop] Web preview mock');
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus]);
+
   const updateSettings = useCallback((newSettings: Partial<PrintSettings>) => {
     setConnectionState(prev => ({
       ...prev,
@@ -517,6 +548,7 @@ export function usePrinterConnection() {
     disconnect,
     startPrint,
     stopPrint,
+    jetStop,
     updateSettings,
     selectMessage,
     checkPrinterStatus,

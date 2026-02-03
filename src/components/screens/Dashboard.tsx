@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil } from 'lucide-react';
+import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil, Zap } from 'lucide-react';
 import { Wifi } from 'lucide-react';
 import { PrinterStatus } from '@/types/printer';
 
@@ -8,6 +8,7 @@ interface DashboardProps {
   isConnected: boolean;
   onStart: () => void;
   onStop: () => void;
+  onJetStop: () => void;
   onNewMessage: () => void;
   onEditMessage: () => void;
   onSignIn: () => void;
@@ -21,6 +22,7 @@ export function Dashboard({
   isConnected,
   onStart,
   onStop,
+  onJetStop,
   onNewMessage,
   onEditMessage,
   onSignIn,
@@ -95,7 +97,7 @@ export function Dashboard({
           <span className="text-sm">Ink Full</span>
         </button>
 
-        {/* Start/Stop buttons */}
+        {/* Start/Stop/Jet Stop buttons */}
         <div className="flex flex-col gap-2 ml-auto">
           <button
             onClick={onStart}
@@ -113,6 +115,15 @@ export function Dashboard({
           >
             <Square className="w-6 h-6" />
             <span className="text-xl font-medium">Stop</span>
+          </button>
+
+          <button
+            onClick={onJetStop}
+            disabled={!isConnected}
+            className="industrial-button-gray text-white px-8 py-4 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Zap className="w-6 h-6" />
+            <span className="text-xl font-medium">Jet Stop</span>
           </button>
         </div>
       </div>

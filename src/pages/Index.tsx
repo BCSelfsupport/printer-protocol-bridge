@@ -22,6 +22,7 @@ const Index = () => {
     disconnect,
     startPrint,
     stopPrint,
+    jetStop,
     updateSettings,
     selectMessage,
     addPrinter,
@@ -68,6 +69,7 @@ const Index = () => {
             isConnected={connectionState.isConnected}
             onStart={startPrint}
             onStop={stopPrint}
+            onJetStop={jetStop}
             onNewMessage={() => setCurrentScreen('messages')}
             onEditMessage={() => setCurrentScreen('messages')}
             onSignIn={() => {}}
