@@ -11,7 +11,7 @@ import { CleanScreen } from '@/components/screens/CleanScreen';
 import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
 import { usePrinterConnection } from '@/hooks/usePrinterConnection';
 
-type ScreenType = NavItem | 'printers' | 'network';
+type ScreenType = NavItem | 'network' | 'control';
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
@@ -41,18 +41,26 @@ const Index = () => {
 
   const handleConnect = async (printer: typeof printers[0]) => {
     await connect(printer);
-    setCurrentScreen('home');
+    // After connecting, go to the control/dashboard screen
+    setCurrentScreen('control');
   };
 
   const renderScreen = () => {
     switch (currentScreen) {
       case 'network':
         return <NetworkConfigScreen onHome={handleHome} />;
+      case 'control':
         return (
-          <PrintersScreen
-            printers={printers}
-            onConnect={handleConnect}
-            onHome={handleHome}
+          <Dashboard
+            status={connectionState.status}
+            isConnected={connectionState.isConnected}
+            onStart={startPrint}
+            onStop={stopPrint}
+            onNewMessage={() => setCurrentScreen('messages')}
+            onEditMessage={() => setCurrentScreen('messages')}
+            onSignIn={() => {}}
+            onHelp={() => {}}
+            onPrinters={handleHome}
           />
         );
       case 'messages':
@@ -84,17 +92,12 @@ const Index = () => {
           />
         );
       default:
+        // Home is now the Printers config screen
         return (
-          <Dashboard
-            status={connectionState.status}
-            isConnected={connectionState.isConnected}
-            onStart={startPrint}
-            onStop={stopPrint}
-            onNewMessage={() => setCurrentScreen('messages')}
-            onEditMessage={() => setCurrentScreen('messages')}
-            onSignIn={() => {}}
-            onHelp={() => {}}
-            onPrinters={() => setCurrentScreen('printers')}
+          <PrintersScreen
+            printers={printers}
+            onConnect={handleConnect}
+            onHome={handleHome}
           />
         );
     }
@@ -114,7 +117,7 @@ const Index = () => {
       </main>
 
       <BottomNav
-        activeItem={currentScreen === 'printers' || currentScreen === 'network' ? 'home' : currentScreen}
+        activeItem={currentScreen === 'network' || currentScreen === 'control' ? 'home' : currentScreen}
         onNavigate={handleNavigate}
         onTurnOff={handleTurnOff}
       />
