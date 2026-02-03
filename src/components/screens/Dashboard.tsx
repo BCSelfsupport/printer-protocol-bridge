@@ -1,0 +1,163 @@
+import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil } from 'lucide-react';
+import { Wifi } from 'lucide-react';
+import { PrinterStatus } from '@/types/printer';
+
+interface DashboardProps {
+  status: PrinterStatus | null;
+  isConnected: boolean;
+  onStart: () => void;
+  onStop: () => void;
+  onNewMessage: () => void;
+  onEditMessage: () => void;
+  onSignIn: () => void;
+  onHelp: () => void;
+  onPrinters: () => void;
+}
+
+export function Dashboard({
+  status,
+  isConnected,
+  onStart,
+  onStop,
+  onNewMessage,
+  onEditMessage,
+  onSignIn,
+  onHelp,
+  onPrinters,
+}: DashboardProps) {
+  return (
+    <div className="flex-1 p-4 flex flex-col gap-4">
+      {/* Top row buttons */}
+      <div className="flex gap-2">
+        <button 
+          onClick={onSignIn}
+          className="industrial-button-gray text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px]"
+        >
+          <Key className="w-10 h-10 mb-1" />
+          <span className="text-sm">Sign In</span>
+        </button>
+
+        <button 
+          onClick={onHelp}
+          className="industrial-button text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px]"
+        >
+          <HelpCircle className="w-10 h-10 mb-1" />
+          <span className="text-sm">Help</span>
+        </button>
+
+        <button 
+          onClick={onPrinters}
+          className="industrial-button text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px]"
+        >
+          <PrinterIcon className="w-10 h-10 mb-1" />
+          <span className="text-sm">Print On</span>
+        </button>
+
+        <button className="industrial-button text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px]">
+          <div className="relative">
+            <Droplets className="w-10 h-10" />
+            {status?.makeupGood && (
+              <Wifi className="w-4 h-4 absolute -top-1 -right-1 text-white" />
+            )}
+          </div>
+          <span className="text-sm">Makeup Good</span>
+        </button>
+
+        <button className="industrial-button text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px]">
+          <div className="relative">
+            <Palette className="w-10 h-10" />
+            {status?.inkFull && (
+              <span className="absolute -top-1 -right-1 text-white text-lg">✓</span>
+            )}
+          </div>
+          <span className="text-sm">Ink Full</span>
+        </button>
+
+        {/* Start/Stop buttons */}
+        <div className="flex flex-col gap-2 ml-auto">
+          <button
+            onClick={onStart}
+            disabled={!isConnected || status?.isRunning}
+            className="industrial-button-success text-white px-8 py-4 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Play className="w-10 h-10" />
+            <span className="text-xl font-medium">Start</span>
+          </button>
+
+          <button
+            onClick={onStop}
+            disabled={!isConnected || !status?.isRunning}
+            className="industrial-button-danger text-white px-8 py-4 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Square className="w-6 h-6" />
+            <span className="text-xl font-medium">Stop</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Middle section */}
+      <div className="flex gap-4">
+        {/* Error message area */}
+        <div className="flex-1 bg-card rounded-lg p-4 min-h-[80px] flex items-center">
+          {status?.errorMessage ? (
+            <div className="text-lg">
+              <div className="font-medium">Message name</div>
+              <div className="text-foreground">{status.errorMessage.split(' ').slice(1).join(' ')}</div>
+            </div>
+          ) : (
+            <div className="text-muted-foreground">No errors</div>
+          )}
+        </div>
+
+        {/* New/Edit buttons */}
+        <div className="flex flex-col gap-2">
+          <button 
+            onClick={onNewMessage}
+            className="industrial-button text-white px-6 py-3 rounded-lg flex items-center gap-2"
+          >
+            <Plus className="w-6 h-6" />
+            <span className="text-lg font-medium">New</span>
+          </button>
+          <button 
+            onClick={onEditMessage}
+            className="industrial-button text-white px-6 py-3 rounded-lg flex items-center gap-2"
+          >
+            <Pencil className="w-6 h-6" />
+            <span className="text-lg font-medium">Edit</span>
+          </button>
+        </div>
+
+        {/* Count panel */}
+        <div className="bg-primary text-primary-foreground rounded-lg p-4 min-w-[180px]">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm">Product count:</span>
+            <span className="font-bold">{status?.productCount ?? 0}</span>
+          </div>
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-sm">Print count:</span>
+            <span className="font-bold">{status?.printCount ?? 0}</span>
+          </div>
+          <button className="w-full bg-card text-foreground rounded py-2 flex items-center justify-center gap-2">
+            <span className="text-2xl font-mono">0 1 2</span>
+            <span className="text-primary font-medium">Count</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Message preview area */}
+      <div className="flex-1 bg-card rounded-lg p-4">
+        {status?.currentMessage && (
+          <div className="text-lg font-mono">
+            <span className="font-bold">{status.currentMessage}</span>
+            <span className="ml-4 text-muted-foreground">
+              {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+            </span>
+            <div className="text-muted-foreground">
+              {new Date().toLocaleDateString('en-US', { year: '2-digit', month: '2-digit', day: '2-digit' })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
