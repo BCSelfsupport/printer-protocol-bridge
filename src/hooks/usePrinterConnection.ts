@@ -244,6 +244,51 @@ export function usePrinterConnection() {
     };
   }, [serviceScreenOpen, connectionState.isConnected, connectionState.connectedPrinter]);
 
+  // Query printer status (^SU) and update state - used on connect and after commands
+  const queryPrinterStatus = useCallback(async (printer: Printer) => {
+    if (!isElectron || !window.electronAPI) return;
+    
+    try {
+      // Ensure socket is connected
+      await window.electronAPI.printer.connect({
+        id: printer.id,
+        ipAddress: printer.ipAddress,
+        port: printer.port,
+      });
+      
+      const result = await window.electronAPI.printer.sendCommand(printer.id, '^SU');
+      console.log('[queryPrinterStatus] ^SU response:', result);
+      
+      if (result.success && result.response) {
+        const parsed = parseStatusResponse(result.response);
+        if (parsed) {
+          const hvOn = parsed.subsystems?.v300up ?? false;
+          
+          setConnectionState((prev) => ({
+            ...prev,
+            status: prev.status ? { ...prev.status, isRunning: hvOn } : null,
+            metrics: prev.metrics ? {
+              ...prev.metrics,
+              modulation: parsed.modulation ?? prev.metrics.modulation,
+              charge: parsed.charge ?? prev.metrics.charge,
+              pressure: parsed.pressure ?? prev.metrics.pressure,
+              rps: parsed.rps ?? prev.metrics.rps,
+              phaseQual: parsed.phaseQual ?? prev.metrics.phaseQual,
+              hvDeflection: parsed.hvDeflection ?? prev.metrics.hvDeflection,
+              viscosity: parsed.viscosity ?? prev.metrics.viscosity,
+              inkLevel: parsed.inkLevel ?? prev.metrics.inkLevel,
+              makeupLevel: parsed.makeupLevel ?? prev.metrics.makeupLevel,
+              printStatus: parsed.printStatus ?? prev.metrics.printStatus,
+              subsystems: parsed.subsystems ?? prev.metrics.subsystems,
+            } : null,
+          }));
+        }
+      }
+    } catch (e) {
+      console.error('[queryPrinterStatus] Failed to query status:', e);
+    }
+  }, []);
+
   const connect = useCallback(async (printer: Printer) => {
     // NOTE: Lazy-connect.
     // Do not open a TCP/Telnet session here; many printers flash/refresh their UI on connect.
@@ -269,7 +314,13 @@ export function usePrinterConnection() {
       settings: defaultSettings,
       messages: mockMessages,
     });
-  }, [updatePrinter]);
+
+    // Query initial status from printer (get real HV state)
+    if (isElectron) {
+      // Small delay to let state update, then query
+      setTimeout(() => queryPrinterStatus(printer), 500);
+    }
+  }, [updatePrinter, queryPrinterStatus]);
 
   const disconnect = useCallback(async () => {
     if (isElectron && window.electronAPI && connectionState.connectedPrinter) {
@@ -299,27 +350,30 @@ export function usePrinterConnection() {
   const startPrint = useCallback(async () => {
     if (!connectionState.isConnected || !connectionState.connectedPrinter) return;
     
+    const printer = connectionState.connectedPrinter;
+    
     // Send ^PR 1 command to enable printing (HV on)
     if (isElectron && window.electronAPI) {
       try {
         // Ensure socket is connected before sending command
         await window.electronAPI.printer.connect({
-          id: connectionState.connectedPrinter.id,
-          ipAddress: connectionState.connectedPrinter.ipAddress,
-          port: connectionState.connectedPrinter.port,
+          id: printer.id,
+          ipAddress: printer.ipAddress,
+          port: printer.port,
         });
         
-        const result = await window.electronAPI.printer.sendCommand(
-          connectionState.connectedPrinter.id,
-          '^PR 1'
-        );
+        const result = await window.electronAPI.printer.sendCommand(printer.id, '^PR 1');
         console.log('[startPrint] ^PR 1 response:', result);
         
         if (result.success) {
+          // Optimistically set state, then confirm with status query
           setConnectionState(prev => ({
             ...prev,
             status: prev.status ? { ...prev.status, isRunning: true } : null,
           }));
+          
+          // Query actual status after a brief delay to confirm
+          setTimeout(() => queryPrinterStatus(printer), 800);
         }
       } catch (e) {
         console.error('[startPrint] Failed to send ^PR 1:', e);
@@ -331,32 +385,35 @@ export function usePrinterConnection() {
         status: prev.status ? { ...prev.status, isRunning: true } : null,
       }));
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus]);
 
   const stopPrint = useCallback(async () => {
     if (!connectionState.isConnected || !connectionState.connectedPrinter) return;
+    
+    const printer = connectionState.connectedPrinter;
     
     // Send ^PR 0 command to disable printing (HV off)
     if (isElectron && window.electronAPI) {
       try {
         // Ensure socket is connected before sending command
         await window.electronAPI.printer.connect({
-          id: connectionState.connectedPrinter.id,
-          ipAddress: connectionState.connectedPrinter.ipAddress,
-          port: connectionState.connectedPrinter.port,
+          id: printer.id,
+          ipAddress: printer.ipAddress,
+          port: printer.port,
         });
         
-        const result = await window.electronAPI.printer.sendCommand(
-          connectionState.connectedPrinter.id,
-          '^PR 0'
-        );
+        const result = await window.electronAPI.printer.sendCommand(printer.id, '^PR 0');
         console.log('[stopPrint] ^PR 0 response:', result);
         
         if (result.success) {
+          // Optimistically set state, then confirm with status query
           setConnectionState(prev => ({
             ...prev,
             status: prev.status ? { ...prev.status, isRunning: false } : null,
           }));
+          
+          // Query actual status after a brief delay to confirm
+          setTimeout(() => queryPrinterStatus(printer), 800);
         }
       } catch (e) {
         console.error('[stopPrint] Failed to send ^PR 0:', e);
@@ -368,7 +425,7 @@ export function usePrinterConnection() {
         status: prev.status ? { ...prev.status, isRunning: false } : null,
       }));
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus]);
 
   const updateSettings = useCallback((newSettings: Partial<PrintSettings>) => {
     setConnectionState(prev => ({
