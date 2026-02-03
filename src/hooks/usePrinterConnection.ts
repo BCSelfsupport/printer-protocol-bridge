@@ -116,20 +116,23 @@ export function usePrinterConnection() {
 
       if (results) {
         results.forEach((status: { id: number; isAvailable: boolean; status: string }) => {
-          // If we're actively connected to this printer, don't let background polling mark it offline.
+          // If we're actively connected to this printer, don't let background polling overwrite its state.
           if (connectionState.isConnected && connectionState.connectedPrinter?.id === status.id) {
             updatePrinterStatus(status.id, {
               isAvailable: true,
-              status: 'ready',
+              // Keep whatever status we already have (HV-derived), don't force READY here.
+              status: connectionState.connectedPrinter.status,
               hasActiveErrors: false,
             });
             return;
           }
 
+          // Availability polling is ICMP-based; it tells us ONLINE/OFFLINE, not HV readiness.
+          // Never mark a printer READY from availability polling.
           updatePrinterStatus(status.id, {
             isAvailable: status.isAvailable,
-            status: status.status as Printer['status'],
-            hasActiveErrors: status.status === 'error',
+            status: status.isAvailable ? 'not_ready' : 'offline',
+            hasActiveErrors: false,
           });
         });
       }
@@ -350,12 +353,13 @@ export function usePrinterConnection() {
     }
 
     // Reflect connection immediately in the printers list (so returning to the printers page doesn't look disconnected)
-    updatePrinter(printer.id, {
-      isConnected: true,
-      isAvailable: true,
-      status: 'ready',
-      hasActiveErrors: false,
-    });
+     updatePrinter(printer.id, {
+       isConnected: true,
+       isAvailable: true,
+       // Default to NOT READY until we confirm HV state via ^SU
+       status: 'not_ready',
+       hasActiveErrors: false,
+     });
 
     setConnectionState({
       isConnected: true,
