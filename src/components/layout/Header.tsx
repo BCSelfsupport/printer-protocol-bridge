@@ -18,12 +18,13 @@ export function Header({ isConnected, connectedIp }: HeaderProps) {
     <header className="flex items-center justify-between px-4 py-2 bg-muted">
       <div className="flex items-center gap-2">
         <div className="flex items-baseline">
-          <span className="text-2xl font-bold italic text-blue-600">
-            code
+          <span className="text-3xl font-bold italic text-blue-600">
+            Code
           </span>
-          <span className="text-2xl font-bold italic text-emerald-500">
-            sync
+          <span className="text-3xl font-bold italic text-emerald-500">
+            Sync
           </span>
+          <span className="text-xs font-normal text-muted-foreground align-top ml-0.5">™</span>
         </div>
         <div className="px-2 py-0.5 bg-gradient-to-r from-blue-600 to-emerald-500 rounded text-[10px] font-bold text-white uppercase tracking-wider">
           Pro
