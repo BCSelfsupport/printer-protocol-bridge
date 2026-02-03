@@ -520,10 +520,23 @@ export function usePrinterConnection() {
         console.error('[jetStop] Failed to send ^SJ 0:', e);
       }
     } else {
-      // Mock for web preview
-      console.log('[jetStop] Web preview mock');
+      // Mock for web preview - set HV off state
+      console.log('[jetStop] Web preview mock - setting HV off');
+      setConnectionState(prev => ({
+        ...prev,
+        status: prev.status ? { ...prev.status, isRunning: false } : null,
+      }));
+      
+      // Also update printer status in list
+      if (connectionState.connectedPrinter) {
+        updatePrinterStatus(connectionState.connectedPrinter.id, {
+          isAvailable: true,
+          status: 'not_ready',
+          hasActiveErrors: false,
+        });
+      }
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus, updatePrinterStatus]);
 
   const updateSettings = useCallback((newSettings: Partial<PrintSettings>) => {
     setConnectionState(prev => ({
