@@ -18,6 +18,7 @@ export interface PrinterStatus {
   printCount: number;
   currentMessage: string | null;
   errorMessage: string | null;
+  printerVersion: string | null;
 }
 
 export interface PrinterMetrics {
