@@ -168,10 +168,17 @@ export function usePrinterConnection() {
   const [controlScreenOpen, setControlScreenOpen] = useState(false);
 
   // Poll status when either Service OR Control (Dashboard) screen is open
-  const shouldPollStatus = useMemo(
-    () => Boolean(isElectron && connectionState.isConnected && connectedPrinterId && (serviceScreenOpen || controlScreenOpen)),
-    [connectionState.isConnected, connectedPrinterId, serviceScreenOpen, controlScreenOpen]
-  );
+  const shouldPollStatus = useMemo(() => {
+    const result = Boolean(isElectron && connectionState.isConnected && connectedPrinterId && (serviceScreenOpen || controlScreenOpen));
+    console.log('[usePrinterConnection] shouldPollStatus:', result, {
+      isElectron,
+      isConnected: connectionState.isConnected,
+      connectedPrinterId,
+      serviceScreenOpen,
+      controlScreenOpen,
+    });
+    return result;
+  }, [connectionState.isConnected, connectedPrinterId, serviceScreenOpen, controlScreenOpen]);
 
   // Stable callback for service polling – avoids effect churn
   const handleServiceResponse = useCallback((raw: string) => {
@@ -223,16 +230,21 @@ export function usePrinterConnection() {
     if (!connectionState.isConnected || !printer) return;
 
     let cancelled = false;
+    const shouldConnect = serviceScreenOpen || controlScreenOpen;
+    console.log('[usePrinterConnection] Lazy connect effect, shouldConnect:', shouldConnect);
 
     (async () => {
       try {
-        if (serviceScreenOpen || controlScreenOpen) {
-          await window.electronAPI.printer.connect({
+        if (shouldConnect) {
+          console.log('[usePrinterConnection] Opening socket for printer:', printer.id);
+          const result = await window.electronAPI.printer.connect({
             id: printer.id,
             ipAddress: printer.ipAddress,
             port: printer.port,
           });
+          console.log('[usePrinterConnection] Socket connect result:', result);
         } else {
+          console.log('[usePrinterConnection] Closing socket for printer:', printer.id);
           // Close the socket when leaving polling screens to avoid any device-side UI refresh.
           await window.electronAPI.printer.disconnect(printer.id);
         }

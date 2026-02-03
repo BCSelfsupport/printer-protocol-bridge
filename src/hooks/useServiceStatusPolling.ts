@@ -32,10 +32,20 @@ export function useServiceStatusPolling(options: {
   const inFlightRef = useRef(false);
 
   useEffect(() => {
-    if (!enabled) return;
-    if (!printerId) return;
-    if (!window.electronAPI) return;
+    if (!enabled) {
+      console.log('[useServiceStatusPolling] Disabled, not polling');
+      return;
+    }
+    if (!printerId) {
+      console.log('[useServiceStatusPolling] No printerId, not polling');
+      return;
+    }
+    if (!window.electronAPI) {
+      console.log('[useServiceStatusPolling] No electronAPI, not polling');
+      return;
+    }
 
+    console.log('[useServiceStatusPolling] Starting polling for printer', printerId, 'with command', command);
     let cancelled = false;
 
     const tick = async () => {
@@ -44,26 +54,36 @@ export function useServiceStatusPolling(options: {
       inFlightRef.current = true;
 
       try {
+        console.log('[useServiceStatusPolling] Sending command:', command);
         const result = await window.electronAPI!.printer.sendCommand(printerId, command);
         if (cancelled) return;
         if (result.success && typeof result.response === "string") {
+          console.log('[useServiceStatusPolling] Got response, length:', result.response.length);
           onResponseRef.current(result.response);
         } else if (!result.success) {
+          console.error('[useServiceStatusPolling] Command failed:', result.error);
           onErrorRef.current?.(new Error(result.error || "Command failed"));
         }
       } catch (e) {
+        console.error('[useServiceStatusPolling] Error:', e);
         if (!cancelled) onErrorRef.current?.(e);
       } finally {
         inFlightRef.current = false;
       }
     };
 
-    // fire immediately, then interval
-    tick();
+    // Delay first tick slightly to allow socket connection to establish
+    const initialDelay = setTimeout(() => {
+      if (!cancelled) {
+        tick();
+      }
+    }, 500);
+    
     const id = window.setInterval(tick, intervalMs);
 
     return () => {
       cancelled = true;
+      clearTimeout(initialDelay);
       window.clearInterval(id);
     };
   }, [enabled, printerId, intervalMs, command]);
