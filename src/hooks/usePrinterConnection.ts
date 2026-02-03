@@ -192,21 +192,44 @@ export function usePrinterConnection() {
     onResponse: handleServiceResponse,
   });
 
-  const connect = useCallback(async (printer: Printer) => {
-    // Establish actual TCP connection when running in Electron
-    if (isElectron && window.electronAPI) {
-      const result = await window.electronAPI.printer.connect({
-        id: printer.id,
-        ipAddress: printer.ipAddress,
-        port: printer.port,
-      });
-      if (!result?.success) {
-        console.error('Failed to connect to printer:', result?.error);
-        return;
+  // Lazy TCP connect: only open the Electron socket while the Service screen is open.
+  // This prevents the printer UI from refreshing/flashing immediately on "Connect".
+  useEffect(() => {
+    if (!isElectron || !window.electronAPI) return;
+    const printer = connectionState.connectedPrinter;
+    if (!connectionState.isConnected || !printer) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        if (serviceScreenOpen) {
+          await window.electronAPI.printer.connect({
+            id: printer.id,
+            ipAddress: printer.ipAddress,
+            port: printer.port,
+          });
+        } else {
+          // Close the socket when leaving Service to avoid any device-side UI refresh.
+          await window.electronAPI.printer.disconnect(printer.id);
+        }
+      } catch (e) {
+        if (!cancelled) console.error('[usePrinterConnection] service socket toggle failed:', e);
       }
-    } else {
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [serviceScreenOpen, connectionState.isConnected, connectionState.connectedPrinter]);
+
+  const connect = useCallback(async (printer: Printer) => {
+    // NOTE: Lazy-connect.
+    // Do not open a TCP/Telnet session here; many printers flash/refresh their UI on connect.
+    // We only open the socket when the Service screen is active.
+    if (!isElectron) {
       // Web preview: keep simulated delay (cannot reach local network printers)
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     // Reflect connection immediately in the printers list (so returning to the printers page doesn't look disconnected)
