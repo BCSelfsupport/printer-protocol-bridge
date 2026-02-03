@@ -165,10 +165,12 @@ export function usePrinterConnection() {
   // Live Service metrics: poll ^SU while connected AND service screen is open (Electron only)
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
   const [serviceScreenOpen, setServiceScreenOpen] = useState(false);
+  const [controlScreenOpen, setControlScreenOpen] = useState(false);
 
-  const shouldPollService = useMemo(
-    () => Boolean(isElectron && connectionState.isConnected && connectedPrinterId && serviceScreenOpen),
-    [connectionState.isConnected, connectedPrinterId, serviceScreenOpen]
+  // Poll status when either Service OR Control (Dashboard) screen is open
+  const shouldPollStatus = useMemo(
+    () => Boolean(isElectron && connectionState.isConnected && connectedPrinterId && (serviceScreenOpen || controlScreenOpen)),
+    [connectionState.isConnected, connectedPrinterId, serviceScreenOpen, controlScreenOpen]
   );
 
   // Stable callback for service polling – avoids effect churn
@@ -206,14 +208,14 @@ export function usePrinterConnection() {
   }, []);
 
   useServiceStatusPolling({
-    enabled: shouldPollService,
+    enabled: shouldPollStatus,
     printerId: connectedPrinterId,
     intervalMs: 3000,
     command: '^SU',
     onResponse: handleServiceResponse,
   });
 
-  // Lazy TCP connect: only open the Electron socket while the Service screen is open.
+  // Lazy TCP connect: only open the Electron socket while a polling screen is open.
   // This prevents the printer UI from refreshing/flashing immediately on "Connect".
   useEffect(() => {
     if (!isElectron || !window.electronAPI) return;
@@ -224,14 +226,14 @@ export function usePrinterConnection() {
 
     (async () => {
       try {
-        if (serviceScreenOpen) {
+        if (serviceScreenOpen || controlScreenOpen) {
           await window.electronAPI.printer.connect({
             id: printer.id,
             ipAddress: printer.ipAddress,
             port: printer.port,
           });
         } else {
-          // Close the socket when leaving Service to avoid any device-side UI refresh.
+          // Close the socket when leaving polling screens to avoid any device-side UI refresh.
           await window.electronAPI.printer.disconnect(printer.id);
         }
       } catch (e) {
@@ -242,7 +244,7 @@ export function usePrinterConnection() {
     return () => {
       cancelled = true;
     };
-  }, [serviceScreenOpen, connectionState.isConnected, connectionState.connectedPrinter]);
+  }, [serviceScreenOpen, controlScreenOpen, connectionState.isConnected, connectionState.connectedPrinter]);
 
   // Query printer status (^SU) and update state - used on connect and after commands
   const queryPrinterStatus = useCallback(async (printer: Printer) => {
@@ -461,6 +463,7 @@ export function usePrinterConnection() {
     addPrinter,
     removePrinter,
     setServiceScreenOpen,
+    setControlScreenOpen,
     setAvailabilityPollingEnabled,
     markAllNotReady,
   };

@@ -27,6 +27,7 @@ const Index = () => {
     addPrinter,
     removePrinter,
     setServiceScreenOpen,
+    setControlScreenOpen,
   } = usePrinterConnection();
 
   const handleNavigate = (item: NavItem) => {
@@ -71,6 +72,8 @@ const Index = () => {
             onEditMessage={() => setCurrentScreen('messages')}
             onSignIn={() => {}}
             onHelp={() => {}}
+            onMount={() => setControlScreenOpen(true)}
+            onUnmount={() => setControlScreenOpen(false)}
           />
         );
       case 'messages':
