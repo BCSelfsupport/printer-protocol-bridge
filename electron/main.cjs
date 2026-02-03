@@ -314,6 +314,14 @@ ipcMain.handle('printer:connect', async (event, printer) => {
   });
 });
 
+// Allow the renderer to register printer connection metadata without opening a TCP socket.
+// This enables on-demand command sockets (send-command) without causing the printer UI to flash
+// from an immediate Telnet connect.
+ipcMain.handle('printer:set-meta', async (event, printer) => {
+  printerMeta.set(printer.id, { ipAddress: printer.ipAddress, port: printer.port });
+  return { success: true };
+});
+
 ipcMain.handle('printer:disconnect', async (event, printerId) => {
   const socket = connections.get(printerId);
   if (socket) {
