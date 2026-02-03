@@ -26,6 +26,7 @@ const Index = () => {
     selectMessage,
     addPrinter,
     removePrinter,
+    setServiceScreenOpen,
   } = usePrinterConnection();
 
   const handleNavigate = (item: NavItem) => {
@@ -99,6 +100,8 @@ const Index = () => {
           <ServiceScreen
             metrics={connectionState.metrics}
             onHome={handleHome}
+            onMount={() => setServiceScreenOpen(true)}
+            onUnmount={() => setServiceScreenOpen(false)}
           />
         );
       default:

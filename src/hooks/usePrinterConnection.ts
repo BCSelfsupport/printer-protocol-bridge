@@ -138,11 +138,13 @@ export function usePrinterConnection() {
     return () => clearInterval(interval);
   }, [printers.length]);
 
-  // Live Service metrics: poll ^SU while connected (Electron only)
+  // Live Service metrics: poll ^SU while connected AND service screen is open (Electron only)
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
+  const [serviceScreenOpen, setServiceScreenOpen] = useState(false);
+
   const shouldPollService = useMemo(
-    () => Boolean(isElectron && connectionState.isConnected && connectedPrinterId),
-    [connectionState.isConnected, connectedPrinterId]
+    () => Boolean(isElectron && connectionState.isConnected && connectedPrinterId && serviceScreenOpen),
+    [connectionState.isConnected, connectedPrinterId, serviceScreenOpen]
   );
 
   // Stable callback for service polling – avoids effect churn
@@ -177,7 +179,7 @@ export function usePrinterConnection() {
   useServiceStatusPolling({
     enabled: shouldPollService,
     printerId: connectedPrinterId,
-    intervalMs: 3000, // slower poll to reduce printer display flicker
+    intervalMs: 3000,
     command: '^SU',
     onResponse: handleServiceResponse,
   });
@@ -285,5 +287,6 @@ export function usePrinterConnection() {
     checkPrinterStatus,
     addPrinter,
     removePrinter,
+    setServiceScreenOpen,
   };
 }
