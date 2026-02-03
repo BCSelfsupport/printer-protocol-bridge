@@ -49,16 +49,12 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
       </div>
 
       <div className="flex items-center gap-4">
-        <div className={`px-4 py-2 rounded ${isConnected ? 'bg-success' : 'bg-muted-foreground'} text-white text-sm font-medium`}>
-          {isConnected ? (
-            <>
-              <div className="text-xs">Connected</div>
-              <div>{connectedIp}</div>
-            </>
-          ) : (
-            'Not connected'
-          )}
-        </div>
+        {isConnected && (
+          <div className="px-4 py-2 rounded bg-success text-white text-sm font-medium">
+            <div className="text-xs">Connected</div>
+            <div>{connectedIp}</div>
+          </div>
+        )}
 
         {mounted && (
           <button 
