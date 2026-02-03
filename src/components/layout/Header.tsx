@@ -55,11 +55,11 @@ export function Header({ isConnected, connectedIp, onSettings, printerTime }: He
           <Settings className="w-6 h-6 text-card" />
         </button>
 
-        <div className="text-right text-foreground">
-          <div className="text-lg font-medium">
+        <div className="text-right text-foreground min-w-[120px]">
+          <div className="text-lg font-medium tabular-nums">
             {displayTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </div>
-          <div className="text-sm">
+          <div className="text-sm tabular-nums">
             {displayTime.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}
           </div>
         </div>
