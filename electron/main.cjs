@@ -119,20 +119,44 @@ ipcMain.handle('printer:check-status', async (event, printers) => {
 
 ipcMain.handle('printer:connect', async (event, printer) => {
   return new Promise((resolve, reject) => {
+    // Close existing connection if any
+    const existing = connections.get(printer.id);
+    if (existing) {
+      existing.destroy();
+      connections.delete(printer.id);
+    }
+
     const socket = new net.Socket();
-    socket.setTimeout(5000);
+    socket.setTimeout(10000); // Increase timeout
+    socket.setKeepAlive(true, 5000); // Enable keep-alive
 
     socket.on('connect', () => {
       connections.set(printer.id, socket);
+      console.log(`[printer:connect] Connected to ${printer.ipAddress}:${printer.port}`);
       resolve({ success: true });
     });
 
+    socket.on('timeout', () => {
+      console.log(`[printer:connect] Socket timeout for ${printer.id}`);
+      // Don't destroy on timeout - just log it
+    });
+
     socket.on('error', (err) => {
+      console.error(`[printer:connect] Socket error for ${printer.id}:`, err.message);
+      connections.delete(printer.id);
       reject({ success: false, error: err.message });
     });
 
-    socket.on('close', () => {
+    socket.on('close', (hadError) => {
+      console.log(`[printer:connect] Socket closed for ${printer.id}, hadError: ${hadError}`);
       connections.delete(printer.id);
+      // Notify renderer that connection was lost
+      mainWindow?.webContents.send('printer:connection-lost', { printerId: printer.id });
+    });
+
+    socket.on('data', (data) => {
+      // Log incoming data for debugging
+      console.log(`[printer:data] ${printer.id}:`, data.toString());
     });
 
     socket.connect(printer.port, printer.ipAddress);
