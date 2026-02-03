@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil } from 'lucide-react';
 import { Wifi } from 'lucide-react';
 import { PrinterStatus } from '@/types/printer';
@@ -11,6 +12,8 @@ interface DashboardProps {
   onEditMessage: () => void;
   onSignIn: () => void;
   onHelp: () => void;
+  onMount?: () => void;
+  onUnmount?: () => void;
 }
 
 export function Dashboard({
@@ -22,7 +25,15 @@ export function Dashboard({
   onEditMessage,
   onSignIn,
   onHelp,
+  onMount,
+  onUnmount,
 }: DashboardProps) {
+  // Notify parent when this screen mounts/unmounts for polling control
+  useEffect(() => {
+    onMount?.();
+    return () => onUnmount?.();
+  }, [onMount, onUnmount]);
+
   // Derive HV state from status
   const isHvOn = status?.isRunning ?? false;
   return (
