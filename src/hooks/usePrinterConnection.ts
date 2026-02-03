@@ -60,7 +60,7 @@ const mockMetrics: PrinterMetrics = {
 const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
 
 export function usePrinterConnection() {
-  const { printers, addPrinter, removePrinter, updatePrinterStatus } = usePrinterStorage();
+  const { printers, addPrinter, removePrinter, updatePrinterStatus, updatePrinter } = usePrinterStorage();
   const [isChecking, setIsChecking] = useState(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     isConnected: false,
@@ -103,6 +103,16 @@ export function usePrinterConnection() {
 
       if (results) {
         results.forEach((status: { id: number; isAvailable: boolean; status: string }) => {
+          // If we're actively connected to this printer, don't let background polling mark it offline.
+          if (connectionState.isConnected && connectionState.connectedPrinter?.id === status.id) {
+            updatePrinterStatus(status.id, {
+              isAvailable: true,
+              status: 'ready',
+              hasActiveErrors: false,
+            });
+            return;
+          }
+
           updatePrinterStatus(status.id, {
             isAvailable: status.isAvailable,
             status: status.status as Printer['status'],
@@ -115,7 +125,7 @@ export function usePrinterConnection() {
     } finally {
       setIsChecking(false);
     }
-  }, [printers, isChecking, updatePrinterStatus]);
+  }, [printers, isChecking, updatePrinterStatus, connectionState.isConnected, connectionState.connectedPrinter]);
 
   // Poll printer status every 5 seconds
   useEffect(() => {
@@ -130,6 +140,14 @@ export function usePrinterConnection() {
     // Simulate connection
     await new Promise(resolve => setTimeout(resolve, 500));
 
+    // Reflect connection immediately in the printers list (so returning to the printers page doesn't look disconnected)
+    updatePrinter(printer.id, {
+      isConnected: true,
+      isAvailable: true,
+      status: 'ready',
+      hasActiveErrors: false,
+    });
+
     setConnectionState({
       isConnected: true,
       connectedPrinter: { ...printer, isConnected: true },
@@ -138,9 +156,15 @@ export function usePrinterConnection() {
       settings: defaultSettings,
       messages: mockMessages,
     });
-  }, []);
+  }, [updatePrinter]);
 
   const disconnect = useCallback(async () => {
+    if (connectionState.connectedPrinter) {
+      updatePrinter(connectionState.connectedPrinter.id, {
+        isConnected: false,
+      });
+    }
+
     setConnectionState({
       isConnected: false,
       connectedPrinter: null,
@@ -149,7 +173,7 @@ export function usePrinterConnection() {
       settings: defaultSettings,
       messages: [],
     });
-  }, []);
+  }, [connectionState.connectedPrinter, updatePrinter]);
 
   const startPrint = useCallback(async () => {
     if (!connectionState.status) return;
