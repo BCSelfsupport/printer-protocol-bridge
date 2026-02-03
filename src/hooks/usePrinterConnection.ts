@@ -144,7 +144,7 @@ export function usePrinterConnection() {
     checkPrinterStatus();
     const interval = setInterval(checkPrinterStatus, 5000);
     return () => clearInterval(interval);
-  }, [printers.length]);
+  }, [printers.length, checkPrinterStatus]);
 
   // Live Service metrics: poll ^SU while connected AND service screen is open (Electron only)
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
