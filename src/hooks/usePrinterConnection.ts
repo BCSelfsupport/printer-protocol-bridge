@@ -1,8 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Printer, PrinterStatus, PrinterMetrics, PrintMessage, PrintSettings, ConnectionState } from '@/types/printer';
 import { usePrinterStorage } from '@/hooks/usePrinterStorage';
 import { supabase } from '@/integrations/supabase/client';
 import '@/types/electron.d.ts';
+import { parseStatusResponse } from '@/lib/printerProtocol';
+import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
 
 const defaultSettings: PrintSettings = {
   width: 15,
@@ -135,6 +137,48 @@ export function usePrinterConnection() {
     const interval = setInterval(checkPrinterStatus, 5000);
     return () => clearInterval(interval);
   }, [printers.length]);
+
+  // Live Service metrics: poll ^SU while connected (Electron only)
+  const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
+  const shouldPollService = useMemo(
+    () => Boolean(isElectron && connectionState.isConnected && connectedPrinterId),
+    [connectionState.isConnected, connectedPrinterId]
+  );
+
+  useServiceStatusPolling({
+    enabled: shouldPollService,
+    printerId: connectedPrinterId,
+    intervalMs: 1000,
+    command: '^SU',
+    onResponse: (raw) => {
+      const parsed = parseStatusResponse(raw);
+      if (!parsed) return;
+
+      setConnectionState((prev) => {
+        const previous = prev.metrics;
+        if (!previous) return prev;
+
+        return {
+          ...prev,
+          metrics: {
+            ...previous,
+            // ^SU values
+            modulation: parsed.modulation ?? previous.modulation,
+            charge: parsed.charge ?? previous.charge,
+            pressure: parsed.pressure ?? previous.pressure,
+            rps: parsed.rps ?? previous.rps,
+            phaseQual: parsed.phaseQual ?? previous.phaseQual,
+            hvDeflection: parsed.hvDeflection ?? previous.hvDeflection,
+            viscosity: parsed.viscosity ?? previous.viscosity,
+            inkLevel: parsed.inkLevel ?? previous.inkLevel,
+            makeupLevel: parsed.makeupLevel ?? previous.makeupLevel,
+            printStatus: parsed.printStatus ?? previous.printStatus,
+            subsystems: parsed.subsystems ?? previous.subsystems,
+          },
+        };
+      });
+    },
+  });
 
   const connect = useCallback(async (printer: Printer) => {
     // Simulate connection
