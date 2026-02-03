@@ -30,6 +30,9 @@ interface NetworkConfigScreenProps {
 }
 
 export function NetworkConfigScreen({ onHome }: NetworkConfigScreenProps) {
+  // Use a stable internal ID for the command terminal connection.
+  // This avoids null IDs causing connect/send to reference different sockets.
+  const terminalPrinterId = 999;
   const [settings, setSettings] = useState<NetworkSettings>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -158,7 +161,7 @@ export function NetworkConfigScreen({ onHome }: NetworkConfigScreenProps) {
           {/* Right column - Command Terminal */}
           <div className="lg:min-h-[500px]">
             <CommandTerminal
-              printerId={null}
+              printerId={terminalPrinterId}
               ipAddress={settings.ipAddress}
               port={parseInt(settings.port, 10) || 23}
             />

@@ -48,7 +48,7 @@ export function CommandTerminal({ printerId, ipAddress, port, onLog }: CommandTe
 
     try {
       const result = await window.electronAPI.printer.connect({
-        id: printerId ?? 999,
+        id: printerId,
         ipAddress,
         port,
       });
@@ -67,15 +67,76 @@ export function CommandTerminal({ printerId, ipAddress, port, onLog }: CommandTe
   };
 
   const handleDisconnect = async () => {
-    if (!window.electronAPI || printerId === null) return;
+    if (!window.electronAPI) return;
 
     try {
-      await window.electronAPI.printer.disconnect(printerId ?? 999);
+      await window.electronAPI.printer.disconnect(printerId);
       setIsConnected(false);
       addLog('info', 'Disconnected');
     } catch (err) {
       addLog('error', `Disconnect error: ${err instanceof Error ? err.message : String(err)}`);
     }
+  };
+
+  // Listen for connection lost events from the main process
+  useEffect(() => {
+    if (!window.electronAPI?.onPrinterConnectionLost) return;
+
+    window.electronAPI.onPrinterConnectionLost(({ printerId: lostId }) => {
+      if (lostId === printerId) {
+        setIsConnected(false);
+        addLog('error', 'Connection lost (printer closed the socket)');
+      }
+    });
+    // Electron IPC listeners are process-wide; we don't remove listeners here.
+    // (Preload uses ipcRenderer.on without exposing an off method.)
+  }, [printerId]);
+
+  const sendWithReconnect = async (cmd: string) => {
+      if (!window.electronAPI) return;
+
+      try {
+        const result = await window.electronAPI.printer.sendCommand(printerId, cmd);
+
+        if (result.success) {
+          if (result.response) {
+            const lines = result.response.split(/[\r\n]+/).filter(Boolean);
+            lines.forEach(line => addLog('received', line));
+          } else {
+            addLog('received', '(no response)');
+          }
+          return;
+        }
+
+        addLog('error', `Send failed: ${result.error}`);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+
+        // If the printer/server closed the socket (common on Telnet servers), reconnect and retry once.
+        if (message.includes('Printer not connected')) {
+          setIsConnected(false);
+          addLog('info', 'Reconnecting...');
+          await handleConnect();
+
+          // small pause to allow banner/handshake
+          await new Promise(r => setTimeout(r, 200));
+
+          const retry = await window.electronAPI.printer.sendCommand(printerId, cmd);
+          if (retry.success) {
+            if (retry.response) {
+              const lines = retry.response.split(/[\r\n]+/).filter(Boolean);
+              lines.forEach(line => addLog('received', line));
+            } else {
+              addLog('received', '(no response)');
+            }
+            return;
+          }
+          addLog('error', `Send failed after reconnect: ${retry.error}`);
+          return;
+        }
+
+        addLog('error', `Send error: ${message}`);
+      }
   };
 
   const handleSend = async () => {
@@ -85,23 +146,7 @@ export function CommandTerminal({ printerId, ipAddress, port, onLog }: CommandTe
     addLog('sent', cmd);
     setCommand('');
 
-    try {
-      const result = await window.electronAPI.printer.sendCommand(printerId ?? 999, cmd);
-      
-      if (result.success) {
-        if (result.response) {
-          // Split response by lines for better readability
-          const lines = result.response.split(/[\r\n]+/).filter(Boolean);
-          lines.forEach(line => addLog('received', line));
-        } else {
-          addLog('received', '(no response)');
-        }
-      } else {
-        addLog('error', `Send failed: ${result.error}`);
-      }
-    } catch (err) {
-      addLog('error', `Send error: ${err instanceof Error ? err.message : String(err)}`);
-    }
+    await sendWithReconnect(cmd);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

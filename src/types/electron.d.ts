@@ -23,6 +23,7 @@ interface ElectronAPI {
   app: AppAPI;
   onUpdateAvailable: (callback: (info: { version: string }) => void) => void;
   onUpdateDownloaded: (callback: (info: { version: string }) => void) => void;
+  onPrinterConnectionLost: (callback: (payload: { printerId: number }) => void) => void;
 }
 
 declare global {
