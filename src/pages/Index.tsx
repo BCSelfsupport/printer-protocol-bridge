@@ -115,8 +115,8 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="bg-sidebar text-sidebar-foreground px-4 py-2 flex justify-between text-sm">
-        <span>Build 4.24.0620 | Application is licensed to Bestcode for showtime and testing purposes</span>
-        <span>v01.09.00.14</span>
+        <span>Build 1.0.0</span>
+        <span>{connectionState.status?.printerVersion ?? ''}</span>
       </footer>
     </div>
   );
