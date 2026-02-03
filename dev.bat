@@ -42,7 +42,7 @@ echo.
 REM Start Electron
 echo [3/3] Starting Electron...
 set VITE_DEV_SERVER_URL=http://localhost:%VITE_PORT%
-npx electron electron/main.cjs
+npx -y electron electron/main.cjs
 
 echo.
 echo Electron closed. Press any key to exit...
