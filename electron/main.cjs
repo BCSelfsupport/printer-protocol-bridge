@@ -216,8 +216,19 @@ ipcMain.handle('printer:connect', async (event, printer) => {
 
     // Close existing connection if any
     const existing = connections.get(printer.id);
+    // IMPORTANT: Make connect idempotent.
+    // The UI has multiple places that can call connect (e.g. NetworkConfig terminal).
+    // Some printers will close sockets if we reconnect too aggressively.
+    if (existing && !existing.destroyed && existing.writable) {
+      console.log(`[printer:connect] Reusing existing socket for ${printer.ipAddress}:${printer.port}`);
+      return resolve({ success: true, reused: true });
+    }
     if (existing) {
-      existing.destroy();
+      try {
+        existing.destroy();
+      } catch (_) {
+        // ignore
+      }
       connections.delete(printer.id);
     }
 

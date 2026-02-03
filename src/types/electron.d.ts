@@ -6,7 +6,7 @@ interface PrinterAPI {
     responseTime?: number;
     error?: string;
   }[]>;
-  connect: (printer: { id: number; ipAddress: string; port: number }) => Promise<{ success: boolean; error?: string }>;
+  connect: (printer: { id: number; ipAddress: string; port: number }) => Promise<{ success: boolean; reused?: boolean; error?: string }>;
   disconnect: (printerId: number) => Promise<{ success: boolean }>;
   sendCommand: (printerId: number, command: string) => Promise<{ success: boolean; response?: string; error?: string }>;
 }
