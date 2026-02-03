@@ -6,6 +6,7 @@ interface BottomNavProps {
   activeItem: NavItem;
   onNavigate: (item: NavItem) => void;
   onTurnOff: () => void;
+  showPrinterControls?: boolean;
 }
 
 const navItems: { id: NavItem; label: string; icon: React.ReactNode }[] = [
@@ -16,7 +17,7 @@ const navItems: { id: NavItem; label: string; icon: React.ReactNode }[] = [
   { id: 'service', label: 'Service', icon: <Wrench className="w-8 h-8" /> },
 ];
 
-export function BottomNav({ activeItem, onNavigate, onTurnOff }: BottomNavProps) {
+export function BottomNav({ activeItem, onNavigate, onTurnOff, showPrinterControls = true }: BottomNavProps) {
   return (
     <nav className="flex h-24 bg-sidebar">
       <button 
@@ -27,7 +28,7 @@ export function BottomNav({ activeItem, onNavigate, onTurnOff }: BottomNavProps)
         <span className="text-sm font-medium">Turn Off</span>
       </button>
 
-      {navItems.map((item) => (
+      {showPrinterControls && navItems.map((item) => (
         <button
           key={item.id}
           onClick={() => onNavigate(item.id)}
@@ -41,6 +42,8 @@ export function BottomNav({ activeItem, onNavigate, onTurnOff }: BottomNavProps)
           <span className="text-sm font-medium">{item.label}</span>
         </button>
       ))}
+      
+      {!showPrinterControls && <div className="flex-1 bg-sidebar" />}
     </nav>
   );
 }
