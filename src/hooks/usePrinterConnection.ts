@@ -145,39 +145,41 @@ export function usePrinterConnection() {
     [connectionState.isConnected, connectedPrinterId]
   );
 
+  // Stable callback for service polling – avoids effect churn
+  const handleServiceResponse = useCallback((raw: string) => {
+    const parsed = parseStatusResponse(raw);
+    if (!parsed) return;
+
+    setConnectionState((prev) => {
+      const previous = prev.metrics;
+      if (!previous) return prev;
+
+      return {
+        ...prev,
+        metrics: {
+          ...previous,
+          modulation: parsed.modulation ?? previous.modulation,
+          charge: parsed.charge ?? previous.charge,
+          pressure: parsed.pressure ?? previous.pressure,
+          rps: parsed.rps ?? previous.rps,
+          phaseQual: parsed.phaseQual ?? previous.phaseQual,
+          hvDeflection: parsed.hvDeflection ?? previous.hvDeflection,
+          viscosity: parsed.viscosity ?? previous.viscosity,
+          inkLevel: parsed.inkLevel ?? previous.inkLevel,
+          makeupLevel: parsed.makeupLevel ?? previous.makeupLevel,
+          printStatus: parsed.printStatus ?? previous.printStatus,
+          subsystems: parsed.subsystems ?? previous.subsystems,
+        },
+      };
+    });
+  }, []);
+
   useServiceStatusPolling({
     enabled: shouldPollService,
     printerId: connectedPrinterId,
-    intervalMs: 1000,
+    intervalMs: 3000, // slower poll to reduce printer display flicker
     command: '^SU',
-    onResponse: (raw) => {
-      const parsed = parseStatusResponse(raw);
-      if (!parsed) return;
-
-      setConnectionState((prev) => {
-        const previous = prev.metrics;
-        if (!previous) return prev;
-
-        return {
-          ...prev,
-          metrics: {
-            ...previous,
-            // ^SU values
-            modulation: parsed.modulation ?? previous.modulation,
-            charge: parsed.charge ?? previous.charge,
-            pressure: parsed.pressure ?? previous.pressure,
-            rps: parsed.rps ?? previous.rps,
-            phaseQual: parsed.phaseQual ?? previous.phaseQual,
-            hvDeflection: parsed.hvDeflection ?? previous.hvDeflection,
-            viscosity: parsed.viscosity ?? previous.viscosity,
-            inkLevel: parsed.inkLevel ?? previous.inkLevel,
-            makeupLevel: parsed.makeupLevel ?? previous.makeupLevel,
-            printStatus: parsed.printStatus ?? previous.printStatus,
-            subsystems: parsed.subsystems ?? previous.subsystems,
-          },
-        };
-      });
-    },
+    onResponse: handleServiceResponse,
   });
 
   const connect = useCallback(async (printer: Printer) => {
