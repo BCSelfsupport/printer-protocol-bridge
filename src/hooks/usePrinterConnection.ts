@@ -55,7 +55,6 @@ const mockMetrics: PrinterMetrics = {
     vltOn: false,
     gutOn: false,
     modOn: false,
-    hvOn: false,
   },
 };
 
@@ -181,12 +180,12 @@ export function usePrinterConnection() {
       const previous = prev.metrics;
       if (!previous) return prev;
 
-      // Sync HV status with isRunning in PrinterStatus
-      const hvOn = parsed.subsystems?.hvOn ?? previous.subsystems.hvOn;
+      // V300UP is the HV indicator - sync isRunning with it
+      const hvOn = parsed.subsystems?.v300up ?? previous.subsystems.v300up;
 
       return {
         ...prev,
-        // Update isRunning based on HV status from printer
+        // Update isRunning based on V300UP (HV status) from printer
         status: prev.status ? { ...prev.status, isRunning: hvOn } : null,
         metrics: {
           ...previous,
