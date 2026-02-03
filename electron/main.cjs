@@ -411,7 +411,10 @@ ipcMain.handle('printer:send-command', async (event, { printerId, command }) => 
     socket.once('error', onError);
     socket.once('close', onClose);
 
-    socket.write(command + '\r', (err) => {
+    // Telnet line endings: many devices require CRLF (\r\n) rather than only CR.
+    // Sending only CR can cause the printer to parse the command incorrectly and reply
+    // with a generic "not recognized" for otherwise valid commands.
+    socket.write(command + '\r\n', (err) => {
       if (err) return onError(err);
       // Give the printer a moment to respond; many responses include a trailing ">" prompt.
       // We purposely keep this short to make iterative testing fast.
