@@ -388,12 +388,13 @@ export function usePrinterConnection() {
     
     const printer = connectionState.connectedPrinter;
     
-    // Send ^PR 1 command to enable printing (HV on)
+    // Send ^PR1 command to enable printing (HV on)
+    // Note: No space between ^PR and 1 - some firmware requires this exact format
     if (isElectron && window.electronAPI) {
       try {
         // sendCommand uses on-demand sockets, no need to call connect() first
-        console.log('[startPrint] Sending ^PR 1...');
-        const result = await window.electronAPI.printer.sendCommand(printer.id, '^PR 1');
+        console.log('[startPrint] Sending ^PR1...');
+        const result = await window.electronAPI.printer.sendCommand(printer.id, '^PR1');
         console.log('[startPrint] ^PR 1 result:', JSON.stringify(result));
         
         if (result.success) {
@@ -430,12 +431,13 @@ export function usePrinterConnection() {
     
     const printer = connectionState.connectedPrinter;
     
-    // Send ^PR 0 command to disable printing (HV off)
+    // Send ^PR0 command to disable printing (HV off)
+    // Note: No space between ^PR and 0 - some firmware requires this exact format
     if (isElectron && window.electronAPI) {
       try {
         // sendCommand uses on-demand sockets, no need to call connect() first
-        console.log('[stopPrint] Sending ^PR 0...');
-        const result = await window.electronAPI.printer.sendCommand(printer.id, '^PR 0');
+        console.log('[stopPrint] Sending ^PR0...');
+        const result = await window.electronAPI.printer.sendCommand(printer.id, '^PR0');
         console.log('[stopPrint] ^PR 0 result:', JSON.stringify(result));
         
         if (result.success) {
