@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, Sun, Moon } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 interface HeaderProps {
   isConnected: boolean;
@@ -10,6 +11,12 @@ interface HeaderProps {
 
 export function Header({ isConnected, connectedIp, onSettings, printerTime }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -18,6 +25,10 @@ export function Header({ isConnected, connectedIp, onSettings, printerTime }: He
 
   // Use printer time when connected, otherwise use local time
   const displayTime = isConnected && printerTime ? printerTime : currentTime;
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
 
   return (
     <header className="flex items-center justify-between px-4 py-2 bg-muted">
@@ -47,6 +58,19 @@ export function Header({ isConnected, connectedIp, onSettings, printerTime }: He
             'Not connected'
           )}
         </div>
+
+        {mounted && (
+          <button 
+            onClick={toggleTheme}
+            className="w-12 h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors"
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-5 h-5 text-card" />
+            ) : (
+              <Moon className="w-5 h-5 text-card" />
+            )}
+          </button>
+        )}
 
         <button 
           onClick={onSettings}
