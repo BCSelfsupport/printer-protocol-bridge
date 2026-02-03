@@ -32,6 +32,15 @@ export interface PrinterMetrics {
   rps: number;
   phaseQual: number;
   hvDeflection: boolean;
+  inkLevel: string;
+  makeupLevel: string;
+  printStatus: string;
+  subsystems: {
+    v300up: boolean;
+    vltOn: boolean;
+    gutOn: boolean;
+    modOn: boolean;
+  };
 }
 
 export interface PrintMessage {

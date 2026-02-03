@@ -45,6 +45,15 @@ const mockMetrics: PrinterMetrics = {
   rps: 0.00,
   phaseQual: 0,
   hvDeflection: true,
+  inkLevel: 'FULL',
+  makeupLevel: 'GOOD',
+  printStatus: 'Not ready',
+  subsystems: {
+    v300up: false,
+    vltOn: false,
+    gutOn: false,
+    modOn: false,
+  },
 };
 
 // Check if running in Electron
