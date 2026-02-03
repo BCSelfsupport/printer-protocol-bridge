@@ -28,4 +28,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onUpdateDownloaded: (callback) => {
     ipcRenderer.on('update-downloaded', (event, info) => callback(info));
   },
+
+  // Printer events
+  onPrinterConnectionLost: (callback) => {
+    ipcRenderer.on('printer:connection-lost', (event, payload) => callback(payload));
+  },
 });
