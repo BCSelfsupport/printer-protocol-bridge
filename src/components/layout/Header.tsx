@@ -4,9 +4,10 @@ import { Settings } from 'lucide-react';
 interface HeaderProps {
   isConnected: boolean;
   connectedIp?: string;
+  onSettings?: () => void;
 }
 
-export function Header({ isConnected, connectedIp }: HeaderProps) {
+export function Header({ isConnected, connectedIp, onSettings }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -43,7 +44,10 @@ export function Header({ isConnected, connectedIp }: HeaderProps) {
           )}
         </div>
 
-        <button className="w-12 h-12 rounded-full bg-muted-foreground flex items-center justify-center">
+        <button 
+          onClick={onSettings}
+          className="w-12 h-12 rounded-full bg-muted-foreground flex items-center justify-center hover:bg-muted-foreground/80 transition-colors"
+        >
           <Settings className="w-6 h-6 text-card" />
         </button>
 

@@ -8,10 +8,13 @@ import { AdjustScreen } from '@/components/screens/AdjustScreen';
 import { SetupScreen } from '@/components/screens/SetupScreen';
 import { ServiceScreen } from '@/components/screens/ServiceScreen';
 import { CleanScreen } from '@/components/screens/CleanScreen';
+import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
 import { usePrinterConnection } from '@/hooks/usePrinterConnection';
 
+type ScreenType = NavItem | 'printers' | 'network';
+
 const Index = () => {
-  const [currentScreen, setCurrentScreen] = useState<NavItem | 'printers'>('home');
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
   const {
     printers,
     connectionState,
@@ -43,7 +46,8 @@ const Index = () => {
 
   const renderScreen = () => {
     switch (currentScreen) {
-      case 'printers':
+      case 'network':
+        return <NetworkConfigScreen onHome={handleHome} />;
         return (
           <PrintersScreen
             printers={printers}
@@ -101,6 +105,7 @@ const Index = () => {
       <Header
         isConnected={connectionState.isConnected}
         connectedIp={connectionState.connectedPrinter?.ipAddress}
+        onSettings={() => setCurrentScreen('network')}
       />
 
       <main className="flex-1 flex flex-col">
@@ -108,7 +113,7 @@ const Index = () => {
       </main>
 
       <BottomNav
-        activeItem={currentScreen === 'printers' ? 'home' : currentScreen}
+        activeItem={currentScreen === 'printers' || currentScreen === 'network' ? 'home' : currentScreen}
         onNavigate={handleNavigate}
         onTurnOff={handleTurnOff}
       />
