@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const net = require('net');
+const { execFile } = require('child_process');
 const path = require('path');
 
 let mainWindow;
@@ -118,56 +119,59 @@ function handleTelnetNegotiation(socket, buf) {
 }
 
 ipcMain.handle('printer:check-status', async (event, printers) => {
+  // IMPORTANT:
+  // Background reachability checks must NOT connect to the printer's Telnet port.
+  // Some Bestcode devices visibly refresh/flash their UI on *any* TCP connect.
+  // Instead, we use ICMP ping (when available) to detect reachability.
+
+  const pingHost = (ipAddress, timeoutMs = 1200) => {
+    return new Promise((resolve) => {
+      const start = Date.now();
+
+      // Cross-platform ping arguments
+      // Windows: ping -n 1 -w <timeout_ms> <host>
+      // macOS/Linux: ping -c 1 -W <timeout_s> <host>
+      const isWin = process.platform === 'win32';
+      const args = isWin
+        ? ['-n', '1', '-w', String(timeoutMs), ipAddress]
+        : ['-c', '1', '-W', String(Math.max(1, Math.round(timeoutMs / 1000))), ipAddress];
+
+      execFile('ping', args, { timeout: timeoutMs + 500 }, (error) => {
+        const responseTime = Date.now() - start;
+        // exit code 0 => reachable
+        resolve({ ok: !error, responseTime, error: error?.message });
+      });
+    });
+  };
+
   const results = await Promise.all(
     printers.map(async (printer) => {
-      const startTime = Date.now();
-      
-      return new Promise((resolve) => {
-        const socket = new net.Socket();
-        socket.setTimeout(3000);
-
-        socket.on('connect', () => {
-          const responseTime = Date.now() - startTime;
-
-          // IMPORTANT:
-          // Do NOT send any commands here.
-          // This handler is used for background availability checks on app start
-          // and on a timer; some printers visibly refresh/flash their UI on any
-          // received command. A successful TCP connect is sufficient to mark
-          // the device as reachable.
-          setTimeout(() => {
-            socket.destroy();
-            resolve({
-              id: printer.id,
-              isAvailable: true,
-              status: 'ready',
-              responseTime,
-            });
-          }, 150);
-        });
-
-        socket.on('timeout', () => {
-          socket.destroy();
-          resolve({
+      // Prefer ICMP ping (no port connection; avoids printer UI flashing)
+      try {
+        const ping = await pingHost(printer.ipAddress, 1200);
+        if (ping.ok) {
+          return {
             id: printer.id,
-            isAvailable: false,
-            status: 'offline',
-            error: 'Connection timeout',
-          });
-        });
+            isAvailable: true,
+            status: 'ready',
+            responseTime: ping.responseTime,
+          };
+        }
 
-        socket.on('error', (err) => {
-          socket.destroy();
-          resolve({
-            id: printer.id,
-            isAvailable: false,
-            status: 'offline',
-            error: err.message,
-          });
-        });
-
-        socket.connect(printer.port, printer.ipAddress);
-      });
+        return {
+          id: printer.id,
+          isAvailable: false,
+          status: 'offline',
+          error: 'Ping failed',
+        };
+      } catch (e) {
+        return {
+          id: printer.id,
+          isAvailable: false,
+          status: 'offline',
+          error: e?.message || 'Ping error',
+        };
+      }
     })
   );
 
