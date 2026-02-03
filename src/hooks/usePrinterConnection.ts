@@ -64,6 +64,7 @@ const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectr
 export function usePrinterConnection() {
   const { printers, addPrinter, removePrinter, updatePrinterStatus, updatePrinter } = usePrinterStorage();
   const [isChecking, setIsChecking] = useState(false);
+  const [availabilityPollingEnabled, setAvailabilityPollingEnabled] = useState(true);
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     isConnected: false,
     connectedPrinter: null,
@@ -75,6 +76,7 @@ export function usePrinterConnection() {
 
   // Check printer availability - uses Electron TCP if available, otherwise cloud function
   const checkPrinterStatus = useCallback(async () => {
+    if (!availabilityPollingEnabled) return;
     if (isChecking || printers.length === 0) return;
     
     setIsChecking(true);
@@ -135,16 +137,27 @@ export function usePrinterConnection() {
     } finally {
       setIsChecking(false);
     }
-  }, [printers, isChecking, updatePrinterStatus, connectionState.isConnected, connectionState.connectedPrinter]);
+  }, [availabilityPollingEnabled, printers, isChecking, updatePrinterStatus, connectionState.isConnected, connectionState.connectedPrinter]);
 
   // Poll printer status every 5 seconds
   useEffect(() => {
+    if (!availabilityPollingEnabled) return;
     if (printers.length === 0) return;
     
     checkPrinterStatus();
     const interval = setInterval(checkPrinterStatus, 5000);
     return () => clearInterval(interval);
-  }, [printers.length, checkPrinterStatus]);
+  }, [availabilityPollingEnabled, printers.length, checkPrinterStatus]);
+
+  const markAllNotReady = useCallback(() => {
+    printers.forEach((p) => {
+      updatePrinterStatus(p.id, {
+        isAvailable: false,
+        status: 'not_ready',
+        hasActiveErrors: false,
+      });
+    });
+  }, [printers, updatePrinterStatus]);
 
   // Live Service metrics: poll ^SU while connected AND service screen is open (Electron only)
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
@@ -309,6 +322,7 @@ export function usePrinterConnection() {
     printers,
     connectionState,
     isChecking,
+    availabilityPollingEnabled,
     connect,
     disconnect,
     startPrint,
@@ -319,5 +333,7 @@ export function usePrinterConnection() {
     addPrinter,
     removePrinter,
     setServiceScreenOpen,
+    setAvailabilityPollingEnabled,
+    markAllNotReady,
   };
 }
