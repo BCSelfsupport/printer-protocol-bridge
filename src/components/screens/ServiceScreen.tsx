@@ -1,44 +1,78 @@
 import { PrinterMetrics } from '@/types/printer';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
-import { Badge } from '@/components/ui/badge';
-import { Droplet, Gauge, Activity, Zap, ThermometerSun, Clock } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ServiceScreenProps {
   metrics: PrinterMetrics | null;
   onHome: () => void;
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const isReady = status.toLowerCase().includes('ready') && !status.toLowerCase().includes('not');
+function StatusIndicator({ label, value, unit, isActive }: { 
+  label: string; 
+  value: string | number; 
+  unit?: string;
+  isActive?: boolean;
+}) {
   return (
-    <Badge 
-      variant={isReady ? 'default' : 'secondary'}
-      className={isReady ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'}
-    >
-      {status}
-    </Badge>
-  );
-}
-
-function LevelBadge({ level, type }: { level: string; type: 'ink' | 'makeup' }) {
-  const isGood = level === 'FULL' || level === 'GOOD';
-  return (
-    <Badge 
-      variant={isGood ? 'default' : 'destructive'}
-      className={isGood ? 'bg-green-600 hover:bg-green-700' : ''}
-    >
-      {type === 'ink' ? `INK: ${level}` : `MAKEUP: ${level}`}
-    </Badge>
-  );
-}
-
-function SubsystemIndicator({ label, active }: { label: string; active: boolean }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className={`w-2 h-2 rounded-full ${active ? 'bg-green-500' : 'bg-slate-500'}`} />
-      <span className={`text-sm ${active ? 'text-foreground' : 'text-muted-foreground'}`}>
+    <div className="flex items-center justify-between py-3 px-4 bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 border-b border-slate-200 dark:border-slate-700">
+      <span className="text-sm font-medium text-slate-700 dark:text-slate-300 min-w-[140px]">
         {label}
       </span>
+      <div className="flex items-center gap-2">
+        <span className={cn(
+          "text-lg font-bold tabular-nums",
+          isActive ? "text-green-600 dark:text-green-400" : "text-slate-900 dark:text-slate-100"
+        )}>
+          {value}
+        </span>
+        {unit && (
+          <span className="text-xs text-slate-500 dark:text-slate-400 min-w-[40px]">
+            {unit}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ active, label }: { active: boolean; label: string }) {
+  return (
+    <div className={cn(
+      "px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wide",
+      active 
+        ? "bg-green-500 text-white shadow-lg shadow-green-500/30" 
+        : "bg-slate-400 text-white"
+    )}>
+      {label}: {active ? 'ON' : 'OFF'}
+    </div>
+  );
+}
+
+function LevelIndicator({ level, type }: { level: string; type: 'ink' | 'makeup' }) {
+  const isGood = level === 'FULL' || level === 'GOOD';
+  const colors = type === 'ink' 
+    ? isGood ? 'bg-cyan-500' : 'bg-red-500'
+    : isGood ? 'bg-amber-500' : 'bg-red-500';
+  
+  return (
+    <div className="flex items-center gap-2">
+      <div className={cn("w-3 h-3 rounded-full", colors)} />
+      <span className="text-xs font-medium uppercase">
+        {type}: {level}
+      </span>
+    </div>
+  );
+}
+
+function InfoRow({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) {
+  return (
+    <div className={cn(
+      "grid grid-cols-2 gap-4 p-3 text-xs",
+      dark 
+        ? "bg-slate-800 dark:bg-slate-900 text-slate-300" 
+        : "bg-slate-700 dark:bg-slate-800 text-slate-200"
+    )}>
+      {children}
     </div>
   );
 }
@@ -52,111 +86,121 @@ export function ServiceScreen({ metrics, onHome }: ServiceScreenProps) {
     );
   }
 
+  const printStatusReady = metrics.printStatus.toLowerCase().includes('ready') && 
+    !metrics.printStatus.toLowerCase().includes('not');
+
   return (
-    <div className="flex-1 p-4 flex flex-col gap-4 overflow-auto">
-      <SubPageHeader title="Service" onHome={onHome} />
-
-      {/* Status Row */}
-      <div className="flex items-center gap-4 flex-wrap">
-        <StatusBadge status={metrics.printStatus} />
-        <LevelBadge level={metrics.inkLevel} type="ink" />
-        <LevelBadge level={metrics.makeupLevel} type="makeup" />
-      </div>
-
-      {/* Main Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {/* Pressure */}
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <Gauge className="w-4 h-4" />
-            <span className="text-sm">Pressure</span>
+    <div className="flex-1 flex flex-col overflow-hidden bg-slate-900">
+      {/* Header Bar */}
+      <div className="bg-gradient-to-r from-slate-800 to-slate-700 border-b border-slate-600 p-3">
+        <div className="flex items-center justify-between">
+          <SubPageHeader title="Service" onHome={onHome} />
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "px-4 py-2 rounded font-bold text-sm",
+              printStatusReady 
+                ? "bg-green-500 text-white" 
+                : "bg-amber-500 text-black"
+            )}>
+              {metrics.printStatus}
+            </div>
           </div>
-          <div className="text-2xl font-bold">{metrics.pressure}</div>
-          <div className="text-xs text-muted-foreground">PSI</div>
-        </div>
-
-        {/* RPS */}
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <Activity className="w-4 h-4" />
-            <span className="text-sm">RPS</span>
-          </div>
-          <div className="text-2xl font-bold">{metrics.rps.toFixed(2)}</div>
-          <div className="text-xs text-muted-foreground">rev/sec</div>
-        </div>
-
-        {/* Modulation */}
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <Zap className="w-4 h-4" />
-            <span className="text-sm">Modulation</span>
-          </div>
-          <div className="text-2xl font-bold">{metrics.modulation}</div>
-          <div className="text-xs text-muted-foreground">Volts</div>
-        </div>
-
-        {/* Charge */}
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <Zap className="w-4 h-4" />
-            <span className="text-sm">Charge</span>
-          </div>
-          <div className="text-2xl font-bold">{metrics.charge}</div>
-          <div className="text-xs text-muted-foreground">%</div>
-        </div>
-
-        {/* Phase Quality */}
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <Activity className="w-4 h-4" />
-            <span className="text-sm">Phase Quality</span>
-          </div>
-          <div className="text-2xl font-bold">{metrics.phaseQual}%</div>
-        </div>
-
-        {/* Viscosity */}
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <Droplet className="w-4 h-4" />
-            <span className="text-sm">Viscosity</span>
-          </div>
-          <div className="text-2xl font-bold">{metrics.viscosity.toFixed(2)}</div>
-          <div className="text-xs text-muted-foreground">cP (6 min read)</div>
-        </div>
-
-        {/* HV Deflection */}
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <Zap className="w-4 h-4" />
-            <span className="text-sm">HV Deflection</span>
-          </div>
-          <div className={`text-2xl font-bold ${metrics.hvDeflection ? 'text-green-500' : 'text-muted-foreground'}`}>
-            {metrics.hvDeflection ? 'ON' : 'OFF'}
-          </div>
-        </div>
-
-        {/* Run Hours */}
-        <div className="bg-card rounded-lg p-4 border border-border">
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <Clock className="w-4 h-4" />
-            <span className="text-sm">Run Hours</span>
-          </div>
-          <div className="text-lg font-bold">{metrics.powerHours}</div>
-          <div className="text-xs text-muted-foreground">Power</div>
-          <div className="text-lg font-bold mt-1">{metrics.streamHours}</div>
-          <div className="text-xs text-muted-foreground">Stream</div>
         </div>
       </div>
 
-      {/* Subsystems */}
-      <div className="bg-card rounded-lg p-4 border border-border">
-        <div className="text-sm font-medium text-muted-foreground mb-3">Subsystems</div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <SubsystemIndicator label="V300UP" active={metrics.subsystems.v300up} />
-          <SubsystemIndicator label="VLT" active={metrics.subsystems.vltOn} />
-          <SubsystemIndicator label="GUT" active={metrics.subsystems.gutOn} />
-          <SubsystemIndicator label="MOD" active={metrics.subsystems.modOn} />
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-6xl mx-auto">
+          
+          {/* Left Column - Primary Metrics */}
+          <div className="space-y-1 rounded-lg overflow-hidden border border-slate-700 shadow-xl">
+            <div className="bg-slate-700 px-4 py-2 border-b border-slate-600">
+              <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">
+                Primary Metrics
+              </h3>
+            </div>
+            <StatusIndicator label="Modulation" value={metrics.modulation} unit="Volts" />
+            <StatusIndicator label="Pressure" value={metrics.pressure} unit="PSI" />
+            <StatusIndicator label="Charge" value={metrics.charge} unit="%" />
+            <StatusIndicator label="RPS" value={metrics.rps.toFixed(2)} unit="rev/s" isActive={metrics.rps > 0} />
+            <StatusIndicator label="Phase Quality" value={metrics.phaseQual} unit="%" isActive={metrics.phaseQual >= 90} />
+            <StatusIndicator label="Viscosity" value={metrics.viscosity.toFixed(2)} unit="cP" />
+          </div>
+
+          {/* Right Column - System Status */}
+          <div className="space-y-4">
+            {/* Subsystems */}
+            <div className="rounded-lg overflow-hidden border border-slate-700 shadow-xl">
+              <div className="bg-slate-700 px-4 py-2 border-b border-slate-600">
+                <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">
+                  Subsystems
+                </h3>
+              </div>
+              <div className="grid grid-cols-2 gap-2 p-3 bg-slate-800">
+                <StatusBadge active={metrics.subsystems.v300up} label="V300UP" />
+                <StatusBadge active={metrics.subsystems.vltOn} label="VLT" />
+                <StatusBadge active={metrics.subsystems.gutOn} label="GUT" />
+                <StatusBadge active={metrics.subsystems.modOn} label="MOD" />
+              </div>
+            </div>
+
+            {/* Consumables */}
+            <div className="rounded-lg overflow-hidden border border-slate-700 shadow-xl">
+              <div className="bg-slate-700 px-4 py-2 border-b border-slate-600">
+                <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">
+                  Consumables
+                </h3>
+              </div>
+              <div className="flex items-center justify-around p-4 bg-slate-800">
+                <LevelIndicator level={metrics.inkLevel} type="ink" />
+                <div className="w-px h-6 bg-slate-600" />
+                <LevelIndicator level={metrics.makeupLevel} type="makeup" />
+              </div>
+            </div>
+
+            {/* HV & Run Hours */}
+            <div className="rounded-lg overflow-hidden border border-slate-700 shadow-xl">
+              <div className="bg-slate-700 px-4 py-2 border-b border-slate-600">
+                <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">
+                  System Info
+                </h3>
+              </div>
+              <div className="bg-slate-800">
+                <StatusIndicator 
+                  label="HV Deflection" 
+                  value={metrics.hvDeflection ? 'Enabled' : 'Disabled'} 
+                  isActive={metrics.hvDeflection}
+                />
+                <StatusIndicator label="Power Hours" value={metrics.powerHours} />
+                <StatusIndicator label="Stream Hours" value={metrics.streamHours} />
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+
+      {/* Footer Info Bar */}
+      <div className="bg-slate-800 border-t border-slate-700 p-2">
+        <InfoRow>
+          <div>
+            <span className="text-slate-400">Pressure: </span>
+            <span className="font-mono">{metrics.pressure} PSI, {metrics.rps.toFixed(0)} RPS</span>
+          </div>
+          <div>
+            <span className="text-slate-400">Viscosity: </span>
+            <span className="font-mono">{metrics.viscosity.toFixed(2)} cP</span>
+          </div>
+        </InfoRow>
+        <InfoRow dark>
+          <div>
+            <span className="text-slate-400">Phase Quality: </span>
+            <span className="font-mono">{metrics.phaseQual}%</span>
+          </div>
+          <div>
+            <span className="text-slate-400">Modulation: </span>
+            <span className="font-mono">{metrics.modulation} Volts</span>
+          </div>
+        </InfoRow>
       </div>
     </div>
   );
