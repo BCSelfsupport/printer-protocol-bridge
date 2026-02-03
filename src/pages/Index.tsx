@@ -102,6 +102,7 @@ const Index = () => {
           <ServiceScreen
             metrics={connectionState.metrics}
             onHome={handleHome}
+            onControl={() => setCurrentScreen('control')}
             onMount={() => setServiceScreenOpen(true)}
             onUnmount={() => setServiceScreenOpen(false)}
           />

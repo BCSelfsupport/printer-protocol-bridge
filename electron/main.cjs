@@ -411,7 +411,17 @@ ipcMain.handle('printer:send-command', async (event, { printerId, command }) => 
 
     const onData = (chunk) => {
       // Strip/handle telnet negotiation bytes so they don't pollute responses.
-      if (handleTelnetNegotiation(socket, chunk)) return;
+      const hadTelnet = handleTelnetNegotiation(socket, chunk);
+      if (hadTelnet) {
+        // IMPORTANT: Some devices send IAC negotiation bytes and real text in the SAME chunk.
+        // If we return early here we lose the ^SU "STATUS: ..." payload.
+        // Strip IAC bytes and keep any remaining text.
+        const stripped = stripTelnetBytes(chunk);
+        if (stripped && stripped.length > 0) {
+          response += stripped.toString();
+        }
+        return;
+      }
       response += chunk.toString();
     };
 

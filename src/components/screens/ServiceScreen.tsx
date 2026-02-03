@@ -11,11 +11,12 @@ import {
 interface ServiceScreenProps {
   metrics: PrinterMetrics | null;
   onHome: () => void;
+  onControl: () => void;
   onMount?: () => void;
   onUnmount?: () => void;
 }
 
-export function ServiceScreen({ metrics, onHome, onMount, onUnmount }: ServiceScreenProps) {
+export function ServiceScreen({ metrics, onHome, onControl, onMount, onUnmount }: ServiceScreenProps) {
   // Notify parent when screen is mounted/unmounted (for polling control)
   useEffect(() => {
     onMount?.();
@@ -34,7 +35,7 @@ export function ServiceScreen({ metrics, onHome, onMount, onUnmount }: ServiceSc
     <div className="flex-1 flex flex-col overflow-hidden bg-industrial-dark">
       <div className="border-b bg-industrial-dark px-4 py-3">
         <div className="max-w-6xl mx-auto">
-          <SubPageHeader title="Service" onHome={onHome} />
+          <SubPageHeader title="Service" onHome={onControl} />
         </div>
       </div>
 
