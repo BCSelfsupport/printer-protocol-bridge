@@ -64,7 +64,8 @@ const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectr
 export function usePrinterConnection() {
   const { printers, addPrinter, removePrinter, updatePrinterStatus, updatePrinter } = usePrinterStorage();
   const [isChecking, setIsChecking] = useState(false);
-  const [availabilityPollingEnabled, setAvailabilityPollingEnabled] = useState(true);
+  // Default OFF to prevent printer UI flashing on app start
+  const [availabilityPollingEnabled, setAvailabilityPollingEnabled] = useState(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     isConnected: false,
     connectedPrinter: null,
@@ -150,6 +151,8 @@ export function usePrinterConnection() {
   }, [availabilityPollingEnabled, printers.length, checkPrinterStatus]);
 
   const markAllNotReady = useCallback(() => {
+    // Also pause polling so the status sticks
+    setAvailabilityPollingEnabled(false);
     printers.forEach((p) => {
       updatePrinterStatus(p.id, {
         isAvailable: false,
