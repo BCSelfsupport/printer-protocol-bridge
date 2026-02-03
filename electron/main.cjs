@@ -56,6 +56,8 @@ function createWindow() {
 
 // TCP connection management
 const connections = new Map();
+// Store last-known connection details so we can reconnect on demand.
+const printerMeta = new Map();
 
 ipcMain.handle('printer:check-status', async (event, printers) => {
   const results = await Promise.all(
@@ -119,6 +121,9 @@ ipcMain.handle('printer:check-status', async (event, printers) => {
 
 ipcMain.handle('printer:connect', async (event, printer) => {
   return new Promise((resolve, reject) => {
+    // Persist metadata for on-demand reconnects (e.g. printer closes telnet socket after a command)
+    printerMeta.set(printer.id, { ipAddress: printer.ipAddress, port: printer.port });
+
     // Close existing connection if any
     const existing = connections.get(printer.id);
     if (existing) {
@@ -173,28 +178,96 @@ ipcMain.handle('printer:disconnect', async (event, printerId) => {
 });
 
 ipcMain.handle('printer:send-command', async (event, { printerId, command }) => {
-  const socket = connections.get(printerId);
-  if (!socket) {
-    throw new Error('Printer not connected');
-  }
+  const meta = printerMeta.get(printerId);
+  const existing = connections.get(printerId);
 
-  return new Promise((resolve, reject) => {
-    socket.write(command + '\r', (err) => {
-      if (err) {
-        reject({ success: false, error: err.message });
-      } else {
-        // Wait for response
-        let data = '';
-        const onData = (chunk) => {
-          data += chunk.toString();
-        };
-        socket.on('data', onData);
+  // Many telnet-style embedded servers will close the socket after sending a response.
+  // To make testing fast/reliable, fall back to an on-demand socket when needed.
+  const canUseExisting = !!(existing && !existing.destroyed && existing.writable);
 
-        setTimeout(() => {
-          socket.off('data', onData);
-          resolve({ success: true, response: data });
-        }, 500);
+  const getSocket = async () => {
+    if (canUseExisting) return { socket: existing, ephemeral: false };
+    if (!meta) throw new Error('Printer not connected');
+
+    return await new Promise((resolve, reject) => {
+      const socket = new net.Socket();
+      socket.setTimeout(5000);
+      socket.setKeepAlive(true, 5000);
+
+      socket.once('connect', () => {
+        connections.set(printerId, socket);
+        resolve({ socket, ephemeral: true });
+      });
+
+      socket.once('timeout', () => {
+        socket.destroy();
+        connections.delete(printerId);
+        reject(new Error('Connection timeout'));
+      });
+
+      socket.once('error', (err) => {
+        socket.destroy();
+        connections.delete(printerId);
+        reject(err);
+      });
+
+      socket.once('close', () => {
+        connections.delete(printerId);
+        mainWindow?.webContents.send('printer:connection-lost', { printerId });
+      });
+
+      socket.connect(meta.port, meta.ipAddress);
+    });
+  };
+
+  const { socket, ephemeral } = await getSocket();
+
+  return await new Promise((resolve, reject) => {
+    let response = '';
+
+    const cleanup = () => {
+      socket.off('data', onData);
+      socket.off('error', onError);
+      socket.off('close', onClose);
+      socket.setTimeout(0);
+      // If we had to create a new socket just for this send, don't try to keep it alive.
+      // (The printer often closes anyway; closing quickly avoids a noisy reconnect loop.)
+      if (ephemeral && !socket.destroyed) socket.destroy();
+    };
+
+    const finish = () => {
+      cleanup();
+      resolve({ success: true, response });
+    };
+
+    const onError = (err) => {
+      cleanup();
+      reject({ success: false, error: err.message });
+    };
+
+    const onClose = () => {
+      // If it closed after we got data, still treat as success.
+      // If it closed before any data, surface it.
+      if (response.length > 0) finish();
+      else {
+        cleanup();
+        reject({ success: false, error: 'Connection closed by printer' });
       }
+    };
+
+    const onData = (chunk) => {
+      response += chunk.toString();
+    };
+
+    socket.on('data', onData);
+    socket.once('error', onError);
+    socket.once('close', onClose);
+
+    socket.write(command + '\r', (err) => {
+      if (err) return onError(err);
+      // Give the printer a moment to respond; many responses include a trailing ">" prompt.
+      // We purposely keep this short to make iterative testing fast.
+      setTimeout(finish, 650);
     });
   });
 });
