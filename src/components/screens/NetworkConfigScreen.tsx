@@ -2,8 +2,10 @@ import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CommandTerminal } from '@/components/terminal/CommandTerminal';
+
+const STORAGE_KEY = 'printer-network-settings';
 
 interface NetworkSettings {
   ipAddress: string;
@@ -14,27 +16,52 @@ interface NetworkSettings {
   port: string;
 }
 
+const defaultSettings: NetworkSettings = {
+  ipAddress: '192.168.1.100',
+  subnetMask: '255.255.255.0',
+  gateway: '192.168.1.1',
+  dns1: '8.8.8.8',
+  dns2: '8.8.4.4',
+  port: '23',
+};
+
 interface NetworkConfigScreenProps {
   onHome: () => void;
 }
 
 export function NetworkConfigScreen({ onHome }: NetworkConfigScreenProps) {
-  const [settings, setSettings] = useState<NetworkSettings>({
-    ipAddress: '192.168.1.100',
-    subnetMask: '255.255.255.0',
-    gateway: '192.168.1.1',
-    dns1: '8.8.8.8',
-    dns2: '8.8.4.4',
-    port: '23',
+  const [settings, setSettings] = useState<NetworkSettings>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        return { ...defaultSettings, ...JSON.parse(saved) };
+      }
+    } catch (e) {
+      console.error('Failed to load network settings:', e);
+    }
+    return defaultSettings;
   });
 
   const handleChange = (field: keyof NetworkSettings, value: string) => {
-    setSettings(prev => ({ ...prev, [field]: value }));
+    setSettings(prev => {
+      const updated = { ...prev, [field]: value };
+      // Auto-save on change
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Failed to save network settings:', e);
+      }
+      return updated;
+    });
   };
 
   const handleSave = () => {
-    // TODO: Save network settings
-    console.log('Saving network settings:', settings);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+      console.log('Network settings saved:', settings);
+    } catch (e) {
+      console.error('Failed to save network settings:', e);
+    }
     onHome();
   };
 
