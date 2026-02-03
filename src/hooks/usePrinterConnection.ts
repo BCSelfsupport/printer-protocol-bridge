@@ -292,20 +292,78 @@ export function usePrinterConnection() {
   }, [connectionState.connectedPrinter, updatePrinter]);
 
   const startPrint = useCallback(async () => {
-    if (!connectionState.status) return;
-    setConnectionState(prev => ({
-      ...prev,
-      status: prev.status ? { ...prev.status, isRunning: true } : null,
-    }));
-  }, [connectionState.status]);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) return;
+    
+    // Send ^PR 1 command to enable printing (HV on)
+    if (isElectron && window.electronAPI) {
+      try {
+        // Ensure socket is connected before sending command
+        await window.electronAPI.printer.connect({
+          id: connectionState.connectedPrinter.id,
+          ipAddress: connectionState.connectedPrinter.ipAddress,
+          port: connectionState.connectedPrinter.port,
+        });
+        
+        const result = await window.electronAPI.printer.sendCommand(
+          connectionState.connectedPrinter.id,
+          '^PR 1'
+        );
+        console.log('[startPrint] ^PR 1 response:', result);
+        
+        if (result.success) {
+          setConnectionState(prev => ({
+            ...prev,
+            status: prev.status ? { ...prev.status, isRunning: true } : null,
+          }));
+        }
+      } catch (e) {
+        console.error('[startPrint] Failed to send ^PR 1:', e);
+      }
+    } else {
+      // Mock for web preview
+      setConnectionState(prev => ({
+        ...prev,
+        status: prev.status ? { ...prev.status, isRunning: true } : null,
+      }));
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
   const stopPrint = useCallback(async () => {
-    if (!connectionState.status) return;
-    setConnectionState(prev => ({
-      ...prev,
-      status: prev.status ? { ...prev.status, isRunning: false } : null,
-    }));
-  }, [connectionState.status]);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) return;
+    
+    // Send ^PR 0 command to disable printing (HV off)
+    if (isElectron && window.electronAPI) {
+      try {
+        // Ensure socket is connected before sending command
+        await window.electronAPI.printer.connect({
+          id: connectionState.connectedPrinter.id,
+          ipAddress: connectionState.connectedPrinter.ipAddress,
+          port: connectionState.connectedPrinter.port,
+        });
+        
+        const result = await window.electronAPI.printer.sendCommand(
+          connectionState.connectedPrinter.id,
+          '^PR 0'
+        );
+        console.log('[stopPrint] ^PR 0 response:', result);
+        
+        if (result.success) {
+          setConnectionState(prev => ({
+            ...prev,
+            status: prev.status ? { ...prev.status, isRunning: false } : null,
+          }));
+        }
+      } catch (e) {
+        console.error('[stopPrint] Failed to send ^PR 0:', e);
+      }
+    } else {
+      // Mock for web preview
+      setConnectionState(prev => ({
+        ...prev,
+        status: prev.status ? { ...prev.status, isRunning: false } : null,
+      }));
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
   const updateSettings = useCallback((newSettings: Partial<PrintSettings>) => {
     setConnectionState(prev => ({
