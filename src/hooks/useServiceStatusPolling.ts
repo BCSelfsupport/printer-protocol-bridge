@@ -15,11 +15,19 @@ export function useServiceStatusPolling(options: {
   const {
     enabled,
     printerId,
-    intervalMs = 1000,
+    intervalMs = 3000, // slower default to reduce printer display flicker
     command = "^SU",
     onResponse,
     onError,
   } = options;
+
+  // Store callbacks in refs to avoid effect re-runs when they change identity
+  const onResponseRef = useRef(onResponse);
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onResponseRef.current = onResponse;
+    onErrorRef.current = onError;
+  });
 
   const inFlightRef = useRef(false);
 
@@ -39,12 +47,12 @@ export function useServiceStatusPolling(options: {
         const result = await window.electronAPI!.printer.sendCommand(printerId, command);
         if (cancelled) return;
         if (result.success && typeof result.response === "string") {
-          onResponse(result.response);
+          onResponseRef.current(result.response);
         } else if (!result.success) {
-          onError?.(new Error(result.error || "Command failed"));
+          onErrorRef.current?.(new Error(result.error || "Command failed"));
         }
       } catch (e) {
-        if (!cancelled) onError?.(e);
+        if (!cancelled) onErrorRef.current?.(e);
       } finally {
         inFlightRef.current = false;
       }
@@ -58,5 +66,5 @@ export function useServiceStatusPolling(options: {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [enabled, printerId, intervalMs, command, onResponse, onError]);
+  }, [enabled, printerId, intervalMs, command]);
 }
