@@ -140,19 +140,15 @@ export function Dashboard({
         </div>
 
         {/* Count panel */}
-        <div className="bg-primary text-primary-foreground rounded-lg p-4 min-w-[180px]">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm">Product count:</span>
-            <span className="font-bold">{status?.productCount ?? 0}</span>
+        <div className="bg-primary text-primary-foreground rounded-lg p-6 min-w-[200px]">
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-lg">Product count:</span>
+            <span className="font-bold text-3xl">{status?.productCount ?? 0}</span>
           </div>
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-sm">Print count:</span>
-            <span className="font-bold">{status?.printCount ?? 0}</span>
+          <div className="flex justify-between items-center">
+            <span className="text-lg">Print count:</span>
+            <span className="font-bold text-3xl">{status?.printCount ?? 0}</span>
           </div>
-          <button className="w-full bg-card text-foreground rounded py-2 flex items-center justify-center gap-2">
-            <span className="text-2xl font-mono">0 1 2</span>
-            <span className="text-primary font-medium">Count</span>
-          </button>
         </div>
       </div>
 
