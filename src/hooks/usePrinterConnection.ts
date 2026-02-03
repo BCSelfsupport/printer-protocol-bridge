@@ -195,6 +195,15 @@ export function usePrinterConnection() {
     const hvOn = parsed.hvDeflection ?? false;
     console.log('[handleServiceResponse] Parsed HV state (hvDeflection):', hvOn, 'raw hvDeflection:', parsed.hvDeflection);
 
+    // Sync the printer's status in the list with the HV state
+    if (connectedPrinterId) {
+      updatePrinterStatus(connectedPrinterId, {
+        isAvailable: true,
+        status: hvOn ? 'ready' : 'not_ready',
+        hasActiveErrors: false,
+      });
+    }
+
     setConnectionState((prev) => {
       const previous = prev.metrics ?? mockMetrics;
 
@@ -220,7 +229,7 @@ export function usePrinterConnection() {
         },
       };
     });
-  }, []);
+  }, [connectedPrinterId, updatePrinterStatus]);
 
   useServiceStatusPolling({
     enabled: shouldPollStatus,
