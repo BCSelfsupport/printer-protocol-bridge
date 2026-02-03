@@ -3,7 +3,18 @@ import { Printer } from '@/types/printer';
 
 const STORAGE_KEY = 'codesync-printers';
 
-const getDefaultPrinters = (): Printer[] => [];
+const getDefaultPrinters = (): Printer[] => [
+  {
+    id: 1,
+    name: 'Printer 1',
+    ipAddress: '192.168.1.55',
+    port: 23,
+    isConnected: false,
+    isAvailable: false,
+    status: 'offline',
+    hasActiveErrors: false,
+  },
+];
 
 export function usePrinterStorage() {
   const [printers, setPrinters] = useState<Printer[]>(() => {
