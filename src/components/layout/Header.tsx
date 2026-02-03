@@ -16,17 +16,17 @@ export function Header({ isConnected, connectedIp }: HeaderProps) {
 
   return (
     <header className="flex items-center justify-between px-4 py-2 bg-muted">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1">
-          <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-cyan-400 via-blue-500 to-blue-600 bg-clip-text text-transparent">
-            JET
+      <div className="flex items-center gap-2">
+        <div className="flex items-baseline">
+          <span className="text-2xl font-bold italic text-blue-600">
+            print
           </span>
-          <span className="text-2xl font-black tracking-tight text-foreground">
-            STREAM
+          <span className="text-2xl font-bold italic text-emerald-500">
+            pulse
           </span>
-          <div className="ml-2 px-2 py-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded text-[10px] font-bold text-white uppercase tracking-wider">
-            Pro
-          </div>
+        </div>
+        <div className="px-2 py-0.5 bg-gradient-to-r from-blue-600 to-emerald-500 rounded text-[10px] font-bold text-white uppercase tracking-wider">
+          Pro
         </div>
       </div>
 
