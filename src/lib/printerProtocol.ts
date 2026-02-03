@@ -22,6 +22,7 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
     vltOn: boolean;
     gutOn: boolean;
     modOn: boolean;
+    hvOn: boolean;
   };
 } | null {
   // Debug: log raw response to console (Electron dev tools)
@@ -51,18 +52,20 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
   const inkLevel = extract(/INK\s*:\s*(\w+)/i) || 'UNKNOWN';
   const makeupLevel = extract(/MAKEUP\s*:\s*(\w+)/i) || 'UNKNOWN';
 
-  // V300UP:1 VLT_ON:1 GUT_ON:1 MOD_ON:1
+  // V300UP:1 VLT_ON:1 GUT_ON:1 MOD_ON:1 HV_ON:1
   const v300up = extract(/V300UP\s*:\s*(\d)/i) === '1';
   const vltOn = extract(/VLT_ON\s*:\s*(\d)/i) === '1';
   const gutOn = extract(/GUT_ON\s*:\s*(\d)/i) === '1';
   const modOn = extract(/MOD_ON\s*:\s*(\d)/i) === '1';
+  // HV status from HVDeflection field (1 = HV on, 0 = HV off)
+  const hvOn = hvDeflection;
 
   // Print Status: Ready (or similar)
   const printStatus = extract(/Print\s*Status\s*:\s*(.+?)(?:\r|\n|$)/i)?.trim() || 'Unknown';
 
   console.log('[parseStatusResponse] parsed:', {
     modulation, charge, pressure, rps, phaseQual, hvDeflection, viscosity,
-    inkLevel, makeupLevel, printStatus, v300up, vltOn, gutOn, modOn,
+    inkLevel, makeupLevel, printStatus, v300up, vltOn, gutOn, modOn, hvOn,
   });
 
   return {
@@ -81,6 +84,7 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
       vltOn,
       gutOn,
       modOn,
+      hvOn,
     },
   };
 }
