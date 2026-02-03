@@ -51,26 +51,26 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
   const inkLevel = extract(/INK\s*:\s*(\w+)/i) || 'UNKNOWN';
   const makeupLevel = extract(/MAKEUP\s*:\s*(\w+)/i) || 'UNKNOWN';
 
-  // V300UP:1 VLT_ON:1 GUT_ON:1 MOD_ON:1
-  // Note: Some firmware reports subsystem flags with NORMAL logic: 1 = ON, 0 = OFF.
-  // We treat these as ON when the value is "1" so HV can correctly reflect the printer's
-  // green/ready state on startup.
+  // V300UP:1 VLT_ON:1 GUT_ON:1 MOD_ON:1 (or MLT_ON in some firmware)
+  // Note: Per v2.0 protocol, these flags use NORMAL logic: 1 = ON, 0 = OFF.
   const v300up = extract(/V300UP\s*:\s*(\d)/i) === '1';
-  const vltOn = extract(/VLT_ON\s*:\s*(\d)/i) === '1';
+  const vltOn = extract(/(?:VLT|MLT)_ON\s*:\s*(\d)/i) === '1';
   const gutOn = extract(/GUT_ON\s*:\s*(\d)/i) === '1';
   const modOn = extract(/MOD_ON\s*:\s*(\d)/i) === '1';
 
   // Debug: log raw subsystem values
   console.log('[parseStatusResponse] raw subsystem values:', {
     V300UP: extract(/V300UP\s*:\s*(\d)/i),
-    VLT_ON: extract(/VLT_ON\s*:\s*(\d)/i),
+    VLT_ON: extract(/(?:VLT|MLT)_ON\s*:\s*(\d)/i),
     GUT_ON: extract(/GUT_ON\s*:\s*(\d)/i),
     MOD_ON: extract(/MOD_ON\s*:\s*(\d)/i),
+    HVDeflection: extract(/HVDeflection\[\s*(\d)\s*\]/i),
   });
 
-  // Print Status: Derive from V300UP (HV state) - printer is only ready when HV is on
-  // The printer's "Print Status" line may not update when HV toggles, so we override based on V300UP
-  const printStatus = v300up ? 'Ready' : 'Not ready';
+  // HV status: Per v2.0 protocol, HVDeflection[1] = HV ON, HVDeflection[0] = HV OFF.
+  // This is the authoritative field for whether printing is enabled.
+  // V300UP may stay at 1 even when HV is toggled off, so we use HVDeflection instead.
+  const printStatus = hvDeflection ? 'Ready' : 'Not ready';
 
   console.log('[parseStatusResponse] parsed:', {
     modulation, charge, pressure, rps, phaseQual, hvDeflection, viscosity,
