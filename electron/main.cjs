@@ -59,6 +59,64 @@ const connections = new Map();
 // Store last-known connection details so we can reconnect on demand.
 const printerMeta = new Map();
 
+// --- Telnet helpers (port 23) ---
+// Some embedded Telnet servers immediately close if the client doesn't respond
+// to option negotiation (IAC sequences). We implement a minimal "refuse everything"
+// negotiation to keep the socket open.
+const TELNET = {
+  IAC: 255,
+  DONT: 254,
+  DO: 253,
+  WONT: 252,
+  WILL: 251,
+  SB: 250,
+  SE: 240,
+};
+
+function handleTelnetNegotiation(socket, buf) {
+  if (!Buffer.isBuffer(buf) || buf.length === 0) return false;
+  if (!buf.includes(TELNET.IAC)) return false;
+
+  const replies = [];
+  for (let i = 0; i < buf.length; i++) {
+    if (buf[i] !== TELNET.IAC) continue;
+    const cmd = buf[i + 1];
+    const opt = buf[i + 2];
+    if (cmd == null) break;
+
+    // Subnegotiation: IAC SB ... IAC SE
+    if (cmd === TELNET.SB) {
+      i += 2;
+      while (i < buf.length - 1) {
+        if (buf[i] === TELNET.IAC && buf[i + 1] === TELNET.SE) {
+          i += 1;
+          break;
+        }
+        i += 1;
+      }
+      continue;
+    }
+
+    if (opt == null) break;
+
+    // Refuse all options: DO/WILL -> WONT/DONT
+    if (cmd === TELNET.DO) replies.push(Buffer.from([TELNET.IAC, TELNET.WONT, opt]));
+    else if (cmd === TELNET.WILL) replies.push(Buffer.from([TELNET.IAC, TELNET.DONT, opt]));
+
+    i += 2;
+  }
+
+  if (replies.length) {
+    try {
+      socket.write(Buffer.concat(replies));
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  return true;
+}
+
 ipcMain.handle('printer:check-status', async (event, printers) => {
   const results = await Promise.all(
     printers.map(async (printer) => {
@@ -138,6 +196,15 @@ ipcMain.handle('printer:connect', async (event, printer) => {
     socket.on('connect', () => {
       connections.set(printer.id, socket);
       console.log(`[printer:connect] Connected to ${printer.ipAddress}:${printer.port}`);
+
+      // Poke the server to elicit its prompt/banner and keep the session alive.
+      // (Safe for telnet servers; ignored by most command parsers.)
+      try {
+        socket.write('\r\n');
+      } catch (_) {
+        // ignore
+      }
+
       resolve({ success: true });
     });
 
@@ -160,6 +227,9 @@ ipcMain.handle('printer:connect', async (event, printer) => {
     });
 
     socket.on('data', (data) => {
+      // Telnet negotiation (respond before logging so logs stay readable)
+      const consumed = handleTelnetNegotiation(socket, data);
+      if (consumed) return;
       // Log incoming data for debugging
       console.log(`[printer:data] ${printer.id}:`, data.toString());
     });
@@ -256,6 +326,8 @@ ipcMain.handle('printer:send-command', async (event, { printerId, command }) => 
     };
 
     const onData = (chunk) => {
+      // Strip/handle telnet negotiation bytes so they don't pollute responses.
+      if (handleTelnetNegotiation(socket, chunk)) return;
       response += chunk.toString();
     };
 
