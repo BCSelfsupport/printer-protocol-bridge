@@ -5,15 +5,19 @@ interface HeaderProps {
   isConnected: boolean;
   connectedIp?: string;
   onSettings?: () => void;
+  printerTime?: Date | null;
 }
 
-export function Header({ isConnected, connectedIp, onSettings }: HeaderProps) {
+export function Header({ isConnected, connectedIp, onSettings, printerTime }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Use printer time when connected, otherwise use local time
+  const displayTime = isConnected && printerTime ? printerTime : currentTime;
 
   return (
     <header className="flex items-center justify-between px-4 py-2 bg-muted">
@@ -53,10 +57,10 @@ export function Header({ isConnected, connectedIp, onSettings }: HeaderProps) {
 
         <div className="text-right text-foreground">
           <div className="text-lg font-medium">
-            {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            {displayTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </div>
           <div className="text-sm">
-            {currentTime.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}
+            {displayTime.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}
           </div>
         </div>
       </div>

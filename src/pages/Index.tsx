@@ -106,6 +106,7 @@ const Index = () => {
         isConnected={connectionState.isConnected}
         connectedIp={connectionState.connectedPrinter?.ipAddress}
         onSettings={() => setCurrentScreen('network')}
+        printerTime={connectionState.status?.printerTime}
       />
 
       <main className="flex-1 flex flex-col">
