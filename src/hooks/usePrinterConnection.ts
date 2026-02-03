@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Printer, PrinterStatus, PrinterMetrics, PrintMessage, PrintSettings, ConnectionState } from '@/types/printer';
+import { supabase } from '@/integrations/supabase/client';
 
 const defaultSettings: PrintSettings = {
   width: 15,
@@ -13,11 +14,11 @@ const defaultSettings: PrintSettings = {
   repeatAmount: 0,
 };
 
-const mockPrinters: Printer[] = [
-  { id: 1, name: 'Printer 1', ipAddress: '192.168.1.55', port: 23, isConnected: false, isAvailable: true, status: 'not_ready', hasActiveErrors: true },
+const initialPrinters: Printer[] = [
+  { id: 1, name: 'Printer 1', ipAddress: '192.168.1.55', port: 23, isConnected: false, isAvailable: false, status: 'offline', hasActiveErrors: false },
   { id: 2, name: 'Printer 2', ipAddress: '192.168.1.53', port: 23, isConnected: false, isAvailable: false, status: 'offline', hasActiveErrors: false },
   { id: 3, name: 'Printer 3', ipAddress: '192.168.1.57', port: 23, isConnected: false, isAvailable: false, status: 'offline', hasActiveErrors: false },
-  { id: 4, name: 'Printer 1', ipAddress: '192.168.1.54', port: 23, isConnected: false, isAvailable: false, status: 'offline', hasActiveErrors: false },
+  { id: 4, name: 'Printer 4', ipAddress: '192.168.1.54', port: 23, isConnected: false, isAvailable: false, status: 'offline', hasActiveErrors: false },
 ];
 
 const mockMessages: PrintMessage[] = [
@@ -52,7 +53,8 @@ const mockMetrics: PrinterMetrics = {
 };
 
 export function usePrinterConnection() {
-  const [printers, setPrinters] = useState<Printer[]>(mockPrinters);
+  const [printers, setPrinters] = useState<Printer[]>(initialPrinters);
+  const [isChecking, setIsChecking] = useState(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     isConnected: false,
     connectedPrinter: null,
@@ -61,6 +63,55 @@ export function usePrinterConnection() {
     settings: defaultSettings,
     messages: [],
   });
+
+  // Check printer availability via edge function
+  const checkPrinterStatus = useCallback(async () => {
+    if (isChecking) return;
+    
+    setIsChecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('check-printer-status', {
+        body: {
+          printers: printers.map(p => ({
+            id: p.id,
+            ipAddress: p.ipAddress,
+            port: p.port,
+          })),
+        },
+      });
+
+      if (error) {
+        console.error('Error checking printer status:', error);
+        return;
+      }
+
+      if (data?.printers) {
+        setPrinters(prev => prev.map(printer => {
+          const status = data.printers.find((s: { id: number }) => s.id === printer.id);
+          if (status) {
+            return {
+              ...printer,
+              isAvailable: status.isAvailable,
+              status: status.status,
+              hasActiveErrors: status.status === 'error',
+            };
+          }
+          return printer;
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to check printer status:', err);
+    } finally {
+      setIsChecking(false);
+    }
+  }, [printers, isChecking]);
+
+  // Poll printer status every 5 seconds
+  useEffect(() => {
+    checkPrinterStatus();
+    const interval = setInterval(checkPrinterStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const connect = useCallback(async (printer: Printer) => {
     // Simulate connection
@@ -126,11 +177,13 @@ export function usePrinterConnection() {
   return {
     printers,
     connectionState,
+    isChecking,
     connect,
     disconnect,
     startPrint,
     stopPrint,
     updateSettings,
     selectMessage,
+    checkPrinterStatus,
   };
 }
