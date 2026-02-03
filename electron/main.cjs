@@ -197,14 +197,6 @@ ipcMain.handle('printer:connect', async (event, printer) => {
       connections.set(printer.id, socket);
       console.log(`[printer:connect] Connected to ${printer.ipAddress}:${printer.port}`);
 
-      // Poke the server to elicit its prompt/banner and keep the session alive.
-      // (Safe for telnet servers; ignored by most command parsers.)
-      try {
-        socket.write('\r\n');
-      } catch (_) {
-        // ignore
-      }
-
       resolve({ success: true });
     });
 
