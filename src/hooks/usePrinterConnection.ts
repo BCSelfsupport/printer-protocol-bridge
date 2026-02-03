@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Printer, PrinterStatus, PrinterMetrics, PrintMessage, PrintSettings, ConnectionState } from '@/types/printer';
 import { supabase } from '@/integrations/supabase/client';
+import '@/types/electron.d.ts';
 
 const defaultSettings: PrintSettings = {
   width: 15,
@@ -52,6 +53,9 @@ const mockMetrics: PrinterMetrics = {
   hvDeflection: true,
 };
 
+// Check if running in Electron
+const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
+
 export function usePrinterConnection() {
   const [printers, setPrinters] = useState<Printer[]>(initialPrinters);
   const [isChecking, setIsChecking] = useState(false);
@@ -64,30 +68,39 @@ export function usePrinterConnection() {
     messages: [],
   });
 
-  // Check printer availability via edge function
+  // Check printer availability - uses Electron TCP if available, otherwise cloud function
   const checkPrinterStatus = useCallback(async () => {
     if (isChecking) return;
     
     setIsChecking(true);
     try {
-      const { data, error } = await supabase.functions.invoke('check-printer-status', {
-        body: {
-          printers: printers.map(p => ({
-            id: p.id,
-            ipAddress: p.ipAddress,
-            port: p.port,
-          })),
-        },
-      });
+      const printerData = printers.map(p => ({
+        id: p.id,
+        ipAddress: p.ipAddress,
+        port: p.port,
+      }));
 
-      if (error) {
-        console.error('Error checking printer status:', error);
-        return;
+      let results;
+
+      if (isElectron && window.electronAPI) {
+        // Use Electron's native TCP sockets
+        results = await window.electronAPI.printer.checkStatus(printerData);
+      } else {
+        // Fallback to cloud function (won't work for local network, but keeps the code path)
+        const { data, error } = await supabase.functions.invoke('check-printer-status', {
+          body: { printers: printerData },
+        });
+
+        if (error) {
+          console.error('Error checking printer status:', error);
+          return;
+        }
+        results = data?.printers;
       }
 
-      if (data?.printers) {
+      if (results) {
         setPrinters(prev => prev.map(printer => {
-          const status = data.printers.find((s: { id: number }) => s.id === printer.id);
+          const status = results.find((s: { id: number }) => s.id === printer.id);
           if (status) {
             return {
               ...printer,
