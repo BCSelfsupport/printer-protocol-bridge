@@ -350,7 +350,11 @@ export function usePrinterConnection() {
   }, [connectionState.connectedPrinter, updatePrinter]);
 
   const startPrint = useCallback(async () => {
-    if (!connectionState.isConnected || !connectionState.connectedPrinter) return;
+    console.log('[startPrint] Called, isConnected:', connectionState.isConnected, 'printer:', connectionState.connectedPrinter?.id);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[startPrint] Not connected, aborting');
+      return;
+    }
     
     const printer = connectionState.connectedPrinter;
     
@@ -358,14 +362,17 @@ export function usePrinterConnection() {
     if (isElectron && window.electronAPI) {
       try {
         // Ensure socket is connected before sending command
-        await window.electronAPI.printer.connect({
+        console.log('[startPrint] Connecting to printer...');
+        const connectResult = await window.electronAPI.printer.connect({
           id: printer.id,
           ipAddress: printer.ipAddress,
           port: printer.port,
         });
+        console.log('[startPrint] Connect result:', connectResult);
         
+        console.log('[startPrint] Sending ^PR 1...');
         const result = await window.electronAPI.printer.sendCommand(printer.id, '^PR 1');
-        console.log('[startPrint] ^PR 1 response:', result);
+        console.log('[startPrint] ^PR 1 result:', JSON.stringify(result));
         
         if (result.success) {
           // Optimistically set state, then confirm with status query
@@ -376,12 +383,15 @@ export function usePrinterConnection() {
           
           // Query actual status after a brief delay to confirm
           setTimeout(() => queryPrinterStatus(printer), 800);
+        } else {
+          console.error('[startPrint] Command failed:', result.error);
         }
       } catch (e) {
         console.error('[startPrint] Failed to send ^PR 1:', e);
       }
     } else {
       // Mock for web preview
+      console.log('[startPrint] Web preview mock - toggling state');
       setConnectionState(prev => ({
         ...prev,
         status: prev.status ? { ...prev.status, isRunning: true } : null,
