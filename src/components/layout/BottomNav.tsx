@@ -18,6 +18,10 @@ const navItems: { id: NavItem; label: string; icon: React.ReactNode }[] = [
 ];
 
 export function BottomNav({ activeItem, onNavigate, onTurnOff, showPrinterControls = true }: BottomNavProps) {
+  if (!showPrinterControls) {
+    return null;
+  }
+
   return (
     <nav className="flex h-24 bg-sidebar">
       <button 
@@ -28,7 +32,7 @@ export function BottomNav({ activeItem, onNavigate, onTurnOff, showPrinterContro
         <span className="text-sm font-medium">Turn Off</span>
       </button>
 
-      {showPrinterControls && navItems.map((item) => (
+      {navItems.map((item) => (
         <button
           key={item.id}
           onClick={() => onNavigate(item.id)}
@@ -42,8 +46,6 @@ export function BottomNav({ activeItem, onNavigate, onTurnOff, showPrinterContro
           <span className="text-sm font-medium">{item.label}</span>
         </button>
       ))}
-      
-      {!showPrinterControls && <div className="flex-1 bg-sidebar" />}
     </nav>
   );
 }
