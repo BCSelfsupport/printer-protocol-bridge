@@ -51,23 +51,8 @@ export function PrintersScreen({
     }
   };
 
-  // Determine ready state from selected printer
-  const isReady = selectedPrinter?.status === 'ready';
-
   return (
-    <div className="flex-1 flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      {/* Status Banner */}
-      <div className={`w-full py-3 px-6 flex items-center justify-center transition-colors ${
-        isReady 
-          ? 'bg-gradient-to-r from-green-600 via-green-500 to-green-400' 
-          : 'bg-gradient-to-r from-red-700 via-red-600 to-red-500'
-      }`}>
-        <span className="text-xl font-bold text-white tracking-wide drop-shadow-md">
-          {isReady ? 'Ready' : 'Not Ready'}
-        </span>
-      </div>
-
-      <div className="flex-1 flex p-6 gap-6">
+    <div className="flex-1 flex bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6 gap-6">
       {/* Left Panel - Printer List */}
       <div className="w-96 flex flex-col bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
         {/* Header */}
@@ -155,7 +140,6 @@ export function PrintersScreen({
         onOpenChange={setAddDialogOpen}
         onAdd={onAddPrinter}
       />
-      </div>
     </div>
   );
 }
