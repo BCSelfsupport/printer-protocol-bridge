@@ -27,9 +27,6 @@ const Index = () => {
     addPrinter,
     removePrinter,
     setServiceScreenOpen,
-    availabilityPollingEnabled,
-    setAvailabilityPollingEnabled,
-    markAllNotReady,
   } = usePrinterConnection();
 
   const handleNavigate = (item: NavItem) => {
@@ -116,9 +113,6 @@ const Index = () => {
             onHome={handleHome}
             onAddPrinter={addPrinter}
             onRemovePrinter={removePrinter}
-            availabilityPollingEnabled={availabilityPollingEnabled}
-            onToggleAvailabilityPolling={() => setAvailabilityPollingEnabled((v) => !v)}
-            onMarkAllNotReady={markAllNotReady}
           />
         );
     }

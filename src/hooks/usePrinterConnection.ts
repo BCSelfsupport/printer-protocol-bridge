@@ -64,8 +64,8 @@ const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectr
 export function usePrinterConnection() {
   const { printers, addPrinter, removePrinter, updatePrinterStatus, updatePrinter } = usePrinterStorage();
   const [isChecking, setIsChecking] = useState(false);
-  // Default OFF to prevent printer UI flashing on app start
-  const [availabilityPollingEnabled, setAvailabilityPollingEnabled] = useState(false);
+  // Now using ICMP ping instead of TCP, so safe to enable by default
+  const [availabilityPollingEnabled, setAvailabilityPollingEnabled] = useState(true);
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     isConnected: false,
     connectedPrinter: null,
