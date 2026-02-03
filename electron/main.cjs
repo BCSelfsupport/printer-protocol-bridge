@@ -1,13 +1,22 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
-const { autoUpdater } = require('electron-updater');
 const net = require('net');
 const path = require('path');
 
 let mainWindow;
 
-// Auto-updater configuration
-autoUpdater.autoDownload = true;
-autoUpdater.autoInstallOnAppQuit = true;
+// Auto-updater (optional)
+const isDev = process.env.NODE_ENV === 'development';
+let autoUpdater;
+if (!isDev) {
+  try {
+    // electron-updater is only needed for packaged production builds.
+    ({ autoUpdater } = require('electron-updater'));
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = true;
+  } catch (e) {
+    console.warn('[auto-updater] electron-updater not installed; updates disabled');
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -23,8 +32,7 @@ function createWindow() {
 
   // In development, load from Vite dev server
   // In production, load the built files
-  const isDev = process.env.NODE_ENV === 'development';
-  
+
   if (isDev) {
     mainWindow.loadURL('http://localhost:8080');
     mainWindow.webContents.openDevTools();
@@ -34,7 +42,7 @@ function createWindow() {
 
   // Check for updates after window is ready
   mainWindow.once('ready-to-show', () => {
-    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater?.checkForUpdatesAndNotify?.();
   });
 }
 
@@ -159,25 +167,27 @@ ipcMain.handle('printer:send-command', async (event, { printerId, command }) => 
   });
 });
 
-// Auto-updater events
-autoUpdater.on('update-available', (info) => {
-  mainWindow?.webContents.send('update-available', info);
-});
+if (autoUpdater) {
+  // Auto-updater events
+  autoUpdater.on('update-available', (info) => {
+    mainWindow?.webContents.send('update-available', info);
+  });
 
-autoUpdater.on('update-downloaded', (info) => {
-  mainWindow?.webContents.send('update-downloaded', info);
-});
+  autoUpdater.on('update-downloaded', (info) => {
+    mainWindow?.webContents.send('update-downloaded', info);
+  });
 
-autoUpdater.on('error', (err) => {
-  console.error('Auto-updater error:', err);
-});
+  autoUpdater.on('error', (err) => {
+    console.error('Auto-updater error:', err);
+  });
+}
 
 ipcMain.handle('app:check-for-updates', () => {
-  autoUpdater.checkForUpdatesAndNotify();
+  autoUpdater?.checkForUpdatesAndNotify?.();
 });
 
 ipcMain.handle('app:install-update', () => {
-  autoUpdater.quitAndInstall();
+  autoUpdater?.quitAndInstall?.();
 });
 
 ipcMain.handle('app:get-version', () => {
