@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Settings } from 'lucide-react';
-import bestcodeLogo from '@/assets/bestcode-logo.png';
 
 interface HeaderProps {
   isConnected: boolean;
@@ -18,7 +17,17 @@ export function Header({ isConnected, connectedIp }: HeaderProps) {
   return (
     <header className="flex items-center justify-between px-4 py-2 bg-muted">
       <div className="flex items-center gap-3">
-        <img src={bestcodeLogo} alt="BestCode" className="h-10" />
+        <div className="flex items-center gap-1">
+          <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-cyan-400 via-blue-500 to-blue-600 bg-clip-text text-transparent">
+            JET
+          </span>
+          <span className="text-2xl font-black tracking-tight text-foreground">
+            STREAM
+          </span>
+          <div className="ml-2 px-2 py-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded text-[10px] font-bold text-white uppercase tracking-wider">
+            Pro
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
