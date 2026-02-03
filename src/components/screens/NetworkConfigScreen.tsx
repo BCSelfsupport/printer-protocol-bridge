@@ -17,7 +17,7 @@ interface NetworkSettings {
 }
 
 const defaultSettings: NetworkSettings = {
-  ipAddress: '192.168.1.100',
+  ipAddress: '192.168.1.55',
   subnetMask: '255.255.255.0',
   gateway: '192.168.1.1',
   dns1: '8.8.8.8',
