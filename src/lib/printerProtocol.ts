@@ -52,11 +52,13 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
   const makeupLevel = extract(/MAKEUP\s*:\s*(\w+)/i) || 'UNKNOWN';
 
   // V300UP:1 VLT_ON:1 GUT_ON:1 MOD_ON:1
-  // Note: V300UP is the HV (high voltage) indicator - INVERTED: 0 = ON, 1 = OFF
-  const v300up = extract(/V300UP\s*:\s*(\d)/i) === '0';
-  const vltOn = extract(/VLT_ON\s*:\s*(\d)/i) === '0';
-  const gutOn = extract(/GUT_ON\s*:\s*(\d)/i) === '0';
-  const modOn = extract(/MOD_ON\s*:\s*(\d)/i) === '0';
+  // Note: Some firmware reports subsystem flags with NORMAL logic: 1 = ON, 0 = OFF.
+  // We treat these as ON when the value is "1" so HV can correctly reflect the printer's
+  // green/ready state on startup.
+  const v300up = extract(/V300UP\s*:\s*(\d)/i) === '1';
+  const vltOn = extract(/VLT_ON\s*:\s*(\d)/i) === '1';
+  const gutOn = extract(/GUT_ON\s*:\s*(\d)/i) === '1';
+  const modOn = extract(/MOD_ON\s*:\s*(\d)/i) === '1';
 
   // Debug: log raw subsystem values
   console.log('[parseStatusResponse] raw subsystem values:', {
