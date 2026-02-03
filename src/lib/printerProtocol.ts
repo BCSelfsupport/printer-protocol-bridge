@@ -52,11 +52,19 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
   const makeupLevel = extract(/MAKEUP\s*:\s*(\w+)/i) || 'UNKNOWN';
 
   // V300UP:1 VLT_ON:1 GUT_ON:1 MOD_ON:1
-  // Note: V300UP is the HV (high voltage) indicator
+  // Note: V300UP is the HV (high voltage) indicator - 1 = ON, 0 = OFF
   const v300up = extract(/V300UP\s*:\s*(\d)/i) === '1';
   const vltOn = extract(/VLT_ON\s*:\s*(\d)/i) === '1';
   const gutOn = extract(/GUT_ON\s*:\s*(\d)/i) === '1';
   const modOn = extract(/MOD_ON\s*:\s*(\d)/i) === '1';
+
+  // Debug: log raw subsystem values
+  console.log('[parseStatusResponse] raw subsystem values:', {
+    V300UP: extract(/V300UP\s*:\s*(\d)/i),
+    VLT_ON: extract(/VLT_ON\s*:\s*(\d)/i),
+    GUT_ON: extract(/GUT_ON\s*:\s*(\d)/i),
+    MOD_ON: extract(/MOD_ON\s*:\s*(\d)/i),
+  });
 
   // Print Status: Ready (or similar)
   const printStatus = extract(/Print\s*Status\s*:\s*(.+?)(?:\r|\n|$)/i)?.trim() || 'Unknown';
