@@ -118,6 +118,37 @@ function handleTelnetNegotiation(socket, buf) {
   return true;
 }
 
+// Helper to strip Telnet IAC sequences from a buffer
+function stripTelnetBytes(buf) {
+  if (!Buffer.isBuffer(buf)) return buf;
+  const result = [];
+  for (let i = 0; i < buf.length; i++) {
+    if (buf[i] === TELNET.IAC) {
+      const cmd = buf[i + 1];
+      if (cmd === TELNET.SB) {
+        // Skip until IAC SE
+        i += 2;
+        while (i < buf.length - 1) {
+          if (buf[i] === TELNET.IAC && buf[i + 1] === TELNET.SE) {
+            i += 1;
+            break;
+          }
+          i += 1;
+        }
+      } else if (cmd >= TELNET.SE) {
+        // 3-byte command: IAC CMD OPT
+        i += 2;
+      } else {
+        // 2-byte command: IAC CMD
+        i += 1;
+      }
+    } else {
+      result.push(buf[i]);
+    }
+  }
+  return Buffer.from(result);
+}
+
 ipcMain.handle('printer:check-status', async (event, printers) => {
   // IMPORTANT:
   // Background reachability checks must NOT connect to the printer's Telnet port.
@@ -194,11 +225,30 @@ ipcMain.handle('printer:connect', async (event, printer) => {
     socket.setTimeout(10000); // Increase timeout
     socket.setKeepAlive(true, 5000); // Enable keep-alive
 
-    socket.on('connect', () => {
-      connections.set(printer.id, socket);
-      console.log(`[printer:connect] Connected to ${printer.ipAddress}:${printer.port}`);
+    let resolved = false;
+    let telnetHandshakeComplete = false;
+    let handshakeTimer = null;
 
+    const finishConnect = () => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(handshakeTimer);
+      connections.set(printer.id, socket);
+      console.log(`[printer:connect] Connection ready for ${printer.ipAddress}:${printer.port}`);
       resolve({ success: true });
+    };
+
+    socket.on('connect', () => {
+      console.log(`[printer:connect] TCP connected to ${printer.ipAddress}:${printer.port}`);
+      
+      // Wait briefly for Telnet negotiation before declaring success
+      // This gives the printer time to send IAC sequences
+      handshakeTimer = setTimeout(() => {
+        if (!telnetHandshakeComplete) {
+          console.log(`[printer:connect] No Telnet negotiation received, proceeding`);
+        }
+        finishConnect();
+      }, 300);
     });
 
     socket.on('timeout', () => {
@@ -208,21 +258,43 @@ ipcMain.handle('printer:connect', async (event, printer) => {
 
     socket.on('error', (err) => {
       console.error(`[printer:connect] Socket error for ${printer.id}:`, err.message);
+      clearTimeout(handshakeTimer);
       connections.delete(printer.id);
-      reject({ success: false, error: err.message });
+      if (!resolved) {
+        resolved = true;
+        reject({ success: false, error: err.message });
+      }
     });
 
     socket.on('close', (hadError) => {
       console.log(`[printer:connect] Socket closed for ${printer.id}, hadError: ${hadError}`);
+      clearTimeout(handshakeTimer);
       connections.delete(printer.id);
-      // Notify renderer that connection was lost
-      mainWindow?.webContents.send('printer:connection-lost', { printerId: printer.id });
+      
+      if (!resolved) {
+        resolved = true;
+        reject({ success: false, error: 'Connection closed by printer during handshake' });
+      } else {
+        // Notify renderer that connection was lost (only if we had successfully connected)
+        mainWindow?.webContents.send('printer:connection-lost', { printerId: printer.id });
+      }
     });
 
     socket.on('data', (data) => {
       // Telnet negotiation (respond before logging so logs stay readable)
-      const consumed = handleTelnetNegotiation(socket, data);
-      if (consumed) return;
+      const hadTelnet = handleTelnetNegotiation(socket, data);
+      if (hadTelnet) {
+        telnetHandshakeComplete = true;
+        console.log(`[printer:connect] Telnet negotiation handled for ${printer.id}`);
+        // Don't return early - printer may send text after IAC sequences
+        
+        // Strip IAC bytes to see if there's remaining text
+        const stripped = stripTelnetBytes(data);
+        if (stripped.length > 0) {
+          console.log(`[printer:data] ${printer.id}:`, stripped.toString());
+        }
+        return;
+      }
       // Log incoming data for debugging
       console.log(`[printer:data] ${printer.id}:`, data.toString());
     });
