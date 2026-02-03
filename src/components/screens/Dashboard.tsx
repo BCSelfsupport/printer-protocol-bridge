@@ -48,7 +48,7 @@ export function Dashboard({
         <button 
           onClick={isHvOn ? onStop : onStart}
           disabled={!isConnected}
-          className={`${isHvOn ? 'industrial-button-success' : 'industrial-button'} text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px] disabled:opacity-50`}
+          className={`${isHvOn ? 'industrial-button-success' : 'industrial-button-danger'} text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px] disabled:opacity-50`}
         >
           <PrinterIcon className="w-10 h-10 mb-1" />
           <span className="text-sm">{isHvOn ? 'HV On' : 'HV Off'}</span>

@@ -40,6 +40,7 @@ export interface PrinterMetrics {
     vltOn: boolean;
     gutOn: boolean;
     modOn: boolean;
+    hvOn: boolean;
   };
 }
 

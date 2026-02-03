@@ -58,6 +58,7 @@ export function ServiceScreen({ metrics, onHome, onMount, onUnmount }: ServiceSc
                 <SubsystemPill label="VLT" active={metrics.subsystems.vltOn} />
                 <SubsystemPill label="GUT" active={metrics.subsystems.gutOn} />
                 <SubsystemPill label="MOD" active={metrics.subsystems.modOn} />
+                <SubsystemPill label="HV" active={metrics.subsystems.hvOn} />
               </div>
             </ServicePanel>
 

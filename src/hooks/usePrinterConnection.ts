@@ -46,7 +46,7 @@ const mockMetrics: PrinterMetrics = {
   pressure: 0,
   rps: 0.00,
   phaseQual: 0,
-  hvDeflection: true,
+  hvDeflection: false,
   inkLevel: 'FULL',
   makeupLevel: 'GOOD',
   printStatus: 'Not ready',
@@ -55,6 +55,7 @@ const mockMetrics: PrinterMetrics = {
     vltOn: false,
     gutOn: false,
     modOn: false,
+    hvOn: false,
   },
 };
 
@@ -180,8 +181,13 @@ export function usePrinterConnection() {
       const previous = prev.metrics;
       if (!previous) return prev;
 
+      // Sync HV status with isRunning in PrinterStatus
+      const hvOn = parsed.subsystems?.hvOn ?? previous.subsystems.hvOn;
+
       return {
         ...prev,
+        // Update isRunning based on HV status from printer
+        status: prev.status ? { ...prev.status, isRunning: hvOn } : null,
         metrics: {
           ...previous,
           modulation: parsed.modulation ?? previous.modulation,
