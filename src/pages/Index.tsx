@@ -71,7 +71,6 @@ const Index = () => {
             onEditMessage={() => setCurrentScreen('messages')}
             onSignIn={() => {}}
             onHelp={() => {}}
-            onPrinters={handleHome}
           />
         );
       case 'messages':

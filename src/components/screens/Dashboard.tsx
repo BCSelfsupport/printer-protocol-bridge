@@ -11,7 +11,6 @@ interface DashboardProps {
   onEditMessage: () => void;
   onSignIn: () => void;
   onHelp: () => void;
-  onPrinters: () => void;
 }
 
 export function Dashboard({
@@ -23,8 +22,9 @@ export function Dashboard({
   onEditMessage,
   onSignIn,
   onHelp,
-  onPrinters,
 }: DashboardProps) {
+  // Derive HV state from status
+  const isHvOn = status?.isRunning ?? false;
   return (
     <div className="flex-1 p-4 flex flex-col gap-4">
       {/* Top row buttons */}
@@ -46,11 +46,12 @@ export function Dashboard({
         </button>
 
         <button 
-          onClick={onPrinters}
-          className="industrial-button text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px]"
+          onClick={isHvOn ? onStop : onStart}
+          disabled={!isConnected}
+          className={`${isHvOn ? 'industrial-button-success' : 'industrial-button'} text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px] disabled:opacity-50`}
         >
           <PrinterIcon className="w-10 h-10 mb-1" />
-          <span className="text-sm">Print On</span>
+          <span className="text-sm">{isHvOn ? 'HV On' : 'HV Off'}</span>
         </button>
 
         <button className="industrial-button text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px]">
