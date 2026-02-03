@@ -174,9 +174,9 @@ export function NetworkConfigScreen({
               printerId={terminalPrinterId}
               ipAddress={settings.ipAddress}
               port={parseInt(settings.port, 10) || 23}
-              isConnected={isConnected}
-              onConnect={onConnect}
-              onDisconnect={onDisconnect}
+              // IMPORTANT: The terminal manages its own socket.
+              // Passing the app-level onConnect/onDisconnect can trigger the Service screen
+              // socket manager to immediately disconnect when Service isn't open.
             />
           </div>
         </div>

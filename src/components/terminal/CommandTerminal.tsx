@@ -51,8 +51,17 @@ export function CommandTerminal({
   };
 
   const handleConnect = async () => {
+    if (isConnected) {
+      addLog('info', 'Already connected');
+      return;
+    }
     if (!window.electronAPI) {
       addLog('error', 'Not running in Electron - TCP connections not available');
+      return;
+    }
+
+    if (printerId == null) {
+      addLog('error', 'No printer selected');
       return;
     }
 
@@ -95,6 +104,8 @@ export function CommandTerminal({
 
   const handleDisconnect = async () => {
     if (!window.electronAPI) return;
+
+    if (printerId == null) return;
 
     try {
       await window.electronAPI.printer.disconnect(printerId);
