@@ -15,13 +15,26 @@ interface CommandTerminalProps {
   printerId: number | null;
   ipAddress: string;
   port: number;
+  isConnected?: boolean;
+  onConnect?: (printer: { id: number; name: string; ipAddress: string; port: number; isConnected: boolean; isAvailable: boolean; status: string; hasActiveErrors: boolean }) => Promise<void>;
+  onDisconnect?: () => Promise<void>;
   onLog?: (entry: LogEntry) => void;
 }
 
-export function CommandTerminal({ printerId, ipAddress, port, onLog }: CommandTerminalProps) {
+export function CommandTerminal({ 
+  printerId, 
+  ipAddress, 
+  port, 
+  isConnected: externalIsConnected,
+  onConnect: externalConnect,
+  onDisconnect: externalDisconnect,
+  onLog,
+}: CommandTerminalProps) {
   const [command, setCommand] = useState('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
+  // Use external connection state if provided, otherwise manage locally
+  const [localIsConnected, setLocalIsConnected] = useState(false);
+  const isConnected = externalIsConnected ?? localIsConnected;
   const [isConnecting, setIsConnecting] = useState(false);
   const logIdRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -54,7 +67,21 @@ export function CommandTerminal({ printerId, ipAddress, port, onLog }: CommandTe
       });
 
       if (result.success) {
-        setIsConnected(true);
+        // Use external connect if available, otherwise set local state
+        if (externalConnect) {
+          await externalConnect({
+            id: printerId ?? 1,
+            name: `Printer ${printerId ?? 1}`,
+            ipAddress,
+            port,
+            isConnected: true,
+            isAvailable: true,
+            status: 'ready',
+            hasActiveErrors: false,
+          });
+        } else {
+          setLocalIsConnected(true);
+        }
         addLog('info', `Connected successfully to ${ipAddress}:${port}`);
       } else {
         addLog('error', `Connection failed: ${result.error}`);
@@ -71,7 +98,12 @@ export function CommandTerminal({ printerId, ipAddress, port, onLog }: CommandTe
 
     try {
       await window.electronAPI.printer.disconnect(printerId);
-      setIsConnected(false);
+      // Use external disconnect if available, otherwise set local state
+      if (externalDisconnect) {
+        await externalDisconnect();
+      } else {
+        setLocalIsConnected(false);
+      }
       addLog('info', 'Disconnected');
     } catch (err) {
       addLog('error', `Disconnect error: ${err instanceof Error ? err.message : String(err)}`);
@@ -84,13 +116,17 @@ export function CommandTerminal({ printerId, ipAddress, port, onLog }: CommandTe
 
     window.electronAPI.onPrinterConnectionLost(({ printerId: lostId }) => {
       if (lostId === printerId) {
-        setIsConnected(false);
+        if (externalDisconnect) {
+          externalDisconnect();
+        } else {
+          setLocalIsConnected(false);
+        }
         addLog('error', 'Connection lost (printer closed the socket)');
       }
     });
     // Electron IPC listeners are process-wide; we don't remove listeners here.
     // (Preload uses ipcRenderer.on without exposing an off method.)
-  }, [printerId]);
+  }, [printerId, externalDisconnect]);
 
   const sendWithReconnect = async (cmd: string) => {
       if (!window.electronAPI) return;
@@ -114,7 +150,11 @@ export function CommandTerminal({ printerId, ipAddress, port, onLog }: CommandTe
 
         // If the printer/server closed the socket (common on Telnet servers), reconnect and retry once.
         if (message.includes('Printer not connected')) {
-          setIsConnected(false);
+          if (externalDisconnect) {
+            await externalDisconnect();
+          } else {
+            setLocalIsConnected(false);
+          }
           addLog('info', 'Reconnecting...');
           await handleConnect();
 
