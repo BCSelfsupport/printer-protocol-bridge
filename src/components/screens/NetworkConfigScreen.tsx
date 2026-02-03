@@ -2,8 +2,9 @@ import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { CommandTerminal } from '@/components/terminal/CommandTerminal';
+import { Printer } from '@/types/printer';
 
 const STORAGE_KEY = 'printer-network-settings';
 
@@ -27,12 +28,21 @@ const defaultSettings: NetworkSettings = {
 
 interface NetworkConfigScreenProps {
   onHome: () => void;
+  isConnected?: boolean;
+  connectedPrinter?: Printer | null;
+  onConnect?: (printer: Printer) => Promise<void>;
+  onDisconnect?: () => Promise<void>;
 }
 
-export function NetworkConfigScreen({ onHome }: NetworkConfigScreenProps) {
-  // Use a stable internal ID for the command terminal connection.
-  // This avoids null IDs causing connect/send to reference different sockets.
-  const terminalPrinterId = 999;
+export function NetworkConfigScreen({ 
+  onHome, 
+  isConnected = false, 
+  connectedPrinter,
+  onConnect,
+  onDisconnect,
+}: NetworkConfigScreenProps) {
+  // Use connected printer's ID if available, otherwise use a stable ID for terminal
+  const terminalPrinterId = connectedPrinter?.id ?? 1;
   const [settings, setSettings] = useState<NetworkSettings>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -164,6 +174,9 @@ export function NetworkConfigScreen({ onHome }: NetworkConfigScreenProps) {
               printerId={terminalPrinterId}
               ipAddress={settings.ipAddress}
               port={parseInt(settings.port, 10) || 23}
+              isConnected={isConnected}
+              onConnect={onConnect}
+              onDisconnect={onDisconnect}
             />
           </div>
         </div>

@@ -50,7 +50,15 @@ const Index = () => {
   const renderScreen = () => {
     switch (currentScreen) {
       case 'network':
-        return <NetworkConfigScreen onHome={handleHome} />;
+        return (
+          <NetworkConfigScreen
+            onHome={handleHome}
+            isConnected={connectionState.isConnected}
+            connectedPrinter={connectionState.connectedPrinter}
+            onConnect={connect}
+            onDisconnect={disconnect}
+          />
+        );
       case 'control':
         return (
           <Dashboard
