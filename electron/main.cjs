@@ -379,11 +379,23 @@ ipcMain.handle('printer:send-command', async (event, { printerId, command }) => 
   return await new Promise((resolve, reject) => {
     let response = '';
 
+    // Instead of a fixed delay, wait until we observe the device prompt / idle.
+    // Bestcode responses typically end with a ">" prompt, but timing varies by device state.
+    // If we finish too early, the next poll can accidentally read the *previous* ^SU payload,
+    // making values like V300UP appear "stuck".
+    const MAX_WAIT_MS = 2200;
+    const IDLE_AFTER_DATA_MS = 220;
+    let maxTimer = null;
+    let idleTimer = null;
+    let gotAnyData = false;
+
     const cleanup = () => {
       socket.off('data', onData);
       socket.off('error', onError);
       socket.off('close', onClose);
       socket.setTimeout(0);
+      if (maxTimer) clearTimeout(maxTimer);
+      if (idleTimer) clearTimeout(idleTimer);
       // If we had to create a new socket just for this send, don't try to keep it alive.
       // (The printer often closes anyway; closing quickly avoids a noisy reconnect loop.)
       if (ephemeral && !socket.destroyed) socket.destroy();
@@ -392,6 +404,14 @@ ipcMain.handle('printer:send-command', async (event, { printerId, command }) => 
     const finish = () => {
       cleanup();
       resolve({ success: true, response });
+    };
+
+    const scheduleFinishWhenIdle = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      // If we received any data, finishing shortly after the last chunk is safer than a fixed delay.
+      idleTimer = setTimeout(() => {
+        finish();
+      }, IDLE_AFTER_DATA_MS);
     };
 
     const onError = (err) => {
@@ -419,24 +439,46 @@ ipcMain.handle('printer:send-command', async (event, { printerId, command }) => 
         const stripped = stripTelnetBytes(chunk);
         if (stripped && stripped.length > 0) {
           response += stripped.toString();
+          gotAnyData = true;
         }
+        // Even if it was negotiation, we may have received real text too.
+        // Keep waiting for prompt/idle.
+        if (response.includes('>')) finish();
+        else scheduleFinishWhenIdle();
         return;
       }
       response += chunk.toString();
+      gotAnyData = true;
+
+      // If we see the prompt, we can finish immediately.
+      if (response.includes('>')) {
+        finish();
+        return;
+      }
+
+      // Otherwise, finish shortly after the last received chunk.
+      scheduleFinishWhenIdle();
     };
 
     socket.on('data', onData);
     socket.once('error', onError);
     socket.once('close', onClose);
 
+    maxTimer = setTimeout(() => {
+      // If we got something, treat it as success; otherwise fail.
+      if (gotAnyData) finish();
+      else {
+        cleanup();
+        reject({ success: false, error: 'No response from printer (timeout)' });
+      }
+    }, MAX_WAIT_MS);
+
     // Telnet line endings: many devices require CRLF (\r\n) rather than only CR.
     // Sending only CR can cause the printer to parse the command incorrectly and reply
     // with a generic "not recognized" for otherwise valid commands.
     socket.write(command + '\r\n', (err) => {
       if (err) return onError(err);
-      // Give the printer a moment to respond; many responses include a trailing ">" prompt.
-      // We purposely keep this short to make iterative testing fast.
-      setTimeout(finish, 650);
+      // Wait for prompt/idle (handled in onData timers) or MAX_WAIT_MS.
     });
   });
 });
