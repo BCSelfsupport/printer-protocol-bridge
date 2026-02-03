@@ -79,11 +79,19 @@ export function usePrinterConnection() {
     
     setIsChecking(true);
     try {
-      const printerData = printers.map(p => ({
-        id: p.id,
-        ipAddress: p.ipAddress,
-        port: p.port,
-      }));
+      // IMPORTANT: never query the currently-connected printer in the background.
+      // Many printers visibly refresh their UI on status queries.
+      const connectedId = connectionState.connectedPrinter?.id ?? null;
+      const printerData = printers
+        .filter((p) => p.id !== connectedId)
+        .map((p) => ({
+          id: p.id,
+          ipAddress: p.ipAddress,
+          port: p.port,
+        }));
+
+      // If the only printer in the list is currently connected, there's nothing to poll.
+      if (printerData.length === 0) return;
 
       let results;
 
