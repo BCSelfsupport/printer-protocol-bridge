@@ -19,6 +19,7 @@ export interface PrinterStatus {
   currentMessage: string | null;
   errorMessage: string | null;
   printerVersion: string | null;
+  printerTime: Date | null;
 }
 
 export interface PrinterMetrics {

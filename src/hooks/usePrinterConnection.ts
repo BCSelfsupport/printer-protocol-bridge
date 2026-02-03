@@ -36,6 +36,7 @@ const mockStatus: PrinterStatus = {
   currentMessage: 'BC-GEN2',
   errorMessage: 'Message name can not be loaded',
   printerVersion: 'v01.09.00.14',
+  printerTime: new Date(),
 };
 
 const mockMetrics: PrinterMetrics = {
