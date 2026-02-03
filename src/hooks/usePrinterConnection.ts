@@ -296,6 +296,13 @@ export function usePrinterConnection() {
           // Per v2.0 protocol, HVDeflection is the authoritative HV indicator
           const hvOn = parsed.hvDeflection ?? false;
           
+          // Update the printer list status so Networking Config Screen reflects real state
+          updatePrinterStatus(printer.id, {
+            isAvailable: true,
+            status: hvOn ? 'ready' : 'not_ready',
+            hasActiveErrors: false,
+          });
+          
           setConnectionState((prev) => ({
             ...prev,
             status: prev.status ? { ...prev.status, isRunning: hvOn } : null,
@@ -319,7 +326,7 @@ export function usePrinterConnection() {
     } catch (e) {
       console.error('[queryPrinterStatus] Failed to query status:', e);
     }
-  }, []);
+  }, [updatePrinterStatus]);
 
   const connect = useCallback(async (printer: Printer) => {
     // NOTE: Lazy-connect.
