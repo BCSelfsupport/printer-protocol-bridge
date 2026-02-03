@@ -24,6 +24,8 @@ const Index = () => {
     stopPrint,
     updateSettings,
     selectMessage,
+    addPrinter,
+    removePrinter,
   } = usePrinterConnection();
 
   const handleNavigate = (item: NavItem) => {
@@ -98,6 +100,8 @@ const Index = () => {
             printers={printers}
             onConnect={handleConnect}
             onHome={handleHome}
+            onAddPrinter={addPrinter}
+            onRemovePrinter={removePrinter}
           />
         );
     }

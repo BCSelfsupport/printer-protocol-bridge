@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Printer, PrinterStatus, PrinterMetrics, PrintMessage, PrintSettings, ConnectionState } from '@/types/printer';
+import { usePrinterStorage } from '@/hooks/usePrinterStorage';
 import { supabase } from '@/integrations/supabase/client';
 import '@/types/electron.d.ts';
 
@@ -14,13 +15,6 @@ const defaultSettings: PrintSettings = {
   pitch: 0,
   repeatAmount: 0,
 };
-
-const initialPrinters: Printer[] = [
-  { id: 1, name: 'Printer 1', ipAddress: '192.168.1.55', port: 23, isConnected: false, isAvailable: false, status: 'offline', hasActiveErrors: false },
-  { id: 2, name: 'Printer 2', ipAddress: '192.168.1.53', port: 23, isConnected: false, isAvailable: false, status: 'offline', hasActiveErrors: false },
-  { id: 3, name: 'Printer 3', ipAddress: '192.168.1.57', port: 23, isConnected: false, isAvailable: false, status: 'offline', hasActiveErrors: false },
-  { id: 4, name: 'Printer 4', ipAddress: '192.168.1.54', port: 23, isConnected: false, isAvailable: false, status: 'offline', hasActiveErrors: false },
-];
 
 const mockMessages: PrintMessage[] = [
   { id: 1, name: 'BESTCODE' },
@@ -57,7 +51,7 @@ const mockMetrics: PrinterMetrics = {
 const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
 
 export function usePrinterConnection() {
-  const [printers, setPrinters] = useState<Printer[]>(initialPrinters);
+  const { printers, addPrinter, removePrinter, updatePrinterStatus } = usePrinterStorage();
   const [isChecking, setIsChecking] = useState(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     isConnected: false,
@@ -70,7 +64,7 @@ export function usePrinterConnection() {
 
   // Check printer availability - uses Electron TCP if available, otherwise cloud function
   const checkPrinterStatus = useCallback(async () => {
-    if (isChecking) return;
+    if (isChecking || printers.length === 0) return;
     
     setIsChecking(true);
     try {
@@ -99,41 +93,33 @@ export function usePrinterConnection() {
       }
 
       if (results) {
-        setPrinters(prev => prev.map(printer => {
-          const status = results.find((s: { id: number }) => s.id === printer.id);
-          if (status) {
-            return {
-              ...printer,
-              isAvailable: status.isAvailable,
-              status: status.status,
-              hasActiveErrors: status.status === 'error',
-            };
-          }
-          return printer;
-        }));
+        results.forEach((status: { id: number; isAvailable: boolean; status: string }) => {
+          updatePrinterStatus(status.id, {
+            isAvailable: status.isAvailable,
+            status: status.status as Printer['status'],
+            hasActiveErrors: status.status === 'error',
+          });
+        });
       }
     } catch (err) {
       console.error('Failed to check printer status:', err);
     } finally {
       setIsChecking(false);
     }
-  }, [printers, isChecking]);
+  }, [printers, isChecking, updatePrinterStatus]);
 
   // Poll printer status every 5 seconds
   useEffect(() => {
+    if (printers.length === 0) return;
+    
     checkPrinterStatus();
     const interval = setInterval(checkPrinterStatus, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [printers.length]);
 
   const connect = useCallback(async (printer: Printer) => {
     // Simulate connection
     await new Promise(resolve => setTimeout(resolve, 500));
-    
-    setPrinters(prev => prev.map(p => ({
-      ...p,
-      isConnected: p.id === printer.id,
-    })));
 
     setConnectionState({
       isConnected: true,
@@ -146,7 +132,6 @@ export function usePrinterConnection() {
   }, []);
 
   const disconnect = useCallback(async () => {
-    setPrinters(prev => prev.map(p => ({ ...p, isConnected: false })));
     setConnectionState({
       isConnected: false,
       connectedPrinter: null,
@@ -198,5 +183,7 @@ export function usePrinterConnection() {
     updateSettings,
     selectMessage,
     checkPrinterStatus,
+    addPrinter,
+    removePrinter,
   };
 }
