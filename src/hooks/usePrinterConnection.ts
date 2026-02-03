@@ -183,29 +183,25 @@ export function usePrinterConnection() {
   // Stable callback for service polling – avoids effect churn
   const handleServiceResponse = useCallback((raw: string) => {
     console.log('[handleServiceResponse] Got raw response, length:', raw.length);
+    console.log('[handleServiceResponse] Raw response:', raw.substring(0, 500));
     const parsed = parseStatusResponse(raw);
     if (!parsed) {
       console.log('[handleServiceResponse] Failed to parse response');
       return;
     }
 
-    console.log('[handleServiceResponse] Parsed HV state (v300up):', parsed.subsystems?.v300up);
+    const hvOn = parsed.subsystems?.v300up ?? false;
+    console.log('[handleServiceResponse] Parsed HV state (v300up):', hvOn, 'raw subsystems:', JSON.stringify(parsed.subsystems));
 
     setConnectionState((prev) => {
-      const previous = prev.metrics;
-      if (!previous) {
-        console.log('[handleServiceResponse] No previous metrics, skipping update');
-        return prev;
-      }
+      const previous = prev.metrics ?? mockMetrics;
 
-      // V300UP is the HV indicator - sync isRunning with it
-      const hvOn = parsed.subsystems?.v300up ?? previous.subsystems.v300up;
-      console.log('[handleServiceResponse] Setting isRunning to:', hvOn);
+      console.log('[handleServiceResponse] Updating state, previous isRunning:', prev.status?.isRunning, '-> new:', hvOn);
 
       return {
         ...prev,
         // Update isRunning based on V300UP (HV status) from printer
-        status: prev.status ? { ...prev.status, isRunning: hvOn } : null,
+        status: prev.status ? { ...prev.status, isRunning: hvOn } : { ...mockStatus, isRunning: hvOn },
         metrics: {
           ...previous,
           modulation: parsed.modulation ?? previous.modulation,
