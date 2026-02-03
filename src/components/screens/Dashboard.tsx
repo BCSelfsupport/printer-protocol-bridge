@@ -37,7 +37,17 @@ export function Dashboard({
   // Derive HV state from status
   const isHvOn = status?.isRunning ?? false;
   return (
-    <div className="flex-1 p-4 flex flex-col gap-4">
+    <div className="flex-1 flex flex-col">
+      {/* Ready banner - only shown when HV is on */}
+      {isHvOn && (
+        <div className="w-full py-3 px-6 flex items-center justify-center bg-gradient-to-r from-green-600 via-green-500 to-green-400">
+          <span className="text-xl font-bold text-white tracking-wide drop-shadow-md">
+            Ready
+          </span>
+        </div>
+      )}
+      
+      <div className="flex-1 p-4 flex flex-col gap-4">
       {/* Top row buttons */}
       <div className="flex gap-2">
         <button 
@@ -167,5 +177,6 @@ export function Dashboard({
         )}
       </div>
     </div>
+  </div>
   );
 }
