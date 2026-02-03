@@ -123,6 +123,7 @@ const Index = () => {
         isConnected={connectionState.isConnected}
         connectedIp={connectionState.connectedPrinter?.ipAddress}
         onSettings={() => setCurrentScreen('network')}
+        onHome={currentScreen !== 'home' ? handleHome : undefined}
         printerTime={connectionState.status?.printerTime}
       />
 

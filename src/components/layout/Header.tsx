@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Settings, Sun, Moon } from 'lucide-react';
+import { Settings, Sun, Moon, Home } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 interface HeaderProps {
   isConnected: boolean;
   connectedIp?: string;
   onSettings?: () => void;
+  onHome?: () => void;
   printerTime?: Date | null;
 }
 
-export function Header({ isConnected, connectedIp, onSettings, printerTime }: HeaderProps) {
+export function Header({ isConnected, connectedIp, onSettings, onHome, printerTime }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -69,6 +70,15 @@ export function Header({ isConnected, connectedIp, onSettings, printerTime }: He
             ) : (
               <Moon className="w-5 h-5 text-card" />
             )}
+          </button>
+        )}
+
+        {onHome && (
+          <button 
+            onClick={onHome}
+            className="w-12 h-12 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 transition-colors"
+          >
+            <Home className="w-6 h-6 text-primary-foreground" />
           </button>
         )}
 
