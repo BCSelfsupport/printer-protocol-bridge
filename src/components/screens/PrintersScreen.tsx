@@ -12,9 +12,21 @@ interface PrintersScreenProps {
   onHome: () => void;
   onAddPrinter: (printer: { name: string; ipAddress: string; port: number }) => void;
   onRemovePrinter: (printerId: number) => void;
+  availabilityPollingEnabled: boolean;
+  onToggleAvailabilityPolling: () => void;
+  onMarkAllNotReady: () => void;
 }
 
-export function PrintersScreen({ printers, onConnect, onHome, onAddPrinter, onRemovePrinter }: PrintersScreenProps) {
+export function PrintersScreen({
+  printers,
+  onConnect,
+  onHome,
+  onAddPrinter,
+  onRemovePrinter,
+  availabilityPollingEnabled,
+  onToggleAvailabilityPolling,
+  onMarkAllNotReady,
+}: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
@@ -113,11 +125,29 @@ export function PrintersScreen({ printers, onConnect, onHome, onAddPrinter, onRe
           <div className="flex items-center justify-between text-xs text-slate-500">
             <span className="flex items-center gap-2">
               <RefreshCw className="w-3 h-3" />
-              Auto-refreshing every 5s
+              {availabilityPollingEnabled ? 'Auto-refreshing every 5s' : 'Auto-refresh paused'}
             </span>
-            <span>
-              {printers.filter(p => p.isAvailable).length}/{printers.length} online
-            </span>
+            <div className="flex items-center gap-2">
+              <span>
+                {printers.filter(p => p.isAvailable).length}/{printers.length} online
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onToggleAvailabilityPolling}
+                className="h-7 px-2 border-slate-700 text-slate-200 hover:bg-slate-800"
+              >
+                {availabilityPollingEnabled ? 'Pause' : 'Resume'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onMarkAllNotReady}
+                className="h-7 px-2 border-slate-700 text-slate-200 hover:bg-slate-800"
+              >
+                Mark not ready
+              </Button>
+            </div>
           </div>
         </div>
       </div>
