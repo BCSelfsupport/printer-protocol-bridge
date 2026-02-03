@@ -183,8 +183,21 @@ export function usePrinterConnection() {
   });
 
   const connect = useCallback(async (printer: Printer) => {
-    // Simulate connection
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Establish actual TCP connection when running in Electron
+    if (isElectron && window.electronAPI) {
+      const result = await window.electronAPI.printer.connect({
+        id: printer.id,
+        ipAddress: printer.ipAddress,
+        port: printer.port,
+      });
+      if (!result?.success) {
+        console.error('Failed to connect to printer:', result?.error);
+        return;
+      }
+    } else {
+      // Web preview: keep simulated delay (cannot reach local network printers)
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
 
     // Reflect connection immediately in the printers list (so returning to the printers page doesn't look disconnected)
     updatePrinter(printer.id, {
@@ -205,6 +218,14 @@ export function usePrinterConnection() {
   }, [updatePrinter]);
 
   const disconnect = useCallback(async () => {
+    if (isElectron && window.electronAPI && connectionState.connectedPrinter) {
+      try {
+        await window.electronAPI.printer.disconnect(connectionState.connectedPrinter.id);
+      } catch (e) {
+        console.error('Failed to disconnect printer:', e);
+      }
+    }
+
     if (connectionState.connectedPrinter) {
       updatePrinter(connectionState.connectedPrinter.id, {
         isConnected: false,
