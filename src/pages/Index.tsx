@@ -132,7 +132,7 @@ const Index = () => {
         activeItem={currentScreen === 'network' || currentScreen === 'control' ? 'home' : currentScreen}
         onNavigate={handleNavigate}
         onTurnOff={handleTurnOff}
-        showPrinterControls={connectionState.isConnected}
+        showPrinterControls={currentScreen === 'control'}
       />
 
       {/* Footer */}
