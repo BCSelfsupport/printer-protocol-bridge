@@ -128,25 +128,22 @@ ipcMain.handle('printer:check-status', async (event, printers) => {
 
         socket.on('connect', () => {
           const responseTime = Date.now() - startTime;
-          
-          // Send status query command
-          socket.write('^S\r');
-          
-          let data = '';
-          socket.on('data', (chunk) => {
-            data += chunk.toString();
-          });
 
+          // IMPORTANT:
+          // Do NOT send any commands here.
+          // This handler is used for background availability checks on app start
+          // and on a timer; some printers visibly refresh/flash their UI on any
+          // received command. A successful TCP connect is sufficient to mark
+          // the device as reachable.
           setTimeout(() => {
             socket.destroy();
-            const isReady = data.includes('READY') || data.includes('OK') || data.length > 0;
             resolve({
               id: printer.id,
               isAvailable: true,
-              status: isReady ? 'ready' : 'not_ready',
+              status: 'ready',
               responseTime,
             });
-          }, 1000);
+          }, 150);
         });
 
         socket.on('timeout', () => {
