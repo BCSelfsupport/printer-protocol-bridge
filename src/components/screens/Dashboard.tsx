@@ -126,19 +126,18 @@ export function Dashboard({
             </div>
             <span className="text-xs text-white font-medium mt-1">Makeup</span>
           </div>
-          {/* Right: Tank level gauge (4 segments) */}
+          {/* Right: Tank level gauge (4 segments) - Makeup has 3 floats: top=full, middle=half/low, bottom=empty */}
           <div className="flex flex-col-reverse gap-0.5 h-16 w-5 bg-black/20 rounded p-0.5">
             {[0, 1, 2, 3].map((seg) => {
               const level = status?.makeupLevel;
-              const filledSegments = level === 'FULL' ? 4 : level === 'GOOD' ? 2 : level === 'LOW' ? 1 : 0;
+              // Makeup tank: FULL=4 bars, GOOD=2 bars (half, one bottle remaining), LOW=2 bars (half, warning), EMPTY=0
+              const filledSegments = level === 'FULL' ? 4 : (level === 'GOOD' || level === 'LOW') ? 2 : 0;
               const isFilled = seg < filledSegments;
               return (
                 <div
                   key={seg}
                   className={`flex-1 rounded-sm transition-colors ${
-                    isFilled
-                      ? level === 'FULL' || level === 'GOOD' ? 'bg-white' : level === 'LOW' ? 'bg-yellow-300' : 'bg-white'
-                      : 'bg-white/20'
+                    isFilled ? 'bg-white' : 'bg-white/20'
                   }`}
                 />
               );
@@ -162,20 +161,18 @@ export function Dashboard({
             </div>
             <span className="text-xs text-white font-medium mt-1">Ink</span>
           </div>
-          {/* Right: Tank level gauge (4 segments) */}
+          {/* Right: Tank level gauge (4 segments) - Ink has 2 floats: top=full/ok, bottom=empty */}
           <div className="flex flex-col-reverse gap-0.5 h-16 w-5 bg-black/20 rounded p-0.5">
             {[0, 1, 2, 3].map((seg) => {
               const level = status?.inkLevel;
-              // Ink is binary: FULL = 4, LOW = 1, EMPTY = 0
+              // Ink tank: FULL=4 bars, LOW=1 bar (warning before empty), EMPTY=0
               const filledSegments = level === 'FULL' ? 4 : level === 'LOW' ? 1 : 0;
               const isFilled = seg < filledSegments;
               return (
                 <div
                   key={seg}
                   className={`flex-1 rounded-sm transition-colors ${
-                    isFilled
-                      ? level === 'FULL' ? 'bg-white' : level === 'LOW' ? 'bg-yellow-300' : 'bg-white'
-                      : 'bg-white/20'
+                    isFilled ? 'bg-white' : 'bg-white/20'
                   }`}
                 />
               );
