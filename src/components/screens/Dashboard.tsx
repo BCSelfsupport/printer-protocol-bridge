@@ -90,7 +90,7 @@ export function Dashboard({
           className={`${isSignedIn ? 'industrial-button-success' : 'industrial-button-gray'} text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px]`}
         >
           <Key className="w-10 h-10 mb-1" />
-          <span className="text-sm">{isSignedIn ? 'Signed In' : 'Sign In'}</span>
+          <span className="text-sm">{isSignedIn ? 'Sign Out' : 'Sign In'}</span>
         </button>
 
         <button 
