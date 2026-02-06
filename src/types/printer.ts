@@ -20,6 +20,9 @@ export interface PrinterStatus {
   errorMessage: string | null;
   printerVersion: string | null;
   printerTime: Date | null;
+  // Detailed consumable levels from ^SU
+  inkLevel: 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+  makeupLevel: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
 }
 
 export interface PrinterMetrics {

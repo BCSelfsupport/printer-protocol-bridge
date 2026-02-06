@@ -35,6 +35,8 @@ const mockStatus: PrinterStatus = {
   errorMessage: 'Message name can not be loaded',
   printerVersion: 'v01.09.00.14',
   printerTime: new Date(),
+  inkLevel: 'FULL',
+  makeupLevel: 'GOOD',
 };
 
 const mockMetrics: PrinterMetrics = {
@@ -228,10 +230,16 @@ export function usePrinterConnection() {
 
       console.log('[handleServiceResponse] Updating state, previous isRunning:', prev.status?.isRunning, '-> new:', hvOn);
 
+      // Map parsed levels to status-compatible types
+      const inkLevel = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+      const makeupLevel = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+
       return {
         ...prev,
-        // Update isRunning based on V300UP (HV status) from printer
-        status: prev.status ? { ...prev.status, isRunning: hvOn } : { ...mockStatus, isRunning: hvOn },
+        // Update isRunning and consumable levels based on ^SU response
+        status: prev.status 
+          ? { ...prev.status, isRunning: hvOn, inkLevel, makeupLevel } 
+          : { ...mockStatus, isRunning: hvOn, inkLevel, makeupLevel },
         metrics: {
           ...previous,
           modulation: parsed.modulation ?? previous.modulation,
@@ -322,9 +330,15 @@ export function usePrinterConnection() {
             hasActiveErrors: false,
           });
           
+          // Map parsed levels to status-compatible types
+          const inkLevel = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+          const makeupLevel = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+          
           setConnectionState((prev) => ({
             ...prev,
-            status: prev.status ? { ...prev.status, isRunning: hvOn } : null,
+            status: prev.status 
+              ? { ...prev.status, isRunning: hvOn, inkLevel, makeupLevel } 
+              : null,
             metrics: prev.metrics ? {
               ...prev.metrics,
               modulation: parsed.modulation ?? prev.metrics.modulation,
@@ -371,6 +385,8 @@ export function usePrinterConnection() {
           ...mockStatus,
           isRunning: emulatorState.hvOn,
           currentMessage: emulatorState.currentMessage,
+          inkLevel: emulatorState.inkLevel as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN',
+          makeupLevel: emulatorState.makeupLevel as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
         },
         metrics: {
           ...mockMetrics,
