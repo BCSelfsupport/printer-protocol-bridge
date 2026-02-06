@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { printerEmulator, EmulatorState, CommandLogEntry } from '@/lib/printerEmulator';
+import { printerEmulator, EmulatorState, CommandLogEntry, PROTOCOL_COMMANDS } from '@/lib/printerEmulator';
 import { cn } from '@/lib/utils';
 import { 
   ChevronLeft, 
@@ -11,12 +11,19 @@ import {
   Radio,
   RotateCcw,
   Terminal,
-  Settings2
+  Settings2,
+  BookOpen,
+  Send,
+  Play,
+  Square,
+  List
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 interface DevPanelProps {
   isOpen: boolean;
@@ -27,6 +34,8 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
   const [emulatorState, setEmulatorState] = useState<EmulatorState>(printerEmulator.getState());
   const [commandLog, setCommandLog] = useState<CommandLogEntry[]>(printerEmulator.getCommandLog());
   const [emulatorEnabled, setEmulatorEnabled] = useState(printerEmulator.enabled);
+  const [manualCommand, setManualCommand] = useState('');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
 
   useEffect(() => {
     const unsubState = printerEmulator.subscribe(setEmulatorState);
@@ -40,6 +49,19 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
   const handleEmulatorToggle = (enabled: boolean) => {
     printerEmulator.enabled = enabled;
     setEmulatorEnabled(enabled);
+  };
+
+  const handleSendCommand = () => {
+    if (manualCommand.trim() && emulatorEnabled) {
+      printerEmulator.processCommand(manualCommand.trim());
+      setManualCommand('');
+    }
+  };
+
+  const handleQuickCommand = (code: string) => {
+    if (emulatorEnabled) {
+      printerEmulator.processCommand(code);
+    }
   };
 
   const StatusLight = ({ on, label, color = 'green' }: { on: boolean; label: string; color?: 'green' | 'red' | 'yellow' | 'blue' }) => {
@@ -92,6 +114,19 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
     </button>
   );
 
+  const categoryColors: Record<string, string> = {
+    system: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
+    query: 'bg-purple-500/20 text-purple-400 border-purple-500/50',
+    printing: 'bg-green-500/20 text-green-400 border-green-500/50',
+    message: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
+    settings: 'bg-orange-500/20 text-orange-400 border-orange-500/50',
+    'one-to-one': 'bg-pink-500/20 text-pink-400 border-pink-500/50',
+  };
+
+  const filteredCommands = filterCategory === 'all' 
+    ? PROTOCOL_COMMANDS 
+    : PROTOCOL_COMMANDS.filter(c => c.category === filterCategory);
+
   return (
     <>
       {/* Toggle Button (always visible) */}
@@ -136,17 +171,20 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
             {emulatorEnabled && (
               <div className="flex items-center gap-2 text-xs text-green-400">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                Emulator Active
+                Emulator Active - Protocol v2.0
               </div>
             )}
           </div>
 
           <Tabs defaultValue="status" className="flex-1 flex flex-col">
-            <TabsList className="mx-4 mt-2">
+            <TabsList className="mx-4 mt-2 grid grid-cols-4">
               <TabsTrigger value="status" className="text-xs">Status</TabsTrigger>
-              <TabsTrigger value="commands" className="text-xs">Commands</TabsTrigger>
+              <TabsTrigger value="protocol" className="text-xs">Protocol</TabsTrigger>
+              <TabsTrigger value="commands" className="text-xs">Log</TabsTrigger>
+              <TabsTrigger value="manual" className="text-xs">Manual</TabsTrigger>
             </TabsList>
 
+            {/* Status Tab */}
             <TabsContent value="status" className="flex-1 overflow-hidden m-0">
               <ScrollArea className="h-full p-4">
                 {/* Status Lights Section */}
@@ -161,6 +199,8 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                     <StatusLight on={emulatorState.vltOn} label="VLT_ON" color="yellow" />
                     <StatusLight on={emulatorState.gutOn} label="GUT_ON" color="yellow" />
                     <StatusLight on={emulatorState.modOn} label="MOD_ON" color="yellow" />
+                    <StatusLight on={emulatorState.echoOn} label="ECHO" color="blue" />
+                    <StatusLight on={emulatorState.oneToOneMode} label="1-1 MODE" color="blue" />
                   </div>
                 </div>
 
@@ -200,6 +240,12 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                       onClick={() => printerEmulator.toggleState('modOn')}
                       icon={Radio}
                     />
+                    <ToggleButton
+                      on={emulatorState.echoOn}
+                      label="Echo"
+                      onClick={() => printerEmulator.toggleState('echoOn')}
+                      icon={Terminal}
+                    />
                   </div>
                 </div>
 
@@ -219,11 +265,11 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Pressure:</span>
-                      <span>{emulatorState.pressure.toFixed(1)} bar</span>
+                      <span>{emulatorState.pressure} psi</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">RPS:</span>
-                      <span>{emulatorState.rps}</span>
+                      <span>{emulatorState.rps.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Phase Qual:</span>
@@ -235,7 +281,7 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Ink Level:</span>
-                      <span className={emulatorState.inkLevel === 'FULL' ? 'text-green-400' : 'text-yellow-400'}>
+                      <span className={emulatorState.inkLevel === 'GOOD' || emulatorState.inkLevel === 'FULL' ? 'text-green-400' : 'text-yellow-400'}>
                         {emulatorState.inkLevel}
                       </span>
                     </div>
@@ -244,6 +290,18 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                       <span className={emulatorState.makeupLevel === 'GOOD' ? 'text-green-400' : 'text-yellow-400'}>
                         {emulatorState.makeupLevel}
                       </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Current Msg:</span>
+                      <span>{emulatorState.currentMessage}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Print Count:</span>
+                      <span>{emulatorState.printCount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Product Count:</span>
+                      <span>{emulatorState.productCount}</span>
                     </div>
                   </div>
                 </div>
@@ -262,6 +320,63 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
               </ScrollArea>
             </TabsContent>
 
+            {/* Protocol Tab */}
+            <TabsContent value="protocol" className="flex-1 overflow-hidden m-0">
+              <ScrollArea className="h-full p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <BookOpen className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Protocol v2.0 Commands
+                  </h3>
+                </div>
+
+                {/* Category Filter */}
+                <div className="flex flex-wrap gap-1 mb-4">
+                  <Badge 
+                    variant={filterCategory === 'all' ? 'default' : 'outline'}
+                    className="text-[10px] cursor-pointer"
+                    onClick={() => setFilterCategory('all')}
+                  >
+                    All
+                  </Badge>
+                  {['system', 'query', 'printing', 'message', 'settings', 'one-to-one'].map(cat => (
+                    <Badge 
+                      key={cat}
+                      variant={filterCategory === cat ? 'default' : 'outline'}
+                      className={cn("text-[10px] cursor-pointer", filterCategory === cat && categoryColors[cat])}
+                      onClick={() => setFilterCategory(cat)}
+                    >
+                      {cat}
+                    </Badge>
+                  ))}
+                </div>
+                
+                <div className="space-y-2">
+                  {filteredCommands.map((cmd, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleQuickCommand(cmd.code)}
+                      disabled={!emulatorEnabled}
+                      className={cn(
+                        "w-full text-left p-2 rounded-md border border-border",
+                        "hover:bg-muted/50 transition-colors",
+                        !emulatorEnabled && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <code className="text-xs font-bold text-primary">{cmd.code}</code>
+                        <Badge variant="outline" className={cn("text-[9px]", categoryColors[cmd.category])}>
+                          {cmd.category}
+                        </Badge>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">{cmd.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            {/* Commands Log Tab */}
             <TabsContent value="commands" className="flex-1 overflow-hidden m-0">
               <ScrollArea className="h-full p-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -300,12 +415,12 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                             {entry.timestamp.toLocaleTimeString()}
                           </span>
                         </div>
-                        <div className="text-foreground">
+                        <div className="text-foreground break-all">
                           {entry.command}
                         </div>
                         {entry.response && entry.direction === 'received' && (
-                          <div className="text-muted-foreground mt-1 truncate">
-                            {entry.response.split('\r\n')[0]}...
+                          <div className="text-muted-foreground mt-1 whitespace-pre-wrap text-[10px]">
+                            {entry.response}
                           </div>
                         )}
                       </div>
@@ -314,11 +429,137 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                 )}
               </ScrollArea>
             </TabsContent>
+
+            {/* Manual Tab */}
+            <TabsContent value="manual" className="flex-1 overflow-hidden m-0">
+              <ScrollArea className="h-full p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Send className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Send Command
+                  </h3>
+                </div>
+
+                <div className="flex gap-2 mb-4">
+                  <Input
+                    value={manualCommand}
+                    onChange={(e) => setManualCommand(e.target.value)}
+                    placeholder="^SU"
+                    className="font-mono text-sm"
+                    disabled={!emulatorEnabled}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendCommand()}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleSendCommand}
+                    disabled={!emulatorEnabled || !manualCommand.trim()}
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* Quick Commands */}
+                <div className="mb-4">
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-2">Quick Commands</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs justify-start"
+                      onClick={() => handleQuickCommand('^SJ 1')}
+                      disabled={!emulatorEnabled}
+                    >
+                      <Play className="w-3 h-3 mr-2" />
+                      Start Jet
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs justify-start"
+                      onClick={() => handleQuickCommand('^SJ 0')}
+                      disabled={!emulatorEnabled}
+                    >
+                      <Square className="w-3 h-3 mr-2" />
+                      Stop Jet
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs justify-start"
+                      onClick={() => handleQuickCommand('^PR 1')}
+                      disabled={!emulatorEnabled}
+                    >
+                      <Zap className="w-3 h-3 mr-2" />
+                      HV On
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs justify-start"
+                      onClick={() => handleQuickCommand('^PR 0')}
+                      disabled={!emulatorEnabled}
+                    >
+                      <Zap className="w-3 h-3 mr-2 opacity-50" />
+                      HV Off
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs justify-start"
+                      onClick={() => handleQuickCommand('^SU')}
+                      disabled={!emulatorEnabled}
+                    >
+                      <List className="w-3 h-3 mr-2" />
+                      Status
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs justify-start"
+                      onClick={() => handleQuickCommand('^VV')}
+                      disabled={!emulatorEnabled}
+                    >
+                      <BookOpen className="w-3 h-3 mr-2" />
+                      Version
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs justify-start"
+                      onClick={() => handleQuickCommand('^LM')}
+                      disabled={!emulatorEnabled}
+                    >
+                      <List className="w-3 h-3 mr-2" />
+                      List Msgs
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs justify-start"
+                      onClick={() => handleQuickCommand('^CN')}
+                      disabled={!emulatorEnabled}
+                    >
+                      <List className="w-3 h-3 mr-2" />
+                      Counters
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Command Reference */}
+                <div className="text-[10px] text-muted-foreground space-y-1 bg-muted/30 rounded-lg p-3">
+                  <p className="font-semibold mb-2">Command Format:</p>
+                  <p>• Commands start with ^ (caret)</p>
+                  <p>• Parameters separated by ; (semicolon)</p>
+                  <p>• Case insensitive (except message data)</p>
+                  <p>• Example: ^SM BESTCODE</p>
+                </div>
+              </ScrollArea>
+            </TabsContent>
           </Tabs>
 
           {/* Footer */}
           <div className="p-3 border-t border-border text-[10px] text-muted-foreground text-center">
-            Printer Emulator v1.0 • Dev Mode Only
+            Printer Emulator v2.0 • Bestcode Protocol • Dev Mode Only
           </div>
         </div>
       </div>
