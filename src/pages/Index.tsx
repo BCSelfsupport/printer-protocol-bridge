@@ -35,6 +35,7 @@ const Index = () => {
     updateSettings,
     selectMessage,
     signIn,
+    signOut,
     addPrinter,
     removePrinter,
     setServiceScreenOpen,
@@ -95,7 +96,18 @@ const Index = () => {
             onJetStop={handleJetStop}
             onNewMessage={() => setCurrentScreen('messages')}
             onEditMessage={() => setCurrentScreen('messages')}
-            onSignIn={() => setSignInDialogOpen(true)}
+            onSignIn={async () => {
+              if (isSignedIn) {
+                // Sign out directly
+                const success = await signOut();
+                if (success) {
+                  setIsSignedIn(false);
+                }
+              } else {
+                // Show sign in dialog
+                setSignInDialogOpen(true);
+              }
+            }}
             onHelp={() => {}}
             isSignedIn={isSignedIn}
             onMount={() => setControlScreenOpen(true)}
