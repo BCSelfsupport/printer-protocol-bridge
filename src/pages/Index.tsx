@@ -23,6 +23,7 @@ const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [signInDialogOpen, setSignInDialogOpen] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
   const {
     printers,
     connectionState,
@@ -96,6 +97,7 @@ const Index = () => {
             onEditMessage={() => setCurrentScreen('messages')}
             onSignIn={() => setSignInDialogOpen(true)}
             onHelp={() => {}}
+            isSignedIn={isSignedIn}
             onMount={() => setControlScreenOpen(true)}
             onUnmount={() => setControlScreenOpen(false)}
             countdownSeconds={countdownSeconds}
@@ -186,7 +188,13 @@ const Index = () => {
       <SignInDialog
         open={signInDialogOpen}
         onOpenChange={setSignInDialogOpen}
-        onSignIn={signIn}
+        onSignIn={async (password) => {
+          const success = await signIn(password);
+          if (success) {
+            setIsSignedIn(true);
+          }
+          return success;
+        }}
       />
     </div>
   );
