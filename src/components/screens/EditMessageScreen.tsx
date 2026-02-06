@@ -43,14 +43,17 @@ const MULTILINE_TEMPLATES = [
   { value: 'multi-2x16', label: '2 lines × 16 dots', height: 32, lines: 2 },
 ] as const;
 
-// Font size options
+// Font size options - matching actual printer fonts
 const FONT_SIZES = [
-  { value: '5x5', label: '5×5' },
-  { value: '7x5', label: '7×5' },
-  { value: '9x6', label: '9×6' },
-  { value: '14', label: '14' },
-  { value: '16', label: '16' },
-  { value: '32', label: '32' },
+  { value: 'Standard5High', label: '5 High', height: 5 },
+  { value: 'Standard7High', label: '7 High', height: 7 },
+  { value: 'Narrow7High', label: '7 High Narrow', height: 7 },
+  { value: 'Standard9High', label: '9 High', height: 9 },
+  { value: 'Standard12High', label: '12 High', height: 12 },
+  { value: 'Standard16High', label: '16 High', height: 16 },
+  { value: 'Standard19High', label: '19 High', height: 19 },
+  { value: 'Standard25High', label: '25 High', height: 25 },
+  { value: 'Standard32High', label: '32 High', height: 32 },
 ] as const;
 
 type SingleTemplateValue = typeof SINGLE_TEMPLATES[number]['value'];
