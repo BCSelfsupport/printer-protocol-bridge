@@ -23,9 +23,28 @@ export interface MessageDetails {
   fields: MessageField[];
 }
 
-// Available template heights (dot rows)
-const TEMPLATE_HEIGHTS = [7, 9, 11, 16, 24, 32] as const;
-type TemplateHeight = typeof TEMPLATE_HEIGHTS[number];
+// Template options - single heights for mixed font messages
+const SINGLE_TEMPLATES = [
+  { value: '32', label: '32 dots' },
+  { value: '24', label: '24 dots' },
+  { value: '16', label: '16 dots' },
+  { value: '12', label: '12 dots' },
+  { value: '9', label: '9 dots' },
+  { value: '7', label: '7 dots' },
+  { value: '5', label: '5 dots' },
+] as const;
+
+// Multi-line templates (lines × dot height per line)
+const MULTILINE_TEMPLATES = [
+  { value: 'multi-5x5', label: '5 lines × 5 dots', height: 25, lines: 5 },
+  { value: 'multi-3x9', label: '3 lines × 9 dots', height: 27, lines: 3 },
+  { value: 'multi-4x7', label: '4 lines × 7 dots', height: 28, lines: 4 },
+  { value: 'multi-2x16', label: '2 lines × 16 dots', height: 32, lines: 2 },
+] as const;
+
+type SingleTemplateValue = typeof SINGLE_TEMPLATES[number]['value'];
+type MultilineTemplateValue = typeof MULTILINE_TEMPLATES[number]['value'];
+type TemplateValue = SingleTemplateValue | MultilineTemplateValue;
 
 interface EditMessageScreenProps {
   messageName: string;
@@ -84,7 +103,12 @@ export function EditMessageScreen({
   };
 
   const handleTemplateChange = (value: string) => {
-    const height = parseInt(value) as TemplateHeight;
+    // Check if it's a multi-line template
+    const multiTemplate = MULTILINE_TEMPLATES.find(t => t.value === value);
+    const height = multiTemplate 
+      ? multiTemplate.height 
+      : parseInt(value) || 16;
+    
     setMessage((prev) => ({
       ...prev,
       height,
@@ -95,6 +119,13 @@ export function EditMessageScreen({
         height: Math.min(f.height, height),
       })),
     }));
+  };
+
+  // Get the current template value for the dropdown
+  const getCurrentTemplateValue = (): string => {
+    const multiTemplate = MULTILINE_TEMPLATES.find(t => t.height === message.height);
+    if (multiTemplate) return multiTemplate.value;
+    return message.height.toString();
   };
 
   const handleAddField = () => {
@@ -175,18 +206,29 @@ export function EditMessageScreen({
                 />
               </div>
               <div>
-                <Label htmlFor="msgTemplate">Template (Rows)</Label>
+                <Label htmlFor="msgTemplate">Template</Label>
                 <Select
-                  value={message.height.toString()}
+                  value={getCurrentTemplateValue()}
                   onValueChange={handleTemplateChange}
                 >
                   <SelectTrigger className="mt-1">
-                    <SelectValue />
+                    <SelectValue placeholder="Select template" />
                   </SelectTrigger>
                   <SelectContent>
-                    {TEMPLATE_HEIGHTS.map((h) => (
-                      <SelectItem key={h} value={h.toString()}>
-                        {h} dots
+                    <SelectItem value="header-single" disabled className="font-semibold text-muted-foreground">
+                      Single Height (Mixed Font)
+                    </SelectItem>
+                    {SINGLE_TEMPLATES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="header-multi" disabled className="font-semibold text-muted-foreground mt-2">
+                      Multi-Line Templates
+                    </SelectItem>
+                    {MULTILINE_TEMPLATES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
