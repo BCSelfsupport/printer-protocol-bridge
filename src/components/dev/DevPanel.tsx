@@ -286,7 +286,7 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                       className={cn(
                         "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all border",
                         "border-gray-300",
-                        emulatorState.makeupLevel === 'GOOD' 
+                        (emulatorState.makeupLevel === 'FULL' || emulatorState.makeupLevel === 'GOOD')
                           ? "bg-green-100 text-green-700 border-green-500" 
                           : emulatorState.makeupLevel === 'LOW'
                           ? "bg-yellow-100 text-yellow-700 border-yellow-500"
