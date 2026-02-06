@@ -110,38 +110,77 @@ export function Dashboard({
           <span className="text-sm">{isHvOn ? 'HV On' : 'HV Off'}</span>
         </button>
 
-        {/* Makeup Level Indicator */}
-        <div className={`w-[120px] h-[100px] rounded-lg flex flex-col items-center justify-center relative overflow-hidden ${
+        {/* Makeup Level Indicator - HMI style with tank gauge */}
+        <div className={`w-[120px] h-[100px] rounded-lg flex items-center justify-between px-3 ${
           status?.makeupLevel === 'EMPTY' ? 'bg-destructive' :
           status?.makeupLevel === 'LOW' ? 'bg-warning' :
-          'bg-success'
+          'industrial-button'
         }`}>
-          {/* Half-full visual: vertical split showing right half filled */}
-          {status?.makeupLevel === 'GOOD' && (
-            <div className="absolute inset-0 bg-success/40" style={{ clipPath: 'inset(0 50% 0 0)' }} />
-          )}
-          <div className="relative z-10">
-            <Droplets className="w-10 h-10 text-white" />
-            {(status?.makeupLevel === 'FULL' || status?.makeupLevel === 'GOOD') && (
-              <Wifi className="w-4 h-4 absolute -top-1 -right-1 text-white" />
-            )}
+          {/* Left: Icon and label */}
+          <div className="flex flex-col items-center">
+            <div className="relative">
+              <Droplets className="w-8 h-8 text-white" />
+              {(status?.makeupLevel === 'FULL' || status?.makeupLevel === 'GOOD') && (
+                <Wifi className="w-3 h-3 absolute -top-0.5 -right-0.5 text-white" />
+              )}
+            </div>
+            <span className="text-xs text-white font-medium mt-1">Makeup</span>
           </div>
-          <span className="text-sm text-white font-medium z-10">Makeup</span>
+          {/* Right: Tank level gauge (4 segments) */}
+          <div className="flex flex-col-reverse gap-0.5 h-16 w-5 bg-black/20 rounded p-0.5">
+            {[0, 1, 2, 3].map((seg) => {
+              const level = status?.makeupLevel;
+              const filledSegments = level === 'FULL' ? 4 : level === 'GOOD' ? 2 : level === 'LOW' ? 1 : 0;
+              const isFilled = seg < filledSegments;
+              return (
+                <div
+                  key={seg}
+                  className={`flex-1 rounded-sm transition-colors ${
+                    isFilled
+                      ? level === 'FULL' || level === 'GOOD' ? 'bg-white' : level === 'LOW' ? 'bg-yellow-300' : 'bg-white'
+                      : 'bg-white/20'
+                  }`}
+                />
+              );
+            })}
+          </div>
         </div>
 
-        {/* Ink Level Indicator */}
-        <div className={`w-[120px] h-[100px] rounded-lg flex flex-col items-center justify-center ${
+        {/* Ink Level Indicator - HMI style with tank gauge */}
+        <div className={`w-[120px] h-[100px] rounded-lg flex items-center justify-between px-3 ${
           status?.inkLevel === 'EMPTY' ? 'bg-destructive' :
           status?.inkLevel === 'LOW' ? 'bg-warning' :
-          'bg-success'
+          'industrial-button'
         }`}>
-          <div className="relative">
-            <Palette className="w-10 h-10 text-white" />
-            {status?.inkLevel === 'FULL' && (
-              <span className="absolute -top-1 -right-1 text-white text-lg">✓</span>
-            )}
+          {/* Left: Icon and label */}
+          <div className="flex flex-col items-center">
+            <div className="relative">
+              <Palette className="w-8 h-8 text-white" />
+              {status?.inkLevel === 'FULL' && (
+                <span className="absolute -top-0.5 -right-0.5 text-white text-sm">✓</span>
+              )}
+            </div>
+            <span className="text-xs text-white font-medium mt-1">Ink</span>
           </div>
-          <span className="text-sm text-white font-medium">Ink</span>
+          {/* Right: Tank level gauge (4 segments) */}
+          <div className="flex flex-col-reverse gap-0.5 h-16 w-5 bg-black/20 rounded p-0.5">
+            {[0, 1, 2, 3].map((seg) => {
+              const level = status?.inkLevel;
+              // Ink is binary: FULL = 4, LOW = 1, EMPTY = 0
+              const filledSegments = level === 'FULL' ? 4 : level === 'LOW' ? 1 : 0;
+              const isFilled = seg < filledSegments;
+              return (
+                <div
+                  key={seg}
+                  className={`flex-1 rounded-sm transition-colors ${
+                    isFilled
+                      ? level === 'FULL' ? 'bg-white' : level === 'LOW' ? 'bg-yellow-300' : 'bg-white'
+                      : 'bg-white/20'
+                  }`}
+                />
+              );
+            })}
+          </div>
         </div>
 
         {/* Start/Stop buttons */}
