@@ -4,6 +4,7 @@ import { BottomNav, NavItem } from '@/components/layout/BottomNav';
 import { Dashboard } from '@/components/screens/Dashboard';
 import { PrintersScreen } from '@/components/screens/PrintersScreen';
 import { MessagesScreen } from '@/components/screens/MessagesScreen';
+import { EditMessageScreen, MessageDetails } from '@/components/screens/EditMessageScreen';
 import { AdjustScreen } from '@/components/screens/AdjustScreen';
 import { SetupScreen } from '@/components/screens/SetupScreen';
 import { ServiceScreen } from '@/components/screens/ServiceScreen';
@@ -13,17 +14,19 @@ import { SignInDialog } from '@/components/printers/SignInDialog';
 import { usePrinterConnection } from '@/hooks/usePrinterConnection';
 import { useJetCountdown } from '@/hooks/useJetCountdown';
 import { DevPanel } from '@/components/dev/DevPanel';
+import { PrintMessage } from '@/types/printer';
 
 // Only show dev panel in development mode
 const isDev = import.meta.env.DEV;
 
-type ScreenType = NavItem | 'network' | 'control';
+type ScreenType = NavItem | 'network' | 'control' | 'editMessage';
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [signInDialogOpen, setSignInDialogOpen] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<PrintMessage | null>(null);
   const {
     printers,
     connectionState,
@@ -116,11 +119,39 @@ const Index = () => {
             countdownType={countdownType}
           />
         );
+      case 'editMessage':
+        return editingMessage ? (
+          <EditMessageScreen
+            messageName={editingMessage.name}
+            onSave={(details: MessageDetails) => {
+              console.log('Save message:', details);
+              // TODO: Send ^CM, ^CF, ^MD commands to update message
+              setCurrentScreen('messages');
+              setEditingMessage(null);
+            }}
+            onCancel={() => {
+              setCurrentScreen('messages');
+              setEditingMessage(null);
+            }}
+          />
+        ) : null;
       case 'messages':
         return (
           <MessagesScreen
             messages={connectionState.messages}
             onSelect={selectMessage}
+            onEdit={(message) => {
+              setEditingMessage(message);
+              setCurrentScreen('editMessage');
+            }}
+            onNew={() => {
+              // TODO: Create new message flow
+              console.log('New message');
+            }}
+            onDelete={(message) => {
+              // TODO: Delete message with ^DM command
+              console.log('Delete message:', message.name);
+            }}
             onHome={handleHome}
           />
         );
@@ -176,7 +207,7 @@ const Index = () => {
       </main>
 
       <BottomNav
-        activeItem={currentScreen === 'network' || currentScreen === 'control' ? 'home' : currentScreen}
+        activeItem={['network', 'control', 'editMessage'].includes(currentScreen) ? 'home' : currentScreen as NavItem}
         onNavigate={handleNavigate}
         onTurnOff={handleTurnOff}
         showPrinterControls={currentScreen === 'control'}
