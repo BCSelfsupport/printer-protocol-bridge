@@ -41,17 +41,8 @@ export function useServiceStatusPolling(options: {
       console.log('[useServiceStatusPolling] No printerId, not polling');
       return;
     }
-    
-    // Determine if we should use emulator or Electron API
-    const useEmulator = printerEmulator.enabled;
-    const hasElectronAPI = !!window.electronAPI;
-    
-    if (!useEmulator && !hasElectronAPI) {
-      console.log('[useServiceStatusPolling] No electronAPI and emulator not enabled, not polling');
-      return;
-    }
 
-    console.log('[useServiceStatusPolling] Starting polling for printer', printerId, 'with command', command, 'useEmulator:', useEmulator);
+    console.log('[useServiceStatusPolling] Starting polling for printer', printerId, 'with command', command);
     let cancelled = false;
 
     const tick = async () => {
@@ -60,19 +51,25 @@ export function useServiceStatusPolling(options: {
       inFlightRef.current = true;
 
       try {
-        console.log('[useServiceStatusPolling] Sending command:', command);
-        
+        const useEmulator = printerEmulator.enabled;
+        const hasElectronAPI = !!window.electronAPI;
+
+        if (!useEmulator && !hasElectronAPI) {
+          console.log('[useServiceStatusPolling] No electronAPI and emulator not enabled, skip tick');
+          return;
+        }
+
+        console.log('[useServiceStatusPolling] Sending command:', command, 'useEmulator:', useEmulator);
+
         let result: { success: boolean; response?: string; error?: string };
-        
+
         if (useEmulator) {
-          // Use emulator directly
           const emulatorResult = printerEmulator.processCommand(command);
           result = { success: emulatorResult.success, response: emulatorResult.response };
         } else {
-          // Use Electron API
           result = await window.electronAPI!.printer.sendCommand(printerId, command);
         }
-        
+
         if (cancelled) return;
         if (result.success && typeof result.response === "string") {
           console.log('[useServiceStatusPolling] Got response, length:', result.response.length);
@@ -89,13 +86,10 @@ export function useServiceStatusPolling(options: {
       }
     };
 
-    // Delay first tick slightly to allow socket connection to establish
     const initialDelay = setTimeout(() => {
-      if (!cancelled) {
-        tick();
-      }
+      if (!cancelled) tick();
     }, 500);
-    
+
     const id = window.setInterval(tick, intervalMs);
 
     return () => {

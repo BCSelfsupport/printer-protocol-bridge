@@ -188,9 +188,10 @@ export function usePrinterConnection() {
   const [serviceScreenOpen, setServiceScreenOpen] = useState(false);
   const [controlScreenOpen, setControlScreenOpen] = useState(false);
 
-  // Poll status when either Service OR Control (Dashboard) screen is open
+  // Poll status when either Service OR Control (Dashboard) screen is open.
+  // The actual transport is decided inside useServiceStatusPolling (Electron vs emulator).
   const shouldPollStatus = useMemo(() => {
-    const result = Boolean(isElectron && connectionState.isConnected && connectedPrinterId && (serviceScreenOpen || controlScreenOpen));
+    const result = Boolean(connectionState.isConnected && connectedPrinterId && (serviceScreenOpen || controlScreenOpen));
     console.log('[usePrinterConnection] shouldPollStatus:', result, {
       isElectron,
       isConnected: connectionState.isConnected,
