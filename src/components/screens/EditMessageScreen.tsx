@@ -207,15 +207,33 @@ export function EditMessageScreen({
           <div className="bg-card rounded-lg p-4 mb-4">
             <div className="grid grid-cols-4 gap-4">
               <div>
-                <Label htmlFor="msgName">Message Name</Label>
-                <Input
-                  id="msgName"
-                  value={message.name}
-                  onChange={(e) =>
-                    setMessage((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                  className="mt-1"
-                />
+                <Label htmlFor="msgFontSize">Font Size</Label>
+                <Select
+                  value={selectedField?.fontSize || '16'}
+                  onValueChange={(value) => {
+                    if (selectedFieldId) {
+                      setMessage((prev) => ({
+                        ...prev,
+                        fields: prev.fields.map((f) =>
+                          f.id === selectedFieldId
+                            ? { ...f, fontSize: value }
+                            : f
+                        ),
+                      }));
+                    }
+                  }}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select font size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FONT_SIZES.map((fs) => (
+                      <SelectItem key={fs.value} value={fs.value}>
+                        {fs.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="msgTemplate">Template</Label>
