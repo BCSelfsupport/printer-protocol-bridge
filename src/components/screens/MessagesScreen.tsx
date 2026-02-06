@@ -6,11 +6,30 @@ import { SubPageHeader } from '@/components/layout/SubPageHeader';
 interface MessagesScreenProps {
   messages: PrintMessage[];
   onSelect: (message: PrintMessage) => void;
+  onEdit: (message: PrintMessage) => void;
+  onNew: () => void;
+  onDelete: (message: PrintMessage) => void;
   onHome: () => void;
 }
 
-export function MessagesScreen({ messages, onSelect, onHome }: MessagesScreenProps) {
+export function MessagesScreen({ 
+  messages, 
+  onSelect, 
+  onEdit, 
+  onNew, 
+  onDelete, 
+  onHome 
+}: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
+
+  const handleMessageClick = (message: PrintMessage) => {
+    // If already selected, open edit
+    if (selectedMessage?.id === message.id) {
+      onEdit(message);
+    } else {
+      setSelectedMessage(message);
+    }
+  };
 
   return (
     <div className="flex-1 p-4 flex flex-col">
@@ -27,7 +46,7 @@ export function MessagesScreen({ messages, onSelect, onHome }: MessagesScreenPro
             {messages.map((message) => (
               <div
                 key={message.id}
-                onClick={() => setSelectedMessage(message)}
+                onClick={() => handleMessageClick(message)}
                 className={`flex items-center py-3 border-b cursor-pointer hover:bg-muted/50 ${
                   selectedMessage?.id === message.id ? 'bg-primary/10' : ''
                 }`}
@@ -51,17 +70,28 @@ export function MessagesScreen({ messages, onSelect, onHome }: MessagesScreenPro
           <span className="font-medium">Select</span>
         </button>
 
-        <button className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]">
+        <button 
+          onClick={onNew}
+          className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
+        >
           <Plus className="w-8 h-8 mb-1" />
           <span className="font-medium">New</span>
         </button>
 
-        <button className="industrial-button-gray text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]">
+        <button 
+          onClick={() => selectedMessage && onEdit(selectedMessage)}
+          disabled={!selectedMessage}
+          className="industrial-button-gray text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
+        >
           <Pencil className="w-8 h-8 mb-1" />
           <span className="font-medium">Edit</span>
         </button>
 
-        <button className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]">
+        <button 
+          onClick={() => selectedMessage && onDelete(selectedMessage)}
+          disabled={!selectedMessage}
+          className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
+        >
           <Trash2 className="w-8 h-8 mb-1" />
           <span className="font-medium">Delete</span>
         </button>
