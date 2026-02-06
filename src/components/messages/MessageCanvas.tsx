@@ -52,13 +52,17 @@ export function MessageCanvas({
   const [scrollX, setScrollX] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollTrackRef = useRef<HTMLDivElement>(null);
   const [canvasWidth, setCanvasWidth] = useState(640);
   
-  // Drag state
+  // Drag state for fields
   const [isDragging, setIsDragging] = useState(false);
   const [dragFieldId, setDragFieldId] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  
+  // Scrollbar drag state
+  const [isScrollDragging, setIsScrollDragging] = useState(false);
   
   // Calculate blocked rows (from top)
   const blockedRows = TOTAL_ROWS - templateHeight;
@@ -324,6 +328,59 @@ export function MessageCanvas({
     }
   };
 
+  // Scrollbar drag handlers
+  const maxScroll = Math.max(0, width - visibleCols);
+  
+  const handleScrollbarMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsScrollDragging(true);
+  };
+
+  const handleScrollTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!scrollTrackRef.current || isScrollDragging) return;
+    
+    const rect = scrollTrackRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const trackWidth = rect.width;
+    const thumbWidth = (visibleCols / width) * trackWidth;
+    
+    // Calculate new scroll position centered on click
+    const clickRatio = (clickX - thumbWidth / 2) / (trackWidth - thumbWidth);
+    const newScrollX = Math.round(Math.max(0, Math.min(maxScroll, clickRatio * maxScroll)));
+    setScrollX(newScrollX);
+  };
+
+  useEffect(() => {
+    if (!isScrollDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!scrollTrackRef.current) return;
+      
+      const rect = scrollTrackRef.current.getBoundingClientRect();
+      const trackWidth = rect.width;
+      const thumbWidth = (visibleCols / width) * trackWidth;
+      
+      const mouseX = e.clientX - rect.left;
+      const scrollableWidth = trackWidth - thumbWidth;
+      const scrollRatio = (mouseX - thumbWidth / 2) / scrollableWidth;
+      
+      const newScrollX = Math.round(Math.max(0, Math.min(maxScroll, scrollRatio * maxScroll)));
+      setScrollX(newScrollX);
+    };
+
+    const handleMouseUp = () => {
+      setIsScrollDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isScrollDragging, maxScroll, visibleCols, width]);
+
   return (
     <div className="flex flex-col w-full">
       {/* Canvas area */}
@@ -353,12 +410,18 @@ export function MessageCanvas({
           </button>
         </div>
         
-        {/* Scroll track */}
-        <div className="flex-1 h-3 bg-sky-300 rounded relative">
+        {/* Scroll track - clickable */}
+        <div 
+          ref={scrollTrackRef}
+          onClick={handleScrollTrackClick}
+          className="flex-1 h-5 bg-sky-300 rounded relative cursor-pointer"
+        >
+          {/* Scroll thumb - draggable */}
           <div 
-            className="absolute h-full bg-sky-600 rounded"
+            onMouseDown={handleScrollbarMouseDown}
+            className={`absolute h-full bg-sky-600 rounded cursor-grab active:cursor-grabbing hover:bg-sky-700 transition-colors ${isScrollDragging ? 'bg-sky-700' : ''}`}
             style={{
-              left: `${(scrollX / Math.max(1, width - visibleCols)) * 100}%`,
+              left: `${maxScroll > 0 ? (scrollX / maxScroll) * (100 - (visibleCols / width) * 100) : 0}%`,
               width: `${Math.min(100, (visibleCols / width) * 100)}%`,
             }}
           />
