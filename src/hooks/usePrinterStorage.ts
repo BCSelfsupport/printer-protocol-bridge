@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Printer } from '@/types/printer';
+import { printerEmulator } from '@/lib/printerEmulator';
 
 const STORAGE_KEY = 'codesync-printers';
 
@@ -28,6 +29,74 @@ export function usePrinterStorage() {
     }
     return getDefaultPrinters();
   });
+
+  // Subscribe to emulator state changes to update simulated printer status
+  useEffect(() => {
+    // When emulator is toggled on/off, update printer 1 availability
+    const unsubEnabled = printerEmulator.subscribeToEnabled((enabled) => {
+      setPrinters(prev => prev.map(p => {
+        if (p.id === 1) {
+          if (enabled) {
+            const simulated = printerEmulator.getSimulatedPrinter();
+            return {
+              ...p,
+              isAvailable: true,
+              status: simulated?.status ?? 'not_ready',
+              hasActiveErrors: false,
+            };
+          } else {
+            // When emulator is disabled, mark offline (unless actually connected)
+            if (!p.isConnected) {
+              return {
+                ...p,
+                isAvailable: false,
+                status: 'offline',
+                hasActiveErrors: false,
+              };
+            }
+          }
+        }
+        return p;
+      }));
+    });
+
+    // Also subscribe to emulator state changes (HV on/off) to update status
+    const unsubState = printerEmulator.subscribe((state) => {
+      if (printerEmulator.enabled) {
+        setPrinters(prev => prev.map(p => {
+          if (p.id === 1) {
+            return {
+              ...p,
+              isAvailable: true,
+              status: state.hvOn ? 'ready' : 'not_ready',
+            };
+          }
+          return p;
+        }));
+      }
+    });
+
+    // Initial check if emulator is already enabled
+    if (printerEmulator.enabled) {
+      setPrinters(prev => prev.map(p => {
+        if (p.id === 1) {
+          const state = printerEmulator.getState();
+          return {
+            ...p,
+            isAvailable: true,
+            status: state.hvOn ? 'ready' : 'not_ready',
+            hasActiveErrors: false,
+          };
+        }
+        return p;
+      }));
+    }
+
+    return () => {
+      unsubEnabled();
+      unsubState();
+    };
+  }, []);
 
   // Persist to localStorage whenever printers change
   useEffect(() => {

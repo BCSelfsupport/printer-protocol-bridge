@@ -335,6 +335,55 @@ export function usePrinterConnection() {
   }, [updatePrinterStatus]);
 
   const connect = useCallback(async (printer: Printer) => {
+    // If using emulator, simulate connection
+    if (shouldUseEmulator()) {
+      console.log('[connect] Using emulator for printer:', printer.id);
+      
+      // Start the jet in emulator to allow HV control
+      printerEmulator.processCommand('^SJ 1');
+      
+      // Update printer status
+      updatePrinter(printer.id, {
+        isConnected: true,
+        isAvailable: true,
+        status: 'not_ready',
+        hasActiveErrors: false,
+      });
+
+      const emulatorState = printerEmulator.getState();
+      setConnectionState({
+        isConnected: true,
+        connectedPrinter: { ...printer, isConnected: true },
+        status: {
+          ...mockStatus,
+          isRunning: emulatorState.hvOn,
+          currentMessage: emulatorState.currentMessage,
+        },
+        metrics: {
+          ...mockMetrics,
+          modulation: emulatorState.modulation,
+          charge: emulatorState.charge,
+          pressure: emulatorState.pressure,
+          rps: emulatorState.rps,
+          phaseQual: emulatorState.phaseQual,
+          viscosity: emulatorState.viscosity,
+          hvDeflection: emulatorState.hvOn,
+          inkLevel: emulatorState.inkLevel,
+          makeupLevel: emulatorState.makeupLevel,
+          printStatus: emulatorState.hvOn ? 'Ready' : 'Not ready',
+          subsystems: {
+            v300up: emulatorState.v300up,
+            vltOn: emulatorState.vltOn,
+            gutOn: emulatorState.gutOn,
+            modOn: emulatorState.modOn,
+          },
+        },
+        settings: defaultSettings,
+        messages: mockMessages,
+      });
+      return;
+    }
+
     // NOTE: Lazy-connect.
     // Do not open a TCP/Telnet session here; many printers flash/refresh their UI on connect.
     // We only open the socket when the Service screen is active.

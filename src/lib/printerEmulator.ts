@@ -69,6 +69,16 @@ export interface CommandLogEntry {
   direction: 'sent' | 'received';
 }
 
+// Simulated printer info for dev mode
+export interface SimulatedPrinter {
+  id: number;
+  name: string;
+  ipAddress: string;
+  port: number;
+  isAvailable: boolean;
+  status: 'ready' | 'not_ready' | 'offline';
+}
+
 // Protocol v2.0 command definitions
 export interface ProtocolCommand {
   code: string;
@@ -190,10 +200,21 @@ class PrinterEmulator {
   private commandLog: CommandLogEntry[] = [];
   private listeners: Set<(state: EmulatorState) => void> = new Set();
   private logListeners: Set<(log: CommandLogEntry[]) => void> = new Set();
+  private enabledListeners: Set<(enabled: boolean) => void> = new Set();
   private _enabled: boolean = false;
   
   private readonly VERSION = 'v01.09.00.14';
   private readonly BUILD_DATE = 'Feb 06 2026 10:30:00';
+
+  // The simulated printer that appears when emulator is enabled
+  private readonly simulatedPrinter: SimulatedPrinter = {
+    id: 1,
+    name: 'Printer 1',
+    ipAddress: '192.168.1.55',
+    port: 23,
+    isAvailable: true,
+    status: 'not_ready',
+  };
 
   get enabled() {
     return this._enabled;
@@ -201,6 +222,29 @@ class PrinterEmulator {
 
   set enabled(value: boolean) {
     this._enabled = value;
+    // Notify listeners when emulator is toggled
+    this.enabledListeners.forEach(listener => listener(value));
+  }
+
+  /**
+   * Get the simulated printer info (available when emulator is enabled)
+   */
+  getSimulatedPrinter(): SimulatedPrinter | null {
+    if (!this._enabled) return null;
+    // Return current status based on emulator state
+    return {
+      ...this.simulatedPrinter,
+      isAvailable: true,
+      status: this.state.hvOn ? 'ready' : 'not_ready',
+    };
+  }
+
+  /**
+   * Subscribe to emulator enabled/disabled changes
+   */
+  subscribeToEnabled(listener: (enabled: boolean) => void): () => void {
+    this.enabledListeners.add(listener);
+    return () => this.enabledListeners.delete(listener);
   }
 
   getState(): EmulatorState {
