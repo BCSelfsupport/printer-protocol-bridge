@@ -9,6 +9,7 @@ import { SetupScreen } from '@/components/screens/SetupScreen';
 import { ServiceScreen } from '@/components/screens/ServiceScreen';
 import { CleanScreen } from '@/components/screens/CleanScreen';
 import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
+import { SignInDialog } from '@/components/printers/SignInDialog';
 import { usePrinterConnection } from '@/hooks/usePrinterConnection';
 import { useJetCountdown } from '@/hooks/useJetCountdown';
 import { DevPanel } from '@/components/dev/DevPanel';
@@ -21,6 +22,7 @@ type ScreenType = NavItem | 'network' | 'control';
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
   const [devPanelOpen, setDevPanelOpen] = useState(false);
+  const [signInDialogOpen, setSignInDialogOpen] = useState(false);
   const {
     printers,
     connectionState,
@@ -31,6 +33,7 @@ const Index = () => {
     jetStop,
     updateSettings,
     selectMessage,
+    signIn,
     addPrinter,
     removePrinter,
     setServiceScreenOpen,
@@ -91,7 +94,7 @@ const Index = () => {
             onJetStop={handleJetStop}
             onNewMessage={() => setCurrentScreen('messages')}
             onEditMessage={() => setCurrentScreen('messages')}
-            onSignIn={() => {}}
+            onSignIn={() => setSignInDialogOpen(true)}
             onHelp={() => {}}
             onMount={() => setControlScreenOpen(true)}
             onUnmount={() => setControlScreenOpen(false)}
@@ -178,6 +181,13 @@ const Index = () => {
           onToggle={() => setDevPanelOpen(!devPanelOpen)} 
         />
       )}
+      
+      {/* Sign In Dialog */}
+      <SignInDialog
+        open={signInDialogOpen}
+        onOpenChange={setSignInDialogOpen}
+        onSignIn={signIn}
+      />
     </div>
   );
 };

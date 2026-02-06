@@ -16,6 +16,7 @@ export interface EmulatorState {
   oneToOneMode: boolean;
   forcePhotoEye: boolean;
   autoAlign: boolean;
+  isLoggedIn: boolean;
   
   // Metrics
   modulation: number;
@@ -96,6 +97,8 @@ export const PROTOCOL_COMMANDS: ProtocolCommand[] = [
   { code: '^SJ 1', name: 'Start Jet', description: 'Start the ink jet', category: 'system' },
   { code: '^UT 0', name: 'UTF-8 Off', description: 'Disable UTF-8 mode', category: 'system' },
   { code: '^UT 1', name: 'UTF-8 On', description: 'Enable UTF-8 mode', category: 'system' },
+  { code: '^LG', name: 'Login', description: 'Sign in with password (^LG password)', category: 'system' },
+  { code: '^LO', name: 'Logout', description: 'Sign out of the printer', category: 'system' },
   
   // Query Commands
   { code: '^SU', name: 'Status Update', description: 'Query printer status (modulation, charge, pressure, etc.)', category: 'query' },
@@ -157,6 +160,7 @@ const defaultState: EmulatorState = {
   oneToOneMode: false,
   forcePhotoEye: false,
   autoAlign: false,
+  isLoggedIn: false,
   
   modulation: 160,
   charge: 65,
@@ -382,6 +386,10 @@ class PrinterEmulator {
         response = this.cmdChangeTimeDelimiter(trimmedCommand);
       } else if (trimmedCommand.startsWith('^VM')) {
         response = this.cmdViewMessage(trimmedCommand);
+      } else if (trimmedCommand.startsWith('^LG')) {
+        response = this.cmdLogin(trimmedCommand);
+      } else if (trimmedCommand.startsWith('^LO')) {
+        response = this.cmdLogout();
       } else {
         // Unknown command
         response = this.formatError(3, 'CmdNotRec', 'Command not recognized');
@@ -789,6 +797,34 @@ class PrinterEmulator {
       
       this.notifyListeners();
     }
+  }
+
+  // ============ Login/Logout Commands ============
+  
+  private readonly ADMIN_PASSWORD = 'TEXAS';
+
+  private cmdLogin(cmd: string): string {
+    // Extract password from command: ^LG password or ^LG;password
+    const match = cmd.match(/\^LG[\s;]+(.+)/i);
+    if (match) {
+      const password = match[1].trim();
+      if (password.toUpperCase() === this.ADMIN_PASSWORD) {
+        this.state.isLoggedIn = true;
+        return this.state.echoOn 
+          ? 'Command Successful!\r\nLogin accepted - Admin access granted'
+          : 'Login OK';
+      } else {
+        return this.formatError(5, 'AuthFail', 'Invalid password');
+      }
+    }
+    return this.formatError(2, 'CmdFormat', 'Usage: ^LG password');
+  }
+
+  private cmdLogout(): string {
+    this.state.isLoggedIn = false;
+    return this.state.echoOn
+      ? 'Command Successful!\r\nLogged out'
+      : 'Logout OK';
   }
 
   /**

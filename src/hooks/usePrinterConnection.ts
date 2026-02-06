@@ -677,6 +677,45 @@ export function usePrinterConnection() {
     }));
   }, []);
 
+  // Printer sign-in: send ^LG password command
+  const signIn = useCallback(async (password: string): Promise<boolean> => {
+    console.log('[signIn] Called, isConnected:', connectionState.isConnected, 'printer:', connectionState.connectedPrinter?.id);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[signIn] Not connected, aborting');
+      return false;
+    }
+    
+    const printer = connectionState.connectedPrinter;
+    
+    if (shouldUseEmulator()) {
+      // Use emulator
+      console.log('[signIn] Using emulator');
+      const result = printerEmulator.processCommand(`^LG ${password}`);
+      console.log('[signIn] Emulator result:', result);
+      return result.success && !result.response.includes('AuthFail');
+    } else if (isElectron && window.electronAPI) {
+      try {
+        console.log('[signIn] Sending ^LG command');
+        const result = await window.electronAPI.printer.sendCommand(printer.id, `^LG ${password}`);
+        console.log('[signIn] Result:', JSON.stringify(result));
+        
+        if (result?.success && result?.response) {
+          // Check if response indicates successful login
+          const response = result.response.toUpperCase();
+          return response.includes('OK') || response.includes('SUCCESSFUL') || response.includes('ACCEPTED');
+        }
+        return false;
+      } catch (e) {
+        console.error('[signIn] Failed to send ^LG command:', e);
+        return false;
+      }
+    } else {
+      // Web preview mock - accept "TEXAS" as password
+      console.log('[signIn] Web preview mock');
+      return password.toUpperCase() === 'TEXAS';
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter]);
+
   return {
     printers,
     connectionState,
@@ -689,6 +728,7 @@ export function usePrinterConnection() {
     jetStop,
     updateSettings,
     selectMessage,
+    signIn,
     checkPrinterStatus,
     addPrinter,
     removePrinter,
