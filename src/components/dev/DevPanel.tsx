@@ -16,7 +16,8 @@ import {
   Send,
   Play,
   Square,
-  List
+  List,
+  Palette
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
@@ -255,6 +256,47 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                       onClick={() => printerEmulator.toggleState('echoOn')}
                       icon={Terminal}
                     />
+                  </div>
+                  
+                  {/* Consumable Level Controls */}
+                  <h3 className="text-xs font-semibold text-gray-500 mt-4 mb-3 uppercase tracking-wider">
+                    Consumable Levels
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => printerEmulator.cycleInkLevel()}
+                      disabled={!emulatorEnabled}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all border",
+                        "border-gray-300",
+                        emulatorState.inkLevel === 'FULL' 
+                          ? "bg-green-100 text-green-700 border-green-500" 
+                          : emulatorState.inkLevel === 'LOW'
+                          ? "bg-yellow-100 text-yellow-700 border-yellow-500"
+                          : "bg-red-100 text-red-700 border-red-500",
+                        !emulatorEnabled && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <Palette className="w-4 h-4" />
+                      Ink: {emulatorState.inkLevel}
+                    </button>
+                    <button
+                      onClick={() => printerEmulator.cycleMakeupLevel()}
+                      disabled={!emulatorEnabled}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all border",
+                        "border-gray-300",
+                        emulatorState.makeupLevel === 'GOOD' 
+                          ? "bg-green-100 text-green-700 border-green-500" 
+                          : emulatorState.makeupLevel === 'LOW'
+                          ? "bg-yellow-100 text-yellow-700 border-yellow-500"
+                          : "bg-red-100 text-red-700 border-red-500",
+                        !emulatorEnabled && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <Droplets className="w-4 h-4" />
+                      Makeup: {emulatorState.makeupLevel}
+                    </button>
                   </div>
                 </div>
 
