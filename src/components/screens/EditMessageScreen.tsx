@@ -83,6 +83,7 @@ export function EditMessageScreen({
   });
   const [loading, setLoading] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(1);
+  const [fieldError, setFieldError] = useState<string | null>(null);
 
   // Load message details when component mounts
   useEffect(() => {
@@ -187,7 +188,22 @@ export function EditMessageScreen({
     );
     if (clickedField) {
       setSelectedFieldId(clickedField.id);
+      setFieldError(null); // Clear error on new selection
     }
+  };
+
+  const handleFieldMove = (fieldId: number, newX: number, newY: number) => {
+    setMessage((prev) => ({
+      ...prev,
+      fields: prev.fields.map((f) =>
+        f.id === fieldId ? { ...f, x: newX, y: newY } : f
+      ),
+    }));
+    setFieldError(null);
+  };
+
+  const handleFieldError = (fieldId: number, error: string | null) => {
+    setFieldError(error);
   };
 
   return (
@@ -200,6 +216,14 @@ export function EditMessageScreen({
         </div>
       ) : (
         <>
+          {/* Error message */}
+          {fieldError && (
+            <div className="mb-2 p-3 bg-destructive/10 border border-destructive rounded-lg text-destructive text-sm flex items-center gap-2">
+              <span className="font-medium">⚠️ Error:</span>
+              <span>{fieldError}</span>
+            </div>
+          )}
+
           {/* Message Canvas - dot matrix preview */}
           <div className="mb-4">
             <MessageCanvas
@@ -207,6 +231,8 @@ export function EditMessageScreen({
               width={message.width}
               fields={message.fields}
               onCanvasClick={handleCanvasClick}
+              onFieldMove={handleFieldMove}
+              onFieldError={handleFieldError}
               selectedFieldId={selectedFieldId}
               multilineTemplate={currentMultilineTemplate ? {
                 lines: currentMultilineTemplate.lines,
