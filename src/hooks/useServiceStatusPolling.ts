@@ -1,8 +1,9 @@
 import { useEffect, useRef } from "react";
+import { printerEmulator } from "@/lib/printerEmulator";
 
 /**
  * Polls a connected printer with a command (default: ^SU) at a fixed interval.
- * Designed to run only in Electron where `window.electronAPI` exists.
+ * Works with both Electron (real printers) and the emulator (web preview).
  */
 export function useServiceStatusPolling(options: {
   enabled: boolean;
@@ -40,12 +41,17 @@ export function useServiceStatusPolling(options: {
       console.log('[useServiceStatusPolling] No printerId, not polling');
       return;
     }
-    if (!window.electronAPI) {
-      console.log('[useServiceStatusPolling] No electronAPI, not polling');
+    
+    // Determine if we should use emulator or Electron API
+    const useEmulator = printerEmulator.enabled;
+    const hasElectronAPI = !!window.electronAPI;
+    
+    if (!useEmulator && !hasElectronAPI) {
+      console.log('[useServiceStatusPolling] No electronAPI and emulator not enabled, not polling');
       return;
     }
 
-    console.log('[useServiceStatusPolling] Starting polling for printer', printerId, 'with command', command);
+    console.log('[useServiceStatusPolling] Starting polling for printer', printerId, 'with command', command, 'useEmulator:', useEmulator);
     let cancelled = false;
 
     const tick = async () => {
@@ -55,7 +61,18 @@ export function useServiceStatusPolling(options: {
 
       try {
         console.log('[useServiceStatusPolling] Sending command:', command);
-        const result = await window.electronAPI!.printer.sendCommand(printerId, command);
+        
+        let result: { success: boolean; response?: string; error?: string };
+        
+        if (useEmulator) {
+          // Use emulator directly
+          const emulatorResult = printerEmulator.processCommand(command);
+          result = { success: emulatorResult.success, response: emulatorResult.response };
+        } else {
+          // Use Electron API
+          result = await window.electronAPI!.printer.sendCommand(printerId, command);
+        }
+        
         if (cancelled) return;
         if (result.success && typeof result.response === "string") {
           console.log('[useServiceStatusPolling] Got response, length:', result.response.length);
