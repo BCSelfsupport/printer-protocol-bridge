@@ -14,6 +14,7 @@ export interface MessageField {
   y: number;
   width: number;
   height: number;
+  fontSize: string;
 }
 
 export interface MessageDetails {
@@ -42,6 +43,16 @@ const MULTILINE_TEMPLATES = [
   { value: 'multi-2x16', label: '2 lines × 16 dots', height: 32, lines: 2 },
 ] as const;
 
+// Font size options
+const FONT_SIZES = [
+  { value: '5x5', label: '5×5' },
+  { value: '7x5', label: '7×5' },
+  { value: '9x6', label: '9×6' },
+  { value: '14', label: '14' },
+  { value: '16', label: '16' },
+  { value: '32', label: '32' },
+] as const;
+
 type SingleTemplateValue = typeof SINGLE_TEMPLATES[number]['value'];
 type MultilineTemplateValue = typeof MULTILINE_TEMPLATES[number]['value'];
 type TemplateValue = SingleTemplateValue | MultilineTemplateValue;
@@ -64,7 +75,7 @@ export function EditMessageScreen({
     height: 16,
     width: 200,
     fields: [
-      { id: 1, type: 'text', data: messageName, x: 0, y: 16, width: 60, height: 16 },
+      { id: 1, type: 'text', data: messageName, x: 0, y: 16, width: 60, height: 16, fontSize: '16' },
     ],
   });
   const [loading, setLoading] = useState(false);
@@ -138,6 +149,7 @@ export function EditMessageScreen({
       y: 32 - message.height,
       width: 50,
       height: Math.min(16, message.height),
+      fontSize: '16',
     };
     setMessage((prev) => ({
       ...prev,
@@ -341,6 +353,34 @@ export function EditMessageScreen({
                           <SelectItem value="time">Time</SelectItem>
                           <SelectItem value="counter">Counter</SelectItem>
                           <SelectItem value="logo">Logo/Graphic</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="fieldFontSize">Font Size</Label>
+                      <Select
+                        value={selectedField.fontSize || '16'}
+                        onValueChange={(value) =>
+                          setMessage((prev) => ({
+                            ...prev,
+                            fields: prev.fields.map((f) =>
+                              f.id === selectedFieldId
+                                ? { ...f, fontSize: value }
+                                : f
+                            ),
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FONT_SIZES.map((fs) => (
+                            <SelectItem key={fs.value} value={fs.value}>
+                              {fs.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
