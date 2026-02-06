@@ -110,25 +110,56 @@ export function Dashboard({
           <span className="text-sm">{isHvOn ? 'HV On' : 'HV Off'}</span>
         </button>
 
-        <button className="industrial-button text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px]">
+        {/* Makeup Level Indicator */}
+        <div className={`px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px] ${
+          status?.makeupLevel === 'EMPTY' ? 'bg-destructive' :
+          status?.makeupLevel === 'LOW' ? 'bg-warning' :
+          'industrial-button'
+        }`}>
           <div className="relative">
-            <Droplets className="w-10 h-10" />
-            {status?.makeupGood && (
+            {/* Half-full visual: split icon coloring */}
+            {status?.makeupLevel === 'GOOD' ? (
+              <div className="relative w-10 h-10">
+                <Droplets className="w-10 h-10 text-white/40" />
+                <div className="absolute inset-0 overflow-hidden" style={{ clipPath: 'inset(50% 0 0 0)' }}>
+                  <Droplets className="w-10 h-10 text-white" />
+                </div>
+              </div>
+            ) : (
+              <Droplets className="w-10 h-10 text-white" />
+            )}
+            {(status?.makeupLevel === 'FULL' || status?.makeupLevel === 'GOOD') && (
               <Wifi className="w-4 h-4 absolute -top-1 -right-1 text-white" />
             )}
           </div>
-          <span className="text-sm">Makeup Good</span>
-        </button>
+          <span className="text-sm text-white">
+            {status?.makeupLevel === 'FULL' ? 'Makeup Good' :
+             status?.makeupLevel === 'GOOD' ? 'Makeup Half' :
+             status?.makeupLevel === 'LOW' ? 'Makeup Low' :
+             status?.makeupLevel === 'EMPTY' ? 'Makeup Empty' :
+             'Makeup Good'}
+          </span>
+        </div>
 
-        <button className="industrial-button text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px]">
+        {/* Ink Level Indicator */}
+        <div className={`px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px] ${
+          status?.inkLevel === 'EMPTY' ? 'bg-destructive' :
+          status?.inkLevel === 'LOW' ? 'bg-warning' :
+          'industrial-button'
+        }`}>
           <div className="relative">
-            <Palette className="w-10 h-10" />
-            {status?.inkFull && (
+            <Palette className="w-10 h-10 text-white" />
+            {(status?.inkLevel === 'FULL' || !status?.inkLevel || status?.inkLevel === 'UNKNOWN') && (
               <span className="absolute -top-1 -right-1 text-white text-lg">✓</span>
             )}
           </div>
-          <span className="text-sm">Ink Full</span>
-        </button>
+          <span className="text-sm text-white">
+            {status?.inkLevel === 'FULL' ? 'Ink Full' :
+             status?.inkLevel === 'LOW' ? 'Ink Low' :
+             status?.inkLevel === 'EMPTY' ? 'Ink Empty' :
+             'Ink Full'}
+          </span>
+        </div>
 
         {/* Start/Stop buttons */}
         <div className="flex flex-col gap-2 ml-auto">
