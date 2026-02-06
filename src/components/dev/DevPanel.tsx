@@ -359,7 +359,7 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                       disabled={!emulatorEnabled}
                       className={cn(
                         "w-full text-left p-2 rounded-md border border-border",
-                        "hover:bg-muted/50 transition-colors",
+                        "bg-background/50 hover:bg-background/80 transition-colors",
                         !emulatorEnabled && "opacity-50 cursor-not-allowed"
                       )}
                     >
@@ -369,7 +369,7 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                           {cmd.category}
                         </Badge>
                       </div>
-                      <div className="text-[10px] text-muted-foreground">{cmd.description}</div>
+                      <div className="text-[10px] text-foreground/70">{cmd.description}</div>
                     </button>
                   ))}
                 </div>
