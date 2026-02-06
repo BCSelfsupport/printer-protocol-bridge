@@ -27,9 +27,12 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
   // Debug: log raw response to console (Electron dev tools)
   console.log('[parseStatusResponse] raw:', response);
 
-  // Case-insensitive search for "status" anywhere in response
-  if (!/status/i.test(response)) {
-    console.log('[parseStatusResponse] no STATUS keyword found');
+  // Accept both verbose and terse ^SU variants.
+  // Real printers may include "STATUS:" and "HVDeflection[...]" while the emulator may return
+  // "Mod[...]" / "HvD[...]" and "INK: ... MAKEUP: ...".
+  const looksLikeStatus = /status/i.test(response) || /\bmod\s*\[/i.test(response) || /\bink\s*:/i.test(response);
+  if (!looksLikeStatus) {
+    console.log('[parseStatusResponse] no recognizable ^SU payload');
     return null;
   }
 
@@ -38,14 +41,29 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
     return match ? match[1] : null;
   };
 
-  // More lenient regexes: allow optional spaces, case-insensitive where appropriate
-  const modulation = parseInt(extract(/Modulation\[\s*(\d+)\s*\]/i) || '0', 10);
-  const charge = parseInt(extract(/Charge\[\s*(\d+)\s*\]/i) || '0', 10);
-  const pressure = parseInt(extract(/Pressure\[\s*(\d+)\s*\]/i) || '0', 10);
+  // Support both verbose and terse token names
+  const modulation = parseInt(
+    extract(/Modulation\[\s*(\d+)\s*\]/i) || extract(/\bMod\[\s*(\d+)\s*\]/i) || '0',
+    10
+  );
+  const charge = parseInt(
+    extract(/Charge\[\s*(\d+)\s*\]/i) || extract(/\bChg\[\s*(\d+)\s*\]/i) || '0',
+    10
+  );
+  const pressure = parseInt(
+    extract(/Pressure\[\s*(\d+)\s*\]/i) || extract(/\bPrs\[\s*(\d+)\s*\]/i) || '0',
+    10
+  );
   const rps = parseFloat(extract(/RPS\[\s*([\d.]+)\s*\]/i) || '0');
-  const phaseQual = parseInt(extract(/PhaseQual\[\s*(\d+)\s*%?\s*\]/i) || '0', 10);
-  const hvDeflection = extract(/HVDeflection\[\s*(\d)\s*\]/i) === '1';
-  const viscosity = parseFloat(extract(/Viscosity\[\s*([\d.]+)\s*\]/i) || '0');
+  const phaseQual = parseInt(
+    extract(/PhaseQual\[\s*(\d+)\s*%?\s*\]/i) || extract(/\bPhQ\[\s*(\d+)\s*%?\s*\]/i) || '0',
+    10
+  );
+  const hvDeflection =
+    (extract(/HVDeflection\[\s*(\d)\s*\]/i) || extract(/\bHvD\[\s*(\d)\s*\]/i)) === '1';
+  const viscosity = parseFloat(
+    extract(/Viscosity\[\s*([\d.]+)\s*\]/i) || extract(/\bVis\[\s*([\d.]+)\s*\]/i) || '0'
+  );
 
   // INK:FULL MAKEUP:GOOD (allow optional spaces)
   const inkLevel = extract(/INK\s*:\s*(\w+)/i) || 'UNKNOWN';
