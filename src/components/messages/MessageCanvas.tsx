@@ -27,7 +27,6 @@ interface MessageCanvasProps {
 
 const TOTAL_ROWS = 32;
 const DOT_SIZE = 8; // pixels per dot
-const VISIBLE_COLS = 80; // visible columns before scrolling
 
 export function MessageCanvas({
   templateHeight = 16,
@@ -38,9 +37,25 @@ export function MessageCanvas({
 }: MessageCanvasProps) {
   const [scrollX, setScrollX] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [canvasWidth, setCanvasWidth] = useState(640); // Default width, will be updated
   
   // Calculate blocked rows (from top)
   const blockedRows = TOTAL_ROWS - templateHeight;
+  const visibleCols = Math.floor(canvasWidth / DOT_SIZE);
+  
+  // Update canvas width when container resizes
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setCanvasWidth(containerRef.current.clientWidth);
+      }
+    };
+    
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
   
   // Render the dot matrix grid
   useEffect(() => {
@@ -50,22 +65,21 @@ export function MessageCanvas({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    const visibleWidth = Math.min(VISIBLE_COLS, width) * DOT_SIZE;
     const totalHeight = TOTAL_ROWS * DOT_SIZE;
     
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw grid background (light gray with grid lines)
-    ctx.fillStyle = '#f5f5f5';
+    // Draw grid background - cream/beige color like the reference
+    ctx.fillStyle = '#f5e6c8';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // Draw grid lines
-    ctx.strokeStyle = '#ddd';
+    ctx.strokeStyle = '#d4c4a8';
     ctx.lineWidth = 0.5;
     
-    // Vertical lines
-    for (let x = 0; x <= VISIBLE_COLS; x++) {
+    // Vertical lines - draw across full canvas width
+    for (let x = 0; x <= visibleCols; x++) {
       ctx.beginPath();
       ctx.moveTo(x * DOT_SIZE, 0);
       ctx.lineTo(x * DOT_SIZE, totalHeight);
@@ -80,10 +94,25 @@ export function MessageCanvas({
       ctx.stroke();
     }
     
-    // Draw blocked (red) area at top
+    // Draw blocked (red) area at top - full width
     if (blockedRows > 0) {
-      ctx.fillStyle = 'rgba(220, 53, 69, 0.85)'; // Industrial red
+      ctx.fillStyle = 'rgba(220, 90, 100, 0.9)'; // Industrial red
       ctx.fillRect(0, 0, canvas.width, blockedRows * DOT_SIZE);
+      
+      // Redraw grid lines over the red area
+      ctx.strokeStyle = 'rgba(180, 60, 70, 0.5)';
+      for (let x = 0; x <= visibleCols; x++) {
+        ctx.beginPath();
+        ctx.moveTo(x * DOT_SIZE, 0);
+        ctx.lineTo(x * DOT_SIZE, blockedRows * DOT_SIZE);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= blockedRows; y++) {
+        ctx.beginPath();
+        ctx.moveTo(0, y * DOT_SIZE);
+        ctx.lineTo(canvas.width, y * DOT_SIZE);
+        ctx.stroke();
+      }
     }
     
     // Draw each field with its font size
@@ -114,14 +143,14 @@ export function MessageCanvas({
       renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE);
     });
     
-  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId]);
+  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, canvasWidth, visibleCols]);
   
   const handleScroll = (direction: 'left' | 'right') => {
     const step = 10;
     if (direction === 'left') {
       setScrollX(Math.max(0, scrollX - step));
     } else {
-      setScrollX(Math.min(width - VISIBLE_COLS, scrollX + step));
+      setScrollX(Math.min(width - visibleCols, scrollX + step));
     }
   };
   
@@ -135,15 +164,15 @@ export function MessageCanvas({
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col w-full">
       {/* Canvas area */}
-      <div className="border-2 border-muted rounded-t-lg overflow-hidden">
+      <div ref={containerRef} className="border-2 border-muted rounded-t-lg overflow-hidden w-full">
         <canvas
           ref={canvasRef}
-          width={VISIBLE_COLS * DOT_SIZE}
+          width={canvasWidth}
           height={TOTAL_ROWS * DOT_SIZE}
           onClick={handleCanvasClick}
-          className="cursor-crosshair"
+          className="cursor-crosshair w-full"
         />
       </div>
       
@@ -165,15 +194,15 @@ export function MessageCanvas({
           <div 
             className="absolute h-full bg-sky-600 rounded"
             style={{
-              left: `${(scrollX / Math.max(1, width - VISIBLE_COLS)) * 100}%`,
-              width: `${Math.min(100, (VISIBLE_COLS / width) * 100)}%`,
+              left: `${(scrollX / Math.max(1, width - visibleCols)) * 100}%`,
+              width: `${Math.min(100, (visibleCols / width) * 100)}%`,
             }}
           />
         </div>
         
         <button
           onClick={() => handleScroll('right')}
-          disabled={scrollX >= width - VISIBLE_COLS}
+          disabled={scrollX >= width - visibleCols}
           className="p-1 bg-sky-300 hover:bg-sky-200 rounded disabled:opacity-50"
         >
           <ChevronRight className="w-4 h-4 text-sky-700" />
