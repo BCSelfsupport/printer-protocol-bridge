@@ -130,8 +130,8 @@ export function Dashboard({
           <div className="flex flex-col-reverse gap-0.5 h-16 w-5 bg-black/20 rounded p-0.5">
             {[0, 1, 2, 3].map((seg) => {
               const level = status?.makeupLevel;
-              // Makeup tank: FULL=4 bars, GOOD=2 bars (half, one bottle remaining), LOW=2 bars (half, warning), EMPTY=0
-              const filledSegments = level === 'FULL' ? 4 : (level === 'GOOD' || level === 'LOW') ? 2 : 0;
+              // Makeup tank: FULL=4 bars, GOOD=2 bars (half), LOW=1 bar, EMPTY=0
+              const filledSegments = level === 'FULL' ? 4 : level === 'GOOD' ? 2 : level === 'LOW' ? 1 : 0;
               const isFilled = seg < filledSegments;
               return (
                 <div
