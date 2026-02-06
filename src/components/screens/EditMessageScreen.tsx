@@ -210,7 +210,7 @@ export function EditMessageScreen({
   };
 
   return (
-    <div className="flex-1 p-4 flex flex-col">
+    <div className="flex-1 p-4 flex flex-col h-full overflow-hidden">
       <SubPageHeader title={`Edit: ${messageName}`} onHome={onCancel} />
 
       {loading ? (
@@ -333,7 +333,7 @@ export function EditMessageScreen({
           </div>
 
           {/* Fields editor */}
-          <div className="bg-card rounded-lg p-4 mb-4 flex-1 overflow-auto">
+          <div className="bg-card rounded-lg p-4 mb-4 flex-1 min-h-0 overflow-auto">
             <div className="grid grid-cols-3 gap-4">
               {/* Field list */}
               <div className="border rounded-lg overflow-hidden">
