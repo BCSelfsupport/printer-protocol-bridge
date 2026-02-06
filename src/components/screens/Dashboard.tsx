@@ -247,18 +247,38 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* Message preview area */}
-      <div className="flex-1 bg-card rounded-lg p-4">
-        {status?.currentMessage && (
-          <div className="text-lg font-mono">
-            <span className="font-bold">{status.currentMessage}</span>
-            <span className="ml-4 text-muted-foreground">
-              {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+      {/* Message preview area - HMI style print preview */}
+      <div className="flex-1 bg-white rounded-lg p-6 flex items-center justify-center min-h-[120px] border-2 border-muted">
+        {status?.currentMessage ? (
+          <div className="flex items-baseline gap-6 font-mono">
+            {/* Main message text - large dot-matrix style */}
+            <span 
+              className="text-5xl font-bold tracking-wide text-foreground"
+              style={{ fontFamily: "'Courier New', Courier, monospace", letterSpacing: '0.05em' }}
+            >
+              {status.currentMessage}
             </span>
-            <div className="text-muted-foreground">
-              {new Date().toLocaleDateString('en-US', { year: '2-digit', month: '2-digit', day: '2-digit' })}
+            {/* Time and date - stacked on the right */}
+            <div className="flex flex-col items-end text-foreground" style={{ fontFamily: "'Courier New', Courier, monospace" }}>
+              <span className="text-2xl font-bold tracking-wider">
+                {(status.printerTime ?? new Date()).toLocaleTimeString('en-US', { 
+                  hour: '2-digit', 
+                  minute: '2-digit', 
+                  second: '2-digit', 
+                  hour12: false 
+                })}
+              </span>
+              <span className="text-xl tracking-wider">
+                {(status.printerTime ?? new Date()).toLocaleDateString('en-US', { 
+                  month: '2-digit', 
+                  day: '2-digit', 
+                  year: '2-digit' 
+                }).replace(/\//g, '/')}
+              </span>
             </div>
           </div>
+        ) : (
+          <span className="text-muted-foreground text-lg">No message selected</span>
         )}
       </div>
     </div>
