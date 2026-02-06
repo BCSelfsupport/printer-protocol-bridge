@@ -78,7 +78,7 @@ export function EditMessageScreen({
     height: 16,
     width: 200,
     fields: [
-      { id: 1, type: 'text', data: messageName, x: 0, y: 16, width: 60, height: 16, fontSize: '16' },
+      { id: 1, type: 'text', data: messageName, x: 0, y: 16, width: 60, height: 16, fontSize: 'Standard16High' },
     ],
   });
   const [loading, setLoading] = useState(false);
@@ -149,7 +149,7 @@ export function EditMessageScreen({
       y: 32 - message.height,
       width: 50,
       height: Math.min(16, message.height),
-      fontSize: '16',
+      fontSize: 'Standard16High',
     };
     setMessage((prev) => ({
       ...prev,
@@ -204,7 +204,7 @@ export function EditMessageScreen({
               <div>
                 <Label htmlFor="msgFontSize">Font Size</Label>
                 <Select
-                  value={selectedField?.fontSize || '16'}
+                  value={selectedField?.fontSize || 'Standard16High'}
                   onValueChange={(value) => {
                     if (selectedFieldId) {
                       setMessage((prev) => ({
