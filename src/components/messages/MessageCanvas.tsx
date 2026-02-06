@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { renderText, getFontInfo, PRINTER_FONTS } from '@/lib/dotMatrixFonts';
 
 interface CanvasField {
   id: number;
@@ -88,29 +89,29 @@ export function MessageCanvas({
     // Draw each field with its font size
     fields.forEach((field) => {
       const isSelected = field.id === selectedFieldId;
+      const fontInfo = getFontInfo(field.fontSize);
+      
+      // Calculate field dimensions based on font
       const fieldX = (field.x - scrollX) * DOT_SIZE;
       const fieldY = field.y * DOT_SIZE;
-      const fieldW = field.width * DOT_SIZE;
-      const fieldH = field.height * DOT_SIZE;
+      const textWidth = field.data.length * (fontInfo.charWidth + 1) * DOT_SIZE;
+      const fieldH = fontInfo.height * DOT_SIZE;
       
       // Skip if field is outside visible area
-      if (fieldX + fieldW < 0 || fieldX > canvas.width) return;
+      if (fieldX + textWidth < 0 || fieldX > canvas.width) return;
       
       // Draw selection highlight
       if (isSelected) {
         ctx.fillStyle = 'rgba(255, 193, 7, 0.3)';
-        ctx.fillRect(fieldX, fieldY, fieldW, fieldH);
+        ctx.fillRect(fieldX, fieldY, textWidth, fieldH);
         ctx.strokeStyle = '#ffc107';
         ctx.lineWidth = 2;
-        ctx.strokeRect(fieldX, fieldY, fieldW, fieldH);
+        ctx.strokeRect(fieldX, fieldY, textWidth, fieldH);
       }
       
-      // Get font height from fontSize
-      const fontHeight = getFontHeight(field.fontSize);
-      
-      // Draw the field text
+      // Draw the field text using the font system
       ctx.fillStyle = '#1a1a1a';
-      drawDotMatrixText(ctx, field.data, fieldX, fieldY, DOT_SIZE, fontHeight);
+      renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE);
     });
     
   }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId]);
@@ -180,91 +181,4 @@ export function MessageCanvas({
       </div>
     </div>
   );
-}
-
-/**
- * Get the dot height from font size string
- */
-function getFontHeight(fontSize: string): number {
-  const fontMap: Record<string, number> = {
-    '5x5': 5,
-    '7x5': 7,
-    '9x6': 9,
-    '14': 14,
-    '16': 16,
-    '32': 32,
-  };
-  return fontMap[fontSize] || 16;
-}
-
-/**
- * Draw dot-matrix text at a position
- */
-function drawDotMatrixText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  startX: number,
-  startY: number,
-  dotSize: number,
-  fontHeight: number
-) {
-  const charWidth = Math.max(5, Math.floor(fontHeight * 0.6)); // Proportional width
-  
-  for (let i = 0; i < text.length; i++) {
-    const charX = startX + i * (charWidth + 1) * (dotSize / 2);
-    drawDotMatrixChar(ctx, text[i], charX, startY, dotSize, fontHeight);
-  }
-}
-
-/**
- * Draw a simplified dot-matrix character
- * This is a basic representation - real implementation would use actual font bitmaps
- */
-function drawDotMatrixChar(
-  ctx: CanvasRenderingContext2D,
-  char: string,
-  x: number,
-  y: number,
-  dotSize: number,
-  height: number
-) {
-  // Simple 5x7 dot matrix patterns for letters/numbers
-  const patterns: Record<string, number[][]> = {
-    'A': [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],
-    'B': [[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0]],
-    'C': [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,1],[0,1,1,1,0]],
-    'D': [[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0]],
-    'E': [[1,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
-    'O': [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
-    'S': [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,0],[0,1,1,1,0],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
-    'T': [[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
-    '-': [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[1,1,1,1,1],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]],
-    '0': [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,1,1],[1,0,1,0,1],[1,1,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
-    '1': [[0,0,1,0,0],[0,1,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,1,1,1,0]],
-    '2': [[0,1,1,1,0],[1,0,0,0,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[1,1,1,1,1]],
-    '3': [[0,1,1,1,0],[1,0,0,0,1],[0,0,0,0,1],[0,0,1,1,0],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
-    ' ': [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]],
-  };
-  
-  const pattern = patterns[char.toUpperCase()] || patterns[' '];
-  if (!pattern) return;
-  
-  // Scale based on font height
-  const scale = Math.max(1, Math.floor(height / 7));
-  const dotScale = (dotSize / 8) * scale;
-  
-  pattern.forEach((row, rowIdx) => {
-    if (rowIdx * scale >= height) return;
-    row.forEach((dot, colIdx) => {
-      if (dot === 1) {
-        for (let sy = 0; sy < scale; sy++) {
-          for (let sx = 0; sx < scale; sx++) {
-            const px = x + (colIdx * scale + sx) * dotScale + 1;
-            const py = y + (rowIdx * scale + sy) * dotScale + 1;
-            ctx.fillRect(px, py, dotScale - 1, dotScale - 1);
-          }
-        }
-      }
-    });
-  });
 }
