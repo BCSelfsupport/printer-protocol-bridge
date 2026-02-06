@@ -12,6 +12,11 @@ interface CanvasField {
   fontSize: string;
 }
 
+interface MultilineTemplate {
+  lines: number;
+  dotsPerLine: number;
+}
+
 interface MessageCanvasProps {
   /** Total height is always 32 dots */
   templateHeight: number; // 7, 9, 11, 16, 24, or 32
@@ -23,6 +28,8 @@ interface MessageCanvasProps {
   onCanvasClick?: (x: number, y: number) => void;
   /** Selected field ID */
   selectedFieldId?: number | null;
+  /** Multi-line template info (if applicable) */
+  multilineTemplate?: MultilineTemplate | null;
 }
 
 const TOTAL_ROWS = 32;
@@ -34,6 +41,7 @@ export function MessageCanvas({
   fields = [],
   onCanvasClick,
   selectedFieldId,
+  multilineTemplate,
 }: MessageCanvasProps) {
   const [scrollX, setScrollX] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -115,6 +123,27 @@ export function MessageCanvas({
       }
     }
     
+    // Draw multi-line template dividers (red dotted lines between lines)
+    if (multilineTemplate && multilineTemplate.lines > 1) {
+      const { lines, dotsPerLine } = multilineTemplate;
+      const startY = blockedRows;
+      
+      ctx.strokeStyle = 'rgba(220, 53, 69, 0.9)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]); // Dotted line
+      
+      // Draw horizontal divider lines between each text line
+      for (let line = 1; line < lines; line++) {
+        const lineY = (startY + line * dotsPerLine) * DOT_SIZE;
+        ctx.beginPath();
+        ctx.moveTo(0, lineY);
+        ctx.lineTo(canvas.width, lineY);
+        ctx.stroke();
+      }
+      
+      ctx.setLineDash([]); // Reset to solid line
+    }
+    
     // Draw each field with its font size
     fields.forEach((field) => {
       const isSelected = field.id === selectedFieldId;
@@ -143,7 +172,7 @@ export function MessageCanvas({
       renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE);
     });
     
-  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, canvasWidth, visibleCols]);
+  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, canvasWidth, visibleCols, multilineTemplate]);
   
   const handleScroll = (direction: 'left' | 'right') => {
     const step = 10;
