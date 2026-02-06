@@ -332,13 +332,13 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Ink Level:</span>
-                      <span className={emulatorState.inkLevel === 'GOOD' || emulatorState.inkLevel === 'FULL' ? 'text-green-600 font-medium' : 'text-yellow-600 font-medium'}>
+                      <span className={emulatorState.inkLevel === 'FULL' ? 'text-green-600 font-medium' : emulatorState.inkLevel === 'LOW' ? 'text-yellow-600 font-medium' : 'text-red-600 font-medium'}>
                         {emulatorState.inkLevel}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Makeup:</span>
-                      <span className={emulatorState.makeupLevel === 'GOOD' ? 'text-green-600 font-medium' : 'text-yellow-600 font-medium'}>
+                      <span className={(emulatorState.makeupLevel === 'FULL' || emulatorState.makeupLevel === 'GOOD') ? 'text-green-600 font-medium' : emulatorState.makeupLevel === 'LOW' ? 'text-yellow-600 font-medium' : 'text-red-600 font-medium'}>
                         {emulatorState.makeupLevel}
                       </span>
                     </div>

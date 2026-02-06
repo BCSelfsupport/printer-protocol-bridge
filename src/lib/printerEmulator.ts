@@ -26,9 +26,11 @@ export interface EmulatorState {
   phaseQual: number;
   viscosity: number;
   
-  // Levels
-  inkLevel: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY';
-  makeupLevel: 'GOOD' | 'LOW' | 'EMPTY';
+  // Levels - based on float switch positions
+  // Ink: 2 floats (top=FULL, bottom triggers LOW then EMPTY)
+  inkLevel: 'FULL' | 'LOW' | 'EMPTY';
+  // Makeup: 3 floats (top=FULL, middle=GOOD/half, bottom triggers LOW then EMPTY)
+  makeupLevel: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY';
   
   // Temperatures
   printheadTemp: number;
@@ -169,8 +171,8 @@ const defaultState: EmulatorState = {
   phaseQual: 100,
   viscosity: 4.20,
   
-  inkLevel: 'GOOD',
-  makeupLevel: 'GOOD',
+  inkLevel: 'FULL',
+  makeupLevel: 'FULL',
   
   printheadTemp: 24.71,
   electronicsTemp: 30.78,
@@ -801,20 +803,22 @@ class PrinterEmulator {
 
   /**
    * Cycle ink level for testing (FULL -> LOW -> EMPTY -> FULL)
+   * Ink has 2 float switches: top (FULL), bottom (LOW/EMPTY)
    */
   cycleInkLevel() {
     const levels: Array<'FULL' | 'LOW' | 'EMPTY'> = ['FULL', 'LOW', 'EMPTY'];
-    const currentIdx = levels.indexOf(this.state.inkLevel === 'GOOD' ? 'FULL' : this.state.inkLevel);
+    const currentIdx = levels.indexOf(this.state.inkLevel);
     const nextIdx = (currentIdx + 1) % levels.length;
     this.state.inkLevel = levels[nextIdx];
     this.notifyListeners();
   }
 
   /**
-   * Cycle makeup level for testing (GOOD -> LOW -> EMPTY -> GOOD)
+   * Cycle makeup level for testing (FULL -> GOOD -> LOW -> EMPTY -> FULL)
+   * Makeup has 3 float switches: top (FULL), middle (GOOD/half), bottom (LOW/EMPTY)
    */
   cycleMakeupLevel() {
-    const levels: Array<'GOOD' | 'LOW' | 'EMPTY'> = ['GOOD', 'LOW', 'EMPTY'];
+    const levels: Array<'FULL' | 'GOOD' | 'LOW' | 'EMPTY'> = ['FULL', 'GOOD', 'LOW', 'EMPTY'];
     const actualIdx = levels.findIndex(l => l === this.state.makeupLevel);
     const nextIdx = (actualIdx === -1 ? 0 : actualIdx + 1) % levels.length;
     this.state.makeupLevel = levels[nextIdx];
