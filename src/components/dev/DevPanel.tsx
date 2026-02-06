@@ -66,10 +66,10 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
 
   const StatusLight = ({ on, label, color = 'green' }: { on: boolean; label: string; color?: 'green' | 'red' | 'yellow' | 'blue' }) => {
     const colorClasses = {
-      green: on ? 'bg-green-500 shadow-green-500/50' : 'bg-muted',
-      red: on ? 'bg-red-500 shadow-red-500/50' : 'bg-muted',
-      yellow: on ? 'bg-yellow-500 shadow-yellow-500/50' : 'bg-muted',
-      blue: on ? 'bg-blue-500 shadow-blue-500/50' : 'bg-muted',
+      green: on ? 'bg-green-500 shadow-green-500/50' : 'bg-gray-300',
+      red: on ? 'bg-red-500 shadow-red-500/50' : 'bg-gray-300',
+      yellow: on ? 'bg-yellow-500 shadow-yellow-500/50' : 'bg-gray-300',
+      blue: on ? 'bg-blue-500 shadow-blue-500/50' : 'bg-gray-300',
     };
 
     return (
@@ -81,7 +81,7 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
             on && "shadow-lg"
           )} 
         />
-        <span className="text-xs font-mono">{label}</span>
+        <span className="text-xs font-mono text-gray-700">{label}</span>
       </div>
     );
   };
@@ -101,11 +101,11 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
       onClick={onClick}
       disabled={!emulatorEnabled}
       className={cn(
-        "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all",
-        "border border-border",
+        "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all border",
+        "border-gray-300",
         on 
-          ? "bg-green-500/20 text-green-400 border-green-500/50" 
-          : "bg-muted/50 text-muted-foreground hover:bg-muted",
+          ? "bg-green-100 text-green-700 border-green-500" 
+          : "bg-gray-50 text-gray-600 hover:bg-gray-100",
         !emulatorEnabled && "opacity-50 cursor-not-allowed"
       )}
     >
@@ -115,12 +115,12 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
   );
 
   const categoryColors: Record<string, string> = {
-    system: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
-    query: 'bg-purple-500/20 text-purple-400 border-purple-500/50',
-    printing: 'bg-green-500/20 text-green-400 border-green-500/50',
-    message: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
-    settings: 'bg-orange-500/20 text-orange-400 border-orange-500/50',
-    'one-to-one': 'bg-pink-500/20 text-pink-400 border-pink-500/50',
+    system: 'bg-blue-100 text-blue-700 border-blue-300',
+    query: 'bg-purple-100 text-purple-700 border-purple-300',
+    printing: 'bg-green-100 text-green-700 border-green-300',
+    message: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+    settings: 'bg-orange-100 text-orange-700 border-orange-300',
+    'one-to-one': 'bg-pink-100 text-pink-700 border-pink-300',
   };
 
   const filteredCommands = filterCategory === 'all' 
@@ -147,7 +147,7 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
       <div
         className={cn(
           "fixed right-0 top-0 h-full w-80 z-40",
-          "bg-sidebar border-l border-border shadow-xl",
+          "bg-white border-l-2 border-border shadow-xl",
           "transform transition-transform duration-300 ease-in-out",
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
@@ -156,13 +156,13 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
           {/* Header */}
           <div className="p-4 border-b border-border">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-sm flex items-center gap-2">
+              <h2 className="font-semibold text-sm flex items-center gap-2 text-gray-800">
                 <Settings2 className="w-4 h-4" />
                 Developer Panel
               </h2>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Emulator</span>
+                  <span className="text-xs text-gray-600">Emulator</span>
                   <Switch
                     checked={emulatorEnabled}
                     onCheckedChange={handleEmulatorToggle}
@@ -170,15 +170,15 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                 </div>
                 <button
                   onClick={onToggle}
-                  className="p-1 rounded hover:bg-muted transition-colors"
+                  className="p-1 rounded hover:bg-gray-100 transition-colors"
                   title="Close panel"
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-4 h-4 text-gray-600" />
                 </button>
               </div>
             </div>
             {emulatorEnabled && (
-              <div className="flex items-center gap-2 text-xs text-green-400">
+              <div className="flex items-center gap-2 text-xs text-green-600 font-medium">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 Emulator Active - Protocol v2.0
               </div>
@@ -198,10 +198,10 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
               <ScrollArea className="h-full p-4">
                 {/* Status Lights Section */}
                 <div className="mb-6">
-                  <h3 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">
                     Subsystem Status
                   </h3>
-                  <div className="grid grid-cols-2 gap-2 p-3 bg-muted/30 rounded-lg">
+                  <div className="grid grid-cols-2 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <StatusLight on={emulatorState.hvOn} label="HV ON" color="green" />
                     <StatusLight on={emulatorState.jetRunning} label="JET RUN" color="blue" />
                     <StatusLight on={emulatorState.v300up} label="V300UP" color="green" />
@@ -215,7 +215,7 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
 
                 {/* Control Buttons */}
                 <div className="mb-6">
-                  <h3 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">
                     Manual Controls
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
@@ -260,57 +260,57 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
 
                 {/* Metrics */}
                 <div className="mb-6">
-                  <h3 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">
                     Metrics
                   </h3>
-                  <div className="space-y-2 text-xs font-mono bg-muted/30 rounded-lg p-3">
+                  <div className="space-y-2 text-xs font-mono bg-gray-50 rounded-lg p-3 border border-gray-200 text-gray-700">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Modulation:</span>
-                      <span>{emulatorState.modulation}</span>
+                      <span className="text-gray-500">Modulation:</span>
+                      <span className="text-gray-800">{emulatorState.modulation}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Charge:</span>
-                      <span>{emulatorState.charge}</span>
+                      <span className="text-gray-500">Charge:</span>
+                      <span className="text-gray-800">{emulatorState.charge}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Pressure:</span>
-                      <span>{emulatorState.pressure} psi</span>
+                      <span className="text-gray-500">Pressure:</span>
+                      <span className="text-gray-800">{emulatorState.pressure} psi</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">RPS:</span>
-                      <span>{emulatorState.rps.toFixed(2)}</span>
+                      <span className="text-gray-500">RPS:</span>
+                      <span className="text-gray-800">{emulatorState.rps.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Phase Qual:</span>
-                      <span>{emulatorState.phaseQual}%</span>
+                      <span className="text-gray-500">Phase Qual:</span>
+                      <span className="text-gray-800">{emulatorState.phaseQual}%</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Viscosity:</span>
-                      <span>{emulatorState.viscosity.toFixed(2)}</span>
+                      <span className="text-gray-500">Viscosity:</span>
+                      <span className="text-gray-800">{emulatorState.viscosity.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Ink Level:</span>
-                      <span className={emulatorState.inkLevel === 'GOOD' || emulatorState.inkLevel === 'FULL' ? 'text-green-400' : 'text-yellow-400'}>
+                      <span className="text-gray-500">Ink Level:</span>
+                      <span className={emulatorState.inkLevel === 'GOOD' || emulatorState.inkLevel === 'FULL' ? 'text-green-600 font-medium' : 'text-yellow-600 font-medium'}>
                         {emulatorState.inkLevel}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Makeup:</span>
-                      <span className={emulatorState.makeupLevel === 'GOOD' ? 'text-green-400' : 'text-yellow-400'}>
+                      <span className="text-gray-500">Makeup:</span>
+                      <span className={emulatorState.makeupLevel === 'GOOD' ? 'text-green-600 font-medium' : 'text-yellow-600 font-medium'}>
                         {emulatorState.makeupLevel}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Current Msg:</span>
-                      <span>{emulatorState.currentMessage}</span>
+                      <span className="text-gray-500">Current Msg:</span>
+                      <span className="text-gray-800">{emulatorState.currentMessage}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Print Count:</span>
-                      <span>{emulatorState.printCount}</span>
+                      <span className="text-gray-500">Print Count:</span>
+                      <span className="text-gray-800">{emulatorState.printCount}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Product Count:</span>
-                      <span>{emulatorState.productCount}</span>
+                      <span className="text-gray-500">Product Count:</span>
+                      <span className="text-gray-800">{emulatorState.productCount}</span>
                     </div>
                   </div>
                 </div>
@@ -333,8 +333,8 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
             <TabsContent value="protocol" className="flex-1 overflow-hidden m-0">
               <ScrollArea className="h-full p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <BookOpen className="w-4 h-4 text-muted-foreground" />
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <BookOpen className="w-4 h-4 text-gray-500" />
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Protocol v2.0 Commands
                   </h3>
                 </div>
@@ -367,18 +367,18 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                       onClick={() => handleQuickCommand(cmd.code)}
                       disabled={!emulatorEnabled}
                       className={cn(
-                        "w-full text-left p-2 rounded-md border border-border",
-                        "bg-background/50 hover:bg-background/80 transition-colors",
+                        "w-full text-left p-2 rounded-md border border-gray-200",
+                        "bg-gray-50 hover:bg-gray-100 transition-colors",
                         !emulatorEnabled && "opacity-50 cursor-not-allowed"
                       )}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <code className="text-xs font-bold text-primary">{cmd.code}</code>
+                        <code className="text-xs font-bold text-blue-600">{cmd.code}</code>
                         <Badge variant="outline" className={cn("text-[9px]", categoryColors[cmd.category])}>
                           {cmd.category}
                         </Badge>
                       </div>
-                      <div className="text-[10px] text-foreground/70">{cmd.description}</div>
+                      <div className="text-[10px] text-gray-600">{cmd.description}</div>
                     </button>
                   ))}
                 </div>
@@ -389,14 +389,14 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
             <TabsContent value="commands" className="flex-1 overflow-hidden m-0">
               <ScrollArea className="h-full p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Terminal className="w-4 h-4 text-muted-foreground" />
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <Terminal className="w-4 h-4 text-gray-500" />
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Command Log
                   </h3>
                 </div>
                 
                 {commandLog.length === 0 ? (
-                  <div className="text-xs text-muted-foreground text-center py-8">
+                  <div className="text-xs text-gray-500 text-center py-8">
                     No commands logged yet.
                     <br />
                     Enable emulator and interact with the app.
@@ -409,26 +409,26 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                         className={cn(
                           "text-xs font-mono p-2 rounded",
                           entry.direction === 'sent' 
-                            ? "bg-blue-500/10 border-l-2 border-blue-500" 
-                            : "bg-green-500/10 border-l-2 border-green-500"
+                            ? "bg-blue-50 border-l-2 border-blue-500" 
+                            : "bg-green-50 border-l-2 border-green-500"
                         )}
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span className={cn(
                             "text-[10px] uppercase font-semibold",
-                            entry.direction === 'sent' ? "text-blue-400" : "text-green-400"
+                            entry.direction === 'sent' ? "text-blue-600" : "text-green-600"
                           )}>
                             {entry.direction === 'sent' ? '→ SENT' : '← RECV'}
                           </span>
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-[10px] text-gray-500">
                             {entry.timestamp.toLocaleTimeString()}
                           </span>
                         </div>
-                        <div className="text-foreground break-all">
+                        <div className="text-gray-800 break-all">
                           {entry.command}
                         </div>
                         {entry.response && entry.direction === 'received' && (
-                          <div className="text-muted-foreground mt-1 whitespace-pre-wrap text-[10px]">
+                          <div className="text-gray-500 mt-1 whitespace-pre-wrap text-[10px]">
                             {entry.response}
                           </div>
                         )}
@@ -443,8 +443,8 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
             <TabsContent value="manual" className="flex-1 overflow-hidden m-0">
               <ScrollArea className="h-full p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Send className="w-4 h-4 text-muted-foreground" />
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <Send className="w-4 h-4 text-gray-500" />
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Send Command
                   </h3>
                 </div>
@@ -469,7 +469,7 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
 
                 {/* Quick Commands */}
                 <div className="mb-4">
-                  <h4 className="text-xs font-semibold text-muted-foreground mb-2">Quick Commands</h4>
+                  <h4 className="text-xs font-semibold text-gray-500 mb-2">Quick Commands</h4>
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="outline"
@@ -555,8 +555,8 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                 </div>
 
                 {/* Command Reference */}
-                <div className="text-[10px] text-muted-foreground space-y-1 bg-muted/30 rounded-lg p-3">
-                  <p className="font-semibold mb-2">Command Format:</p>
+                <div className="text-[10px] text-gray-600 space-y-1 bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <p className="font-semibold mb-2 text-gray-700">Command Format:</p>
                   <p>• Commands start with ^ (caret)</p>
                   <p>• Parameters separated by ; (semicolon)</p>
                   <p>• Case insensitive (except message data)</p>
@@ -567,7 +567,7 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
           </Tabs>
 
           {/* Footer */}
-          <div className="p-3 border-t border-border text-[10px] text-muted-foreground text-center">
+          <div className="p-3 border-t border-gray-200 text-[10px] text-gray-500 text-center">
             Printer Emulator v2.0 • Bestcode Protocol • Dev Mode Only
           </div>
         </div>
