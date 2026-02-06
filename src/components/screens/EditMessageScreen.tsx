@@ -37,10 +37,10 @@ const SINGLE_TEMPLATES = [
 
 // Multi-line templates (lines × dot height per line)
 const MULTILINE_TEMPLATES = [
-  { value: 'multi-5x5', label: '5 lines × 5 dots', height: 25, lines: 5 },
-  { value: 'multi-3x9', label: '3 lines × 9 dots', height: 27, lines: 3 },
-  { value: 'multi-4x7', label: '4 lines × 7 dots', height: 28, lines: 4 },
-  { value: 'multi-2x16', label: '2 lines × 16 dots', height: 32, lines: 2 },
+  { value: 'multi-5x5', label: '5 lines × 5 dots', height: 25, lines: 5, dotsPerLine: 5 },
+  { value: 'multi-3x9', label: '3 lines × 9 dots', height: 27, lines: 3, dotsPerLine: 9 },
+  { value: 'multi-4x7', label: '4 lines × 7 dots', height: 28, lines: 4, dotsPerLine: 7 },
+  { value: 'multi-2x16', label: '2 lines × 16 dots', height: 32, lines: 2, dotsPerLine: 16 },
 ] as const;
 
 // Font size options - matching actual printer fonts
@@ -139,6 +139,19 @@ export function EditMessageScreen({
     return message.height.toString();
   };
 
+  // Get current multiline template info (if any)
+  const currentMultilineTemplate = MULTILINE_TEMPLATES.find(t => t.height === message.height);
+  
+  // Get allowed font sizes based on current template
+  const getAllowedFonts = () => {
+    if (currentMultilineTemplate) {
+      // For multiline templates, only allow fonts that match the dots per line
+      return FONT_SIZES.filter(fs => fs.height <= currentMultilineTemplate.dotsPerLine);
+    }
+    // For single-height templates, allow all fonts up to the template height
+    return FONT_SIZES.filter(fs => fs.height <= message.height);
+  };
+
   const handleAddField = () => {
     const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
     const newField: MessageField = {
@@ -195,6 +208,10 @@ export function EditMessageScreen({
               fields={message.fields}
               onCanvasClick={handleCanvasClick}
               selectedFieldId={selectedFieldId}
+              multilineTemplate={currentMultilineTemplate ? {
+                lines: currentMultilineTemplate.lines,
+                dotsPerLine: currentMultilineTemplate.dotsPerLine,
+              } : null}
             />
           </div>
 
@@ -222,7 +239,7 @@ export function EditMessageScreen({
                     <SelectValue placeholder="Select font size" />
                   </SelectTrigger>
                   <SelectContent>
-                    {FONT_SIZES.map((fs) => (
+                    {getAllowedFonts().map((fs) => (
                       <SelectItem key={fs.value} value={fs.value}>
                         {fs.label}
                       </SelectItem>
