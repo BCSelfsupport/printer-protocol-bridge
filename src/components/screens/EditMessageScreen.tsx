@@ -22,6 +22,7 @@ export interface MessageDetails {
   height: number;
   width: number;
   fields: MessageField[];
+  templateValue?: string; // Track which template was selected
 }
 
 // Template options - single heights for mixed font messages
@@ -80,6 +81,7 @@ export function EditMessageScreen({
     fields: [
       { id: 1, type: 'text', data: messageName, x: 0, y: 16, width: 60, height: 16, fontSize: 'Standard16High' },
     ],
+    templateValue: '16', // Default to 16 dots single template
   });
   const [loading, setLoading] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(1);
@@ -124,6 +126,7 @@ export function EditMessageScreen({
     setMessage((prev) => ({
       ...prev,
       height,
+      templateValue: value, // Store the actual template selection
       // Update field Y positions to be within the template area
       fields: prev.fields.map((f) => ({
         ...f,
@@ -135,13 +138,13 @@ export function EditMessageScreen({
 
   // Get the current template value for the dropdown
   const getCurrentTemplateValue = (): string => {
-    const multiTemplate = MULTILINE_TEMPLATES.find(t => t.height === message.height);
-    if (multiTemplate) return multiTemplate.value;
-    return message.height.toString();
+    return message.templateValue || message.height.toString();
   };
 
-  // Get current multiline template info (if any)
-  const currentMultilineTemplate = MULTILINE_TEMPLATES.find(t => t.height === message.height);
+  // Get current multiline template info (if any) - only if explicitly selected
+  const currentMultilineTemplate = message.templateValue?.startsWith('multi-') 
+    ? MULTILINE_TEMPLATES.find(t => t.value === message.templateValue)
+    : null;
   
   // Get allowed font sizes based on current template
   const getAllowedFonts = () => {
