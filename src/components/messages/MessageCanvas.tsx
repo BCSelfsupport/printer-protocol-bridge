@@ -1,17 +1,27 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+interface CanvasField {
+  id: number;
+  data: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fontSize: string;
+}
+
 interface MessageCanvasProps {
   /** Total height is always 32 dots */
   templateHeight: number; // 7, 9, 11, 16, 24, or 32
   /** Width in dots (scrollable) */
   width?: number;
-  /** The message content to render (for now just text, later could be actual bitmap) */
-  content?: string;
+  /** The fields to render on the canvas */
+  fields?: CanvasField[];
   /** Callback when canvas is clicked (for field selection) */
   onCanvasClick?: (x: number, y: number) => void;
-  /** Selected field highlight bounds */
-  selectedField?: { x: number; y: number; width: number; height: number } | null;
+  /** Selected field ID */
+  selectedFieldId?: number | null;
 }
 
 const TOTAL_ROWS = 32;
@@ -21,9 +31,9 @@ const VISIBLE_COLS = 80; // visible columns before scrolling
 export function MessageCanvas({
   templateHeight = 16,
   width = 200,
-  content = '',
+  fields = [],
   onCanvasClick,
-  selectedField,
+  selectedFieldId,
 }: MessageCanvasProps) {
   const [scrollX, setScrollX] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -75,39 +85,35 @@ export function MessageCanvas({
       ctx.fillRect(0, 0, canvas.width, blockedRows * DOT_SIZE);
     }
     
-    // Draw simulated dot-matrix text content
-    // This is a simplified representation - real implementation would use actual bitmap data
-    if (content) {
-      const startY = blockedRows;
-      const charWidth = 6; // dots per character (including spacing)
-      const charHeight = Math.min(templateHeight, 16);
+    // Draw each field with its font size
+    fields.forEach((field) => {
+      const isSelected = field.id === selectedFieldId;
+      const fieldX = (field.x - scrollX) * DOT_SIZE;
+      const fieldY = field.y * DOT_SIZE;
+      const fieldW = field.width * DOT_SIZE;
+      const fieldH = field.height * DOT_SIZE;
       
-      // Simple dot-matrix font simulation
-      ctx.fillStyle = '#1a1a1a';
+      // Skip if field is outside visible area
+      if (fieldX + fieldW < 0 || fieldX > canvas.width) return;
       
-      for (let i = 0; i < content.length; i++) {
-        const charX = (i * charWidth - scrollX) * DOT_SIZE;
-        if (charX < -charWidth * DOT_SIZE || charX > canvas.width) continue;
-        
-        // Draw a simple representation of each character as dots
-        drawDotMatrixChar(ctx, content[i], charX, startY * DOT_SIZE, DOT_SIZE, charHeight);
+      // Draw selection highlight
+      if (isSelected) {
+        ctx.fillStyle = 'rgba(255, 193, 7, 0.3)';
+        ctx.fillRect(fieldX, fieldY, fieldW, fieldH);
+        ctx.strokeStyle = '#ffc107';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(fieldX, fieldY, fieldW, fieldH);
       }
-    }
+      
+      // Get font height from fontSize
+      const fontHeight = getFontHeight(field.fontSize);
+      
+      // Draw the field text
+      ctx.fillStyle = '#1a1a1a';
+      drawDotMatrixText(ctx, field.data, fieldX, fieldY, DOT_SIZE, fontHeight);
+    });
     
-    // Draw selected field highlight
-    if (selectedField) {
-      ctx.strokeStyle = '#ffc107';
-      ctx.fillStyle = 'rgba(255, 193, 7, 0.2)';
-      ctx.lineWidth = 2;
-      const fx = (selectedField.x - scrollX) * DOT_SIZE;
-      const fy = selectedField.y * DOT_SIZE;
-      const fw = selectedField.width * DOT_SIZE;
-      const fh = selectedField.height * DOT_SIZE;
-      ctx.fillRect(fx, fy, fw, fh);
-      ctx.strokeRect(fx, fy, fw, fh);
-    }
-    
-  }, [templateHeight, width, content, scrollX, blockedRows, selectedField]);
+  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId]);
   
   const handleScroll = (direction: 'left' | 'right') => {
     const step = 10;
@@ -177,6 +183,40 @@ export function MessageCanvas({
 }
 
 /**
+ * Get the dot height from font size string
+ */
+function getFontHeight(fontSize: string): number {
+  const fontMap: Record<string, number> = {
+    '5x5': 5,
+    '7x5': 7,
+    '9x6': 9,
+    '14': 14,
+    '16': 16,
+    '32': 32,
+  };
+  return fontMap[fontSize] || 16;
+}
+
+/**
+ * Draw dot-matrix text at a position
+ */
+function drawDotMatrixText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  startX: number,
+  startY: number,
+  dotSize: number,
+  fontHeight: number
+) {
+  const charWidth = Math.max(5, Math.floor(fontHeight * 0.6)); // Proportional width
+  
+  for (let i = 0; i < text.length; i++) {
+    const charX = startX + i * (charWidth + 1) * (dotSize / 2);
+    drawDotMatrixChar(ctx, text[i], charX, startY, dotSize, fontHeight);
+  }
+}
+
+/**
  * Draw a simplified dot-matrix character
  * This is a basic representation - real implementation would use actual font bitmaps
  */
@@ -209,7 +249,9 @@ function drawDotMatrixChar(
   const pattern = patterns[char.toUpperCase()] || patterns[' '];
   if (!pattern) return;
   
+  // Scale based on font height
   const scale = Math.max(1, Math.floor(height / 7));
+  const dotScale = (dotSize / 8) * scale;
   
   pattern.forEach((row, rowIdx) => {
     if (rowIdx * scale >= height) return;
@@ -217,9 +259,9 @@ function drawDotMatrixChar(
       if (dot === 1) {
         for (let sy = 0; sy < scale; sy++) {
           for (let sx = 0; sx < scale; sx++) {
-            const px = x + (colIdx * scale + sx) * (dotSize / scale) + 1;
-            const py = y + (rowIdx * scale + sy) * (dotSize / scale) + 1;
-            ctx.fillRect(px, py, dotSize / scale - 1, dotSize / scale - 1);
+            const px = x + (colIdx * scale + sx) * dotScale + 1;
+            const py = y + (rowIdx * scale + sy) * dotScale + 1;
+            ctx.fillRect(px, py, dotScale - 1, dotScale - 1);
           }
         }
       }

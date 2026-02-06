@@ -100,9 +100,6 @@ export function EditMessageScreen({
 
   const selectedField = message.fields.find((f) => f.id === selectedFieldId);
 
-  // Combine all field data for canvas preview
-  const canvasContent = message.fields.map(f => f.data).join(' ');
-
   const handleFieldDataChange = (value: string) => {
     if (!selectedFieldId) return;
     setMessage((prev) => ({
@@ -192,14 +189,9 @@ export function EditMessageScreen({
             <MessageCanvas
               templateHeight={message.height}
               width={message.width}
-              content={canvasContent}
+              fields={message.fields}
               onCanvasClick={handleCanvasClick}
-              selectedField={selectedField ? {
-                x: selectedField.x,
-                y: selectedField.y,
-                width: selectedField.width,
-                height: selectedField.height,
-              } : null}
+              selectedFieldId={selectedFieldId}
             />
           </div>
 
