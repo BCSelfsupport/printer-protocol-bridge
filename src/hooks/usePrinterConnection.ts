@@ -716,6 +716,38 @@ export function usePrinterConnection() {
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
+  // Printer sign-out: send ^LO command
+  const signOut = useCallback(async (): Promise<boolean> => {
+    console.log('[signOut] Called, isConnected:', connectionState.isConnected, 'printer:', connectionState.connectedPrinter?.id);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[signOut] Not connected, aborting');
+      return false;
+    }
+    
+    const printer = connectionState.connectedPrinter;
+    
+    if (shouldUseEmulator()) {
+      console.log('[signOut] Using emulator');
+      const result = printerEmulator.processCommand('^LO');
+      console.log('[signOut] Emulator result:', result);
+      return result.success;
+    } else if (isElectron && window.electronAPI) {
+      try {
+        console.log('[signOut] Sending ^LO command');
+        const result = await window.electronAPI.printer.sendCommand(printer.id, '^LO');
+        console.log('[signOut] Result:', JSON.stringify(result));
+        return result?.success ?? false;
+      } catch (e) {
+        console.error('[signOut] Failed to send ^LO command:', e);
+        return false;
+      }
+    } else {
+      // Web preview mock
+      console.log('[signOut] Web preview mock');
+      return true;
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter]);
+
   return {
     printers,
     connectionState,
@@ -729,6 +761,7 @@ export function usePrinterConnection() {
     updateSettings,
     selectMessage,
     signIn,
+    signOut,
     checkPrinterStatus,
     addPrinter,
     removePrinter,
