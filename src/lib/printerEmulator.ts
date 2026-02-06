@@ -799,6 +799,28 @@ class PrinterEmulator {
     }
   }
 
+  /**
+   * Cycle ink level for testing (FULL -> LOW -> EMPTY -> FULL)
+   */
+  cycleInkLevel() {
+    const levels: Array<'FULL' | 'LOW' | 'EMPTY'> = ['FULL', 'LOW', 'EMPTY'];
+    const currentIdx = levels.indexOf(this.state.inkLevel === 'GOOD' ? 'FULL' : this.state.inkLevel);
+    const nextIdx = (currentIdx + 1) % levels.length;
+    this.state.inkLevel = levels[nextIdx];
+    this.notifyListeners();
+  }
+
+  /**
+   * Cycle makeup level for testing (GOOD -> LOW -> EMPTY -> GOOD)
+   */
+  cycleMakeupLevel() {
+    const levels: Array<'GOOD' | 'LOW' | 'EMPTY'> = ['GOOD', 'LOW', 'EMPTY'];
+    const actualIdx = levels.findIndex(l => l === this.state.makeupLevel);
+    const nextIdx = (actualIdx === -1 ? 0 : actualIdx + 1) % levels.length;
+    this.state.makeupLevel = levels[nextIdx];
+    this.notifyListeners();
+  }
+
   // ============ Login/Logout Commands ============
   
   private readonly ADMIN_PASSWORD = 'TEXAS';
