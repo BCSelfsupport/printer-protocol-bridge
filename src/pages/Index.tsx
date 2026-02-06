@@ -10,11 +10,16 @@ import { ServiceScreen } from '@/components/screens/ServiceScreen';
 import { CleanScreen } from '@/components/screens/CleanScreen';
 import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
 import { usePrinterConnection } from '@/hooks/usePrinterConnection';
+import { DevPanel } from '@/components/dev/DevPanel';
+
+// Only show dev panel in development mode
+const isDev = import.meta.env.DEV;
 
 type ScreenType = NavItem | 'network' | 'control';
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
+  const [devPanelOpen, setDevPanelOpen] = useState(false);
   const {
     printers,
     connectionState,
@@ -149,6 +154,14 @@ const Index = () => {
         <span>Build 1.0.0</span>
         <span>{connectionState.status?.printerVersion ?? ''}</span>
       </footer>
+
+      {/* Dev Panel - only in development */}
+      {isDev && (
+        <DevPanel 
+          isOpen={devPanelOpen} 
+          onToggle={() => setDevPanelOpen(!devPanelOpen)} 
+        />
+      )}
     </div>
   );
 };

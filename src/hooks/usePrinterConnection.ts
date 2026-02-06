@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import '@/types/electron.d.ts';
 import { parseStatusResponse } from '@/lib/printerProtocol';
 import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
-
+import { printerEmulator } from '@/lib/printerEmulator';
 const defaultSettings: PrintSettings = {
   width: 15,
   height: 8,
@@ -60,6 +60,9 @@ const mockMetrics: PrinterMetrics = {
 
 // Check if running in Electron
 const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
+
+// Helper to check if emulator should be used
+const shouldUseEmulator = () => printerEmulator.enabled;
 
 export function usePrinterConnection() {
   const { printers, addPrinter, removePrinter, updatePrinterStatus, updatePrinter } = usePrinterStorage();
@@ -414,7 +417,27 @@ export function usePrinterConnection() {
     // Send ^PR command to enable printing (HV on)
     // IMPORTANT: Do NOT optimistically flip UI to green.
     // We only show HV On after a confirmed ^SU response (V300UP:1).
-    if (isElectron && window.electronAPI) {
+    if (shouldUseEmulator()) {
+      // Use emulator
+      console.log('[startPrint] Using emulator');
+      const result = printerEmulator.processCommand('^PR 1');
+      console.log('[startPrint] Emulator result:', result);
+      
+      // Update state from emulator
+      const state = printerEmulator.getState();
+      setConnectionState(prev => ({
+        ...prev,
+        status: prev.status ? { ...prev.status, isRunning: state.hvOn } : null,
+      }));
+      
+      if (connectionState.connectedPrinter) {
+        updatePrinterStatus(connectionState.connectedPrinter.id, {
+          isAvailable: true,
+          status: state.hvOn ? 'ready' : 'not_ready',
+          hasActiveErrors: false,
+        });
+      }
+    } else if (isElectron && window.electronAPI) {
       try {
         // sendCommand uses on-demand sockets, no need to call connect() first
         const tryCommands = ['^PR 1', '^PR1'] as const;
@@ -448,7 +471,7 @@ export function usePrinterConnection() {
         status: prev.status ? { ...prev.status, isRunning: true } : null,
       }));
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus, updatePrinterStatus]);
 
   const stopPrint = useCallback(async () => {
     console.log('[stopPrint] Called, isConnected:', connectionState.isConnected, 'printer:', connectionState.connectedPrinter?.id);
@@ -462,7 +485,27 @@ export function usePrinterConnection() {
     // Send ^PR command to disable printing (HV off)
     // IMPORTANT: Do NOT optimistically flip UI.
     // We only show HV Off after a confirmed ^SU response (V300UP:0).
-    if (isElectron && window.electronAPI) {
+    if (shouldUseEmulator()) {
+      // Use emulator
+      console.log('[stopPrint] Using emulator');
+      const result = printerEmulator.processCommand('^PR 0');
+      console.log('[stopPrint] Emulator result:', result);
+      
+      // Update state from emulator
+      const state = printerEmulator.getState();
+      setConnectionState(prev => ({
+        ...prev,
+        status: prev.status ? { ...prev.status, isRunning: state.hvOn } : null,
+      }));
+      
+      if (connectionState.connectedPrinter) {
+        updatePrinterStatus(connectionState.connectedPrinter.id, {
+          isAvailable: true,
+          status: state.hvOn ? 'ready' : 'not_ready',
+          hasActiveErrors: false,
+        });
+      }
+    } else if (isElectron && window.electronAPI) {
       try {
         // sendCommand uses on-demand sockets, no need to call connect() first
         const tryCommands = ['^PR 0', '^PR0'] as const;
@@ -492,7 +535,7 @@ export function usePrinterConnection() {
         status: prev.status ? { ...prev.status, isRunning: false } : null,
       }));
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus, updatePrinterStatus]);
 
   // Jet Stop - send ^SJ 0 command to stop the ink jet
   const jetStop = useCallback(async () => {
@@ -504,7 +547,27 @@ export function usePrinterConnection() {
     
     const printer = connectionState.connectedPrinter;
     
-    if (isElectron && window.electronAPI) {
+    if (shouldUseEmulator()) {
+      // Use emulator
+      console.log('[jetStop] Using emulator');
+      const result = printerEmulator.processCommand('^SJ 0');
+      console.log('[jetStop] Emulator result:', result);
+      
+      // Update state from emulator
+      const state = printerEmulator.getState();
+      setConnectionState(prev => ({
+        ...prev,
+        status: prev.status ? { ...prev.status, isRunning: state.hvOn } : null,
+      }));
+      
+      if (connectionState.connectedPrinter) {
+        updatePrinterStatus(connectionState.connectedPrinter.id, {
+          isAvailable: true,
+          status: state.hvOn ? 'ready' : 'not_ready',
+          hasActiveErrors: false,
+        });
+      }
+    } else if (isElectron && window.electronAPI) {
       try {
         console.log('[jetStop] Sending ^SJ 0');
         const result = await window.electronAPI.printer.sendCommand(printer.id, '^SJ 0');
