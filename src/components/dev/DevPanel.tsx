@@ -160,12 +160,21 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                 <Settings2 className="w-4 h-4" />
                 Developer Panel
               </h2>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Emulator</span>
-                <Switch
-                  checked={emulatorEnabled}
-                  onCheckedChange={handleEmulatorToggle}
-                />
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Emulator</span>
+                  <Switch
+                    checked={emulatorEnabled}
+                    onCheckedChange={handleEmulatorToggle}
+                  />
+                </div>
+                <button
+                  onClick={onToggle}
+                  className="p-1 rounded hover:bg-muted transition-colors"
+                  title="Close panel"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
             {emulatorEnabled && (
