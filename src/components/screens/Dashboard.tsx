@@ -15,6 +15,9 @@ interface DashboardProps {
   onHelp: () => void;
   onMount?: () => void;
   onUnmount?: () => void;
+  // Countdown timer props
+  countdownSeconds?: number | null; // null = no countdown, number = seconds remaining
+  countdownType?: 'starting' | 'stopping' | null;
 }
 
 export function Dashboard({
@@ -29,6 +32,8 @@ export function Dashboard({
   onHelp,
   onMount,
   onUnmount,
+  countdownSeconds,
+  countdownType,
 }: DashboardProps) {
   // Notify parent when this screen mounts/unmounts for polling control
   useEffect(() => {
@@ -38,10 +43,35 @@ export function Dashboard({
 
   // Derive HV state from status
   const isHvOn = status?.isRunning ?? false;
+  
+  // Format countdown time as M:SS
+  const formatCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  // Determine banner state
+  const showCountdown = countdownSeconds !== null && countdownSeconds !== undefined && countdownSeconds > 0;
+  const showReady = isHvOn && !showCountdown;
+  
   return (
     <div className="flex-1 flex flex-col">
-      {/* Ready banner - only shown when HV is on */}
-      {isHvOn && (
+      {/* Countdown banner - shown during jet startup/shutdown */}
+      {showCountdown && (
+        <div className={`w-full py-3 px-6 flex items-center justify-center ${
+          countdownType === 'starting' 
+            ? 'bg-gradient-to-r from-red-600 via-red-500 to-red-400' 
+            : 'bg-gradient-to-r from-orange-600 via-orange-500 to-orange-400'
+        }`}>
+          <span className="text-xl font-bold text-white tracking-wide drop-shadow-md font-mono">
+            {countdownType === 'starting' ? 'Starting...' : 'Stopping...'} {formatCountdown(countdownSeconds)}
+          </span>
+        </div>
+      )}
+      
+      {/* Ready banner - only shown when HV is on and no countdown */}
+      {showReady && (
         <div className="w-full py-3 px-6 flex items-center justify-center bg-gradient-to-r from-green-600 via-green-500 to-green-400">
           <span className="text-xl font-bold text-white tracking-wide drop-shadow-md">
             Ready

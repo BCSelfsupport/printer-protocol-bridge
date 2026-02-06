@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Header } from '@/components/layout/Header';
 import { BottomNav, NavItem } from '@/components/layout/BottomNav';
 import { Dashboard } from '@/components/screens/Dashboard';
@@ -10,6 +10,7 @@ import { ServiceScreen } from '@/components/screens/ServiceScreen';
 import { CleanScreen } from '@/components/screens/CleanScreen';
 import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
 import { usePrinterConnection } from '@/hooks/usePrinterConnection';
+import { useJetCountdown } from '@/hooks/useJetCountdown';
 import { DevPanel } from '@/components/dev/DevPanel';
 
 // Only show dev panel in development mode
@@ -35,6 +36,8 @@ const Index = () => {
     setServiceScreenOpen,
     setControlScreenOpen,
   } = usePrinterConnection();
+  
+  const { countdownSeconds, countdownType, startCountdown, cancelCountdown } = useJetCountdown();
 
   const handleNavigate = (item: NavItem) => {
     setCurrentScreen(item);
@@ -54,6 +57,17 @@ const Index = () => {
     // After connecting, go to the control/dashboard screen
     setCurrentScreen('control');
   };
+  
+  // Wrapped handlers that trigger countdown
+  const handleStartPrint = useCallback(() => {
+    startPrint();
+    startCountdown('starting', 106); // 1:46 countdown
+  }, [startPrint, startCountdown]);
+  
+  const handleJetStop = useCallback(() => {
+    jetStop();
+    startCountdown('stopping', 106); // 1:46 countdown for stopping too
+  }, [jetStop, startCountdown]);
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -72,15 +86,17 @@ const Index = () => {
           <Dashboard
             status={connectionState.status}
             isConnected={connectionState.isConnected}
-            onStart={startPrint}
+            onStart={handleStartPrint}
             onStop={stopPrint}
-            onJetStop={jetStop}
+            onJetStop={handleJetStop}
             onNewMessage={() => setCurrentScreen('messages')}
             onEditMessage={() => setCurrentScreen('messages')}
             onSignIn={() => {}}
             onHelp={() => {}}
             onMount={() => setControlScreenOpen(true)}
             onUnmount={() => setControlScreenOpen(false)}
+            countdownSeconds={countdownSeconds}
+            countdownType={countdownType}
           />
         );
       case 'messages':
