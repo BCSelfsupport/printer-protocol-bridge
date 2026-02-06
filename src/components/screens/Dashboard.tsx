@@ -18,6 +18,8 @@ interface DashboardProps {
   // Countdown timer props
   countdownSeconds?: number | null; // null = no countdown, number = seconds remaining
   countdownType?: 'starting' | 'stopping' | null;
+  // Sign-in state
+  isSignedIn?: boolean;
 }
 
 export function Dashboard({
@@ -34,6 +36,7 @@ export function Dashboard({
   onUnmount,
   countdownSeconds,
   countdownType,
+  isSignedIn = false,
 }: DashboardProps) {
   // Notify parent when this screen mounts/unmounts for polling control
   useEffect(() => {
@@ -84,10 +87,10 @@ export function Dashboard({
       <div className="flex gap-2">
         <button 
           onClick={onSignIn}
-          className="industrial-button-gray text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px]"
+          className={`${isSignedIn ? 'industrial-button-success' : 'industrial-button-gray'} text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px]`}
         >
           <Key className="w-10 h-10 mb-1" />
-          <span className="text-sm">Sign In</span>
+          <span className="text-sm">{isSignedIn ? 'Signed In' : 'Sign In'}</span>
         </button>
 
         <button 
