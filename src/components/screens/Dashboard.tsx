@@ -296,7 +296,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     if (!ctx) return;
 
     const width = renderWidth;
-    const height = TOTAL_ROWS * dotSize + 1; // +1 to include bottom grid line
+    const height = (TOTAL_ROWS + 1) * dotSize; // +1 row buffer to prevent clipping at bottom edge
 
     // Set backing store size to match CSS size (prevents scaling artifacts/"overlap")
     canvas.width = width;
@@ -373,8 +373,8 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     ctx.fillText('No message selected', width / 2, height / 2 + 5);
   }, [message, printerTime, messageContent, renderWidth, dotSize]);
 
-  // Add 1 extra pixel to ensure the bottom row grid line is visible
-  const canvasHeight = TOTAL_ROWS * dotSize + 1;
+  // Add 1 extra row buffer to ensure the bottom row is fully visible
+  const canvasHeight = (TOTAL_ROWS + 1) * dotSize;
 
   return (
     <div
