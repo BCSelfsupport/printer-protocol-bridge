@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, X, FilePlus, SaveAll, Trash2 } from 'lucide-react';
+import { Save, X, FilePlus, SaveAll, Trash2, Settings } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import { NewFieldDialog } from '@/components/messages/NewFieldDialog';
 import { AutoCodeFieldDialog } from '@/components/messages/AutoCodeFieldDialog';
 import { TimeCodesDialog } from '@/components/messages/TimeCodesDialog';
 import { DateCodesDialog } from '@/components/messages/DateCodesDialog';
+import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,7 @@ export interface MessageDetails {
   width: number;
   fields: MessageField[];
   templateValue?: string; // Track which template was selected
+  settings?: MessageSettings; // Message-level print settings
 }
 
 // Template options - single heights for mixed font messages (loaded from .BIN files)
@@ -111,6 +113,7 @@ export function EditMessageScreen({
       { id: 1, type: 'text', data: messageName, x: 0, y: 16, width: 60, height: 16, fontSize: 'Standard16High' },
     ],
     templateValue: '16', // Default to 16 dots single template
+    settings: defaultMessageSettings,
   });
   const [loading, setLoading] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(1);
@@ -122,6 +125,7 @@ export function EditMessageScreen({
   const [autoCodeDialogOpen, setAutoCodeDialogOpen] = useState(false);
   const [timeCodesDialogOpen, setTimeCodesDialogOpen] = useState(false);
   const [dateCodesDialogOpen, setDateCodesDialogOpen] = useState(false);
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   // Load message details when component mounts (only once)
@@ -532,6 +536,14 @@ export function EditMessageScreen({
               <Trash2 className="w-8 h-8 mb-1" />
               <span className="font-medium">Delete</span>
             </button>
+
+            <button
+              onClick={() => setSettingsDialogOpen(true)}
+              className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
+            >
+              <Settings className="w-8 h-8 mb-1" />
+              <span className="font-medium">Settings</span>
+            </button>
           </div>
 
           {/* New Field Dialog */}
@@ -566,6 +578,19 @@ export function EditMessageScreen({
             onOpenChange={setDateCodesDialogOpen}
             onBack={() => setAutoCodeDialogOpen(true)}
             onAddField={handleAddField}
+          />
+
+          {/* Message Settings Dialog */}
+          <MessageSettingsDialog
+            open={settingsDialogOpen}
+            onOpenChange={setSettingsDialogOpen}
+            settings={message.settings || defaultMessageSettings}
+            onUpdate={(newSettings) => {
+              setMessage((prev) => ({
+                ...prev,
+                settings: { ...(prev.settings || defaultMessageSettings), ...newSettings },
+              }));
+            }}
           />
           {/* Action buttons */}
           <div className="flex gap-4 justify-center">
