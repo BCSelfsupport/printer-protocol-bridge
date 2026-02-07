@@ -274,22 +274,39 @@ const TOTAL_ROWS = 32; // Total printable height in dots
 const MIN_CANVAS_WIDTH = 420; // Minimum width to prevent any layout squeezing
 
 // Calculate required canvas width based on message content
-function calculateRequiredWidth(messageContent: MessageDetails | undefined, dotSize: number): number {
-  if (!messageContent || messageContent.fields.length === 0) {
-    return MIN_CANVAS_WIDTH;
+function calculateRequiredWidth(messageContent: MessageDetails | undefined, message: string | undefined, dotSize: number): number {
+  // If we have messageContent fields, calculate based on those
+  if (messageContent && messageContent.fields.length > 0) {
+    let maxXEnd = 0;
+    messageContent.fields.forEach((field) => {
+      const fontName = field.fontSize || 'Standard16High';
+      const fontInfo = getFontInfo(fontName);
+      const x = field.x * dotSize;
+      const textWidth = field.data.length * (fontInfo.charWidth + 1) * dotSize;
+      maxXEnd = Math.max(maxXEnd, x + textWidth);
+    });
+    // Add some padding
+    return Math.max(MIN_CANVAS_WIDTH, maxXEnd + 20);
   }
 
-  let maxXEnd = 0;
-  messageContent.fields.forEach((field) => {
-    const fontName = field.fontSize || 'Standard16High';
-    const fontInfo = getFontInfo(fontName);
-    const x = field.x * dotSize;
-    const textWidth = field.data.length * (fontInfo.charWidth + 1) * dotSize;
-    maxXEnd = Math.max(maxXEnd, x + textWidth);
-  });
+  // Fallback path: message string with time/date on right
+  if (message) {
+    const mainFontInfo = getFontInfo('Standard16High');
+    const smallFontInfo = getFontInfo('Standard7High');
+    const padding = 10;
+    
+    // Calculate message text width
+    const messageWidth = message.length * (mainFontInfo.charWidth + 1) * dotSize;
+    
+    // Time string is typically "HH:MM:SS" = 8 chars, date is "MM/DD/YY" = 8 chars
+    const timeWidth = 8 * (smallFontInfo.charWidth + 1) * dotSize;
+    
+    // Total width: padding + message + gap + time/date + padding
+    const totalNeeded = padding + messageWidth + 20 + timeWidth + padding;
+    return Math.max(MIN_CANVAS_WIDTH, totalNeeded);
+  }
 
-  // Add some padding
-  return Math.max(MIN_CANVAS_WIDTH, maxXEnd + 20);
+  return MIN_CANVAS_WIDTH;
 }
 
 function MessagePreviewCanvas({ message, printerTime, messageContent }: MessagePreviewCanvasProps) {
@@ -306,7 +323,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
   }, []);
 
   // Calculate dynamic width based on message content
-  const renderWidth = calculateRequiredWidth(messageContent, dotSize);
+  const renderWidth = calculateRequiredWidth(messageContent, message, dotSize);
 
   useEffect(() => {
     const canvas = canvasRef.current;
