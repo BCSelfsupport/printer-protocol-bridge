@@ -57,6 +57,8 @@ const Index = () => {
     saveMessageContent,
     updateMessage,
     deleteMessage,
+    resetCounter,
+    resetAllCounters,
   } = usePrinterConnection();
   
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown } = useJetCountdown();
@@ -99,14 +101,8 @@ const Index = () => {
             status={connectionState.status}
             isConnected={connectionState.isConnected}
             onHome={() => setCurrentScreen('control')}
-            onResetCounter={(counterId, value) => {
-              // TODO: Send ^CC command to reset counter
-              console.log(`Reset counter ${counterId} to ${value}`);
-            }}
-            onResetAll={() => {
-              // TODO: Send ^CC commands to reset all counters
-              console.log('Reset all counters');
-            }}
+            onResetCounter={resetCounter}
+            onResetAll={resetAllCounters}
           />
         );
       case 'network':

@@ -971,6 +971,70 @@ export function usePrinterConnection() {
     }));
   }, []);
 
+  // Reset or set a counter value using ^CC command
+  // Counter IDs: 0 = Print Counter, 1-4 = Custom Counters, 6 = Product Counter
+  const resetCounter = useCallback(async (counterId: number, value: number = 0) => {
+    console.log('[resetCounter] Called, counterId:', counterId, 'value:', value, 'isConnected:', connectionState.isConnected);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[resetCounter] Not connected, aborting');
+      return false;
+    }
+    
+    const printer = connectionState.connectedPrinter;
+    const command = `^CC ${counterId};${value}`;
+    
+    if (shouldUseEmulator()) {
+      console.log('[resetCounter] Using emulator, command:', command);
+      const result = printerEmulator.processCommand(command);
+      console.log('[resetCounter] Emulator result:', result);
+      
+      // Update local state from emulator
+      const state = printerEmulator.getState();
+      setConnectionState(prev => ({
+        ...prev,
+        status: prev.status ? {
+          ...prev.status,
+          productCount: state.productCount,
+          printCount: state.printCount,
+        } : null,
+      }));
+      return true;
+    } else if (isElectron && window.electronAPI) {
+      try {
+        console.log('[resetCounter] Sending', command);
+        const result = await window.electronAPI.printer.sendCommand(printer.id, command);
+        console.log('[resetCounter] Result:', JSON.stringify(result));
+        
+        if (!result?.success) {
+          console.error('[resetCounter] ^CC command failed:', result?.error);
+          return false;
+        }
+        
+        // Query status after a delay to reflect new counter values
+        setTimeout(() => queryPrinterStatus(printer), 500);
+        return true;
+      } catch (e) {
+        console.error('[resetCounter] Failed to send ^CC:', e);
+        return false;
+      }
+    } else {
+      // Web preview mock - just log
+      console.log('[resetCounter] Web preview mock - would send:', command);
+      return true;
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus]);
+
+  // Reset all counters
+  const resetAllCounters = useCallback(async () => {
+    console.log('[resetAllCounters] Resetting all counters');
+    // Counter IDs: 0 = Print, 1-4 = Custom, 6 = Product
+    const counterIds = [0, 1, 2, 3, 4, 6];
+    
+    for (const id of counterIds) {
+      await resetCounter(id, 0);
+    }
+  }, [resetCounter]);
+
   return {
     printers,
     connectionState,
@@ -997,5 +1061,7 @@ export function usePrinterConnection() {
     saveMessageContent,
     updateMessage,
     deleteMessage,
+    resetCounter,
+    resetAllCounters,
   };
 }
