@@ -341,6 +341,9 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     if (messageContent && messageContent.fields.length > 0) {
       ctx.fillStyle = '#1a1a1a';
 
+      // Home preview only: shift everything up by 1 dot row to avoid bottom-row clipping on some devices.
+      const previewYOffsetDots = 1;
+
       messageContent.fields.forEach((field) => {
         const fontName = field.fontSize || 'Standard16High';
         const fontInfo = getFontInfo(fontName);
@@ -349,7 +352,8 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
         const clampedYDots = Math.min(field.y, Math.max(0, TOTAL_ROWS - fontInfo.height));
 
         const x = field.x * dotSize;
-        const y = clampedYDots * dotSize;
+        const yDots = Math.max(0, clampedYDots - previewYOffsetDots);
+        const y = yDots * dotSize;
 
         renderText(ctx, field.data, x, y, fontName, dotSize);
       });
@@ -359,10 +363,14 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     if (message) {
       ctx.fillStyle = '#1a1a1a';
 
+      // Home preview only: shift everything up by 1 dot row to avoid bottom-row clipping on some devices.
+      const previewYOffsetDots = 1;
+
       const mainFontName = 'Standard16High';
       const mainFontInfo = getFontInfo(mainFontName);
 
-      const mainY = (32 - mainFontInfo.height) * dotSize;
+      const mainYDots = Math.max(0, (32 - mainFontInfo.height) - previewYOffsetDots);
+      const mainY = mainYDots * dotSize;
       const padding = 10;
 
       renderText(ctx, message, padding, mainY, mainFontName, dotSize);
@@ -377,8 +385,11 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
       const timeWidth = timeStr.length * (smallFontInfo.charWidth + 1) * dotSize;
       const timeX = width - timeWidth - padding;
 
-      const timeY = 16 * dotSize;
-      const dateY = (16 + smallFontInfo.height + 1) * dotSize;
+      const timeYDots = Math.max(0, 16 - previewYOffsetDots);
+      const dateYDots = Math.max(0, (16 + smallFontInfo.height + 1) - previewYOffsetDots);
+
+      const timeY = timeYDots * dotSize;
+      const dateY = dateYDots * dotSize;
 
       renderText(ctx, timeStr, timeX, timeY, smallFontName, dotSize);
       renderText(ctx, dateStr, timeX, dateY, smallFontName, dotSize);
