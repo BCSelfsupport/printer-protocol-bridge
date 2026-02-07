@@ -185,18 +185,18 @@ export function Dashboard({
           {/* Start/Stop buttons with Count panel */}
           <div className="flex gap-2 md:ml-auto flex-shrink-0">
             {/* Count panel */}
-            <div className="bg-primary text-primary-foreground rounded-lg p-2 md:p-4 flex-shrink-0">
-              <div className="flex justify-between items-center mb-1 md:mb-2 gap-3">
+            <div className="bg-primary text-primary-foreground rounded-lg p-2 md:p-3 flex-shrink-0 min-w-[120px] md:min-w-[180px]">
+              <div className="flex justify-between items-center mb-0.5 md:mb-1 gap-3">
                 <span className="text-[10px] md:text-sm whitespace-nowrap">Product:</span>
                 <span className="font-bold text-sm md:text-xl font-mono">{(status?.productCount ?? 0).toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center mb-2 gap-3">
+              <div className="flex justify-between items-center mb-1 md:mb-1.5 gap-3">
                 <span className="text-[10px] md:text-sm whitespace-nowrap">Print:</span>
                 <span className="font-bold text-sm md:text-xl font-mono">{(status?.printCount ?? 0).toLocaleString()}</span>
               </div>
               <button
                 onClick={onCounters}
-                className="w-full text-[10px] md:text-xs bg-gradient-to-b from-white/30 to-white/10 hover:from-white/40 hover:to-white/20 border border-white/20 rounded-md px-2 py-1.5 transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_1px_2px_rgba(0,0,0,0.2)] active:shadow-[inset_0_1px_3px_rgba(0,0,0,0.2)] flex items-center justify-center gap-1"
+                className="w-full text-[10px] md:text-xs bg-gradient-to-b from-white/30 to-white/10 hover:from-white/40 hover:to-white/20 border border-white/20 rounded-md px-2 py-1 transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_1px_2px_rgba(0,0,0,0.2)] active:shadow-[inset_0_1px_3px_rgba(0,0,0,0.2)] flex items-center justify-center gap-1"
               >
                 <RotateCcw className="w-3 h-3 md:w-4 md:h-4" />
                 <span>Reset</span>
