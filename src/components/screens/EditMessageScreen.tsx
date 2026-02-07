@@ -416,65 +416,6 @@ export function EditMessageScreen({
                       Delete
                     </button>
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    
-                    <div>
-                      <Label htmlFor="fieldType">Type</Label>
-                      <Select
-                        value={selectedField.type}
-                        onValueChange={(value) =>
-                          setMessage((prev) => ({
-                            ...prev,
-                            fields: prev.fields.map((f) =>
-                              f.id === selectedFieldId
-                                ? { ...f, type: value as MessageField['type'] }
-                                : f
-                            ),
-                          }))
-                        }
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="text">Text</SelectItem>
-                          <SelectItem value="date">Date</SelectItem>
-                          <SelectItem value="time">Time</SelectItem>
-                          <SelectItem value="counter">Counter</SelectItem>
-                          <SelectItem value="logo">Logo/Graphic</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="fieldFontSize">Font Size</Label>
-                      <Select
-                        value={selectedField.fontSize || '16'}
-                        onValueChange={(value) =>
-                          setMessage((prev) => ({
-                            ...prev,
-                            fields: prev.fields.map((f) =>
-                              f.id === selectedFieldId
-                                ? { ...f, fontSize: value }
-                                : f
-                            ),
-                          }))
-                        }
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {FONT_SIZES.map((fs) => (
-                            <SelectItem key={fs.value} value={fs.value}>
-                              {fs.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
