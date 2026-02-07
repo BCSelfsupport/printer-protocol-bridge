@@ -223,35 +223,12 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* Middle section - horizontal scroll on mobile */}
-      <div className="overflow-x-auto pb-2 -mx-2 px-2 md:mx-0 md:px-0 md:overflow-visible">
-        <div className="flex gap-2 md:gap-4 min-w-max md:min-w-0">
-          {/* Message name area */}
-          <div className="min-w-[100px] md:flex-1 bg-card rounded-lg p-2 md:p-4 min-h-[50px] md:min-h-[80px] flex items-center flex-shrink-0">
-            <div className="text-xs md:text-lg">
-              <div className="font-medium">Message name</div>
-              <div className="text-foreground truncate max-w-[100px] md:max-w-none">
-                {status?.currentMessage || 'No message selected'}
-              </div>
-            </div>
-          </div>
-
-          {/* New/Edit buttons */}
-          <div className="flex gap-2 md:flex-col flex-shrink-0">
-            <button 
-              onClick={onNewMessage}
-              className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-1 md:gap-2"
-            >
-              <Plus className="w-4 h-4 md:w-6 md:h-6" />
-              <span className="text-sm md:text-lg font-medium">New</span>
-            </button>
-            <button 
-              onClick={onEditMessage}
-              className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-1 md:gap-2"
-            >
-              <Pencil className="w-4 h-4 md:w-6 md:h-6" />
-              <span className="text-sm md:text-lg font-medium">Edit</span>
-            </button>
+      {/* Middle section - Message name */}
+      <div className="bg-card rounded-lg p-2 md:p-4 min-h-[50px] md:min-h-[80px] flex items-center">
+        <div className="text-xs md:text-lg">
+          <div className="font-medium">Message name</div>
+          <div className="text-foreground truncate">
+            {status?.currentMessage || 'No message selected'}
           </div>
         </div>
       </div>
@@ -263,6 +240,24 @@ export function Dashboard({
           printerTime={status?.printerTime}
           messageContent={messageContent}
         />
+      </div>
+
+      {/* New/Edit buttons - side by side below preview */}
+      <div className="flex gap-2 justify-center">
+        <button 
+          onClick={onNewMessage}
+          className="industrial-button text-white px-4 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4 md:w-6 md:h-6" />
+          <span className="text-sm md:text-lg font-medium">New</span>
+        </button>
+        <button 
+          onClick={onEditMessage}
+          className="industrial-button text-white px-4 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-2"
+        >
+          <Pencil className="w-4 h-4 md:w-6 md:h-6" />
+          <span className="text-sm md:text-lg font-medium">Edit</span>
+        </button>
       </div>
     </div>
   </div>
