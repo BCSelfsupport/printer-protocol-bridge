@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, X, Plus, Trash2, FileText, Hash, User, Square, Barcode, Image, FilePlus } from 'lucide-react';
+import { Save, X, Plus, Trash2, FileText, Hash, User, Square, Barcode, Image, FilePlus, SaveAll } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 // Field type options matching the printer's New Field menu
 const FIELD_TYPES = [
@@ -95,7 +103,7 @@ type TemplateValue = SingleTemplateValue | MultilineTemplateValue;
 
 interface EditMessageScreenProps {
   messageName: string;
-  onSave: (message: MessageDetails) => void;
+  onSave: (message: MessageDetails, isNew?: boolean) => void;
   onCancel: () => void;
   onGetMessageDetails?: (name: string) => Promise<MessageDetails | null>;
 }
@@ -119,6 +127,8 @@ export function EditMessageScreen({
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(1);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [loadedTemplate, setLoadedTemplate] = useState<ParsedTemplate | null>(null);
+  const [saveAsDialogOpen, setSaveAsDialogOpen] = useState(false);
+  const [saveAsName, setSaveAsName] = useState('');
 
   // Load message details when component mounts
   useEffect(() => {
@@ -408,11 +418,22 @@ export function EditMessageScreen({
           {/* Action buttons */}
           <div className="flex gap-4 justify-center">
             <button
-              onClick={() => onSave(message)}
+              onClick={() => onSave(message, false)}
               className="industrial-button-success text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
             >
               <Save className="w-8 h-8 mb-1" />
               <span className="font-medium">Save</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setSaveAsName(message.name + '_copy');
+                setSaveAsDialogOpen(true);
+              }}
+              className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
+            >
+              <SaveAll className="w-8 h-8 mb-1" />
+              <span className="font-medium">Save As</span>
             </button>
 
             <button
@@ -423,6 +444,42 @@ export function EditMessageScreen({
               <span className="font-medium">Cancel</span>
             </button>
           </div>
+
+          {/* Save As Dialog */}
+          <Dialog open={saveAsDialogOpen} onOpenChange={setSaveAsDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Save As New Message</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <Label htmlFor="saveAsName">Message Name</Label>
+                <Input
+                  id="saveAsName"
+                  value={saveAsName}
+                  onChange={(e) => setSaveAsName(e.target.value.toUpperCase())}
+                  placeholder="Enter message name"
+                  className="mt-2"
+                  autoFocus
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setSaveAsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (saveAsName.trim()) {
+                      onSave({ ...message, name: saveAsName.trim() }, true);
+                      setSaveAsDialogOpen(false);
+                    }
+                  }}
+                  disabled={!saveAsName.trim()}
+                >
+                  Save
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </div>

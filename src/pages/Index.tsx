@@ -123,9 +123,18 @@ const Index = () => {
         return editingMessage ? (
           <EditMessageScreen
             messageName={editingMessage.name}
-            onSave={(details: MessageDetails) => {
-              console.log('Save message:', details);
-              // TODO: Send ^CM, ^CF, ^MD commands to update message
+            onSave={(details: MessageDetails, isNew?: boolean) => {
+              console.log('Save message:', details, 'isNew:', isNew);
+              // TODO: Send ^CM, ^CF, ^MD commands to update/create message
+              // If isNew is true, this is a "Save As" operation - create new message
+              // If isNew is false, this is a regular save - overwrite existing message
+              if (isNew) {
+                console.log('Creating new message with name:', details.name);
+                // TODO: Add new message to the list
+              } else {
+                console.log('Updating existing message:', editingMessage.name);
+                // TODO: Update the existing message
+              }
               setCurrentScreen('messages');
               setEditingMessage(null);
             }}
