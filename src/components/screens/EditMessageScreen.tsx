@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageCanvas } from '@/components/messages/MessageCanvas';
+import { loadTemplate, templateToMultilineConfig, type ParsedTemplate } from '@/lib/templateParser';
 
 export interface MessageField {
   id: number;
@@ -36,12 +37,12 @@ const SINGLE_TEMPLATES = [
   { value: '5', label: '5 dots' },
 ] as const;
 
-// Multi-line templates (lines × dot height per line)
+// Multi-line templates - will be loaded from .BIN files
 const MULTILINE_TEMPLATES = [
-  { value: 'multi-5x5', label: '5 lines × 5 dots', height: 25, lines: 5, dotsPerLine: 5 },
-  { value: 'multi-3x9', label: '3 lines × 9 dots', height: 27, lines: 3, dotsPerLine: 9 },
-  { value: 'multi-4x7', label: '4 lines × 7 dots', height: 28, lines: 4, dotsPerLine: 7 },
-  { value: 'multi-2x16', label: '2 lines × 16 dots', height: 32, lines: 2, dotsPerLine: 16 },
+  { value: 'multi-5x5', label: '5 lines × 5 dots', height: 25, lines: 5, dotsPerLine: 5, file: '5L5U.BIN' },
+  { value: 'multi-3x9', label: '3 lines × 9 dots', height: 27, lines: 3, dotsPerLine: 9, file: null },
+  { value: 'multi-4x7', label: '4 lines × 7 dots', height: 28, lines: 4, dotsPerLine: 7, file: null },
+  { value: 'multi-2x16', label: '2 lines × 16 dots', height: 32, lines: 2, dotsPerLine: 16, file: null },
 ] as const;
 
 // Font size options - matching actual printer fonts
@@ -86,6 +87,7 @@ export function EditMessageScreen({
   const [loading, setLoading] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(1);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [loadedTemplate, setLoadedTemplate] = useState<ParsedTemplate | null>(null);
 
   // Load message details when component mounts
   useEffect(() => {
@@ -116,12 +118,24 @@ export function EditMessageScreen({
     }));
   };
 
-  const handleTemplateChange = (value: string) => {
+  const handleTemplateChange = async (value: string) => {
     // Check if it's a multi-line template
     const multiTemplate = MULTILINE_TEMPLATES.find(t => t.value === value);
     const height = multiTemplate 
       ? multiTemplate.height 
       : parseInt(value) || 16;
+    
+    // Try to load the template file if available
+    if (multiTemplate && multiTemplate.file) {
+      console.log('Loading template file:', multiTemplate.file);
+      const template = await loadTemplate(multiTemplate.file);
+      if (template) {
+        console.log('Template loaded successfully:', template);
+        setLoadedTemplate(template);
+      }
+    } else {
+      setLoadedTemplate(null);
+    }
     
     setMessage((prev) => ({
       ...prev,
