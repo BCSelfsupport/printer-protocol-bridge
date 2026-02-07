@@ -71,6 +71,7 @@ export function MessageCanvas({
   // Touch/long-press state for mobile drag
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isLongPressActive, setIsLongPressActive] = useState(false);
+  const [isLongPressPending, setIsLongPressPending] = useState(false); // Waiting for long press
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const LONG_PRESS_DURATION = 400; // ms to hold before drag activates
   const TOUCH_MOVE_THRESHOLD = 10; // pixels - if moved more than this, cancel long press
@@ -578,6 +579,7 @@ export function MessageCanvas({
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    setIsLongPressPending(false);
     setIsLongPressActive(false);
   };
 
@@ -593,9 +595,13 @@ export function MessageCanvas({
     touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
     
     if (field) {
+      // Mark that we're waiting for long press (to prevent scroll)
+      setIsLongPressPending(true);
+      
       // Start long press timer
       longPressTimerRef.current = setTimeout(() => {
         // Long press activated - start dragging
+        setIsLongPressPending(false);
         setIsLongPressActive(true);
         setIsDragging(true);
         setDragFieldId(field.id);
@@ -615,17 +621,24 @@ export function MessageCanvas({
     const touch = e.touches[0];
     if (!touch) return;
     
-    // Check if we've moved too far - cancel long press timer
-    if (touchStartPosRef.current && !isLongPressActive) {
+    // If long press is pending (waiting for timer), prevent scrolling
+    if (isLongPressPending && touchStartPosRef.current) {
       const dx = touch.clientX - touchStartPosRef.current.x;
       const dy = touch.clientY - touchStartPosRef.current.y;
-      if (Math.sqrt(dx * dx + dy * dy) > TOUCH_MOVE_THRESHOLD) {
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance > TOUCH_MOVE_THRESHOLD) {
+        // Moved too far - cancel long press and allow normal scroll
         clearLongPressTimer();
-        return; // Let normal scrolling happen
+        return;
       }
+      
+      // Still within threshold - prevent scroll while waiting for long press
+      e.preventDefault();
+      return;
     }
     
-    // If we're in drag mode, handle the drag
+    // If we're in active drag mode, handle the drag
     if (isDragging && dragFieldId !== null && isLongPressActive) {
       e.preventDefault(); // Prevent scrolling while dragging
       
@@ -793,8 +806,8 @@ export function MessageCanvas({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchCancel}
-          className={`w-full outline-none touch-pan-x ${isDragging && isLongPressActive ? 'cursor-grabbing' : isEditing ? 'cursor-text' : 'cursor-crosshair'}`}
-          style={{ touchAction: isLongPressActive ? 'none' : 'pan-x pan-y' }}
+          className={`w-full outline-none ${isDragging && isLongPressActive ? 'cursor-grabbing' : isEditing ? 'cursor-text' : 'cursor-crosshair'}`}
+          style={{ touchAction: (isLongPressPending || isLongPressActive) ? 'none' : 'pan-x pan-y' }}
         />
       </div>
       
