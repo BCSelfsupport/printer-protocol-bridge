@@ -185,14 +185,14 @@ export function Dashboard({
           {/* Start/Stop buttons with Count panel */}
           <div className="flex gap-2 md:ml-auto flex-shrink-0">
             {/* Count panel */}
-            <div className="bg-primary text-primary-foreground rounded-lg p-2 md:p-4 min-w-[100px] md:min-w-[140px] flex-shrink-0">
-              <div className="flex justify-between items-center mb-1 md:mb-2 gap-2">
+            <div className="bg-primary text-primary-foreground rounded-lg p-2 md:p-4 min-w-[120px] md:min-w-[180px] flex-shrink-0">
+              <div className="flex justify-between items-center mb-1 md:mb-2 gap-3">
                 <span className="text-[10px] md:text-sm whitespace-nowrap">Product:</span>
-                <span className="font-bold text-base md:text-2xl">{status?.productCount ?? 0}</span>
+                <span className="font-bold text-sm md:text-xl font-mono">{(status?.productCount ?? 0).toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center mb-2 gap-2">
+              <div className="flex justify-between items-center mb-2 gap-3">
                 <span className="text-[10px] md:text-sm whitespace-nowrap">Print:</span>
-                <span className="font-bold text-base md:text-2xl">{status?.printCount ?? 0}</span>
+                <span className="font-bold text-sm md:text-xl font-mono">{(status?.printCount ?? 0).toLocaleString()}</span>
               </div>
               <button
                 onClick={onCounters}
