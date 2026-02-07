@@ -184,6 +184,7 @@ const Index = () => {
         return (
           <MessagesScreen
             messages={connectionState.messages}
+            currentMessageName={connectionState.status?.currentMessage ?? null}
             onSelect={async (message) => {
               const success = await selectMessage(message);
               if (success) {
