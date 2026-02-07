@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, FlaskConical, FileText } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, FlaskConical, FileText, Hash } from 'lucide-react';
 import { Printer } from '@/types/printer';
 
 interface PrinterListItemProps {
@@ -71,9 +71,9 @@ export function PrinterListItem({ printer, isSelected, onSelect }: PrinterListIt
             </div>
           )}
           
-          {/* Fluid levels */}
+          {/* Fluid levels and print count */}
           {printer.isAvailable && (
-            <div className="flex items-center gap-4 mt-2">
+            <div className="flex items-center gap-4 mt-2 flex-wrap">
               <div className="flex items-center gap-1.5" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
                 <Droplets className={`w-4 h-4 ${getFluidColor(printer.inkLevel)}`} />
                 <span className="text-xs text-slate-300 font-medium">INK:</span>
@@ -88,6 +88,15 @@ export function PrinterListItem({ printer, isSelected, onSelect }: PrinterListIt
                   {printer.makeupLevel || '?'}
                 </span>
               </div>
+              {printer.printCount !== undefined && (
+                <div className="flex items-center gap-1.5" title={`Print Count: ${printer.printCount}`}>
+                  <Hash className="w-4 h-4 text-primary" />
+                  <span className="text-xs text-slate-300 font-medium">PRINTS:</span>
+                  <span className="text-xs font-semibold text-primary">
+                    {printer.printCount.toLocaleString()}
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>

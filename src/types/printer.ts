@@ -11,6 +11,7 @@ export interface Printer {
   inkLevel?: 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN';
   makeupLevel?: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
   currentMessage?: string | null;
+  printCount?: number;
 }
 
 export interface PrinterStatus {

@@ -55,6 +55,7 @@ export function usePrinterStorage() {
             inkLevel: state.inkLevel,
             makeupLevel: state.makeupLevel,
             currentMessage: state.currentMessage,
+            printCount: state.printCount,
           };
         }
         return p;
