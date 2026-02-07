@@ -428,13 +428,12 @@ export function EditMessageScreen({
             </div>
           )}
 
-          {/* Message Canvas - horizontal scroll on mobile */}
+          {/* Message Canvas - component handles its own horizontal scrolling */}
           <div
             ref={canvasScrollerRef}
-            className={`mb-2 md:mb-4 overflow-y-hidden -mx-2 px-2 md:mx-0 md:px-0 pb-2 ${isCanvasScrollLocked ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
-            style={isCanvasScrollLocked ? { overscrollBehaviorX: 'none' } : undefined}
+            className={`mb-2 md:mb-4 -mx-2 px-2 md:mx-0 md:px-0 pb-2`}
           >
-            <div className="min-w-max" style={{ minWidth: `${Math.max(500, message.width * 8 + 100)}px` }}>
+            <div style={{ minWidth: `${Math.max(500, message.width * 8 + 100)}px` }}>
               <MessageCanvas
                 templateHeight={message.height}
                 width={message.width}
