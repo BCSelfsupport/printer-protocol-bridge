@@ -36,8 +36,6 @@ interface MessageCanvasProps {
   multilineTemplate?: MultilineTemplate | null;
   /** Callback for field errors */
   onFieldError?: (fieldId: number, error: string | null) => void;
-  /** Notifies parent when inline editing starts/stops (useful for mobile keyboard handling) */
-  onEditingChange?: (isEditing: boolean) => void;
 }
 
 const TOTAL_ROWS = 32;
@@ -53,7 +51,6 @@ export function MessageCanvas({
   selectedFieldId,
   multilineTemplate,
   onFieldError,
-  onEditingChange,
 }: MessageCanvasProps) {
   const [scrollX, setScrollX] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -310,12 +307,11 @@ export function MessageCanvas({
   const startEditing = useCallback((fieldId: number, clickX?: number) => {
     const field = fields.find(f => f.id === fieldId);
     if (!field) return;
-
+    
     setIsEditing(true);
-    onEditingChange?.(true);
     setEditingFieldId(fieldId);
     setEditingText(field.data);
-
+    
     // Set cursor position based on click location or end of text
     if (clickX !== undefined) {
       const fontInfo = getFontInfo(field.fontSize);
@@ -326,21 +322,20 @@ export function MessageCanvas({
     } else {
       setCursorPosition(field.data.length); // Default to end
     }
-
+    
     // Focus the hidden input to trigger mobile keyboard
     setTimeout(() => {
       hiddenInputRef.current?.focus();
     }, 50);
-  }, [fields, onEditingChange]);
+  }, [fields]);
 
   const stopEditing = useCallback(() => {
     setIsEditing(false);
-    onEditingChange?.(false);
     setEditingFieldId(null);
     setCursorPosition(0);
     setEditingText('');
     hiddenInputRef.current?.blur();
-  }, [onEditingChange]);
+  }, []);
 
   // Keyboard handler for canvas-based editing
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLCanvasElement>) => {
