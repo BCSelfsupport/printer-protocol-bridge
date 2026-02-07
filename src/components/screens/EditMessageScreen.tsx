@@ -1,17 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Save, X, Plus, Trash2, FileText, Hash, User, Square, Barcode, Image, FilePlus, SaveAll } from 'lucide-react';
+import { Save, X, FilePlus, SaveAll } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageCanvas } from '@/components/messages/MessageCanvas';
 import { loadTemplate, templateToMultilineConfig, type ParsedTemplate } from '@/lib/templateParser';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { NewFieldDialog } from '@/components/messages/NewFieldDialog';
 import {
   Dialog,
   DialogContent,
@@ -21,15 +16,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-// Field type options matching the printer's New Field menu
-const FIELD_TYPES = [
-  { value: 'text', label: 'Text Field', icon: FileText },
-  { value: 'counter', label: 'AutoCode Field', icon: Hash },
-  { value: 'userdefine', label: 'User Define', icon: User },
-  { value: 'block', label: 'Block Field', icon: Square },
-  { value: 'barcode', label: 'Barcode Field', icon: Barcode },
-  { value: 'logo', label: 'Graphic Field', icon: Image },
-] as const;
 
 export interface MessageField {
   id: number;
@@ -129,6 +115,7 @@ export function EditMessageScreen({
   const [loadedTemplate, setLoadedTemplate] = useState<ParsedTemplate | null>(null);
   const [saveAsDialogOpen, setSaveAsDialogOpen] = useState(false);
   const [saveAsName, setSaveAsName] = useState('');
+  const [newFieldDialogOpen, setNewFieldDialogOpen] = useState(false);
 
   // Load message details when component mounts
   useEffect(() => {
@@ -392,27 +379,21 @@ export function EditMessageScreen({
 
           {/* New Field button row */}
           <div className="flex gap-4 justify-center mb-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]">
-                  <FilePlus className="w-8 h-8 mb-1" />
-                  <span className="font-medium">New</span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" className="w-48">
-                {FIELD_TYPES.map((fieldType) => (
-                  <DropdownMenuItem
-                    key={fieldType.value}
-                    onClick={() => handleAddField(fieldType.value)}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <fieldType.icon className="w-4 h-4" />
-                    {fieldType.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <button
+              onClick={() => setNewFieldDialogOpen(true)}
+              className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
+            >
+              <FilePlus className="w-8 h-8 mb-1" />
+              <span className="font-medium">New</span>
+            </button>
           </div>
+
+          {/* New Field Dialog */}
+          <NewFieldDialog
+            open={newFieldDialogOpen}
+            onOpenChange={setNewFieldDialogOpen}
+            onSelectFieldType={handleAddField}
+          />
 
 
           {/* Action buttons */}
