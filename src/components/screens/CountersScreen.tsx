@@ -1,7 +1,7 @@
 import { RotateCcw, Pencil } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { PrinterStatus } from '@/types/printer';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 
 interface CountersScreenProps {
@@ -10,6 +10,7 @@ interface CountersScreenProps {
   onHome: () => void;
   onResetCounter: (counterId: number, value: number) => void;
   onResetAll: () => void;
+  onMount?: () => void;
 }
 
 interface CounterCardProps {
@@ -23,6 +24,13 @@ interface CounterCardProps {
 function CounterCard({ label, value, onReset, onEdit, disabled }: CounterCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value.toString());
+
+  // Sync editValue when value changes externally
+  useEffect(() => {
+    if (!isEditing) {
+      setEditValue(value.toString());
+    }
+  }, [value, isEditing]);
 
   const handleEditSubmit = () => {
     const numValue = parseInt(editValue, 10);
@@ -89,19 +97,26 @@ export function CountersScreen({
   onHome,
   onResetCounter,
   onResetAll,
+  onMount,
 }: CountersScreenProps) {
+  // Query counters on mount
+  useEffect(() => {
+    onMount?.();
+  }, [onMount]);
+
   // Counter IDs from protocol:
   // 0 = Print Counter
   // 1-4 = Custom Counters
   // 6 = Product Counter
+  const customCounters = status?.customCounters ?? [0, 0, 0, 0];
 
   const counters = [
     { id: 6, label: 'Product Count', value: status?.productCount ?? 0 },
     { id: 0, label: 'Print Count', value: status?.printCount ?? 0 },
-    { id: 1, label: 'Counter 1', value: 0 },
-    { id: 2, label: 'Counter 2', value: 0 },
-    { id: 3, label: 'Counter 3', value: 0 },
-    { id: 4, label: 'Counter 4', value: 0 },
+    { id: 1, label: 'Counter 1', value: customCounters[0] ?? 0 },
+    { id: 2, label: 'Counter 2', value: customCounters[1] ?? 0 },
+    { id: 3, label: 'Counter 3', value: customCounters[2] ?? 0 },
+    { id: 4, label: 'Counter 4', value: customCounters[3] ?? 0 },
   ];
 
   return (
