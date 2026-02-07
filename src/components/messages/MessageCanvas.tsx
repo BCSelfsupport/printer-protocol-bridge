@@ -274,13 +274,18 @@ export function MessageCanvas({
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDragging || dragFieldId === null) return;
     
+    const draggedField = fields.find(f => f.id === dragFieldId);
+    if (!draggedField) return;
+    
+    const fontInfo = getFontInfo(draggedField.fontSize);
     const pos = getMousePosition(e);
     let newX = pos.x - dragOffset.x;
     let newY = pos.y - dragOffset.y;
     
-    // Clamp to valid area
+    // Clamp to valid area - prevent dropping off top (blocked rows) or bottom (past row 32)
     newX = Math.max(0, newX);
     newY = Math.max(blockedRows, newY);
+    newY = Math.min(TOTAL_ROWS - fontInfo.height, newY); // Prevent going past bottom
     
     // Snap to line if multiline template
     if (multilineTemplate) {
