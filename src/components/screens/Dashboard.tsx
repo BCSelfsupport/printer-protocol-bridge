@@ -180,6 +180,18 @@ export function Dashboard({
             </div>
           </div>
 
+          {/* Count panel - moved next to Start/Stop */}
+          <div className="bg-primary text-primary-foreground rounded-lg p-2 md:p-4 min-w-[100px] md:min-w-[140px] flex-shrink-0">
+            <div className="flex justify-between items-center mb-1 md:mb-2 gap-2">
+              <span className="text-[10px] md:text-sm whitespace-nowrap">Product:</span>
+              <span className="font-bold text-base md:text-2xl">{status?.productCount ?? 0}</span>
+            </div>
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-[10px] md:text-sm whitespace-nowrap">Print:</span>
+              <span className="font-bold text-base md:text-2xl">{status?.printCount ?? 0}</span>
+            </div>
+          </div>
+
           {/* Start/Stop buttons */}
           <div className="flex gap-2 md:flex-col md:ml-auto flex-shrink-0">
             <button
@@ -232,18 +244,6 @@ export function Dashboard({
               <Pencil className="w-4 h-4 md:w-6 md:h-6" />
               <span className="text-sm md:text-lg font-medium">Edit</span>
             </button>
-          </div>
-
-          {/* Count panel */}
-          <div className="bg-primary text-primary-foreground rounded-lg p-2 md:p-6 min-w-[120px] md:min-w-[200px] flex-shrink-0">
-            <div className="flex justify-between items-center mb-1 md:mb-4 gap-2">
-              <span className="text-[10px] md:text-lg whitespace-nowrap">Product:</span>
-              <span className="font-bold text-lg md:text-3xl">{status?.productCount ?? 0}</span>
-            </div>
-            <div className="flex justify-between items-center gap-2">
-              <span className="text-[10px] md:text-lg whitespace-nowrap">Print:</span>
-              <span className="font-bold text-lg md:text-3xl">{status?.printCount ?? 0}</span>
-            </div>
           </div>
         </div>
       </div>
