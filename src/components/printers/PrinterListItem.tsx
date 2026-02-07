@@ -76,14 +76,16 @@ export function PrinterListItem({ printer, isSelected, onSelect }: PrinterListIt
             <div className="flex items-center gap-4 mt-2">
               <div className="flex items-center gap-1.5" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
                 <Droplets className={`w-4 h-4 ${getFluidColor(printer.inkLevel)}`} />
-                <span className={`text-xs font-medium ${getFluidColor(printer.inkLevel)}`}>
-                  {printer.inkLevel === 'FULL' ? 'INK' : printer.inkLevel || '?'}
+                <span className="text-xs text-muted-foreground">INK:</span>
+                <span className={`text-xs font-semibold ${getFluidColor(printer.inkLevel)}`}>
+                  {printer.inkLevel || '?'}
                 </span>
               </div>
               <div className="flex items-center gap-1.5" title={`Makeup: ${printer.makeupLevel || 'Unknown'}`}>
                 <FlaskConical className={`w-4 h-4 ${getFluidColor(printer.makeupLevel)}`} />
-                <span className={`text-xs font-medium ${getFluidColor(printer.makeupLevel)}`}>
-                  {printer.makeupLevel === 'FULL' || printer.makeupLevel === 'GOOD' ? 'MU' : printer.makeupLevel || '?'}
+                <span className="text-xs text-muted-foreground">MU:</span>
+                <span className={`text-xs font-semibold ${getFluidColor(printer.makeupLevel)}`}>
+                  {printer.makeupLevel || '?'}
                 </span>
               </div>
             </div>
