@@ -6,6 +6,16 @@ interface PrinterDetailsPanelProps {
   onConnect: () => void;
 }
 
+// Helper to generate error message from printer state
+function getErrorMessage(printer: Printer): string {
+  const errors: string[] = [];
+  if (printer.inkLevel === 'LOW') errors.push('Ink Low');
+  if (printer.inkLevel === 'EMPTY') errors.push('Ink Empty');
+  if (printer.makeupLevel === 'LOW') errors.push('Makeup Low');
+  if (printer.makeupLevel === 'EMPTY') errors.push('Makeup Empty');
+  return errors.length > 0 ? errors.join(', ') : 'Active Errors';
+}
+
 export function PrinterDetailsPanel({ printer, onConnect }: PrinterDetailsPanelProps) {
   if (!printer) {
     return (
@@ -145,7 +155,9 @@ export function PrinterDetailsPanel({ printer, onConnect }: PrinterDetailsPanelP
                 <p className={`font-semibold ${
                   printer.hasActiveErrors ? 'text-red-400' : 'text-slate-400'
                 }`}>
-                  {printer.hasActiveErrors ? 'Active Errors' : 'No Errors'}
+                  {printer.hasActiveErrors 
+                    ? getErrorMessage(printer)
+                    : 'No Errors'}
                 </p>
               </div>
             </div>
