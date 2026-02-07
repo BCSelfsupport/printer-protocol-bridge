@@ -395,27 +395,25 @@ export function EditMessageScreen({
   };
 
   return (
-    <div className="flex-1 p-2 md:p-4 flex flex-col h-full overflow-hidden">
-      {/* Sticky header + canvas container for mobile - stays visible above keyboard */}
-      <div className="sticky top-0 z-10 bg-background pb-2">
-        <SubPageHeader title={`Edit: ${messageName}`} onHome={onCancel} />
-
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
+      {/* Canvas FIRST - fixed to top on mobile, stays visible above keyboard */}
+      <div className="fixed top-0 left-0 right-0 z-20 bg-background p-2 md:relative md:p-0 md:z-auto">
         {loading ? (
-          <div className="flex-1 flex items-center justify-center py-8">
-            <span className="text-muted-foreground">Loading message...</span>
+          <div className="flex items-center justify-center py-4">
+            <span className="text-muted-foreground">Loading...</span>
           </div>
         ) : (
           <>
             {/* Error message */}
             {fieldError && (
-              <div className="mb-2 p-2 md:p-3 bg-destructive/10 border border-destructive rounded-lg text-destructive text-xs md:text-sm flex items-center gap-2">
-                <span className="font-medium">⚠️ Error:</span>
+              <div className="mb-1 p-1 md:p-3 bg-destructive/10 border border-destructive rounded text-destructive text-[10px] md:text-sm flex items-center gap-1">
+                <span className="font-medium">⚠️</span>
                 <span>{fieldError}</span>
               </div>
             )}
 
             {/* Message Canvas - horizontal scroll on mobile */}
-            <div className="mb-2 md:mb-4 overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
+            <div className="overflow-x-auto">
               <div className="min-w-[400px]">
                 <MessageCanvas
                   templateHeight={message.height}
@@ -438,16 +436,19 @@ export function EditMessageScreen({
                     dotsPerLine: currentMultilineTemplate.dotsPerLine,
                   } : null}
                 />
-                <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Tap field to select, double-tap to edit</p>
               </div>
             </div>
           </>
         )}
       </div>
 
-      {/* Scrollable content below sticky header - only show when not loading */}
+      {/* Spacer for fixed canvas on mobile */}
+      <div className="h-[280px] md:h-0 shrink-0" />
+
+      {/* Scrollable content below - header and controls */}
       {!loading && (
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-2 md:p-4">
+          <SubPageHeader title={`Edit: ${messageName}`} onHome={onCancel} />
           {/* Message properties row - horizontal scroll on mobile */}
           <div className="bg-card rounded-lg p-2 md:p-4 mb-2 md:mb-4 overflow-x-auto">
             <div className="flex gap-3 md:gap-4 min-w-max md:min-w-0 md:grid md:grid-cols-4">
