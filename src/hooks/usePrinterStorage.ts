@@ -37,12 +37,16 @@ export function usePrinterStorage() {
       setPrinters(prev => prev.map(p => {
         if (p.id === 1) {
           if (enabled) {
+            const state = printerEmulator.getState();
             const simulated = printerEmulator.getSimulatedPrinter();
             return {
               ...p,
               isAvailable: true,
               status: simulated?.status ?? 'not_ready',
               hasActiveErrors: false,
+              inkLevel: state.inkLevel,
+              makeupLevel: state.makeupLevel,
+              currentMessage: state.currentMessage,
             };
           } else {
             // When emulator is disabled, mark offline (unless actually connected)
@@ -52,6 +56,9 @@ export function usePrinterStorage() {
                 isAvailable: false,
                 status: 'offline',
                 hasActiveErrors: false,
+                inkLevel: undefined,
+                makeupLevel: undefined,
+                currentMessage: undefined,
               };
             }
           }
@@ -60,7 +67,7 @@ export function usePrinterStorage() {
       }));
     });
 
-    // Also subscribe to emulator state changes (HV on/off) to update status
+    // Also subscribe to emulator state changes (HV on/off, ink/makeup levels) to update status
     const unsubState = printerEmulator.subscribe((state) => {
       if (printerEmulator.enabled) {
         setPrinters(prev => prev.map(p => {
@@ -69,6 +76,9 @@ export function usePrinterStorage() {
               ...p,
               isAvailable: true,
               status: state.hvOn ? 'ready' : 'not_ready',
+              inkLevel: state.inkLevel,
+              makeupLevel: state.makeupLevel,
+              currentMessage: state.currentMessage,
             };
           }
           return p;
@@ -86,6 +96,9 @@ export function usePrinterStorage() {
             isAvailable: true,
             status: state.hvOn ? 'ready' : 'not_ready',
             hasActiveErrors: false,
+            inkLevel: state.inkLevel,
+            makeupLevel: state.makeupLevel,
+            currentMessage: state.currentMessage,
           };
         }
         return p;
