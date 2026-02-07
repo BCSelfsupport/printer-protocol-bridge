@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, X, Plus, Trash2, FileText, Hash, User, Square, Barcode, Image } from 'lucide-react';
+import { Save, X, Plus, Trash2, FileText, Hash, User, Square, Barcode, Image, FilePlus } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -377,29 +377,31 @@ export function EditMessageScreen({
                   className="mt-1"
                 />
               </div>
-              <div className="flex items-end gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="industrial-button text-white px-4 py-2 rounded flex items-center gap-2">
-                      <Plus className="w-4 h-4" />
-                      New
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    {FIELD_TYPES.map((fieldType) => (
-                      <DropdownMenuItem
-                        key={fieldType.value}
-                        onClick={() => handleAddField(fieldType.value)}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <fieldType.icon className="w-4 h-4" />
-                        {fieldType.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
             </div>
+          </div>
+
+          {/* New Field button row */}
+          <div className="flex gap-4 justify-center mb-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]">
+                  <FilePlus className="w-8 h-8 mb-1" />
+                  <span className="font-medium">New</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-48">
+                {FIELD_TYPES.map((fieldType) => (
+                  <DropdownMenuItem
+                    key={fieldType.value}
+                    onClick={() => handleAddField(fieldType.value)}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <fieldType.icon className="w-4 h-4" />
+                    {fieldType.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
 
