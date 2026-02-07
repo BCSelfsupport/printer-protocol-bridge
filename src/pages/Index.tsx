@@ -13,6 +13,7 @@ import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
 import { SignInDialog } from '@/components/printers/SignInDialog';
 import { usePrinterConnection } from '@/hooks/usePrinterConnection';
 import { useJetCountdown } from '@/hooks/useJetCountdown';
+import { useMessageStorage, isReadOnlyMessage } from '@/hooks/useMessageStorage';
 import { DevPanel } from '@/components/dev/DevPanel';
 import { PrintMessage } from '@/types/printer';
 
@@ -28,10 +29,12 @@ const Index = () => {
   const [isDevSignedIn, setIsDevSignedIn] = useState(false);
   const [devSignInDialogOpen, setDevSignInDialogOpen] = useState(false);
   const [editingMessage, setEditingMessage] = useState<PrintMessage | null>(null);
-  // Store message content (fields) by message name
-  const [messageContents, setMessageContents] = useState<Record<string, MessageDetails>>({});
   // Control whether to auto-open the new message dialog
   const [openNewDialogOnMount, setOpenNewDialogOnMount] = useState(false);
+  
+  // Local message storage (persists to localStorage)
+  const { saveMessage, getMessage } = useMessageStorage();
+  
   const {
     printers,
     connectionState,
@@ -100,9 +103,9 @@ const Index = () => {
           />
         );
       case 'control':
-        // Get the current message content if available
+        // Get the current message content from local storage
         const currentMsgName = connectionState.status?.currentMessage;
-        const currentMsgContent = currentMsgName ? messageContents[currentMsgName] : undefined;
+        const currentMsgContent = currentMsgName ? getMessage(currentMsgName) : undefined;
         
         return (
           <Dashboard
@@ -162,11 +165,11 @@ const Index = () => {
                 updateMessage(editingMessage.id, details.name);
               }
               
-              // Store message content locally for retrieval
-              setMessageContents(prev => ({
-                ...prev,
-                [targetName]: details,
-              }));
+              // Store message content locally for retrieval (persisted)
+              saveMessage({
+                ...details,
+                name: targetName,
+              });
               
               setCurrentScreen('messages');
               setEditingMessage(null);
@@ -176,8 +179,8 @@ const Index = () => {
               setEditingMessage(null);
             }}
             onGetMessageDetails={async (name: string) => {
-              // Return stored message details if available
-              return messageContents[name] || null;
+              // Return stored message details from local storage
+              return getMessage(name);
             }}
           />
         ) : null;
