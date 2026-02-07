@@ -30,14 +30,14 @@ export function usePrinterStorage() {
     return getDefaultPrinters();
   });
 
-  // Helper to determine if there are active errors based on fluid levels
-  const hasErrors = useCallback((state: { inkLevel: string; makeupLevel: string }) => {
-    return state.inkLevel === 'LOW' || state.inkLevel === 'EMPTY' || 
-           state.makeupLevel === 'LOW' || state.makeupLevel === 'EMPTY';
-  }, []);
-
   // Subscribe to emulator state changes to update simulated printer status
   useEffect(() => {
+    // Helper to determine if there are active errors based on fluid levels
+    const hasErrors = (state: { inkLevel: string; makeupLevel: string }) => {
+      return state.inkLevel === 'LOW' || state.inkLevel === 'EMPTY' || 
+             state.makeupLevel === 'LOW' || state.makeupLevel === 'EMPTY';
+    };
+
     // Update printer 1 from emulator state
     const updateFromEmulator = () => {
       if (!printerEmulator.enabled) return;
@@ -95,7 +95,7 @@ export function usePrinterStorage() {
       unsubEnabled();
       unsubState();
     };
-  }, [hasErrors]);
+  }, []);
 
   // Persist to localStorage whenever printers change
   useEffect(() => {
