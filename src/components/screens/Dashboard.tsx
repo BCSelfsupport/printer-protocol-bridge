@@ -342,8 +342,13 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
 
       messageContent.fields.forEach((field) => {
         const fontName = field.fontSize || 'Standard16High';
+        const fontInfo = getFontInfo(fontName);
+
+        // Clamp to keep the full font visible within the 32-dot canvas
+        const clampedYDots = Math.min(field.y, Math.max(0, TOTAL_ROWS - fontInfo.height));
+
         const x = field.x * dotSize;
-        const y = field.y * dotSize;
+        const y = clampedYDots * dotSize;
 
         renderText(ctx, field.data, x, y, fontName, dotSize);
       });
