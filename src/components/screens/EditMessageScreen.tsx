@@ -249,11 +249,91 @@ export function EditMessageScreen({
     }
   };
 
+  // Helper to format date based on format string
+  const formatDateValue = (format: string, expiryDays: number = 0): string => {
+    const now = new Date();
+    // Add expiry days if specified
+    if (expiryDays > 0) {
+      now.setDate(now.getDate() + expiryDays);
+    }
+    
+    const day = now.getDate().toString().padStart(2, '0');
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const yearFull = now.getFullYear().toString();
+    const yearShort = yearFull.slice(-2);
+    
+    // Parse the format - strip any expiry/rollover metadata
+    const cleanFormat = format.split('|')[0];
+    
+    switch (cleanFormat) {
+      case 'MMDDYY': return `${month}${day}${yearShort}`;
+      case 'DDMMYY': return `${day}${month}${yearShort}`;
+      case 'YYMMDD': return `${yearShort}${month}${day}`;
+      case 'MM/DD/YY': return `${month}/${day}/${yearShort}`;
+      case 'DD/MM/YY': return `${day}/${month}/${yearShort}`;
+      case 'YY/MM/DD': return `${yearShort}/${month}/${day}`;
+      case 'MM-DD-YY': return `${month}-${day}-${yearShort}`;
+      case 'DD-MM-YY': return `${day}-${month}-${yearShort}`;
+      case 'YY-MM-DD': return `${yearShort}-${month}-${day}`;
+      case 'MM.DD.YY': return `${month}.${day}.${yearShort}`;
+      case 'DD.MM.YY': return `${day}.${month}.${yearShort}`;
+      default: return `${month}/${day}/${yearShort}`;
+    }
+  };
+
+  // Helper to get specific date code value
+  const getDateCodeValue = (codeType: string, expiryDays: number = 0): string => {
+    const now = new Date();
+    if (expiryDays > 0) {
+      now.setDate(now.getDate() + expiryDays);
+    }
+    
+    const day = now.getDate();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+    const dayOfYear = Math.floor((now.getTime() - new Date(year, 0, 0).getTime()) / 86400000);
+    const weekNum = Math.ceil(dayOfYear / 7);
+    const dayOfWeek = now.getDay() || 7; // 1-7, Sunday=7
+    const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    
+    switch (codeType) {
+      // Year codes
+      case 'yyyy': return year.toString();
+      case 'yy': return year.toString().slice(-2);
+      case 'y': return year.toString().slice(-1);
+      case 'doy': return dayOfYear.toString().padStart(3, '0');
+      case 'julian': return `${year.toString().slice(-2)}${dayOfYear.toString().padStart(3, '0')}`;
+      case 'program_year': return year.toString().slice(-2);
+      case 'program_doy': return dayOfYear.toString().padStart(3, '0');
+      // Month codes
+      case 'mm': return month.toString().padStart(2, '0');
+      case 'alpha_month': return monthNames[month - 1];
+      case 'dom': return day.toString().padStart(2, '0');
+      case 'program_month': return month.toString().padStart(2, '0');
+      case 'program_dom': return day.toString().padStart(2, '0');
+      // Week codes
+      case 'ww': return weekNum.toString().padStart(2, '0');
+      case 'dow_num': return dayOfWeek.toString();
+      case 'dow_alpha': return dayNames[now.getDay()];
+      case 'program_week': return weekNum.toString().padStart(2, '0');
+      case 'program_dow': return dayOfWeek.toString();
+      default: return codeType.toUpperCase();
+    }
+  };
+
   const handleAddField = (fieldType: string, format?: string) => {
     const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
     
     // Determine field data based on type
     let fieldData = fieldType === 'text' ? '' : fieldType.toUpperCase();
+    
+    // Parse expiry days from format if present
+    let expiryDays = 0;
+    if (format?.includes('|expiry:')) {
+      const match = format.match(/\|expiry:(\d+)/);
+      if (match) expiryDays = parseInt(match[1]) || 0;
+    }
     
     if (fieldType === 'time' && format) {
       fieldData = formatTimeValue(format);
@@ -263,6 +343,19 @@ export function EditMessageScreen({
       fieldData = new Date().getMinutes().toString().padStart(2, '0');
     } else if (fieldType === 'program_second') {
       fieldData = new Date().getSeconds().toString().padStart(2, '0');
+    } else if (fieldType.startsWith('date_')) {
+      // Parse date field type: date_normal, date_expiry, date_normal_yyyy, etc.
+      const parts = fieldType.split('_');
+      const dateType = parts[1]; // normal, expiry, rollover, expiry_rollover
+      const codeType = parts.slice(2).join('_'); // yyyy, mm, doy, etc. or empty
+      
+      if (codeType) {
+        // Specific code type (year, month, week codes)
+        fieldData = getDateCodeValue(codeType, expiryDays);
+      } else if (format) {
+        // Full date format
+        fieldData = formatDateValue(format, expiryDays);
+      }
     }
     
     const newField: MessageField = {
