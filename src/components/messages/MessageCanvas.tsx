@@ -68,6 +68,13 @@ export function MessageCanvas({
   // Scrollbar drag state
   const [isScrollDragging, setIsScrollDragging] = useState(false);
   
+  // Touch/long-press state for mobile drag
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isLongPressActive, setIsLongPressActive] = useState(false);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const LONG_PRESS_DURATION = 400; // ms to hold before drag activates
+  const TOUCH_MOVE_THRESHOLD = 10; // pixels - if moved more than this, cancel long press
+  
   // Inline editing state - cursor-based editing on canvas
   const [isEditing, setIsEditing] = useState(false);
   const [editingFieldId, setEditingFieldId] = useState<number | null>(null);
@@ -557,6 +564,135 @@ export function MessageCanvas({
     }
   };
 
+  // Touch event helpers
+  const getTouchPosition = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect || !e.touches[0]) return { x: 0, y: 0 };
+    const x = Math.floor((e.touches[0].clientX - rect.left) / DOT_SIZE) + scrollX;
+    const y = Math.floor((e.touches[0].clientY - rect.top) / DOT_SIZE);
+    return { x, y };
+  };
+
+  const clearLongPressTimer = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    setIsLongPressActive(false);
+  };
+
+  // Touch handlers for long-press drag on mobile
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    
+    const pos = getTouchPosition(e);
+    const field = findFieldAtPosition(pos.x, pos.y);
+    
+    // Store touch start position for movement threshold check
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    
+    if (field) {
+      // Start long press timer
+      longPressTimerRef.current = setTimeout(() => {
+        // Long press activated - start dragging
+        setIsLongPressActive(true);
+        setIsDragging(true);
+        setDragFieldId(field.id);
+        setDragOffset({ x: pos.x - field.x, y: pos.y - field.y });
+        setDragPosition({ x: field.x, y: field.y });
+        onCanvasClick?.(pos.x, pos.y); // Select the field
+        
+        // Provide haptic feedback if available
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+      }, LONG_PRESS_DURATION);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    
+    // Check if we've moved too far - cancel long press timer
+    if (touchStartPosRef.current && !isLongPressActive) {
+      const dx = touch.clientX - touchStartPosRef.current.x;
+      const dy = touch.clientY - touchStartPosRef.current.y;
+      if (Math.sqrt(dx * dx + dy * dy) > TOUCH_MOVE_THRESHOLD) {
+        clearLongPressTimer();
+        return; // Let normal scrolling happen
+      }
+    }
+    
+    // If we're in drag mode, handle the drag
+    if (isDragging && dragFieldId !== null && isLongPressActive) {
+      e.preventDefault(); // Prevent scrolling while dragging
+      
+      const draggedField = fields.find(f => f.id === dragFieldId);
+      if (!draggedField) return;
+      
+      const fontInfo = getFontInfo(draggedField.fontSize);
+      const pos = getTouchPosition(e);
+      let newX = pos.x - dragOffset.x;
+      let newY = pos.y - dragOffset.y;
+      
+      // Clamp to valid area
+      newX = Math.max(0, newX);
+      newY = Math.max(blockedRows, newY);
+      newY = Math.min(TOTAL_ROWS - fontInfo.height, newY);
+      
+      // Snap to line if multiline template
+      if (multilineTemplate) {
+        const lineInfo = getLineForY(newY);
+        if (lineInfo) {
+          newY = lineInfo.lineY;
+        }
+      }
+      
+      setDragPosition({ x: newX, y: newY });
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    clearLongPressTimer();
+    touchStartPosRef.current = null;
+    
+    if (isDragging && dragFieldId !== null && isLongPressActive) {
+      // Complete the drag
+      const draggedField = fields.find(f => f.id === dragFieldId);
+      if (draggedField && onFieldMove) {
+        const fontInfo = getFontInfo(draggedField.fontSize);
+        
+        // Check if font fits in the target line
+        if (multilineTemplate) {
+          const lineInfo = getLineForY(dragPosition.y);
+          if (lineInfo && fontInfo.height > lineInfo.lineHeight) {
+            onFieldError?.(dragFieldId, `Font "${fontInfo.height}px" is too tall for this line (max ${lineInfo.lineHeight}px)`);
+          } else {
+            onFieldError?.(dragFieldId, null);
+            onFieldMove(dragFieldId, dragPosition.x, dragPosition.y);
+          }
+        } else {
+          onFieldMove(dragFieldId, dragPosition.x, dragPosition.y);
+        }
+      }
+      
+      setIsDragging(false);
+      setDragFieldId(null);
+      setIsLongPressActive(false);
+      e.preventDefault();
+    }
+  };
+
+  const handleTouchCancel = () => {
+    clearLongPressTimer();
+    touchStartPosRef.current = null;
+    setIsDragging(false);
+    setDragFieldId(null);
+    setIsLongPressActive(false);
+  };
+
   // Scrollbar drag handlers
   const maxScroll = Math.max(0, width - visibleCols);
   
@@ -653,7 +789,12 @@ export function MessageCanvas({
           onMouseLeave={handleMouseLeave}
           onDoubleClick={handleDoubleClick}
           onKeyDown={handleKeyDown}
-          className={`w-full outline-none ${isDragging ? 'cursor-grabbing' : isEditing ? 'cursor-text' : 'cursor-crosshair'}`}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
+          className={`w-full outline-none touch-pan-x ${isDragging && isLongPressActive ? 'cursor-grabbing' : isEditing ? 'cursor-text' : 'cursor-crosshair'}`}
+          style={{ touchAction: isLongPressActive ? 'none' : 'pan-x pan-y' }}
         />
       </div>
       
