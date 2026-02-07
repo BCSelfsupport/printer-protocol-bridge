@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil } from 'lucide-react';
 import { Wifi } from 'lucide-react';
 import { PrinterStatus } from '@/types/printer';
@@ -249,7 +249,7 @@ export function Dashboard({
       </div>
 
       {/* Message preview area - horizontal scroll on mobile */}
-      <div className="flex-1 overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0 min-h-0">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden -mx-2 px-2 md:mx-0 md:px-0 min-h-0">
         <MessagePreviewCanvas 
           message={status?.currentMessage}
           printerTime={status?.printerTime}
@@ -271,40 +271,46 @@ interface MessagePreviewCanvasProps {
 const DOT_SIZE_MOBILE = 3; // Smaller dots on mobile
 const DOT_SIZE_DESKTOP = 4; // Pixels per dot on desktop
 const TOTAL_ROWS = 32; // Total printable height in dots
-const MIN_CANVAS_WIDTH = 400; // Minimum width to prevent text wrapping
+const MIN_CANVAS_WIDTH = 420; // Minimum width to prevent any layout squeezing
 
 function MessagePreviewCanvas({ message, printerTime, messageContent }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  
+  const [dotSize, setDotSize] = useState<number>(DOT_SIZE_DESKTOP);
+
+  // Keep dot size in sync with breakpoint (but keep width fixed to avoid scaling/overlap artifacts)
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 767px)');
+    const update = () => setDotSize(mql.matches ? DOT_SIZE_MOBILE : DOT_SIZE_DESKTOP);
+    update();
+    mql.addEventListener('change', update);
+    return () => mql.removeEventListener('change', update);
+  }, []);
+
+  const renderWidth = MIN_CANVAS_WIDTH;
+
   useEffect(() => {
     const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
-    
+    if (!canvas) return;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
-    // Use smaller dots on mobile (window width < 768)
-    const isMobile = window.innerWidth < 768;
-    const DOT_SIZE = isMobile ? DOT_SIZE_MOBILE : DOT_SIZE_DESKTOP;
-    
-    // Set canvas size - use container width but enforce minimum
-    const containerWidth = container.clientWidth;
-    const width = Math.max(containerWidth, MIN_CANVAS_WIDTH);
-    const height = TOTAL_ROWS * DOT_SIZE;
+
+    const width = renderWidth;
+    const height = TOTAL_ROWS * dotSize;
+
+    // Set backing store size to match CSS size (prevents scaling artifacts/"overlap")
     canvas.width = width;
     canvas.height = height;
-    
-    // Draw background - cream/beige like the message editor
+
+    // Draw background
     ctx.fillStyle = '#f5e6c8';
     ctx.fillRect(0, 0, width, height);
-    
+
     // Draw grid
     ctx.strokeStyle = '#d4c4a8';
     ctx.lineWidth = 0.5;
-    
-    for (let x = 0; x <= width; x += DOT_SIZE) {
+
+    for (let x = 0; x <= width; x += dotSize) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, height);
@@ -312,72 +318,72 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     }
     for (let y = 0; y <= TOTAL_ROWS; y++) {
       ctx.beginPath();
-      ctx.moveTo(0, y * DOT_SIZE);
-      ctx.lineTo(width, y * DOT_SIZE);
+      ctx.moveTo(0, y * dotSize);
+      ctx.lineTo(width, y * dotSize);
       ctx.stroke();
     }
-    
+
     // Render message content if available
     if (messageContent && messageContent.fields.length > 0) {
       ctx.fillStyle = '#1a1a1a';
-      
-      // Render each field from the message content
+
       messageContent.fields.forEach((field) => {
         const fontName = field.fontSize || 'Standard16High';
-        const x = field.x * DOT_SIZE;
-        const y = field.y * DOT_SIZE;
-        
-        renderText(ctx, field.data, x, y, fontName, DOT_SIZE);
+        const x = field.x * dotSize;
+        const y = field.y * dotSize;
+
+        renderText(ctx, field.data, x, y, fontName, dotSize);
       });
-    } else if (message) {
+      return;
+    }
+
+    if (message) {
       ctx.fillStyle = '#1a1a1a';
-      
-      // Fallback: show message name if no content available
+
       const mainFontName = 'Standard16High';
       const mainFontInfo = getFontInfo(mainFontName);
-      
-      // Position main message: 16 dots high, starts at row 16 (bottom half of 32)
-      const mainY = (32 - mainFontInfo.height) * DOT_SIZE;
+
+      const mainY = (32 - mainFontInfo.height) * dotSize;
       const padding = 10;
-      
-      renderText(ctx, message, padding, mainY, mainFontName, DOT_SIZE);
-      
-      // Time and date on the right - using 7 dot font
+
+      renderText(ctx, message, padding, mainY, mainFontName, dotSize);
+
       const time = printerTime ?? new Date();
       const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
       const dateStr = time.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
-      
+
       const smallFontName = 'Standard7High';
       const smallFontInfo = getFontInfo(smallFontName);
-      
-      const timeWidth = timeStr.length * (smallFontInfo.charWidth + 1) * DOT_SIZE;
+
+      const timeWidth = timeStr.length * (smallFontInfo.charWidth + 1) * dotSize;
       const timeX = width - timeWidth - padding;
-      
-      const timeY = 16 * DOT_SIZE;
-      const dateY = (16 + smallFontInfo.height + 1) * DOT_SIZE;
-      
-      renderText(ctx, timeStr, timeX, timeY, smallFontName, DOT_SIZE);
-      renderText(ctx, dateStr, timeX, dateY, smallFontName, DOT_SIZE);
-    } else {
-      // No message - show placeholder
-      ctx.fillStyle = '#888';
-      ctx.font = '16px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('No message selected', width / 2, height / 2 + 5);
+
+      const timeY = 16 * dotSize;
+      const dateY = (16 + smallFontInfo.height + 1) * dotSize;
+
+      renderText(ctx, timeStr, timeX, timeY, smallFontName, dotSize);
+      renderText(ctx, dateStr, timeX, dateY, smallFontName, dotSize);
+      return;
     }
-  }, [message, printerTime, messageContent]);
-  
-  // Calculate height based on mobile detection
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const canvasHeight = TOTAL_ROWS * (isMobile ? DOT_SIZE_MOBILE : DOT_SIZE_DESKTOP);
-  
+
+    // No message - show placeholder
+    ctx.fillStyle = '#888';
+    ctx.font = '16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('No message selected', width / 2, height / 2 + 5);
+  }, [message, printerTime, messageContent, renderWidth, dotSize]);
+
+  const canvasHeight = TOTAL_ROWS * dotSize;
+
   return (
-    <div 
-      ref={containerRef} 
+    <div
       className="bg-white rounded-lg overflow-hidden border-2 border-muted flex-shrink-0"
-      style={{ minWidth: MIN_CANVAS_WIDTH, height: canvasHeight }}
+      style={{ width: renderWidth, height: canvasHeight }}
     >
-      <canvas ref={canvasRef} style={{ width: '100%', height: canvasHeight }} />
+      <canvas
+        ref={canvasRef}
+        style={{ display: 'block', width: renderWidth, height: canvasHeight }}
+      />
     </div>
   );
 }
