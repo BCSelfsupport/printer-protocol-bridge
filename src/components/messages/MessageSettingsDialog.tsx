@@ -45,13 +45,13 @@ interface SettingsRowProps {
 
 function SettingsRow({ label, value, onIncrease, onDecrease, onDirectInput, showInput = true, showRotate = false, inputWidth = 'w-16' }: SettingsRowProps) {
   return (
-    <div className="bg-muted/30 rounded-lg p-3 flex items-center justify-between gap-2">
-      <span className="text-primary text-base font-medium whitespace-nowrap">{label}: {value}</span>
+    <div className="bg-muted/30 rounded-lg p-2 md:p-3 flex items-center justify-between gap-1 md:gap-2">
+      <span className="text-primary text-sm md:text-base font-medium whitespace-nowrap">{label}: {value}</span>
       <div className="flex items-center gap-1 flex-shrink-0">
         {showInput && onDirectInput && (
           <input
             type="number"
-            className={`${inputWidth} h-8 bg-card border rounded px-2 text-right text-sm`}
+            className={`${inputWidth} h-7 md:h-8 bg-card border rounded px-1 md:px-2 text-right text-xs md:text-sm`}
             value={typeof value === 'number' ? value : ''}
             onChange={(e) => {
               const num = parseInt(e.target.value);
@@ -64,23 +64,23 @@ function SettingsRow({ label, value, onIncrease, onDecrease, onDirectInput, show
         {showRotate ? (
           <button 
             onClick={onIncrease}
-            className="industrial-button text-white p-2 rounded-lg"
+            className="industrial-button text-white p-1.5 md:p-2 rounded-lg"
           >
-            <RotateCcw className="w-5 h-5" />
+            <RotateCcw className="w-4 h-4 md:w-5 md:h-5" />
           </button>
         ) : (
           <>
             <button 
               onClick={onDecrease}
-              className="industrial-button text-white p-2 rounded-lg"
+              className="industrial-button text-white p-1.5 md:p-2 rounded-lg"
             >
-              <ChevronDown className="w-5 h-5" />
+              <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
             </button>
             <button 
               onClick={onIncrease}
-              className="industrial-button text-white p-2 rounded-lg"
+              className="industrial-button text-white p-1.5 md:p-2 rounded-lg"
             >
-              <ChevronUp className="w-5 h-5" />
+              <ChevronUp className="w-4 h-4 md:w-5 md:h-5" />
             </button>
           </>
         )}
@@ -122,11 +122,11 @@ export function MessageSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Message Settings</DialogTitle>
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[80vh] overflow-y-auto p-3 md:p-6">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-base md:text-lg">Message Settings</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 py-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 py-2 md:py-4">
           <SettingsRow
             label="Width"
             value={settings.width}
