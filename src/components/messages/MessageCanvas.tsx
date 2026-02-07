@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, ChangeEvent } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { renderText, getFontInfo, PRINTER_FONTS } from '@/lib/dotMatrixFonts';
 
@@ -56,6 +56,7 @@ export function MessageCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollTrackRef = useRef<HTMLDivElement>(null);
+  const hiddenInputRef = useRef<HTMLInputElement>(null); // Hidden input for mobile keyboard
   const [canvasWidth, setCanvasWidth] = useState(640);
   
   // Drag state for fields
@@ -72,6 +73,7 @@ export function MessageCanvas({
   const [editingFieldId, setEditingFieldId] = useState<number | null>(null);
   const [cursorPosition, setCursorPosition] = useState(0); // Character position in text
   const [cursorVisible, setCursorVisible] = useState(true); // For blinking effect
+  const [editingText, setEditingText] = useState(''); // Current text being edited (for hidden input sync)
   
   // Calculate blocked rows (from top)
   const blockedRows = TOTAL_ROWS - templateHeight;
@@ -308,6 +310,7 @@ export function MessageCanvas({
     
     setIsEditing(true);
     setEditingFieldId(fieldId);
+    setEditingText(field.data);
     
     // Set cursor position based on click location or end of text
     if (clickX !== undefined) {
@@ -320,14 +323,18 @@ export function MessageCanvas({
       setCursorPosition(field.data.length); // Default to end
     }
     
-    // Focus the canvas to receive keyboard events
-    canvasRef.current?.focus();
+    // Focus the hidden input to trigger mobile keyboard
+    setTimeout(() => {
+      hiddenInputRef.current?.focus();
+    }, 50);
   }, [fields]);
 
   const stopEditing = useCallback(() => {
     setIsEditing(false);
     setEditingFieldId(null);
     setCursorPosition(0);
+    setEditingText('');
+    hiddenInputRef.current?.blur();
   }, []);
 
   // Keyboard handler for canvas-based editing
@@ -376,6 +383,26 @@ export function MessageCanvas({
       e.preventDefault();
     }
   }, [isEditing, editingFieldId, fields, onFieldDataChange, cursorPosition, stopEditing]);
+
+  // Handle hidden input changes (for mobile keyboard support)
+  const handleHiddenInputChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    if (!isEditing || editingFieldId === null || !onFieldDataChange) return;
+    
+    const newText = e.target.value.toUpperCase();
+    setEditingText(newText);
+    onFieldDataChange(editingFieldId, newText);
+    setCursorPosition(newText.length);
+  }, [isEditing, editingFieldId, onFieldDataChange]);
+
+  // Sync editingText when field data changes externally
+  useEffect(() => {
+    if (isEditing && editingFieldId !== null) {
+      const field = fields.find(f => f.id === editingFieldId);
+      if (field && field.data !== editingText) {
+        setEditingText(field.data);
+      }
+    }
+  }, [fields, isEditing, editingFieldId, editingText]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // If currently editing, stop editing on click elsewhere
@@ -539,6 +566,34 @@ export function MessageCanvas({
 
   return (
     <div className="flex flex-col w-full">
+      {/* Hidden input for mobile keyboard - positioned off-screen */}
+      <input
+        ref={hiddenInputRef}
+        type="text"
+        value={editingText}
+        onChange={handleHiddenInputChange}
+        onBlur={() => {
+          // Delay stop editing slightly to allow for tap events
+          setTimeout(() => {
+            if (document.activeElement !== hiddenInputRef.current) {
+              stopEditing();
+            }
+          }, 100);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === 'Escape') {
+            stopEditing();
+            e.preventDefault();
+          }
+        }}
+        className="absolute -top-[9999px] -left-[9999px] opacity-0 pointer-events-none"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="characters"
+        spellCheck={false}
+        aria-hidden="true"
+      />
+      
       {/* Canvas area */}
       <div ref={containerRef} className="border-2 border-muted rounded-t-lg overflow-hidden w-full relative">
         <canvas

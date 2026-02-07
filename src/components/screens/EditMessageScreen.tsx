@@ -395,7 +395,7 @@ export function EditMessageScreen({
   };
 
   return (
-    <div className="flex-1 p-4 flex flex-col h-full overflow-hidden">
+    <div className="flex-1 p-2 md:p-4 flex flex-col h-full overflow-hidden">
       <SubPageHeader title={`Edit: ${messageName}`} onHome={onCancel} />
 
       {loading ? (
@@ -406,43 +406,45 @@ export function EditMessageScreen({
         <>
           {/* Error message */}
           {fieldError && (
-            <div className="mb-2 p-3 bg-destructive/10 border border-destructive rounded-lg text-destructive text-sm flex items-center gap-2">
+            <div className="mb-2 p-2 md:p-3 bg-destructive/10 border border-destructive rounded-lg text-destructive text-xs md:text-sm flex items-center gap-2">
               <span className="font-medium">⚠️ Error:</span>
               <span>{fieldError}</span>
             </div>
           )}
 
-          {/* Message Canvas - dot matrix preview */}
-          <div className="mb-4">
-            <MessageCanvas
-              templateHeight={message.height}
-              width={message.width}
-              fields={message.fields}
-              onCanvasClick={handleCanvasClick}
-              onFieldMove={handleFieldMove}
-              onFieldDataChange={(fieldId, newData) => {
-                setMessage((prev) => ({
-                  ...prev,
-                  fields: prev.fields.map((f) =>
-                    f.id === fieldId ? { ...f, data: newData } : f
-                  ),
-                }));
-              }}
-              onFieldError={handleFieldError}
-              selectedFieldId={selectedFieldId}
-              multilineTemplate={currentMultilineTemplate ? {
-                lines: currentMultilineTemplate.lines,
-                dotsPerLine: currentMultilineTemplate.dotsPerLine,
-              } : null}
-            />
-            <p className="text-xs text-muted-foreground mt-1">Double-click a field to edit text inline</p>
+          {/* Message Canvas - horizontal scroll on mobile */}
+          <div className="mb-2 md:mb-4 overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
+            <div className="min-w-[400px]">
+              <MessageCanvas
+                templateHeight={message.height}
+                width={message.width}
+                fields={message.fields}
+                onCanvasClick={handleCanvasClick}
+                onFieldMove={handleFieldMove}
+                onFieldDataChange={(fieldId, newData) => {
+                  setMessage((prev) => ({
+                    ...prev,
+                    fields: prev.fields.map((f) =>
+                      f.id === fieldId ? { ...f, data: newData } : f
+                    ),
+                  }));
+                }}
+                onFieldError={handleFieldError}
+                selectedFieldId={selectedFieldId}
+                multilineTemplate={currentMultilineTemplate ? {
+                  lines: currentMultilineTemplate.lines,
+                  dotsPerLine: currentMultilineTemplate.dotsPerLine,
+                } : null}
+              />
+              <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click a field to edit text inline</p>
+            </div>
           </div>
 
-          {/* Message properties row */}
-          <div className="bg-card rounded-lg p-4 mb-4">
-            <div className="grid grid-cols-4 gap-4">
-              <div>
-                <Label htmlFor="msgFontSize">Font Size</Label>
+          {/* Message properties row - horizontal scroll on mobile */}
+          <div className="bg-card rounded-lg p-2 md:p-4 mb-2 md:mb-4 overflow-x-auto">
+            <div className="flex gap-3 md:gap-4 min-w-max md:min-w-0 md:grid md:grid-cols-4">
+              <div className="min-w-[120px] md:min-w-0">
+                <Label htmlFor="msgFontSize" className="text-xs md:text-sm">Font Size</Label>
                 <Select
                   value={selectedField?.fontSize || 'Standard16High'}
                   onValueChange={(value) => {
@@ -459,7 +461,7 @@ export function EditMessageScreen({
                   }}
                   disabled={!selectedFieldId}
                 >
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger className="mt-1 h-9 md:h-10 text-xs md:text-sm">
                     <SelectValue placeholder="Select font size" />
                   </SelectTrigger>
                   <SelectContent className="z-[100]">
@@ -471,13 +473,13 @@ export function EditMessageScreen({
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label htmlFor="msgTemplate">Template</Label>
+              <div className="min-w-[140px] md:min-w-0">
+                <Label htmlFor="msgTemplate" className="text-xs md:text-sm">Template</Label>
                 <Select
                   value={getCurrentTemplateValue()}
                   onValueChange={handleTemplateChange}
                 >
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger className="mt-1 h-9 md:h-10 text-xs md:text-sm">
                     <SelectValue placeholder="Select template" />
                   </SelectTrigger>
                   <SelectContent className="z-[100] max-h-[300px]">
@@ -500,8 +502,8 @@ export function EditMessageScreen({
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label htmlFor="msgWidth">Width (dots)</Label>
+              <div className="min-w-[100px] md:min-w-0">
+                <Label htmlFor="msgWidth" className="text-xs md:text-sm">Width (dots)</Label>
                 <Input
                   id="msgWidth"
                   type="number"
@@ -512,38 +514,40 @@ export function EditMessageScreen({
                       width: parseInt(e.target.value) || 135,
                     }))
                   }
-                  className="mt-1"
+                  className="mt-1 h-9 md:h-10 text-xs md:text-sm"
                 />
               </div>
             </div>
           </div>
 
-          {/* New Field button row */}
-          <div className="flex gap-4 justify-center mb-4">
-            <button
-              onClick={() => setNewFieldDialogOpen(true)}
-              className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
-            >
-              <FilePlus className="w-8 h-8 mb-1" />
-              <span className="font-medium">New Field</span>
-            </button>
+          {/* New Field button row - horizontal scroll on mobile */}
+          <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0 mb-2 md:mb-4">
+            <div className="flex gap-2 md:gap-4 justify-center min-w-max">
+              <button
+                onClick={() => setNewFieldDialogOpen(true)}
+                className="industrial-button text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[90px] md:min-w-[120px]"
+              >
+                <FilePlus className="w-6 h-6 md:w-8 md:h-8 mb-1" />
+                <span className="text-xs md:text-base font-medium">New Field</span>
+              </button>
 
-            <button
-              onClick={handleDeleteField}
-              disabled={!selectedFieldId || message.fields.length <= 1}
-              className="industrial-button-danger text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
-            >
-              <Trash2 className="w-8 h-8 mb-1" />
-              <span className="font-medium">Delete</span>
-            </button>
+              <button
+                onClick={handleDeleteField}
+                disabled={!selectedFieldId || message.fields.length <= 1}
+                className="industrial-button-danger text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[90px] md:min-w-[120px] disabled:opacity-50"
+              >
+                <Trash2 className="w-6 h-6 md:w-8 md:h-8 mb-1" />
+                <span className="text-xs md:text-base font-medium">Delete</span>
+              </button>
 
-            <button
-              onClick={() => setSettingsDialogOpen(true)}
-              className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
-            >
-              <Settings className="w-8 h-8 mb-1" />
-              <span className="font-medium">Settings</span>
-            </button>
+              <button
+                onClick={() => setSettingsDialogOpen(true)}
+                className="industrial-button text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[90px] md:min-w-[120px]"
+              >
+                <Settings className="w-6 h-6 md:w-8 md:h-8 mb-1" />
+                <span className="text-xs md:text-base font-medium">Settings</span>
+              </button>
+            </div>
           </div>
 
           {/* New Field Dialog */}
@@ -592,34 +596,36 @@ export function EditMessageScreen({
               }));
             }}
           />
-          {/* Action buttons */}
-          <div className="flex gap-4 justify-center">
-            <button
-              onClick={() => onSave(message, false)}
-              className="industrial-button-success text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
-            >
-              <Save className="w-8 h-8 mb-1" />
-              <span className="font-medium">Save</span>
-            </button>
+          {/* Action buttons - horizontal scroll on mobile */}
+          <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
+            <div className="flex gap-2 md:gap-4 justify-center min-w-max">
+              <button
+                onClick={() => onSave(message, false)}
+                className="industrial-button-success text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[90px] md:min-w-[120px]"
+              >
+                <Save className="w-6 h-6 md:w-8 md:h-8 mb-1" />
+                <span className="text-xs md:text-base font-medium">Save</span>
+              </button>
 
-            <button
-              onClick={() => {
-                setSaveAsName(message.name + '_copy');
-                setSaveAsDialogOpen(true);
-              }}
-              className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
-            >
-              <SaveAll className="w-8 h-8 mb-1" />
-              <span className="font-medium">Save As</span>
-            </button>
+              <button
+                onClick={() => {
+                  setSaveAsName(message.name + '_copy');
+                  setSaveAsDialogOpen(true);
+                }}
+                className="industrial-button text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[90px] md:min-w-[120px]"
+              >
+                <SaveAll className="w-6 h-6 md:w-8 md:h-8 mb-1" />
+                <span className="text-xs md:text-base font-medium">Save As</span>
+              </button>
 
-            <button
-              onClick={onCancel}
-              className="industrial-button-gray text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
-            >
-              <X className="w-8 h-8 mb-1" />
-              <span className="font-medium">Cancel</span>
-            </button>
+              <button
+                onClick={onCancel}
+                className="industrial-button-gray text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[90px] md:min-w-[120px]"
+              >
+                <X className="w-6 h-6 md:w-8 md:h-8 mb-1" />
+                <span className="text-xs md:text-base font-medium">Cancel</span>
+              </button>
+            </div>
           </div>
 
           {/* Save As Dialog */}
