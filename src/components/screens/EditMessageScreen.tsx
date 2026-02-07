@@ -9,6 +9,7 @@ import { loadTemplate, templateToMultilineConfig, type ParsedTemplate } from '@/
 import { NewFieldDialog } from '@/components/messages/NewFieldDialog';
 import { AutoCodeFieldDialog } from '@/components/messages/AutoCodeFieldDialog';
 import { TimeCodesDialog } from '@/components/messages/TimeCodesDialog';
+import { DateCodesDialog } from '@/components/messages/DateCodesDialog';
 import {
   Dialog,
   DialogContent,
@@ -120,6 +121,7 @@ export function EditMessageScreen({
   const [newFieldDialogOpen, setNewFieldDialogOpen] = useState(false);
   const [autoCodeDialogOpen, setAutoCodeDialogOpen] = useState(false);
   const [timeCodesDialogOpen, setTimeCodesDialogOpen] = useState(false);
+  const [dateCodesDialogOpen, setDateCodesDialogOpen] = useState(false);
 
   // Load message details when component mounts
   useEffect(() => {
@@ -463,6 +465,7 @@ export function EditMessageScreen({
             onBack={() => setNewFieldDialogOpen(true)}
             onSelectType={handleAddField}
             onOpenTimeCodes={() => setTimeCodesDialogOpen(true)}
+            onOpenDateCodes={() => setDateCodesDialogOpen(true)}
           />
 
           {/* Time Codes Dialog */}
@@ -473,7 +476,13 @@ export function EditMessageScreen({
             onAddField={handleAddField}
           />
 
-
+          {/* Date Codes Dialog */}
+          <DateCodesDialog
+            open={dateCodesDialogOpen}
+            onOpenChange={setDateCodesDialogOpen}
+            onBack={() => setAutoCodeDialogOpen(true)}
+            onAddField={handleAddField}
+          />
           {/* Action buttons */}
           <div className="flex gap-4 justify-center">
             <button
