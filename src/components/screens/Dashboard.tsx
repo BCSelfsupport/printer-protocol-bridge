@@ -87,163 +87,163 @@ export function Dashboard({
         </div>
       )}
       
-      <div className="flex-1 p-2 md:p-4 flex flex-col gap-2 md:gap-4 overflow-auto">
-      {/* Top row buttons */}
-      <div className="flex flex-wrap gap-2">
-        <button 
-          onClick={onSignIn}
-          className={`${isSignedIn ? 'industrial-button-success' : 'industrial-button-gray'} text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[80px] md:min-w-[100px]`}
-        >
-          <Key className="w-8 h-8 md:w-10 md:h-10 mb-1" />
-          <span className="text-xs md:text-sm">{isSignedIn ? 'Sign Out' : 'Sign In'}</span>
-        </button>
-
-        <button 
-          onClick={onHelp}
-          className="industrial-button text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[80px] md:min-w-[100px]"
-        >
-          <HelpCircle className="w-8 h-8 md:w-10 md:h-10 mb-1" />
-          <span className="text-xs md:text-sm">Help</span>
-        </button>
-
-        <button 
-          onClick={isHvOn ? onStop : onStart}
-          disabled={!isConnected}
-          className={`${isHvOn ? 'industrial-button-success' : 'industrial-button-danger'} text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[80px] md:min-w-[100px] disabled:opacity-50`}
-        >
-          <PrinterIcon className="w-8 h-8 md:w-10 md:h-10 mb-1" />
-          <span className="text-xs md:text-sm">{isHvOn ? 'HV On' : 'HV Off'}</span>
-        </button>
-
-        {/* Makeup Level Indicator - HMI style with tank gauge */}
-        <div className={`w-[100px] md:w-[120px] h-[80px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 ${
-          status?.makeupLevel === 'EMPTY' ? 'bg-destructive' :
-          status?.makeupLevel === 'LOW' ? 'bg-warning' :
-          'industrial-button'
-        }`}>
-          {/* Left: Icon and label */}
-          <div className="flex flex-col items-center">
-            <div className="relative">
-              <Droplets className="w-6 h-6 md:w-8 md:h-8 text-white" />
-              {(status?.makeupLevel === 'FULL' || status?.makeupLevel === 'GOOD') && (
-                <Wifi className="w-2.5 h-2.5 md:w-3 md:h-3 absolute -top-0.5 -right-0.5 text-white" />
-              )}
-            </div>
-            <span className="text-[10px] md:text-xs text-white font-medium mt-1">Makeup</span>
-          </div>
-          {/* Right: Tank level gauge (4 segments) */}
-          <div className="flex flex-col-reverse gap-0.5 h-12 md:h-16 w-4 md:w-5 bg-black/20 rounded p-0.5">
-            {[0, 1, 2, 3].map((seg) => {
-              const level = status?.makeupLevel;
-              const filledSegments = level === 'FULL' ? 4 : level === 'GOOD' ? 2 : level === 'LOW' ? 1 : 0;
-              const isFilled = seg < filledSegments;
-              return (
-                <div
-                  key={seg}
-                  className={`flex-1 rounded-sm transition-colors ${
-                    isFilled ? 'bg-white' : 'bg-white/20'
-                  }`}
-                />
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Ink Level Indicator - HMI style with tank gauge */}
-        <div className={`w-[100px] md:w-[120px] h-[80px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 ${
-          status?.inkLevel === 'EMPTY' ? 'bg-destructive' :
-          status?.inkLevel === 'LOW' ? 'bg-warning' :
-          'industrial-button'
-        }`}>
-          {/* Left: Icon and label */}
-          <div className="flex flex-col items-center">
-            <div className="relative">
-              <Palette className="w-6 h-6 md:w-8 md:h-8 text-white" />
-              {status?.inkLevel === 'FULL' && (
-                <span className="absolute -top-0.5 -right-0.5 text-white text-xs md:text-sm">✓</span>
-              )}
-            </div>
-            <span className="text-[10px] md:text-xs text-white font-medium mt-1">Ink</span>
-          </div>
-          {/* Right: Tank level gauge (4 segments) */}
-          <div className="flex flex-col-reverse gap-0.5 h-12 md:h-16 w-4 md:w-5 bg-black/20 rounded p-0.5">
-            {[0, 1, 2, 3].map((seg) => {
-              const level = status?.inkLevel;
-              const filledSegments = level === 'FULL' ? 4 : level === 'LOW' ? 1 : 0;
-              const isFilled = seg < filledSegments;
-              return (
-                <div
-                  key={seg}
-                  className={`flex-1 rounded-sm transition-colors ${
-                    isFilled ? 'bg-white' : 'bg-white/20'
-                  }`}
-                />
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Start/Stop buttons - inline on mobile, stacked on desktop */}
-        <div className="flex md:flex-col gap-2 md:ml-auto">
-          <button
-            onClick={onStart}
-            disabled={!isConnected || status?.isRunning}
-            className="industrial-button-success text-white px-4 md:px-8 py-2 md:py-4 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+      <div className="flex-1 p-2 md:p-4 flex flex-col gap-2 md:gap-4 overflow-hidden">
+      {/* Top row buttons - horizontal scroll on mobile */}
+      <div className="overflow-x-auto pb-2 -mx-2 px-2 md:mx-0 md:px-0 md:overflow-visible">
+        <div className="flex gap-2 min-w-max md:min-w-0 md:flex-wrap">
+          <button 
+            onClick={onSignIn}
+            className={`${isSignedIn ? 'industrial-button-success' : 'industrial-button-gray'} text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[100px] flex-shrink-0`}
           >
-            <Play className="w-6 h-6 md:w-10 md:h-10" />
-            <span className="text-base md:text-xl font-medium">Start</span>
+            <Key className="w-7 h-7 md:w-10 md:h-10 mb-1" />
+            <span className="text-[10px] md:text-sm">{isSignedIn ? 'Sign Out' : 'Sign In'}</span>
           </button>
 
-          <button
-            onClick={onJetStop}
-            disabled={!isConnected || !status?.isRunning}
-            className="industrial-button-danger text-white px-4 md:px-8 py-2 md:py-4 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+          <button 
+            onClick={onHelp}
+            className="industrial-button text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[100px] flex-shrink-0"
           >
-            <Square className="w-5 h-5 md:w-6 md:h-6" />
-            <span className="text-base md:text-xl font-medium">Stop</span>
+            <HelpCircle className="w-7 h-7 md:w-10 md:h-10 mb-1" />
+            <span className="text-[10px] md:text-sm">Help</span>
           </button>
+
+          <button 
+            onClick={isHvOn ? onStop : onStart}
+            disabled={!isConnected}
+            className={`${isHvOn ? 'industrial-button-success' : 'industrial-button-danger'} text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[100px] flex-shrink-0 disabled:opacity-50`}
+          >
+            <PrinterIcon className="w-7 h-7 md:w-10 md:h-10 mb-1" />
+            <span className="text-[10px] md:text-sm">{isHvOn ? 'HV On' : 'HV Off'}</span>
+          </button>
+
+          {/* Makeup Level Indicator */}
+          <div className={`w-[80px] md:w-[120px] h-[70px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 flex-shrink-0 ${
+            status?.makeupLevel === 'EMPTY' ? 'bg-destructive' :
+            status?.makeupLevel === 'LOW' ? 'bg-warning' :
+            'industrial-button'
+          }`}>
+            <div className="flex flex-col items-center">
+              <div className="relative">
+                <Droplets className="w-5 h-5 md:w-8 md:h-8 text-white" />
+                {(status?.makeupLevel === 'FULL' || status?.makeupLevel === 'GOOD') && (
+                  <Wifi className="w-2 h-2 md:w-3 md:h-3 absolute -top-0.5 -right-0.5 text-white" />
+                )}
+              </div>
+              <span className="text-[8px] md:text-xs text-white font-medium mt-1">Makeup</span>
+            </div>
+            <div className="flex flex-col-reverse gap-0.5 h-10 md:h-16 w-3 md:w-5 bg-black/20 rounded p-0.5">
+              {[0, 1, 2, 3].map((seg) => {
+                const level = status?.makeupLevel;
+                const filledSegments = level === 'FULL' ? 4 : level === 'GOOD' ? 2 : level === 'LOW' ? 1 : 0;
+                const isFilled = seg < filledSegments;
+                return (
+                  <div
+                    key={seg}
+                    className={`flex-1 rounded-sm transition-colors ${
+                      isFilled ? 'bg-white' : 'bg-white/20'
+                    }`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Ink Level Indicator */}
+          <div className={`w-[80px] md:w-[120px] h-[70px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 flex-shrink-0 ${
+            status?.inkLevel === 'EMPTY' ? 'bg-destructive' :
+            status?.inkLevel === 'LOW' ? 'bg-warning' :
+            'industrial-button'
+          }`}>
+            <div className="flex flex-col items-center">
+              <div className="relative">
+                <Palette className="w-5 h-5 md:w-8 md:h-8 text-white" />
+                {status?.inkLevel === 'FULL' && (
+                  <span className="absolute -top-0.5 -right-0.5 text-white text-[10px] md:text-sm">✓</span>
+                )}
+              </div>
+              <span className="text-[8px] md:text-xs text-white font-medium mt-1">Ink</span>
+            </div>
+            <div className="flex flex-col-reverse gap-0.5 h-10 md:h-16 w-3 md:w-5 bg-black/20 rounded p-0.5">
+              {[0, 1, 2, 3].map((seg) => {
+                const level = status?.inkLevel;
+                const filledSegments = level === 'FULL' ? 4 : level === 'LOW' ? 1 : 0;
+                const isFilled = seg < filledSegments;
+                return (
+                  <div
+                    key={seg}
+                    className={`flex-1 rounded-sm transition-colors ${
+                      isFilled ? 'bg-white' : 'bg-white/20'
+                    }`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Start/Stop buttons */}
+          <div className="flex gap-2 md:flex-col md:ml-auto flex-shrink-0">
+            <button
+              onClick={onStart}
+              disabled={!isConnected || status?.isRunning}
+              className="industrial-button-success text-white px-3 md:px-8 py-2 md:py-4 rounded-lg flex items-center justify-center gap-1 md:gap-2 disabled:opacity-50"
+            >
+              <Play className="w-5 h-5 md:w-10 md:h-10" />
+              <span className="text-sm md:text-xl font-medium">Start</span>
+            </button>
+
+            <button
+              onClick={onJetStop}
+              disabled={!isConnected || !status?.isRunning}
+              className="industrial-button-danger text-white px-3 md:px-8 py-2 md:py-4 rounded-lg flex items-center justify-center gap-1 md:gap-2 disabled:opacity-50"
+            >
+              <Square className="w-4 h-4 md:w-6 md:h-6" />
+              <span className="text-sm md:text-xl font-medium">Stop</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Middle section */}
-      <div className="flex flex-wrap gap-2 md:gap-4">
-        {/* Message name area */}
-        <div className="flex-1 min-w-[120px] bg-card rounded-lg p-3 md:p-4 min-h-[60px] md:min-h-[80px] flex items-center">
-          <div className="text-sm md:text-lg">
-            <div className="font-medium">Message name</div>
-            <div className="text-foreground">
-              {status?.currentMessage || 'No message selected'}
+      {/* Middle section - horizontal scroll on mobile */}
+      <div className="overflow-x-auto pb-2 -mx-2 px-2 md:mx-0 md:px-0 md:overflow-visible">
+        <div className="flex gap-2 md:gap-4 min-w-max md:min-w-0">
+          {/* Message name area */}
+          <div className="min-w-[100px] md:flex-1 bg-card rounded-lg p-2 md:p-4 min-h-[50px] md:min-h-[80px] flex items-center flex-shrink-0">
+            <div className="text-xs md:text-lg">
+              <div className="font-medium">Message name</div>
+              <div className="text-foreground truncate max-w-[100px] md:max-w-none">
+                {status?.currentMessage || 'No message selected'}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* New/Edit buttons */}
-        <div className="flex md:flex-col gap-2">
-          <button 
-            onClick={onNewMessage}
-            className="industrial-button text-white px-4 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5 md:w-6 md:h-6" />
-            <span className="text-base md:text-lg font-medium">New</span>
-          </button>
-          <button 
-            onClick={onEditMessage}
-            className="industrial-button text-white px-4 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-2"
-          >
-            <Pencil className="w-5 h-5 md:w-6 md:h-6" />
-            <span className="text-base md:text-lg font-medium">Edit</span>
-          </button>
-        </div>
-
-        {/* Count panel */}
-        <div className="bg-primary text-primary-foreground rounded-lg p-3 md:p-6 min-w-[150px] md:min-w-[200px]">
-          <div className="flex justify-between items-center mb-2 md:mb-4">
-            <span className="text-sm md:text-lg">Product count:</span>
-            <span className="font-bold text-xl md:text-3xl">{status?.productCount ?? 0}</span>
+          {/* New/Edit buttons */}
+          <div className="flex gap-2 md:flex-col flex-shrink-0">
+            <button 
+              onClick={onNewMessage}
+              className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-1 md:gap-2"
+            >
+              <Plus className="w-4 h-4 md:w-6 md:h-6" />
+              <span className="text-sm md:text-lg font-medium">New</span>
+            </button>
+            <button 
+              onClick={onEditMessage}
+              className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-1 md:gap-2"
+            >
+              <Pencil className="w-4 h-4 md:w-6 md:h-6" />
+              <span className="text-sm md:text-lg font-medium">Edit</span>
+            </button>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm md:text-lg">Print count:</span>
-            <span className="font-bold text-xl md:text-3xl">{status?.printCount ?? 0}</span>
+
+          {/* Count panel */}
+          <div className="bg-primary text-primary-foreground rounded-lg p-2 md:p-6 min-w-[120px] md:min-w-[200px] flex-shrink-0">
+            <div className="flex justify-between items-center mb-1 md:mb-4 gap-2">
+              <span className="text-[10px] md:text-lg whitespace-nowrap">Product:</span>
+              <span className="font-bold text-lg md:text-3xl">{status?.productCount ?? 0}</span>
+            </div>
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-[10px] md:text-lg whitespace-nowrap">Print:</span>
+              <span className="font-bold text-lg md:text-3xl">{status?.printCount ?? 0}</span>
+            </div>
           </div>
         </div>
       </div>
