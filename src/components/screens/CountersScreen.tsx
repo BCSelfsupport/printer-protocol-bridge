@@ -52,10 +52,10 @@ export function CountersScreen({
   // 6 = Product Counter
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col p-4">
       <SubPageHeader title="Printer Counts" onHome={onHome} />
 
-      <div className="flex-1 p-4 space-y-4 overflow-auto">
+      <div className="flex-1 space-y-4 overflow-auto">
         {/* Product Counter */}
         <CounterRow
           label="Product Count"
@@ -77,7 +77,7 @@ export function CountersScreen({
           <CounterRow
             key={id}
             label={`Custom Counter ${id}`}
-            value={0} // TODO: Add custom counter values to status
+            value={0}
             onReset={() => onResetCounter(id, 0)}
             disabled={!isConnected}
           />
