@@ -138,6 +138,30 @@ export function EditMessageScreen({
     }
   }, [messageName, onGetMessageDetails]);
 
+  // Keyboard listener for Delete key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't delete if user is typing in an input
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+      
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedFieldId && message.fields.length > 1) {
+        e.preventDefault();
+        setMessage((prev) => {
+          const newFields = prev.fields.filter((f) => f.id !== selectedFieldId);
+          // Select the first remaining field
+          setSelectedFieldId(newFields[0]?.id ?? null);
+          return { ...prev, fields: newFields };
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedFieldId, message.fields.length]);
+
   const selectedField = message.fields.find((f) => f.id === selectedFieldId);
 
   const handleFieldDataChange = (value: string) => {
