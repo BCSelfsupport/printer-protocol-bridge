@@ -95,8 +95,10 @@ export function MessagesScreen({
             <div
               key={message.id}
               onClick={() => handleMessageClick(message)}
-              className={`flex items-center py-3 border-b cursor-pointer hover:bg-muted/50 ${
-                selectedMessage?.id === message.id ? 'bg-primary/10' : ''
+              className={`flex items-center py-3 border-b cursor-pointer transition-colors ${
+                selectedMessage?.id === message.id 
+                  ? 'bg-primary/20 border-primary/30' 
+                  : 'hover:bg-muted/50'
               }`}
             >
               <div className="w-10 flex justify-center">
