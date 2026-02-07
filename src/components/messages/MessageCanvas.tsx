@@ -67,10 +67,11 @@ export function MessageCanvas({
   // Scrollbar drag state
   const [isScrollDragging, setIsScrollDragging] = useState(false);
   
-  // Inline editing state
+  // Inline editing state - cursor-based editing on canvas
   const [isEditing, setIsEditing] = useState(false);
   const [editingFieldId, setEditingFieldId] = useState<number | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [cursorPosition, setCursorPosition] = useState(0); // Character position in text
+  const [cursorVisible, setCursorVisible] = useState(true); // For blinking effect
   
   // Calculate blocked rows (from top)
   const blockedRows = TOTAL_ROWS - templateHeight;
@@ -88,6 +89,20 @@ export function MessageCanvas({
     window.addEventListener('resize', updateWidth);
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
+
+  // Blinking cursor effect
+  useEffect(() => {
+    if (!isEditing) {
+      setCursorVisible(true);
+      return;
+    }
+    
+    const interval = setInterval(() => {
+      setCursorVisible(prev => !prev);
+    }, 500); // Blink every 500ms
+    
+    return () => clearInterval(interval);
+  }, [isEditing]);
   
   // Render the dot matrix grid
   useEffect(() => {
@@ -172,6 +187,7 @@ export function MessageCanvas({
     fields.forEach((field) => {
       const isSelected = field.id === selectedFieldId;
       const isBeingDragged = isDragging && field.id === dragFieldId;
+      const isBeingEdited = isEditing && field.id === editingFieldId;
       const fontInfo = getFontInfo(field.fontSize);
       
       // Use drag position if being dragged, otherwise use field position
@@ -198,22 +214,36 @@ export function MessageCanvas({
         ctx.strokeRect(fieldX, fieldY, textWidth, fieldH);
         ctx.setLineDash([]);
       }
-      // Draw selection highlight
-      else if (isSelected) {
-        ctx.fillStyle = 'rgba(255, 193, 7, 0.3)';
-        ctx.fillRect(fieldX, fieldY, textWidth, fieldH);
-        ctx.strokeStyle = '#ffc107';
+      // Draw selection highlight (including when editing)
+      else if (isSelected || isBeingEdited) {
+        ctx.fillStyle = isBeingEdited ? 'rgba(255, 220, 100, 0.4)' : 'rgba(255, 193, 7, 0.3)';
+        ctx.fillRect(fieldX, fieldY, Math.max(textWidth, 20), fieldH);
+        ctx.strokeStyle = isBeingEdited ? '#ff6600' : '#ffc107';
         ctx.lineWidth = 2;
-        ctx.strokeRect(fieldX, fieldY, textWidth, fieldH);
+        ctx.strokeRect(fieldX, fieldY, Math.max(textWidth, 20), fieldH);
       }
       
       // Draw the field text using the font system
       ctx.fillStyle = '#1a1a1a';
       renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE);
       ctx.globalAlpha = 1.0; // Reset alpha
+      
+      // Draw blinking cursor if editing this field
+      if (isBeingEdited && cursorVisible) {
+        const charWidth = (fontInfo.charWidth + 1) * DOT_SIZE;
+        const cursorX = fieldX + cursorPosition * charWidth;
+        
+        // Draw red vertical line cursor
+        ctx.strokeStyle = '#ff0000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cursorX, fieldY);
+        ctx.lineTo(cursorX, fieldY + fieldH);
+        ctx.stroke();
+      }
     });
     
-  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, canvasWidth, visibleCols, multilineTemplate, isDragging, dragFieldId, dragPosition]);
+  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, canvasWidth, visibleCols, multilineTemplate, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible]);
   
   const handleScroll = (direction: 'left' | 'right') => {
     const step = 10;
@@ -263,35 +293,99 @@ export function MessageCanvas({
     return null;
   };
   
-  const startEditing = useCallback((fieldId: number) => {
+  const startEditing = useCallback((fieldId: number, clickX?: number) => {
+    const field = fields.find(f => f.id === fieldId);
+    if (!field) return;
+    
     setIsEditing(true);
     setEditingFieldId(fieldId);
-    // Focus the input after it renders
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, []);
+    
+    // Set cursor position based on click location or end of text
+    if (clickX !== undefined) {
+      const fontInfo = getFontInfo(field.fontSize);
+      const charWidth = fontInfo.charWidth + 1;
+      const relativeX = clickX - field.x;
+      const charPos = Math.round(relativeX / charWidth);
+      setCursorPosition(Math.max(0, Math.min(charPos, field.data.length)));
+    } else {
+      setCursorPosition(field.data.length); // Default to end
+    }
+    
+    // Focus the canvas to receive keyboard events
+    canvasRef.current?.focus();
+  }, [fields]);
 
   const stopEditing = useCallback(() => {
     setIsEditing(false);
     setEditingFieldId(null);
+    setCursorPosition(0);
   }, []);
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (editingFieldId !== null && onFieldDataChange) {
-      onFieldDataChange(editingFieldId, e.target.value);
-    }
-  }, [editingFieldId, onFieldDataChange]);
-
-  const handleInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === 'Escape') {
+  // Keyboard handler for canvas-based editing
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLCanvasElement>) => {
+    if (!isEditing || editingFieldId === null) return;
+    
+    const field = fields.find(f => f.id === editingFieldId);
+    if (!field || !onFieldDataChange) return;
+    
+    const text = field.data;
+    
+    if (e.key === 'Escape' || e.key === 'Enter') {
       stopEditing();
+      e.preventDefault();
+    } else if (e.key === 'Backspace') {
+      if (cursorPosition > 0) {
+        const newText = text.slice(0, cursorPosition - 1) + text.slice(cursorPosition);
+        onFieldDataChange(editingFieldId, newText);
+        setCursorPosition(cursorPosition - 1);
+      }
+      e.preventDefault();
+    } else if (e.key === 'Delete') {
+      if (cursorPosition < text.length) {
+        const newText = text.slice(0, cursorPosition) + text.slice(cursorPosition + 1);
+        onFieldDataChange(editingFieldId, newText);
+      }
+      e.preventDefault();
+    } else if (e.key === 'ArrowLeft') {
+      setCursorPosition(Math.max(0, cursorPosition - 1));
+      e.preventDefault();
+    } else if (e.key === 'ArrowRight') {
+      setCursorPosition(Math.min(text.length, cursorPosition + 1));
+      e.preventDefault();
+    } else if (e.key === 'Home') {
+      setCursorPosition(0);
+      e.preventDefault();
+    } else if (e.key === 'End') {
+      setCursorPosition(text.length);
+      e.preventDefault();
+    } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      // Regular character input - convert to uppercase for printer
+      const char = e.key.toUpperCase();
+      const newText = text.slice(0, cursorPosition) + char + text.slice(cursorPosition);
+      onFieldDataChange(editingFieldId, newText);
+      setCursorPosition(cursorPosition + 1);
+      e.preventDefault();
     }
-  }, [stopEditing]);
+  }, [isEditing, editingFieldId, fields, onFieldDataChange, cursorPosition, stopEditing]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // If currently editing, stop editing on click elsewhere
     if (isEditing) {
+      const pos = getMousePosition(e);
+      const field = findFieldAtPosition(pos.x, pos.y);
+      
+      // If clicking on the same field, just move cursor
+      if (field && field.id === editingFieldId) {
+        const fontInfo = getFontInfo(field.fontSize);
+        const charWidth = fontInfo.charWidth + 1;
+        const relativeX = pos.x - field.x;
+        const charPos = Math.round(relativeX / charWidth);
+        setCursorPosition(Math.max(0, Math.min(charPos, field.data.length)));
+        e.preventDefault();
+        return;
+      }
+      
       stopEditing();
-      return;
     }
     
     const pos = getMousePosition(e);
@@ -314,7 +408,7 @@ export function MessageCanvas({
     const field = findFieldAtPosition(pos.x, pos.y);
     
     if (field) {
-      startEditing(field.id);
+      startEditing(field.id, pos.x);
       e.preventDefault();
     }
   };
@@ -434,23 +528,6 @@ export function MessageCanvas({
     };
   }, [isScrollDragging, maxScroll, visibleCols, width]);
 
-  // Calculate position for inline input overlay
-  const getEditingFieldPosition = () => {
-    const field = fields.find(f => f.id === editingFieldId);
-    if (!field) return null;
-    
-    const fontInfo = getFontInfo(field.fontSize);
-    const fieldX = (field.x - scrollX) * DOT_SIZE;
-    const fieldY = field.y * DOT_SIZE;
-    const textWidth = Math.max(field.data.length * (fontInfo.charWidth + 1) * DOT_SIZE, 100);
-    const fieldH = fontInfo.height * DOT_SIZE;
-    
-    return { x: fieldX, y: fieldY, width: textWidth, height: fieldH, fontInfo };
-  };
-
-  const editingPosition = isEditing ? getEditingFieldPosition() : null;
-  const editingField = editingFieldId !== null ? fields.find(f => f.id === editingFieldId) : null;
-
   return (
     <div className="flex flex-col w-full">
       {/* Canvas area */}
@@ -459,34 +536,15 @@ export function MessageCanvas({
           ref={canvasRef}
           width={canvasWidth}
           height={TOTAL_ROWS * DOT_SIZE}
+          tabIndex={0}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
           onDoubleClick={handleDoubleClick}
-          className={`w-full ${isDragging ? 'cursor-grabbing' : 'cursor-crosshair'}`}
+          onKeyDown={handleKeyDown}
+          className={`w-full outline-none ${isDragging ? 'cursor-grabbing' : isEditing ? 'cursor-text' : 'cursor-crosshair'}`}
         />
-        
-        {/* Inline text editing overlay */}
-        {isEditing && editingPosition && editingField && (
-          <input
-            ref={inputRef}
-            type="text"
-            value={editingField.data}
-            onChange={handleInputChange}
-            onKeyDown={handleInputKeyDown}
-            onBlur={stopEditing}
-            className="absolute font-mono bg-yellow-100 border-2 border-yellow-500 outline-none px-1"
-            style={{
-              left: editingPosition.x,
-              top: editingPosition.y,
-              minWidth: editingPosition.width,
-              height: editingPosition.height,
-              fontSize: `${editingPosition.fontInfo.height * 0.7}px`,
-              lineHeight: `${editingPosition.height}px`,
-            }}
-          />
-        )}
       </div>
       
       {/* Scroll bar */}
