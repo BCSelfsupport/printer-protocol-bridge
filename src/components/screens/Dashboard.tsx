@@ -312,8 +312,13 @@ function calculateRequiredWidth(messageContent: MessageDetails | undefined, mess
 function MessagePreviewCanvas({ message, printerTime, messageContent }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dotSize, setDotSize] = useState<number>(DOT_SIZE_DESKTOP);
+  const [isZoomed, setIsZoomed] = useState(false);
 
-  // Keep dot size in sync with breakpoint (but keep width fixed to avoid scaling/overlap artifacts)
+  // Zoom multiplier when clicked (3x scale)
+  const ZOOM_MULTIPLIER = 3;
+  const effectiveDotSize = isZoomed ? dotSize * ZOOM_MULTIPLIER : dotSize;
+
+  // Keep base dot size in sync with breakpoint
   useEffect(() => {
     const mql = window.matchMedia('(max-width: 767px)');
     const update = () => setDotSize(mql.matches ? DOT_SIZE_MOBILE : DOT_SIZE_DESKTOP);
@@ -323,7 +328,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
   }, []);
 
   // Calculate dynamic width based on message content
-  const renderWidth = calculateRequiredWidth(messageContent, message, dotSize);
+  const renderWidth = calculateRequiredWidth(messageContent, message, effectiveDotSize);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -334,7 +339,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
 
     const width = renderWidth;
     // Add 1 CSS pixel safety margin to avoid bottom-edge clipping on some DPR/rounding combos
-    const height = TOTAL_ROWS * dotSize + 1;
+    const height = TOTAL_ROWS * effectiveDotSize + 1;
 
     // HiDPI: scale backing store to devicePixelRatio while keeping CSS size
     // Use ceil + derive the actual scale factors to avoid clipping on non-integer DPRs (e.g. 2.625)
@@ -361,7 +366,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     ctx.strokeStyle = '#d4c4a8';
     ctx.lineWidth = 0.5;
 
-    for (let x = 0; x <= width; x += dotSize) {
+    for (let x = 0; x <= width; x += effectiveDotSize) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, height);
@@ -369,8 +374,8 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     }
     for (let y = 0; y <= TOTAL_ROWS; y++) {
       ctx.beginPath();
-      ctx.moveTo(0, y * dotSize);
-      ctx.lineTo(width, y * dotSize);
+      ctx.moveTo(0, y * effectiveDotSize);
+      ctx.lineTo(width, y * effectiveDotSize);
       ctx.stroke();
     }
 
@@ -391,14 +396,14 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
         // Clamp to keep the full font visible within the 32-dot canvas
         const clampedYDots = Math.min(field.y, Math.max(0, TOTAL_ROWS - fontInfo.height));
 
-        const x = field.x * dotSize;
+        const x = field.x * effectiveDotSize;
         const yDots = Math.max(0, clampedYDots - previewYOffsetDots);
-        const y = yDots * dotSize;
+        const y = yDots * effectiveDotSize;
 
-        renderText(ctx, field.data, x, y, fontName, dotSize);
+        renderText(ctx, field.data, x, y, fontName, effectiveDotSize);
 
         // Track the rightmost edge of rendered content
-        const textWidth = field.data.length * (fontInfo.charWidth + 1) * dotSize;
+        const textWidth = field.data.length * (fontInfo.charWidth + 1) * effectiveDotSize;
         maxXEnd = Math.max(maxXEnd, x + textWidth);
       });
       return;
@@ -414,10 +419,10 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
       const mainFontInfo = getFontInfo(mainFontName);
 
       const mainYDots = Math.max(0, (32 - mainFontInfo.height) - previewYOffsetDots);
-      const mainY = mainYDots * dotSize;
+      const mainY = mainYDots * effectiveDotSize;
       const padding = 10;
 
-      renderText(ctx, message, padding, mainY, mainFontName, dotSize);
+      renderText(ctx, message, padding, mainY, mainFontName, effectiveDotSize);
 
       const time = printerTime ?? new Date();
       const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -426,17 +431,17 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
       const smallFontName = 'Standard7High';
       const smallFontInfo = getFontInfo(smallFontName);
 
-      const timeWidth = timeStr.length * (smallFontInfo.charWidth + 1) * dotSize;
+      const timeWidth = timeStr.length * (smallFontInfo.charWidth + 1) * effectiveDotSize;
       const timeX = width - timeWidth - padding;
 
       const timeYDots = Math.max(0, 16 - previewYOffsetDots);
       const dateYDots = Math.max(0, (16 + smallFontInfo.height + 1) - previewYOffsetDots);
 
-      const timeY = timeYDots * dotSize;
-      const dateY = dateYDots * dotSize;
+      const timeY = timeYDots * effectiveDotSize;
+      const dateY = dateYDots * effectiveDotSize;
 
-      renderText(ctx, timeStr, timeX, timeY, smallFontName, dotSize);
-      renderText(ctx, dateStr, timeX, dateY, smallFontName, dotSize);
+      renderText(ctx, timeStr, timeX, timeY, smallFontName, effectiveDotSize);
+      renderText(ctx, dateStr, timeX, dateY, smallFontName, effectiveDotSize);
       return;
     }
 
@@ -445,14 +450,20 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     ctx.font = '16px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('No message selected', width / 2, height / 2 + 5);
-  }, [message, printerTime, messageContent, renderWidth, dotSize]);
+  }, [message, printerTime, messageContent, renderWidth, effectiveDotSize]);
 
-  const canvasHeight = TOTAL_ROWS * dotSize + 1;
+  const canvasHeight = TOTAL_ROWS * effectiveDotSize + 1;
+
+  const handleClick = () => {
+    setIsZoomed(!isZoomed);
+  };
 
   return (
     <div
-      className="bg-white rounded-lg overflow-hidden border-2 border-muted flex-shrink-0"
+      onClick={handleClick}
+      className="bg-white rounded-lg overflow-hidden border-2 border-muted flex-shrink-0 cursor-pointer transition-all duration-200 hover:border-primary"
       style={{ width: renderWidth, height: canvasHeight }}
+      title={isZoomed ? 'Click to zoom out' : 'Click to zoom in'}
     >
       <canvas
         ref={canvasRef}
