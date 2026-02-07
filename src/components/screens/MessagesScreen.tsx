@@ -88,22 +88,24 @@ export function MessagesScreen({
 
       {/* Message list */}
       <div className="flex-1 bg-card rounded-lg p-4 mb-4">
-        <div className="flex items-start gap-4">
-          <PrinterIcon className="w-16 h-16 text-muted-foreground" />
-          <div className="flex-1">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                onClick={() => handleMessageClick(message)}
-                className={`flex items-center py-3 border-b cursor-pointer hover:bg-muted/50 ${
-                  selectedMessage?.id === message.id ? 'bg-primary/10' : ''
-                }`}
-              >
-                <span className="w-12 text-primary font-medium">{message.id}</span>
-                <span className="flex-1 text-center text-lg">{message.name}</span>
+        <div className="flex-1">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              onClick={() => handleMessageClick(message)}
+              className={`flex items-center py-3 border-b cursor-pointer hover:bg-muted/50 ${
+                selectedMessage?.id === message.id ? 'bg-primary/10' : ''
+              }`}
+            >
+              <div className="w-10 flex justify-center">
+                {selectedMessage?.id === message.id && (
+                  <PrinterIcon className="w-5 h-5 text-primary" />
+                )}
               </div>
-            ))}
-          </div>
+              <span className="w-12 text-primary font-medium">{message.id}</span>
+              <span className="flex-1 text-center text-lg">{message.name}</span>
+            </div>
+          ))}
         </div>
       </div>
 
