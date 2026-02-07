@@ -273,6 +273,25 @@ const DOT_SIZE_DESKTOP = 4; // Pixels per dot on desktop
 const TOTAL_ROWS = 32; // Total printable height in dots
 const MIN_CANVAS_WIDTH = 420; // Minimum width to prevent any layout squeezing
 
+// Calculate required canvas width based on message content
+function calculateRequiredWidth(messageContent: MessageDetails | undefined, dotSize: number): number {
+  if (!messageContent || messageContent.fields.length === 0) {
+    return MIN_CANVAS_WIDTH;
+  }
+
+  let maxXEnd = 0;
+  messageContent.fields.forEach((field) => {
+    const fontName = field.fontSize || 'Standard16High';
+    const fontInfo = getFontInfo(fontName);
+    const x = field.x * dotSize;
+    const textWidth = field.data.length * (fontInfo.charWidth + 1) * dotSize;
+    maxXEnd = Math.max(maxXEnd, x + textWidth);
+  });
+
+  // Add some padding
+  return Math.max(MIN_CANVAS_WIDTH, maxXEnd + 20);
+}
+
 function MessagePreviewCanvas({ message, printerTime, messageContent }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dotSize, setDotSize] = useState<number>(DOT_SIZE_DESKTOP);
@@ -286,7 +305,8 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     return () => mql.removeEventListener('change', update);
   }, []);
 
-  const renderWidth = MIN_CANVAS_WIDTH;
+  // Calculate dynamic width based on message content
+  const renderWidth = calculateRequiredWidth(messageContent, dotSize);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -344,6 +364,9 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
       // Home preview only: shift everything up by 1 dot row to avoid bottom-row clipping on some devices.
       const previewYOffsetDots = 1;
 
+      // Calculate total width needed and use dynamic canvas sizing
+      let maxXEnd = 0;
+
       messageContent.fields.forEach((field) => {
         const fontName = field.fontSize || 'Standard16High';
         const fontInfo = getFontInfo(fontName);
@@ -356,6 +379,10 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
         const y = yDots * dotSize;
 
         renderText(ctx, field.data, x, y, fontName, dotSize);
+
+        // Track the rightmost edge of rendered content
+        const textWidth = field.data.length * (fontInfo.charWidth + 1) * dotSize;
+        maxXEnd = Math.max(maxXEnd, x + textWidth);
       });
       return;
     }
