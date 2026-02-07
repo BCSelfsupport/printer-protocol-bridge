@@ -40,13 +40,17 @@ const SINGLE_TEMPLATES = [
   { value: '5s', label: '5 dots (standard)', file: '1L5sU.BIN' },
 ] as const;
 
-// Multi-line templates - will be loaded from .BIN files
+// Multi-line templates - loaded from .BIN files
 const MULTILINE_TEMPLATES = [
+  { value: 'multi-5x5', label: '5 lines × 5 dots', height: 25, lines: 5, dotsPerLine: 5, file: '5L5U.BIN' },
+  { value: 'multi-5x5-2', label: '5 lines × 5 dots (v2)', height: 25, lines: 5, dotsPerLine: 5, file: '5L5U-2.BIN' },
+  { value: 'multi-4x7', label: '4 lines × 7 dots', height: 28, lines: 4, dotsPerLine: 7, file: '4L7U.BIN' },
+  { value: 'multi-4x5', label: '4 lines × 5 dots', height: 20, lines: 4, dotsPerLine: 5, file: '4L5U.BIN' },
+  { value: 'multi-4x5h', label: '4 lines × 5 dots (H)', height: 20, lines: 4, dotsPerLine: 5, file: '4L5H.BIN' },
   { value: 'multi-2x12', label: '2 lines × 12 dots', height: 24, lines: 2, dotsPerLine: 12, file: '2L12U.BIN' },
   { value: 'multi-2x7', label: '2 lines × 7 dots', height: 14, lines: 2, dotsPerLine: 7, file: '2L7U.BIN' },
   { value: 'multi-2x7s', label: '2 lines × 7 dots (narrow)', height: 14, lines: 2, dotsPerLine: 7, file: '2L7sU.BIN' },
   { value: 'multi-2x5', label: '2 lines × 5 dots', height: 10, lines: 2, dotsPerLine: 5, file: '2L5U.BIN' },
-  { value: 'multi-5x5', label: '5 lines × 5 dots', height: 25, lines: 5, dotsPerLine: 5, file: '5L5U.BIN' },
 ] as const;
 
 // Font size options - matching actual printer fonts
