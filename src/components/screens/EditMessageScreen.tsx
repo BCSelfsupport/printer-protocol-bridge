@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MessageCanvas } from '@/components/messages/MessageCanvas';
 import { loadTemplate, templateToMultilineConfig, type ParsedTemplate } from '@/lib/templateParser';
 import { NewFieldDialog } from '@/components/messages/NewFieldDialog';
+import { AutoCodeFieldDialog } from '@/components/messages/AutoCodeFieldDialog';
 import {
   Dialog,
   DialogContent,
@@ -116,6 +117,7 @@ export function EditMessageScreen({
   const [saveAsDialogOpen, setSaveAsDialogOpen] = useState(false);
   const [saveAsName, setSaveAsName] = useState('');
   const [newFieldDialogOpen, setNewFieldDialogOpen] = useState(false);
+  const [autoCodeDialogOpen, setAutoCodeDialogOpen] = useState(false);
 
   // Load message details when component mounts
   useEffect(() => {
@@ -393,6 +395,15 @@ export function EditMessageScreen({
             open={newFieldDialogOpen}
             onOpenChange={setNewFieldDialogOpen}
             onSelectFieldType={handleAddField}
+            onOpenAutoCode={() => setAutoCodeDialogOpen(true)}
+          />
+
+          {/* AutoCode Field Dialog */}
+          <AutoCodeFieldDialog
+            open={autoCodeDialogOpen}
+            onOpenChange={setAutoCodeDialogOpen}
+            onBack={() => setNewFieldDialogOpen(true)}
+            onSelectType={handleAddField}
           />
 
 
