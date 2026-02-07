@@ -87,36 +87,36 @@ export function Dashboard({
         </div>
       )}
       
-      <div className="flex-1 p-4 flex flex-col gap-4">
+      <div className="flex-1 p-2 md:p-4 flex flex-col gap-2 md:gap-4 overflow-auto">
       {/* Top row buttons */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button 
           onClick={onSignIn}
-          className={`${isSignedIn ? 'industrial-button-success' : 'industrial-button-gray'} text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px]`}
+          className={`${isSignedIn ? 'industrial-button-success' : 'industrial-button-gray'} text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[80px] md:min-w-[100px]`}
         >
-          <Key className="w-10 h-10 mb-1" />
-          <span className="text-sm">{isSignedIn ? 'Sign Out' : 'Sign In'}</span>
+          <Key className="w-8 h-8 md:w-10 md:h-10 mb-1" />
+          <span className="text-xs md:text-sm">{isSignedIn ? 'Sign Out' : 'Sign In'}</span>
         </button>
 
         <button 
           onClick={onHelp}
-          className="industrial-button text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px]"
+          className="industrial-button text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[80px] md:min-w-[100px]"
         >
-          <HelpCircle className="w-10 h-10 mb-1" />
-          <span className="text-sm">Help</span>
+          <HelpCircle className="w-8 h-8 md:w-10 md:h-10 mb-1" />
+          <span className="text-xs md:text-sm">Help</span>
         </button>
 
         <button 
           onClick={isHvOn ? onStop : onStart}
           disabled={!isConnected}
-          className={`${isHvOn ? 'industrial-button-success' : 'industrial-button-danger'} text-white px-4 py-3 rounded-lg flex flex-col items-center justify-center min-w-[100px] disabled:opacity-50`}
+          className={`${isHvOn ? 'industrial-button-success' : 'industrial-button-danger'} text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[80px] md:min-w-[100px] disabled:opacity-50`}
         >
-          <PrinterIcon className="w-10 h-10 mb-1" />
-          <span className="text-sm">{isHvOn ? 'HV On' : 'HV Off'}</span>
+          <PrinterIcon className="w-8 h-8 md:w-10 md:h-10 mb-1" />
+          <span className="text-xs md:text-sm">{isHvOn ? 'HV On' : 'HV Off'}</span>
         </button>
 
         {/* Makeup Level Indicator - HMI style with tank gauge */}
-        <div className={`w-[120px] h-[100px] rounded-lg flex items-center justify-between px-3 ${
+        <div className={`w-[100px] md:w-[120px] h-[80px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 ${
           status?.makeupLevel === 'EMPTY' ? 'bg-destructive' :
           status?.makeupLevel === 'LOW' ? 'bg-warning' :
           'industrial-button'
@@ -124,18 +124,17 @@ export function Dashboard({
           {/* Left: Icon and label */}
           <div className="flex flex-col items-center">
             <div className="relative">
-              <Droplets className="w-8 h-8 text-white" />
+              <Droplets className="w-6 h-6 md:w-8 md:h-8 text-white" />
               {(status?.makeupLevel === 'FULL' || status?.makeupLevel === 'GOOD') && (
-                <Wifi className="w-3 h-3 absolute -top-0.5 -right-0.5 text-white" />
+                <Wifi className="w-2.5 h-2.5 md:w-3 md:h-3 absolute -top-0.5 -right-0.5 text-white" />
               )}
             </div>
-            <span className="text-xs text-white font-medium mt-1">Makeup</span>
+            <span className="text-[10px] md:text-xs text-white font-medium mt-1">Makeup</span>
           </div>
-          {/* Right: Tank level gauge (4 segments) - Makeup has 3 floats: top=full, middle=half/low, bottom=empty */}
-          <div className="flex flex-col-reverse gap-0.5 h-16 w-5 bg-black/20 rounded p-0.5">
+          {/* Right: Tank level gauge (4 segments) */}
+          <div className="flex flex-col-reverse gap-0.5 h-12 md:h-16 w-4 md:w-5 bg-black/20 rounded p-0.5">
             {[0, 1, 2, 3].map((seg) => {
               const level = status?.makeupLevel;
-              // Makeup tank: FULL=4 bars, GOOD=2 bars (half), LOW=1 bar, EMPTY=0
               const filledSegments = level === 'FULL' ? 4 : level === 'GOOD' ? 2 : level === 'LOW' ? 1 : 0;
               const isFilled = seg < filledSegments;
               return (
@@ -151,7 +150,7 @@ export function Dashboard({
         </div>
 
         {/* Ink Level Indicator - HMI style with tank gauge */}
-        <div className={`w-[120px] h-[100px] rounded-lg flex items-center justify-between px-3 ${
+        <div className={`w-[100px] md:w-[120px] h-[80px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 ${
           status?.inkLevel === 'EMPTY' ? 'bg-destructive' :
           status?.inkLevel === 'LOW' ? 'bg-warning' :
           'industrial-button'
@@ -159,18 +158,17 @@ export function Dashboard({
           {/* Left: Icon and label */}
           <div className="flex flex-col items-center">
             <div className="relative">
-              <Palette className="w-8 h-8 text-white" />
+              <Palette className="w-6 h-6 md:w-8 md:h-8 text-white" />
               {status?.inkLevel === 'FULL' && (
-                <span className="absolute -top-0.5 -right-0.5 text-white text-sm">✓</span>
+                <span className="absolute -top-0.5 -right-0.5 text-white text-xs md:text-sm">✓</span>
               )}
             </div>
-            <span className="text-xs text-white font-medium mt-1">Ink</span>
+            <span className="text-[10px] md:text-xs text-white font-medium mt-1">Ink</span>
           </div>
-          {/* Right: Tank level gauge (4 segments) - Ink has 2 floats: top=full/ok, bottom=empty */}
-          <div className="flex flex-col-reverse gap-0.5 h-16 w-5 bg-black/20 rounded p-0.5">
+          {/* Right: Tank level gauge (4 segments) */}
+          <div className="flex flex-col-reverse gap-0.5 h-12 md:h-16 w-4 md:w-5 bg-black/20 rounded p-0.5">
             {[0, 1, 2, 3].map((seg) => {
               const level = status?.inkLevel;
-              // Ink tank: FULL=4 bars, LOW=1 bar (warning before empty), EMPTY=0
               const filledSegments = level === 'FULL' ? 4 : level === 'LOW' ? 1 : 0;
               const isFilled = seg < filledSegments;
               return (
@@ -185,33 +183,33 @@ export function Dashboard({
           </div>
         </div>
 
-        {/* Start/Stop buttons */}
-        <div className="flex flex-col gap-2 ml-auto">
+        {/* Start/Stop buttons - inline on mobile, stacked on desktop */}
+        <div className="flex md:flex-col gap-2 md:ml-auto">
           <button
             onClick={onStart}
             disabled={!isConnected || status?.isRunning}
-            className="industrial-button-success text-white px-8 py-4 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+            className="industrial-button-success text-white px-4 md:px-8 py-2 md:py-4 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <Play className="w-10 h-10" />
-            <span className="text-xl font-medium">Start</span>
+            <Play className="w-6 h-6 md:w-10 md:h-10" />
+            <span className="text-base md:text-xl font-medium">Start</span>
           </button>
 
           <button
             onClick={onJetStop}
             disabled={!isConnected || !status?.isRunning}
-            className="industrial-button-danger text-white px-8 py-4 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+            className="industrial-button-danger text-white px-4 md:px-8 py-2 md:py-4 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <Square className="w-6 h-6" />
-            <span className="text-xl font-medium">Stop</span>
+            <Square className="w-5 h-5 md:w-6 md:h-6" />
+            <span className="text-base md:text-xl font-medium">Stop</span>
           </button>
         </div>
       </div>
 
       {/* Middle section */}
-      <div className="flex gap-4">
+      <div className="flex flex-wrap gap-2 md:gap-4">
         {/* Message name area */}
-        <div className="flex-1 bg-card rounded-lg p-4 min-h-[80px] flex items-center">
-          <div className="text-lg">
+        <div className="flex-1 min-w-[120px] bg-card rounded-lg p-3 md:p-4 min-h-[60px] md:min-h-[80px] flex items-center">
+          <div className="text-sm md:text-lg">
             <div className="font-medium">Message name</div>
             <div className="text-foreground">
               {status?.currentMessage || 'No message selected'}
@@ -220,32 +218,32 @@ export function Dashboard({
         </div>
 
         {/* New/Edit buttons */}
-        <div className="flex flex-col gap-2">
+        <div className="flex md:flex-col gap-2">
           <button 
             onClick={onNewMessage}
-            className="industrial-button text-white px-6 py-3 rounded-lg flex items-center gap-2"
+            className="industrial-button text-white px-4 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-2"
           >
-            <Plus className="w-6 h-6" />
-            <span className="text-lg font-medium">New</span>
+            <Plus className="w-5 h-5 md:w-6 md:h-6" />
+            <span className="text-base md:text-lg font-medium">New</span>
           </button>
           <button 
             onClick={onEditMessage}
-            className="industrial-button text-white px-6 py-3 rounded-lg flex items-center gap-2"
+            className="industrial-button text-white px-4 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-2"
           >
-            <Pencil className="w-6 h-6" />
-            <span className="text-lg font-medium">Edit</span>
+            <Pencil className="w-5 h-5 md:w-6 md:h-6" />
+            <span className="text-base md:text-lg font-medium">Edit</span>
           </button>
         </div>
 
         {/* Count panel */}
-        <div className="bg-primary text-primary-foreground rounded-lg p-6 min-w-[200px]">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-lg">Product count:</span>
-            <span className="font-bold text-3xl">{status?.productCount ?? 0}</span>
+        <div className="bg-primary text-primary-foreground rounded-lg p-3 md:p-6 min-w-[150px] md:min-w-[200px]">
+          <div className="flex justify-between items-center mb-2 md:mb-4">
+            <span className="text-sm md:text-lg">Product count:</span>
+            <span className="font-bold text-xl md:text-3xl">{status?.productCount ?? 0}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-lg">Print count:</span>
-            <span className="font-bold text-3xl">{status?.printCount ?? 0}</span>
+            <span className="text-sm md:text-lg">Print count:</span>
+            <span className="font-bold text-xl md:text-3xl">{status?.printCount ?? 0}</span>
           </div>
         </div>
       </div>
