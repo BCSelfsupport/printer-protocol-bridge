@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 
 interface MessagesScreenProps {
   messages: PrintMessage[];
+  currentMessageName: string | null;
   onSelect: (message: PrintMessage) => Promise<boolean>;
   onEdit: (message: PrintMessage) => void;
   onNew: (name: string) => void;
@@ -26,6 +27,7 @@ interface MessagesScreenProps {
 
 export function MessagesScreen({ 
   messages, 
+  currentMessageName,
   onSelect, 
   onEdit, 
   onNew, 
@@ -98,7 +100,7 @@ export function MessagesScreen({
               }`}
             >
               <div className="w-10 flex justify-center">
-                {selectedMessage?.id === message.id && (
+                {currentMessageName === message.name && (
                   <PrinterIcon className="w-5 h-5 text-primary" />
                 )}
               </div>
