@@ -44,6 +44,7 @@ const Index = () => {
     setServiceScreenOpen,
     setControlScreenOpen,
     addMessage,
+    createMessageOnPrinter,
     updateMessage,
     deleteMessage,
   } = usePrinterConnection();
@@ -126,16 +127,20 @@ const Index = () => {
         return editingMessage ? (
           <EditMessageScreen
             messageName={editingMessage.name}
-            onSave={(details: MessageDetails, isNew?: boolean) => {
+            onSave={async (details: MessageDetails, isNew?: boolean) => {
               console.log('Save message:', details, 'isNew:', isNew);
-              // TODO: Send ^CM, ^CF, ^MD commands to update/create message
               if (isNew) {
-                // Save As - create new message
+                // Save As - send ^NM command to create new message on printer
                 console.log('Creating new message with name:', details.name);
-                addMessage(details.name);
+                const success = await createMessageOnPrinter(details.name);
+                if (!success) {
+                  console.error('Failed to create message on printer');
+                }
+                // TODO: Send ^CM, ^CF, ^MD commands for message content
               } else {
                 // Regular save - update existing message
                 console.log('Updating existing message:', editingMessage.name);
+                // TODO: Send ^CM, ^CF, ^MD commands to update message content
                 updateMessage(editingMessage.id, details.name);
               }
               setCurrentScreen('messages');

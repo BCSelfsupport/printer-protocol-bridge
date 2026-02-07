@@ -815,7 +815,7 @@ export function usePrinterConnection() {
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
-  // Add a new message to the list
+  // Add a new message to the list (local only)
   const addMessage = useCallback((name: string) => {
     setConnectionState((prev) => {
       const newId = Math.max(0, ...prev.messages.map(m => m.id)) + 1;
@@ -826,6 +826,51 @@ export function usePrinterConnection() {
       };
     });
   }, []);
+
+  // Create a new message on the printer via ^NM command
+  const createMessageOnPrinter = useCallback(async (name: string): Promise<boolean> => {
+    console.log('[createMessageOnPrinter] Called with name:', name);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[createMessageOnPrinter] Not connected');
+      return false;
+    }
+    
+    const printer = connectionState.connectedPrinter;
+    const command = `^NM ${name}`;
+    
+    if (shouldUseEmulator()) {
+      console.log('[createMessageOnPrinter] Using emulator');
+      const result = printerEmulator.processCommand(command);
+      console.log('[createMessageOnPrinter] Emulator result:', result);
+      
+      if (result.success) {
+        // Add to local state
+        addMessage(name);
+        return true;
+      }
+      return false;
+    } else if (isElectron && window.electronAPI) {
+      try {
+        console.log('[createMessageOnPrinter] Sending ^NM command:', command);
+        const result = await window.electronAPI.printer.sendCommand(printer.id, command);
+        console.log('[createMessageOnPrinter] Result:', JSON.stringify(result));
+        
+        if (result?.success) {
+          addMessage(name);
+          return true;
+        }
+        return false;
+      } catch (e) {
+        console.error('[createMessageOnPrinter] Failed to send ^NM command:', e);
+        return false;
+      }
+    } else {
+      // Web preview mock
+      console.log('[createMessageOnPrinter] Web preview mock');
+      addMessage(name);
+      return true;
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter, addMessage]);
 
   // Update an existing message
   const updateMessage = useCallback((id: number, name: string) => {
@@ -865,6 +910,7 @@ export function usePrinterConnection() {
     setAvailabilityPollingEnabled,
     markAllNotReady,
     addMessage,
+    createMessageOnPrinter,
     updateMessage,
     deleteMessage,
   };
