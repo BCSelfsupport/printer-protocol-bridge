@@ -989,7 +989,7 @@ export function usePrinterConnection() {
       const result = printerEmulator.processCommand(command);
       console.log('[resetCounter] Emulator result:', result);
       
-      // Update local state from emulator
+      // Update local state from emulator - include all counters
       const state = printerEmulator.getState();
       setConnectionState(prev => ({
         ...prev,
@@ -997,6 +997,7 @@ export function usePrinterConnection() {
           ...prev.status,
           productCount: state.productCount,
           printCount: state.printCount,
+          customCounters: [...state.customCounters],
         } : null,
       }));
       return true;
