@@ -449,11 +449,12 @@ export function EditMessageScreen({
                       }));
                     }
                   }}
+                  disabled={!selectedFieldId}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select font size" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[100]">
                     {getAllowedFonts().map((fs) => (
                       <SelectItem key={fs.value} value={fs.value}>
                         {fs.label}
@@ -471,7 +472,7 @@ export function EditMessageScreen({
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select template" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[100] max-h-[300px]">
                     <SelectItem value="header-single" disabled className="font-semibold text-muted-foreground">
                       Single Height (Mixed Font)
                     </SelectItem>
