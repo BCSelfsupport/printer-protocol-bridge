@@ -36,6 +36,8 @@ interface MessageCanvasProps {
   multilineTemplate?: MultilineTemplate | null;
   /** Callback for field errors */
   onFieldError?: (fieldId: number, error: string | null) => void;
+  /** Let parent temporarily disable its horizontal scroller while dragging */
+  onScrollLockChange?: (locked: boolean) => void;
 }
 
 const TOTAL_ROWS = 32;
@@ -51,6 +53,7 @@ export function MessageCanvas({
   selectedFieldId,
   multilineTemplate,
   onFieldError,
+  onScrollLockChange,
 }: MessageCanvasProps) {
   const [scrollX, setScrollX] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -82,6 +85,12 @@ export function MessageCanvas({
   const [cursorPosition, setCursorPosition] = useState(0); // Character position in text
   const [cursorVisible, setCursorVisible] = useState(true); // For blinking effect
   const [editingText, setEditingText] = useState(''); // Current text being edited (for hidden input sync)
+
+  // Inform parent when we need to lock its horizontal scroll (mobile drag)
+  const scrollLock = isLongPressPending || (isLongPressActive && isDragging);
+  useEffect(() => {
+    onScrollLockChange?.(scrollLock);
+  }, [scrollLock, onScrollLockChange]);
   
   // Calculate blocked rows (from top)
   const blockedRows = TOTAL_ROWS - templateHeight;

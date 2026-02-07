@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Save, X, FilePlus, SaveAll, Trash2, Settings } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
@@ -128,6 +128,10 @@ export function EditMessageScreen({
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
+  // Mobile: lock the parent horizontal scroller while long-press dragging fields
+  const [isCanvasScrollLocked, setIsCanvasScrollLocked] = useState(false);
+  const canvasScrollerRef = useRef<HTMLDivElement>(null);
+
   // Load message details when component mounts (only once)
   useEffect(() => {
     if (onGetMessageDetails && !initialLoadDone) {
@@ -148,6 +152,18 @@ export function EditMessageScreen({
     }
   }, [messageName, onGetMessageDetails, initialLoadDone]);
 
+  // Prevent the overflow-x container from taking over horizontal swipes while dragging
+  useEffect(() => {
+    const el = canvasScrollerRef.current;
+    if (!el) return;
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (isCanvasScrollLocked) e.preventDefault();
+    };
+
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => el.removeEventListener('touchmove', onTouchMove);
+  }, [isCanvasScrollLocked]);
 
   const selectedField = message.fields.find((f) => f.id === selectedFieldId);
 
@@ -413,7 +429,11 @@ export function EditMessageScreen({
           )}
 
           {/* Message Canvas - horizontal scroll on mobile */}
-          <div className="mb-2 md:mb-4 overflow-x-auto overflow-y-hidden -mx-2 px-2 md:mx-0 md:px-0 pb-2">
+          <div
+            ref={canvasScrollerRef}
+            className={`mb-2 md:mb-4 overflow-y-hidden -mx-2 px-2 md:mx-0 md:px-0 pb-2 ${isCanvasScrollLocked ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
+            style={isCanvasScrollLocked ? { overscrollBehaviorX: 'none' } : undefined}
+          >
             <div className="min-w-max" style={{ minWidth: `${Math.max(500, message.width * 8 + 100)}px` }}>
               <MessageCanvas
                 templateHeight={message.height}
@@ -435,6 +455,7 @@ export function EditMessageScreen({
                   lines: currentMultilineTemplate.lines,
                   dotsPerLine: currentMultilineTemplate.dotsPerLine,
                 } : null}
+                onScrollLockChange={setIsCanvasScrollLocked}
               />
               <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click a field to edit text inline</p>
             </div>
