@@ -762,7 +762,22 @@ class PrinterEmulator {
     return this.formatSuccess();
   }
 
-  private cmdChangeCounter(_cmd: string): string {
+  private cmdChangeCounter(cmd: string): string {
+    // ^CC C;V - Set counter C to value V
+    // Counter IDs: 0 = Print, 1-4 = Custom, 6 = Product
+    const match = cmd.match(/\^CC\s*(\d+);(\d+)/);
+    if (match) {
+      const counterId = parseInt(match[1], 10);
+      const value = parseInt(match[2], 10);
+      
+      if (counterId === 0) {
+        this.state.printCount = value;
+      } else if (counterId === 6) {
+        this.state.productCount = value;
+      } else if (counterId >= 1 && counterId <= 4) {
+        this.state.customCounters[counterId - 1] = value;
+      }
+    }
     return this.formatSuccess();
   }
 
