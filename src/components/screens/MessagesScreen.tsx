@@ -100,9 +100,9 @@ export function MessagesScreen({
               }`}
             >
               <div className="w-10 flex justify-center">
-                {currentMessageName === message.name && (
+                {currentMessageName === message.name ? (
                   <PrinterIcon className="w-5 h-5 text-primary" />
-                )}
+                ) : null}
               </div>
               <span className="w-12 text-primary font-medium">{message.id}</span>
               <span className="flex-1 text-center text-lg">{message.name}</span>

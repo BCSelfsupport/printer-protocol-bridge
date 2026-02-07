@@ -31,8 +31,8 @@ const mockStatus: PrinterStatus = {
   isRunning: false,
   productCount: 8,
   printCount: 0,
-  currentMessage: 'BC-GEN2',
-  errorMessage: 'Message name can not be loaded',
+  currentMessage: 'BESTCODE',  // Match first mockMessage name
+  errorMessage: null,
   printerVersion: 'v01.09.00.14',
   printerTime: new Date(),
   inkLevel: 'FULL',
@@ -238,9 +238,10 @@ export function usePrinterConnection() {
       return {
         ...prev,
         // Update isRunning and consumable levels based on ^SU response
+        // IMPORTANT: Preserve currentMessage - it's only updated by selectMessage
         status: prev.status 
           ? { ...prev.status, isRunning: hvOn, inkLevel, makeupLevel } 
-          : { ...mockStatus, isRunning: hvOn, inkLevel, makeupLevel },
+          : { ...mockStatus, isRunning: hvOn, inkLevel, makeupLevel, currentMessage: prev.status?.currentMessage ?? mockStatus.currentMessage },
         metrics: {
           ...previous,
           modulation: parsed.modulation ?? previous.modulation,
