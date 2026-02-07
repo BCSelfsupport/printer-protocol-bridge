@@ -248,12 +248,14 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* Message preview area - Dot matrix style print preview */}
-      <MessagePreviewCanvas 
-        message={status?.currentMessage}
-        printerTime={status?.printerTime}
-        messageContent={messageContent}
-      />
+      {/* Message preview area - horizontal scroll on mobile */}
+      <div className="flex-1 overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0 min-h-0">
+        <MessagePreviewCanvas 
+          message={status?.currentMessage}
+          printerTime={status?.printerTime}
+          messageContent={messageContent}
+        />
+      </div>
     </div>
   </div>
   );
@@ -266,8 +268,10 @@ interface MessagePreviewCanvasProps {
   messageContent?: MessageDetails;
 }
 
-const DOT_SIZE = 4; // Pixels per dot
+const DOT_SIZE_MOBILE = 3; // Smaller dots on mobile
+const DOT_SIZE_DESKTOP = 4; // Pixels per dot on desktop
 const TOTAL_ROWS = 32; // Total printable height in dots
+const MIN_CANVAS_WIDTH = 400; // Minimum width to prevent text wrapping
 
 function MessagePreviewCanvas({ message, printerTime, messageContent }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -281,8 +285,13 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // Set canvas size - full width, 32 dots high
-    const width = container.clientWidth;
+    // Use smaller dots on mobile (window width < 768)
+    const isMobile = window.innerWidth < 768;
+    const DOT_SIZE = isMobile ? DOT_SIZE_MOBILE : DOT_SIZE_DESKTOP;
+    
+    // Set canvas size - use container width but enforce minimum
+    const containerWidth = container.clientWidth;
+    const width = Math.max(containerWidth, MIN_CANVAS_WIDTH);
     const height = TOTAL_ROWS * DOT_SIZE;
     canvas.width = width;
     canvas.height = height;
@@ -358,9 +367,17 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     }
   }, [message, printerTime, messageContent]);
   
+  // Calculate height based on mobile detection
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const canvasHeight = TOTAL_ROWS * (isMobile ? DOT_SIZE_MOBILE : DOT_SIZE_DESKTOP);
+  
   return (
-    <div ref={containerRef} className="flex-1 bg-white rounded-lg overflow-hidden border-2 border-muted" style={{ minHeight: TOTAL_ROWS * DOT_SIZE }}>
-      <canvas ref={canvasRef} className="w-full" style={{ height: TOTAL_ROWS * DOT_SIZE }} />
+    <div 
+      ref={containerRef} 
+      className="bg-white rounded-lg overflow-hidden border-2 border-muted flex-shrink-0"
+      style={{ minWidth: MIN_CANVAS_WIDTH, height: canvasHeight }}
+    >
+      <canvas ref={canvasRef} style={{ width: '100%', height: canvasHeight }} />
     </div>
   );
 }
