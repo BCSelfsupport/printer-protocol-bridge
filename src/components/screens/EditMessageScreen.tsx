@@ -418,16 +418,6 @@ export function EditMessageScreen({
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                      <Label htmlFor="fieldData">Data / Content</Label>
-                      <Input
-                        id="fieldData"
-                        value={selectedField.data}
-                        onChange={(e) => handleFieldDataChange(e.target.value)}
-                        placeholder="Enter field text..."
-                        className="mt-1 font-mono"
-                      />
-                    </div>
                     
                     <div>
                       <Label htmlFor="fieldType">Type</Label>
