@@ -110,30 +110,29 @@ export function renderCharBitmap(
   const baseHeight = 7; // base pattern height
   const baseWidth = 5;  // base pattern width
   
-  // Calculate scaling to match font height
-  const scaleY = font.height / baseHeight;
-  const scaleX = font.charWidth / baseWidth;
-  
   // Draw scaled dots (use cumulative rounding so total height/width matches exactly)
+  // Use floor/ceil bounds to avoid ever “dropping” the last pixel row/col due to rounding.
   const cellH = (font.height / baseHeight) * dotSize;
   const cellW = (font.charWidth / baseWidth) * dotSize;
 
   for (let row = 0; row < baseHeight; row++) {
-    const rowStart = Math.round(y + row * cellH);
-    const rowEnd = Math.round(y + (row + 1) * cellH);
+    const rowStart = Math.floor(y + row * cellH);
+    const rowEnd = Math.ceil(y + (row + 1) * cellH);
     const dotH = Math.max(1, rowEnd - rowStart);
 
     for (let col = 0; col < baseWidth; col++) {
       if (pattern[row]?.[col] === 1) {
-        const colStart = Math.round(x + col * cellW);
-        const colEnd = Math.round(x + (col + 1) * cellW);
+        const colStart = Math.floor(x + col * cellW);
+        const colEnd = Math.ceil(x + (col + 1) * cellW);
         const dotW = Math.max(1, colEnd - colStart);
 
         ctx.fillRect(colStart, rowStart, dotW, dotH);
       }
     }
   }
-  
+
+  // Return the width consumed (for next character positioning)
+  return font.charWidth * dotSize;
   // Return the width consumed (for next character positioning)
   return font.charWidth * dotSize;
 }
