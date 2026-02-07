@@ -139,7 +139,13 @@ const Index = () => {
         return (
           <MessagesScreen
             messages={connectionState.messages}
-            onSelect={selectMessage}
+            onSelect={async (message) => {
+              const success = await selectMessage(message);
+              if (success) {
+                setCurrentScreen('control');
+              }
+              return success;
+            }}
             onEdit={(message) => {
               setEditingMessage(message);
               setCurrentScreen('editMessage');
@@ -152,7 +158,7 @@ const Index = () => {
               // TODO: Delete message with ^DM command
               console.log('Delete message:', message.name);
             }}
-            onHome={handleHome}
+            onHome={() => setCurrentScreen('control')}
           />
         );
       case 'adjust':

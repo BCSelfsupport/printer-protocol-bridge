@@ -687,12 +687,62 @@ export function usePrinterConnection() {
     }));
   }, []);
 
-  const selectMessage = useCallback(async (message: PrintMessage) => {
-    setConnectionState(prev => ({
-      ...prev,
-      status: prev.status ? { ...prev.status, currentMessage: message.name } : null,
-    }));
-  }, []);
+  const selectMessage = useCallback(async (message: PrintMessage): Promise<boolean> => {
+    console.log('[selectMessage] Called, message:', message.name, 'isConnected:', connectionState.isConnected);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[selectMessage] Not connected, updating local state only');
+      setConnectionState(prev => ({
+        ...prev,
+        status: prev.status ? { ...prev.status, currentMessage: message.name } : null,
+      }));
+      return true;
+    }
+    
+    const printer = connectionState.connectedPrinter;
+    
+    if (shouldUseEmulator()) {
+      // Use emulator
+      console.log('[selectMessage] Using emulator');
+      const result = printerEmulator.processCommand(`^SM ${message.name}`);
+      console.log('[selectMessage] Emulator result:', result);
+      
+      if (result.success) {
+        const state = printerEmulator.getState();
+        setConnectionState(prev => ({
+          ...prev,
+          status: prev.status ? { ...prev.status, currentMessage: state.currentMessage } : null,
+        }));
+        return true;
+      }
+      return false;
+    } else if (isElectron && window.electronAPI) {
+      try {
+        console.log('[selectMessage] Sending ^SM command:', message.name);
+        const result = await window.electronAPI.printer.sendCommand(printer.id, `^SM ${message.name}`);
+        console.log('[selectMessage] Result:', JSON.stringify(result));
+        
+        if (result?.success) {
+          setConnectionState(prev => ({
+            ...prev,
+            status: prev.status ? { ...prev.status, currentMessage: message.name } : null,
+          }));
+          return true;
+        }
+        return false;
+      } catch (e) {
+        console.error('[selectMessage] Failed to send ^SM command:', e);
+        return false;
+      }
+    } else {
+      // Web preview mock
+      console.log('[selectMessage] Web preview mock');
+      setConnectionState(prev => ({
+        ...prev,
+        status: prev.status ? { ...prev.status, currentMessage: message.name } : null,
+      }));
+      return true;
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
   // Printer sign-in: send ^LG password command
   const signIn = useCallback(async (password: string): Promise<boolean> => {

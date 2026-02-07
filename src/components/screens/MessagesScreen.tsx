@@ -5,7 +5,7 @@ import { SubPageHeader } from '@/components/layout/SubPageHeader';
 
 interface MessagesScreenProps {
   messages: PrintMessage[];
-  onSelect: (message: PrintMessage) => void;
+  onSelect: (message: PrintMessage) => Promise<boolean>;
   onEdit: (message: PrintMessage) => void;
   onNew: () => void;
   onDelete: (message: PrintMessage) => void;
@@ -21,6 +21,7 @@ export function MessagesScreen({
   onHome 
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
 
   const handleMessageClick = (message: PrintMessage) => {
     // If already selected, open edit
@@ -28,6 +29,21 @@ export function MessagesScreen({
       onEdit(message);
     } else {
       setSelectedMessage(message);
+    }
+  };
+
+  const handleSelectMessage = async () => {
+    if (!selectedMessage || isSelecting) return;
+    
+    setIsSelecting(true);
+    try {
+      const success = await onSelect(selectedMessage);
+      if (success) {
+        // Navigate to home screen after successful selection
+        onHome();
+      }
+    } finally {
+      setIsSelecting(false);
     }
   };
 
@@ -62,12 +78,12 @@ export function MessagesScreen({
       {/* Action buttons */}
       <div className="flex gap-4 justify-center">
         <button
-          onClick={() => selectedMessage && onSelect(selectedMessage)}
-          disabled={!selectedMessage}
+          onClick={handleSelectMessage}
+          disabled={!selectedMessage || isSelecting}
           className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
         >
           <Check className="w-8 h-8 mb-1" />
-          <span className="font-medium">Select</span>
+          <span className="font-medium">{isSelecting ? 'Selecting...' : 'Select'}</span>
         </button>
 
         <button 
