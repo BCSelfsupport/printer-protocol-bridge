@@ -373,53 +373,6 @@ export function EditMessageScreen({
             </div>
           </div>
 
-          {/* Fields editor */}
-          <div className="bg-card rounded-lg p-4 mb-4 flex-1 min-h-0 overflow-auto">
-            <div className="grid grid-cols-3 gap-4">
-              {/* Field list */}
-              <div className="border rounded-lg overflow-hidden">
-                <div className="bg-muted px-3 py-2 font-medium text-sm">
-                  Fields ({message.fields.length})
-                </div>
-                {message.fields.map((field) => (
-                  <div
-                    key={field.id}
-                    onClick={() => setSelectedFieldId(field.id)}
-                    className={`p-3 border-b cursor-pointer hover:bg-muted/50 ${
-                      selectedFieldId === field.id ? 'bg-primary/10 border-l-4 border-l-primary' : ''
-                    }`}
-                  >
-                    <div className="flex justify-between">
-                      <span className="font-medium">Field {field.id}</span>
-                      <span className="text-muted-foreground text-sm capitalize">
-                        {field.type}
-                      </span>
-                    </div>
-                    <div className="text-sm text-muted-foreground truncate mt-1">
-                      {field.data || '(empty)'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Field editor */}
-              {selectedField && (
-                <div className="border rounded-lg p-4 col-span-2">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="font-medium">Field {selectedField.id}</h4>
-                    <button
-                      onClick={handleDeleteField}
-                      disabled={message.fields.length <= 1}
-                      className="industrial-button-danger text-white px-3 py-1.5 rounded flex items-center gap-1 text-sm disabled:opacity-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Action buttons */}
           <div className="flex gap-4 justify-center">
