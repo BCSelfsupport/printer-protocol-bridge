@@ -725,14 +725,23 @@ class PrinterEmulator {
   }
 
   private cmdNewMessage(cmd: string): string {
-    // Simplified: just add the message name
-    const match = cmd.match(/\^NM\s*\d*;\d*;\d*;\d*;(\w+)/);
-    if (match) {
-      const msgName = match[1].toUpperCase();
-      if (!this.state.messages.includes(msgName)) {
-        this.state.messages.push(msgName);
+    // Support both formats:
+    // ^NM 0;0;0;16;MSGNAME (full format with template params)
+    // ^NM MSGNAME (simple format)
+    let msgName: string | null = null;
+    
+    const fullMatch = cmd.match(/\^NM\s*\d*;\d*;\d*;\d*;(\w+)/);
+    if (fullMatch) {
+      msgName = fullMatch[1].toUpperCase();
+    } else {
+      const simpleMatch = cmd.match(/\^NM\s+(\w+)/);
+      if (simpleMatch) {
+        msgName = simpleMatch[1].toUpperCase();
       }
-      return this.formatSuccess();
+    }
+    
+    if (msgName && !this.state.messages.includes(msgName)) {
+      this.state.messages.push(msgName);
     }
     return this.formatSuccess();
   }
