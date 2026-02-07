@@ -15,6 +15,7 @@ interface DashboardProps {
   onEditMessage: () => void;
   onSignIn: () => void;
   onHelp: () => void;
+  onCounters: () => void;
   onMount?: () => void;
   onUnmount?: () => void;
   // Countdown timer props
@@ -36,6 +37,7 @@ export function Dashboard({
   onEditMessage,
   onSignIn,
   onHelp,
+  onCounters,
   onMount,
   onUnmount,
   countdownSeconds,
@@ -186,10 +188,16 @@ export function Dashboard({
               <span className="text-[10px] md:text-sm whitespace-nowrap">Product:</span>
               <span className="font-bold text-base md:text-2xl">{status?.productCount ?? 0}</span>
             </div>
-            <div className="flex justify-between items-center gap-2">
+            <div className="flex justify-between items-center mb-2 gap-2">
               <span className="text-[10px] md:text-sm whitespace-nowrap">Print:</span>
               <span className="font-bold text-base md:text-2xl">{status?.printCount ?? 0}</span>
             </div>
+            <button
+              onClick={onCounters}
+              className="w-full text-[10px] md:text-xs bg-white/20 hover:bg-white/30 rounded px-2 py-1 transition-colors"
+            >
+              Access
+            </button>
           </div>
 
           {/* Start/Stop buttons */}
