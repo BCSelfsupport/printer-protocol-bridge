@@ -310,7 +310,7 @@ function calculateRequiredWidth(messageContent: MessageDetails | undefined, mess
 }
 
 // Zoom levels to cycle through on each click
-const ZOOM_LEVELS = [1, 1.5, 2, 2.5, 3];
+const ZOOM_LEVELS = [1, 1.5, 2];
 
 function MessagePreviewCanvas({ message, printerTime, messageContent }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
