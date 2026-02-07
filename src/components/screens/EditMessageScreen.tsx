@@ -267,6 +267,14 @@ export function EditMessageScreen({
               fields={message.fields}
               onCanvasClick={handleCanvasClick}
               onFieldMove={handleFieldMove}
+              onFieldDataChange={(fieldId, newData) => {
+                setMessage((prev) => ({
+                  ...prev,
+                  fields: prev.fields.map((f) =>
+                    f.id === fieldId ? { ...f, data: newData } : f
+                  ),
+                }));
+              }}
               onFieldError={handleFieldError}
               selectedFieldId={selectedFieldId}
               multilineTemplate={currentMultilineTemplate ? {
@@ -274,6 +282,7 @@ export function EditMessageScreen({
                 dotsPerLine: currentMultilineTemplate.dotsPerLine,
               } : null}
             />
+            <p className="text-xs text-muted-foreground mt-1">Double-click a field to edit text inline</p>
           </div>
 
           {/* Message properties row */}
