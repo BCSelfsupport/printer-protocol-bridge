@@ -759,6 +759,46 @@ export function MessageCanvas({
     };
   }, [isScrollDragging, maxScroll, visibleCols, width]);
 
+  // Use non-passive touch listener when dragging to allow preventDefault
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    // Only attach when we're in pending or active long press mode
+    if (!isLongPressPending && !isLongPressActive) return;
+    
+    const handleTouchMoveNonPassive = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      
+      // If we're actively dragging, prevent scroll and update position
+      if (isDragging && isLongPressActive && dragFieldId !== null) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
+      // If pending, check movement threshold
+      if (isLongPressPending && touchStartPosRef.current) {
+        const dx = touch.clientX - touchStartPosRef.current.x;
+        const dy = touch.clientY - touchStartPosRef.current.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance <= TOUCH_MOVE_THRESHOLD) {
+          // Still within threshold - prevent scroll
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+    };
+    
+    // Add with { passive: false } to allow preventDefault
+    canvas.addEventListener('touchmove', handleTouchMoveNonPassive, { passive: false });
+    
+    return () => {
+      canvas.removeEventListener('touchmove', handleTouchMoveNonPassive);
+    };
+  }, [isLongPressPending, isLongPressActive, isDragging, dragFieldId]);
+
   return (
     <div className="flex flex-col w-full">
       {/* Hidden input for mobile keyboard - positioned off-screen */}
