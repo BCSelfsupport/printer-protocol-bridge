@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, X, FilePlus, SaveAll } from 'lucide-react';
+import { Save, X, FilePlus, SaveAll, Trash2 } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -539,7 +539,16 @@ export function EditMessageScreen({
               className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
             >
               <FilePlus className="w-8 h-8 mb-1" />
-              <span className="font-medium">New</span>
+              <span className="font-medium">New Field</span>
+            </button>
+
+            <button
+              onClick={handleDeleteField}
+              disabled={!selectedFieldId || message.fields.length <= 1}
+              className="industrial-button-danger text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
+            >
+              <Trash2 className="w-8 h-8 mb-1" />
+              <span className="font-medium">Delete</span>
             </button>
           </div>
 
