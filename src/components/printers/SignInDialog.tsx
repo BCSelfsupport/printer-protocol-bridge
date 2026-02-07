@@ -13,9 +13,11 @@ interface SignInDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSignIn: (password: string) => Promise<boolean>;
+  title?: string;
+  description?: string;
 }
 
-export function SignInDialog({ open, onOpenChange, onSignIn }: SignInDialogProps) {
+export function SignInDialog({ open, onOpenChange, onSignIn, title = "Printer Sign In", description }: SignInDialogProps) {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,8 +56,11 @@ export function SignInDialog({ open, onOpenChange, onSignIn }: SignInDialogProps
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Key className="w-5 h-5" />
-            Printer Sign In
+            {title}
           </DialogTitle>
+          {description && (
+            <p className="text-sm text-muted-foreground">{description}</p>
+          )}
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">

@@ -16,8 +16,7 @@ import { useJetCountdown } from '@/hooks/useJetCountdown';
 import { DevPanel } from '@/components/dev/DevPanel';
 import { PrintMessage } from '@/types/printer';
 
-// Only show dev panel in development mode
-const isDev = import.meta.env.DEV;
+// Dev panel can be shown in dev mode OR when signed in with CITEC password
 
 type ScreenType = NavItem | 'network' | 'control' | 'editMessage';
 
@@ -26,6 +25,8 @@ const Index = () => {
   const [devPanelOpen, setDevPanelOpen] = useState(false);
   const [signInDialogOpen, setSignInDialogOpen] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [isDevSignedIn, setIsDevSignedIn] = useState(false);
+  const [devSignInDialogOpen, setDevSignInDialogOpen] = useState(false);
   const [editingMessage, setEditingMessage] = useState<PrintMessage | null>(null);
   // Store message content (fields) by message name
   const [messageContents, setMessageContents] = useState<Record<string, MessageDetails>>({});
@@ -245,6 +246,9 @@ const Index = () => {
             onHome={handleHome}
             onAddPrinter={addPrinter}
             onRemovePrinter={removePrinter}
+            isDevSignedIn={isDevSignedIn}
+            onDevSignIn={() => setDevSignInDialogOpen(true)}
+            onDevSignOut={() => setIsDevSignedIn(false)}
           />
         );
     }
@@ -277,15 +281,15 @@ const Index = () => {
         <span>{connectionState.status?.printerVersion ?? ''}</span>
       </footer>
 
-      {/* Dev Panel - only in development */}
-      {isDev && (
+      {/* Dev Panel - shown in dev mode OR when signed in with CITEC */}
+      {(import.meta.env.DEV || isDevSignedIn) && (
         <DevPanel 
           isOpen={devPanelOpen} 
           onToggle={() => setDevPanelOpen(!devPanelOpen)} 
         />
       )}
       
-      {/* Sign In Dialog */}
+      {/* Printer Sign In Dialog */}
       <SignInDialog
         open={signInDialogOpen}
         onOpenChange={setSignInDialogOpen}
@@ -296,6 +300,21 @@ const Index = () => {
           }
           return success;
         }}
+      />
+      
+      {/* Dev Portal Sign In Dialog */}
+      <SignInDialog
+        open={devSignInDialogOpen}
+        onOpenChange={setDevSignInDialogOpen}
+        onSignIn={async (password) => {
+          if (password === 'CITEC') {
+            setIsDevSignedIn(true);
+            return true;
+          }
+          return false;
+        }}
+        title="Dev Portal Sign In"
+        description="Enter the developer password to access the Dev Portal"
       />
     </div>
   );
