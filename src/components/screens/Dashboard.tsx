@@ -296,7 +296,8 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     if (!ctx) return;
 
     const width = renderWidth;
-    const height = TOTAL_ROWS * dotSize;
+    // Add 1 CSS pixel safety margin to avoid bottom-edge clipping on some DPR/rounding combos
+    const height = TOTAL_ROWS * dotSize + 1;
 
     // HiDPI: scale backing store to devicePixelRatio while keeping CSS size
     // Use ceil + derive the actual scale factors to avoid clipping on non-integer DPRs (e.g. 2.625)
@@ -391,7 +392,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     ctx.fillText('No message selected', width / 2, height / 2 + 5);
   }, [message, printerTime, messageContent, renderWidth, dotSize]);
 
-  const canvasHeight = TOTAL_ROWS * dotSize;
+  const canvasHeight = TOTAL_ROWS * dotSize + 1;
 
   return (
     <div
