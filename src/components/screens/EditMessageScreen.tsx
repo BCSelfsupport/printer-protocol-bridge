@@ -205,12 +205,44 @@ export function EditMessageScreen({
     return FONT_SIZES.filter(fs => fs.height <= message.height);
   };
 
-  const handleAddField = (fieldType: string) => {
+  // Helper to format time based on format string
+  const formatTimeValue = (format: string): string => {
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const seconds = now.getSeconds().toString().padStart(2, '0');
+    
+    switch (format) {
+      case 'HH:MM:SS': return `${hours}:${minutes}:${seconds}`;
+      case 'HH:MM': return `${hours}:${minutes}`;
+      case 'HH': return hours;
+      case 'MM:SS': return `${minutes}:${seconds}`;
+      case 'MM': return minutes;
+      case 'SS': return seconds;
+      default: return `${hours}:${minutes}:${seconds}`;
+    }
+  };
+
+  const handleAddField = (fieldType: string, format?: string) => {
     const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
+    
+    // Determine field data based on type
+    let fieldData = fieldType === 'text' ? '' : fieldType.toUpperCase();
+    
+    if (fieldType === 'time' && format) {
+      fieldData = formatTimeValue(format);
+    } else if (fieldType === 'program_hour') {
+      fieldData = new Date().getHours().toString().padStart(2, '0');
+    } else if (fieldType === 'program_minute') {
+      fieldData = new Date().getMinutes().toString().padStart(2, '0');
+    } else if (fieldType === 'program_second') {
+      fieldData = new Date().getSeconds().toString().padStart(2, '0');
+    }
+    
     const newField: MessageField = {
       id: newId,
-      type: fieldType as MessageField['type'],
-      data: fieldType === 'text' ? '' : fieldType.toUpperCase(),
+      type: fieldType === 'time' || fieldType.startsWith('program_') ? 'time' : fieldType as MessageField['type'],
+      data: fieldData,
       x: message.fields.length * 50,
       y: 32 - message.height,
       width: 50,
