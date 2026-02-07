@@ -85,14 +85,21 @@ export function usePrinterConnection() {
     if (!availabilityPollingEnabled) return;
     if (isChecking || printers.length === 0) return;
 
-    // Emulator: keep Printer 1 stable "online" and don't let polling override it.
+    // Emulator: keep Printer 1 stable "online" but still reflect consumable/error state.
     if (shouldUseEmulator()) {
       const sim = printerEmulator.getSimulatedPrinter();
       if (sim) {
+        const state = printerEmulator.getState();
+        const hasActiveErrors =
+          state.inkLevel === 'LOW' ||
+          state.inkLevel === 'EMPTY' ||
+          state.makeupLevel === 'LOW' ||
+          state.makeupLevel === 'EMPTY';
+
         updatePrinterStatus(sim.id, {
           isAvailable: true,
           status: sim.status,
-          hasActiveErrors: false,
+          hasActiveErrors,
         });
       }
       return;
