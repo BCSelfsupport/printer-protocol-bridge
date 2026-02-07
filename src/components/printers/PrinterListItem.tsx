@@ -63,17 +63,27 @@ export function PrinterListItem({ printer, isSelected, onSelect }: PrinterListIt
             {printer.ipAddress}:{printer.port}
           </div>
           
-          {/* Current message */}
+          {/* Current message with print count */}
           {printer.currentMessage && (
-            <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
-              <FileText className="w-3.5 h-3.5" />
-              <span className="truncate font-medium">{printer.currentMessage}</span>
+            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5" />
+                <span className="truncate font-medium">{printer.currentMessage}</span>
+              </div>
+              {printer.printCount !== undefined && (
+                <div className="flex items-center gap-1.5" title={`Print Count: ${printer.printCount}`}>
+                  <Hash className="w-3.5 h-3.5 text-primary" />
+                  <span className="font-semibold text-primary">
+                    {printer.printCount.toLocaleString()}
+                  </span>
+                </div>
+              )}
             </div>
           )}
           
-          {/* Fluid levels and print count */}
+          {/* Fluid levels */}
           {printer.isAvailable && (
-            <div className="flex items-center gap-4 mt-2 flex-wrap">
+            <div className="flex items-center gap-4 mt-2">
               <div className="flex items-center gap-1.5" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
                 <Droplets className={`w-4 h-4 ${getFluidColor(printer.inkLevel)}`} />
                 <span className="text-xs text-slate-300 font-medium">INK:</span>
@@ -88,15 +98,6 @@ export function PrinterListItem({ printer, isSelected, onSelect }: PrinterListIt
                   {printer.makeupLevel || '?'}
                 </span>
               </div>
-              {printer.printCount !== undefined && (
-                <div className="flex items-center gap-1.5" title={`Print Count: ${printer.printCount}`}>
-                  <Hash className="w-4 h-4 text-primary" />
-                  <span className="text-xs text-slate-300 font-medium">PRINTS:</span>
-                  <span className="text-xs font-semibold text-primary">
-                    {printer.printCount.toLocaleString()}
-                  </span>
-                </div>
-              )}
             </div>
           )}
         </div>
