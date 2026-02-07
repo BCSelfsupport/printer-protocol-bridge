@@ -27,6 +27,8 @@ const Index = () => {
   const [signInDialogOpen, setSignInDialogOpen] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [editingMessage, setEditingMessage] = useState<PrintMessage | null>(null);
+  // Store message content (fields) by message name
+  const [messageContents, setMessageContents] = useState<Record<string, MessageDetails>>({});
   const {
     printers,
     connectionState,
@@ -130,6 +132,8 @@ const Index = () => {
             messageName={editingMessage.name}
             onSave={async (details: MessageDetails, isNew?: boolean) => {
               console.log('Save message:', details, 'isNew:', isNew);
+              const targetName = isNew ? details.name : editingMessage.name;
+              
               if (isNew) {
                 // Save As - send ^NM command to create new message on printer
                 console.log('Creating new message with name:', details.name);
@@ -146,12 +150,23 @@ const Index = () => {
                 await saveMessageContent(editingMessage.name, details.fields);
                 updateMessage(editingMessage.id, details.name);
               }
+              
+              // Store message content locally for retrieval
+              setMessageContents(prev => ({
+                ...prev,
+                [targetName]: details,
+              }));
+              
               setCurrentScreen('messages');
               setEditingMessage(null);
             }}
             onCancel={() => {
               setCurrentScreen('messages');
               setEditingMessage(null);
+            }}
+            onGetMessageDetails={async (name: string) => {
+              // Return stored message details if available
+              return messageContents[name] || null;
             }}
           />
         ) : null;
