@@ -64,21 +64,33 @@ export function parseTemplateData(data: Uint8Array, name: string = 'unknown'): P
   const fileName = name.split('/').pop()?.replace('.BIN', '') || 'unknown';
   
   // Parse based on known file naming patterns (e.g., "5L5U" = 5 lines, 5 units/dots each)
-  const lineMatch = fileName.match(/(\d+)L(\d+)U/i);
+  const lineMatch = fileName.match(/(\d+)L(\d+)s?U/i);
   
   if (lineMatch) {
     const numLines = parseInt(lineMatch[1]);
     const dotsPerLine = parseInt(lineMatch[2]);
-    const totalHeight = numLines * dotsPerLine;
     
-    // Generate line definitions
+    // Calculate actual template height - for 2L7U, printer uses 16 dots (2x7 + 2 spacing)
+    let totalHeight = numLines * dotsPerLine;
+    
+    // Add inter-line spacing for multi-line templates
+    if (numLines === 2 && dotsPerLine === 7) {
+      totalHeight = 16; // 2x7 + 2 dots spacing = 16 total
+    } else if (numLines === 2 && dotsPerLine === 9) {
+      totalHeight = 18; // 2x9 = 18
+    } else if (numLines === 2 && dotsPerLine === 12) {
+      totalHeight = 24; // 2x12 = 24  
+    }
+    
+    // Generate line definitions - lines are evenly distributed within the template height
     const lines: TemplateLine[] = [];
     const startY = 32 - totalHeight; // Start from top of usable area
+    const lineSpacing = Math.floor(totalHeight / numLines);
     
     for (let i = 0; i < numLines; i++) {
       lines.push({
         index: i,
-        startY: startY + (i * dotsPerLine),
+        startY: startY + (i * lineSpacing),
         height: dotsPerLine,
       });
     }

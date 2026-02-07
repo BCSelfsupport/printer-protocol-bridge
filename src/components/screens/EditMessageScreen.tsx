@@ -68,10 +68,10 @@ const MULTILINE_TEMPLATES = [
   { value: 'multi-3x7', label: '3 lines × 7 dots', height: 21, lines: 3, dotsPerLine: 7, file: '3L7U.BIN' },
   { value: 'multi-2x12', label: '2 lines × 12 dots', height: 24, lines: 2, dotsPerLine: 12, file: '2L12U.BIN' },
   { value: 'multi-2x9', label: '2 lines × 9 dots', height: 18, lines: 2, dotsPerLine: 9, file: '2L9U.BIN' },
-  { value: 'multi-2x7', label: '2 lines × 7 dots', height: 14, lines: 2, dotsPerLine: 7, file: '2L7U.BIN' },
-  { value: 'multi-2x7-2', label: '2 lines × 7 dots (v2)', height: 14, lines: 2, dotsPerLine: 7, file: '2L7U-2.BIN' },
-  { value: 'multi-2x7s', label: '2 lines × 7 dots (narrow)', height: 14, lines: 2, dotsPerLine: 7, file: '2L7sU.BIN' },
-  { value: 'multi-2x7s-2', label: '2 lines × 7 dots narrow (v2)', height: 14, lines: 2, dotsPerLine: 7, file: '2L7sU-2.BIN' },
+  { value: 'multi-2x7', label: '2 lines × 7 dots', height: 16, lines: 2, dotsPerLine: 7, file: '2L7U.BIN' },  // 2x7=14 + 2 spacing = 16
+  { value: 'multi-2x7-2', label: '2 lines × 7 dots (v2)', height: 16, lines: 2, dotsPerLine: 7, file: '2L7U-2.BIN' },
+  { value: 'multi-2x7s', label: '2 lines × 7 dots (narrow)', height: 16, lines: 2, dotsPerLine: 7, file: '2L7sU.BIN' },
+  { value: 'multi-2x7s-2', label: '2 lines × 7 dots narrow (v2)', height: 16, lines: 2, dotsPerLine: 7, file: '2L7sU-2.BIN' },
   { value: 'multi-2x5', label: '2 lines × 5 dots', height: 10, lines: 2, dotsPerLine: 5, file: '2L5U.BIN' },
 ] as const;
 
