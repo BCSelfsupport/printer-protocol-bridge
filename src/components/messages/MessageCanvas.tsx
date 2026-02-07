@@ -767,15 +767,29 @@ export function MessageCanvas({
     // Only attach when we're in pending or active long press mode
     if (!isLongPressPending && !isLongPressActive) return;
     
+    const getTouchPos = (touch: Touch) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor((touch.clientX - rect.left) / DOT_SIZE) + scrollX;
+      const y = Math.floor((touch.clientY - rect.top) / DOT_SIZE);
+      return { x, y };
+    };
+    
+    const getLineForYLocal = (y: number): { lineIndex: number; lineY: number; lineHeight: number } | null => {
+      if (!multilineTemplate) return null;
+      const { lines, dotsPerLine } = multilineTemplate;
+      const startY = blockedRows;
+      for (let i = 0; i < lines; i++) {
+        const lineY = startY + i * dotsPerLine;
+        if (y >= lineY && y < lineY + dotsPerLine) {
+          return { lineIndex: i, lineY, lineHeight: dotsPerLine };
+        }
+      }
+      return null;
+    };
+    
     const handleTouchMoveNonPassive = (e: TouchEvent) => {
       const touch = e.touches[0];
       if (!touch) return;
-      
-      // If we're actively dragging, prevent scroll and update position
-      if (isDragging && isLongPressActive && dragFieldId !== null) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
       
       // If pending, check movement threshold
       if (isLongPressPending && touchStartPosRef.current) {
@@ -786,8 +800,42 @@ export function MessageCanvas({
         if (distance <= TOUCH_MOVE_THRESHOLD) {
           // Still within threshold - prevent scroll
           e.preventDefault();
-          e.stopPropagation();
+        } else {
+          // Moved too far - cancel long press
+          if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+          }
         }
+        return;
+      }
+      
+      // If we're actively dragging, prevent scroll and update position
+      if (isDragging && isLongPressActive && dragFieldId !== null) {
+        e.preventDefault();
+        
+        const draggedField = fields.find(f => f.id === dragFieldId);
+        if (!draggedField) return;
+        
+        const fontInfo = getFontInfo(draggedField.fontSize);
+        const pos = getTouchPos(touch);
+        let newX = pos.x - dragOffset.x;
+        let newY = pos.y - dragOffset.y;
+        
+        // Clamp to valid area
+        newX = Math.max(0, newX);
+        newY = Math.max(blockedRows, newY);
+        newY = Math.min(TOTAL_ROWS - fontInfo.height, newY);
+        
+        // Snap to line if multiline template
+        if (multilineTemplate) {
+          const lineInfo = getLineForYLocal(newY);
+          if (lineInfo) {
+            newY = lineInfo.lineY;
+          }
+        }
+        
+        setDragPosition({ x: newX, y: newY });
       }
     };
     
@@ -797,7 +845,7 @@ export function MessageCanvas({
     return () => {
       canvas.removeEventListener('touchmove', handleTouchMoveNonPassive);
     };
-  }, [isLongPressPending, isLongPressActive, isDragging, dragFieldId]);
+  }, [isLongPressPending, isLongPressActive, isDragging, dragFieldId, fields, dragOffset, blockedRows, multilineTemplate, scrollX]);
 
   return (
     <div className="flex flex-col w-full">
