@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil } from 'lucide-react';
 import { Wifi } from 'lucide-react';
 import { PrinterStatus } from '@/types/printer';
+import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
 
 interface DashboardProps {
   status: PrinterStatus | null;
@@ -247,41 +248,103 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* Message preview area - HMI style print preview */}
-      <div className="flex-1 bg-white rounded-lg p-6 flex items-center justify-center min-h-[120px] border-2 border-muted">
-        {status?.currentMessage ? (
-          <div className="flex items-baseline gap-6 font-mono">
-            {/* Main message text - large dot-matrix style */}
-            <span 
-              className="text-5xl font-bold tracking-wide text-foreground"
-              style={{ fontFamily: "'Courier New', Courier, monospace", letterSpacing: '0.05em' }}
-            >
-              {status.currentMessage}
-            </span>
-            {/* Time and date - stacked on the right */}
-            <div className="flex flex-col items-end text-foreground" style={{ fontFamily: "'Courier New', Courier, monospace" }}>
-              <span className="text-2xl font-bold tracking-wider">
-                {(status.printerTime ?? new Date()).toLocaleTimeString('en-US', { 
-                  hour: '2-digit', 
-                  minute: '2-digit', 
-                  second: '2-digit', 
-                  hour12: false 
-                })}
-              </span>
-              <span className="text-xl tracking-wider">
-                {(status.printerTime ?? new Date()).toLocaleDateString('en-US', { 
-                  month: '2-digit', 
-                  day: '2-digit', 
-                  year: '2-digit' 
-                }).replace(/\//g, '/')}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <span className="text-muted-foreground text-lg">No message selected</span>
-        )}
-      </div>
+      {/* Message preview area - Dot matrix style print preview */}
+      <MessagePreviewCanvas 
+        message={status?.currentMessage}
+        printerTime={status?.printerTime}
+      />
     </div>
   </div>
+  );
+}
+
+// Dot matrix message preview component
+interface MessagePreviewCanvasProps {
+  message?: string;
+  printerTime?: Date;
+}
+
+function MessagePreviewCanvas({ message, printerTime }: MessagePreviewCanvasProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Set canvas size
+    const width = container.clientWidth;
+    const height = 120;
+    canvas.width = width;
+    canvas.height = height;
+    
+    // Draw background - cream/beige like the message editor
+    ctx.fillStyle = '#f5e6c8';
+    ctx.fillRect(0, 0, width, height);
+    
+    // Draw grid
+    const dotSize = 4;
+    ctx.strokeStyle = '#d4c4a8';
+    ctx.lineWidth = 0.5;
+    
+    for (let x = 0; x <= width; x += dotSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= height; y += dotSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+    
+    if (message) {
+      // Render the message text using dot matrix font
+      ctx.fillStyle = '#1a1a1a';
+      const fontName = 'Standard16High';
+      const fontInfo = getFontInfo(fontName);
+      
+      // Center the message vertically
+      const textY = Math.floor((height - fontInfo.height * dotSize) / 2);
+      const padding = 20;
+      
+      renderText(ctx, message, padding, textY, fontName, dotSize);
+      
+      // Render time and date on the right
+      const time = printerTime ?? new Date();
+      const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      const dateStr = time.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
+      
+      // Calculate position for time/date (right side)
+      const smallFontName = 'Standard9High';
+      const smallFontInfo = getFontInfo(smallFontName);
+      const timeWidth = timeStr.length * (smallFontInfo.charWidth + 1) * dotSize;
+      const timeX = width - timeWidth - padding;
+      
+      // Render time above date
+      const timeY = Math.floor(height / 2 - smallFontInfo.height * dotSize - 2);
+      const dateY = Math.floor(height / 2 + 2);
+      
+      renderText(ctx, timeStr, timeX, timeY, smallFontName, dotSize);
+      renderText(ctx, dateStr, timeX, dateY, smallFontName, dotSize);
+    } else {
+      // No message - show placeholder
+      ctx.fillStyle = '#888';
+      ctx.font = '16px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('No message selected', width / 2, height / 2 + 5);
+    }
+  }, [message, printerTime]);
+  
+  return (
+    <div ref={containerRef} className="flex-1 bg-white rounded-lg overflow-hidden min-h-[120px] border-2 border-muted">
+      <canvas ref={canvasRef} className="w-full h-full" />
+    </div>
   );
 }
