@@ -16,7 +16,7 @@ export function SubPageHeader({ title, onHome, rightContent }: SubPageHeaderProp
         <Home className="w-8 h-8" />
       </button>
       
-      <h1 className="text-4xl font-normal text-foreground">{title}</h1>
+      <h1 className="text-lg md:text-4xl font-normal text-foreground truncate max-w-[180px] md:max-w-none">{title}</h1>
       
       <div className="min-w-[100px] flex justify-end">
         {rightContent}
