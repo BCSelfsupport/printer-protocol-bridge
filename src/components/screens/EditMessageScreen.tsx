@@ -1,15 +1,31 @@
 import { useState, useEffect } from 'react';
-import { Save, X, Plus, Trash2 } from 'lucide-react';
+import { Save, X, Plus, Trash2, FileText, Hash, User, Square, Barcode, Image } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageCanvas } from '@/components/messages/MessageCanvas';
 import { loadTemplate, templateToMultilineConfig, type ParsedTemplate } from '@/lib/templateParser';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+// Field type options matching the printer's New Field menu
+const FIELD_TYPES = [
+  { value: 'text', label: 'Text Field', icon: FileText },
+  { value: 'counter', label: 'AutoCode Field', icon: Hash },
+  { value: 'userdefine', label: 'User Define', icon: User },
+  { value: 'block', label: 'Block Field', icon: Square },
+  { value: 'barcode', label: 'Barcode Field', icon: Barcode },
+  { value: 'logo', label: 'Graphic Field', icon: Image },
+] as const;
 
 export interface MessageField {
   id: number;
-  type: 'text' | 'date' | 'time' | 'counter' | 'logo';
+  type: 'text' | 'date' | 'time' | 'counter' | 'logo' | 'userdefine' | 'block' | 'barcode';
   data: string;
   x: number;
   y: number;
@@ -188,12 +204,12 @@ export function EditMessageScreen({
     return FONT_SIZES.filter(fs => fs.height <= message.height);
   };
 
-  const handleAddField = () => {
+  const handleAddField = (fieldType: string) => {
     const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
     const newField: MessageField = {
       id: newId,
-      type: 'text',
-      data: '',
+      type: fieldType as MessageField['type'],
+      data: fieldType === 'text' ? '' : fieldType.toUpperCase(),
       x: message.fields.length * 50,
       y: 32 - message.height,
       width: 50,
@@ -362,13 +378,26 @@ export function EditMessageScreen({
                 />
               </div>
               <div className="flex items-end gap-2">
-                <button
-                  onClick={handleAddField}
-                  className="industrial-button text-white px-4 py-2 rounded flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Field
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="industrial-button text-white px-4 py-2 rounded flex items-center gap-2">
+                      <Plus className="w-4 h-4" />
+                      New
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    {FIELD_TYPES.map((fieldType) => (
+                      <DropdownMenuItem
+                        key={fieldType.value}
+                        onClick={() => handleAddField(fieldType.value)}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <fieldType.icon className="w-4 h-4" />
+                        {fieldType.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </div>
