@@ -30,78 +30,27 @@ export function usePrinterStorage() {
     return getDefaultPrinters();
   });
 
+  // Helper to determine if there are active errors based on fluid levels
+  const hasErrors = useCallback((state: { inkLevel: string; makeupLevel: string }) => {
+    return state.inkLevel === 'LOW' || state.inkLevel === 'EMPTY' || 
+           state.makeupLevel === 'LOW' || state.makeupLevel === 'EMPTY';
+  }, []);
+
   // Subscribe to emulator state changes to update simulated printer status
   useEffect(() => {
-    // Helper to determine if there are active errors based on fluid levels
-    const hasErrors = (state: { inkLevel: string; makeupLevel: string }) => {
-      return state.inkLevel === 'LOW' || state.inkLevel === 'EMPTY' || 
-             state.makeupLevel === 'LOW' || state.makeupLevel === 'EMPTY';
-    };
-
-    // When emulator is toggled on/off, update printer 1 availability
-    const unsubEnabled = printerEmulator.subscribeToEnabled((enabled) => {
+    // Update printer 1 from emulator state
+    const updateFromEmulator = () => {
+      if (!printerEmulator.enabled) return;
+      
+      const state = printerEmulator.getState();
+      const simulated = printerEmulator.getSimulatedPrinter();
+      
       setPrinters(prev => prev.map(p => {
         if (p.id === 1) {
-          if (enabled) {
-            const state = printerEmulator.getState();
-            const simulated = printerEmulator.getSimulatedPrinter();
-            return {
-              ...p,
-              isAvailable: true,
-              status: simulated?.status ?? 'not_ready',
-              hasActiveErrors: hasErrors(state),
-              inkLevel: state.inkLevel,
-              makeupLevel: state.makeupLevel,
-              currentMessage: state.currentMessage,
-            };
-          } else {
-            // When emulator is disabled, mark offline (unless actually connected)
-            if (!p.isConnected) {
-              return {
-                ...p,
-                isAvailable: false,
-                status: 'offline',
-                hasActiveErrors: false,
-                inkLevel: undefined,
-                makeupLevel: undefined,
-                currentMessage: undefined,
-              };
-            }
-          }
-        }
-        return p;
-      }));
-    });
-
-    // Also subscribe to emulator state changes (HV on/off, ink/makeup levels) to update status
-    const unsubState = printerEmulator.subscribe((state) => {
-      if (printerEmulator.enabled) {
-        setPrinters(prev => prev.map(p => {
-          if (p.id === 1) {
-            return {
-              ...p,
-              isAvailable: true,
-              status: state.hvOn ? 'ready' : 'not_ready',
-              hasActiveErrors: hasErrors(state),
-              inkLevel: state.inkLevel,
-              makeupLevel: state.makeupLevel,
-              currentMessage: state.currentMessage,
-            };
-          }
-          return p;
-        }));
-      }
-    });
-
-    // Initial check if emulator is already enabled
-    if (printerEmulator.enabled) {
-      setPrinters(prev => prev.map(p => {
-        if (p.id === 1) {
-          const state = printerEmulator.getState();
           return {
             ...p,
             isAvailable: true,
-            status: state.hvOn ? 'ready' : 'not_ready',
+            status: simulated?.status ?? (state.hvOn ? 'ready' : 'not_ready'),
             hasActiveErrors: hasErrors(state),
             inkLevel: state.inkLevel,
             makeupLevel: state.makeupLevel,
@@ -110,13 +59,43 @@ export function usePrinterStorage() {
         }
         return p;
       }));
-    }
+    };
+
+    // When emulator is toggled on/off, update printer 1 availability
+    const unsubEnabled = printerEmulator.subscribeToEnabled((enabled) => {
+      if (enabled) {
+        updateFromEmulator();
+      } else {
+        setPrinters(prev => prev.map(p => {
+          if (p.id === 1 && !p.isConnected) {
+            return {
+              ...p,
+              isAvailable: false,
+              status: 'offline',
+              hasActiveErrors: false,
+              inkLevel: undefined,
+              makeupLevel: undefined,
+              currentMessage: undefined,
+            };
+          }
+          return p;
+        }));
+      }
+    });
+
+    // Subscribe to ALL emulator state changes
+    const unsubState = printerEmulator.subscribe(() => {
+      updateFromEmulator();
+    });
+
+    // Initial sync if emulator is already enabled
+    updateFromEmulator();
 
     return () => {
       unsubEnabled();
       unsubState();
     };
-  }, []);
+  }, [hasErrors]);
 
   // Persist to localStorage whenever printers change
   useEffect(() => {
