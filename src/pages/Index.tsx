@@ -45,6 +45,7 @@ const Index = () => {
     setControlScreenOpen,
     addMessage,
     createMessageOnPrinter,
+    saveMessageContent,
     updateMessage,
     deleteMessage,
   } = usePrinterConnection();
@@ -135,12 +136,14 @@ const Index = () => {
                 const success = await createMessageOnPrinter(details.name);
                 if (!success) {
                   console.error('Failed to create message on printer');
+                } else {
+                  // Now save the field content
+                  await saveMessageContent(details.name, details.fields);
                 }
-                // TODO: Send ^CM, ^CF, ^MD commands for message content
               } else {
-                // Regular save - update existing message
+                // Regular save - update existing message content
                 console.log('Updating existing message:', editingMessage.name);
-                // TODO: Send ^CM, ^CF, ^MD commands to update message content
+                await saveMessageContent(editingMessage.name, details.fields);
                 updateMessage(editingMessage.id, details.name);
               }
               setCurrentScreen('messages');

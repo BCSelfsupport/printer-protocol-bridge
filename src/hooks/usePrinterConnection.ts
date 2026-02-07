@@ -872,6 +872,81 @@ export function usePrinterConnection() {
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter, addMessage]);
 
+  // Save message content (fields) to the printer
+  // Uses ^CF (Change Field) command: ^CF <msg>,<field>,<type>,<x>,<y>,<font>,<data>
+  const saveMessageContent = useCallback(async (
+    messageName: string,
+    fields: Array<{
+      id: number;
+      type: string;
+      data: string;
+      x: number;
+      y: number;
+      fontSize: string;
+    }>
+  ): Promise<boolean> => {
+    console.log('[saveMessageContent] Called with:', messageName, fields);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[saveMessageContent] Not connected');
+      return false;
+    }
+
+    const printer = connectionState.connectedPrinter;
+
+    // Build commands for each field
+    // ^CF message,field_num,type,x,y,font,data
+    const commands: string[] = [];
+    fields.forEach((field, index) => {
+      const fieldNum = index + 1;
+      // Map field type to printer type code
+      const typeCode = field.type === 'text' ? 'TXT' : 
+                       field.type === 'time' ? 'TIM' :
+                       field.type === 'date' ? 'DAT' :
+                       field.type === 'counter' ? 'CNT' :
+                       field.type === 'barcode' ? 'BAR' :
+                       field.type === 'logo' ? 'LOG' :
+                       'TXT';
+      
+      // Font name mapping (strip 'Standard' prefix for protocol)
+      const fontCode = field.fontSize.replace('Standard', '').replace('High', '');
+      
+      commands.push(`^CF ${messageName},${fieldNum},${typeCode},${field.x},${field.y},${fontCode},${field.data}`);
+    });
+
+    console.log('[saveMessageContent] Commands to send:', commands);
+
+    if (shouldUseEmulator()) {
+      console.log('[saveMessageContent] Using emulator');
+      // Process all commands
+      for (const cmd of commands) {
+        const result = printerEmulator.processCommand(cmd);
+        console.log('[saveMessageContent] Emulator result for', cmd, ':', result);
+      }
+      return true;
+    } else if (isElectron && window.electronAPI) {
+      try {
+        // Send all field commands
+        for (const cmd of commands) {
+          console.log('[saveMessageContent] Sending:', cmd);
+          const result = await window.electronAPI.printer.sendCommand(printer.id, cmd);
+          console.log('[saveMessageContent] Result:', JSON.stringify(result));
+          if (!result?.success) {
+            console.error('[saveMessageContent] Command failed:', cmd);
+            return false;
+          }
+        }
+        return true;
+      } catch (e) {
+        console.error('[saveMessageContent] Failed:', e);
+        return false;
+      }
+    } else {
+      // Web preview mock - just log
+      console.log('[saveMessageContent] Web preview mock - commands:', commands);
+      return true;
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter]);
+
   // Update an existing message
   const updateMessage = useCallback((id: number, name: string) => {
     setConnectionState((prev) => ({
@@ -911,6 +986,7 @@ export function usePrinterConnection() {
     markAllNotReady,
     addMessage,
     createMessageOnPrinter,
+    saveMessageContent,
     updateMessage,
     deleteMessage,
   };
