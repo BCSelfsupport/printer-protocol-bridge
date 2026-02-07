@@ -299,14 +299,20 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     const height = TOTAL_ROWS * dotSize;
 
     // HiDPI: scale backing store to devicePixelRatio while keeping CSS size
+    // Use ceil + derive the actual scale factors to avoid clipping on non-integer DPRs (e.g. 2.625)
     const dpr = Math.max(1, window.devicePixelRatio || 1);
-    canvas.width = Math.round(width * dpr);
-    canvas.height = Math.round(height * dpr);
+    const scaledWidth = Math.ceil(width * dpr);
+    const scaledHeight = Math.ceil(height * dpr);
+
+    canvas.width = scaledWidth;
+    canvas.height = scaledHeight;
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
 
-    // Draw in CSS pixel space
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Draw in CSS pixel space using the *actual* scale factors
+    const scaleX = scaledWidth / width;
+    const scaleY = scaledHeight / height;
+    ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
     ctx.imageSmoothingEnabled = false;
 
     // Draw background
