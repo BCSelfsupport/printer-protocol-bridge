@@ -205,19 +205,23 @@ export function Dashboard({
             <button
               onClick={onStart}
               disabled={!isConnected || status?.isRunning}
-              className="industrial-button-success text-white px-3 md:px-8 py-2 md:py-4 rounded-lg flex items-center justify-center gap-1 md:gap-2 disabled:opacity-50"
+              className={`industrial-button-success text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all ${
+                showCountdown && countdownType === 'starting' ? 'animate-pulse ring-4 ring-green-300/50' : ''
+              }`}
             >
-              <Play className="w-5 h-5 md:w-10 md:h-10" />
-              <span className="text-sm md:text-xl font-medium">Start</span>
+              <Play className="w-6 h-6 md:w-12 md:h-12" />
+              <span className="text-base md:text-2xl font-medium">Start</span>
             </button>
 
             <button
               onClick={onJetStop}
               disabled={!isConnected || !status?.isRunning}
-              className="industrial-button-danger text-white px-3 md:px-8 py-2 md:py-4 rounded-lg flex items-center justify-center gap-1 md:gap-2 disabled:opacity-50"
+              className={`industrial-button-danger text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all ${
+                showCountdown && countdownType === 'stopping' ? 'animate-pulse ring-4 ring-red-300/50' : ''
+              }`}
             >
-              <Square className="w-4 h-4 md:w-6 md:h-6" />
-              <span className="text-sm md:text-xl font-medium">Stop</span>
+              <Square className="w-5 h-5 md:w-8 md:h-8" />
+              <span className="text-base md:text-2xl font-medium">Stop</span>
             </button>
           </div>
         </div>
