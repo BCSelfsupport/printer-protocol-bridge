@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil } from 'lucide-react';
+import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil, RotateCcw } from 'lucide-react';
 import { Wifi } from 'lucide-react';
 import { PrinterStatus } from '@/types/printer';
 import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
@@ -182,47 +182,51 @@ export function Dashboard({
             </div>
           </div>
 
-          {/* Count panel - moved next to Start/Stop */}
-          <div className="bg-primary text-primary-foreground rounded-lg p-2 md:p-4 min-w-[100px] md:min-w-[140px] flex-shrink-0">
-            <div className="flex justify-between items-center mb-1 md:mb-2 gap-2">
-              <span className="text-[10px] md:text-sm whitespace-nowrap">Product:</span>
-              <span className="font-bold text-base md:text-2xl">{status?.productCount ?? 0}</span>
+          {/* Start/Stop buttons with Count panel */}
+          <div className="flex gap-2 md:ml-auto flex-shrink-0">
+            {/* Count panel */}
+            <div className="bg-primary text-primary-foreground rounded-lg p-2 md:p-4 min-w-[100px] md:min-w-[140px] flex-shrink-0">
+              <div className="flex justify-between items-center mb-1 md:mb-2 gap-2">
+                <span className="text-[10px] md:text-sm whitespace-nowrap">Product:</span>
+                <span className="font-bold text-base md:text-2xl">{status?.productCount ?? 0}</span>
+              </div>
+              <div className="flex justify-between items-center mb-2 gap-2">
+                <span className="text-[10px] md:text-sm whitespace-nowrap">Print:</span>
+                <span className="font-bold text-base md:text-2xl">{status?.printCount ?? 0}</span>
+              </div>
+              <button
+                onClick={onCounters}
+                className="w-full text-[10px] md:text-xs bg-gradient-to-b from-white/30 to-white/10 hover:from-white/40 hover:to-white/20 border border-white/20 rounded-md px-2 py-1.5 transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_1px_2px_rgba(0,0,0,0.2)] active:shadow-[inset_0_1px_3px_rgba(0,0,0,0.2)] flex items-center justify-center gap-1"
+              >
+                <RotateCcw className="w-3 h-3 md:w-4 md:h-4" />
+                <span>Reset</span>
+              </button>
             </div>
-            <div className="flex justify-between items-center mb-2 gap-2">
-              <span className="text-[10px] md:text-sm whitespace-nowrap">Print:</span>
-              <span className="font-bold text-base md:text-2xl">{status?.printCount ?? 0}</span>
+
+            {/* Start/Stop buttons */}
+            <div className="flex gap-2 md:flex-col flex-shrink-0">
+              <button
+                onClick={onStart}
+                disabled={!isConnected || status?.isRunning}
+                className={`industrial-button-success text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all ${
+                  showCountdown && countdownType === 'starting' ? 'animate-pulse ring-4 ring-green-300/50' : ''
+                }`}
+              >
+                <Play className="w-6 h-6 md:w-12 md:h-12" />
+                <span className="text-base md:text-2xl font-medium">Start</span>
+              </button>
+
+              <button
+                onClick={onJetStop}
+                disabled={!isConnected || !status?.isRunning}
+                className={`industrial-button-danger text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all ${
+                  showCountdown && countdownType === 'stopping' ? 'animate-pulse ring-4 ring-red-300/50' : ''
+                }`}
+              >
+                <Square className="w-5 h-5 md:w-8 md:h-8" />
+                <span className="text-base md:text-2xl font-medium">Stop</span>
+              </button>
             </div>
-            <button
-              onClick={onCounters}
-              className="w-full text-[10px] md:text-xs bg-white/20 hover:bg-white/30 rounded px-2 py-1 transition-colors"
-            >
-              Access
-            </button>
-          </div>
-
-          {/* Start/Stop buttons */}
-          <div className="flex gap-2 md:flex-col md:ml-auto flex-shrink-0">
-            <button
-              onClick={onStart}
-              disabled={!isConnected || status?.isRunning}
-              className={`industrial-button-success text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all ${
-                showCountdown && countdownType === 'starting' ? 'animate-pulse ring-4 ring-green-300/50' : ''
-              }`}
-            >
-              <Play className="w-6 h-6 md:w-12 md:h-12" />
-              <span className="text-base md:text-2xl font-medium">Start</span>
-            </button>
-
-            <button
-              onClick={onJetStop}
-              disabled={!isConnected || !status?.isRunning}
-              className={`industrial-button-danger text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all ${
-                showCountdown && countdownType === 'stopping' ? 'animate-pulse ring-4 ring-red-300/50' : ''
-              }`}
-            >
-              <Square className="w-5 h-5 md:w-8 md:h-8" />
-              <span className="text-base md:text-2xl font-medium">Stop</span>
-            </button>
           </div>
         </div>
       </div>
