@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Save, X, FilePlus, SaveAll, Trash2 } from 'lucide-react';
+import { Save, X, FilePlus, SaveAll, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageCanvas } from '@/components/messages/MessageCanvas';
 import { loadTemplate, templateToMultilineConfig, type ParsedTemplate } from '@/lib/templateParser';
 import { NewFieldDialog } from '@/components/messages/NewFieldDialog';
@@ -430,81 +429,114 @@ export function EditMessageScreen({
             <p className="text-xs text-muted-foreground mt-1">Double-click a field to edit text inline</p>
           </div>
 
-          {/* Message properties row */}
+          {/* Message properties - cycling buttons like reference */}
           <div className="bg-card rounded-lg p-4 mb-4">
-            <div className="grid grid-cols-4 gap-4">
-              <div>
-                <Label htmlFor="msgFontSize">Font Size</Label>
-                <Select
-                  value={selectedField?.fontSize || 'Standard16High'}
-                  onValueChange={(value) => {
-                    if (selectedFieldId) {
+            <div className="grid grid-cols-2 gap-4">
+              {/* Font Size cycling button */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-muted rounded-lg px-4 py-3 flex items-center justify-between">
+                  <span className="text-foreground font-medium">
+                    Font Size: {getAllowedFonts().find(f => f.value === (selectedField?.fontSize || 'Standard16High'))?.label || '16 High'}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => {
+                      if (!selectedFieldId) return;
+                      const fonts = getAllowedFonts();
+                      const currentIdx = fonts.findIndex(f => f.value === selectedField?.fontSize);
+                      const nextIdx = (currentIdx + 1) % fonts.length;
                       setMessage((prev) => ({
                         ...prev,
                         fields: prev.fields.map((f) =>
-                          f.id === selectedFieldId
-                            ? { ...f, fontSize: value }
-                            : f
+                          f.id === selectedFieldId ? { ...f, fontSize: fonts[nextIdx].value } : f
                         ),
                       }));
+                    }}
+                    disabled={!selectedFieldId}
+                    className="industrial-button p-2 rounded disabled:opacity-50"
+                  >
+                    <ChevronUp className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!selectedFieldId) return;
+                      const fonts = getAllowedFonts();
+                      const currentIdx = fonts.findIndex(f => f.value === selectedField?.fontSize);
+                      const prevIdx = currentIdx <= 0 ? fonts.length - 1 : currentIdx - 1;
+                      setMessage((prev) => ({
+                        ...prev,
+                        fields: prev.fields.map((f) =>
+                          f.id === selectedFieldId ? { ...f, fontSize: fonts[prevIdx].value } : f
+                        ),
+                      }));
+                    }}
+                    disabled={!selectedFieldId}
+                    className="industrial-button p-2 rounded disabled:opacity-50"
+                  >
+                    <ChevronDown className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Template cycling button */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-muted rounded-lg px-4 py-3 flex items-center justify-between">
+                  <span className="text-foreground font-medium">
+                    Template: {
+                      SINGLE_TEMPLATES.find(t => t.value === getCurrentTemplateValue())?.label ||
+                      MULTILINE_TEMPLATES.find(t => t.value === getCurrentTemplateValue())?.label ||
+                      '16 dots'
                     }
-                  }}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select font size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAllowedFonts().map((fs) => (
-                      <SelectItem key={fs.value} value={fs.value}>
-                        {fs.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => {
+                      const allTemplates = [...SINGLE_TEMPLATES, ...MULTILINE_TEMPLATES];
+                      const currentIdx = allTemplates.findIndex(t => t.value === getCurrentTemplateValue());
+                      const nextIdx = (currentIdx + 1) % allTemplates.length;
+                      handleTemplateChange(allTemplates[nextIdx].value);
+                    }}
+                    className="industrial-button p-2 rounded"
+                  >
+                    <ChevronUp className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      const allTemplates = [...SINGLE_TEMPLATES, ...MULTILINE_TEMPLATES];
+                      const currentIdx = allTemplates.findIndex(t => t.value === getCurrentTemplateValue());
+                      const prevIdx = currentIdx <= 0 ? allTemplates.length - 1 : currentIdx - 1;
+                      handleTemplateChange(allTemplates[prevIdx].value);
+                    }}
+                    className="industrial-button p-2 rounded"
+                  >
+                    <ChevronDown className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="msgTemplate">Template</Label>
-                <Select
-                  value={getCurrentTemplateValue()}
-                  onValueChange={handleTemplateChange}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select template" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="header-single" disabled className="font-semibold text-muted-foreground">
-                      Single Height (Mixed Font)
-                    </SelectItem>
-                    {SINGLE_TEMPLATES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="header-multi" disabled className="font-semibold text-muted-foreground mt-2">
-                      Multi-Line Templates
-                    </SelectItem>
-                    {MULTILINE_TEMPLATES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="msgWidth">Width (dots)</Label>
-                <Input
-                  id="msgWidth"
-                  type="number"
-                  value={message.width}
-                  onChange={(e) =>
-                    setMessage((prev) => ({
-                      ...prev,
-                      width: parseInt(e.target.value) || 135,
-                    }))
-                  }
-                  className="mt-1"
-                />
+
+              {/* Width cycling button */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-muted rounded-lg px-4 py-3 flex items-center justify-between">
+                  <span className="text-foreground font-medium">
+                    Width: {message.width} dots
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => setMessage((prev) => ({ ...prev, width: Math.min(prev.width + 10, 500) }))}
+                    className="industrial-button p-2 rounded"
+                  >
+                    <ChevronUp className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setMessage((prev) => ({ ...prev, width: Math.max(prev.width - 10, 50) }))}
+                    className="industrial-button p-2 rounded"
+                  >
+                    <ChevronDown className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
