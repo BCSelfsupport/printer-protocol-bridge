@@ -32,6 +32,12 @@ export function usePrinterStorage() {
 
   // Subscribe to emulator state changes to update simulated printer status
   useEffect(() => {
+    // Helper to determine if there are active errors based on fluid levels
+    const hasErrors = (state: { inkLevel: string; makeupLevel: string }) => {
+      return state.inkLevel === 'LOW' || state.inkLevel === 'EMPTY' || 
+             state.makeupLevel === 'LOW' || state.makeupLevel === 'EMPTY';
+    };
+
     // When emulator is toggled on/off, update printer 1 availability
     const unsubEnabled = printerEmulator.subscribeToEnabled((enabled) => {
       setPrinters(prev => prev.map(p => {
@@ -43,7 +49,7 @@ export function usePrinterStorage() {
               ...p,
               isAvailable: true,
               status: simulated?.status ?? 'not_ready',
-              hasActiveErrors: false,
+              hasActiveErrors: hasErrors(state),
               inkLevel: state.inkLevel,
               makeupLevel: state.makeupLevel,
               currentMessage: state.currentMessage,
@@ -76,6 +82,7 @@ export function usePrinterStorage() {
               ...p,
               isAvailable: true,
               status: state.hvOn ? 'ready' : 'not_ready',
+              hasActiveErrors: hasErrors(state),
               inkLevel: state.inkLevel,
               makeupLevel: state.makeupLevel,
               currentMessage: state.currentMessage,
@@ -95,7 +102,7 @@ export function usePrinterStorage() {
             ...p,
             isAvailable: true,
             status: state.hvOn ? 'ready' : 'not_ready',
-            hasActiveErrors: false,
+            hasActiveErrors: hasErrors(state),
             inkLevel: state.inkLevel,
             makeupLevel: state.makeupLevel,
             currentMessage: state.currentMessage,
