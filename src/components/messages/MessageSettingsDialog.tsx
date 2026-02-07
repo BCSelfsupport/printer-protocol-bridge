@@ -43,32 +43,32 @@ interface SettingsRowProps {
 
 function SettingsRow({ label, value, onIncrease, onDecrease, showInput = true, showRotate = false }: SettingsRowProps) {
   return (
-    <div className="bg-muted/30 rounded-lg p-3 flex items-center justify-between">
-      <span className="text-primary text-lg font-medium min-w-[160px]">{label}: {value}</span>
-      <div className="flex items-center gap-2">
+    <div className="bg-muted/30 rounded-lg p-3 flex items-center justify-between gap-2">
+      <span className="text-primary text-base font-medium whitespace-nowrap">{label}: {value}</span>
+      <div className="flex items-center gap-1 flex-shrink-0">
         {showInput && (
-          <div className="w-16 h-9 bg-card border rounded" />
+          <div className="w-12 h-8 bg-card border rounded" />
         )}
         {showRotate ? (
           <button 
             onClick={onIncrease}
-            className="industrial-button text-white p-2.5 rounded-lg"
+            className="industrial-button text-white p-2 rounded-lg"
           >
-            <RotateCcw className="w-6 h-6" />
+            <RotateCcw className="w-5 h-5" />
           </button>
         ) : (
           <>
             <button 
               onClick={onDecrease}
-              className="industrial-button text-white p-2.5 rounded-lg"
+              className="industrial-button text-white p-2 rounded-lg"
             >
-              <ChevronDown className="w-6 h-6" />
+              <ChevronDown className="w-5 h-5" />
             </button>
             <button 
               onClick={onIncrease}
-              className="industrial-button text-white p-2.5 rounded-lg"
+              className="industrial-button text-white p-2 rounded-lg"
             >
-              <ChevronUp className="w-6 h-6" />
+              <ChevronUp className="w-5 h-5" />
             </button>
           </>
         )}
@@ -110,11 +110,11 @@ export function MessageSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Message Settings</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-3 py-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 py-4">
           <SettingsRow
             label="Width"
             value={settings.width}
