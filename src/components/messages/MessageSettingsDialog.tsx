@@ -40,9 +40,10 @@ interface SettingsRowProps {
   onDirectInput?: (val: number) => void;
   showInput?: boolean;
   showRotate?: boolean;
+  inputWidth?: string; // Custom width for large values
 }
 
-function SettingsRow({ label, value, onIncrease, onDecrease, onDirectInput, showInput = true, showRotate = false }: SettingsRowProps) {
+function SettingsRow({ label, value, onIncrease, onDecrease, onDirectInput, showInput = true, showRotate = false, inputWidth = 'w-16' }: SettingsRowProps) {
   return (
     <div className="bg-muted/30 rounded-lg p-3 flex items-center justify-between gap-2">
       <span className="text-primary text-base font-medium whitespace-nowrap">{label}: {value}</span>
@@ -50,7 +51,7 @@ function SettingsRow({ label, value, onIncrease, onDecrease, onDirectInput, show
         {showInput && onDirectInput && (
           <input
             type="number"
-            className="w-14 h-8 bg-card border rounded px-2 text-center text-sm"
+            className={`${inputWidth} h-8 bg-card border rounded px-2 text-center text-sm`}
             value={typeof value === 'number' ? value : ''}
             onChange={(e) => {
               const num = parseInt(e.target.value);
@@ -147,6 +148,7 @@ export function MessageSettingsDialog({
             onIncrease={() => onUpdate({ delay: settings.delay + 10 })}
             onDecrease={() => onUpdate({ delay: Math.max(0, settings.delay - 10) })}
             onDirectInput={(val) => onUpdate({ delay: val })}
+            inputWidth="w-24"
           />
           <SettingsRow
             label="Rotation"
