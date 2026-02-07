@@ -413,8 +413,8 @@ export function EditMessageScreen({
           )}
 
           {/* Message Canvas - horizontal scroll on mobile */}
-          <div className="mb-2 md:mb-4 overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
-            <div className="min-w-[400px]">
+          <div className="mb-2 md:mb-4 overflow-x-auto overflow-y-hidden -mx-2 px-2 md:mx-0 md:px-0 pb-2">
+            <div className="min-w-max" style={{ minWidth: `${Math.max(500, message.width * 8 + 100)}px` }}>
               <MessageCanvas
                 templateHeight={message.height}
                 width={message.width}
