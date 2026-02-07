@@ -815,6 +815,34 @@ export function usePrinterConnection() {
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
+  // Add a new message to the list
+  const addMessage = useCallback((name: string) => {
+    setConnectionState((prev) => {
+      const newId = Math.max(0, ...prev.messages.map(m => m.id)) + 1;
+      const newMessage: PrintMessage = { id: newId, name };
+      return {
+        ...prev,
+        messages: [...prev.messages, newMessage],
+      };
+    });
+  }, []);
+
+  // Update an existing message
+  const updateMessage = useCallback((id: number, name: string) => {
+    setConnectionState((prev) => ({
+      ...prev,
+      messages: prev.messages.map(m => m.id === id ? { ...m, name } : m),
+    }));
+  }, []);
+
+  // Delete a message
+  const deleteMessage = useCallback((id: number) => {
+    setConnectionState((prev) => ({
+      ...prev,
+      messages: prev.messages.filter(m => m.id !== id),
+    }));
+  }, []);
+
   return {
     printers,
     connectionState,
@@ -836,5 +864,8 @@ export function usePrinterConnection() {
     setControlScreenOpen,
     setAvailabilityPollingEnabled,
     markAllNotReady,
+    addMessage,
+    updateMessage,
+    deleteMessage,
   };
 }

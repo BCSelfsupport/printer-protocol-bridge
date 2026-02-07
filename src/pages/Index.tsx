@@ -43,6 +43,9 @@ const Index = () => {
     removePrinter,
     setServiceScreenOpen,
     setControlScreenOpen,
+    addMessage,
+    updateMessage,
+    deleteMessage,
   } = usePrinterConnection();
   
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown } = useJetCountdown();
@@ -126,14 +129,14 @@ const Index = () => {
             onSave={(details: MessageDetails, isNew?: boolean) => {
               console.log('Save message:', details, 'isNew:', isNew);
               // TODO: Send ^CM, ^CF, ^MD commands to update/create message
-              // If isNew is true, this is a "Save As" operation - create new message
-              // If isNew is false, this is a regular save - overwrite existing message
               if (isNew) {
+                // Save As - create new message
                 console.log('Creating new message with name:', details.name);
-                // TODO: Add new message to the list
+                addMessage(details.name);
               } else {
+                // Regular save - update existing message
                 console.log('Updating existing message:', editingMessage.name);
-                // TODO: Update the existing message
+                updateMessage(editingMessage.id, details.name);
               }
               setCurrentScreen('messages');
               setEditingMessage(null);
@@ -160,12 +163,17 @@ const Index = () => {
               setCurrentScreen('editMessage');
             }}
             onNew={() => {
-              // TODO: Create new message flow
-              console.log('New message');
+              // Create a new empty message and go to edit
+              const newName = 'NEW_MSG';
+              addMessage(newName);
+              // Find the newly added message (will have highest ID)
+              const newId = Math.max(0, ...connectionState.messages.map(m => m.id)) + 1;
+              setEditingMessage({ id: newId, name: newName });
+              setCurrentScreen('editMessage');
             }}
             onDelete={(message) => {
-              // TODO: Delete message with ^DM command
               console.log('Delete message:', message.name);
+              deleteMessage(message.id);
             }}
             onHome={() => setCurrentScreen('control')}
           />
