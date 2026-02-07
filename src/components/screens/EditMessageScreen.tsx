@@ -8,6 +8,7 @@ import { MessageCanvas } from '@/components/messages/MessageCanvas';
 import { loadTemplate, templateToMultilineConfig, type ParsedTemplate } from '@/lib/templateParser';
 import { NewFieldDialog } from '@/components/messages/NewFieldDialog';
 import { AutoCodeFieldDialog } from '@/components/messages/AutoCodeFieldDialog';
+import { TimeCodesDialog } from '@/components/messages/TimeCodesDialog';
 import {
   Dialog,
   DialogContent,
@@ -118,6 +119,7 @@ export function EditMessageScreen({
   const [saveAsName, setSaveAsName] = useState('');
   const [newFieldDialogOpen, setNewFieldDialogOpen] = useState(false);
   const [autoCodeDialogOpen, setAutoCodeDialogOpen] = useState(false);
+  const [timeCodesDialogOpen, setTimeCodesDialogOpen] = useState(false);
 
   // Load message details when component mounts
   useEffect(() => {
@@ -404,6 +406,15 @@ export function EditMessageScreen({
             onOpenChange={setAutoCodeDialogOpen}
             onBack={() => setNewFieldDialogOpen(true)}
             onSelectType={handleAddField}
+            onOpenTimeCodes={() => setTimeCodesDialogOpen(true)}
+          />
+
+          {/* Time Codes Dialog */}
+          <TimeCodesDialog
+            open={timeCodesDialogOpen}
+            onOpenChange={setTimeCodesDialogOpen}
+            onBack={() => setAutoCodeDialogOpen(true)}
+            onAddField={handleAddField}
           />
 
 
