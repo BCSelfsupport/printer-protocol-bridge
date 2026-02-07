@@ -50,12 +50,8 @@ export function MessagesScreen({
   }, [openNewDialogOnMount, onNewDialogOpened]);
 
   const handleMessageClick = (message: PrintMessage) => {
-    // If already selected, open edit
-    if (selectedMessage?.id === message.id) {
-      onEdit(message);
-    } else {
-      setSelectedMessage(message);
-    }
+    // Single click only highlights/selects the message
+    setSelectedMessage(message);
   };
 
   const handleSelectMessage = async () => {
