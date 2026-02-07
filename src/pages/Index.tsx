@@ -97,6 +97,10 @@ const Index = () => {
           />
         );
       case 'control':
+        // Get the current message content if available
+        const currentMsgName = connectionState.status?.currentMessage;
+        const currentMsgContent = currentMsgName ? messageContents[currentMsgName] : undefined;
+        
         return (
           <Dashboard
             status={connectionState.status}
@@ -124,6 +128,7 @@ const Index = () => {
             onUnmount={() => setControlScreenOpen(false)}
             countdownSeconds={countdownSeconds}
             countdownType={countdownType}
+            messageContent={currentMsgContent}
           />
         );
       case 'editMessage':

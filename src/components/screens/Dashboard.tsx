@@ -3,6 +3,7 @@ import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Squar
 import { Wifi } from 'lucide-react';
 import { PrinterStatus } from '@/types/printer';
 import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
+import { MessageDetails, MessageField } from '@/components/screens/EditMessageScreen';
 
 interface DashboardProps {
   status: PrinterStatus | null;
@@ -21,6 +22,8 @@ interface DashboardProps {
   countdownType?: 'starting' | 'stopping' | null;
   // Sign-in state
   isSignedIn?: boolean;
+  // Message content for preview
+  messageContent?: MessageDetails;
 }
 
 export function Dashboard({
@@ -38,6 +41,7 @@ export function Dashboard({
   countdownSeconds,
   countdownType,
   isSignedIn = false,
+  messageContent,
 }: DashboardProps) {
   // Notify parent when this screen mounts/unmounts for polling control
   useEffect(() => {
@@ -205,16 +209,14 @@ export function Dashboard({
 
       {/* Middle section */}
       <div className="flex gap-4">
-        {/* Error message area */}
+        {/* Message name area */}
         <div className="flex-1 bg-card rounded-lg p-4 min-h-[80px] flex items-center">
-          {status?.errorMessage ? (
-            <div className="text-lg">
-              <div className="font-medium">Message name</div>
-              <div className="text-foreground">{status.errorMessage.split(' ').slice(1).join(' ')}</div>
+          <div className="text-lg">
+            <div className="font-medium">Message name</div>
+            <div className="text-foreground">
+              {status?.currentMessage || 'No message selected'}
             </div>
-          ) : (
-            <div className="text-muted-foreground">No errors</div>
-          )}
+          </div>
         </div>
 
         {/* New/Edit buttons */}
@@ -252,6 +254,7 @@ export function Dashboard({
       <MessagePreviewCanvas 
         message={status?.currentMessage}
         printerTime={status?.printerTime}
+        messageContent={messageContent}
       />
     </div>
   </div>
@@ -262,12 +265,13 @@ export function Dashboard({
 interface MessagePreviewCanvasProps {
   message?: string;
   printerTime?: Date;
+  messageContent?: MessageDetails;
 }
 
 const DOT_SIZE = 4; // Pixels per dot
 const TOTAL_ROWS = 32; // Total printable height in dots
 
-function MessagePreviewCanvas({ message, printerTime }: MessagePreviewCanvasProps) {
+function MessagePreviewCanvas({ message, printerTime, messageContent }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -306,21 +310,32 @@ function MessagePreviewCanvas({ message, printerTime }: MessagePreviewCanvasProp
       ctx.stroke();
     }
     
-    if (message) {
+    // Render message content if available
+    if (messageContent && messageContent.fields.length > 0) {
       ctx.fillStyle = '#1a1a1a';
       
-      // Main message - 16 dot font, positioned at bottom of 32-dot area
+      // Render each field from the message content
+      messageContent.fields.forEach((field) => {
+        const fontName = field.fontSize || 'Standard16High';
+        const x = field.x * DOT_SIZE;
+        const y = field.y * DOT_SIZE;
+        
+        renderText(ctx, field.data, x, y, fontName, DOT_SIZE);
+      });
+    } else if (message) {
+      ctx.fillStyle = '#1a1a1a';
+      
+      // Fallback: show message name if no content available
       const mainFontName = 'Standard16High';
       const mainFontInfo = getFontInfo(mainFontName);
       
       // Position main message: 16 dots high, starts at row 16 (bottom half of 32)
-      const mainY = (32 - mainFontInfo.height) * DOT_SIZE; // Row 16
+      const mainY = (32 - mainFontInfo.height) * DOT_SIZE;
       const padding = 10;
       
       renderText(ctx, message, padding, mainY, mainFontName, DOT_SIZE);
       
       // Time and date on the right - using 7 dot font
-      // Two lines: time on top, date below, with 1 dot spacing between
       const time = printerTime ?? new Date();
       const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
       const dateStr = time.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
@@ -328,15 +343,11 @@ function MessagePreviewCanvas({ message, printerTime }: MessagePreviewCanvasProp
       const smallFontName = 'Standard7High';
       const smallFontInfo = getFontInfo(smallFontName);
       
-      // Calculate width of time/date text
       const timeWidth = timeStr.length * (smallFontInfo.charWidth + 1) * DOT_SIZE;
       const timeX = width - timeWidth - padding;
       
-      // Two 7-dot lines with 1 dot spacing = 15 dots total
-      // Center vertically in the 16-dot message area (rows 16-31)
-      // Time starts at row 16, date at row 24 (7 dots + 1 space = 8)
-      const timeY = 16 * DOT_SIZE; // Row 16
-      const dateY = (16 + smallFontInfo.height + 1) * DOT_SIZE; // Row 24 (7 + 1 spacing)
+      const timeY = 16 * DOT_SIZE;
+      const dateY = (16 + smallFontInfo.height + 1) * DOT_SIZE;
       
       renderText(ctx, timeStr, timeX, timeY, smallFontName, DOT_SIZE);
       renderText(ctx, dateStr, timeX, dateY, smallFontName, DOT_SIZE);
@@ -347,7 +358,7 @@ function MessagePreviewCanvas({ message, printerTime }: MessagePreviewCanvasProp
       ctx.textAlign = 'center';
       ctx.fillText('No message selected', width / 2, height / 2 + 5);
     }
-  }, [message, printerTime]);
+  }, [message, printerTime, messageContent]);
   
   return (
     <div ref={containerRef} className="flex-1 bg-white rounded-lg overflow-hidden border-2 border-muted" style={{ minHeight: TOTAL_ROWS * DOT_SIZE }}>
