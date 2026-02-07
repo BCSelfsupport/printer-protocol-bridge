@@ -122,10 +122,11 @@ export function EditMessageScreen({
   const [autoCodeDialogOpen, setAutoCodeDialogOpen] = useState(false);
   const [timeCodesDialogOpen, setTimeCodesDialogOpen] = useState(false);
   const [dateCodesDialogOpen, setDateCodesDialogOpen] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
-  // Load message details when component mounts
+  // Load message details when component mounts (only once)
   useEffect(() => {
-    if (onGetMessageDetails) {
+    if (onGetMessageDetails && !initialLoadDone) {
       setLoading(true);
       onGetMessageDetails(messageName)
         .then((details) => {
@@ -136,9 +137,12 @@ export function EditMessageScreen({
             }
           }
         })
-        .finally(() => setLoading(false));
+        .finally(() => {
+          setLoading(false);
+          setInitialLoadDone(true);
+        });
     }
-  }, [messageName, onGetMessageDetails]);
+  }, [messageName, onGetMessageDetails, initialLoadDone]);
 
 
   const selectedField = message.fields.find((f) => f.id === selectedFieldId);
