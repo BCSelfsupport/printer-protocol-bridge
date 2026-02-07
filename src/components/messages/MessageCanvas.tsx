@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { renderText, getFontInfo, PRINTER_FONTS } from '@/lib/dotMatrixFonts';
 
@@ -28,6 +28,8 @@ interface MessageCanvasProps {
   onCanvasClick?: (x: number, y: number) => void;
   /** Callback when a field is moved */
   onFieldMove?: (fieldId: number, newX: number, newY: number) => void;
+  /** Callback when field text is changed */
+  onFieldDataChange?: (fieldId: number, newData: string) => void;
   /** Selected field ID */
   selectedFieldId?: number | null;
   /** Multi-line template info (if applicable) */
@@ -45,6 +47,7 @@ export function MessageCanvas({
   fields = [],
   onCanvasClick,
   onFieldMove,
+  onFieldDataChange,
   selectedFieldId,
   multilineTemplate,
   onFieldError,
@@ -63,6 +66,11 @@ export function MessageCanvas({
   
   // Scrollbar drag state
   const [isScrollDragging, setIsScrollDragging] = useState(false);
+  
+  // Inline editing state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingFieldId, setEditingFieldId] = useState<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   // Calculate blocked rows (from top)
   const blockedRows = TOTAL_ROWS - templateHeight;
@@ -255,7 +263,37 @@ export function MessageCanvas({
     return null;
   };
   
+  const startEditing = useCallback((fieldId: number) => {
+    setIsEditing(true);
+    setEditingFieldId(fieldId);
+    // Focus the input after it renders
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, []);
+
+  const stopEditing = useCallback(() => {
+    setIsEditing(false);
+    setEditingFieldId(null);
+  }, []);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (editingFieldId !== null && onFieldDataChange) {
+      onFieldDataChange(editingFieldId, e.target.value);
+    }
+  }, [editingFieldId, onFieldDataChange]);
+
+  const handleInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      stopEditing();
+    }
+  }, [stopEditing]);
+
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // If currently editing, stop editing on click elsewhere
+    if (isEditing) {
+      stopEditing();
+      return;
+    }
+    
     const pos = getMousePosition(e);
     const field = findFieldAtPosition(pos.x, pos.y);
     
@@ -268,6 +306,16 @@ export function MessageCanvas({
       e.preventDefault();
     } else {
       onCanvasClick?.(pos.x, pos.y);
+    }
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const pos = getMousePosition(e);
+    const field = findFieldAtPosition(pos.x, pos.y);
+    
+    if (field) {
+      startEditing(field.id);
+      e.preventDefault();
     }
   };
 
@@ -386,10 +434,27 @@ export function MessageCanvas({
     };
   }, [isScrollDragging, maxScroll, visibleCols, width]);
 
+  // Calculate position for inline input overlay
+  const getEditingFieldPosition = () => {
+    const field = fields.find(f => f.id === editingFieldId);
+    if (!field) return null;
+    
+    const fontInfo = getFontInfo(field.fontSize);
+    const fieldX = (field.x - scrollX) * DOT_SIZE;
+    const fieldY = field.y * DOT_SIZE;
+    const textWidth = Math.max(field.data.length * (fontInfo.charWidth + 1) * DOT_SIZE, 100);
+    const fieldH = fontInfo.height * DOT_SIZE;
+    
+    return { x: fieldX, y: fieldY, width: textWidth, height: fieldH, fontInfo };
+  };
+
+  const editingPosition = isEditing ? getEditingFieldPosition() : null;
+  const editingField = editingFieldId !== null ? fields.find(f => f.id === editingFieldId) : null;
+
   return (
     <div className="flex flex-col w-full">
       {/* Canvas area */}
-      <div ref={containerRef} className="border-2 border-muted rounded-t-lg overflow-hidden w-full">
+      <div ref={containerRef} className="border-2 border-muted rounded-t-lg overflow-hidden w-full relative">
         <canvas
           ref={canvasRef}
           width={canvasWidth}
@@ -398,8 +463,30 @@ export function MessageCanvas({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
+          onDoubleClick={handleDoubleClick}
           className={`w-full ${isDragging ? 'cursor-grabbing' : 'cursor-crosshair'}`}
         />
+        
+        {/* Inline text editing overlay */}
+        {isEditing && editingPosition && editingField && (
+          <input
+            ref={inputRef}
+            type="text"
+            value={editingField.data}
+            onChange={handleInputChange}
+            onKeyDown={handleInputKeyDown}
+            onBlur={stopEditing}
+            className="absolute font-mono bg-yellow-100 border-2 border-yellow-500 outline-none px-1"
+            style={{
+              left: editingPosition.x,
+              top: editingPosition.y,
+              minWidth: editingPosition.width,
+              height: editingPosition.height,
+              fontSize: `${editingPosition.fontInfo.height * 0.7}px`,
+              lineHeight: `${editingPosition.height}px`,
+            }}
+          />
+        )}
       </div>
       
       {/* Scroll bar */}
