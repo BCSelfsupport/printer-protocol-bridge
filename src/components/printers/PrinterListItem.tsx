@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, FlaskConical, FileText, Hash } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, FlaskConical, FileText } from 'lucide-react';
 import { Printer } from '@/types/printer';
 
 interface PrinterListItemProps {
@@ -71,8 +71,8 @@ export function PrinterListItem({ printer, isSelected, onSelect }: PrinterListIt
                 <span className="truncate font-medium">{printer.currentMessage}</span>
               </div>
               {printer.printCount !== undefined && (
-                <div className="flex items-center gap-1.5" title={`Print Count: ${printer.printCount}`}>
-                  <Hash className="w-3.5 h-3.5 text-primary" />
+                <div className="flex items-center gap-1" title={`Print Count: ${printer.printCount}`}>
+                  <span className="text-slate-400">PRINTS:</span>
                   <span className="font-semibold text-primary">
                     {printer.printCount.toLocaleString()}
                   </span>
