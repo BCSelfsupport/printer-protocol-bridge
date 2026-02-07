@@ -195,7 +195,8 @@ const defaultState: EmulatorState = {
   powerHours: 165.0,
   streamHours: 120.5,
   
-  messages: ['BESTCODE', 'BESTCODE-AUTO', 'TEST', 'SAMPLE', 'BC-GEN2'],
+  // Keep this aligned with the UI's mock message list so selections work in emulator mode.
+  messages: ['BESTCODE', 'BESTCODE-AUTO', 'MOBA_00A', 'TEST', 'SAMPLE', 'BC-GEN2'],
   logos: ['ENCODER.BMP', 'highVolt.bmp', 'phaseWave.bmp', 'running_2.bmp', 'USBdrive.bmp'],
   
   errorsOn: false,
