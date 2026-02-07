@@ -298,9 +298,16 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     const width = renderWidth;
     const height = TOTAL_ROWS * dotSize;
 
-    // Set backing store size to match CSS size (prevents scaling artifacts/"overlap")
-    canvas.width = width;
-    canvas.height = height;
+    // HiDPI: scale backing store to devicePixelRatio while keeping CSS size
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    // Draw in CSS pixel space
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
 
     // Draw background
     ctx.fillStyle = '#f5e6c8';
