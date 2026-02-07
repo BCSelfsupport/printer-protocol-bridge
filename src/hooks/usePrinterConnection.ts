@@ -31,6 +31,7 @@ const mockStatus: PrinterStatus = {
   isRunning: false,
   productCount: 8,
   printCount: 0,
+  customCounters: [0, 0, 0, 0], // Custom counters 1-4
   currentMessage: 'BESTCODE',  // Match first mockMessage name
   errorMessage: null,
   printerVersion: 'v01.09.00.14',
@@ -1035,6 +1036,87 @@ export function usePrinterConnection() {
     }
   }, [resetCounter]);
 
+  // Query all counter values using ^CN command
+  const queryCounters = useCallback(async () => {
+    console.log('[queryCounters] Called, isConnected:', connectionState.isConnected);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[queryCounters] Not connected, aborting');
+      return;
+    }
+    
+    const printer = connectionState.connectedPrinter;
+    
+    if (shouldUseEmulator()) {
+      console.log('[queryCounters] Using emulator');
+      const result = printerEmulator.processCommand('^CN');
+      console.log('[queryCounters] Emulator result:', result);
+      
+      if (result.success && result.response) {
+        // Parse response: "Product,Print,Custom1,Custom2,Custom3,Custom4"
+        const parts = result.response.split(',').map(s => parseInt(s.trim(), 10));
+        if (parts.length >= 6) {
+          setConnectionState(prev => ({
+            ...prev,
+            status: prev.status ? {
+              ...prev.status,
+              productCount: parts[0],
+              printCount: parts[1],
+              customCounters: [parts[2], parts[3], parts[4], parts[5]],
+            } : null,
+          }));
+        }
+      }
+    } else if (isElectron && window.electronAPI) {
+      try {
+        console.log('[queryCounters] Sending ^CN');
+        const result = await window.electronAPI.printer.sendCommand(printer.id, '^CN');
+        console.log('[queryCounters] Result:', JSON.stringify(result));
+        
+        if (result?.success && result.response) {
+          // Parse response: could be terse "308,7,10,21,34,45" or verbose
+          const response = result.response;
+          let parts: number[] = [];
+          
+          if (response.includes('Product:')) {
+            // Verbose format: "Product:308, Print:7, Custom1:10, ..."
+            const productMatch = response.match(/Product:(\d+)/);
+            const printMatch = response.match(/Print:(\d+)/);
+            const custom1Match = response.match(/Custom1:(\d+)/);
+            const custom2Match = response.match(/Custom2:(\d+)/);
+            const custom3Match = response.match(/Custom3:(\d+)/);
+            const custom4Match = response.match(/Custom4:(\d+)/);
+            
+            parts = [
+              productMatch ? parseInt(productMatch[1], 10) : 0,
+              printMatch ? parseInt(printMatch[1], 10) : 0,
+              custom1Match ? parseInt(custom1Match[1], 10) : 0,
+              custom2Match ? parseInt(custom2Match[1], 10) : 0,
+              custom3Match ? parseInt(custom3Match[1], 10) : 0,
+              custom4Match ? parseInt(custom4Match[1], 10) : 0,
+            ];
+          } else {
+            // Terse format: "308,7,10,21,34,45"
+            parts = response.split(',').map((s: string) => parseInt(s.trim(), 10));
+          }
+          
+          if (parts.length >= 6) {
+            setConnectionState(prev => ({
+              ...prev,
+              status: prev.status ? {
+                ...prev.status,
+                productCount: parts[0],
+                printCount: parts[1],
+                customCounters: [parts[2], parts[3], parts[4], parts[5]],
+              } : null,
+            }));
+          }
+        }
+      } catch (e) {
+        console.error('[queryCounters] Failed to query counters:', e);
+      }
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter]);
+
   return {
     printers,
     connectionState,
@@ -1063,5 +1145,6 @@ export function usePrinterConnection() {
     deleteMessage,
     resetCounter,
     resetAllCounters,
+    queryCounters,
   };
 }

@@ -59,6 +59,7 @@ const Index = () => {
     deleteMessage,
     resetCounter,
     resetAllCounters,
+    queryCounters,
   } = usePrinterConnection();
   
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown } = useJetCountdown();
@@ -103,6 +104,7 @@ const Index = () => {
             onHome={() => setCurrentScreen('control')}
             onResetCounter={resetCounter}
             onResetAll={resetAllCounters}
+            onMount={queryCounters}
           />
         );
       case 'network':

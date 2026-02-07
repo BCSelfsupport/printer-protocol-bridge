@@ -20,6 +20,7 @@ export interface PrinterStatus {
   isRunning: boolean;
   productCount: number;
   printCount: number;
+  customCounters: number[]; // Custom counters 1-4
   currentMessage: string | null;
   errorMessage: string | null;
   printerVersion: string | null;
