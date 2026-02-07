@@ -51,7 +51,7 @@ function SettingsRow({ label, value, onIncrease, onDecrease, onDirectInput, show
         {showInput && onDirectInput && (
           <input
             type="number"
-            className={`${inputWidth} h-8 bg-card border rounded px-2 text-center text-sm`}
+            className={`${inputWidth} h-8 bg-card border rounded px-2 text-right text-sm`}
             value={typeof value === 'number' ? value : ''}
             onChange={(e) => {
               const num = parseInt(e.target.value);
