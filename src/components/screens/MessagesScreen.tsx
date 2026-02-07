@@ -2,12 +2,22 @@ import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe } from 'luci
 import { PrintMessage } from '@/types/printer';
 import { useState } from 'react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface MessagesScreenProps {
   messages: PrintMessage[];
   onSelect: (message: PrintMessage) => Promise<boolean>;
   onEdit: (message: PrintMessage) => void;
-  onNew: () => void;
+  onNew: (name: string) => void;
   onDelete: (message: PrintMessage) => void;
   onHome: () => void;
 }
@@ -22,6 +32,8 @@ export function MessagesScreen({
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
+  const [newDialogOpen, setNewDialogOpen] = useState(false);
+  const [newMessageName, setNewMessageName] = useState('');
 
   const handleMessageClick = (message: PrintMessage) => {
     // If already selected, open edit
@@ -44,6 +56,14 @@ export function MessagesScreen({
       }
     } finally {
       setIsSelecting(false);
+    }
+  };
+
+  const handleNewMessage = () => {
+    if (newMessageName.trim()) {
+      onNew(newMessageName.trim().toUpperCase());
+      setNewDialogOpen(false);
+      setNewMessageName('');
     }
   };
 
@@ -87,7 +107,10 @@ export function MessagesScreen({
         </button>
 
         <button 
-          onClick={onNew}
+          onClick={() => {
+            setNewMessageName('');
+            setNewDialogOpen(true);
+          }}
           className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
         >
           <Plus className="w-8 h-8 mb-1" />
@@ -117,6 +140,42 @@ export function MessagesScreen({
           <span className="font-medium">Graphics</span>
         </button>
       </div>
+
+      {/* New Message Dialog */}
+      <Dialog open={newDialogOpen} onOpenChange={setNewDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Message</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="newMsgName">Message Name</Label>
+            <Input
+              id="newMsgName"
+              value={newMessageName}
+              onChange={(e) => setNewMessageName(e.target.value.toUpperCase())}
+              placeholder="Enter message name"
+              className="mt-2"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleNewMessage();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleNewMessage}
+              disabled={!newMessageName.trim()}
+            >
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -185,13 +185,12 @@ const Index = () => {
               setEditingMessage(message);
               setCurrentScreen('editMessage');
             }}
-            onNew={() => {
-              // Create a new empty message and go to edit
-              const newName = 'NEW_MSG';
-              addMessage(newName);
+            onNew={(name: string) => {
+              // Create a new message with the given name and go to edit
+              addMessage(name);
               // Find the newly added message (will have highest ID)
               const newId = Math.max(0, ...connectionState.messages.map(m => m.id)) + 1;
-              setEditingMessage({ id: newId, name: newName });
+              setEditingMessage({ id: newId, name });
               setCurrentScreen('editMessage');
             }}
             onDelete={(message) => {
