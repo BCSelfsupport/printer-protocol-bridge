@@ -313,19 +313,24 @@ export function MessageCanvas({
     setEditingText(field.data);
     
     // Set cursor position based on click location or end of text
+    let cursorPos: number;
     if (clickX !== undefined) {
       const fontInfo = getFontInfo(field.fontSize);
       const charWidth = fontInfo.charWidth + 1;
       const relativeX = clickX - field.x;
       const charPos = Math.round(relativeX / charWidth);
-      setCursorPosition(Math.max(0, Math.min(charPos, field.data.length)));
+      cursorPos = Math.max(0, Math.min(charPos, field.data.length));
     } else {
-      setCursorPosition(field.data.length); // Default to end
+      cursorPos = field.data.length; // Default to end
     }
+    setCursorPosition(cursorPos);
     
-    // Focus the hidden input to trigger mobile keyboard
+    // Focus the hidden input to trigger mobile keyboard and set its cursor
     setTimeout(() => {
-      hiddenInputRef.current?.focus();
+      if (hiddenInputRef.current) {
+        hiddenInputRef.current.focus();
+        hiddenInputRef.current.setSelectionRange(cursorPos, cursorPos);
+      }
     }, 50);
   }, [fields]);
 
@@ -388,11 +393,35 @@ export function MessageCanvas({
   const handleHiddenInputChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     if (!isEditing || editingFieldId === null || !onFieldDataChange) return;
     
+    const field = fields.find(f => f.id === editingFieldId);
+    if (!field) return;
+    
     const newText = e.target.value.toUpperCase();
+    const oldText = field.data;
+    
+    // Determine cursor position based on what changed
+    // If text got shorter, it was a backspace/delete
+    // If text got longer, it was an insertion
+    let newCursorPos: number;
+    
+    if (newText.length < oldText.length) {
+      // Deletion occurred - find where the deletion happened
+      // The cursor in the hidden input tells us where we are after the delete
+      const inputCursor = e.target.selectionStart ?? newText.length;
+      newCursorPos = inputCursor;
+    } else if (newText.length > oldText.length) {
+      // Insertion occurred
+      const inputCursor = e.target.selectionStart ?? newText.length;
+      newCursorPos = inputCursor;
+    } else {
+      // Length same (replacement) - keep cursor at input position
+      newCursorPos = e.target.selectionStart ?? newText.length;
+    }
+    
     setEditingText(newText);
     onFieldDataChange(editingFieldId, newText);
-    setCursorPosition(newText.length);
-  }, [isEditing, editingFieldId, onFieldDataChange]);
+    setCursorPosition(newCursorPos);
+  }, [isEditing, editingFieldId, onFieldDataChange, fields]);
 
   // Sync editingText when field data changes externally
   useEffect(() => {
