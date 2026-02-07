@@ -7,6 +7,10 @@ export interface Printer {
   isAvailable: boolean;
   status: 'ready' | 'not_ready' | 'error' | 'offline';
   hasActiveErrors: boolean;
+  // Quick status fields for overview display
+  inkLevel?: 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+  makeupLevel?: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+  currentMessage?: string | null;
 }
 
 export interface PrinterStatus {
