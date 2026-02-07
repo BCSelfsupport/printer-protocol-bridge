@@ -396,50 +396,58 @@ export function EditMessageScreen({
 
   return (
     <div className="flex-1 p-2 md:p-4 flex flex-col h-full overflow-hidden">
-      <SubPageHeader title={`Edit: ${messageName}`} onHome={onCancel} />
+      {/* Sticky header + canvas container for mobile - stays visible above keyboard */}
+      <div className="sticky top-0 z-10 bg-background pb-2">
+        <SubPageHeader title={`Edit: ${messageName}`} onHome={onCancel} />
 
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <span className="text-muted-foreground">Loading message...</span>
-        </div>
-      ) : (
-        <>
-          {/* Error message */}
-          {fieldError && (
-            <div className="mb-2 p-2 md:p-3 bg-destructive/10 border border-destructive rounded-lg text-destructive text-xs md:text-sm flex items-center gap-2">
-              <span className="font-medium">⚠️ Error:</span>
-              <span>{fieldError}</span>
-            </div>
-          )}
-
-          {/* Message Canvas - horizontal scroll on mobile */}
-          <div className="mb-2 md:mb-4 overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
-            <div className="min-w-[400px]">
-              <MessageCanvas
-                templateHeight={message.height}
-                width={message.width}
-                fields={message.fields}
-                onCanvasClick={handleCanvasClick}
-                onFieldMove={handleFieldMove}
-                onFieldDataChange={(fieldId, newData) => {
-                  setMessage((prev) => ({
-                    ...prev,
-                    fields: prev.fields.map((f) =>
-                      f.id === fieldId ? { ...f, data: newData } : f
-                    ),
-                  }));
-                }}
-                onFieldError={handleFieldError}
-                selectedFieldId={selectedFieldId}
-                multilineTemplate={currentMultilineTemplate ? {
-                  lines: currentMultilineTemplate.lines,
-                  dotsPerLine: currentMultilineTemplate.dotsPerLine,
-                } : null}
-              />
-              <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click a field to edit text inline</p>
-            </div>
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center py-8">
+            <span className="text-muted-foreground">Loading message...</span>
           </div>
+        ) : (
+          <>
+            {/* Error message */}
+            {fieldError && (
+              <div className="mb-2 p-2 md:p-3 bg-destructive/10 border border-destructive rounded-lg text-destructive text-xs md:text-sm flex items-center gap-2">
+                <span className="font-medium">⚠️ Error:</span>
+                <span>{fieldError}</span>
+              </div>
+            )}
 
+            {/* Message Canvas - horizontal scroll on mobile */}
+            <div className="mb-2 md:mb-4 overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
+              <div className="min-w-[400px]">
+                <MessageCanvas
+                  templateHeight={message.height}
+                  width={message.width}
+                  fields={message.fields}
+                  onCanvasClick={handleCanvasClick}
+                  onFieldMove={handleFieldMove}
+                  onFieldDataChange={(fieldId, newData) => {
+                    setMessage((prev) => ({
+                      ...prev,
+                      fields: prev.fields.map((f) =>
+                        f.id === fieldId ? { ...f, data: newData } : f
+                      ),
+                    }));
+                  }}
+                  onFieldError={handleFieldError}
+                  selectedFieldId={selectedFieldId}
+                  multilineTemplate={currentMultilineTemplate ? {
+                    lines: currentMultilineTemplate.lines,
+                    dotsPerLine: currentMultilineTemplate.dotsPerLine,
+                  } : null}
+                />
+                <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Tap field to select, double-tap to edit</p>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Scrollable content below sticky header - only show when not loading */}
+      {!loading && (
+        <div className="flex-1 overflow-y-auto">
           {/* Message properties row - horizontal scroll on mobile */}
           <div className="bg-card rounded-lg p-2 md:p-4 mb-2 md:mb-4 overflow-x-auto">
             <div className="flex gap-3 md:gap-4 min-w-max md:min-w-0 md:grid md:grid-cols-4">
@@ -663,7 +671,7 @@ export function EditMessageScreen({
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </>
+        </div>
       )}
     </div>
   );
