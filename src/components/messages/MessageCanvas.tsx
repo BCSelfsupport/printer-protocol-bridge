@@ -433,6 +433,17 @@ export function MessageCanvas({
     }
   }, [fields, isEditing, editingFieldId, editingText]);
 
+  // Keep hidden input cursor position in sync with visual cursor
+  useEffect(() => {
+    if (isEditing && hiddenInputRef.current) {
+      const input = hiddenInputRef.current;
+      // Only update if different to avoid infinite loops
+      if (input.selectionStart !== cursorPosition || input.selectionEnd !== cursorPosition) {
+        input.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    }
+  }, [isEditing, cursorPosition]);
+
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // If currently editing, stop editing on click elsewhere
     if (isEditing) {
@@ -445,7 +456,13 @@ export function MessageCanvas({
         const charWidth = fontInfo.charWidth + 1;
         const relativeX = pos.x - field.x;
         const charPos = Math.round(relativeX / charWidth);
-        setCursorPosition(Math.max(0, Math.min(charPos, field.data.length)));
+        const newCursorPos = Math.max(0, Math.min(charPos, field.data.length));
+        setCursorPosition(newCursorPos);
+        
+        // Immediately sync the hidden input cursor
+        if (hiddenInputRef.current) {
+          hiddenInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+        }
         e.preventDefault();
         return;
       }
