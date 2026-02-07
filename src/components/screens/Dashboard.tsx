@@ -264,6 +264,9 @@ interface MessagePreviewCanvasProps {
   printerTime?: Date;
 }
 
+const DOT_SIZE = 4; // Pixels per dot
+const TOTAL_ROWS = 32; // Total printable height in dots
+
 function MessagePreviewCanvas({ message, printerTime }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -276,9 +279,9 @@ function MessagePreviewCanvas({ message, printerTime }: MessagePreviewCanvasProp
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // Set canvas size
+    // Set canvas size - full width, 32 dots high
     const width = container.clientWidth;
-    const height = 120;
+    const height = TOTAL_ROWS * DOT_SIZE;
     canvas.width = width;
     canvas.height = height;
     
@@ -287,52 +290,56 @@ function MessagePreviewCanvas({ message, printerTime }: MessagePreviewCanvasProp
     ctx.fillRect(0, 0, width, height);
     
     // Draw grid
-    const dotSize = 4;
     ctx.strokeStyle = '#d4c4a8';
     ctx.lineWidth = 0.5;
     
-    for (let x = 0; x <= width; x += dotSize) {
+    for (let x = 0; x <= width; x += DOT_SIZE) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, height);
       ctx.stroke();
     }
-    for (let y = 0; y <= height; y += dotSize) {
+    for (let y = 0; y <= TOTAL_ROWS; y++) {
       ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
+      ctx.moveTo(0, y * DOT_SIZE);
+      ctx.lineTo(width, y * DOT_SIZE);
       ctx.stroke();
     }
     
     if (message) {
-      // Render the message text using dot matrix font
       ctx.fillStyle = '#1a1a1a';
-      const fontName = 'Standard16High';
-      const fontInfo = getFontInfo(fontName);
       
-      // Center the message vertically
-      const textY = Math.floor((height - fontInfo.height * dotSize) / 2);
-      const padding = 20;
+      // Main message - 16 dot font, positioned at bottom of 32-dot area
+      const mainFontName = 'Standard16High';
+      const mainFontInfo = getFontInfo(mainFontName);
       
-      renderText(ctx, message, padding, textY, fontName, dotSize);
+      // Position main message: 16 dots high, starts at row 16 (bottom half of 32)
+      const mainY = (32 - mainFontInfo.height) * DOT_SIZE; // Row 16
+      const padding = 10;
       
-      // Render time and date on the right
+      renderText(ctx, message, padding, mainY, mainFontName, DOT_SIZE);
+      
+      // Time and date on the right - using 7 dot font
+      // Two lines: time on top, date below, with 1 dot spacing between
       const time = printerTime ?? new Date();
       const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
       const dateStr = time.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
       
-      // Calculate position for time/date (right side)
-      const smallFontName = 'Standard9High';
+      const smallFontName = 'Standard7High';
       const smallFontInfo = getFontInfo(smallFontName);
-      const timeWidth = timeStr.length * (smallFontInfo.charWidth + 1) * dotSize;
+      
+      // Calculate width of time/date text
+      const timeWidth = timeStr.length * (smallFontInfo.charWidth + 1) * DOT_SIZE;
       const timeX = width - timeWidth - padding;
       
-      // Render time above date
-      const timeY = Math.floor(height / 2 - smallFontInfo.height * dotSize - 2);
-      const dateY = Math.floor(height / 2 + 2);
+      // Two 7-dot lines with 1 dot spacing = 15 dots total
+      // Center vertically in the 16-dot message area (rows 16-31)
+      // Time starts at row 16, date at row 24 (7 dots + 1 space = 8)
+      const timeY = 16 * DOT_SIZE; // Row 16
+      const dateY = (16 + smallFontInfo.height + 1) * DOT_SIZE; // Row 24 (7 + 1 spacing)
       
-      renderText(ctx, timeStr, timeX, timeY, smallFontName, dotSize);
-      renderText(ctx, dateStr, timeX, dateY, smallFontName, dotSize);
+      renderText(ctx, timeStr, timeX, timeY, smallFontName, DOT_SIZE);
+      renderText(ctx, dateStr, timeX, dateY, smallFontName, DOT_SIZE);
     } else {
       // No message - show placeholder
       ctx.fillStyle = '#888';
@@ -343,8 +350,8 @@ function MessagePreviewCanvas({ message, printerTime }: MessagePreviewCanvasProp
   }, [message, printerTime]);
   
   return (
-    <div ref={containerRef} className="flex-1 bg-white rounded-lg overflow-hidden min-h-[120px] border-2 border-muted">
-      <canvas ref={canvasRef} className="w-full h-full" />
+    <div ref={containerRef} className="flex-1 bg-white rounded-lg overflow-hidden border-2 border-muted" style={{ minHeight: TOTAL_ROWS * DOT_SIZE }}>
+      <canvas ref={canvasRef} className="w-full" style={{ height: TOTAL_ROWS * DOT_SIZE }} />
     </div>
   );
 }
