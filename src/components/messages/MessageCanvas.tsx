@@ -197,7 +197,10 @@ export function MessageCanvas({
       // Calculate field dimensions based on font
       const fieldX = (displayX - scrollX) * DOT_SIZE;
       const fieldY = displayY * DOT_SIZE;
-      const textWidth = field.data.length * (fontInfo.charWidth + 1) * DOT_SIZE;
+      // Ensure minimum visible width for empty fields (3 chars minimum)
+      const minChars = 3;
+      const textLength = Math.max(field.data.length, minChars);
+      const textWidth = textLength * (fontInfo.charWidth + 1) * DOT_SIZE;
       const fieldH = fontInfo.height * DOT_SIZE;
       
       // Skip if field is outside visible area
@@ -214,13 +217,17 @@ export function MessageCanvas({
         ctx.strokeRect(fieldX, fieldY, textWidth, fieldH);
         ctx.setLineDash([]);
       }
-      // Draw selection highlight (including when editing)
-      else if (isSelected || isBeingEdited) {
-        ctx.fillStyle = isBeingEdited ? 'rgba(255, 220, 100, 0.4)' : 'rgba(255, 193, 7, 0.3)';
-        ctx.fillRect(fieldX, fieldY, Math.max(textWidth, 20), fieldH);
-        ctx.strokeStyle = isBeingEdited ? '#ff6600' : '#ffc107';
+      // Draw selection highlight (including when editing) - always show for empty fields
+      else if (isSelected || isBeingEdited || field.data.length === 0) {
+        const highlightColor = isBeingEdited ? 'rgba(255, 220, 100, 0.4)' : 
+                               field.data.length === 0 ? 'rgba(200, 200, 200, 0.5)' : 'rgba(255, 193, 7, 0.3)';
+        const borderColor = isBeingEdited ? '#ff6600' : 
+                            field.data.length === 0 ? '#999999' : '#ffc107';
+        ctx.fillStyle = highlightColor;
+        ctx.fillRect(fieldX, fieldY, textWidth, fieldH);
+        ctx.strokeStyle = borderColor;
         ctx.lineWidth = 2;
-        ctx.strokeRect(fieldX, fieldY, Math.max(textWidth, 20), fieldH);
+        ctx.strokeRect(fieldX, fieldY, textWidth, fieldH);
       }
       
       // Draw the field text using the font system
@@ -267,7 +274,9 @@ export function MessageCanvas({
     for (let i = fields.length - 1; i >= 0; i--) {
       const field = fields[i];
       const fontInfo = getFontInfo(field.fontSize);
-      const fieldWidth = field.data.length * (fontInfo.charWidth + 1);
+      // Ensure minimum clickable width of 3 characters for empty fields
+      const textLength = Math.max(field.data.length, 3);
+      const fieldWidth = textLength * (fontInfo.charWidth + 1);
       const fieldHeight = fontInfo.height;
       
       if (x >= field.x && x < field.x + fieldWidth &&
