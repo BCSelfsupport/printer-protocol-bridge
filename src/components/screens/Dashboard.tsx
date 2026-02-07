@@ -309,14 +309,17 @@ function calculateRequiredWidth(messageContent: MessageDetails | undefined, mess
   return MIN_CANVAS_WIDTH;
 }
 
+// Zoom levels to cycle through on each click
+const ZOOM_LEVELS = [1, 1.5, 2, 2.5, 3];
+
 function MessagePreviewCanvas({ message, printerTime, messageContent }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dotSize, setDotSize] = useState<number>(DOT_SIZE_DESKTOP);
-  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomIndex, setZoomIndex] = useState(0);
 
-  // Zoom multiplier when clicked (3x scale)
-  const ZOOM_MULTIPLIER = 3;
-  const effectiveDotSize = isZoomed ? dotSize * ZOOM_MULTIPLIER : dotSize;
+  // Current zoom multiplier based on index
+  const zoomMultiplier = ZOOM_LEVELS[zoomIndex];
+  const effectiveDotSize = dotSize * zoomMultiplier;
 
   // Keep base dot size in sync with breakpoint
   useEffect(() => {
@@ -455,16 +458,23 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
   const canvasHeight = TOTAL_ROWS * effectiveDotSize + 1;
 
   const handleClick = () => {
-    setIsZoomed(!isZoomed);
+    // Cycle to next zoom level, wrap back to 0 at the end
+    setZoomIndex((prev) => (prev + 1) % ZOOM_LEVELS.length);
   };
+
+  const zoomLabel = zoomMultiplier === 1 ? '1×' : `${zoomMultiplier}×`;
 
   return (
     <div
       onClick={handleClick}
-      className="bg-white rounded-lg overflow-hidden border-2 border-muted flex-shrink-0 cursor-pointer transition-all duration-200 hover:border-primary"
+      className="bg-white rounded-lg overflow-hidden border-2 border-muted flex-shrink-0 cursor-pointer transition-all duration-200 hover:border-primary relative"
       style={{ width: renderWidth, height: canvasHeight }}
-      title={isZoomed ? 'Click to zoom out' : 'Click to zoom in'}
+      title={`Zoom: ${zoomLabel} (click to change)`}
     >
+      {/* Zoom indicator badge */}
+      <div className="absolute top-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded font-mono">
+        {zoomLabel}
+      </div>
       <canvas
         ref={canvasRef}
         style={{ display: 'block', width: renderWidth, height: canvasHeight }}
