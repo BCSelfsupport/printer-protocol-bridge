@@ -1,6 +1,6 @@
 import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe } from 'lucide-react';
 import { PrintMessage } from '@/types/printer';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import {
   Dialog,
@@ -20,6 +20,8 @@ interface MessagesScreenProps {
   onNew: (name: string) => void;
   onDelete: (message: PrintMessage) => void;
   onHome: () => void;
+  openNewDialogOnMount?: boolean;
+  onNewDialogOpened?: () => void;
 }
 
 export function MessagesScreen({ 
@@ -28,12 +30,22 @@ export function MessagesScreen({
   onEdit, 
   onNew, 
   onDelete, 
-  onHome 
+  onHome,
+  openNewDialogOnMount,
+  onNewDialogOpened,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [newMessageName, setNewMessageName] = useState('');
+
+  // Auto-open the new dialog when navigating from Dashboard "New" button
+  useEffect(() => {
+    if (openNewDialogOnMount) {
+      setNewDialogOpen(true);
+      onNewDialogOpened?.();
+    }
+  }, [openNewDialogOnMount, onNewDialogOpened]);
 
   const handleMessageClick = (message: PrintMessage) => {
     // If already selected, open edit

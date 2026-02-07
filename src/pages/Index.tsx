@@ -29,6 +29,8 @@ const Index = () => {
   const [editingMessage, setEditingMessage] = useState<PrintMessage | null>(null);
   // Store message content (fields) by message name
   const [messageContents, setMessageContents] = useState<Record<string, MessageDetails>>({});
+  // Control whether to auto-open the new message dialog
+  const [openNewDialogOnMount, setOpenNewDialogOnMount] = useState(false);
   const {
     printers,
     connectionState,
@@ -108,7 +110,10 @@ const Index = () => {
             onStart={handleStartPrint}
             onStop={stopPrint}
             onJetStop={handleJetStop}
-            onNewMessage={() => setCurrentScreen('messages')}
+            onNewMessage={() => {
+              setOpenNewDialogOnMount(true);
+              setCurrentScreen('messages');
+            }}
             onEditMessage={() => setCurrentScreen('messages')}
             onSignIn={async () => {
               if (isSignedIn) {
@@ -203,6 +208,8 @@ const Index = () => {
               deleteMessage(message.id);
             }}
             onHome={() => setCurrentScreen('control')}
+            openNewDialogOnMount={openNewDialogOnMount}
+            onNewDialogOpened={() => setOpenNewDialogOnMount(false)}
           />
         );
       case 'adjust':
