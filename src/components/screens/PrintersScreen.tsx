@@ -52,9 +52,9 @@ export function PrintersScreen({
   };
 
   return (
-    <div className="flex-1 flex bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6 gap-6">
+    <div className="flex-1 flex flex-col md:flex-row bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-3 md:p-6 gap-3 md:gap-6 overflow-auto">
       {/* Left Panel - Printer List */}
-      <div className="w-96 flex flex-col bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
+      <div className="w-full md:w-96 flex-shrink-0 flex flex-col bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
         {/* Header */}
         <div className="p-4 border-b border-slate-800 bg-slate-900/80">
           <div className="flex items-center justify-between mb-4">
