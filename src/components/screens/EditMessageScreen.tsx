@@ -26,15 +26,15 @@ export interface MessageDetails {
   templateValue?: string; // Track which template was selected
 }
 
-// Template options - single heights for mixed font messages
+// Template options - single heights for mixed font messages (loaded from .BIN files)
 const SINGLE_TEMPLATES = [
-  { value: '32', label: '32 dots' },
-  { value: '24', label: '24 dots' },
-  { value: '16', label: '16 dots' },
-  { value: '12', label: '12 dots' },
-  { value: '9', label: '9 dots' },
-  { value: '7', label: '7 dots' },
-  { value: '5', label: '5 dots' },
+  { value: '32', label: '32 dots', file: '1L32U.BIN' },
+  { value: '25', label: '25 dots', file: '1L25U.BIN' },
+  { value: '19', label: '19 dots', file: '1L19U.BIN' },
+  { value: '16', label: '16 dots', file: '1L16U.BIN' },
+  { value: '12', label: '12 dots', file: '1L12U.BIN' },
+  { value: '5', label: '5 dots', file: '1L5U.BIN' },
+  { value: '5s', label: '5 dots (standard)', file: '1L5sU.BIN' },
 ] as const;
 
 // Multi-line templates - will be loaded from .BIN files
@@ -121,14 +121,17 @@ export function EditMessageScreen({
   const handleTemplateChange = async (value: string) => {
     // Check if it's a multi-line template
     const multiTemplate = MULTILINE_TEMPLATES.find(t => t.value === value);
+    const singleTemplate = SINGLE_TEMPLATES.find(t => t.value === value);
+    
     const height = multiTemplate 
       ? multiTemplate.height 
-      : parseInt(value) || 16;
+      : (value === '5s' ? 5 : parseInt(value) || 16);
     
     // Try to load the template file if available
-    if (multiTemplate && multiTemplate.file) {
-      console.log('Loading template file:', multiTemplate.file);
-      const template = await loadTemplate(multiTemplate.file);
+    const templateFile = multiTemplate?.file || singleTemplate?.file;
+    if (templateFile) {
+      console.log('Loading template file:', templateFile);
+      const template = await loadTemplate(templateFile);
       if (template) {
         console.log('Template loaded successfully:', template);
         setLoadedTemplate(template);
