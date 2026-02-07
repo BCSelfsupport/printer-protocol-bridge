@@ -37,17 +37,28 @@ interface SettingsRowProps {
   value: string | number;
   onIncrease: () => void;
   onDecrease: () => void;
+  onDirectInput?: (val: number) => void;
   showInput?: boolean;
   showRotate?: boolean;
 }
 
-function SettingsRow({ label, value, onIncrease, onDecrease, showInput = true, showRotate = false }: SettingsRowProps) {
+function SettingsRow({ label, value, onIncrease, onDecrease, onDirectInput, showInput = true, showRotate = false }: SettingsRowProps) {
   return (
     <div className="bg-muted/30 rounded-lg p-3 flex items-center justify-between gap-2">
       <span className="text-primary text-base font-medium whitespace-nowrap">{label}: {value}</span>
       <div className="flex items-center gap-1 flex-shrink-0">
-        {showInput && (
-          <div className="w-12 h-8 bg-card border rounded" />
+        {showInput && onDirectInput && (
+          <input
+            type="number"
+            className="w-14 h-8 bg-card border rounded px-2 text-center text-sm"
+            value={typeof value === 'number' ? value : ''}
+            onChange={(e) => {
+              const num = parseInt(e.target.value);
+              if (!isNaN(num)) {
+                onDirectInput(Math.max(0, num));
+              }
+            }}
+          />
         )}
         {showRotate ? (
           <button 
@@ -120,6 +131,7 @@ export function MessageSettingsDialog({
             value={settings.width}
             onIncrease={() => onUpdate({ width: settings.width + 1 })}
             onDecrease={() => onUpdate({ width: Math.max(0, settings.width - 1) })}
+            onDirectInput={(val) => onUpdate({ width: val })}
           />
           <SettingsRow
             label="Height"
@@ -134,6 +146,7 @@ export function MessageSettingsDialog({
             value={settings.delay}
             onIncrease={() => onUpdate({ delay: settings.delay + 10 })}
             onDecrease={() => onUpdate({ delay: Math.max(0, settings.delay - 10) })}
+            onDirectInput={(val) => onUpdate({ delay: val })}
           />
           <SettingsRow
             label="Rotation"
@@ -149,6 +162,7 @@ export function MessageSettingsDialog({
             value={settings.bold}
             onIncrease={() => onUpdate({ bold: settings.bold + 1 })}
             onDecrease={() => onUpdate({ bold: Math.max(0, settings.bold - 1) })}
+            onDirectInput={(val) => onUpdate({ bold: val })}
           />
           <SettingsRow
             label="Speed"
@@ -163,12 +177,14 @@ export function MessageSettingsDialog({
             value={settings.gap}
             onIncrease={() => onUpdate({ gap: settings.gap + 1 })}
             onDecrease={() => onUpdate({ gap: Math.max(0, settings.gap - 1) })}
+            onDirectInput={(val) => onUpdate({ gap: val })}
           />
           <SettingsRow
             label="Pitch"
             value={settings.pitch}
             onIncrease={() => onUpdate({ pitch: settings.pitch + 1 })}
             onDecrease={() => onUpdate({ pitch: Math.max(0, settings.pitch - 1) })}
+            onDirectInput={(val) => onUpdate({ pitch: val })}
           />
 
           <SettingsRow
@@ -176,6 +192,7 @@ export function MessageSettingsDialog({
             value={settings.repeatAmount}
             onIncrease={() => onUpdate({ repeatAmount: settings.repeatAmount + 1 })}
             onDecrease={() => onUpdate({ repeatAmount: Math.max(0, settings.repeatAmount - 1) })}
+            onDirectInput={(val) => onUpdate({ repeatAmount: val })}
           />
         </div>
         <DialogFooter>
