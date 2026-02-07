@@ -114,17 +114,22 @@ export function renderCharBitmap(
   const scaleY = font.height / baseHeight;
   const scaleX = font.charWidth / baseWidth;
   
-  // Draw scaled dots
+  // Draw scaled dots (use cumulative rounding so total height/width matches exactly)
+  const cellH = (font.height / baseHeight) * dotSize;
+  const cellW = (font.charWidth / baseWidth) * dotSize;
+
   for (let row = 0; row < baseHeight; row++) {
+    const rowStart = Math.round(y + row * cellH);
+    const rowEnd = Math.round(y + (row + 1) * cellH);
+    const dotH = Math.max(1, rowEnd - rowStart);
+
     for (let col = 0; col < baseWidth; col++) {
       if (pattern[row]?.[col] === 1) {
-        // Calculate scaled position
-        const dotX = x + Math.floor(col * scaleX * dotSize);
-        const dotY = y + Math.floor(row * scaleY * dotSize);
-        const dotW = Math.max(1, Math.floor(scaleX * dotSize) - 1);
-        const dotH = Math.max(1, Math.floor(scaleY * dotSize) - 1);
-        
-        ctx.fillRect(dotX, dotY, dotW, dotH);
+        const colStart = Math.round(x + col * cellW);
+        const colEnd = Math.round(x + (col + 1) * cellW);
+        const dotW = Math.max(1, colEnd - colStart);
+
+        ctx.fillRect(colStart, rowStart, dotW, dotH);
       }
     }
   }
