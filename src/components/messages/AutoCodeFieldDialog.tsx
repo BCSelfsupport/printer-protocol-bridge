@@ -1,40 +1,40 @@
-import { FileText, Hash, User, Square, Barcode, Image, ChevronRight, Plus, ArrowLeft } from 'lucide-react';
+import { Clock, Calendar, Hash, Layers, ChevronRight, Plus, ArrowLeft } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog';
 
-const FIELD_TYPES = [
-  { value: 'text', label: 'Text Field', icon: FileText, action: 'add' },
-  { value: 'autocode', label: 'AutoCode Field', icon: Hash, action: 'submenu' },
-  { value: 'userdefine', label: 'User Define', icon: User, action: 'submenu' },
-  { value: 'block', label: 'Block Field', icon: Square, action: 'submenu' },
-  { value: 'barcode', label: 'Barcode Field', icon: Barcode, action: 'submenu' },
-  { value: 'logo', label: 'Graphic Field', icon: Image, action: 'submenu' },
+const AUTOCODE_TYPES = [
+  { value: 'time', label: 'Time Codes', icon: Clock, action: 'submenu' },
+  { value: 'date', label: 'Date Codes', icon: Calendar, action: 'submenu' },
+  { value: 'counter', label: 'Counter', icon: Hash, action: 'submenu' },
+  { value: 'shift', label: 'Shift Codes', icon: Layers, action: 'add' },
 ] as const;
 
-interface NewFieldDialogProps {
+interface AutoCodeFieldDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectFieldType: (type: string) => void;
-  onOpenAutoCode: () => void;
+  onBack: () => void;
+  onSelectType: (type: string) => void;
 }
 
-export function NewFieldDialog({ 
+export function AutoCodeFieldDialog({ 
   open, 
   onOpenChange, 
-  onSelectFieldType,
-  onOpenAutoCode 
-}: NewFieldDialogProps) {
-  const handleSelect = (fieldType: typeof FIELD_TYPES[number]) => {
-    if (fieldType.value === 'autocode') {
-      onOpenChange(false);
-      onOpenAutoCode();
-      return;
-    }
-    onSelectFieldType(fieldType.value);
+  onBack,
+  onSelectType 
+}: AutoCodeFieldDialogProps) {
+  const handleSelect = (autoCodeType: typeof AUTOCODE_TYPES[number]) => {
+    // For now, all types add a field directly
+    // Later we can add submenus for time/date format selection
+    onSelectType(autoCodeType.value);
     onOpenChange(false);
+  };
+
+  const handleBack = () => {
+    onOpenChange(false);
+    onBack();
   };
 
   return (
@@ -43,30 +43,30 @@ export function NewFieldDialog({
         {/* Header styled like the reference */}
         <div className="bg-gradient-to-b from-muted to-muted/80 px-4 py-3 flex items-center gap-3 border-b">
           <button
-            onClick={() => onOpenChange(false)}
+            onClick={handleBack}
             className="industrial-button p-2 rounded"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <DialogTitle className="flex-1 text-center text-lg font-semibold pr-10">
-            New Field
+            AutoCode Field
           </DialogTitle>
         </div>
 
-        {/* Field type grid */}
+        {/* AutoCode type grid */}
         <div className="bg-card p-4">
           <div className="grid grid-cols-2 gap-3">
-            {FIELD_TYPES.map((fieldType) => (
+            {AUTOCODE_TYPES.map((autoCodeType) => (
               <button
-                key={fieldType.value}
-                onClick={() => handleSelect(fieldType)}
+                key={autoCodeType.value}
+                onClick={() => handleSelect(autoCodeType)}
                 className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 hover:from-muted/80 hover:to-muted/40 border border-border rounded-lg p-3 transition-colors group"
               >
                 <span className="text-foreground font-medium text-sm">
-                  {fieldType.label}
+                  {autoCodeType.label}
                 </span>
                 <div className="industrial-button p-2 rounded">
-                  {fieldType.action === 'add' ? (
+                  {autoCodeType.action === 'add' ? (
                     <Plus className="w-5 h-5 text-primary" />
                   ) : (
                     <ChevronRight className="w-5 h-5" />
