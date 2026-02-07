@@ -109,50 +109,52 @@ export function MessagesScreen({
         </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="flex gap-4 justify-center">
-        <button
-          onClick={handleSelectMessage}
-          disabled={!selectedMessage || isSelecting}
-          className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
-        >
-          <Check className="w-8 h-8 mb-1" />
-          <span className="font-medium">{isSelecting ? 'Selecting...' : 'Select'}</span>
-        </button>
+      {/* Action buttons - horizontal scroll on mobile */}
+      <div className="overflow-x-auto -mx-4 px-4 pb-2">
+        <div className="flex gap-4 justify-center min-w-max">
+          <button
+            onClick={handleSelectMessage}
+            disabled={!selectedMessage || isSelecting}
+            className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
+          >
+            <Check className="w-8 h-8 mb-1" />
+            <span className="font-medium">{isSelecting ? 'Selecting...' : 'Select'}</span>
+          </button>
 
-        <button 
-          onClick={() => {
-            setNewMessageName('');
-            setNewDialogOpen(true);
-          }}
-          className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
-        >
-          <Plus className="w-8 h-8 mb-1" />
-          <span className="font-medium">New</span>
-        </button>
+          <button 
+            onClick={() => {
+              setNewMessageName('');
+              setNewDialogOpen(true);
+            }}
+            className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
+          >
+            <Plus className="w-8 h-8 mb-1" />
+            <span className="font-medium">New</span>
+          </button>
 
-        <button 
-          onClick={() => selectedMessage && onEdit(selectedMessage)}
-          disabled={!selectedMessage}
-          className="industrial-button-gray text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
-        >
-          <Pencil className="w-8 h-8 mb-1" />
-          <span className="font-medium">Edit</span>
-        </button>
+          <button 
+            onClick={() => selectedMessage && onEdit(selectedMessage)}
+            disabled={!selectedMessage}
+            className="industrial-button-gray text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
+          >
+            <Pencil className="w-8 h-8 mb-1" />
+            <span className="font-medium">Edit</span>
+          </button>
 
-        <button 
-          onClick={() => selectedMessage && onDelete(selectedMessage)}
-          disabled={!selectedMessage}
-          className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
-        >
-          <Trash2 className="w-8 h-8 mb-1" />
-          <span className="font-medium">Delete</span>
-        </button>
+          <button 
+            onClick={() => selectedMessage && onDelete(selectedMessage)}
+            disabled={!selectedMessage}
+            className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
+          >
+            <Trash2 className="w-8 h-8 mb-1" />
+            <span className="font-medium">Delete</span>
+          </button>
 
-        <button className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]">
-          <Globe className="w-8 h-8 mb-1" />
-          <span className="font-medium">Graphics</span>
-        </button>
+          <button className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]">
+            <Globe className="w-8 h-8 mb-1" />
+            <span className="font-medium">Graphics</span>
+          </button>
+        </div>
       </div>
 
       {/* New Message Dialog */}
