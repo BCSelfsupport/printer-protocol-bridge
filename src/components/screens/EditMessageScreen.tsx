@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Save, X, FilePlus, SaveAll, Trash2, Settings } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,8 @@ import { AutoCodeFieldDialog } from '@/components/messages/AutoCodeFieldDialog';
 import { TimeCodesDialog } from '@/components/messages/TimeCodesDialog';
 import { DateCodesDialog } from '@/components/messages/DateCodesDialog';
 import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import {
   Dialog,
   DialogContent,
@@ -394,26 +396,53 @@ export function EditMessageScreen({
     setFieldError(error);
   };
 
+  const isMobile = useIsMobile();
+  const { bottomInset } = useKeyboardInset();
+  const [isCanvasEditing, setIsCanvasEditing] = useState(false);
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const canvasWrapRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isMobile || !isCanvasEditing) return;
+    if (!scrollRef.current || !canvasWrapRef.current) return;
+
+    // Scroll the canvas into view when the keyboard opens.
+    // Account for the sticky header height.
+    const headerH = headerRef.current?.offsetHeight ?? 0;
+    const top = canvasWrapRef.current.offsetTop - headerH - 8;
+
+    scrollRef.current.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }, [isMobile, isCanvasEditing, bottomInset]);
+
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
-      {/* Canvas FIRST - fixed to top on mobile, stays visible above keyboard */}
-      <div className="fixed top-0 left-0 right-0 z-20 bg-background p-2 md:relative md:p-0 md:z-auto">
+    <div className="flex-1 p-2 md:p-4 flex flex-col h-full overflow-hidden">
+      {/* Keep heading at top */}
+      <div ref={headerRef} className="sticky top-0 z-20 bg-background">
+        <SubPageHeader title={`Edit: ${messageName}`} onHome={onCancel} />
+      </div>
+
+      {/* Everything below header can scroll; add bottom padding when keyboard is open */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto"
+        style={{ paddingBottom: isMobile && isCanvasEditing ? Math.max(0, bottomInset) + 16 : undefined }}
+      >
         {loading ? (
-          <div className="flex items-center justify-center py-4">
-            <span className="text-muted-foreground">Loading...</span>
+          <div className="flex items-center justify-center py-8">
+            <span className="text-muted-foreground">Loading message...</span>
           </div>
         ) : (
           <>
-            {/* Error message */}
             {fieldError && (
-              <div className="mb-1 p-1 md:p-3 bg-destructive/10 border border-destructive rounded text-destructive text-[10px] md:text-sm flex items-center gap-1">
-                <span className="font-medium">⚠️</span>
+              <div className="mb-2 p-2 md:p-3 bg-destructive/10 border border-destructive rounded-lg text-destructive text-xs md:text-sm flex items-center gap-2">
+                <span className="font-medium">⚠️ Error:</span>
                 <span>{fieldError}</span>
               </div>
             )}
 
-            {/* Message Canvas - horizontal scroll on mobile */}
-            <div className="overflow-x-auto">
+            {/* Message Canvas - stays near top; scroll container moves it up when keyboard opens */}
+            <div ref={canvasWrapRef} className="mb-2 md:mb-4 overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
               <div className="min-w-[400px]">
                 <MessageCanvas
                   templateHeight={message.height}
@@ -435,53 +464,45 @@ export function EditMessageScreen({
                     lines: currentMultilineTemplate.lines,
                     dotsPerLine: currentMultilineTemplate.dotsPerLine,
                   } : null}
+                  onEditingChange={setIsCanvasEditing}
                 />
+                <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Tap field to select, double-tap to edit</p>
               </div>
             </div>
-          </>
-        )}
-      </div>
 
-      {/* Spacer for fixed canvas on mobile */}
-      <div className="h-[280px] md:h-0 shrink-0" />
-
-      {/* Scrollable content below - header and controls */}
-      {!loading && (
-        <div className="flex-1 overflow-y-auto p-2 md:p-4">
-          <SubPageHeader title={`Edit: ${messageName}`} onHome={onCancel} />
-          {/* Message properties row - horizontal scroll on mobile */}
-          <div className="bg-card rounded-lg p-2 md:p-4 mb-2 md:mb-4 overflow-x-auto">
-            <div className="flex gap-3 md:gap-4 min-w-max md:min-w-0 md:grid md:grid-cols-4">
-              <div className="min-w-[120px] md:min-w-0">
-                <Label htmlFor="msgFontSize" className="text-xs md:text-sm">Font Size</Label>
-                <Select
-                  value={selectedField?.fontSize || 'Standard16High'}
-                  onValueChange={(value) => {
-                    if (selectedFieldId) {
-                      setMessage((prev) => ({
-                        ...prev,
-                        fields: prev.fields.map((f) =>
-                          f.id === selectedFieldId
-                            ? { ...f, fontSize: value }
-                            : f
-                        ),
-                      }));
-                    }
-                  }}
-                  disabled={!selectedFieldId}
-                >
-                  <SelectTrigger className="mt-1 h-9 md:h-10 text-xs md:text-sm">
-                    <SelectValue placeholder="Select font size" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[100]">
-                    {getAllowedFonts().map((fs) => (
-                      <SelectItem key={fs.value} value={fs.value}>
-                        {fs.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Message properties row - horizontal scroll on mobile */}
+            <div className="bg-card rounded-lg p-2 md:p-4 mb-2 md:mb-4 overflow-x-auto">
+              <div className="flex gap-3 md:gap-4 min-w-max md:min-w-0 md:grid md:grid-cols-4">
+                <div className="min-w-[120px] md:min-w-0">
+                  <Label htmlFor="msgFontSize" className="text-xs md:text-sm">Font Size</Label>
+                  <Select
+                    value={selectedField?.fontSize || 'Standard16High'}
+                    onValueChange={(value) => {
+                      if (selectedFieldId) {
+                        setMessage((prev) => ({
+                          ...prev,
+                          fields: prev.fields.map((f) =>
+                            f.id === selectedFieldId
+                              ? { ...f, fontSize: value }
+                              : f
+                          ),
+                        }));
+                      }
+                    }}
+                    disabled={!selectedFieldId}
+                  >
+                    <SelectTrigger className="mt-1 h-9 md:h-10 text-xs md:text-sm">
+                      <SelectValue placeholder="Select font size" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[100]">
+                      {getAllowedFonts().map((fs) => (
+                        <SelectItem key={fs.value} value={fs.value}>
+                          {fs.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               <div className="min-w-[140px] md:min-w-0">
                 <Label htmlFor="msgTemplate" className="text-xs md:text-sm">Template</Label>
                 <Select
@@ -672,8 +693,9 @@ export function EditMessageScreen({
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
