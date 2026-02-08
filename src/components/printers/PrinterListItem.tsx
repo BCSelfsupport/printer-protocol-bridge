@@ -10,6 +10,7 @@ interface PrinterListItemProps {
   showConnectButton?: boolean;
   isConnected?: boolean;
   compact?: boolean;
+  countdownType?: 'starting' | 'stopping' | null;
 }
 
 // Helper to get color for fluid levels
@@ -35,7 +36,32 @@ export function PrinterListItem({
   showConnectButton = true,
   isConnected = false,
   compact = false,
+  countdownType,
 }: PrinterListItemProps) {
+  
+  // Determine effective status (countdown overrides ready state)
+  const getEffectiveStatus = () => {
+    if (isConnected && countdownType === 'starting') return 'starting';
+    if (isConnected && countdownType === 'stopping') return 'stopping';
+    return printer.status;
+  };
+  
+  const effectiveStatus = getEffectiveStatus();
+  
+  const getStatusBadge = (short: boolean) => {
+    switch (effectiveStatus) {
+      case 'ready':
+        return { label: short ? 'RDY' : 'READY', className: 'bg-success text-white' };
+      case 'starting':
+        return { label: short ? 'START' : 'STARTING', className: 'bg-destructive text-white' };
+      case 'stopping':
+        return { label: short ? 'STOP' : 'STOPPING', className: 'bg-warning text-white' };
+      case 'not_ready':
+        return { label: short ? 'WAIT' : 'NOT READY', className: 'bg-warning text-white' };
+      default:
+        return { label: short ? 'OFF' : 'OFFLINE', className: 'bg-muted text-muted-foreground' };
+    }
+  };
   
   // Compact mode for split-view layout
   if (compact) {
@@ -86,16 +112,14 @@ export function PrinterListItem({
 
           {/* Status badges */}
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-              printer.status === 'ready' 
-                ? 'bg-success text-white' 
-                : printer.status === 'not_ready'
-                ? 'bg-warning text-white'
-                : 'bg-muted text-muted-foreground'
-            }`}>
-              {printer.status === 'ready' ? 'RDY' : 
-               printer.status === 'not_ready' ? 'WAIT' : 'OFF'}
-            </span>
+            {(() => {
+              const badge = getStatusBadge(true);
+              return (
+                <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${badge.className}`}>
+                  {badge.label}
+                </span>
+              );
+            })()}
             {printer.hasActiveErrors && (
               <span className="text-[10px] px-2 py-0.5 rounded bg-destructive text-white font-medium">
                 ERR
@@ -182,16 +206,14 @@ export function PrinterListItem({
 
         {/* Right side: status + connect */}
         <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-          <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-            printer.status === 'ready' 
-              ? 'bg-success text-white' 
-              : printer.status === 'not_ready'
-              ? 'bg-warning text-white'
-              : 'bg-muted text-muted-foreground'
-          }`}>
-            {printer.status === 'ready' ? 'READY' : 
-             printer.status === 'not_ready' ? 'NOT READY' : 'OFFLINE'}
-          </span>
+          {(() => {
+            const badge = getStatusBadge(false);
+            return (
+              <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${badge.className}`}>
+                {badge.label}
+              </span>
+            );
+          })()}
           {printer.hasActiveErrors && (
             <span className="text-[10px] px-2 py-0.5 rounded bg-destructive text-white font-medium">
               ERROR
