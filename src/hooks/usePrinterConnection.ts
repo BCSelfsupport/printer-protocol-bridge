@@ -295,6 +295,8 @@ export function usePrinterConnection() {
   useServiceStatusPolling({
     enabled: shouldPollStatus,
     printerId: connectedPrinterId,
+    printerIp: connectionState.connectedPrinter?.ipAddress,
+    printerPort: connectionState.connectedPrinter?.port,
     intervalMs: 3000,
     command: '^SU',
     onResponse: handleServiceResponse,
@@ -398,9 +400,73 @@ export function usePrinterConnection() {
   const connect = useCallback(async (printer: Printer) => {
     // If using emulator, simulate connection
     if (shouldUseEmulator()) {
-      console.log('[connect] Using emulator for printer:', printer.id);
+      console.log('[connect] Using emulator for printer:', printer.id, printer.ipAddress);
       
-      // Start the jet in emulator to allow HV control
+      // Disconnect previous printer if switching
+      if (connectionState.connectedPrinter && connectionState.connectedPrinter.id !== printer.id) {
+        updatePrinter(connectionState.connectedPrinter.id, {
+          isConnected: false,
+        });
+      }
+
+      // Check if multi-printer emulator has an instance for this IP
+      const multiInstance = multiPrinterEmulator.enabled 
+        ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
+        : null;
+
+      if (multiInstance) {
+        // Use the specific emulator instance for this printer
+        multiInstance.processCommand('^SJ 1'); // Start jet
+        
+        const emulatorState = multiInstance.getState();
+        const simPrinter = multiInstance.getSimulatedPrinter();
+        
+        // Update printer status
+        updatePrinter(printer.id, {
+          isConnected: true,
+          isAvailable: true,
+          status: simPrinter.status,
+          hasActiveErrors: false,
+        });
+
+        setConnectionState({
+          isConnected: true,
+          connectedPrinter: { ...printer, isConnected: true },
+          status: {
+            ...mockStatus,
+            isRunning: emulatorState.hvOn,
+            currentMessage: emulatorState.currentMessage,
+            inkLevel: emulatorState.inkLevel as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN',
+            makeupLevel: emulatorState.makeupLevel as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
+            printCount: emulatorState.printCount,
+            productCount: emulatorState.productCount,
+          },
+          metrics: {
+            ...mockMetrics,
+            modulation: emulatorState.modulation,
+            charge: emulatorState.charge,
+            pressure: emulatorState.pressure,
+            rps: emulatorState.rps,
+            phaseQual: emulatorState.phaseQual,
+            viscosity: emulatorState.viscosity,
+            hvDeflection: emulatorState.hvOn,
+            inkLevel: emulatorState.inkLevel,
+            makeupLevel: emulatorState.makeupLevel,
+            printStatus: emulatorState.hvOn ? 'Ready' : 'Not ready',
+            subsystems: {
+              v300up: emulatorState.v300up,
+              vltOn: emulatorState.vltOn,
+              gutOn: emulatorState.gutOn,
+              modOn: emulatorState.modOn,
+            },
+          },
+          settings: defaultSettings,
+          messages: mockMessages,
+        });
+        return;
+      }
+
+      // Fall back to single emulator (backward compat)
       printerEmulator.processCommand('^SJ 1');
       
       // Update printer status

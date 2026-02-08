@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { printerEmulator } from "@/lib/printerEmulator";
+import { multiPrinterEmulator } from "@/lib/multiPrinterEmulator";
 
 /**
  * Polls a connected printer with a command (default: ^SU) at a fixed interval.
@@ -8,6 +9,8 @@ import { printerEmulator } from "@/lib/printerEmulator";
 export function useServiceStatusPolling(options: {
   enabled: boolean;
   printerId: number | null | undefined;
+  printerIp?: string;
+  printerPort?: number;
   intervalMs?: number;
   command?: string;
   onResponse: (response: string) => void;
@@ -16,6 +19,8 @@ export function useServiceStatusPolling(options: {
   const {
     enabled,
     printerId,
+    printerIp,
+    printerPort = 23,
     intervalMs = 3000, // slower default to reduce printer display flicker
     command = "^SU",
     onResponse,
@@ -42,7 +47,7 @@ export function useServiceStatusPolling(options: {
       return;
     }
 
-    console.log('[useServiceStatusPolling] Starting polling for printer', printerId, 'with command', command);
+    console.log('[useServiceStatusPolling] Starting polling for printer', printerId, printerIp, 'with command', command);
     let cancelled = false;
 
     const tick = async () => {
@@ -51,19 +56,31 @@ export function useServiceStatusPolling(options: {
       inFlightRef.current = true;
 
       try {
-        const useEmulator = printerEmulator.enabled;
+        const useMultiEmulator = multiPrinterEmulator.enabled;
+        const useSingleEmulator = printerEmulator.enabled;
         const hasElectronAPI = !!window.electronAPI;
 
-        if (!useEmulator && !hasElectronAPI) {
+        if (!useMultiEmulator && !useSingleEmulator && !hasElectronAPI) {
           console.log('[useServiceStatusPolling] No electronAPI and emulator not enabled, skip tick');
           return;
         }
 
-        console.log('[useServiceStatusPolling] Sending command:', command, 'useEmulator:', useEmulator);
+        console.log('[useServiceStatusPolling] Sending command:', command, 'useMultiEmulator:', useMultiEmulator, 'useSingleEmulator:', useSingleEmulator);
 
         let result: { success: boolean; response?: string; error?: string };
 
-        if (useEmulator) {
+        if (useMultiEmulator && printerIp) {
+          // Use the specific emulator instance for this printer
+          const instance = multiPrinterEmulator.getInstanceByIp(printerIp, printerPort);
+          if (instance) {
+            const emulatorResult = instance.processCommand(command);
+            result = { success: emulatorResult.success, response: emulatorResult.response };
+          } else {
+            // Fall back to single emulator if no instance found
+            const emulatorResult = printerEmulator.processCommand(command);
+            result = { success: emulatorResult.success, response: emulatorResult.response };
+          }
+        } else if (useSingleEmulator) {
           const emulatorResult = printerEmulator.processCommand(command);
           result = { success: emulatorResult.success, response: emulatorResult.response };
         } else {
@@ -97,5 +114,5 @@ export function useServiceStatusPolling(options: {
       clearTimeout(initialDelay);
       window.clearInterval(id);
     };
-  }, [enabled, printerId, intervalMs, command]);
+  }, [enabled, printerId, printerIp, printerPort, intervalMs, command]);
 }
