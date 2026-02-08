@@ -14,7 +14,7 @@ export interface MessageSettings {
   delay: number;
   rotation: 'Normal' | 'Inverted' | 'Mirrored' | 'Rotated';
   bold: number;
-  speed: 'Slow' | 'Normal' | 'Fast';
+  speed: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
   gap: number;
   pitch: number;
   repeatAmount: number;
@@ -26,7 +26,7 @@ export const defaultMessageSettings: MessageSettings = {
   delay: 100,
   rotation: 'Normal',
   bold: 0,
-  speed: 'Fast',
+  speed: 'Fastest',
   gap: 0,
   pitch: 0,
   repeatAmount: 0,
@@ -97,7 +97,7 @@ interface MessageSettingsDialogProps {
 }
 
 const rotationValues: MessageSettings['rotation'][] = ['Normal', 'Inverted', 'Mirrored', 'Rotated'];
-const speedValues: MessageSettings['speed'][] = ['Slow', 'Normal', 'Fast'];
+const speedValues: MessageSettings['speed'][] = ['Fast', 'Faster', 'Fastest', 'Ultra Fast'];
 
 export function MessageSettingsDialog({
   open,
@@ -112,7 +112,7 @@ export function MessageSettingsDialog({
 
   const cycleSpeedUp = () => {
     const idx = speedValues.indexOf(settings.speed);
-    onUpdate({ speed: speedValues[Math.min(2, idx + 1)] });
+    onUpdate({ speed: speedValues[Math.min(3, idx + 1)] });
   };
 
   const cycleSpeedDown = () => {

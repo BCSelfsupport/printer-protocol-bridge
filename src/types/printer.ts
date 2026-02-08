@@ -63,7 +63,7 @@ export interface PrintSettings {
   delay: number;
   rotation: 'Normal' | 'Inverted' | '90CW' | '90CCW';
   bold: number;
-  speed: 'Slow' | 'Normal' | 'Fast';
+  speed: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
   gap: number;
   pitch: number;
   repeatAmount: number;

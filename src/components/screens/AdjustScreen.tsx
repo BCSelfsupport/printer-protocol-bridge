@@ -108,12 +108,12 @@ export function AdjustScreen({ settings, onUpdate, onSave, onHome }: AdjustScree
           label="Speed"
           value={settings.speed}
           onIncrease={() => {
-            const speeds: PrintSettings['speed'][] = ['Slow', 'Normal', 'Fast'];
+            const speeds: PrintSettings['speed'][] = ['Fast', 'Faster', 'Fastest', 'Ultra Fast'];
             const idx = speeds.indexOf(settings.speed);
-            onUpdate({ speed: speeds[Math.min(2, idx + 1)] });
+            onUpdate({ speed: speeds[Math.min(3, idx + 1)] });
           }}
           onDecrease={() => {
-            const speeds: PrintSettings['speed'][] = ['Slow', 'Normal', 'Fast'];
+            const speeds: PrintSettings['speed'][] = ['Fast', 'Faster', 'Fastest', 'Ultra Fast'];
             const idx = speeds.indexOf(settings.speed);
             onUpdate({ speed: speeds[Math.max(0, idx - 1)] });
           }}
