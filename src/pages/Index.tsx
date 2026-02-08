@@ -5,7 +5,7 @@ import { Dashboard } from '@/components/screens/Dashboard';
 import { PrintersScreen } from '@/components/screens/PrintersScreen';
 import { MessagesScreen } from '@/components/screens/MessagesScreen';
 import { EditMessageScreen, MessageDetails } from '@/components/screens/EditMessageScreen';
-import { AdjustScreen } from '@/components/screens/AdjustScreen';
+import { AdjustDialog } from '@/components/adjust/AdjustDialog';
 import { SetupScreen } from '@/components/screens/SetupScreen';
 import { ServiceScreen } from '@/components/screens/ServiceScreen';
 import { CleanScreen } from '@/components/screens/CleanScreen';
@@ -32,6 +32,7 @@ const Index = () => {
   const [editingMessage, setEditingMessage] = useState<PrintMessage | null>(null);
   // Control whether to auto-open the new message dialog
   const [openNewDialogOnMount, setOpenNewDialogOnMount] = useState(false);
+  const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   
   // Local message storage (persists to localStorage)
   const { saveMessage, getMessage } = useMessageStorage();
@@ -68,6 +69,11 @@ const Index = () => {
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown } = useJetCountdown();
 
   const handleNavigate = (item: NavItem) => {
+    // Adjust opens as a dialog, not a screen
+    if (item === 'adjust') {
+      setAdjustDialogOpen(true);
+      return;
+    }
     setCurrentScreen(item);
   };
 
@@ -227,26 +233,8 @@ const Index = () => {
             onNewDialogOpened={() => setOpenNewDialogOnMount(false)}
           />
         );
-      case 'adjust':
-        return (
-          <AdjustScreen
-            settings={connectionState.settings}
-            onUpdate={updateSettings}
-            onSave={async () => {
-              console.log('[AdjustScreen] Saving global adjust settings:', connectionState.settings);
-              const success = await saveGlobalAdjust(connectionState.settings);
-              if (success) {
-                console.log('[AdjustScreen] Settings saved successfully');
-                handleHome();
-              } else {
-                console.error('[AdjustScreen] Failed to save settings');
-              }
-            }}
-            onCancel={handleHome}
-            onHome={handleHome}
-            isConnected={connectionState.isConnected}
-          />
-        );
+      // 'adjust' is now handled as a dialog, not a screen
+      // This case shouldn't be reached, but redirect to control just in case
       case 'clean':
         return <CleanScreen onHome={handleHome} />;
       case 'setup':
@@ -339,6 +327,24 @@ const Index = () => {
         }}
         title="Dev Portal Sign In"
         description="Enter the developer password to access the Dev Portal"
+      />
+      
+      {/* Adjust Dialog */}
+      <AdjustDialog
+        open={adjustDialogOpen}
+        onOpenChange={setAdjustDialogOpen}
+        settings={connectionState.settings}
+        onUpdate={updateSettings}
+        onSave={async () => {
+          console.log('[AdjustDialog] Saving global adjust settings:', connectionState.settings);
+          const success = await saveGlobalAdjust(connectionState.settings);
+          if (success) {
+            console.log('[AdjustDialog] Settings saved successfully');
+          } else {
+            console.error('[AdjustDialog] Failed to save settings');
+          }
+        }}
+        isConnected={connectionState.isConnected}
       />
     </div>
   );
