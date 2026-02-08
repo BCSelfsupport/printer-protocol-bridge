@@ -289,21 +289,23 @@ export function Dashboard({
       onMount={onQueryCounters}
     />
     
-    {/* Bottom Nav - only show if handlers provided */}
+    {/* Combined Bottom Nav with version info */}
     {onNavigate && onTurnOff && (
-      <BottomNav
-        activeItem="home"
-        onNavigate={onNavigate}
-        onTurnOff={onTurnOff}
-        showPrinterControls={true}
-      />
+      <div className="bg-sidebar">
+        {/* Nav buttons row */}
+        <BottomNav
+          activeItem="home"
+          onNavigate={onNavigate}
+          onTurnOff={onTurnOff}
+          showPrinterControls={true}
+        />
+        {/* Version footer row */}
+        <div className="bg-sidebar text-sidebar-foreground px-4 py-1.5 flex justify-between text-sm border-t border-sidebar-border">
+          <span>Build 1.0.0</span>
+          <span>{status?.printerVersion ?? ''}</span>
+        </div>
+      </div>
     )}
-    
-    {/* Footer */}
-    <footer className="bg-sidebar text-sidebar-foreground px-4 py-2 flex justify-between text-sm">
-      <span>Build 1.0.0</span>
-      <span></span>
-    </footer>
   </div>
   );
 }

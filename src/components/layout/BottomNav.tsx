@@ -11,11 +11,11 @@ interface BottomNavProps {
 }
 
 const navItems: { id: NavItem; label: string; icon: React.ReactNode; disabled?: boolean }[] = [
-  { id: 'messages', label: 'Messages', icon: <FileText className="w-5 h-5" /> },
-  { id: 'adjust', label: 'Adjust', icon: <SlidersHorizontal className="w-5 h-5" /> },
-  { id: 'clean', label: 'Clean', icon: <Brush className="w-5 h-5" />, disabled: true },
-  { id: 'setup', label: 'Setup', icon: <Settings className="w-5 h-5" />, disabled: true },
-  { id: 'service', label: 'Service', icon: <Wrench className="w-5 h-5" /> },
+  { id: 'messages', label: 'Messages', icon: <FileText className="w-6 h-6" /> },
+  { id: 'adjust', label: 'Adjust', icon: <SlidersHorizontal className="w-6 h-6" /> },
+  { id: 'clean', label: 'Clean', icon: <Brush className="w-6 h-6" />, disabled: true },
+  { id: 'setup', label: 'Setup', icon: <Settings className="w-6 h-6" />, disabled: true },
+  { id: 'service', label: 'Service', icon: <Wrench className="w-6 h-6" /> },
 ];
 
 export function BottomNav({ activeItem, onNavigate, onTurnOff, showPrinterControls = true }: BottomNavProps) {
@@ -36,23 +36,25 @@ export function BottomNav({ activeItem, onNavigate, onTurnOff, showPrinterContro
         {isCollapsed ? 'Show' : 'Hide'}
       </button>
 
-      {/* Nav bar */}
-      <nav className={`bg-sidebar overflow-x-auto transition-all duration-200 ${isCollapsed ? 'h-0 overflow-hidden' : 'h-14'}`}>
-        <div className="flex h-full min-w-max">
+      {/* Nav bar - evenly distributed buttons */}
+      <nav className={`bg-sidebar transition-all duration-200 ${isCollapsed ? 'h-0 overflow-hidden' : 'h-16'}`}>
+        <div className="flex h-full">
+          {/* Turn Off button */}
           <button 
             onClick={onTurnOff}
-            className="flex flex-col items-center justify-center gap-0.5 px-4 industrial-button-gray text-white min-w-[70px] flex-shrink-0"
+            className="flex-1 flex flex-col items-center justify-center gap-1 industrial-button-gray text-white"
           >
-            <Power className="w-5 h-5" />
+            <Power className="w-6 h-6" />
             <span className="text-xs font-medium">Turn Off</span>
           </button>
 
+          {/* Nav items - evenly distributed */}
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => !item.disabled && onNavigate(item.id)}
               disabled={item.disabled}
-              className={`min-w-[60px] px-3 flex flex-col items-center justify-center gap-0.5 transition-all flex-shrink-0 ${
+              className={`flex-1 flex flex-col items-center justify-center gap-1 transition-all ${
                 item.disabled
                   ? 'bg-sidebar/50 text-sidebar-foreground/40 cursor-not-allowed'
                   : activeItem === item.id 
