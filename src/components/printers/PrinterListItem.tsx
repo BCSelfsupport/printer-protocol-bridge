@@ -48,18 +48,18 @@ export function PrinterListItem({
   
   const effectiveStatus = getEffectiveStatus();
   
-  const getStatusBadge = (short: boolean) => {
+  const getStatusBadge = () => {
     switch (effectiveStatus) {
       case 'ready':
-        return { label: short ? 'RDY' : 'READY', className: 'bg-success text-white' };
+        return { label: 'READY', className: 'bg-success text-white' };
       case 'starting':
-        return { label: short ? 'START' : 'STARTING', className: 'bg-destructive text-white' };
+        return { label: 'STARTING', className: 'bg-destructive text-white' };
       case 'stopping':
-        return { label: short ? 'STOP' : 'STOPPING', className: 'bg-warning text-white' };
+        return { label: 'STOPPING', className: 'bg-warning text-white' };
       case 'not_ready':
-        return { label: short ? 'WAIT' : 'NOT READY', className: 'bg-warning text-white' };
+        return { label: 'NOT READY', className: 'bg-warning text-white' };
       default:
-        return { label: short ? 'OFF' : 'OFFLINE', className: 'bg-muted text-muted-foreground' };
+        return { label: 'OFFLINE', className: 'bg-muted text-muted-foreground' };
     }
   };
   
@@ -144,7 +144,7 @@ export function PrinterListItem({
           {/* Status badges */}
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
             {(() => {
-              const badge = getStatusBadge(true);
+              const badge = getStatusBadge();
               return (
                 <span className={`text-xs px-2.5 py-1 rounded font-medium ${badge.className}`}>
                   {badge.label}
@@ -153,7 +153,7 @@ export function PrinterListItem({
             })()}
             {printer.hasActiveErrors && (
               <span className="text-xs px-2.5 py-1 rounded bg-destructive text-white font-medium">
-                ERR
+                ERROR
               </span>
             )}
           </div>
@@ -238,7 +238,7 @@ export function PrinterListItem({
         {/* Right side: status + connect */}
         <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
           {(() => {
-            const badge = getStatusBadge(false);
+            const badge = getStatusBadge();
             return (
               <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${badge.className}`}>
                 {badge.label}
