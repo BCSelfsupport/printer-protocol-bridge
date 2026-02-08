@@ -342,7 +342,7 @@ export function PrintersScreen({
         </div>
       </div>
 
-      {/* Right Panel - Dashboard (when connected) or Empty State */}
+      {/* Right Panel - Dashboard (when connected) or Empty State - no scrollbar */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {showDashboardInPanel ? (
           <div className="flex-1 flex flex-col bg-background rounded-xl border border-slate-700 overflow-hidden">
@@ -368,7 +368,7 @@ export function PrintersScreen({
             />
           </div>
         ) : (
-          <div className="hidden md:flex flex-1 items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl border border-slate-700">
+          <div className="hidden md:flex flex-1 items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl border border-slate-700 overflow-hidden">
             <div className="text-center text-slate-500">
               <Server className="w-16 h-16 mx-auto mb-4 opacity-50" />
               <p className="text-lg font-medium">Select a Printer</p>
