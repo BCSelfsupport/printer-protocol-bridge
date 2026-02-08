@@ -244,8 +244,8 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* Message preview area - horizontal scroll on mobile */}
-      <div className="flex-1 overflow-x-auto overflow-y-auto -mx-2 px-2 md:mx-0 md:px-0 min-h-0">
+      {/* Message preview area - horizontal scroll, no vertical overflow */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden -mx-2 px-2 md:mx-0 md:px-0 min-h-0">
         <MessagePreviewCanvas 
           message={status?.currentMessage}
           printerTime={status?.printerTime}
