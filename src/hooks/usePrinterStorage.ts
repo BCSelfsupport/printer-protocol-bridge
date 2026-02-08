@@ -185,9 +185,18 @@ export function usePrinterStorage() {
       updateFromEmulators();
     }
 
+    // Periodic polling to keep printer cards updated with emulator state
+    // This ensures counts, messages, and status stay in sync
+    const pollInterval = setInterval(() => {
+      if (multiPrinterEmulator.enabled) {
+        updateFromEmulators();
+      }
+    }, 2000); // Poll every 2 seconds
+
     return () => {
       unsubEnabled();
       unsubscribers.forEach(unsub => unsub());
+      clearInterval(pollInterval);
     };
   }, []);
 
