@@ -701,10 +701,27 @@ export function MessageCanvas({
   // Max scroll calculation for swipe scrolling
   const maxScroll = Math.max(0, width - visibleCols);
 
-  // Non-passive touchmove listener so horizontal swipe reliably scrolls on mobile
+  // Non-passive touch listeners so horizontal swipe reliably scrolls on mobile
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    const handleTouchStartNative = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+
+      // Initialize refs for this gesture (don't rely on React onTouchStart)
+      swipeModeRef.current = false;
+      touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+      swipeStartXRef.current = touch.clientX;
+      swipeStartYRef.current = touch.clientY;
+      swipeStartScrollXRef.current = scrollX;
+    };
+
+    const handleTouchEndNative = () => {
+      swipeModeRef.current = false;
+      touchStartPosRef.current = null;
+    };
 
     const handleTouchMoveNonPassive = (e: TouchEvent) => {
       const touch = e.touches[0];
@@ -785,8 +802,18 @@ export function MessageCanvas({
       }
     };
 
+    // Important: touchmove must be non-passive to allow preventDefault
+    canvas.addEventListener('touchstart', handleTouchStartNative, { passive: true });
     canvas.addEventListener('touchmove', handleTouchMoveNonPassive, { passive: false });
-    return () => canvas.removeEventListener('touchmove', handleTouchMoveNonPassive);
+    canvas.addEventListener('touchend', handleTouchEndNative, { passive: true });
+    canvas.addEventListener('touchcancel', handleTouchEndNative, { passive: true });
+
+    return () => {
+      canvas.removeEventListener('touchstart', handleTouchStartNative);
+      canvas.removeEventListener('touchmove', handleTouchMoveNonPassive);
+      canvas.removeEventListener('touchend', handleTouchEndNative);
+      canvas.removeEventListener('touchcancel', handleTouchEndNative);
+    };
   }, [blockedRows, dragFieldId, dragOffset.x, dragOffset.y, fields, isDragging, isLongPressActive, isLongPressPending, maxScroll, multilineTemplate, scrollX]);
 
   return (
