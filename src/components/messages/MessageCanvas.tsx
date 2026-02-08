@@ -626,16 +626,7 @@ export function MessageCanvas({
     const touch = e.touches[0];
     if (!touch) return;
     
-    // Handle swipe scrolling when not dragging a field
-    if (isCanvasSwiping && !isDragging && !isLongPressPending && !isLongPressActive) {
-      const deltaX = swipeStartXRef.current - touch.clientX;
-      const deltaInDots = Math.round(deltaX / DOT_SIZE);
-      const newScrollX = Math.max(0, Math.min(maxScroll, swipeStartScrollXRef.current + deltaInDots));
-      setScrollX(newScrollX);
-      return;
-    }
-    
-    // If long press is pending (waiting for timer), check threshold
+    // If long press is pending (waiting for timer), check threshold first
     if (isLongPressPending && touchStartPosRef.current) {
       const dx = touch.clientX - touchStartPosRef.current.x;
       const dy = touch.clientY - touchStartPosRef.current.y;
@@ -647,11 +638,27 @@ export function MessageCanvas({
         setIsCanvasSwiping(true);
         swipeStartXRef.current = touchStartPosRef.current.x;
         swipeStartScrollXRef.current = scrollX;
+        // Don't return - fall through to handle the swipe
+      } else {
+        // Still within threshold - prevent scroll while waiting for long press
+        e.preventDefault();
         return;
       }
+    }
+    
+    // Handle swipe scrolling when not dragging a field
+    if ((isCanvasSwiping || !isDragging) && !isLongPressActive && touchStartPosRef.current) {
+      // Enable swiping mode if not already
+      if (!isCanvasSwiping) {
+        setIsCanvasSwiping(true);
+        swipeStartXRef.current = touchStartPosRef.current.x;
+        swipeStartScrollXRef.current = scrollX;
+      }
       
-      // Still within threshold - prevent scroll while waiting for long press
-      e.preventDefault();
+      const deltaX = swipeStartXRef.current - touch.clientX;
+      const deltaInDots = Math.round(deltaX / DOT_SIZE);
+      const newScrollX = Math.max(0, Math.min(maxScroll, swipeStartScrollXRef.current + deltaInDots));
+      setScrollX(newScrollX);
       return;
     }
     
@@ -864,7 +871,7 @@ export function MessageCanvas({
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchCancel}
           className={`w-full outline-none ${isDragging && isLongPressActive ? 'cursor-grabbing' : isEditing ? 'cursor-text' : 'cursor-crosshair'}`}
-          style={{ touchAction: (isLongPressPending || isLongPressActive) ? 'none' : 'pan-y' }}
+          style={{ touchAction: 'none' }}
         />
         
         {/* Scroll position indicator - subtle, shown when scrolled */}
