@@ -329,13 +329,7 @@ const Index = () => {
         {renderScreen()}
       </main>
 
-      {/* BottomNav now rendered inside Dashboard/PrintersScreen right panel */}
-
-      {/* Footer */}
-      <footer className="bg-sidebar text-sidebar-foreground px-4 py-2 flex justify-between text-sm">
-        <span>Build 1.0.0</span>
-        <span>{connectionState.status?.printerVersion ?? ''}</span>
-      </footer>
+      {/* BottomNav and Footer now rendered inside Dashboard/PrintersScreen right panel */}
 
       {/* Dev Panel - shown in dev mode OR when signed in with CITEC */}
       {(import.meta.env.DEV || isDevSignedIn) && (
