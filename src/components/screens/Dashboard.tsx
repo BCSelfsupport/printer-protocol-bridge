@@ -295,9 +295,15 @@ export function Dashboard({
         activeItem="home"
         onNavigate={onNavigate}
         onTurnOff={onTurnOff}
-        showPrinterControls={isConnected}
+        showPrinterControls={true}
       />
     )}
+    
+    {/* Footer */}
+    <footer className="bg-sidebar text-sidebar-foreground px-4 py-2 flex justify-between text-sm">
+      <span>Build 1.0.0</span>
+      <span></span>
+    </footer>
   </div>
   );
 }
