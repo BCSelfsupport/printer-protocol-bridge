@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback, ChangeEvent } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { renderText, getFontInfo, PRINTER_FONTS } from '@/lib/dotMatrixFonts';
 
 interface CanvasField {
@@ -58,7 +57,6 @@ export function MessageCanvas({
   const [scrollX, setScrollX] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const scrollTrackRef = useRef<HTMLDivElement>(null);
   const hiddenInputRef = useRef<HTMLInputElement>(null); // Hidden input for mobile keyboard
   const [canvasWidth, setCanvasWidth] = useState(640);
   
@@ -68,8 +66,10 @@ export function MessageCanvas({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   
-  // Scrollbar drag state
-  const [isScrollDragging, setIsScrollDragging] = useState(false);
+  // Canvas swipe scroll state for mobile
+  const [isCanvasSwiping, setIsCanvasSwiping] = useState(false);
+  const swipeStartXRef = useRef<number>(0);
+  const swipeStartScrollXRef = useRef<number>(0);
   
   // Touch/long-press state for mobile drag
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -77,7 +77,7 @@ export function MessageCanvas({
   const [isLongPressPending, setIsLongPressPending] = useState(false); // Waiting for long press
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const LONG_PRESS_DURATION = 400; // ms to hold before drag activates
-  const TOUCH_MOVE_THRESHOLD = 10; // pixels - if moved more than this, cancel long press
+  const TOUCH_MOVE_THRESHOLD = 10; // pixels - if moved more than this, cancel long press and allow swipe
   
   // Inline editing state - cursor-based editing on canvas
   const [isEditing, setIsEditing] = useState(false);
@@ -270,15 +270,6 @@ export function MessageCanvas({
     });
     
   }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, canvasWidth, visibleCols, multilineTemplate, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible]);
-  
-  const handleScroll = (direction: 'left' | 'right') => {
-    const step = 10;
-    if (direction === 'left') {
-      setScrollX(Math.max(0, scrollX - step));
-    } else {
-      setScrollX(Math.min(width - visibleCols, scrollX + step));
-    }
-  };
   
   const getMousePosition = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -592,7 +583,7 @@ export function MessageCanvas({
     setIsLongPressActive(false);
   };
 
-  // Touch handlers for long-press drag on mobile
+  // Touch handlers for long-press drag on mobile AND swipe-to-scroll
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     const touch = e.touches[0];
     if (!touch) return;
@@ -623,6 +614,11 @@ export function MessageCanvas({
           navigator.vibrate(50);
         }
       }, LONG_PRESS_DURATION);
+    } else {
+      // Not on a field - prepare for swipe scrolling
+      setIsCanvasSwiping(true);
+      swipeStartXRef.current = touch.clientX;
+      swipeStartScrollXRef.current = scrollX;
     }
   };
 
@@ -630,15 +626,27 @@ export function MessageCanvas({
     const touch = e.touches[0];
     if (!touch) return;
     
-    // If long press is pending (waiting for timer), prevent scrolling
+    // Handle swipe scrolling when not dragging a field
+    if (isCanvasSwiping && !isDragging && !isLongPressPending && !isLongPressActive) {
+      const deltaX = swipeStartXRef.current - touch.clientX;
+      const deltaInDots = Math.round(deltaX / DOT_SIZE);
+      const newScrollX = Math.max(0, Math.min(maxScroll, swipeStartScrollXRef.current + deltaInDots));
+      setScrollX(newScrollX);
+      return;
+    }
+    
+    // If long press is pending (waiting for timer), check threshold
     if (isLongPressPending && touchStartPosRef.current) {
       const dx = touch.clientX - touchStartPosRef.current.x;
       const dy = touch.clientY - touchStartPosRef.current.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
       
       if (distance > TOUCH_MOVE_THRESHOLD) {
-        // Moved too far - cancel long press and allow normal scroll
+        // Moved too far - cancel long press and start swipe scrolling instead
         clearLongPressTimer();
+        setIsCanvasSwiping(true);
+        swipeStartXRef.current = touchStartPosRef.current.x;
+        swipeStartScrollXRef.current = scrollX;
         return;
       }
       
@@ -679,6 +687,7 @@ export function MessageCanvas({
   const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
     clearLongPressTimer();
     touchStartPosRef.current = null;
+    setIsCanvasSwiping(false);
     
     if (isDragging && dragFieldId !== null && isLongPressActive) {
       // Complete the drag
@@ -710,103 +719,14 @@ export function MessageCanvas({
   const handleTouchCancel = () => {
     clearLongPressTimer();
     touchStartPosRef.current = null;
+    setIsCanvasSwiping(false);
     setIsDragging(false);
     setDragFieldId(null);
     setIsLongPressActive(false);
   };
 
-  // Scrollbar drag handlers
+  // Max scroll calculation for swipe scrolling
   const maxScroll = Math.max(0, width - visibleCols);
-  
-  const handleScrollbarMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsScrollDragging(true);
-  };
-
-  const handleScrollbarTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsScrollDragging(true);
-  };
-
-  const handleScrollTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!scrollTrackRef.current || isScrollDragging) return;
-    
-    const rect = scrollTrackRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const trackWidth = rect.width;
-    const thumbWidth = (visibleCols / width) * trackWidth;
-    
-    // Calculate new scroll position centered on click
-    const clickRatio = (clickX - thumbWidth / 2) / (trackWidth - thumbWidth);
-    const newScrollX = Math.round(Math.max(0, Math.min(maxScroll, clickRatio * maxScroll)));
-    setScrollX(newScrollX);
-  };
-
-  const handleScrollTrackTouch = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!scrollTrackRef.current) return;
-    
-    const touch = e.touches[0];
-    if (!touch) return;
-    
-    const rect = scrollTrackRef.current.getBoundingClientRect();
-    const touchX = touch.clientX - rect.left;
-    const trackWidth = rect.width;
-    const thumbWidth = (visibleCols / width) * trackWidth;
-    
-    // Calculate new scroll position centered on touch
-    const touchRatio = (touchX - thumbWidth / 2) / (trackWidth - thumbWidth);
-    const newScrollX = Math.round(Math.max(0, Math.min(maxScroll, touchRatio * maxScroll)));
-    setScrollX(newScrollX);
-  };
-
-  useEffect(() => {
-    if (!isScrollDragging) return;
-
-    const handleMove = (clientX: number) => {
-      if (!scrollTrackRef.current) return;
-      
-      const rect = scrollTrackRef.current.getBoundingClientRect();
-      const trackWidth = rect.width;
-      const thumbWidth = (visibleCols / width) * trackWidth;
-      
-      const posX = clientX - rect.left;
-      const scrollableWidth = trackWidth - thumbWidth;
-      const scrollRatio = (posX - thumbWidth / 2) / scrollableWidth;
-      
-      const newScrollX = Math.round(Math.max(0, Math.min(maxScroll, scrollRatio * maxScroll)));
-      setScrollX(newScrollX);
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      handleMove(e.clientX);
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches[0]) {
-        e.preventDefault();
-        handleMove(e.touches[0].clientX);
-      }
-    };
-
-    const handleEnd = () => {
-      setIsScrollDragging(false);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleEnd);
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-    window.addEventListener('touchend', handleEnd);
-    window.addEventListener('touchcancel', handleEnd);
-    
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleEnd);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleEnd);
-      window.removeEventListener('touchcancel', handleEnd);
-    };
-  }, [isScrollDragging, maxScroll, visibleCols, width]);
 
   // Use non-passive touch listener when dragging to allow preventDefault
   useEffect(() => {
@@ -926,8 +846,8 @@ export function MessageCanvas({
         aria-hidden="true"
       />
       
-      {/* Canvas area */}
-      <div ref={containerRef} className="border-2 border-muted rounded-t-lg overflow-hidden w-full relative">
+      {/* Canvas area - swipeable on mobile */}
+      <div ref={containerRef} className="border-2 border-muted rounded-lg overflow-hidden w-full relative">
         <canvas
           ref={canvasRef}
           width={canvasWidth}
@@ -944,50 +864,15 @@ export function MessageCanvas({
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchCancel}
           className={`w-full outline-none ${isDragging && isLongPressActive ? 'cursor-grabbing' : isEditing ? 'cursor-text' : 'cursor-crosshair'}`}
-          style={{ touchAction: (isLongPressPending || isLongPressActive) ? 'none' : 'pan-x pan-y' }}
+          style={{ touchAction: (isLongPressPending || isLongPressActive) ? 'none' : 'pan-y' }}
         />
-      </div>
-      
-      {/* Scroll bar */}
-      <div className="flex items-center bg-gradient-to-b from-sky-400 to-sky-500 rounded-b-lg p-1 gap-2">
-        <div className="flex items-center bg-sky-300 rounded px-2 py-1">
-          <span className="text-sm font-mono text-sky-800 min-w-[30px]">{scrollX}</span>
-          <button
-            onClick={() => handleScroll('left')}
-            disabled={scrollX <= 0}
-            className="p-0.5 hover:bg-sky-200 rounded disabled:opacity-50"
-          >
-            <ChevronLeft className="w-4 h-4 text-sky-700" />
-          </button>
-        </div>
         
-        {/* Scroll track - clickable and touch-draggable */}
-        <div 
-          ref={scrollTrackRef}
-          onClick={handleScrollTrackClick}
-          onTouchStart={handleScrollTrackTouch}
-          onTouchMove={handleScrollTrackTouch}
-          className="flex-1 h-8 bg-sky-300 rounded relative cursor-pointer touch-none"
-        >
-          {/* Scroll thumb - draggable via mouse and touch */}
-          <div 
-            onMouseDown={handleScrollbarMouseDown}
-            onTouchStart={handleScrollbarTouchStart}
-            className={`absolute h-full bg-sky-600 rounded cursor-grab active:cursor-grabbing hover:bg-sky-700 transition-colors touch-none ${isScrollDragging ? 'bg-sky-700' : ''}`}
-            style={{
-              left: `${maxScroll > 0 ? (scrollX / maxScroll) * (100 - (visibleCols / width) * 100) : 0}%`,
-              width: `${Math.min(100, (visibleCols / width) * 100)}%`,
-            }}
-          />
-        </div>
-        
-        <button
-          onClick={() => handleScroll('right')}
-          disabled={scrollX >= width - visibleCols}
-          className="p-1 bg-sky-300 hover:bg-sky-200 rounded disabled:opacity-50"
-        >
-          <ChevronRight className="w-4 h-4 text-sky-700" />
-        </button>
+        {/* Scroll position indicator - subtle, shown when scrolled */}
+        {scrollX > 0 && (
+          <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded pointer-events-none">
+            {scrollX}
+          </div>
+        )}
       </div>
     </div>
   );
