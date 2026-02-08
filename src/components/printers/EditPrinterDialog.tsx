@@ -9,16 +9,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Printer as PrinterIcon, Save } from 'lucide-react';
+import { Printer as PrinterIcon, Save, Trash2 } from 'lucide-react';
 
 interface EditPrinterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   printer: Printer | null;
   onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number }) => void;
+  onDelete?: (printerId: number) => void;
 }
 
-export function EditPrinterDialog({ open, onOpenChange, printer, onSave }: EditPrinterDialogProps) {
+export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelete }: EditPrinterDialogProps) {
   const [name, setName] = useState('');
   const [ipAddress, setIpAddress] = useState('');
   const [port, setPort] = useState('23');
@@ -46,6 +47,12 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave }: EditP
       ipAddress: ipAddress.trim(),
       port: portNum,
     });
+    onOpenChange(false);
+  };
+
+  const handleDelete = () => {
+    if (!printer || !onDelete) return;
+    onDelete(printer.id);
     onOpenChange(false);
   };
 
@@ -101,22 +108,35 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave }: EditP
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="border-slate-600 text-slate-300 hover:bg-slate-800"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Save className="w-4 h-4 mr-1" />
-              Save Changes
-            </Button>
+          <div className="flex justify-between pt-2">
+            {onDelete && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDelete}
+                className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Delete
+              </Button>
+            )}
+            <div className="flex gap-2 ml-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="border-slate-600 text-slate-300 hover:bg-slate-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Save className="w-4 h-4 mr-1" />
+                Save Changes
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>
