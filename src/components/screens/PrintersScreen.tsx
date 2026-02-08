@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Server } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Server, GripVertical } from 'lucide-react';
 import { Printer, PrinterStatus } from '@/types/printer';
 import { useState, useEffect } from 'react';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
@@ -7,6 +7,24 @@ import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dashboard } from '@/components/screens/Dashboard';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface PrintersScreenProps {
   printers: Printer[];
@@ -14,6 +32,7 @@ interface PrintersScreenProps {
   onHome: () => void;
   onAddPrinter: (printer: { name: string; ipAddress: string; port: number }) => void;
   onRemovePrinter: (printerId: number) => void;
+  onReorderPrinters?: (printers: Printer[]) => void;
   isDevSignedIn?: boolean;
   onDevSignIn?: () => void;
   onDevSignOut?: () => void;
@@ -39,12 +58,73 @@ interface PrintersScreenProps {
   onControlUnmount?: () => void;
 }
 
+// Sortable wrapper for PrinterListItem
+function SortablePrinterItem({
+  printer,
+  isSelected,
+  onSelect,
+  onConnect,
+  showConnectButton,
+  isConnected,
+  compact,
+  countdownType,
+}: {
+  printer: Printer;
+  isSelected: boolean;
+  onSelect: () => void;
+  onConnect: () => void;
+  showConnectButton: boolean;
+  isConnected: boolean;
+  compact: boolean;
+  countdownType?: 'starting' | 'stopping' | null;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: printer.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : 'auto',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="relative group">
+      {/* Drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded hover:bg-slate-700"
+      >
+        <GripVertical className="w-4 h-4 text-slate-400" />
+      </div>
+      <PrinterListItem
+        printer={printer}
+        isSelected={isSelected}
+        onSelect={onSelect}
+        onConnect={onConnect}
+        showConnectButton={showConnectButton}
+        isConnected={isConnected}
+        compact={compact}
+        countdownType={countdownType}
+      />
+    </div>
+  );
+}
+
 export function PrintersScreen({
   printers,
   onConnect,
   onHome,
   onAddPrinter,
   onRemovePrinter,
+  onReorderPrinters,
   isDevSignedIn = false,
   onDevSignIn,
   onDevSignOut,
@@ -73,6 +153,17 @@ export function PrintersScreen({
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const isMobile = useIsMobile();
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   // Update selected printer when printers list changes
   useEffect(() => {
     if (printers.length > 0 && !selectedPrinter) {
@@ -95,15 +186,29 @@ export function PrintersScreen({
     }
   }, [connectedPrinter?.id]);
 
-  const handleConnect = () => {
-    if (selectedPrinter) {
-      onConnect(selectedPrinter);
+  const handlePrinterClick = (printer: Printer) => {
+    setSelectedPrinter(printer);
+    // On desktop, clicking connects immediately if printer is available
+    if (!isMobile && printer.isAvailable) {
+      onConnect(printer);
     }
   };
 
   const handleRemoveSelected = () => {
     if (selectedPrinter) {
       onRemovePrinter(selectedPrinter.id);
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = printers.findIndex((p) => p.id === active.id);
+      const newIndex = printers.findIndex((p) => p.id === over.id);
+
+      const reordered = arrayMove(printers, oldIndex, newIndex);
+      onReorderPrinters?.(reordered);
     }
   };
 
@@ -123,7 +228,7 @@ export function PrintersScreen({
               </div>
               <div>
                 <h2 className="font-bold text-white text-sm">Network Printers</h2>
-                <p className="text-[10px] text-slate-400">{printers.length} device{printers.length !== 1 ? 's' : ''}</p>
+                <p className="text-[10px] text-slate-400">{printers.length} device{printers.length !== 1 ? 's' : ''} • drag to reorder</p>
               </div>
             </div>
           </div>
@@ -151,32 +256,45 @@ export function PrintersScreen({
           </div>
         </div>
 
-        {/* Printer List */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {printers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-slate-500 py-8">
-              <PrinterIcon className="w-10 h-10 mb-3 opacity-50" />
-              <p className="font-medium text-sm">No printers configured</p>
-              <p className="text-xs text-center mt-1">
-                Click "Add" to add your first device
-              </p>
-            </div>
-          ) : (
-            printers.map((printer) => (
-              <PrinterListItem
-                key={printer.id}
-                printer={printer}
-                isSelected={selectedPrinter?.id === printer.id}
-                onSelect={() => setSelectedPrinter(printer)}
-                onConnect={() => onConnect(printer)}
-                showConnectButton={!showDashboardInPanel}
-                isConnected={connectedPrinter?.id === printer.id}
-                compact={!!showDashboardInPanel}
-                countdownType={connectedPrinter?.id === printer.id ? countdownType : null}
-              />
-            ))
-          )}
-        </div>
+        {/* Printer List with ScrollArea */}
+        <ScrollArea className="flex-1">
+          <div className="p-3 space-y-2">
+            {printers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-slate-500 py-8">
+                <PrinterIcon className="w-10 h-10 mb-3 opacity-50" />
+                <p className="font-medium text-sm">No printers configured</p>
+                <p className="text-xs text-center mt-1">
+                  Click "Add" to add your first device
+                </p>
+              </div>
+            ) : (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={printers.map(p => p.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {printers.map((printer) => (
+                    <SortablePrinterItem
+                      key={printer.id}
+                      printer={printer}
+                      isSelected={selectedPrinter?.id === printer.id}
+                      onSelect={() => handlePrinterClick(printer)}
+                      onConnect={() => onConnect(printer)}
+                      showConnectButton={!showDashboardInPanel}
+                      isConnected={connectedPrinter?.id === printer.id}
+                      compact={!!showDashboardInPanel}
+                      countdownType={connectedPrinter?.id === printer.id ? countdownType : null}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+            )}
+          </div>
+        </ScrollArea>
 
         {/* Footer with status and dev sign-in */}
         <div className="p-2 border-t border-slate-800 bg-slate-900/80">
@@ -237,14 +355,6 @@ export function PrintersScreen({
               <Server className="w-16 h-16 mx-auto mb-4 opacity-50" />
               <p className="text-lg font-medium">Select a Printer</p>
               <p className="text-sm mt-1">Click a printer from the list to connect</p>
-              {selectedPrinter && selectedPrinter.isAvailable && (
-                <Button
-                  onClick={handleConnect}
-                  className="mt-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500"
-                >
-                  Connect to {selectedPrinter.name}
-                </Button>
-              )}
             </div>
           </div>
         )}
