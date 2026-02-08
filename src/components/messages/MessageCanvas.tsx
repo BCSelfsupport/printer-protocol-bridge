@@ -66,9 +66,10 @@ export function MessageCanvas({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   
-  // Canvas swipe scroll state for mobile
-  const [isCanvasSwiping, setIsCanvasSwiping] = useState(false);
+  // Canvas swipe scroll state for mobile (refs so it updates immediately during touch)
+  const swipeModeRef = useRef(false);
   const swipeStartXRef = useRef<number>(0);
+  const swipeStartYRef = useRef<number>(0);
   const swipeStartScrollXRef = useRef<number>(0);
   
   // Touch/long-press state for mobile drag
@@ -587,17 +588,23 @@ export function MessageCanvas({
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     const touch = e.touches[0];
     if (!touch) return;
-    
+
+    // Reset swipe mode at start
+    swipeModeRef.current = false;
+
     const pos = getTouchPosition(e);
     const field = findFieldAtPosition(pos.x, pos.y);
-    
+
     // Store touch start position for movement threshold check
     touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
-    
+    swipeStartXRef.current = touch.clientX;
+    swipeStartYRef.current = touch.clientY;
+    swipeStartScrollXRef.current = scrollX;
+
     if (field) {
       // Mark that we're waiting for long press (to prevent scroll)
       setIsLongPressPending(true);
-      
+
       // Start long press timer
       longPressTimerRef.current = setTimeout(() => {
         // Long press activated - start dragging
@@ -608,77 +615,36 @@ export function MessageCanvas({
         setDragOffset({ x: pos.x - field.x, y: pos.y - field.y });
         setDragPosition({ x: field.x, y: field.y });
         onCanvasClick?.(pos.x, pos.y); // Select the field
-        
+
         // Provide haptic feedback if available
         if (navigator.vibrate) {
           navigator.vibrate(50);
         }
       }, LONG_PRESS_DURATION);
-    } else {
-      // Not on a field - prepare for swipe scrolling
-      setIsCanvasSwiping(true);
-      swipeStartXRef.current = touch.clientX;
-      swipeStartScrollXRef.current = scrollX;
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
     const touch = e.touches[0];
     if (!touch) return;
-    
-    // If long press is pending (waiting for timer), check threshold first
-    if (isLongPressPending && touchStartPosRef.current) {
-      const dx = touch.clientX - touchStartPosRef.current.x;
-      const dy = touch.clientY - touchStartPosRef.current.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      if (distance > TOUCH_MOVE_THRESHOLD) {
-        // Moved too far - cancel long press and start swipe scrolling instead
-        clearLongPressTimer();
-        setIsCanvasSwiping(true);
-        swipeStartXRef.current = touchStartPosRef.current.x;
-        swipeStartScrollXRef.current = scrollX;
-        // Don't return - fall through to handle the swipe
-      } else {
-        // Still within threshold - prevent scroll while waiting for long press
-        e.preventDefault();
-        return;
-      }
-    }
-    
-    // Handle swipe scrolling when not dragging a field
-    if ((isCanvasSwiping || !isDragging) && !isLongPressActive && touchStartPosRef.current) {
-      // Enable swiping mode if not already
-      if (!isCanvasSwiping) {
-        setIsCanvasSwiping(true);
-        swipeStartXRef.current = touchStartPosRef.current.x;
-        swipeStartScrollXRef.current = scrollX;
-      }
-      
-      const deltaX = swipeStartXRef.current - touch.clientX;
-      const deltaInDots = Math.round(deltaX / DOT_SIZE);
-      const newScrollX = Math.max(0, Math.min(maxScroll, swipeStartScrollXRef.current + deltaInDots));
-      setScrollX(newScrollX);
-      return;
-    }
-    
+
     // If we're in active drag mode, handle the drag
     if (isDragging && dragFieldId !== null && isLongPressActive) {
       e.preventDefault(); // Prevent scrolling while dragging
-      
+
       const draggedField = fields.find(f => f.id === dragFieldId);
       if (!draggedField) return;
-      
+
       const fontInfo = getFontInfo(draggedField.fontSize);
       const pos = getTouchPosition(e);
       let newX = pos.x - dragOffset.x;
       let newY = pos.y - dragOffset.y;
-      
+
       // Clamp to valid area
       newX = Math.max(0, newX);
       newY = Math.max(blockedRows, newY);
       newY = Math.min(TOTAL_ROWS - fontInfo.height, newY);
-      
+
       // Snap to line if multiline template
       if (multilineTemplate) {
         const lineInfo = getLineForY(newY);
@@ -686,22 +652,22 @@ export function MessageCanvas({
           newY = lineInfo.lineY;
         }
       }
-      
+
       setDragPosition({ x: newX, y: newY });
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    swipeModeRef.current = false;
     clearLongPressTimer();
     touchStartPosRef.current = null;
-    setIsCanvasSwiping(false);
-    
+
     if (isDragging && dragFieldId !== null && isLongPressActive) {
       // Complete the drag
       const draggedField = fields.find(f => f.id === dragFieldId);
       if (draggedField && onFieldMove) {
         const fontInfo = getFontInfo(draggedField.fontSize);
-        
+
         // Check if font fits in the target line
         if (multilineTemplate) {
           const lineInfo = getLineForY(dragPosition.y);
@@ -715,7 +681,7 @@ export function MessageCanvas({
           onFieldMove(dragFieldId, dragPosition.x, dragPosition.y);
         }
       }
-      
+
       setIsDragging(false);
       setDragFieldId(null);
       setIsLongPressActive(false);
@@ -724,9 +690,9 @@ export function MessageCanvas({
   };
 
   const handleTouchCancel = () => {
+    swipeModeRef.current = false;
     clearLongPressTimer();
     touchStartPosRef.current = null;
-    setIsCanvasSwiping(false);
     setIsDragging(false);
     setDragFieldId(null);
     setIsLongPressActive(false);
@@ -735,93 +701,93 @@ export function MessageCanvas({
   // Max scroll calculation for swipe scrolling
   const maxScroll = Math.max(0, width - visibleCols);
 
-  // Use non-passive touch listener when dragging to allow preventDefault
+  // Non-passive touchmove listener so horizontal swipe reliably scrolls on mobile
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
-    // Only attach when we're in pending or active long press mode
-    if (!isLongPressPending && !isLongPressActive) return;
-    
-    const getTouchPos = (touch: Touch) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = Math.floor((touch.clientX - rect.left) / DOT_SIZE) + scrollX;
-      const y = Math.floor((touch.clientY - rect.top) / DOT_SIZE);
-      return { x, y };
-    };
-    
-    const getLineForYLocal = (y: number): { lineIndex: number; lineY: number; lineHeight: number } | null => {
-      if (!multilineTemplate) return null;
-      const { lines, dotsPerLine } = multilineTemplate;
-      const startY = blockedRows;
-      for (let i = 0; i < lines; i++) {
-        const lineY = startY + i * dotsPerLine;
-        if (y >= lineY && y < lineY + dotsPerLine) {
-          return { lineIndex: i, lineY, lineHeight: dotsPerLine };
-        }
-      }
-      return null;
-    };
-    
+
     const handleTouchMoveNonPassive = (e: TouchEvent) => {
       const touch = e.touches[0];
       if (!touch) return;
-      
-      // If pending, check movement threshold
-      if (isLongPressPending && touchStartPosRef.current) {
-        const dx = touch.clientX - touchStartPosRef.current.x;
-        const dy = touch.clientY - touchStartPosRef.current.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance <= TOUCH_MOVE_THRESHOLD) {
-          // Still within threshold - prevent scroll
-          e.preventDefault();
-        } else {
-          // Moved too far - cancel long press
-          if (longPressTimerRef.current) {
-            clearTimeout(longPressTimerRef.current);
-            longPressTimerRef.current = null;
+
+      if (!touchStartPosRef.current) return;
+
+      const dx = touch.clientX - touchStartPosRef.current.x;
+      const dy = touch.clientY - touchStartPosRef.current.y;
+
+      // Decide if this gesture is a horizontal swipe (lock once decided)
+      if (!swipeModeRef.current) {
+        const isHorizontal = Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > TOUCH_MOVE_THRESHOLD;
+        if (isHorizontal) {
+          swipeModeRef.current = true;
+          // If we were waiting for a long-press, cancel it and treat as swipe
+          if (isLongPressPending) {
+            clearLongPressTimer();
           }
+        }
+      }
+
+      // If swipe mode: prevent browser scrolling and update scrollX
+      if (swipeModeRef.current && !isLongPressActive && !isDragging) {
+        e.preventDefault();
+        const deltaX = swipeStartXRef.current - touch.clientX;
+        const deltaInDots = Math.round(deltaX / DOT_SIZE);
+        const newScrollX = Math.max(0, Math.min(maxScroll, swipeStartScrollXRef.current + deltaInDots));
+        setScrollX(newScrollX);
+        return;
+      }
+
+      // If pending and not yet determined swipe vs long-press, prevent scroll inside threshold
+      if (isLongPressPending && !swipeModeRef.current) {
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance <= TOUCH_MOVE_THRESHOLD) {
+          e.preventDefault();
         }
         return;
       }
-      
+
       // If we're actively dragging, prevent scroll and update position
       if (isDragging && isLongPressActive && dragFieldId !== null) {
         e.preventDefault();
-        
+
         const draggedField = fields.find(f => f.id === dragFieldId);
         if (!draggedField) return;
-        
+
         const fontInfo = getFontInfo(draggedField.fontSize);
-        const pos = getTouchPos(touch);
-        let newX = pos.x - dragOffset.x;
-        let newY = pos.y - dragOffset.y;
-        
+
+        // Convert touch into dot coords
+        const rect = canvas.getBoundingClientRect();
+        const x = Math.floor((touch.clientX - rect.left) / DOT_SIZE) + scrollX;
+        const y = Math.floor((touch.clientY - rect.top) / DOT_SIZE);
+
+        let newX = x - dragOffset.x;
+        let newY = y - dragOffset.y;
+
         // Clamp to valid area
         newX = Math.max(0, newX);
         newY = Math.max(blockedRows, newY);
         newY = Math.min(TOTAL_ROWS - fontInfo.height, newY);
-        
+
         // Snap to line if multiline template
         if (multilineTemplate) {
-          const lineInfo = getLineForYLocal(newY);
-          if (lineInfo) {
-            newY = lineInfo.lineY;
+          const { lines, dotsPerLine } = multilineTemplate;
+          const startY = blockedRows;
+          for (let i = 0; i < lines; i++) {
+            const lineY = startY + i * dotsPerLine;
+            if (newY >= lineY && newY < lineY + dotsPerLine) {
+              newY = lineY;
+              break;
+            }
           }
         }
-        
+
         setDragPosition({ x: newX, y: newY });
       }
     };
-    
-    // Add with { passive: false } to allow preventDefault
+
     canvas.addEventListener('touchmove', handleTouchMoveNonPassive, { passive: false });
-    
-    return () => {
-      canvas.removeEventListener('touchmove', handleTouchMoveNonPassive);
-    };
-  }, [isLongPressPending, isLongPressActive, isDragging, dragFieldId, fields, dragOffset, blockedRows, multilineTemplate, scrollX]);
+    return () => canvas.removeEventListener('touchmove', handleTouchMoveNonPassive);
+  }, [blockedRows, dragFieldId, dragOffset.x, dragOffset.y, fields, isDragging, isLongPressActive, isLongPressPending, maxScroll, multilineTemplate, scrollX]);
 
   return (
     <div className="flex flex-col w-full">
