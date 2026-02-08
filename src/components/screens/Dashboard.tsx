@@ -291,47 +291,47 @@ export function Dashboard({
     
     {/* Combined Bottom Nav with version info - all on one line */}
     {onNavigate && onTurnOff && (
-      <div className="bg-sidebar h-20 flex items-center px-4">
+      <div className="bg-sidebar h-20 flex items-center px-2 md:px-4">
         {/* Left version */}
-        <span className="text-sidebar-foreground text-sm whitespace-nowrap">Build 1.0.0</span>
+        <span className="text-sidebar-foreground text-xs md:text-sm whitespace-nowrap flex-shrink-0">Build 1.0.0</span>
         
-        {/* Center nav buttons */}
-        <div className="flex-1 flex justify-center">
-          <div className="flex gap-1">
+        {/* Center nav buttons - horizontally scrollable on mobile */}
+        <div className="flex-1 overflow-x-auto mx-2 md:mx-4">
+          <div className="flex gap-1 justify-center min-w-max px-2">
             <button 
               onClick={onTurnOff}
-              className="flex flex-col items-center justify-center gap-1 px-5 py-2.5 industrial-button-gray text-white rounded"
+              className="flex flex-col items-center justify-center gap-1 px-4 md:px-5 py-2 md:py-2.5 industrial-button-gray text-white rounded"
             >
-              <Power className="w-6 h-6" />
-              <span className="text-xs font-medium">Turn Off</span>
+              <Power className="w-5 h-5 md:w-6 md:h-6" />
+              <span className="text-[10px] md:text-xs font-medium">Turn Off</span>
             </button>
             
             {[
-              { id: 'messages' as const, label: 'Messages', icon: <FileText className="w-6 h-6" /> },
-              { id: 'adjust' as const, label: 'Adjust', icon: <SlidersHorizontal className="w-6 h-6" /> },
-              { id: 'clean' as const, label: 'Clean', icon: <Brush className="w-6 h-6" />, disabled: true },
-              { id: 'setup' as const, label: 'Setup', icon: <Settings className="w-6 h-6" />, disabled: true },
-              { id: 'service' as const, label: 'Service', icon: <Wrench className="w-6 h-6" /> },
+              { id: 'messages' as const, label: 'Messages', icon: <FileText className="w-5 h-5 md:w-6 md:h-6" /> },
+              { id: 'adjust' as const, label: 'Adjust', icon: <SlidersHorizontal className="w-5 h-5 md:w-6 md:h-6" /> },
+              { id: 'clean' as const, label: 'Clean', icon: <Brush className="w-5 h-5 md:w-6 md:h-6" />, disabled: true },
+              { id: 'setup' as const, label: 'Setup', icon: <Settings className="w-5 h-5 md:w-6 md:h-6" />, disabled: true },
+              { id: 'service' as const, label: 'Service', icon: <Wrench className="w-5 h-5 md:w-6 md:h-6" /> },
             ].map((item) => (
               <button
                 key={item.id}
                 onClick={() => !item.disabled && onNavigate(item.id)}
                 disabled={item.disabled}
-                className={`flex flex-col items-center justify-center gap-1 px-5 py-2.5 rounded transition-all ${
+                className={`flex flex-col items-center justify-center gap-1 px-4 md:px-5 py-2 md:py-2.5 rounded transition-all ${
                   item.disabled
                     ? 'bg-sidebar/50 text-sidebar-foreground/40 cursor-not-allowed'
                     : 'industrial-button text-white'
                 }`}
               >
                 {item.icon}
-                <span className="text-xs font-medium">{item.label}</span>
+                <span className="text-[10px] md:text-xs font-medium">{item.label}</span>
               </button>
             ))}
           </div>
         </div>
         
         {/* Right version */}
-        <span className="text-sidebar-foreground text-sm whitespace-nowrap">{status?.printerVersion ?? ''}</span>
+        <span className="text-sidebar-foreground text-xs md:text-sm whitespace-nowrap flex-shrink-0">{status?.printerVersion ?? ''}</span>
       </div>
     )}
   </div>
