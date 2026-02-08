@@ -19,18 +19,25 @@ interface NewFieldDialogProps {
   onOpenChange: (open: boolean) => void;
   onSelectFieldType: (type: string) => void;
   onOpenAutoCode: () => void;
+  onOpenBarcode: () => void;
 }
 
 export function NewFieldDialog({ 
   open, 
   onOpenChange, 
   onSelectFieldType,
-  onOpenAutoCode 
+  onOpenAutoCode,
+  onOpenBarcode,
 }: NewFieldDialogProps) {
   const handleSelect = (fieldType: typeof FIELD_TYPES[number]) => {
     if (fieldType.value === 'autocode') {
       onOpenChange(false);
       onOpenAutoCode();
+      return;
+    }
+    if (fieldType.value === 'barcode') {
+      onOpenChange(false);
+      onOpenBarcode();
       return;
     }
     onSelectFieldType(fieldType.value);
