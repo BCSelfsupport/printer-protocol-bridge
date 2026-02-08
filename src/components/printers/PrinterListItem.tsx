@@ -65,6 +65,11 @@ export function PrinterListItem({
     }
   };
   
+  // Text color classes based on selection state
+  const textColor = isSelected || isConnected ? 'text-primary' : 'text-slate-200';
+  const subTextColor = isSelected || isConnected ? 'text-primary' : 'text-slate-300';
+  const mutedTextColor = isSelected || isConnected ? 'text-primary/70' : 'text-slate-400';
+
   // Compact mode for split-view layout
   if (compact) {
     return (
@@ -75,7 +80,7 @@ export function PrinterListItem({
             ? 'bg-success/20 border-success ring-2 ring-success/30'
             : isSelected 
               ? 'bg-primary/20 border-primary' 
-              : 'bg-card/50 border-transparent hover:bg-card/80 hover:border-border'
+              : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600'
         }`}
       >
         <div className="flex items-start gap-4">
@@ -107,20 +112,20 @@ export function PrinterListItem({
           {/* Printer info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-primary truncate text-base">{printer.name}</span>
+              <span className={`font-bold truncate text-base ${textColor}`}>{printer.name}</span>
               {isConnected && (
                 <span className="text-xs px-2 py-0.5 rounded bg-success text-white font-medium">
                   ACTIVE
                 </span>
               )}
             </div>
-            <div className="text-sm text-primary font-mono truncate">
+            <div className={`text-sm font-mono truncate ${subTextColor}`}>
               {printer.ipAddress}:{printer.port}
             </div>
             
             {/* Message name with print count */}
             {printer.currentMessage && (
-              <div className="flex items-center gap-2 mt-1.5 text-sm text-primary">
+              <div className={`flex items-center gap-2 mt-1.5 text-sm ${subTextColor}`}>
                 <FileText className="w-4 h-4 flex-shrink-0" />
                 <span className="truncate font-medium">{printer.currentMessage}</span>
                 {printer.printCount !== undefined && (
@@ -178,7 +183,7 @@ export function PrinterListItem({
       className={`w-full text-left p-3 rounded-lg transition-all border ${
         isSelected 
           ? 'bg-primary/20 border-primary shadow-lg' 
-          : 'bg-card/50 border-transparent hover:bg-card/80 hover:border-border'
+          : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600'
       }`}
     >
       <div className="flex items-center gap-3">
@@ -210,22 +215,22 @@ export function PrinterListItem({
         {/* Printer info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-primary truncate text-sm">{printer.name}</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+            <span className={`font-bold truncate text-sm ${textColor}`}>{printer.name}</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded bg-slate-700 ${mutedTextColor}`}>
               ID: {printer.id}
             </span>
           </div>
-          <div className="text-xs text-primary font-mono">
+          <div className={`text-xs font-mono ${subTextColor}`}>
             {printer.ipAddress}:{printer.port}
           </div>
           
           {/* Current message with print count - inline */}
           {printer.currentMessage && (
-            <div className="flex items-center gap-2 mt-1 text-[10px]">
-              <FileText className="w-3 h-3 flex-shrink-0 text-primary" />
-              <span className="truncate text-primary font-medium">{printer.currentMessage}</span>
+            <div className={`flex items-center gap-2 mt-1 text-[10px] ${subTextColor}`}>
+              <FileText className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate font-medium">{printer.currentMessage}</span>
               {printer.printCount !== undefined && (
-                <span className="text-primary font-semibold flex-shrink-0">
+                <span className="font-semibold flex-shrink-0">
                   #{printer.printCount.toLocaleString()}
                 </span>
               )}
@@ -273,7 +278,7 @@ export function PrinterListItem({
                 onConnect();
               }}
               size="sm"
-              className="h-6 text-[10px] px-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500"
+              className="h-6 text-[10px] px-2 bg-gradient-to-r from-success to-success/80 hover:from-success/90 hover:to-success/70"
             >
               <Plug className="w-2.5 h-2.5 mr-1" />
               Connect
