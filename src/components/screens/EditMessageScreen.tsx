@@ -433,31 +433,29 @@ export function EditMessageScreen({
             ref={canvasScrollerRef}
             className={`mb-2 md:mb-4 -mx-2 px-2 md:mx-0 md:px-0 pb-2`}
           >
-            <div style={{ minWidth: `${Math.max(500, message.width * 8 + 100)}px` }}>
-              <MessageCanvas
-                templateHeight={message.height}
-                width={message.width}
-                fields={message.fields}
-                onCanvasClick={handleCanvasClick}
-                onFieldMove={handleFieldMove}
-                onFieldDataChange={(fieldId, newData) => {
-                  setMessage((prev) => ({
-                    ...prev,
-                    fields: prev.fields.map((f) =>
-                      f.id === fieldId ? { ...f, data: newData } : f
-                    ),
-                  }));
-                }}
-                onFieldError={handleFieldError}
-                selectedFieldId={selectedFieldId}
-                multilineTemplate={currentMultilineTemplate ? {
-                  lines: currentMultilineTemplate.lines,
-                  dotsPerLine: currentMultilineTemplate.dotsPerLine,
-                } : null}
-                onScrollLockChange={setIsCanvasScrollLocked}
-              />
-              <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click a field to edit text inline</p>
-            </div>
+            <MessageCanvas
+              templateHeight={message.height}
+              width={message.width}
+              fields={message.fields}
+              onCanvasClick={handleCanvasClick}
+              onFieldMove={handleFieldMove}
+              onFieldDataChange={(fieldId, newData) => {
+                setMessage((prev) => ({
+                  ...prev,
+                  fields: prev.fields.map((f) =>
+                    f.id === fieldId ? { ...f, data: newData } : f
+                  ),
+                }));
+              }}
+              onFieldError={handleFieldError}
+              selectedFieldId={selectedFieldId}
+              multilineTemplate={currentMultilineTemplate ? {
+                lines: currentMultilineTemplate.lines,
+                dotsPerLine: currentMultilineTemplate.dotsPerLine,
+              } : null}
+              onScrollLockChange={setIsCanvasScrollLocked}
+            />
+            <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click a field to edit text inline</p>
           </div>
 
           {/* Message properties row - horizontal scroll on mobile */}
