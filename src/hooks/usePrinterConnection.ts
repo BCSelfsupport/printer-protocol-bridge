@@ -6,6 +6,7 @@ import '@/types/electron.d.ts';
 import { parseStatusResponse } from '@/lib/printerProtocol';
 import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
 import { printerEmulator } from '@/lib/printerEmulator';
+import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 const defaultSettings: PrintSettings = {
   width: 15,
   height: 8,
@@ -65,7 +66,7 @@ const mockMetrics: PrinterMetrics = {
 const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
 
 // Helper to check if emulator should be used
-const shouldUseEmulator = () => printerEmulator.enabled;
+const shouldUseEmulator = () => printerEmulator.enabled || multiPrinterEmulator.enabled;
 
 export function usePrinterConnection() {
   const { printers, addPrinter, removePrinter, updatePrinterStatus, updatePrinter, setPrinters } = usePrinterStorage();
@@ -86,8 +87,31 @@ export function usePrinterConnection() {
     if (!availabilityPollingEnabled) return;
     if (isChecking || printers.length === 0) return;
 
-    // Emulator: keep Printer 1 stable "online" but still reflect consumable/error state.
+    // Emulator: keep emulated printers stable "online" and reflect consumable/error state.
     if (shouldUseEmulator()) {
+      // Multi-printer emulator: update every emulated IP in the list
+      if (multiPrinterEmulator.enabled) {
+        const hasErrors = (inkLevel?: string, makeupLevel?: string) =>
+          inkLevel === 'LOW' || inkLevel === 'EMPTY' || makeupLevel === 'LOW' || makeupLevel === 'EMPTY';
+
+        printers.forEach((p) => {
+          const instance = multiPrinterEmulator.getInstanceByIp(p.ipAddress, p.port);
+          if (!instance) return;
+
+          const state = instance.getState();
+          const sim = instance.getSimulatedPrinter();
+
+          updatePrinterStatus(p.id, {
+            isAvailable: true,
+            status: sim.status,
+            hasActiveErrors: hasErrors(state?.inkLevel, state?.makeupLevel),
+          });
+        });
+
+        return;
+      }
+
+      // Single emulator (back-compat): keep Printer 1 online
       const sim = printerEmulator.getSimulatedPrinter();
       if (sim) {
         const state = printerEmulator.getState();
