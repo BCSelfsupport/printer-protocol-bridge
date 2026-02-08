@@ -10,6 +10,8 @@ import { NewFieldDialog } from '@/components/messages/NewFieldDialog';
 import { AutoCodeFieldDialog } from '@/components/messages/AutoCodeFieldDialog';
 import { TimeCodesDialog } from '@/components/messages/TimeCodesDialog';
 import { DateCodesDialog } from '@/components/messages/DateCodesDialog';
+import { CounterDialog } from '@/components/messages/CounterDialog';
+import { UserDefineDialog, UserDefineConfig } from '@/components/messages/UserDefineDialog';
 import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
 import { BlockFieldDialog, BlockFieldConfig } from '@/components/messages/BlockFieldDialog';
 import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
@@ -130,6 +132,8 @@ export function EditMessageScreen({
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [counterDialogOpen, setCounterDialogOpen] = useState(false);
+  const [userDefineDialogOpen, setUserDefineDialogOpen] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   // Mobile: lock the parent horizontal scroller while long-press dragging fields
@@ -428,6 +432,30 @@ export function EditMessageScreen({
     setSelectedFieldId(newId);
   };
 
+  const handleAddUserDefine = (config: UserDefineConfig) => {
+    const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
+    
+    // Create user define field representation
+    const userDefineLabel = `[${config.id}:${'_'.repeat(config.length)}]`;
+    
+    const newField: MessageField = {
+      id: newId,
+      type: 'userdefine',
+      data: userDefineLabel,
+      x: message.fields.length * 50,
+      y: 32 - message.height,
+      width: config.length * 8 + 16, // Estimate width based on length
+      height: Math.min(16, message.height),
+      fontSize: 'Standard16High',
+    };
+    
+    setMessage((prev) => ({
+      ...prev,
+      fields: [...prev.fields, newField],
+    }));
+    setSelectedFieldId(newId);
+  };
+
   const handleDeleteField = () => {
     if (!selectedFieldId || message.fields.length <= 1) return;
     setMessage((prev) => ({
@@ -700,6 +728,7 @@ export function EditMessageScreen({
             onOpenAutoCode={() => setAutoCodeDialogOpen(true)}
             onOpenBarcode={() => setBarcodeDialogOpen(true)}
             onOpenBlock={() => setBlockDialogOpen(true)}
+            onOpenUserDefine={() => setUserDefineDialogOpen(true)}
           />
 
           {/* AutoCode Field Dialog */}
@@ -710,6 +739,7 @@ export function EditMessageScreen({
             onSelectType={handleAddField}
             onOpenTimeCodes={() => setTimeCodesDialogOpen(true)}
             onOpenDateCodes={() => setDateCodesDialogOpen(true)}
+            onOpenCounter={() => setCounterDialogOpen(true)}
           />
 
           {/* Time Codes Dialog */}
@@ -728,6 +758,14 @@ export function EditMessageScreen({
             onAddField={handleAddField}
           />
 
+          {/* Counter Dialog */}
+          <CounterDialog
+            open={counterDialogOpen}
+            onOpenChange={setCounterDialogOpen}
+            onBack={() => setAutoCodeDialogOpen(true)}
+            onAddField={handleAddField}
+          />
+
           {/* Barcode Field Dialog */}
           <BarcodeFieldDialog
             open={barcodeDialogOpen}
@@ -742,6 +780,14 @@ export function EditMessageScreen({
             onOpenChange={setBlockDialogOpen}
             onSave={handleAddBlock}
             maxHeight={message.height}
+          />
+
+          {/* User Define Dialog */}
+          <UserDefineDialog
+            open={userDefineDialogOpen}
+            onOpenChange={setUserDefineDialogOpen}
+            onBack={() => setNewFieldDialogOpen(true)}
+            onAddField={handleAddUserDefine}
           />
 
           {/* Message Settings Dialog */}

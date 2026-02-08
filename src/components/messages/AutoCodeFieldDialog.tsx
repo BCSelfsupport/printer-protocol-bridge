@@ -19,6 +19,7 @@ interface AutoCodeFieldDialogProps {
   onSelectType: (type: string, format?: string) => void;
   onOpenTimeCodes: () => void;
   onOpenDateCodes: () => void;
+  onOpenCounter: () => void;
 }
 
 export function AutoCodeFieldDialog({ 
@@ -28,6 +29,7 @@ export function AutoCodeFieldDialog({
   onSelectType,
   onOpenTimeCodes,
   onOpenDateCodes,
+  onOpenCounter,
 }: AutoCodeFieldDialogProps) {
   const handleSelect = (autoCodeType: typeof AUTOCODE_TYPES[number]) => {
     if (autoCodeType.value === 'time') {
@@ -40,7 +42,12 @@ export function AutoCodeFieldDialog({
       onOpenDateCodes();
       return;
     }
-    // For other types, add field directly for now
+    if (autoCodeType.value === 'counter') {
+      onOpenChange(false);
+      onOpenCounter();
+      return;
+    }
+    // For shift codes, add field directly
     onSelectType(autoCodeType.value);
     onOpenChange(false);
   };
