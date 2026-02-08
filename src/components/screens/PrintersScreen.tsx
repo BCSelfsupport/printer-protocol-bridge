@@ -240,9 +240,9 @@ export function PrintersScreen({
   const showDashboardInPanel = !isMobile && isConnected && connectedPrinter;
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-3 md:p-4 gap-3 md:gap-4 overflow-hidden">
+    <div className="flex-1 flex flex-col md:flex-row bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-3 md:p-4 gap-3 md:gap-4 overflow-y-auto md:overflow-hidden">
       {/* Left Panel - Printer List (narrower on desktop when showing Dashboard) */}
-      <div className={`${showDashboardInPanel ? 'w-full md:w-96 lg:w-[420px]' : 'w-full md:w-96'} flex-shrink-0 flex flex-col bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden`}>
+      <div className={`${showDashboardInPanel ? 'w-full md:w-96 lg:w-[420px]' : 'w-full md:w-96'} flex-shrink-0 flex flex-col bg-slate-900/50 rounded-xl border border-slate-800 overflow-visible md:overflow-hidden`}>
         {/* Header */}
         <div className="p-3 border-b border-slate-800 bg-slate-900/80">
           <div className="flex items-center justify-between mb-3">
