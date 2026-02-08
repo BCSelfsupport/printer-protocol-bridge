@@ -115,8 +115,8 @@ export function PrinterListItem({
                 <FileText className="w-3.5 h-3.5 flex-shrink-0 text-primary" />
                 <span className="truncate text-primary font-medium">{printer.currentMessage}</span>
                 {printer.printCount !== undefined && (
-                  <span className="text-primary font-semibold flex-shrink-0">
-                    #{printer.printCount.toLocaleString()}
+                  <span className="text-muted-foreground flex-shrink-0">
+                    Prints: <span className="text-primary font-semibold">{printer.printCount.toLocaleString()}</span>
                   </span>
                 )}
               </div>
