@@ -14,11 +14,17 @@ import { Input } from '@/components/ui/input';
 export interface MessageSettings {
   speed: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
   rotation: 'Normal' | 'Mirror' | 'Flip' | 'Mirror Flip';
+  bold: number;    // 0-9 (^SB equivalent for per-message)
+  gap: number;     // 0-9 (^GP equivalent for per-message)
+  width: number;   // 0-16000 (^PW equivalent for per-message)
 }
 
 export const defaultMessageSettings: MessageSettings = {
   speed: 'Fastest',
   rotation: 'Normal',
+  bold: 0,
+  gap: 0,
+  width: 1000,
 };
 
 interface SettingCardProps {
@@ -167,6 +173,21 @@ export function MessageSettingsDialog({
     onUpdate({ speed: speedValues[Math.max(0, idx - 1)] });
   };
 
+  const handleBoldChange = (delta: number) => {
+    const newValue = Math.max(0, Math.min(9, (settings.bold ?? 0) + delta));
+    onUpdate({ bold: newValue });
+  };
+
+  const handleGapChange = (delta: number) => {
+    const newValue = Math.max(0, Math.min(9, (settings.gap ?? 0) + delta));
+    onUpdate({ gap: newValue });
+  };
+
+  const handleWidthChange = (delta: number) => {
+    const newValue = Math.max(0, Math.min(16000, (settings.width ?? 1000) + delta));
+    onUpdate({ width: newValue });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-lg max-h-[80vh] overflow-y-auto p-4 md:p-6 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950">
@@ -193,6 +214,42 @@ export function MessageSettingsDialog({
               onDecrease={cycleRotation}
               showInput={false}
               showRotate
+            />
+
+            {/* Bold: 0-9 */}
+            <SettingCard
+              label="Bold (0-9)"
+              value={settings.bold ?? 0}
+              onIncrease={() => handleBoldChange(1)}
+              onDecrease={() => handleBoldChange(-1)}
+              onEdit={(val) => onUpdate({ bold: Math.max(0, Math.min(9, val)) })}
+              showInput
+              min={0}
+              max={9}
+            />
+
+            {/* Gap: 0-9 */}
+            <SettingCard
+              label="Gap (0-9)"
+              value={settings.gap ?? 0}
+              onIncrease={() => handleGapChange(1)}
+              onDecrease={() => handleGapChange(-1)}
+              onEdit={(val) => onUpdate({ gap: Math.max(0, Math.min(9, val)) })}
+              showInput
+              min={0}
+              max={9}
+            />
+
+            {/* Width: 0-16000 */}
+            <SettingCard
+              label="Width (0-16000)"
+              value={settings.width ?? 1000}
+              onIncrease={() => handleWidthChange(10)}
+              onDecrease={() => handleWidthChange(-10)}
+              onEdit={(val) => onUpdate({ width: Math.max(0, Math.min(16000, val)) })}
+              showInput
+              min={0}
+              max={16000}
             />
           </div>
           
