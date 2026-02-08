@@ -68,7 +68,7 @@ export function PrinterListItem({
     return (
       <button
         onClick={onSelect}
-        className={`w-full text-left p-2.5 rounded-lg transition-all border ${
+        className={`w-full text-left p-3 rounded-lg transition-all border ${
           isConnected
             ? 'bg-success/20 border-success ring-2 ring-success/30'
             : isSelected 
@@ -76,43 +76,43 @@ export function PrinterListItem({
               : 'bg-card/50 border-transparent hover:bg-card/80 hover:border-border'
         }`}
       >
-        <div className="flex items-start gap-2.5">
+        <div className="flex items-start gap-3">
           {/* Status indicator */}
-          <div className={`relative w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+          <div className={`relative w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
             printer.isAvailable ? 'bg-success/20' : 'bg-muted'
           }`}>
-            <PrinterIcon className={`w-4 h-4 ${
+            <PrinterIcon className={`w-5 h-5 ${
               printer.isAvailable ? 'text-success' : 'text-muted-foreground'
             }`} />
-            <div className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card flex items-center justify-center ${
+            <div className={`absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-card flex items-center justify-center ${
               printer.isAvailable ? 'bg-success' : 'bg-destructive'
             }`}>
               {printer.isAvailable ? (
-                <Wifi className="w-1.5 h-1.5 text-white" />
+                <Wifi className="w-2 h-2 text-white" />
               ) : (
-                <WifiOff className="w-1.5 h-1.5 text-white" />
+                <WifiOff className="w-2 h-2 text-white" />
               )}
             </div>
           </div>
 
           {/* Printer info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-primary truncate text-xs">{printer.name}</span>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-primary truncate text-sm">{printer.name}</span>
               {isConnected && (
-                <span className="text-[9px] px-1 py-0.5 rounded bg-success text-white font-medium">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-success text-white font-medium">
                   ACTIVE
                 </span>
               )}
             </div>
-            <div className="text-[10px] text-primary font-mono truncate">
+            <div className="text-xs text-primary font-mono truncate">
               {printer.ipAddress}
             </div>
             
             {/* Message name with print count */}
             {printer.currentMessage && (
-              <div className="flex items-center gap-1.5 mt-0.5 text-[9px]">
-                <FileText className="w-2.5 h-2.5 flex-shrink-0 text-primary" />
+              <div className="flex items-center gap-1.5 mt-1 text-[10px]">
+                <FileText className="w-3 h-3 flex-shrink-0 text-primary" />
                 <span className="truncate text-primary">{printer.currentMessage}</span>
                 {printer.printCount !== undefined && (
                   <span className="text-primary font-semibold flex-shrink-0">
@@ -124,16 +124,16 @@ export function PrinterListItem({
             
             {/* Fluid levels */}
             {printer.isAvailable && (
-              <div className="flex items-center gap-2 mt-0.5">
-                <div className="flex items-center gap-0.5" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
-                  <Palette className={`w-2.5 h-2.5 ${getFluidColor(printer.inkLevel)}`} />
-                  <span className={`text-[9px] font-semibold ${getFluidColor(printer.inkLevel)}`}>
+              <div className="flex items-center gap-3 mt-1">
+                <div className="flex items-center gap-1" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
+                  <Palette className={`w-3 h-3 ${getFluidColor(printer.inkLevel)}`} />
+                  <span className={`text-[10px] font-semibold ${getFluidColor(printer.inkLevel)}`}>
                     {printer.inkLevel || '?'}
                   </span>
                 </div>
-                <div className="flex items-center gap-0.5" title={`Makeup: ${printer.makeupLevel || 'Unknown'}`}>
-                  <Droplets className={`w-2.5 h-2.5 ${getFluidColor(printer.makeupLevel)}`} />
-                  <span className={`text-[9px] font-semibold ${getFluidColor(printer.makeupLevel)}`}>
+                <div className="flex items-center gap-1" title={`Makeup: ${printer.makeupLevel || 'Unknown'}`}>
+                  <Droplets className={`w-3 h-3 ${getFluidColor(printer.makeupLevel)}`} />
+                  <span className={`text-[10px] font-semibold ${getFluidColor(printer.makeupLevel)}`}>
                     {printer.makeupLevel || '?'}
                   </span>
                 </div>
@@ -142,17 +142,17 @@ export function PrinterListItem({
           </div>
 
           {/* Status badges */}
-          <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
             {(() => {
               const badge = getStatusBadge(true);
               return (
-                <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${badge.className}`}>
+                <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${badge.className}`}>
                   {badge.label}
                 </span>
               );
             })()}
             {printer.hasActiveErrors && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-destructive text-white font-medium">
+              <span className="text-[10px] px-2 py-0.5 rounded bg-destructive text-white font-medium">
                 ERR
               </span>
             )}
