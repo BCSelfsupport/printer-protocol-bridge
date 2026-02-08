@@ -540,32 +540,59 @@ export function EditMessageScreen({
             </div>
           </div>
 
-          {/* New Field button row - horizontal scroll on mobile */}
-          <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0 mb-2 md:mb-4">
+          {/* Action buttons - all in one horizontal scroll row */}
+          <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
             <div className="flex gap-2 md:gap-4 justify-center min-w-max">
               <button
                 onClick={() => setNewFieldDialogOpen(true)}
-                className="industrial-button text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[90px] md:min-w-[120px]"
+                className="industrial-button text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[80px] md:min-w-[100px]"
               >
-                <FilePlus className="w-6 h-6 md:w-8 md:h-8 mb-1" />
-                <span className="text-xs md:text-base font-medium">New Field</span>
+                <FilePlus className="w-5 h-5 md:w-7 md:h-7 mb-1" />
+                <span className="text-[10px] md:text-sm font-medium">New Field</span>
               </button>
 
               <button
                 onClick={handleDeleteField}
                 disabled={!selectedFieldId || message.fields.length <= 1}
-                className="industrial-button-danger text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[90px] md:min-w-[120px] disabled:opacity-50"
+                className="industrial-button-danger text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[80px] md:min-w-[100px] disabled:opacity-50"
               >
-                <Trash2 className="w-6 h-6 md:w-8 md:h-8 mb-1" />
-                <span className="text-xs md:text-base font-medium">Delete</span>
+                <Trash2 className="w-5 h-5 md:w-7 md:h-7 mb-1" />
+                <span className="text-[10px] md:text-sm font-medium">Delete</span>
               </button>
 
               <button
                 onClick={() => setSettingsDialogOpen(true)}
-                className="industrial-button text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[90px] md:min-w-[120px]"
+                className="industrial-button text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[80px] md:min-w-[100px]"
               >
-                <Settings className="w-6 h-6 md:w-8 md:h-8 mb-1" />
-                <span className="text-xs md:text-base font-medium">Settings</span>
+                <Settings className="w-5 h-5 md:w-7 md:h-7 mb-1" />
+                <span className="text-[10px] md:text-sm font-medium">Settings</span>
+              </button>
+
+              <button
+                onClick={() => onSave(message, false)}
+                className="industrial-button-success text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[80px] md:min-w-[100px]"
+              >
+                <Save className="w-5 h-5 md:w-7 md:h-7 mb-1" />
+                <span className="text-[10px] md:text-sm font-medium">Save</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setSaveAsName(message.name + '_copy');
+                  setSaveAsDialogOpen(true);
+                }}
+                className="industrial-button text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[80px] md:min-w-[100px]"
+              >
+                <SaveAll className="w-5 h-5 md:w-7 md:h-7 mb-1" />
+                <span className="text-[10px] md:text-sm font-medium">Save As</span>
+              </button>
+
+              <button
+                onClick={onCancel}
+                className="industrial-button-gray text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[80px] md:min-w-[100px]"
+              >
+                <X className="w-5 h-5 md:w-7 md:h-7 mb-1" />
+                <span className="text-[10px] md:text-sm font-medium">Cancel</span>
               </button>
             </div>
           </div>
@@ -616,37 +643,6 @@ export function EditMessageScreen({
               }));
             }}
           />
-          {/* Action buttons - horizontal scroll on mobile */}
-          <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
-            <div className="flex gap-2 md:gap-4 justify-center min-w-max">
-              <button
-                onClick={() => onSave(message, false)}
-                className="industrial-button-success text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[90px] md:min-w-[120px]"
-              >
-                <Save className="w-6 h-6 md:w-8 md:h-8 mb-1" />
-                <span className="text-xs md:text-base font-medium">Save</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setSaveAsName(message.name + '_copy');
-                  setSaveAsDialogOpen(true);
-                }}
-                className="industrial-button text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[90px] md:min-w-[120px]"
-              >
-                <SaveAll className="w-6 h-6 md:w-8 md:h-8 mb-1" />
-                <span className="text-xs md:text-base font-medium">Save As</span>
-              </button>
-
-              <button
-                onClick={onCancel}
-                className="industrial-button-gray text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[90px] md:min-w-[120px]"
-              >
-                <X className="w-6 h-6 md:w-8 md:h-8 mb-1" />
-                <span className="text-xs md:text-base font-medium">Cancel</span>
-              </button>
-            </div>
-          </div>
 
           {/* Save As Dialog */}
           <Dialog open={saveAsDialogOpen} onOpenChange={setSaveAsDialogOpen}>
