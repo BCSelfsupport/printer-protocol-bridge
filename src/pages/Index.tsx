@@ -70,6 +70,7 @@ const Index = () => {
     saveMessageSettings,
     queryPrintSettings,
     sendCommand,
+    queryPrinterMetrics,
   } = usePrinterConnection();
   
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown } = useJetCountdown();
@@ -276,6 +277,7 @@ const Index = () => {
             onRemovePrinter={removePrinter}
             onReorderPrinters={reorderPrinters}
             onUpdatePrinter={updatePrinter}
+            onQueryPrinterMetrics={queryPrinterMetrics}
             isDevSignedIn={isDevSignedIn}
             onDevSignIn={() => setDevSignInDialogOpen(true)}
             onDevSignOut={() => setIsDevSignedIn(false)}

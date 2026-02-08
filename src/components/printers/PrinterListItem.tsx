@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2 } from 'lucide-react';
 import { Printer } from '@/types/printer';
 import { Button } from '@/components/ui/button';
 
@@ -8,6 +8,7 @@ interface PrinterListItemProps {
   onSelect: () => void;
   onConnect?: () => void;
   onEdit?: () => void;
+  onService?: () => void;
   showConnectButton?: boolean;
   isConnected?: boolean;
   compact?: boolean;
@@ -35,6 +36,7 @@ export function PrinterListItem({
   onSelect,
   onConnect,
   onEdit,
+  onService,
   showConnectButton = true,
   isConnected = false,
   compact = false,
@@ -155,7 +157,7 @@ export function PrinterListItem({
             )}
           </div>
 
-          {/* Status badges */}
+          {/* Status badges + Service button */}
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
             {(() => {
               const badge = getStatusBadge();
@@ -169,6 +171,22 @@ export function PrinterListItem({
               <span className="text-xs px-2.5 py-1 rounded bg-destructive text-white font-medium">
                 ERROR
               </span>
+            )}
+            {/* Service button */}
+            {printer.isAvailable && onService && (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onService();
+                }}
+                size="sm"
+                variant="ghost"
+                className="h-6 text-[10px] px-2 text-slate-400 hover:text-white hover:bg-slate-600"
+                title="View service metrics"
+              >
+                <Settings2 className="w-3 h-3 mr-1" />
+                Service
+              </Button>
             )}
           </div>
         </div>
@@ -256,8 +274,8 @@ export function PrinterListItem({
           )}
         </div>
 
-        {/* Right side: status + connect */}
-        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+        {/* Right side: status + service + connect */}
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
           {(() => {
             const badge = getStatusBadge();
             return (
@@ -271,19 +289,36 @@ export function PrinterListItem({
               ERROR
             </span>
           )}
-          {showConnectButton && printer.isAvailable && onConnect && (
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                onConnect();
-              }}
-              size="sm"
-              className="h-6 text-[10px] px-2 bg-gradient-to-r from-success to-success/80 hover:from-success/90 hover:to-success/70"
-            >
-              <Plug className="w-2.5 h-2.5 mr-1" />
-              Connect
-            </Button>
-          )}
+          <div className="flex items-center gap-1 mt-1">
+            {/* Service button */}
+            {printer.isAvailable && onService && (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onService();
+                }}
+                size="sm"
+                variant="ghost"
+                className="h-6 text-[10px] px-1.5 text-slate-400 hover:text-white hover:bg-slate-600"
+                title="View service metrics"
+              >
+                <Settings2 className="w-3 h-3" />
+              </Button>
+            )}
+            {showConnectButton && printer.isAvailable && onConnect && (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onConnect();
+                }}
+                size="sm"
+                className="h-6 text-[10px] px-2 bg-gradient-to-r from-success to-success/80 hover:from-success/90 hover:to-success/70"
+              >
+                <Plug className="w-2.5 h-2.5 mr-1" />
+                Connect
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </button>

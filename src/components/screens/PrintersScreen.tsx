@@ -1,9 +1,10 @@
 import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Server, GripVertical } from 'lucide-react';
-import { Printer, PrinterStatus } from '@/types/printer';
+import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 import { useState, useEffect } from 'react';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
 import { AddPrinterDialog } from '@/components/printers/AddPrinterDialog';
 import { EditPrinterDialog } from '@/components/printers/EditPrinterDialog';
+import { PrinterServicePopup } from '@/components/printers/PrinterServicePopup';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dashboard } from '@/components/screens/Dashboard';
@@ -38,6 +39,7 @@ interface PrintersScreenProps {
   onRemovePrinter: (printerId: number) => void;
   onReorderPrinters?: (printers: Printer[]) => void;
   onUpdatePrinter?: (printerId: number, updates: Partial<Printer>) => void;
+  onQueryPrinterMetrics?: (printer: Printer) => Promise<PrinterMetrics | null>;
   isDevSignedIn?: boolean;
   onDevSignIn?: () => void;
   onDevSignOut?: () => void;
@@ -73,6 +75,7 @@ function SortablePrinterItem({
   onSelect,
   onConnect,
   onEdit,
+  onService,
   showConnectButton,
   isConnected,
   compact,
@@ -84,6 +87,7 @@ function SortablePrinterItem({
   onSelect: () => void;
   onConnect: () => void;
   onEdit: () => void;
+  onService: () => void;
   showConnectButton: boolean;
   isConnected: boolean;
   compact: boolean;
@@ -129,6 +133,7 @@ function SortablePrinterItem({
         onSelect={onSelect}
         onConnect={onConnect}
         onEdit={onEdit}
+        onService={onService}
         showConnectButton={showConnectButton}
         isConnected={isConnected}
         compact={compact}
@@ -146,6 +151,7 @@ export function PrintersScreen({
   onRemovePrinter,
   onReorderPrinters,
   onUpdatePrinter,
+  onQueryPrinterMetrics,
   isDevSignedIn = false,
   onDevSignIn,
   onDevSignOut,
@@ -176,6 +182,8 @@ export function PrintersScreen({
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [printerToEdit, setPrinterToEdit] = useState<Printer | null>(null);
+  const [servicePopupOpen, setServicePopupOpen] = useState(false);
+  const [servicePrinter, setServicePrinter] = useState<Printer | null>(null);
   const isMobile = useIsMobile();
 
   const sensors = useSensors(
@@ -252,6 +260,11 @@ export function PrintersScreen({
     }
   };
 
+  const handleOpenService = (printer: Printer) => {
+    setServicePrinter(printer);
+    setServicePopupOpen(true);
+  };
+
   // Desktop shows split-view with Dashboard when connected
   const showDashboardInPanel = !isMobile && isConnected && connectedPrinter;
 
@@ -325,6 +338,7 @@ export function PrintersScreen({
                       onSelect={() => handlePrinterClick(printer)}
                       onConnect={() => onConnect(printer)}
                       onEdit={() => handleEditPrinter(printer)}
+                      onService={() => handleOpenService(printer)}
                       showConnectButton={!showDashboardInPanel}
                       isConnected={connectedPrinter?.id === printer.id}
                       compact={!!showDashboardInPanel}
@@ -418,6 +432,14 @@ export function PrintersScreen({
         printer={printerToEdit}
         onSave={handleSaveEdit}
         onDelete={onRemovePrinter}
+      />
+
+      {/* Service Popup */}
+      <PrinterServicePopup
+        open={servicePopupOpen}
+        onOpenChange={setServicePopupOpen}
+        printer={servicePrinter}
+        onQueryMetrics={onQueryPrinterMetrics ?? (async () => null)}
       />
     </div>
   );

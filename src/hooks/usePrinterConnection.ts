@@ -1454,6 +1454,120 @@ export function usePrinterConnection() {
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
+  // Query printer metrics for any printer (for service popup)
+  // This opens a temporary connection if needed
+  const queryPrinterMetrics = useCallback(async (printer: Printer): Promise<PrinterMetrics | null> => {
+    console.log('[queryPrinterMetrics] Called for printer:', printer.id, printer.ipAddress);
+
+    if (shouldUseEmulator()) {
+      // Multi-printer emulator
+      if (multiPrinterEmulator.enabled) {
+        const instance = multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port);
+        if (instance) {
+          const result = instance.processCommand('^SU');
+          if (result.success && result.response) {
+            const parsed = parseStatusResponse(result.response);
+            if (parsed) {
+              return {
+                powerHours: parsed.powerHours ?? '0:00',
+                streamHours: parsed.streamHours ?? '0:00',
+                modulation: parsed.modulation ?? 0,
+                viscosity: parsed.viscosity ?? 0,
+                charge: parsed.charge ?? 0,
+                pressure: parsed.pressure ?? 0,
+                rps: parsed.rps ?? 0,
+                phaseQual: parsed.phaseQual ?? 0,
+                hvDeflection: parsed.hvDeflection ?? false,
+                inkLevel: (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN',
+                makeupLevel: (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
+                printStatus: parsed.hvDeflection ? 'Ready' : 'Not Ready',
+                subsystems: {
+                  v300up: parsed.subsystems?.v300up ?? false,
+                  vltOn: parsed.subsystems?.vltOn ?? false,
+                  gutOn: parsed.subsystems?.gutOn ?? false,
+                  modOn: parsed.subsystems?.modOn ?? false,
+                },
+              };
+            }
+          }
+        }
+      }
+      // Fallback to single emulator
+      const result = printerEmulator.processCommand('^SU');
+      if (result.success && result.response) {
+        const parsed = parseStatusResponse(result.response);
+        if (parsed) {
+          return {
+            powerHours: parsed.powerHours ?? '0:00',
+            streamHours: parsed.streamHours ?? '0:00',
+            modulation: parsed.modulation ?? 0,
+            viscosity: parsed.viscosity ?? 0,
+            charge: parsed.charge ?? 0,
+            pressure: parsed.pressure ?? 0,
+            rps: parsed.rps ?? 0,
+            phaseQual: parsed.phaseQual ?? 0,
+            hvDeflection: parsed.hvDeflection ?? false,
+            inkLevel: (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN',
+            makeupLevel: (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
+            printStatus: parsed.hvDeflection ? 'Ready' : 'Not Ready',
+            subsystems: {
+              v300up: parsed.subsystems?.v300up ?? false,
+              vltOn: parsed.subsystems?.vltOn ?? false,
+              gutOn: parsed.subsystems?.gutOn ?? false,
+              modOn: parsed.subsystems?.modOn ?? false,
+            },
+          };
+        }
+      }
+      return mockMetrics;
+    } else if (isElectron && window.electronAPI) {
+      try {
+        // Open temporary connection
+        await window.electronAPI.printer.connect({
+          id: printer.id,
+          ipAddress: printer.ipAddress,
+          port: printer.port,
+        });
+
+        const result = await window.electronAPI.printer.sendCommand(printer.id, '^SU');
+        console.log('[queryPrinterMetrics] ^SU response:', result);
+
+        if (result.success && result.response) {
+          const parsed = parseStatusResponse(result.response);
+          if (parsed) {
+            return {
+              powerHours: parsed.powerHours ?? '0:00',
+              streamHours: parsed.streamHours ?? '0:00',
+              modulation: parsed.modulation ?? 0,
+              viscosity: parsed.viscosity ?? 0,
+              charge: parsed.charge ?? 0,
+              pressure: parsed.pressure ?? 0,
+              rps: parsed.rps ?? 0,
+              phaseQual: parsed.phaseQual ?? 0,
+              hvDeflection: parsed.hvDeflection ?? false,
+              inkLevel: (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN',
+              makeupLevel: (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
+              printStatus: parsed.hvDeflection ? 'Ready' : 'Not Ready',
+              subsystems: {
+                v300up: parsed.subsystems?.v300up ?? false,
+                vltOn: parsed.subsystems?.vltOn ?? false,
+                gutOn: parsed.subsystems?.gutOn ?? false,
+                modOn: parsed.subsystems?.modOn ?? false,
+              },
+            };
+          }
+        }
+        return null;
+      } catch (e) {
+        console.error('[queryPrinterMetrics] Failed:', e);
+        return null;
+      }
+    } else {
+      // Web preview mock
+      return mockMetrics;
+    }
+  }, []);
+
   return {
     printers,
     connectionState,
@@ -1489,5 +1603,6 @@ export function usePrinterConnection() {
     saveMessageSettings,
     queryPrintSettings,
     sendCommand,
+    queryPrinterMetrics,
   };
 }
