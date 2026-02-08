@@ -11,6 +11,7 @@ import { AutoCodeFieldDialog } from '@/components/messages/AutoCodeFieldDialog';
 import { TimeCodesDialog } from '@/components/messages/TimeCodesDialog';
 import { DateCodesDialog } from '@/components/messages/DateCodesDialog';
 import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
+import { BlockFieldDialog, BlockFieldConfig } from '@/components/messages/BlockFieldDialog';
 import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
 import {
   Dialog,
@@ -128,6 +129,7 @@ export function EditMessageScreen({
   const [dateCodesDialogOpen, setDateCodesDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   // Mobile: lock the parent horizontal scroller while long-press dragging fields
@@ -391,6 +393,30 @@ export function EditMessageScreen({
       x: message.fields.length * 50,
       y: 32 - message.height,
       width: Math.max(60, config.data.length * 8), // Estimate width based on data length
+      height: Math.min(message.height, 32),
+      fontSize: 'Standard16High',
+    };
+    
+    setMessage((prev) => ({
+      ...prev,
+      fields: [...prev.fields, newField],
+    }));
+    setSelectedFieldId(newId);
+  };
+
+  const handleAddBlock = (config: BlockFieldConfig) => {
+    const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
+    
+    // Create block field representation
+    const blockLabel = `[BLOCK L:${config.blockLength} G:${config.gap}]`;
+    
+    const newField: MessageField = {
+      id: newId,
+      type: 'block',
+      data: blockLabel,
+      x: message.fields.length * 50,
+      y: 32 - message.height,
+      width: config.blockLength + config.gap + 8, // Width based on block+gap
       height: Math.min(message.height, 32),
       fontSize: 'Standard16High',
     };
@@ -673,6 +699,7 @@ export function EditMessageScreen({
             onSelectFieldType={handleAddField}
             onOpenAutoCode={() => setAutoCodeDialogOpen(true)}
             onOpenBarcode={() => setBarcodeDialogOpen(true)}
+            onOpenBlock={() => setBlockDialogOpen(true)}
           />
 
           {/* AutoCode Field Dialog */}
@@ -707,6 +734,14 @@ export function EditMessageScreen({
             onOpenChange={setBarcodeDialogOpen}
             onBack={() => setNewFieldDialogOpen(true)}
             onAddBarcode={handleAddBarcode}
+          />
+
+          {/* Block Field Dialog */}
+          <BlockFieldDialog
+            open={blockDialogOpen}
+            onOpenChange={setBlockDialogOpen}
+            onSave={handleAddBlock}
+            maxHeight={message.height}
           />
 
           {/* Message Settings Dialog */}
