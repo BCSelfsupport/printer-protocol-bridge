@@ -106,7 +106,7 @@ export function PrinterListItem({
               )}
             </div>
             <div className="text-sm text-primary font-mono truncate">
-              {printer.ipAddress}
+              {printer.ipAddress}:{printer.port}
             </div>
             
             {/* Message name with print count */}
