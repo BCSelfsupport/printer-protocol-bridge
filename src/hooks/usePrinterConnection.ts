@@ -12,7 +12,7 @@ const defaultSettings: PrintSettings = {
   delay: 100,
   rotation: 'Normal',
   bold: 0,
-  speed: 'Fast',
+  speed: 'Fastest',
   gap: 0,
   pitch: 0,
   repeatAmount: 0,
@@ -1118,6 +1118,156 @@ export function usePrinterConnection() {
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
+  // Save print settings to the printer
+  // Uses protocol commands for each setting:
+  // ^WP n - Width (0-1000)
+  // ^HT n - Height (0-10)
+  // ^DL n - Delay (0-4,000,000,000)
+  // ^RO n - Rotation (0=Normal, 1=Mirror, 2=Flip, 3=Mirror Flip)
+  // ^BO n - Bold (0-9)
+  // ^SP n - Speed (0=Fast, 1=Faster, 2=Fastest, 3=Ultra Fast)
+  // ^GA n - Gap (0-9)
+  // ^PI n - Pitch (0-4,000,000,000)
+  const savePrintSettings = useCallback(async (settings: PrintSettings): Promise<boolean> => {
+    console.log('[savePrintSettings] Called with:', settings);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[savePrintSettings] Not connected');
+      return false;
+    }
+
+    const printer = connectionState.connectedPrinter;
+
+    // Map rotation and speed to numeric values
+    const rotationMap: Record<PrintSettings['rotation'], number> = {
+      'Normal': 0,
+      'Mirror': 1,
+      'Flip': 2,
+      'Mirror Flip': 3,
+    };
+    const speedMap: Record<PrintSettings['speed'], number> = {
+      'Fast': 0,
+      'Faster': 1,
+      'Fastest': 2,
+      'Ultra Fast': 3,
+    };
+
+    const commands = [
+      `^WP ${settings.width}`,
+      `^HT ${settings.height}`,
+      `^DL ${settings.delay}`,
+      `^RO ${rotationMap[settings.rotation]}`,
+      `^BO ${settings.bold}`,
+      `^SP ${speedMap[settings.speed]}`,
+      `^GA ${settings.gap}`,
+      `^PI ${settings.pitch}`,
+    ];
+
+    if (shouldUseEmulator()) {
+      console.log('[savePrintSettings] Using emulator');
+      for (const cmd of commands) {
+        const result = printerEmulator.processCommand(cmd);
+        console.log('[savePrintSettings] Emulator result for', cmd, ':', result);
+      }
+      return true;
+    } else if (isElectron && window.electronAPI) {
+      try {
+        console.log('[savePrintSettings] Sending commands to printer');
+        for (const cmd of commands) {
+          console.log('[savePrintSettings] Sending:', cmd);
+          const result = await window.electronAPI.printer.sendCommand(printer.id, cmd);
+          console.log('[savePrintSettings] Result:', JSON.stringify(result));
+          
+          if (!result?.success) {
+            console.error('[savePrintSettings] Command failed:', cmd, result?.error);
+            // Continue with other commands even if one fails
+          }
+        }
+        return true;
+      } catch (e) {
+        console.error('[savePrintSettings] Failed to save settings:', e);
+        return false;
+      }
+    } else {
+      // Web preview mock
+      console.log('[savePrintSettings] Web preview mock');
+      return true;
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter]);
+
+  // Query print settings from the printer
+  // Uses ^QP command to get current print settings
+  const queryPrintSettings = useCallback(async (): Promise<void> => {
+    console.log('[queryPrintSettings] Called');
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[queryPrintSettings] Not connected');
+      return;
+    }
+
+    const printer = connectionState.connectedPrinter;
+
+    if (shouldUseEmulator()) {
+      console.log('[queryPrintSettings] Using emulator - using current settings');
+      // Emulator doesn't have stored settings, use current state
+      return;
+    } else if (isElectron && window.electronAPI) {
+      try {
+        console.log('[queryPrintSettings] Querying settings from printer');
+        const result = await window.electronAPI.printer.sendCommand(printer.id, '^QP');
+        console.log('[queryPrintSettings] Result:', JSON.stringify(result));
+
+        if (result?.success && result.response) {
+          // Parse response - format varies by firmware
+          // Expected format: "Width:15,Height:8,Delay:100,Rotation:0,Bold:0,Speed:2,Gap:0,Pitch:0"
+          const response = result.response;
+          
+          const extract = (key: string): number | null => {
+            const match = response.match(new RegExp(`${key}[:\\s]*(\\d+)`, 'i'));
+            return match ? parseInt(match[1], 10) : null;
+          };
+
+          const rotationReverseMap: Record<number, PrintSettings['rotation']> = {
+            0: 'Normal',
+            1: 'Mirror',
+            2: 'Flip',
+            3: 'Mirror Flip',
+          };
+          const speedReverseMap: Record<number, PrintSettings['speed']> = {
+            0: 'Fast',
+            1: 'Faster',
+            2: 'Fastest',
+            3: 'Ultra Fast',
+          };
+
+          const width = extract('Width');
+          const height = extract('Height');
+          const delay = extract('Delay');
+          const rotationNum = extract('Rotation');
+          const bold = extract('Bold');
+          const speedNum = extract('Speed');
+          const gap = extract('Gap');
+          const pitch = extract('Pitch');
+
+          setConnectionState(prev => ({
+            ...prev,
+            settings: {
+              ...prev.settings,
+              ...(width !== null && { width }),
+              ...(height !== null && { height }),
+              ...(delay !== null && { delay }),
+              ...(rotationNum !== null && { rotation: rotationReverseMap[rotationNum] ?? 'Normal' }),
+              ...(bold !== null && { bold }),
+              ...(speedNum !== null && { speed: speedReverseMap[speedNum] ?? 'Fast' }),
+              ...(gap !== null && { gap }),
+              ...(pitch !== null && { pitch }),
+            },
+          }));
+        }
+      } catch (e) {
+        console.error('[queryPrintSettings] Failed to query settings:', e);
+      }
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter]);
+
   return {
     printers,
     connectionState,
@@ -1147,5 +1297,7 @@ export function usePrinterConnection() {
     resetCounter,
     resetAllCounters,
     queryCounters,
+    savePrintSettings,
+    queryPrintSettings,
   };
 }
