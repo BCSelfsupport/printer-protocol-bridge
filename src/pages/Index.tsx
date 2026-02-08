@@ -335,13 +335,23 @@ const Index = () => {
         onOpenChange={setAdjustDialogOpen}
         settings={connectionState.settings}
         onUpdate={updateSettings}
-        onSave={async () => {
-          console.log('[AdjustDialog] Saving global adjust settings:', connectionState.settings);
-          const success = await saveGlobalAdjust(connectionState.settings);
-          if (success) {
-            console.log('[AdjustDialog] Settings saved successfully');
-          } else {
-            console.error('[AdjustDialog] Failed to save settings');
+        onSendCommand={async (command: string) => {
+          console.log('[AdjustDialog] Sending live command:', command);
+          // Send command directly via the connection hook
+          if (connectionState.isConnected && connectionState.connectedPrinter) {
+            const printerId = connectionState.connectedPrinter.id;
+            // Use emulator or electron API
+            if (window.electronAPI) {
+              const result = await window.electronAPI.printer.sendCommand(printerId, command);
+              console.log('[AdjustDialog] Command result:', result);
+            } else {
+              // Emulator fallback handled in usePrinterConnection
+              const { printerEmulator } = await import('@/lib/printerEmulator');
+              if (printerEmulator.enabled) {
+                const result = printerEmulator.processCommand(command);
+                console.log('[AdjustDialog] Emulator result:', result);
+              }
+            }
           }
         }}
         isConnected={connectionState.isConnected}

@@ -1,4 +1,4 @@
-import { ChevronUp, ChevronDown, Pencil, Save, X } from 'lucide-react';
+import { ChevronUp, ChevronDown, Pencil, X } from 'lucide-react';
 import { PrintSettings } from '@/types/printer';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
@@ -15,20 +15,22 @@ interface AdjustDialogProps {
   onOpenChange: (open: boolean) => void;
   settings: PrintSettings;
   onUpdate: (settings: Partial<PrintSettings>) => void;
-  onSave: () => void;
+  onSendCommand: (command: string) => Promise<void>;
   isConnected: boolean;
 }
 
 // Validation constraints from BestCode v2.0 protocol documentation
 const CONSTRAINTS = {
-  width: { min: 0, max: 16000 },   // ^PW command: 0-16000
-  height: { min: 0, max: 10 },      // ^PH command: 0-10
-  delay: { min: 0, max: 4000000000 }, // ^DA command: 0-4B
-  bold: { min: 0, max: 9 },         // ^SB command: 0-9
-  gap: { min: 0, max: 9 },          // ^GP command: 0-9
-  pitch: { min: 0, max: 4000000000 }, // ^PA command: 0-4B
-  repeatAmount: { min: 0, max: 30000 }, // ^RA command: 0-30000
+  width: { min: 0, max: 16000, cmd: 'PW' },   // ^PW command: 0-16000
+  height: { min: 0, max: 10, cmd: 'PH' },      // ^PH command: 0-10
+  delay: { min: 0, max: 4000000000, cmd: 'DA' }, // ^DA command: 0-4B
+  bold: { min: 0, max: 9, cmd: 'SB' },         // ^SB command: 0-9
+  gap: { min: 0, max: 9, cmd: 'GP' },          // ^GP command: 0-9
+  pitch: { min: 0, max: 4000000000, cmd: 'PA' }, // ^PA command: 0-4B
+  repeatAmount: { min: 0, max: 30000, cmd: 'RA' }, // ^RA command: 0-30000
 } as const;
+
+type SettingKey = keyof typeof CONSTRAINTS;
 
 interface AdjustCardProps {
   label: string;
@@ -142,14 +144,28 @@ export function AdjustDialog({
   onOpenChange, 
   settings, 
   onUpdate, 
-  onSave, 
+  onSendCommand,
   isConnected 
 }: AdjustDialogProps) {
+  
+  // Helper to update a setting and send the command immediately
+  const handleLiveUpdate = async (key: SettingKey, newValue: number) => {
+    const constraint = CONSTRAINTS[key];
+    const clampedValue = Math.max(constraint.min, Math.min(constraint.max, newValue));
+    
+    // Update local state
+    onUpdate({ [key]: clampedValue });
+    
+    // Send command to printer immediately
+    const command = `^${constraint.cmd} ${clampedValue}`;
+    await onSendCommand(command);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl bg-gradient-to-b from-slate-700 to-slate-800 border-slate-600 max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle className="text-xl text-white">Adjust Settings</DialogTitle>
+          <DialogTitle className="text-xl text-white">Adjust Settings (Live)</DialogTitle>
           <DialogClose asChild>
             <button className="rounded-full p-1 hover:bg-white/10 transition-colors">
               <X className="w-5 h-5 text-white" />
@@ -164,9 +180,9 @@ export function AdjustDialog({
             <AdjustCard
               label="Width (0-16000)"
               value={settings.width}
-              onIncrease={() => onUpdate({ width: Math.min(CONSTRAINTS.width.max, settings.width + 1) })}
-              onDecrease={() => onUpdate({ width: Math.max(CONSTRAINTS.width.min, settings.width - 1) })}
-              onEdit={(val) => onUpdate({ width: val })}
+              onIncrease={() => handleLiveUpdate('width', settings.width + 1)}
+              onDecrease={() => handleLiveUpdate('width', settings.width - 1)}
+              onEdit={(val) => handleLiveUpdate('width', val)}
               disabled={!isConnected}
               min={CONSTRAINTS.width.min}
               max={CONSTRAINTS.width.max}
@@ -176,9 +192,9 @@ export function AdjustDialog({
             <AdjustCard
               label="Height (0-10)"
               value={settings.height}
-              onIncrease={() => onUpdate({ height: Math.min(CONSTRAINTS.height.max, settings.height + 1) })}
-              onDecrease={() => onUpdate({ height: Math.max(CONSTRAINTS.height.min, settings.height - 1) })}
-              onEdit={(val) => onUpdate({ height: val })}
+              onIncrease={() => handleLiveUpdate('height', settings.height + 1)}
+              onDecrease={() => handleLiveUpdate('height', settings.height - 1)}
+              onEdit={(val) => handleLiveUpdate('height', val)}
               disabled={!isConnected}
               min={CONSTRAINTS.height.min}
               max={CONSTRAINTS.height.max}
@@ -188,9 +204,9 @@ export function AdjustDialog({
             <AdjustCard
               label="Delay (0-4B)"
               value={settings.delay}
-              onIncrease={() => onUpdate({ delay: Math.min(CONSTRAINTS.delay.max, settings.delay + 10) })}
-              onDecrease={() => onUpdate({ delay: Math.max(CONSTRAINTS.delay.min, settings.delay - 10) })}
-              onEdit={(val) => onUpdate({ delay: val })}
+              onIncrease={() => handleLiveUpdate('delay', settings.delay + 10)}
+              onDecrease={() => handleLiveUpdate('delay', settings.delay - 10)}
+              onEdit={(val) => handleLiveUpdate('delay', val)}
               disabled={!isConnected}
               min={CONSTRAINTS.delay.min}
               max={CONSTRAINTS.delay.max}
@@ -200,9 +216,9 @@ export function AdjustDialog({
             <AdjustCard
               label="Bold (0-9)"
               value={settings.bold}
-              onIncrease={() => onUpdate({ bold: Math.min(CONSTRAINTS.bold.max, settings.bold + 1) })}
-              onDecrease={() => onUpdate({ bold: Math.max(CONSTRAINTS.bold.min, settings.bold - 1) })}
-              onEdit={(val) => onUpdate({ bold: val })}
+              onIncrease={() => handleLiveUpdate('bold', settings.bold + 1)}
+              onDecrease={() => handleLiveUpdate('bold', settings.bold - 1)}
+              onEdit={(val) => handleLiveUpdate('bold', val)}
               disabled={!isConnected}
               min={CONSTRAINTS.bold.min}
               max={CONSTRAINTS.bold.max}
@@ -212,9 +228,9 @@ export function AdjustDialog({
             <AdjustCard
               label="Gap (0-9)"
               value={settings.gap}
-              onIncrease={() => onUpdate({ gap: Math.min(CONSTRAINTS.gap.max, settings.gap + 1) })}
-              onDecrease={() => onUpdate({ gap: Math.max(CONSTRAINTS.gap.min, settings.gap - 1) })}
-              onEdit={(val) => onUpdate({ gap: val })}
+              onIncrease={() => handleLiveUpdate('gap', settings.gap + 1)}
+              onDecrease={() => handleLiveUpdate('gap', settings.gap - 1)}
+              onEdit={(val) => handleLiveUpdate('gap', val)}
               disabled={!isConnected}
               min={CONSTRAINTS.gap.min}
               max={CONSTRAINTS.gap.max}
@@ -224,9 +240,9 @@ export function AdjustDialog({
             <AdjustCard
               label="Pitch (0-4B)"
               value={settings.pitch}
-              onIncrease={() => onUpdate({ pitch: Math.min(CONSTRAINTS.pitch.max, settings.pitch + 1) })}
-              onDecrease={() => onUpdate({ pitch: Math.max(CONSTRAINTS.pitch.min, settings.pitch - 1) })}
-              onEdit={(val) => onUpdate({ pitch: val })}
+              onIncrease={() => handleLiveUpdate('pitch', settings.pitch + 1)}
+              onDecrease={() => handleLiveUpdate('pitch', settings.pitch - 1)}
+              onEdit={(val) => handleLiveUpdate('pitch', val)}
               disabled={!isConnected}
               min={CONSTRAINTS.pitch.min}
               max={CONSTRAINTS.pitch.max}
@@ -236,31 +252,18 @@ export function AdjustDialog({
             <AdjustCard
               label="Repeat (0-30000)"
               value={settings.repeatAmount}
-              onIncrease={() => onUpdate({ repeatAmount: Math.min(CONSTRAINTS.repeatAmount.max, settings.repeatAmount + 1) })}
-              onDecrease={() => onUpdate({ repeatAmount: Math.max(CONSTRAINTS.repeatAmount.min, settings.repeatAmount - 1) })}
-              onEdit={(val) => onUpdate({ repeatAmount: val })}
+              onIncrease={() => handleLiveUpdate('repeatAmount', settings.repeatAmount + 1)}
+              onDecrease={() => handleLiveUpdate('repeatAmount', settings.repeatAmount - 1)}
+              onEdit={(val) => handleLiveUpdate('repeatAmount', val)}
               disabled={!isConnected}
               min={CONSTRAINTS.repeatAmount.min}
               max={CONSTRAINTS.repeatAmount.max}
             />
           </div>
 
-          {/* Save Button */}
-          <button
-            onClick={() => {
-              onSave();
-              onOpenChange(false);
-            }}
-            disabled={!isConnected}
-            className="w-full industrial-button-success text-white py-3 rounded-lg text-base font-medium flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            <Save className="w-5 h-5" />
-            Save to Printer
-          </button>
-
           {/* Info text */}
           <p className="text-xs text-slate-400 text-center">
-            These global settings affect the currently printing message (^PW, ^PH, ^DA, ^SB, ^GP, ^PA, ^RA)
+            Changes are sent to the printer immediately (^PW, ^PH, ^DA, ^SB, ^GP, ^PA, ^RA)
           </p>
         </div>
       </DialogContent>
