@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, FlaskConical, FileText } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText } from 'lucide-react';
 import { Printer } from '@/types/printer';
 
 interface PrinterListItemProps {
@@ -85,14 +85,14 @@ export function PrinterListItem({ printer, isSelected, onSelect }: PrinterListIt
           {printer.isAvailable && (
             <div className="flex items-center gap-4 mt-2">
               <div className="flex items-center gap-1.5" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
-                <Droplets className={`w-4 h-4 ${getFluidColor(printer.inkLevel)}`} />
+                <Palette className={`w-4 h-4 ${getFluidColor(printer.inkLevel)}`} />
                 <span className="text-xs text-slate-300 font-medium">INK:</span>
                 <span className={`text-xs font-semibold ${getFluidColor(printer.inkLevel)}`}>
                   {printer.inkLevel || '?'}
                 </span>
               </div>
               <div className="flex items-center gap-1.5" title={`Makeup: ${printer.makeupLevel || 'Unknown'}`}>
-                <FlaskConical className={`w-4 h-4 ${getFluidColor(printer.makeupLevel)}`} />
+                <Droplets className={`w-4 h-4 ${getFluidColor(printer.makeupLevel)}`} />
                 <span className="text-xs text-slate-300 font-medium">MU:</span>
                 <span className={`text-xs font-semibold ${getFluidColor(printer.makeupLevel)}`}>
                   {printer.makeupLevel || '?'}
