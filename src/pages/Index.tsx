@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Header } from '@/components/layout/Header';
 import { BottomNav, NavItem } from '@/components/layout/BottomNav';
 import { Dashboard } from '@/components/screens/Dashboard';
@@ -86,10 +87,15 @@ const Index = () => {
     setCurrentScreen('home');
   };
 
+  const isMobile = useIsMobile();
+  
   const handleConnect = async (printer: typeof printers[0]) => {
     await connect(printer);
-    // After connecting, go to the control/dashboard screen
-    setCurrentScreen('control');
+    // On mobile, navigate to full-screen Dashboard
+    // On desktop, stay on home screen (Dashboard is embedded in split-view)
+    if (isMobile) {
+      setCurrentScreen('control');
+    }
   };
   
   // Wrapped handlers that trigger countdown
@@ -250,7 +256,10 @@ const Index = () => {
           />
         );
       default:
-        // Home is now the Printers config screen
+        // Home is now the Printers config screen with split-view Dashboard on desktop
+        const homeMsgName = connectionState.status?.currentMessage;
+        const homeMsgContent = homeMsgName ? getMessage(homeMsgName) : undefined;
+        
         return (
           <PrintersScreen
             printers={printers}
@@ -261,6 +270,38 @@ const Index = () => {
             isDevSignedIn={isDevSignedIn}
             onDevSignIn={() => setDevSignInDialogOpen(true)}
             onDevSignOut={() => setIsDevSignedIn(false)}
+            // Dashboard props for split-view on desktop
+            isConnected={connectionState.isConnected}
+            connectedPrinter={connectionState.connectedPrinter}
+            status={connectionState.status}
+            onStart={handleStartPrint}
+            onStop={stopPrint}
+            onJetStop={handleJetStop}
+            onNewMessage={() => {
+              setOpenNewDialogOnMount(true);
+              setCurrentScreen('messages');
+            }}
+            onEditMessage={() => setCurrentScreen('messages')}
+            onSignIn={async () => {
+              if (isSignedIn) {
+                const success = await signOut();
+                if (success) {
+                  setIsSignedIn(false);
+                }
+              } else {
+                setSignInDialogOpen(true);
+              }
+            }}
+            onHelp={() => {}}
+            onResetCounter={resetCounter}
+            onResetAllCounters={resetAllCounters}
+            onQueryCounters={queryCounters}
+            isSignedIn={isSignedIn}
+            countdownSeconds={countdownSeconds}
+            countdownType={countdownType}
+            messageContent={homeMsgContent}
+            onControlMount={() => setControlScreenOpen(true)}
+            onControlUnmount={() => setControlScreenOpen(false)}
           />
         );
     }
