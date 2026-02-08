@@ -172,6 +172,7 @@ export function PrintersScreen({
                 showConnectButton={!showDashboardInPanel}
                 isConnected={connectedPrinter?.id === printer.id}
                 compact={!!showDashboardInPanel}
+                countdownType={connectedPrinter?.id === printer.id ? countdownType : null}
               />
             ))
           )}
