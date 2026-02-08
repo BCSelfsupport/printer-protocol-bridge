@@ -7,6 +7,7 @@ interface PrinterListItemProps {
   isSelected: boolean;
   onSelect: () => void;
   onConnect?: () => void;
+  onEdit?: () => void;
   showConnectButton?: boolean;
   isConnected?: boolean;
   compact?: boolean;
@@ -33,6 +34,7 @@ export function PrinterListItem({
   isSelected, 
   onSelect,
   onConnect,
+  onEdit,
   showConnectButton = true,
   isConnected = false,
   compact = false,
@@ -77,10 +79,17 @@ export function PrinterListItem({
         }`}
       >
         <div className="flex items-start gap-4">
-          {/* Status indicator */}
-          <div className={`relative w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-            printer.isAvailable ? 'bg-success/20' : 'bg-muted'
-          }`}>
+          {/* Status indicator - clickable for edit */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit?.();
+            }}
+            className={`relative w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all hover:ring-2 hover:ring-primary/50 ${
+              printer.isAvailable ? 'bg-success/20 hover:bg-success/30' : 'bg-muted hover:bg-muted/80'
+            }`}
+            title="Click to edit printer"
+          >
             <PrinterIcon className={`w-6 h-6 ${
               printer.isAvailable ? 'text-success' : 'text-muted-foreground'
             }`} />
@@ -93,7 +102,7 @@ export function PrinterListItem({
                 <WifiOff className="w-2.5 h-2.5 text-white" />
               )}
             </div>
-          </div>
+          </button>
 
           {/* Printer info */}
           <div className="flex-1 min-w-0">
@@ -173,10 +182,17 @@ export function PrinterListItem({
       }`}
     >
       <div className="flex items-center gap-3">
-        {/* Status indicator */}
-        <div className={`relative w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-          printer.isAvailable ? 'bg-success/20' : 'bg-muted'
-        }`}>
+        {/* Status indicator - clickable for edit */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit?.();
+          }}
+          className={`relative w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:ring-2 hover:ring-primary/50 ${
+            printer.isAvailable ? 'bg-success/20 hover:bg-success/30' : 'bg-muted hover:bg-muted/80'
+          }`}
+          title="Click to edit printer"
+        >
           <PrinterIcon className={`w-6 h-6 ${
             printer.isAvailable ? 'text-success' : 'text-muted-foreground'
           }`} />
@@ -189,7 +205,7 @@ export function PrinterListItem({
               <WifiOff className="w-2.5 h-2.5 text-white" />
             )}
           </div>
-        </div>
+        </button>
 
         {/* Printer info */}
         <div className="flex-1 min-w-0">

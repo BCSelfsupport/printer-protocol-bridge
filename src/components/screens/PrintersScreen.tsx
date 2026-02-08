@@ -3,6 +3,7 @@ import { Printer, PrinterStatus } from '@/types/printer';
 import { useState, useEffect } from 'react';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
 import { AddPrinterDialog } from '@/components/printers/AddPrinterDialog';
+import { EditPrinterDialog } from '@/components/printers/EditPrinterDialog';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dashboard } from '@/components/screens/Dashboard';
@@ -33,6 +34,7 @@ interface PrintersScreenProps {
   onAddPrinter: (printer: { name: string; ipAddress: string; port: number }) => void;
   onRemovePrinter: (printerId: number) => void;
   onReorderPrinters?: (printers: Printer[]) => void;
+  onUpdatePrinter?: (printerId: number, updates: Partial<Printer>) => void;
   isDevSignedIn?: boolean;
   onDevSignIn?: () => void;
   onDevSignOut?: () => void;
@@ -64,6 +66,7 @@ function SortablePrinterItem({
   isSelected,
   onSelect,
   onConnect,
+  onEdit,
   showConnectButton,
   isConnected,
   compact,
@@ -73,6 +76,7 @@ function SortablePrinterItem({
   isSelected: boolean;
   onSelect: () => void;
   onConnect: () => void;
+  onEdit: () => void;
   showConnectButton: boolean;
   isConnected: boolean;
   compact: boolean;
@@ -109,6 +113,7 @@ function SortablePrinterItem({
         isSelected={isSelected}
         onSelect={onSelect}
         onConnect={onConnect}
+        onEdit={onEdit}
         showConnectButton={showConnectButton}
         isConnected={isConnected}
         compact={compact}
@@ -125,6 +130,7 @@ export function PrintersScreen({
   onAddPrinter,
   onRemovePrinter,
   onReorderPrinters,
+  onUpdatePrinter,
   isDevSignedIn = false,
   onDevSignIn,
   onDevSignOut,
@@ -151,6 +157,8 @@ export function PrintersScreen({
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [printerToEdit, setPrinterToEdit] = useState<Printer | null>(null);
   const isMobile = useIsMobile();
 
   const sensors = useSensors(
@@ -198,6 +206,15 @@ export function PrintersScreen({
     if (selectedPrinter) {
       onRemovePrinter(selectedPrinter.id);
     }
+  };
+
+  const handleEditPrinter = (printer: Printer) => {
+    setPrinterToEdit(printer);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = (printerId: number, updates: { name: string; ipAddress: string; port: number }) => {
+    onUpdatePrinter?.(printerId, updates);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -284,6 +301,7 @@ export function PrintersScreen({
                       isSelected={selectedPrinter?.id === printer.id}
                       onSelect={() => handlePrinterClick(printer)}
                       onConnect={() => onConnect(printer)}
+                      onEdit={() => handleEditPrinter(printer)}
                       showConnectButton={!showDashboardInPanel}
                       isConnected={connectedPrinter?.id === printer.id}
                       compact={!!showDashboardInPanel}
@@ -365,6 +383,14 @@ export function PrintersScreen({
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onAdd={onAddPrinter}
+      />
+
+      {/* Edit Printer Dialog */}
+      <EditPrinterDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        printer={printerToEdit}
+        onSave={handleSaveEdit}
       />
     </div>
   );
