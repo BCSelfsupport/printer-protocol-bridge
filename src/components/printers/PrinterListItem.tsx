@@ -150,9 +150,9 @@ export function PrinterListItem({
           
           {/* Current message with print count - inline */}
           {printer.currentMessage && (
-            <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-              <FileText className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">{printer.currentMessage}</span>
+            <div className="flex items-center gap-2 mt-1 text-[10px]">
+              <FileText className="w-3 h-3 flex-shrink-0 text-primary" />
+              <span className="truncate text-primary font-medium">{printer.currentMessage}</span>
               {printer.printCount !== undefined && (
                 <span className="text-primary font-semibold flex-shrink-0">
                   #{printer.printCount.toLocaleString()}
