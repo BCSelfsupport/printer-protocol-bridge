@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter } from 'lucide-react';
+import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,8 @@ import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/Ba
 import { BlockFieldDialog, BlockFieldConfig } from '@/components/messages/BlockFieldDialog';
 import { GraphicFieldDialog, GraphicFieldConfig } from '@/components/messages/GraphicFieldDialog';
 import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
+import { AdvancedSettingsDialog, AdvancedSettings, defaultAdvancedSettings } from '@/components/messages/AdvancedSettingsDialog';
+import { FieldSettingsPanel, FieldSettings, defaultFieldSettings } from '@/components/messages/FieldSettingsPanel';
 import {
   Dialog,
   DialogContent,
@@ -35,6 +37,11 @@ export interface MessageField {
   width: number;
   height: number;
   fontSize: string;
+  // Per-field settings (manual pages 49-50)
+  bold?: number;
+  gap?: number;
+  rotation?: FieldSettings['rotation'];
+  autoNumerals?: number;
 }
 
 export interface MessageDetails {
@@ -44,6 +51,7 @@ export interface MessageDetails {
   fields: MessageField[];
   templateValue?: string; // Track which template was selected
   settings?: MessageSettings; // Message-level print settings
+  advancedSettings?: AdvancedSettings; // Advanced settings (pages 52-55)
 }
 
 // Template options - single heights for mixed font messages (loaded from .BIN files)
@@ -115,10 +123,11 @@ export function EditMessageScreen({
     height: 16,
     width: 200,
     fields: [
-      { id: 1, type: 'text', data: messageName, x: 0, y: 16, width: 60, height: 16, fontSize: 'Standard16High' },
+      { id: 1, type: 'text', data: messageName, x: 0, y: 16, width: 60, height: 16, fontSize: 'Standard16High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
     ],
     templateValue: '16', // Default to 16 dots single template
     settings: defaultMessageSettings,
+    advancedSettings: defaultAdvancedSettings,
   });
   const [loading, setLoading] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(1);
@@ -131,6 +140,7 @@ export function EditMessageScreen({
   const [timeCodesDialogOpen, setTimeCodesDialogOpen] = useState(false);
   const [dateCodesDialogOpen, setDateCodesDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [advancedSettingsDialogOpen, setAdvancedSettingsDialogOpen] = useState(false);
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [counterDialogOpen, setCounterDialogOpen] = useState(false);
@@ -484,11 +494,62 @@ export function EditMessageScreen({
 
   const handleDeleteField = () => {
     if (!selectedFieldId || message.fields.length <= 1) return;
+    const currentIdx = message.fields.findIndex(f => f.id === selectedFieldId);
     setMessage((prev) => ({
       ...prev,
       fields: prev.fields.filter((f) => f.id !== selectedFieldId),
     }));
-    setSelectedFieldId(message.fields[0]?.id ?? null);
+    // Select next or previous field
+    const newFields = message.fields.filter((f) => f.id !== selectedFieldId);
+    setSelectedFieldId(newFields[Math.min(currentIdx, newFields.length - 1)]?.id ?? null);
+  };
+
+  // Navigate to previous field
+  const handlePrevField = () => {
+    if (message.fields.length === 0) return;
+    const currentIdx = message.fields.findIndex(f => f.id === selectedFieldId);
+    const newIdx = currentIdx <= 0 ? message.fields.length - 1 : currentIdx - 1;
+    setSelectedFieldId(message.fields[newIdx].id);
+  };
+
+  // Navigate to next field
+  const handleNextField = () => {
+    if (message.fields.length === 0) return;
+    const currentIdx = message.fields.findIndex(f => f.id === selectedFieldId);
+    const newIdx = currentIdx >= message.fields.length - 1 ? 0 : currentIdx + 1;
+    setSelectedFieldId(message.fields[newIdx].id);
+  };
+
+  // Copy selected field
+  const handleCopyField = () => {
+    if (!selectedFieldId) return;
+    const fieldToCopy = message.fields.find(f => f.id === selectedFieldId);
+    if (!fieldToCopy) return;
+    
+    const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
+    const copiedField: MessageField = {
+      ...fieldToCopy,
+      id: newId,
+      x: fieldToCopy.x + 20, // Offset slightly
+      y: fieldToCopy.y,
+    };
+    
+    setMessage((prev) => ({
+      ...prev,
+      fields: [...prev.fields, copiedField],
+    }));
+    setSelectedFieldId(newId);
+  };
+
+  // Update field settings (bold, gap, rotation, autoNumerals)
+  const handleUpdateFieldSetting = (key: keyof MessageField, value: any) => {
+    if (!selectedFieldId) return;
+    setMessage((prev) => ({
+      ...prev,
+      fields: prev.fields.map((f) =>
+        f.id === selectedFieldId ? { ...f, [key]: value } : f
+      ),
+    }));
   };
 
   /**
@@ -599,72 +660,69 @@ export function EditMessageScreen({
             <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click a field to edit text inline</p>
           </div>
 
-          {/* Message properties row - horizontal scroll on mobile */}
-          <div className="bg-card rounded-lg p-2 md:p-4 mb-2 md:mb-4 overflow-x-auto">
-            <div className="flex gap-3 md:gap-4 min-w-max md:min-w-0 md:grid md:grid-cols-4">
-              <div className="min-w-[120px] md:min-w-0">
-                <Label htmlFor="msgFontSize" className="text-xs md:text-sm">Font Size</Label>
-                <Select
-                  value={selectedField?.fontSize || 'Standard16High'}
-                  onValueChange={(value) => {
-                    if (selectedFieldId) {
-                      setMessage((prev) => ({
-                        ...prev,
-                        fields: prev.fields.map((f) =>
-                          f.id === selectedFieldId
-                            ? { ...f, fontSize: value }
-                            : f
-                        ),
-                      }));
-                    }
-                  }}
-                  disabled={!selectedFieldId}
-                >
-                  <SelectTrigger className="mt-1 h-9 md:h-10 text-xs md:text-sm">
-                    <SelectValue placeholder="Select font size" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[100]">
-                    {getAllowedFonts().map((fs) => (
-                      <SelectItem key={fs.value} value={fs.value}>
-                        {fs.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="min-w-[140px] md:min-w-0">
-                <Label htmlFor="msgTemplate" className="text-xs md:text-sm">Template</Label>
+          {/* Field Settings Panel - Per-field settings like manual page 49-50 */}
+          {selectedField && (
+            <FieldSettingsPanel
+              fontSize={selectedField.fontSize}
+              bold={selectedField.bold ?? 0}
+              gap={selectedField.gap ?? 1}
+              rotation={selectedField.rotation ?? 'Normal'}
+              autoNumerals={selectedField.autoNumerals ?? 0}
+              templateLabel={getCurrentTemplateValue().startsWith('multi-') 
+                ? MULTILINE_TEMPLATES.find(t => t.value === getCurrentTemplateValue())?.label || getCurrentTemplateValue()
+                : `${message.height} dots`
+              }
+              onFontSizeChange={(delta) => {
+                const fonts = getAllowedFonts();
+                const currentIdx = fonts.findIndex(f => f.value === selectedField.fontSize);
+                const newIdx = Math.max(0, Math.min(fonts.length - 1, currentIdx + delta));
+                handleUpdateFieldSetting('fontSize', fonts[newIdx].value);
+              }}
+              onBoldChange={(v) => handleUpdateFieldSetting('bold', v)}
+              onGapChange={(v) => handleUpdateFieldSetting('gap', v)}
+              onRotationChange={(v) => handleUpdateFieldSetting('rotation', v)}
+              onAutoNumeralsChange={(v) => handleUpdateFieldSetting('autoNumerals', v)}
+              disabled={!selectedFieldId}
+              allowedFonts={getAllowedFonts()}
+              currentFontIndex={getAllowedFonts().findIndex(f => f.value === selectedField.fontSize)}
+            />
+          )}
+
+          {/* Message properties row */}
+          <div className="bg-card rounded-lg p-2 md:p-3 mb-2 overflow-x-auto">
+            <div className="flex gap-2 md:gap-3 min-w-max">
+              <div className="min-w-[120px]">
+                <Label className="text-[10px] md:text-xs">Template</Label>
                 <Select
                   value={getCurrentTemplateValue()}
                   onValueChange={handleTemplateChange}
                 >
-                  <SelectTrigger className="mt-1 h-9 md:h-10 text-xs md:text-sm">
+                  <SelectTrigger className="mt-1 h-8 text-xs">
                     <SelectValue placeholder="Select template" />
                   </SelectTrigger>
                   <SelectContent className="z-[100] max-h-[300px]">
-                    <SelectItem value="header-single" disabled className="font-semibold text-muted-foreground">
-                      Single Height (Mixed Font)
+                    <SelectItem value="header-single" disabled className="font-semibold text-muted-foreground text-xs">
+                      Single Height
                     </SelectItem>
                     {SINGLE_TEMPLATES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
+                      <SelectItem key={t.value} value={t.value} className="text-xs">
                         {t.label}
                       </SelectItem>
                     ))}
-                    <SelectItem value="header-multi" disabled className="font-semibold text-muted-foreground mt-2">
-                      Multi-Line Templates
+                    <SelectItem value="header-multi" disabled className="font-semibold text-muted-foreground mt-2 text-xs">
+                      Multi-Line
                     </SelectItem>
                     {MULTILINE_TEMPLATES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
+                      <SelectItem key={t.value} value={t.value} className="text-xs">
                         {t.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="min-w-[100px] md:min-w-0">
-                <Label htmlFor="msgWidth" className="text-xs md:text-sm">Width (dots)</Label>
+              <div className="min-w-[80px]">
+                <Label className="text-[10px] md:text-xs">Width</Label>
                 <Input
-                  id="msgWidth"
                   type="number"
                   value={message.width}
                   onChange={(e) =>
@@ -673,56 +731,96 @@ export function EditMessageScreen({
                       width: parseInt(e.target.value) || 135,
                     }))
                   }
-                  className="mt-1 h-9 md:h-10 text-xs md:text-sm"
+                  className="mt-1 h-8 text-xs"
                 />
               </div>
             </div>
           </div>
 
-          {/* Action buttons - all in one horizontal scroll row */}
+          {/* Navigation and Action buttons */}
           <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
-            <div className="flex gap-2 md:gap-4 justify-center min-w-max">
+            {/* Field navigation row */}
+            <div className="flex gap-2 justify-center mb-2">
+              <button
+                onClick={handlePrevField}
+                disabled={message.fields.length <= 1}
+                className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-1 disabled:opacity-50"
+                title="Previous Field"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="text-xs">Prev</span>
+              </button>
+              <button
+                onClick={handleNextField}
+                disabled={message.fields.length <= 1}
+                className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-1 disabled:opacity-50"
+                title="Next Field"
+              >
+                <span className="text-xs">Next</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleCopyField}
+                disabled={!selectedFieldId}
+                className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-1 disabled:opacity-50"
+                title="Copy Field"
+              >
+                <Copy className="w-4 h-4" />
+                <span className="text-xs">Copy</span>
+              </button>
+            </div>
+
+            {/* Main action buttons */}
+            <div className="flex gap-2 md:gap-3 justify-center min-w-max">
               <button
                 onClick={() => setNewFieldDialogOpen(true)}
-                className="industrial-button text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[80px] md:min-w-[100px]"
+                className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
               >
-                <FilePlus className="w-5 h-5 md:w-7 md:h-7 mb-1" />
-                <span className="text-[10px] md:text-sm font-medium">New Field</span>
+                <FilePlus className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                <span className="text-[9px] md:text-xs font-medium">New</span>
               </button>
 
               <button
                 onClick={handleDeleteField}
                 disabled={!selectedFieldId || message.fields.length <= 1}
-                className="industrial-button-danger text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[80px] md:min-w-[100px] disabled:opacity-50"
+                className="industrial-button-danger text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px] disabled:opacity-50"
               >
-                <Trash2 className="w-5 h-5 md:w-7 md:h-7 mb-1" />
-                <span className="text-[10px] md:text-sm font-medium">Delete</span>
+                <Trash2 className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                <span className="text-[9px] md:text-xs font-medium">Delete</span>
               </button>
 
               <button
                 onClick={handleAlignFields}
                 disabled={message.fields.length < 2}
-                className="industrial-button text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[80px] md:min-w-[100px] disabled:opacity-50"
+                className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px] disabled:opacity-50"
                 title="Auto-align overlapping fields (^AL)"
               >
-                <AlignHorizontalDistributeCenter className="w-5 h-5 md:w-7 md:h-7 mb-1" />
-                <span className="text-[10px] md:text-sm font-medium">Align</span>
+                <AlignHorizontalDistributeCenter className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                <span className="text-[9px] md:text-xs font-medium">Align</span>
               </button>
 
               <button
                 onClick={() => setSettingsDialogOpen(true)}
-                className="industrial-button text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[80px] md:min-w-[100px]"
+                className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
               >
-                <Settings className="w-5 h-5 md:w-7 md:h-7 mb-1" />
-                <span className="text-[10px] md:text-sm font-medium">Settings</span>
+                <Settings className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                <span className="text-[9px] md:text-xs font-medium">Settings</span>
+              </button>
+
+              <button
+                onClick={() => setAdvancedSettingsDialogOpen(true)}
+                className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
+              >
+                <SlidersHorizontal className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                <span className="text-[9px] md:text-xs font-medium">Advanced</span>
               </button>
 
               <button
                 onClick={() => onSave(message, false)}
-                className="industrial-button-success text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[80px] md:min-w-[100px]"
+                className="industrial-button-success text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
               >
-                <Save className="w-5 h-5 md:w-7 md:h-7 mb-1" />
-                <span className="text-[10px] md:text-sm font-medium">Save</span>
+                <Save className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                <span className="text-[9px] md:text-xs font-medium">Save</span>
               </button>
 
               <button
@@ -730,18 +828,18 @@ export function EditMessageScreen({
                   setSaveAsName(message.name + '_copy');
                   setSaveAsDialogOpen(true);
                 }}
-                className="industrial-button text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[80px] md:min-w-[100px]"
+                className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
               >
-                <SaveAll className="w-5 h-5 md:w-7 md:h-7 mb-1" />
-                <span className="text-[10px] md:text-sm font-medium">Save As</span>
+                <SaveAll className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                <span className="text-[9px] md:text-xs font-medium">Save As</span>
               </button>
 
               <button
                 onClick={onCancel}
-                className="industrial-button-gray text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[80px] md:min-w-[100px]"
+                className="industrial-button-gray text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
               >
-                <X className="w-5 h-5 md:w-7 md:h-7 mb-1" />
-                <span className="text-[10px] md:text-sm font-medium">Cancel</span>
+                <X className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                <span className="text-[9px] md:text-xs font-medium">Cancel</span>
               </button>
             </div>
           </div>
@@ -838,7 +936,19 @@ export function EditMessageScreen({
             }}
           />
 
-          {/* Save As Dialog */}
+          {/* Advanced Settings Dialog */}
+          <AdvancedSettingsDialog
+            open={advancedSettingsDialogOpen}
+            onOpenChange={setAdvancedSettingsDialogOpen}
+            settings={message.advancedSettings || defaultAdvancedSettings}
+            onUpdate={(newSettings) => {
+              setMessage((prev) => ({
+                ...prev,
+                advancedSettings: { ...(prev.advancedSettings || defaultAdvancedSettings), ...newSettings },
+              }));
+            }}
+          />
+
           <Dialog open={saveAsDialogOpen} onOpenChange={setSaveAsDialogOpen}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
