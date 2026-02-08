@@ -1271,13 +1271,15 @@ export function usePrinterConnection() {
 
   // Save PER-MESSAGE settings using ^CM (Change Message) command
   // Per BestCode v2.0 protocol, ^CM updates the STORED message definition:
-  // ^CM t; s; o
+  // ^CM t; s; o; p
   // t = Template size (0-16) - handled by template selection
   // s = Print Speed (0=Fast, 1=Faster, 2=Fastest, 3=Ultra Fast)
-  // o = Orientation (0=Normal, 1=Flip, 2=Mirror, 3=Mirror Flip)
+  // o = Orientation (0-7: Normal, Flip, Mirror, Mirror Flip, Tower, Tower Flip, Tower Mirror, Tower Mirror Flip)
+  // p = Print Mode (0=Normal, 1=Auto, 2=Repeat, 3=Reverse)
   const saveMessageSettings = useCallback(async (settings: {
     speed: PrintSettings['speed'];
-    rotation: PrintSettings['rotation'];
+    rotation: string; // Extended to include tower orientations
+    printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse';
   }): Promise<boolean> => {
     console.log('[saveMessageSettings] Called with:', settings);
     if (!connectionState.isConnected || !connectionState.connectedPrinter) {
@@ -1288,11 +1290,16 @@ export function usePrinterConnection() {
     const printer = connectionState.connectedPrinter;
 
     // Map rotation and speed to numeric values per protocol
-    const orientationMap: Record<PrintSettings['rotation'], number> = {
+    // Extended orientation map to include tower modes (0-7)
+    const orientationMap: Record<string, number> = {
       'Normal': 0,
       'Flip': 1,
       'Mirror': 2,
       'Mirror Flip': 3,
+      'Tower': 4,
+      'Tower Flip': 5,
+      'Tower Mirror': 6,
+      'Tower Mirror Flip': 7,
     };
     const speedMap: Record<PrintSettings['speed'], number> = {
       'Fast': 0,
@@ -1300,9 +1307,17 @@ export function usePrinterConnection() {
       'Fastest': 2,
       'Ultra Fast': 3,
     };
+    const printModeMap: Record<string, number> = {
+      'Normal': 0,
+      'Auto': 1,
+      'Repeat': 2,
+      'Reverse': 3,
+    };
 
-    // ^CM with named parameters: s=speed, o=orientation
-    const command = `^CM s${speedMap[settings.speed]};o${orientationMap[settings.rotation]}`;
+    // ^CM with named parameters: s=speed, o=orientation, p=printMode
+    const orientationValue = orientationMap[settings.rotation] ?? 0;
+    const printModeValue = printModeMap[settings.printMode ?? 'Normal'];
+    const command = `^CM s${speedMap[settings.speed]};o${orientationValue};p${printModeValue}`;
 
     if (shouldUseEmulator()) {
       console.log('[saveMessageSettings] Using emulator');
@@ -1405,6 +1420,40 @@ export function usePrinterConnection() {
     setPrinters(newOrder);
   }, [setPrinters]);
 
+  // Send a raw command to the printer and get response
+  // Used for help commands and other queries
+  const sendCommand = useCallback(async (command: string): Promise<{ success: boolean; response: string }> => {
+    console.log('[sendCommand] Called with:', command);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[sendCommand] Not connected');
+      return { success: false, response: 'Not connected to printer' };
+    }
+
+    const printer = connectionState.connectedPrinter;
+
+    if (shouldUseEmulator()) {
+      console.log('[sendCommand] Using emulator');
+      return printerEmulator.processCommand(command);
+    } else if (isElectron && window.electronAPI) {
+      try {
+        console.log('[sendCommand] Sending:', command);
+        const result = await window.electronAPI.printer.sendCommand(printer.id, command);
+        console.log('[sendCommand] Result:', JSON.stringify(result));
+        return {
+          success: result?.success ?? false,
+          response: result?.response ?? '',
+        };
+      } catch (e) {
+        console.error('[sendCommand] Failed:', e);
+        return { success: false, response: 'Command failed' };
+      }
+    } else {
+      // Web preview mock
+      console.log('[sendCommand] Web preview mock');
+      return { success: true, response: 'Web preview - no printer connected' };
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter]);
+
   return {
     printers,
     connectionState,
@@ -1439,5 +1488,6 @@ export function usePrinterConnection() {
     saveGlobalAdjust,
     saveMessageSettings,
     queryPrintSettings,
+    sendCommand,
   };
 }
