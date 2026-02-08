@@ -234,9 +234,9 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* Middle section - Message name */}
-      <div className="bg-card rounded-lg p-2 md:p-4 min-h-[50px] md:min-h-[80px] flex items-center">
-        <div className="text-xs md:text-lg">
+      {/* Middle section - Message name - compact */}
+      <div className="bg-card rounded-lg p-2 md:p-3 flex items-center">
+        <div className="text-xs md:text-base">
           <div className="font-medium">Message name</div>
           <div className="text-foreground truncate">
             {status?.currentMessage || 'No message selected'}
@@ -334,8 +334,8 @@ function calculateRequiredWidth(messageContent: MessageDetails | undefined, mess
   return MIN_CANVAS_WIDTH;
 }
 
-// Zoom levels to cycle through on each click (limited to 1.5x max to prevent vertical overflow)
-const ZOOM_LEVELS = [1, 1.5];
+// Zoom levels to cycle through on each click
+const ZOOM_LEVELS = [1, 1.5, 2];
 
 function MessagePreviewCanvas({ message, printerTime, messageContent }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
