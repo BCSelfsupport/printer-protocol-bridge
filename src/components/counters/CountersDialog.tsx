@@ -1,4 +1,4 @@
-import { RotateCcw, Pencil } from 'lucide-react';
+import { RotateCcw, Pencil, X } from 'lucide-react';
 import { PrinterStatus } from '@/types/printer';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 
 interface CountersDialogProps {
@@ -131,8 +132,13 @@ export function CountersDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl bg-gradient-to-b from-slate-700 to-slate-800 border-slate-600">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle className="text-xl text-white">Counters</DialogTitle>
+          <DialogClose asChild>
+            <button className="rounded-full p-1 hover:bg-white/10 transition-colors">
+              <X className="w-5 h-5 text-white" />
+            </button>
+          </DialogClose>
         </DialogHeader>
 
         <div className="space-y-4">
