@@ -90,6 +90,19 @@ export function MessageCanvas({
   useEffect(() => {
     onScrollLockChange?.(scrollLock);
   }, [scrollLock, onScrollLockChange]);
+
+  // While long-press dragging, prevent the page from scrolling under the finger
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (scrollLock) e.preventDefault();
+    };
+
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => canvas.removeEventListener('touchmove', onTouchMove);
+  }, [scrollLock]);
   
   // Calculate blocked rows (from top)
   const blockedRows = TOTAL_ROWS - templateHeight;
@@ -762,7 +775,7 @@ export function MessageCanvas({
             onTouchEnd={handleTouchEnd}
             onTouchCancel={handleTouchCancel}
             className={`${isDragging && isLongPressActive ? 'cursor-grabbing' : isEditing ? 'cursor-text' : 'cursor-crosshair'} block max-w-none outline-none`}
-            style={{ touchAction: 'pan-x pan-y' }}
+            style={{ touchAction: scrollLock ? 'none' : 'pan-x pan-y' }}
           />
         </div>
 
