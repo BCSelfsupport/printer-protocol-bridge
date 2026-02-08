@@ -112,11 +112,11 @@ export function PrinterListItem({
             {/* Message name with print count */}
             {printer.currentMessage && (
               <div className="flex items-center gap-2 mt-1.5 text-xs">
-                <FileText className="w-3.5 h-3.5 flex-shrink-0 text-primary" />
-                <span className="truncate text-primary font-medium">{printer.currentMessage}</span>
+                <FileText className="w-3.5 h-3.5 flex-shrink-0 text-foreground" />
+                <span className="truncate text-foreground font-medium">{printer.currentMessage}</span>
                 {printer.printCount !== undefined && (
-                  <span className="text-muted-foreground flex-shrink-0">
-                    Prints: <span className="text-primary font-semibold">{printer.printCount.toLocaleString()}</span>
+                  <span className="text-foreground flex-shrink-0">
+                    Prints: <span className="text-foreground font-semibold">{printer.printCount.toLocaleString()}</span>
                   </span>
                 )}
               </div>
