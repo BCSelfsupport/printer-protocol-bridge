@@ -10,7 +10,7 @@ import { SetupScreen } from '@/components/screens/SetupScreen';
 import { ServiceScreen } from '@/components/screens/ServiceScreen';
 import { CleanScreen } from '@/components/screens/CleanScreen';
 import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
-import { CountersScreen } from '@/components/screens/CountersScreen';
+
 import { SignInDialog } from '@/components/printers/SignInDialog';
 import { usePrinterConnection } from '@/hooks/usePrinterConnection';
 import { useJetCountdown } from '@/hooks/useJetCountdown';
@@ -20,7 +20,7 @@ import { PrintMessage } from '@/types/printer';
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
 
-type ScreenType = NavItem | 'network' | 'control' | 'editMessage' | 'counters';
+type ScreenType = NavItem | 'network' | 'control' | 'editMessage';
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
@@ -96,17 +96,6 @@ const Index = () => {
 
   const renderScreen = () => {
     switch (currentScreen) {
-      case 'counters':
-        return (
-          <CountersScreen
-            status={connectionState.status}
-            isConnected={connectionState.isConnected}
-            onHome={() => setCurrentScreen('control')}
-            onResetCounter={resetCounter}
-            onResetAll={resetAllCounters}
-            onMount={queryCounters}
-          />
-        );
       case 'network':
         return (
           <NetworkConfigScreen
@@ -147,7 +136,9 @@ const Index = () => {
               }
             }}
             onHelp={() => {}}
-            onCounters={() => setCurrentScreen('counters')}
+            onResetCounter={resetCounter}
+            onResetAllCounters={resetAllCounters}
+            onQueryCounters={queryCounters}
             isSignedIn={isSignedIn}
             onMount={() => setControlScreenOpen(true)}
             onUnmount={() => setControlScreenOpen(false)}

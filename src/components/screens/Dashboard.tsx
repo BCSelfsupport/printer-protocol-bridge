@@ -4,6 +4,7 @@ import { Wifi } from 'lucide-react';
 import { PrinterStatus } from '@/types/printer';
 import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
 import { MessageDetails, MessageField } from '@/components/screens/EditMessageScreen';
+import { CountersDialog } from '@/components/counters/CountersDialog';
 
 interface DashboardProps {
   status: PrinterStatus | null;
@@ -15,7 +16,9 @@ interface DashboardProps {
   onEditMessage: () => void;
   onSignIn: () => void;
   onHelp: () => void;
-  onCounters: () => void;
+  onResetCounter: (counterId: number, value: number) => void;
+  onResetAllCounters: () => void;
+  onQueryCounters: () => void;
   onMount?: () => void;
   onUnmount?: () => void;
   // Countdown timer props
@@ -37,7 +40,9 @@ export function Dashboard({
   onEditMessage,
   onSignIn,
   onHelp,
-  onCounters,
+  onResetCounter,
+  onResetAllCounters,
+  onQueryCounters,
   onMount,
   onUnmount,
   countdownSeconds,
@@ -45,6 +50,8 @@ export function Dashboard({
   isSignedIn = false,
   messageContent,
 }: DashboardProps) {
+  const [countersDialogOpen, setCountersDialogOpen] = useState(false);
+
   // Notify parent when this screen mounts/unmounts for polling control
   useEffect(() => {
     onMount?.();
@@ -195,7 +202,7 @@ export function Dashboard({
                 <span className="font-bold text-sm md:text-xl font-mono">{(status?.printCount ?? 0).toLocaleString()}</span>
               </div>
               <button
-                onClick={onCounters}
+                onClick={() => setCountersDialogOpen(true)}
                 className="w-full text-[10px] md:text-xs bg-gradient-to-b from-white/30 to-white/10 hover:from-white/40 hover:to-white/20 border border-white/20 rounded-md px-2 py-1 transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_1px_2px_rgba(0,0,0,0.2)] active:shadow-[inset_0_1px_3px_rgba(0,0,0,0.2)] flex items-center justify-center gap-1"
               >
                 <RotateCcw className="w-3 h-3 md:w-4 md:h-4" />
@@ -264,6 +271,17 @@ export function Dashboard({
         </button>
       </div>
     </div>
+
+    {/* Counters Dialog */}
+    <CountersDialog
+      open={countersDialogOpen}
+      onOpenChange={setCountersDialogOpen}
+      status={status}
+      isConnected={isConnected}
+      onResetCounter={onResetCounter}
+      onResetAll={onResetAllCounters}
+      onMount={onQueryCounters}
+    />
   </div>
   );
 }
