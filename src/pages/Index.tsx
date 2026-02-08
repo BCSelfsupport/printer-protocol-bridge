@@ -13,6 +13,7 @@ import { CleanScreen } from '@/components/screens/CleanScreen';
 import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
 
 import { SignInDialog } from '@/components/printers/SignInDialog';
+import { HelpDialog } from '@/components/help/HelpDialog';
 import { usePrinterConnection } from '@/hooks/usePrinterConnection';
 import { useJetCountdown } from '@/hooks/useJetCountdown';
 import { useMessageStorage, isReadOnlyMessage } from '@/hooks/useMessageStorage';
@@ -34,6 +35,7 @@ const Index = () => {
   // Control whether to auto-open the new message dialog
   const [openNewDialogOnMount, setOpenNewDialogOnMount] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+  const [helpDialogOpen, setHelpDialogOpen] = useState(false);
   
   // Local message storage (persists to localStorage)
   const { saveMessage, getMessage } = useMessageStorage();
@@ -67,6 +69,7 @@ const Index = () => {
     saveGlobalAdjust,
     saveMessageSettings,
     queryPrintSettings,
+    sendCommand,
   } = usePrinterConnection();
   
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown } = useJetCountdown();
@@ -152,7 +155,7 @@ const Index = () => {
                 setSignInDialogOpen(true);
               }
             }}
-            onHelp={() => {}}
+            onHelp={() => setHelpDialogOpen(true)}
             onResetCounter={resetCounter}
             onResetAllCounters={resetAllCounters}
             onQueryCounters={queryCounters}
@@ -298,7 +301,7 @@ const Index = () => {
                 setSignInDialogOpen(true);
               }
             }}
-            onHelp={() => {}}
+            onHelp={() => setHelpDialogOpen(true)}
             onResetCounter={resetCounter}
             onResetAllCounters={resetAllCounters}
             onQueryCounters={queryCounters}
@@ -392,6 +395,14 @@ const Index = () => {
             }
           }
         }}
+        isConnected={connectionState.isConnected}
+      />
+
+      {/* Help Dialog */}
+      <HelpDialog
+        open={helpDialogOpen}
+        onOpenChange={setHelpDialogOpen}
+        onSendCommand={sendCommand}
         isConnected={connectionState.isConnected}
       />
     </div>

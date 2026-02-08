@@ -393,6 +393,12 @@ class PrinterEmulator {
         response = this.cmdLogin(trimmedCommand);
       } else if (trimmedCommand.startsWith('^LO')) {
         response = this.cmdLogout();
+      } else if (trimmedCommand.startsWith('^HE')) {
+        response = this.cmdHelp(trimmedCommand);
+      } else if (trimmedCommand.startsWith('^HM')) {
+        response = this.cmdHelpMD();
+      } else if (trimmedCommand.startsWith('^HN')) {
+        response = this.cmdHelpNM();
       } else {
         // Unknown command
         response = this.formatError(3, 'CmdNotRec', 'Command not recognized');
@@ -878,9 +884,133 @@ class PrinterEmulator {
       : 'Logout OK';
   }
 
-  /**
-   * Set a state value
-   */
+  // ============ Help Commands ============
+
+  private cmdHelp(cmd: string): string {
+    const match = cmd.match(/\^HE\s*(\w*)/i);
+    const topic = match?.[1]?.toUpperCase() || '';
+
+    const helpTopics: Record<string, string> = {
+      '': [
+        'Available Commands:',
+        '^HE [topic] - Help',
+        '^VV - View Version',
+        '^EN/^EF - Echo On/Off',
+        '^SJ 0/1 - Stop/Start Jet',
+        '^PR 0/1 - Disable/Enable Printing',
+        '^SM msg - Select Message',
+        '^LM - List Messages',
+        '^NM - New Message',
+        '^CM - Change Message',
+        '^SU - Status Update',
+        '^CN - Count Query',
+        '',
+        'Topics: Bar, Date, DMAT, DOT, Font, Mode, Orient, Speed, Temp, Time',
+      ].join('\r\n'),
+      'BAR': [
+        'Barcode Types:',
+        '0 = Interleaved 2 of 5',
+        '1 = UPC-A',
+        '2 = UPC-E',
+        '3 = EAN-13',
+        '4 = EAN-8',
+        '5 = Code 39',
+        '6 = Code 128',
+        '7 = DataMatrix',
+        '8 = QR Code',
+      ].join('\r\n'),
+      'DATE': [
+        'Date Types:',
+        '1 = Day of week (numeric)',
+        '2 = Day of week (alpha)',
+        '3 = Day of month',
+        '4 = Day of year',
+        '5 = Week number',
+        '6 = Month number',
+        '7 = Month (alpha)',
+        '8-10 = Year (1/2/4 digits)',
+        '11-22 = Various date formats',
+      ].join('\r\n'),
+      'FONT': [
+        'Font Sizes:',
+        '0 = 5 dots high',
+        '1 = 7 dots high (wide)',
+        '2 = 7 dots high (narrow)',
+        '3 = 9 dots high',
+        '4 = 12 dots high',
+        '5 = 16 dots high',
+        '6 = 19 dots high',
+        '7 = 25 dots high',
+        '8 = 32 dots high',
+      ].join('\r\n'),
+      'MODE': [
+        'Print Modes:',
+        '0 = Normal - Print once per trigger',
+        '1 = Auto - Continuous printing at pitch interval',
+        '2 = Repeat - Print N times per trigger',
+        '3 = Reverse - Print in reverse direction',
+      ].join('\r\n'),
+      'ORIENT': [
+        'Orientation Values:',
+        '0 = Normal',
+        '1 = Flip (upside down)',
+        '2 = Mirror (horizontal flip)',
+        '3 = Mirror and Flip',
+        '4 = Tower Normal (chars rotated 90°)',
+        '5 = Tower Flip',
+        '6 = Tower Mirror',
+        '7 = Tower Mirror and Flip',
+      ].join('\r\n'),
+      'SPEED': [
+        'Print Speeds:',
+        '0 = Fast',
+        '1 = Faster',
+        '2 = Fastest',
+        '3 = Ultra Fast',
+      ].join('\r\n'),
+      'TEMP': [
+        'Template Sizes (Lines x Dots):',
+        '0 = 1x5    5 = 1x19   10 = 2x12   15 = 5x5',
+        '1 = 1x7    6 = 1x25   11 = 2x16   16 = 1x3',
+        '2 = 1x9    7 = 1x32   12 = 3x7',
+        '3 = 1x12   8 = 2x7    13 = 3x9',
+        '4 = 1x16   9 = 2x9    14 = 4x7',
+      ].join('\r\n'),
+      'TIME': [
+        'Time Types:',
+        '23/3 = Hours only',
+        '24/2 = Minutes only',
+        '25/1 = Seconds only',
+        '26/4 = Hours:Minutes (no delimiter)',
+        '27/5 = Hours:Minutes:Seconds (no delimiter)',
+        '28/6 = Hours:Minutes (with delimiter)',
+        '29/7 = Hours:Minutes:Seconds (with delimiter)',
+      ].join('\r\n'),
+    };
+
+    return helpTopics[topic] || `Unknown topic: ${topic}. Use ^HE for list of topics.`;
+  }
+
+  private cmdHelpMD(): string {
+    return [
+      'Message Data Subcommands (^MD):',
+      '^TDn;data - Text Data for field n',
+      '^BDn;data - Barcode Data for field n',
+    ].join('\r\n');
+  }
+
+  private cmdHelpNM(): string {
+    return [
+      'New Message Subcommands (^NM):',
+      '^AT n;x;y;s;data - Add Text field',
+      '^AB n;x;y;s;type;data - Add Barcode field',
+      '^AC n;x;y;s;c - Add Counter field',
+      '^AD n;x;y;s;d - Add Date field',
+      '^AH n;x;y;s;t - Add Time field',
+      '^AL n;x;y;logo - Add Logo field',
+    ].join('\r\n');
+  }
+
   setState<K extends keyof EmulatorState>(key: K, value: EmulatorState[K]) {
     this.state[key] = value;
     this.notifyListeners();
