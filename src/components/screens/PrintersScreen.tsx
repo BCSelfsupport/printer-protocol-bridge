@@ -391,6 +391,7 @@ export function PrintersScreen({
         onOpenChange={setEditDialogOpen}
         printer={printerToEdit}
         onSave={handleSaveEdit}
+        onDelete={onRemovePrinter}
       />
     </div>
   );
