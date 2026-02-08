@@ -1,4 +1,5 @@
-import { ChevronUp, ChevronDown, RotateCcw } from 'lucide-react';
+import { ChevronUp, ChevronDown, RotateCcw, Pencil } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -7,83 +8,129 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
+// Per-message settings that are STORED with the message via ^CM
 export interface MessageSettings {
-  width: number;       // 0-1000
-  height: number;      // 0-10
-  delay: number;       // 0-4,000,000,000
-  rotation: 'Normal' | 'Mirror' | 'Flip' | 'Mirror Flip';
-  bold: number;        // 0-9
   speed: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
-  gap: number;         // 0-9
-  pitch: number;       // 0-4,000,000,000
-  repeatAmount: number;
+  rotation: 'Normal' | 'Mirror' | 'Flip' | 'Mirror Flip';
 }
 
 export const defaultMessageSettings: MessageSettings = {
-  width: 15,
-  height: 8,
-  delay: 100,
-  rotation: 'Normal',
-  bold: 0,
   speed: 'Fastest',
-  gap: 0,
-  pitch: 0,
-  repeatAmount: 0,
+  rotation: 'Normal',
 };
 
-interface SettingsRowProps {
+interface SettingCardProps {
   label: string;
   value: string | number;
   onIncrease: () => void;
   onDecrease: () => void;
-  onDirectInput?: (val: number) => void;
+  onEdit?: (newValue: number) => void;
   showInput?: boolean;
   showRotate?: boolean;
-  inputWidth?: string; // Custom width for large values
+  min?: number;
+  max?: number;
 }
 
-function SettingsRow({ label, value, onIncrease, onDecrease, onDirectInput, showInput = true, showRotate = false, inputWidth = 'w-16' }: SettingsRowProps) {
+function SettingCard({ 
+  label, 
+  value, 
+  onIncrease, 
+  onDecrease, 
+  onEdit, 
+  showInput = false,
+  showRotate = false,
+  min = 0,
+  max = 9999,
+}: SettingCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value.toString());
+
+  // Sync editValue when value changes externally
+  useEffect(() => {
+    if (!isEditing) {
+      setEditValue(value.toString());
+    }
+  }, [value, isEditing]);
+
+  const handleEditSubmit = () => {
+    if (onEdit && typeof value === 'number') {
+      const numValue = parseInt(editValue, 10);
+      if (!isNaN(numValue)) {
+        const clampedValue = Math.max(min, Math.min(max, numValue));
+        onEdit(clampedValue);
+      }
+    }
+    setIsEditing(false);
+  };
+
   return (
-    <div className="bg-muted/30 rounded-lg p-2 md:p-3 flex items-center justify-between gap-1 md:gap-2">
-      <span className="text-primary text-sm md:text-base font-medium whitespace-nowrap">{label}: {value}</span>
-      <div className="flex items-center gap-1 flex-shrink-0">
-        {showInput && onDirectInput && (
-          <input
-            type="number"
-            className={`${inputWidth} h-7 md:h-8 bg-card border rounded px-1 md:px-2 text-right text-xs md:text-sm`}
-            value={typeof value === 'number' ? value : ''}
-            onChange={(e) => {
-              const num = parseInt(e.target.value);
-              if (!isNaN(num)) {
-                onDirectInput(Math.max(0, num));
-              }
-            }}
-          />
-        )}
-        {showRotate ? (
-          <button 
-            onClick={onIncrease}
-            className="industrial-button text-white p-1.5 md:p-2 rounded-lg"
-          >
-            <RotateCcw className="w-4 h-4 md:w-5 md:h-5" />
-          </button>
-        ) : (
-          <>
-            <button 
-              onClick={onDecrease}
-              className="industrial-button text-white p-1.5 md:p-2 rounded-lg"
+    <div className="bg-gradient-to-b from-slate-100 to-slate-200 rounded-lg p-3 border border-slate-300 shadow-sm">
+      <div className="flex items-center gap-2">
+        {/* Setting info */}
+        <div className="flex-1 min-w-0">
+          <div className="text-xs text-slate-600 font-medium truncate">{label}</div>
+          {isEditing && showInput ? (
+            <Input
+              type="number"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={handleEditSubmit}
+              onKeyDown={(e) => e.key === 'Enter' && handleEditSubmit()}
+              className="h-7 text-lg font-bold bg-white"
+              autoFocus
+              min={min}
+              max={max}
+            />
+          ) : (
+            <div className="text-lg md:text-xl font-bold text-slate-800 tabular-nums">
+              {typeof value === 'number' ? value.toLocaleString() : value}
+            </div>
+          )}
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-1">
+          {showInput && onEdit && (
+            <button
+              onClick={() => {
+                setEditValue(value.toString());
+                setIsEditing(true);
+              }}
+              className="industrial-button text-white p-2 rounded"
+              title="Edit value"
             >
-              <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />
+              <Pencil className="w-4 h-4" />
             </button>
-            <button 
+          )}
+          {showRotate ? (
+            <button
               onClick={onIncrease}
-              className="industrial-button text-white p-1.5 md:p-2 rounded-lg"
+              className="industrial-button text-white p-2 rounded"
+              title="Rotate"
             >
-              <ChevronUp className="w-4 h-4 md:w-5 md:h-5" />
+              <RotateCcw className="w-4 h-4" />
             </button>
-          </>
-        )}
+          ) : (
+            <>
+              <button
+                onClick={onDecrease}
+                className="industrial-button text-white p-2 rounded"
+                title="Decrease"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              <button
+                onClick={onIncrease}
+                className="industrial-button text-white p-2 rounded"
+                title="Increase"
+              >
+                <ChevronUp className="w-4 h-4" />
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -122,83 +169,44 @@ export function MessageSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-4xl max-h-[80vh] overflow-y-auto p-3 md:p-6">
+      <DialogContent className="w-[95vw] max-w-lg max-h-[80vh] overflow-y-auto p-4 md:p-6 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950">
         <DialogHeader className="pb-2">
-          <DialogTitle className="text-base md:text-lg">Message Settings</DialogTitle>
+          <DialogTitle className="text-base md:text-lg text-white">Message Settings</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 py-2 md:py-4">
-          <SettingsRow
-            label="Width"
-            value={settings.width}
-            onIncrease={() => onUpdate({ width: settings.width + 1 })}
-            onDecrease={() => onUpdate({ width: Math.max(0, settings.width - 1) })}
-            onDirectInput={(val) => onUpdate({ width: val })}
-          />
-          <SettingsRow
-            label="Height"
-            value={settings.height}
-            onIncrease={() => onUpdate({ height: settings.height + 1 })}
-            onDecrease={() => onUpdate({ height: Math.max(0, settings.height - 1) })}
-            showInput={false}
-          />
+        
+        <div className="bg-gradient-to-b from-slate-700 to-slate-800 rounded-xl p-4 border border-slate-600 shadow-xl">
+          <div className="space-y-3">
+            {/* Speed: Fast, Faster, Fastest, Ultra Fast */}
+            <SettingCard
+              label="Speed"
+              value={settings.speed}
+              onIncrease={cycleSpeedUp}
+              onDecrease={cycleSpeedDown}
+              showInput={false}
+            />
 
-          <SettingsRow
-            label="Delay"
-            value={settings.delay}
-            onIncrease={() => onUpdate({ delay: settings.delay + 10 })}
-            onDecrease={() => onUpdate({ delay: Math.max(0, settings.delay - 10) })}
-            onDirectInput={(val) => onUpdate({ delay: val })}
-            inputWidth="w-24"
-          />
-          <SettingsRow
-            label="Rotation"
-            value={settings.rotation}
-            onIncrease={cycleRotation}
-            onDecrease={cycleRotation}
-            showInput={false}
-            showRotate
-          />
-
-          <SettingsRow
-            label="Bold"
-            value={settings.bold}
-            onIncrease={() => onUpdate({ bold: settings.bold + 1 })}
-            onDecrease={() => onUpdate({ bold: Math.max(0, settings.bold - 1) })}
-            onDirectInput={(val) => onUpdate({ bold: val })}
-          />
-          <SettingsRow
-            label="Speed"
-            value={settings.speed}
-            onIncrease={cycleSpeedUp}
-            onDecrease={cycleSpeedDown}
-            showInput={false}
-          />
-
-          <SettingsRow
-            label="Gap"
-            value={settings.gap}
-            onIncrease={() => onUpdate({ gap: settings.gap + 1 })}
-            onDecrease={() => onUpdate({ gap: Math.max(0, settings.gap - 1) })}
-            onDirectInput={(val) => onUpdate({ gap: val })}
-          />
-          <SettingsRow
-            label="Pitch"
-            value={settings.pitch}
-            onIncrease={() => onUpdate({ pitch: settings.pitch + 1 })}
-            onDecrease={() => onUpdate({ pitch: Math.max(0, settings.pitch - 1) })}
-            onDirectInput={(val) => onUpdate({ pitch: val })}
-          />
-
-          <SettingsRow
-            label="Repeat amount"
-            value={settings.repeatAmount}
-            onIncrease={() => onUpdate({ repeatAmount: settings.repeatAmount + 1 })}
-            onDecrease={() => onUpdate({ repeatAmount: Math.max(0, settings.repeatAmount - 1) })}
-            onDirectInput={(val) => onUpdate({ repeatAmount: val })}
-          />
+            {/* Rotation: Normal, Mirror, Flip, Mirror Flip */}
+            <SettingCard
+              label="Rotation"
+              value={settings.rotation}
+              onIncrease={cycleRotation}
+              onDecrease={cycleRotation}
+              showInput={false}
+              showRotate
+            />
+          </div>
+          
+          {/* Info text */}
+          <p className="text-xs text-slate-400 text-center mt-4">
+            These settings are stored with the message (^CM protocol)
+          </p>
         </div>
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>
+        
+        <DialogFooter className="mt-4">
+          <Button 
+            onClick={() => onOpenChange(false)}
+            className="industrial-button-success text-white"
+          >
             Done
           </Button>
         </DialogFooter>

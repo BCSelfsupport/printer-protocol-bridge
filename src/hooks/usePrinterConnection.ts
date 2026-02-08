@@ -1118,30 +1118,91 @@ export function usePrinterConnection() {
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
-  // Save print settings to the printer
-  // Uses protocol commands for each setting:
-  // ^WP n - Width (0-1000)
-  // ^HT n - Height (0-10)
-  // ^DL n - Delay (0-4,000,000,000)
-  // ^RO n - Rotation (0=Normal, 1=Mirror, 2=Flip, 3=Mirror Flip)
-  // ^BO n - Bold (0-9)
-  // ^SP n - Speed (0=Fast, 1=Faster, 2=Fastest, 3=Ultra Fast)
-  // ^GA n - Gap (0-9)
-  // ^PI n - Pitch (0-4,000,000,000)
-  const savePrintSettings = useCallback(async (settings: PrintSettings): Promise<boolean> => {
-    console.log('[savePrintSettings] Called with:', settings);
+  // Save GLOBAL print settings to the CURRENTLY SELECTED printing message
+  // Per BestCode v2.0 protocol, these affect the active message dynamically:
+  // ^PW n - Print Width (0-16000)
+  // ^PH n - Print Height (0-10)
+  // ^DA n - Delay Adjust (0-4,000,000,000)
+  // ^SB n - Set Bold (0-9)
+  // ^GP n - Gap (0-9)
+  // ^PA n - Pitch Adjust (0-4,000,000,000) - only for Repeat/Auto mode
+  // ^RA n - Repeat Adjust (0-30000) - only for Repeat mode
+  const saveGlobalAdjust = useCallback(async (settings: PrintSettings): Promise<boolean> => {
+    console.log('[saveGlobalAdjust] Called with:', settings);
     if (!connectionState.isConnected || !connectionState.connectedPrinter) {
-      console.log('[savePrintSettings] Not connected');
+      console.log('[saveGlobalAdjust] Not connected');
       return false;
     }
 
     const printer = connectionState.connectedPrinter;
 
-    // Map rotation and speed to numeric values
-    const rotationMap: Record<PrintSettings['rotation'], number> = {
+    // Global adjust commands - affect the currently printing message
+    const commands = [
+      `^PW ${settings.width}`,
+      `^PH ${settings.height}`,
+      `^DA ${settings.delay}`,
+      `^SB ${settings.bold}`,
+      `^GP ${settings.gap}`,
+      `^PA ${settings.pitch}`,
+      `^RA ${settings.repeatAmount}`,
+    ];
+
+    if (shouldUseEmulator()) {
+      console.log('[saveGlobalAdjust] Using emulator');
+      for (const cmd of commands) {
+        const result = printerEmulator.processCommand(cmd);
+        console.log('[saveGlobalAdjust] Emulator result for', cmd, ':', result);
+      }
+      return true;
+    } else if (isElectron && window.electronAPI) {
+      try {
+        console.log('[saveGlobalAdjust] Sending commands to printer');
+        for (const cmd of commands) {
+          console.log('[saveGlobalAdjust] Sending:', cmd);
+          const result = await window.electronAPI.printer.sendCommand(printer.id, cmd);
+          console.log('[saveGlobalAdjust] Result:', JSON.stringify(result));
+          
+          if (!result?.success) {
+            console.error('[saveGlobalAdjust] Command failed:', cmd, result?.error);
+            // Continue with other commands even if one fails
+          }
+        }
+        return true;
+      } catch (e) {
+        console.error('[saveGlobalAdjust] Failed to save settings:', e);
+        return false;
+      }
+    } else {
+      // Web preview mock
+      console.log('[saveGlobalAdjust] Web preview mock');
+      return true;
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter]);
+
+  // Save PER-MESSAGE settings using ^CM (Change Message) command
+  // Per BestCode v2.0 protocol, ^CM updates the STORED message definition:
+  // ^CM t; s; o; p
+  // t = Template size (0-16)
+  // s = Print Speed (0=Fast, 1=Faster, 2=Fastest, 3=Ultra Fast)
+  // o = Orientation (0=Normal, 1=Flip, 2=Mirror, 3=Mirror Flip)
+  // p = Print Mode (0=Normal, 1=Auto, 2=Repeat, 3=Reverse)
+  const saveMessageSettings = useCallback(async (settings: {
+    speed: PrintSettings['speed'];
+    rotation: PrintSettings['rotation'];
+  }): Promise<boolean> => {
+    console.log('[saveMessageSettings] Called with:', settings);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[saveMessageSettings] Not connected');
+      return false;
+    }
+
+    const printer = connectionState.connectedPrinter;
+
+    // Map rotation and speed to numeric values per protocol
+    const orientationMap: Record<PrintSettings['rotation'], number> = {
       'Normal': 0,
-      'Mirror': 1,
-      'Flip': 2,
+      'Flip': 1,
+      'Mirror': 2,
       'Mirror Flip': 3,
     };
     const speedMap: Record<PrintSettings['speed'], number> = {
@@ -1151,45 +1212,27 @@ export function usePrinterConnection() {
       'Ultra Fast': 3,
     };
 
-    const commands = [
-      `^WP ${settings.width}`,
-      `^HT ${settings.height}`,
-      `^DL ${settings.delay}`,
-      `^RO ${rotationMap[settings.rotation]}`,
-      `^BO ${settings.bold}`,
-      `^SP ${speedMap[settings.speed]}`,
-      `^GA ${settings.gap}`,
-      `^PI ${settings.pitch}`,
-    ];
+    // ^CM with named parameters: o=orientation, s=speed
+    const command = `^CM s${speedMap[settings.speed]};o${orientationMap[settings.rotation]}`;
 
     if (shouldUseEmulator()) {
-      console.log('[savePrintSettings] Using emulator');
-      for (const cmd of commands) {
-        const result = printerEmulator.processCommand(cmd);
-        console.log('[savePrintSettings] Emulator result for', cmd, ':', result);
-      }
-      return true;
+      console.log('[saveMessageSettings] Using emulator');
+      const result = printerEmulator.processCommand(command);
+      console.log('[saveMessageSettings] Emulator result:', result);
+      return result.success;
     } else if (isElectron && window.electronAPI) {
       try {
-        console.log('[savePrintSettings] Sending commands to printer');
-        for (const cmd of commands) {
-          console.log('[savePrintSettings] Sending:', cmd);
-          const result = await window.electronAPI.printer.sendCommand(printer.id, cmd);
-          console.log('[savePrintSettings] Result:', JSON.stringify(result));
-          
-          if (!result?.success) {
-            console.error('[savePrintSettings] Command failed:', cmd, result?.error);
-            // Continue with other commands even if one fails
-          }
-        }
-        return true;
+        console.log('[saveMessageSettings] Sending:', command);
+        const result = await window.electronAPI.printer.sendCommand(printer.id, command);
+        console.log('[saveMessageSettings] Result:', JSON.stringify(result));
+        return result?.success ?? false;
       } catch (e) {
-        console.error('[savePrintSettings] Failed to save settings:', e);
+        console.error('[saveMessageSettings] Failed to save message settings:', e);
         return false;
       }
     } else {
       // Web preview mock
-      console.log('[savePrintSettings] Web preview mock');
+      console.log('[saveMessageSettings] Web preview mock');
       return true;
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
@@ -1297,7 +1340,8 @@ export function usePrinterConnection() {
     resetCounter,
     resetAllCounters,
     queryCounters,
-    savePrintSettings,
+    saveGlobalAdjust,
+    saveMessageSettings,
     queryPrintSettings,
   };
 }
