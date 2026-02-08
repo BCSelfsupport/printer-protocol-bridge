@@ -259,8 +259,8 @@ export function Dashboard({
         />
       </div>
 
-      {/* New/Edit buttons - side by side below preview */}
-      <div className="flex gap-2 justify-center">
+      {/* New/Edit buttons - side by side below preview, tighter spacing */}
+      <div className="flex gap-2 justify-center -mt-1">
         <button 
           onClick={onNewMessage}
           className="industrial-button text-white px-4 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-2"
@@ -291,42 +291,40 @@ export function Dashboard({
     
     {/* Combined Bottom Nav with version info - all on one line */}
     {onNavigate && onTurnOff && (
-      <div className="bg-sidebar h-14 flex items-center px-3">
+      <div className="bg-sidebar h-20 flex items-center px-4">
         {/* Left version */}
         <span className="text-sidebar-foreground text-sm whitespace-nowrap">Build 1.0.0</span>
         
         {/* Center nav buttons */}
         <div className="flex-1 flex justify-center">
-          <div className="flex">
+          <div className="flex gap-1">
             <button 
               onClick={onTurnOff}
-              className="flex flex-col items-center justify-center gap-0.5 px-4 py-2 industrial-button-gray text-white rounded-l"
+              className="flex flex-col items-center justify-center gap-1 px-5 py-2.5 industrial-button-gray text-white rounded"
             >
-              <Power className="w-5 h-5" />
-              <span className="text-[10px] font-medium">Turn Off</span>
+              <Power className="w-6 h-6" />
+              <span className="text-xs font-medium">Turn Off</span>
             </button>
             
             {[
-              { id: 'messages' as const, label: 'Messages', icon: <FileText className="w-5 h-5" /> },
-              { id: 'adjust' as const, label: 'Adjust', icon: <SlidersHorizontal className="w-5 h-5" /> },
-              { id: 'clean' as const, label: 'Clean', icon: <Brush className="w-5 h-5" />, disabled: true },
-              { id: 'setup' as const, label: 'Setup', icon: <Settings className="w-5 h-5" />, disabled: true },
-              { id: 'service' as const, label: 'Service', icon: <Wrench className="w-5 h-5" /> },
-            ].map((item, idx, arr) => (
+              { id: 'messages' as const, label: 'Messages', icon: <FileText className="w-6 h-6" /> },
+              { id: 'adjust' as const, label: 'Adjust', icon: <SlidersHorizontal className="w-6 h-6" /> },
+              { id: 'clean' as const, label: 'Clean', icon: <Brush className="w-6 h-6" />, disabled: true },
+              { id: 'setup' as const, label: 'Setup', icon: <Settings className="w-6 h-6" />, disabled: true },
+              { id: 'service' as const, label: 'Service', icon: <Wrench className="w-6 h-6" /> },
+            ].map((item) => (
               <button
                 key={item.id}
                 onClick={() => !item.disabled && onNavigate(item.id)}
                 disabled={item.disabled}
-                className={`flex flex-col items-center justify-center gap-0.5 px-4 py-2 transition-all ${
-                  idx === arr.length - 1 ? 'rounded-r' : ''
-                } ${
+                className={`flex flex-col items-center justify-center gap-1 px-5 py-2.5 rounded transition-all ${
                   item.disabled
                     ? 'bg-sidebar/50 text-sidebar-foreground/40 cursor-not-allowed'
                     : 'industrial-button text-white'
                 }`}
               >
                 {item.icon}
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <span className="text-xs font-medium">{item.label}</span>
               </button>
             ))}
           </div>
