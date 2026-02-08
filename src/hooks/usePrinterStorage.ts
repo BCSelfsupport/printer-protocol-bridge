@@ -61,57 +61,33 @@ export function usePrinterStorage() {
     const updateFromEmulators = () => {
       if (!multiPrinterEmulator.enabled) return;
       
-      const emulatedPrinters = multiPrinterEmulator.getEmulatedPrinters();
+      // Get all instances directly from the manager (even if enabled just changed)
+      const emulatedConfigs = [
+        { ipAddress: '192.168.1.55', port: 23 },
+        { ipAddress: '192.168.1.56', port: 23 },
+        { ipAddress: '192.168.1.100', port: 23 },
+        { ipAddress: '192.168.1.101', port: 23 },
+      ];
       
       setPrinters(prev => {
-        // Create a map of existing printers by IP for quick lookup
-        const existingByIp = new Map(prev.map(p => [`${p.ipAddress}:${p.port}`, p]));
-        
-        // Update existing printers and add new emulated ones
-        const updatedPrinters = [...prev];
-        
-        emulatedPrinters.forEach(ep => {
-          const key = `${ep.ipAddress}:${ep.port}`;
-          const existing = existingByIp.get(key);
-          const instance = multiPrinterEmulator.getInstanceByIp(ep.ipAddress, ep.port);
-          const state = instance?.getState();
-          
-          if (existing) {
-            // Update existing printer
-            const idx = updatedPrinters.findIndex(p => p.id === existing.id);
-            if (idx !== -1) {
-              updatedPrinters[idx] = {
-                ...existing,
-                name: ep.name,
-                isAvailable: true,
-                status: ep.status,
-                hasActiveErrors: state ? hasErrors(state.inkLevel, state.makeupLevel) : false,
-                inkLevel: state?.inkLevel,
-                makeupLevel: state?.makeupLevel,
-                currentMessage: state?.currentMessage,
-                printCount: state?.printCount,
-              };
-            }
-          } else {
-            // Add new emulated printer
-            const newId = updatedPrinters.length > 0 
-              ? Math.max(...updatedPrinters.map(p => p.id)) + 1 
-              : 1;
-            updatedPrinters.push({
-              id: newId,
-              name: ep.name,
-              ipAddress: ep.ipAddress,
-              port: ep.port,
-              isConnected: false,
+        const updatedPrinters = prev.map(p => {
+          // Check if this printer matches an emulated IP
+          const instance = multiPrinterEmulator.getInstanceByIp(p.ipAddress, p.port);
+          if (instance) {
+            const state = instance.getState();
+            const simPrinter = instance.getSimulatedPrinter();
+            return {
+              ...p,
               isAvailable: true,
-              status: ep.status,
-              hasActiveErrors: state ? hasErrors(state.inkLevel, state.makeupLevel) : false,
+              status: simPrinter.status,
+              hasActiveErrors: hasErrors(state?.inkLevel, state?.makeupLevel),
               inkLevel: state?.inkLevel,
               makeupLevel: state?.makeupLevel,
               currentMessage: state?.currentMessage,
               printCount: state?.printCount,
-            });
+            };
           }
+          return p;
         });
         
         return updatedPrinters;
@@ -121,11 +97,14 @@ export function usePrinterStorage() {
     // When emulator is toggled on/off, update printer availability
     const unsubEnabled = multiPrinterEmulator.subscribeToEnabled((enabled) => {
       if (enabled) {
+        // Immediately update all matching printers
         updateFromEmulators();
       } else {
         // Mark all emulated printers as offline
         setPrinters(prev => prev.map(p => {
-          const isEmulated = multiPrinterEmulator.isEmulatedIp(p.ipAddress, p.port);
+          // Check against known emulated IPs
+          const knownEmulatedIps = ['192.168.1.55', '192.168.1.56', '192.168.1.100', '192.168.1.101'];
+          const isEmulated = knownEmulatedIps.includes(p.ipAddress);
           if (isEmulated && !p.isConnected) {
             return {
               ...p,
@@ -143,18 +122,32 @@ export function usePrinterStorage() {
       }
     });
 
-    // Subscribe to state changes from all emulated printers
+    // Subscribe to state changes from all potential emulated printers
+    // We subscribe even before enabled - the callbacks will check enabled state
     const unsubscribers: (() => void)[] = [];
-    const emulatedPrinters = multiPrinterEmulator.getEmulatedPrinters();
-    emulatedPrinters.forEach(ep => {
+    const knownEmulatedIps = [
+      { ipAddress: '192.168.1.55', port: 23 },
+      { ipAddress: '192.168.1.56', port: 23 },
+      { ipAddress: '192.168.1.100', port: 23 },
+      { ipAddress: '192.168.1.101', port: 23 },
+    ];
+    
+    knownEmulatedIps.forEach(ep => {
+      // Subscribe directly to the instance (instances exist even when disabled)
+      const key = `${ep.ipAddress}:${ep.port}`;
+      // We need to access the instance even when disabled - modify the manager call
       const unsub = multiPrinterEmulator.subscribe(ep.ipAddress, ep.port, () => {
-        updateFromEmulators();
+        if (multiPrinterEmulator.enabled) {
+          updateFromEmulators();
+        }
       });
       unsubscribers.push(unsub);
     });
 
     // Initial sync if emulator is already enabled
-    updateFromEmulators();
+    if (multiPrinterEmulator.enabled) {
+      updateFromEmulators();
+    }
 
     return () => {
       unsubEnabled();
