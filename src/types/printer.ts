@@ -44,6 +44,9 @@ export interface PrinterMetrics {
   inkLevel: string;
   makeupLevel: string;
   printStatus: string;
+  // Temperature readings from ^TP command
+  printheadTemp: number;
+  electronicsTemp: number;
   subsystems: {
     v300up: boolean;
     vltOn: boolean;

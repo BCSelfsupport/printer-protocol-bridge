@@ -54,6 +54,8 @@ const mockMetrics: PrinterMetrics = {
   inkLevel: 'FULL',
   makeupLevel: 'GOOD',
   printStatus: 'Not ready',
+  printheadTemp: 24.71,
+  electronicsTemp: 30.78,
   subsystems: {
     v300up: false,
     vltOn: false,
@@ -1481,6 +1483,8 @@ export function usePrinterConnection() {
                 inkLevel: (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN',
                 makeupLevel: (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
                 printStatus: parsed.hvDeflection ? 'Ready' : 'Not Ready',
+                printheadTemp: parsed.printheadTemp ?? 0,
+                electronicsTemp: parsed.electronicsTemp ?? 0,
                 subsystems: {
                   v300up: parsed.subsystems?.v300up ?? false,
                   vltOn: parsed.subsystems?.vltOn ?? false,
@@ -1510,6 +1514,8 @@ export function usePrinterConnection() {
             inkLevel: (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN',
             makeupLevel: (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
             printStatus: parsed.hvDeflection ? 'Ready' : 'Not Ready',
+            printheadTemp: parsed.printheadTemp ?? 0,
+            electronicsTemp: parsed.electronicsTemp ?? 0,
             subsystems: {
               v300up: parsed.subsystems?.v300up ?? false,
               vltOn: parsed.subsystems?.vltOn ?? false,
@@ -1548,6 +1554,8 @@ export function usePrinterConnection() {
               inkLevel: (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN',
               makeupLevel: (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
               printStatus: parsed.hvDeflection ? 'Ready' : 'Not Ready',
+              printheadTemp: parsed.printheadTemp ?? 0,
+              electronicsTemp: parsed.electronicsTemp ?? 0,
               subsystems: {
                 v300up: parsed.subsystems?.v300up ?? false,
                 vltOn: parsed.subsystems?.vltOn ?? false,
