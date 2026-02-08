@@ -54,7 +54,7 @@ export function MessageCanvas({
   onFieldError,
   onScrollLockChange,
 }: MessageCanvasProps) {
-  const [scrollX, setScrollX] = useState(0);
+  const [scrollX, setScrollX] = useState(0); // derived from scroller scrollLeft (in dots)
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hiddenInputRef = useRef<HTMLInputElement>(null); // Hidden input for mobile keyboard
@@ -66,22 +66,14 @@ export function MessageCanvas({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   
-  // Canvas swipe scroll state for mobile (refs so it updates immediately during touch/pointer)
-  const swipeModeRef = useRef(false);
-  const swipeStartXRef = useRef<number>(0);
-  const swipeStartYRef = useRef<number>(0);
-  const swipeStartScrollXRef = useRef<number>(0);
-
-  // Pointer-pan state (more reliable than touch listeners in some mobile browsers)
-  const pointerPanActiveRef = useRef(false);
-  const pointerIdRef = useRef<number | null>(null);
+  // Horizontal scroll container (native swipe-to-scroll on mobile)
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const scrollLeftDotsRef = useRef(0);
 
   // Touch/long-press state for mobile drag
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isLongPressActive, setIsLongPressActive] = useState(false);
   const [isLongPressPending, setIsLongPressPending] = useState(false); // Waiting for long press
-  const isLongPressActiveRef = useRef(false);
-  const isLongPressPendingRef = useRef(false);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const LONG_PRESS_DURATION = 400; // ms to hold before drag activates
   const TOUCH_MOVE_THRESHOLD = 10; // pixels - if moved more than this, cancel long press and allow swipe
@@ -98,15 +90,6 @@ export function MessageCanvas({
   useEffect(() => {
     onScrollLockChange?.(scrollLock);
   }, [scrollLock, onScrollLockChange]);
-
-  // Keep refs in sync so pointer handlers can read synchronously
-  useEffect(() => {
-    isLongPressActiveRef.current = isLongPressActive;
-  }, [isLongPressActive]);
-
-  useEffect(() => {
-    isLongPressPendingRef.current = isLongPressPending;
-  }, [isLongPressPending]);
   
   // Calculate blocked rows (from top)
   const blockedRows = TOTAL_ROWS - templateHeight;
@@ -143,31 +126,34 @@ export function MessageCanvas({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
+
     const totalHeight = TOTAL_ROWS * DOT_SIZE;
-    
+    const totalCols = Math.floor(canvas.width / DOT_SIZE);
+    const viewLeftPx = scrollX * DOT_SIZE;
+    const viewRightPx = viewLeftPx + canvasWidth;
+
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     // Draw grid background - cream/beige color like the reference
     ctx.fillStyle = '#f5e6c8';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     // Draw grid lines
     ctx.strokeStyle = '#d4c4a8';
     ctx.lineWidth = 0.5;
-    
+
     // Vertical lines - draw across full canvas width
-    for (let x = 0; x <= visibleCols; x++) {
+    for (let x = 0; x <= totalCols; x++) {
       ctx.beginPath();
       ctx.moveTo(x * DOT_SIZE, 0);
       ctx.lineTo(x * DOT_SIZE, totalHeight);
       ctx.stroke();
     }
-    
+
     // Horizontal lines
     for (let y = 0; y <= TOTAL_ROWS; y++) {
       ctx.beginPath();
@@ -175,15 +161,15 @@ export function MessageCanvas({
       ctx.lineTo(canvas.width, y * DOT_SIZE);
       ctx.stroke();
     }
-    
+
     // Draw blocked (red) area at top - full width
     if (blockedRows > 0) {
       ctx.fillStyle = 'rgba(220, 90, 100, 0.9)'; // Industrial red
       ctx.fillRect(0, 0, canvas.width, blockedRows * DOT_SIZE);
-      
+
       // Redraw grid lines over the red area
       ctx.strokeStyle = 'rgba(180, 60, 70, 0.5)';
-      for (let x = 0; x <= visibleCols; x++) {
+      for (let x = 0; x <= totalCols; x++) {
         ctx.beginPath();
         ctx.moveTo(x * DOT_SIZE, 0);
         ctx.lineTo(x * DOT_SIZE, blockedRows * DOT_SIZE);
@@ -196,16 +182,16 @@ export function MessageCanvas({
         ctx.stroke();
       }
     }
-    
+
     // Draw multi-line template dividers (red dotted lines between lines)
     if (multilineTemplate && multilineTemplate.lines > 1) {
       const { lines, dotsPerLine } = multilineTemplate;
       const startY = blockedRows;
-      
+
       ctx.strokeStyle = 'rgba(220, 53, 69, 0.9)';
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 4]); // Dotted line
-      
+
       // Draw horizontal divider lines between each text line
       for (let line = 1; line < lines; line++) {
         const lineY = (startY + line * dotsPerLine) * DOT_SIZE;
@@ -214,33 +200,34 @@ export function MessageCanvas({
         ctx.lineTo(canvas.width, lineY);
         ctx.stroke();
       }
-      
+
       ctx.setLineDash([]); // Reset to solid line
     }
-    
+
     // Draw each field with its font size
     fields.forEach((field) => {
       const isSelected = field.id === selectedFieldId;
       const isBeingDragged = isDragging && field.id === dragFieldId;
       const isBeingEdited = isEditing && field.id === editingFieldId;
       const fontInfo = getFontInfo(field.fontSize);
-      
+
       // Use drag position if being dragged, otherwise use field position
       const displayX = isBeingDragged ? dragPosition.x : field.x;
       const displayY = isBeingDragged ? dragPosition.y : field.y;
-      
-      // Calculate field dimensions based on font
-      const fieldX = (displayX - scrollX) * DOT_SIZE;
+
+      // Canvas is physically wide and is clipped by the scroll container, so don't offset drawing.
+      const fieldX = displayX * DOT_SIZE;
       const fieldY = displayY * DOT_SIZE;
+
       // Ensure minimum visible width for empty fields (3 chars minimum)
       const minChars = 3;
       const textLength = Math.max(field.data.length, minChars);
       const textWidth = textLength * (fontInfo.charWidth + 1) * DOT_SIZE;
       const fieldH = fontInfo.height * DOT_SIZE;
-      
-      // Skip if field is outside visible area
-      if (fieldX + textWidth < 0 || fieldX > canvas.width) return;
-      
+
+      // Skip if field is outside visible viewport (optimization)
+      if (fieldX + textWidth < viewLeftPx || fieldX > viewRightPx) return;
+
       // Draw drag preview with semi-transparency
       if (isBeingDragged) {
         ctx.globalAlpha = 0.7;
@@ -254,27 +241,31 @@ export function MessageCanvas({
       }
       // Draw selection highlight (including when editing) - always show for empty fields
       else if (isSelected || isBeingEdited || field.data.length === 0) {
-        const highlightColor = isBeingEdited ? 'rgba(255, 220, 100, 0.4)' : 
-                               field.data.length === 0 ? 'rgba(200, 200, 200, 0.5)' : 'rgba(255, 193, 7, 0.3)';
-        const borderColor = isBeingEdited ? '#ff6600' : 
-                            field.data.length === 0 ? '#999999' : '#ffc107';
+        const highlightColor =
+          isBeingEdited
+            ? 'rgba(255, 220, 100, 0.4)'
+            : field.data.length === 0
+              ? 'rgba(200, 200, 200, 0.5)'
+              : 'rgba(255, 193, 7, 0.3)';
+        const borderColor =
+          isBeingEdited ? '#ff6600' : field.data.length === 0 ? '#999999' : '#ffc107';
         ctx.fillStyle = highlightColor;
         ctx.fillRect(fieldX, fieldY, textWidth, fieldH);
         ctx.strokeStyle = borderColor;
         ctx.lineWidth = 2;
         ctx.strokeRect(fieldX, fieldY, textWidth, fieldH);
       }
-      
+
       // Draw the field text using the font system
       ctx.fillStyle = '#1a1a1a';
       renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE);
       ctx.globalAlpha = 1.0; // Reset alpha
-      
+
       // Draw blinking cursor if editing this field
       if (isBeingEdited && cursorVisible) {
         const charWidth = (fontInfo.charWidth + 1) * DOT_SIZE;
         const cursorX = fieldX + cursorPosition * charWidth;
-        
+
         // Draw red vertical line cursor
         ctx.strokeStyle = '#ff0000';
         ctx.lineWidth = 2;
@@ -284,8 +275,7 @@ export function MessageCanvas({
         ctx.stroke();
       }
     });
-    
-  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, canvasWidth, visibleCols, multilineTemplate, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible]);
+  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, canvasWidth, multilineTemplate, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible]);
   
   const getMousePosition = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -599,22 +589,16 @@ export function MessageCanvas({
     setIsLongPressActive(false);
   };
 
-  // Touch handlers for long-press drag on mobile AND swipe-to-scroll
+  // Touch handlers for long-press drag on mobile
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     const touch = e.touches[0];
     if (!touch) return;
-
-    // Reset swipe mode at start
-    swipeModeRef.current = false;
 
     const pos = getTouchPosition(e);
     const field = findFieldAtPosition(pos.x, pos.y);
 
     // Store touch start position for movement threshold check
     touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
-    swipeStartXRef.current = touch.clientX;
-    swipeStartYRef.current = touch.clientY;
-    swipeStartScrollXRef.current = scrollX;
 
     if (field) {
       // Mark that we're waiting for long press (to prevent scroll)
@@ -673,7 +657,6 @@ export function MessageCanvas({
   };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    swipeModeRef.current = false;
     clearLongPressTimer();
     touchStartPosRef.current = null;
 
@@ -705,7 +688,6 @@ export function MessageCanvas({
   };
 
   const handleTouchCancel = () => {
-    swipeModeRef.current = false;
     clearLongPressTimer();
     touchStartPosRef.current = null;
     setIsDragging(false);
@@ -713,185 +695,23 @@ export function MessageCanvas({
     setIsLongPressActive(false);
   };
 
-  // Pointer Events swipe-to-scroll (works reliably on mobile Chrome/Android)
-  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (e.pointerType !== 'touch') return;
-    if (isLongPressActiveRef.current || isLongPressPendingRef.current) return;
-
-    pointerPanActiveRef.current = false;
-    pointerIdRef.current = e.pointerId;
-
-    swipeModeRef.current = false;
-    touchStartPosRef.current = { x: e.clientX, y: e.clientY };
-    swipeStartXRef.current = e.clientX;
-    swipeStartYRef.current = e.clientY;
-    swipeStartScrollXRef.current = scrollX;
-
-    // Capture so we keep receiving move events even if finger leaves canvas
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      // ignore
-    }
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (e.pointerType !== 'touch') return;
-    if (pointerIdRef.current !== e.pointerId) return;
-    if (!touchStartPosRef.current) return;
-    if (isLongPressActiveRef.current || isLongPressPendingRef.current) return;
-
-    const dx = e.clientX - touchStartPosRef.current.x;
-    const dy = e.clientY - touchStartPosRef.current.y;
-
-    if (!pointerPanActiveRef.current) {
-      const isHorizontal = Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > TOUCH_MOVE_THRESHOLD;
-      if (!isHorizontal) return;
-      pointerPanActiveRef.current = true;
-    }
-
-    // We are panning horizontally → prevent browser from trying to pan horizontally
-    e.preventDefault();
-
-    const deltaX = swipeStartXRef.current - e.clientX;
-    const deltaInDots = Math.round(deltaX / DOT_SIZE);
-    const newScrollX = Math.max(0, Math.min(maxScroll, swipeStartScrollXRef.current + deltaInDots));
-    setScrollX(newScrollX);
-  };
-
-  const endPointerPan = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (e.pointerType !== 'touch') return;
-    if (pointerIdRef.current !== e.pointerId) return;
-
-    pointerIdRef.current = null;
-    pointerPanActiveRef.current = false;
-    swipeModeRef.current = false;
-    touchStartPosRef.current = null;
-
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      // ignore
-    }
-  };
-
-  // Max scroll calculation for swipe scrolling
-  const maxScroll = Math.max(0, width - visibleCols);
-
-  // Non-passive touch listeners so horizontal swipe reliably scrolls on mobile
+  // Sync scrollX (in dots) from the native horizontal scroller
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const el = scrollerRef.current;
+    if (!el) return;
 
-    const handleTouchStartNative = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      if (!touch) return;
-
-      // Initialize refs for this gesture (don't rely on React onTouchStart)
-      swipeModeRef.current = false;
-      touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
-      swipeStartXRef.current = touch.clientX;
-      swipeStartYRef.current = touch.clientY;
-      swipeStartScrollXRef.current = scrollX;
+    const handleScroll = () => {
+      const dots = Math.round(el.scrollLeft / DOT_SIZE);
+      scrollLeftDotsRef.current = dots;
+      setScrollX(dots);
     };
 
-    const handleTouchEndNative = () => {
-      swipeModeRef.current = false;
-      touchStartPosRef.current = null;
-    };
+    handleScroll();
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
 
-    const handleTouchMoveNonPassive = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      if (!touch) return;
-
-      if (!touchStartPosRef.current) return;
-
-      const dx = touch.clientX - touchStartPosRef.current.x;
-      const dy = touch.clientY - touchStartPosRef.current.y;
-
-      // Decide if this gesture is a horizontal swipe (lock once decided)
-      if (!swipeModeRef.current) {
-        const isHorizontal = Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > TOUCH_MOVE_THRESHOLD;
-        if (isHorizontal) {
-          swipeModeRef.current = true;
-          // If we were waiting for a long-press, cancel it and treat as swipe
-          if (isLongPressPending) {
-            clearLongPressTimer();
-          }
-        }
-      }
-
-      // If swipe mode: prevent browser scrolling and update scrollX
-      if (swipeModeRef.current && !isLongPressActive && !isDragging) {
-        e.preventDefault();
-        const deltaX = swipeStartXRef.current - touch.clientX;
-        const deltaInDots = Math.round(deltaX / DOT_SIZE);
-        const newScrollX = Math.max(0, Math.min(maxScroll, swipeStartScrollXRef.current + deltaInDots));
-        setScrollX(newScrollX);
-        return;
-      }
-
-      // If pending and not yet determined swipe vs long-press, prevent scroll inside threshold
-      if (isLongPressPending && !swipeModeRef.current) {
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance <= TOUCH_MOVE_THRESHOLD) {
-          e.preventDefault();
-        }
-        return;
-      }
-
-      // If we're actively dragging, prevent scroll and update position
-      if (isDragging && isLongPressActive && dragFieldId !== null) {
-        e.preventDefault();
-
-        const draggedField = fields.find(f => f.id === dragFieldId);
-        if (!draggedField) return;
-
-        const fontInfo = getFontInfo(draggedField.fontSize);
-
-        // Convert touch into dot coords
-        const rect = canvas.getBoundingClientRect();
-        const x = Math.floor((touch.clientX - rect.left) / DOT_SIZE) + scrollX;
-        const y = Math.floor((touch.clientY - rect.top) / DOT_SIZE);
-
-        let newX = x - dragOffset.x;
-        let newY = y - dragOffset.y;
-
-        // Clamp to valid area
-        newX = Math.max(0, newX);
-        newY = Math.max(blockedRows, newY);
-        newY = Math.min(TOTAL_ROWS - fontInfo.height, newY);
-
-        // Snap to line if multiline template
-        if (multilineTemplate) {
-          const { lines, dotsPerLine } = multilineTemplate;
-          const startY = blockedRows;
-          for (let i = 0; i < lines; i++) {
-            const lineY = startY + i * dotsPerLine;
-            if (newY >= lineY && newY < lineY + dotsPerLine) {
-              newY = lineY;
-              break;
-            }
-          }
-        }
-
-        setDragPosition({ x: newX, y: newY });
-      }
-    };
-
-    // Important: touchmove must be non-passive to allow preventDefault
-    canvas.addEventListener('touchstart', handleTouchStartNative, { passive: true });
-    canvas.addEventListener('touchmove', handleTouchMoveNonPassive, { passive: false });
-    canvas.addEventListener('touchend', handleTouchEndNative, { passive: true });
-    canvas.addEventListener('touchcancel', handleTouchEndNative, { passive: true });
-
-    return () => {
-      canvas.removeEventListener('touchstart', handleTouchStartNative);
-      canvas.removeEventListener('touchmove', handleTouchMoveNonPassive);
-      canvas.removeEventListener('touchend', handleTouchEndNative);
-      canvas.removeEventListener('touchcancel', handleTouchEndNative);
-    };
-  }, [blockedRows, dragFieldId, dragOffset.x, dragOffset.y, fields, isDragging, isLongPressActive, isLongPressPending, maxScroll, multilineTemplate, scrollX]);
+  const canvasPixelWidth = Math.max(canvasWidth, width * DOT_SIZE);
 
   return (
     <div className="flex flex-col w-full">
@@ -922,32 +742,30 @@ export function MessageCanvas({
         spellCheck={false}
         aria-hidden="true"
       />
-      
-      {/* Canvas area - swipeable on mobile */}
+
+      {/* Canvas area - native horizontal swipe (same as the button bars) */}
       <div ref={containerRef} className="border-2 border-muted rounded-lg overflow-hidden w-full relative">
-        <canvas
-          ref={canvasRef}
-          width={canvasWidth}
-          height={TOTAL_ROWS * DOT_SIZE}
-          tabIndex={0}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          onDoubleClick={handleDoubleClick}
-          onKeyDown={handleKeyDown}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchCancel}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={endPointerPan}
-          onPointerCancel={endPointerPan}
-          className={`w-full outline-none ${isDragging && isLongPressActive ? 'cursor-grabbing' : isEditing ? 'cursor-text' : 'cursor-crosshair'}`}
-          style={{ touchAction: 'pan-y' }}
-        />
-        
+        <div ref={scrollerRef} className="overflow-x-auto overflow-y-hidden">
+          <canvas
+            ref={canvasRef}
+            width={canvasPixelWidth}
+            height={TOTAL_ROWS * DOT_SIZE}
+            tabIndex={0}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+            onDoubleClick={handleDoubleClick}
+            onKeyDown={handleKeyDown}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchCancel}
+            className={`${isDragging && isLongPressActive ? 'cursor-grabbing' : isEditing ? 'cursor-text' : 'cursor-crosshair'} block max-w-none outline-none`}
+            style={{ touchAction: 'pan-x pan-y' }}
+          />
+        </div>
+
         {/* Scroll position indicator - subtle, shown when scrolled */}
         {scrollX > 0 && (
           <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded pointer-events-none">
