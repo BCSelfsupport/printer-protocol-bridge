@@ -27,6 +27,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+import { NavItem } from '@/components/layout/BottomNav';
+
 interface PrintersScreenProps {
   printers: Printer[];
   onConnect: (printer: Printer) => void;
@@ -58,6 +60,9 @@ interface PrintersScreenProps {
   messageContent?: MessageDetails;
   onControlMount?: () => void;
   onControlUnmount?: () => void;
+  // Bottom nav props
+  onNavigate?: (item: NavItem) => void;
+  onTurnOff?: () => void;
 }
 
 // Sortable wrapper for PrinterListItem
@@ -154,6 +159,8 @@ export function PrintersScreen({
   messageContent,
   onControlMount,
   onControlUnmount,
+  onNavigate,
+  onTurnOff,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -365,6 +372,8 @@ export function PrintersScreen({
               messageContent={messageContent}
               onMount={onControlMount}
               onUnmount={onControlUnmount}
+              onNavigate={onNavigate}
+              onTurnOff={onTurnOff}
             />
           </div>
         ) : (

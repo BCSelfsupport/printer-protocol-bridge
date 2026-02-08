@@ -5,6 +5,7 @@ import { PrinterStatus } from '@/types/printer';
 import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
 import { MessageDetails, MessageField } from '@/components/screens/EditMessageScreen';
 import { CountersDialog } from '@/components/counters/CountersDialog';
+import { BottomNav, NavItem } from '@/components/layout/BottomNav';
 
 interface DashboardProps {
   status: PrinterStatus | null;
@@ -28,6 +29,9 @@ interface DashboardProps {
   isSignedIn?: boolean;
   // Message content for preview
   messageContent?: MessageDetails;
+  // Bottom nav props
+  onNavigate?: (item: NavItem) => void;
+  onTurnOff?: () => void;
 }
 
 export function Dashboard({
@@ -49,6 +53,8 @@ export function Dashboard({
   countdownType,
   isSignedIn = false,
   messageContent,
+  onNavigate,
+  onTurnOff,
 }: DashboardProps) {
   const [countersDialogOpen, setCountersDialogOpen] = useState(false);
 
@@ -282,6 +288,16 @@ export function Dashboard({
       onResetAll={onResetAllCounters}
       onMount={onQueryCounters}
     />
+    
+    {/* Bottom Nav - only show if handlers provided */}
+    {onNavigate && onTurnOff && (
+      <BottomNav
+        activeItem="home"
+        onNavigate={onNavigate}
+        onTurnOff={onTurnOff}
+        showPrinterControls={isConnected}
+      />
+    )}
   </div>
   );
 }
