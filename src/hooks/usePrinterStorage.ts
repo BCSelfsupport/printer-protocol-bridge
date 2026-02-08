@@ -65,6 +65,8 @@ export function usePrinterStorage() {
       const emulatedConfigs = [
         { ipAddress: '192.168.1.55', port: 23 },
         { ipAddress: '192.168.1.56', port: 23 },
+        { ipAddress: '192.168.1.57', port: 23 },
+        { ipAddress: '192.168.1.58', port: 23 },
         { ipAddress: '192.168.1.100', port: 23 },
         { ipAddress: '192.168.1.101', port: 23 },
       ];
@@ -102,8 +104,8 @@ export function usePrinterStorage() {
       } else {
         // Mark all emulated printers as offline
         setPrinters(prev => prev.map(p => {
-          // Check against known emulated IPs
-          const knownEmulatedIps = ['192.168.1.55', '192.168.1.56', '192.168.1.100', '192.168.1.101'];
+        // Check against known emulated IPs
+        const knownEmulatedIps = ['192.168.1.55', '192.168.1.56', '192.168.1.57', '192.168.1.58', '192.168.1.100', '192.168.1.101'];
           const isEmulated = knownEmulatedIps.includes(p.ipAddress);
           if (isEmulated && !p.isConnected) {
             return {
@@ -128,6 +130,8 @@ export function usePrinterStorage() {
     const knownEmulatedIps = [
       { ipAddress: '192.168.1.55', port: 23 },
       { ipAddress: '192.168.1.56', port: 23 },
+      { ipAddress: '192.168.1.57', port: 23 },
+      { ipAddress: '192.168.1.58', port: 23 },
       { ipAddress: '192.168.1.100', port: 23 },
       { ipAddress: '192.168.1.101', port: 23 },
     ];

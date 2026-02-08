@@ -127,6 +127,36 @@ const EMULATED_PRINTERS: EmulatedPrinterConfig[] = [
       errorsOn: true,
     },
   },
+  {
+    id: 5,
+    name: 'Printer 5',
+    ipAddress: '192.168.1.57',
+    port: 23,
+    initialState: {
+      currentMessage: 'TEST',
+      printCount: 5621,
+      productCount: 18432,
+      inkLevel: 'FULL',
+      makeupLevel: 'FULL',
+      hvOn: false,
+      jetRunning: false,
+    },
+  },
+  {
+    id: 6,
+    name: 'Printer 6',
+    ipAddress: '192.168.1.58',
+    port: 23,
+    initialState: {
+      currentMessage: 'SAMPLE',
+      printCount: 9834,
+      productCount: 42156,
+      inkLevel: 'FULL',
+      makeupLevel: 'GOOD' as const,
+      hvOn: true,
+      jetRunning: true,
+    },
+  },
 ];
 
 /**
