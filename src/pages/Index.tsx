@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Header } from '@/components/layout/Header';
-import { BottomNav, NavItem } from '@/components/layout/BottomNav';
+import { NavItem } from '@/components/layout/BottomNav';
 import { Dashboard } from '@/components/screens/Dashboard';
 import { PrintersScreen } from '@/components/screens/PrintersScreen';
 import { MessagesScreen } from '@/components/screens/MessagesScreen';
@@ -162,6 +162,8 @@ const Index = () => {
             countdownSeconds={countdownSeconds}
             countdownType={countdownType}
             messageContent={currentMsgContent}
+            onNavigate={handleNavigate}
+            onTurnOff={handleTurnOff}
           />
         );
       case 'editMessage':
@@ -306,6 +308,8 @@ const Index = () => {
             messageContent={homeMsgContent}
             onControlMount={() => setControlScreenOpen(true)}
             onControlUnmount={() => setControlScreenOpen(false)}
+            onNavigate={handleNavigate}
+            onTurnOff={handleTurnOff}
           />
         );
     }
@@ -325,12 +329,7 @@ const Index = () => {
         {renderScreen()}
       </main>
 
-      <BottomNav
-        activeItem={['network', 'control', 'editMessage'].includes(currentScreen) ? 'home' : currentScreen as NavItem}
-        onNavigate={handleNavigate}
-        onTurnOff={handleTurnOff}
-        showPrinterControls={currentScreen === 'control' || (currentScreen === 'home' && connectionState.isConnected)}
-      />
+      {/* BottomNav now rendered inside Dashboard/PrintersScreen right panel */}
 
       {/* Footer */}
       <footer className="bg-sidebar text-sidebar-foreground px-4 py-2 flex justify-between text-sm">
