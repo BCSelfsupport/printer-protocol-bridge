@@ -9,11 +9,11 @@ interface BottomNavProps {
   showPrinterControls?: boolean;
 }
 
-const navItems: { id: NavItem; label: string; icon: React.ReactNode }[] = [
+const navItems: { id: NavItem; label: string; icon: React.ReactNode; disabled?: boolean }[] = [
   { id: 'messages', label: 'Messages', icon: <FileText className="w-6 h-6 md:w-8 md:h-8" /> },
   { id: 'adjust', label: 'Adjust', icon: <SlidersHorizontal className="w-6 h-6 md:w-8 md:h-8" /> },
-  { id: 'clean', label: 'Clean', icon: <Brush className="w-6 h-6 md:w-8 md:h-8" /> },
-  { id: 'setup', label: 'Setup', icon: <Settings className="w-6 h-6 md:w-8 md:h-8" /> },
+  { id: 'clean', label: 'Clean', icon: <Brush className="w-6 h-6 md:w-8 md:h-8" />, disabled: true },
+  { id: 'setup', label: 'Setup', icon: <Settings className="w-6 h-6 md:w-8 md:h-8" />, disabled: true },
   { id: 'service', label: 'Service', icon: <Wrench className="w-6 h-6 md:w-8 md:h-8" /> },
 ];
 
@@ -36,11 +36,14 @@ export function BottomNav({ activeItem, onNavigate, onTurnOff, showPrinterContro
         {navItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => onNavigate(item.id)}
+            onClick={() => !item.disabled && onNavigate(item.id)}
+            disabled={item.disabled}
             className={`min-w-[70px] md:min-w-[100px] px-3 md:px-4 flex flex-col items-center justify-center gap-1 transition-all flex-shrink-0 ${
-              activeItem === item.id 
-                ? 'industrial-button text-white' 
-                : 'bg-sidebar hover:bg-sidebar-accent text-sidebar-foreground'
+              item.disabled
+                ? 'bg-sidebar/50 text-sidebar-foreground/40 cursor-not-allowed'
+                : activeItem === item.id 
+                  ? 'industrial-button text-white' 
+                  : 'bg-sidebar hover:bg-sidebar-accent text-sidebar-foreground'
             }`}
           >
             {item.icon}
