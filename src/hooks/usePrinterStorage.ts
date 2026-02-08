@@ -61,7 +61,7 @@ export function usePrinterStorage() {
     const updateFromEmulators = () => {
       if (!multiPrinterEmulator.enabled) return;
       
-      // Get all instances directly from the manager (even if enabled just changed)
+      // Get all emulated printer configs
       const emulatedConfigs = [
         { ipAddress: '192.168.1.55', port: 23 },
         { ipAddress: '192.168.1.56', port: 23 },
@@ -72,8 +72,11 @@ export function usePrinterStorage() {
       ];
       
       setPrinters(prev => {
+        // Create a map of existing printers by IP:port for quick lookup
+        const existingByKey = new Map(prev.map(p => [`${p.ipAddress}:${p.port}`, p]));
+        
+        // Start with updated existing printers
         const updatedPrinters = prev.map(p => {
-          // Check if this printer matches an emulated IP
           const instance = multiPrinterEmulator.getInstanceByIp(p.ipAddress, p.port);
           if (instance) {
             const state = instance.getState();
@@ -90,6 +93,35 @@ export function usePrinterStorage() {
             };
           }
           return p;
+        });
+        
+        // Add any missing emulated printers
+        emulatedConfigs.forEach(cfg => {
+          const key = `${cfg.ipAddress}:${cfg.port}`;
+          if (!existingByKey.has(key)) {
+            const instance = multiPrinterEmulator.getInstanceByIp(cfg.ipAddress, cfg.port);
+            if (instance) {
+              const state = instance.getState();
+              const simPrinter = instance.getSimulatedPrinter();
+              const newId = updatedPrinters.length > 0 
+                ? Math.max(...updatedPrinters.map(p => p.id)) + 1 
+                : 1;
+              updatedPrinters.push({
+                id: newId,
+                name: simPrinter.name,
+                ipAddress: cfg.ipAddress,
+                port: cfg.port,
+                isConnected: false,
+                isAvailable: true,
+                status: simPrinter.status,
+                hasActiveErrors: hasErrors(state?.inkLevel, state?.makeupLevel),
+                inkLevel: state?.inkLevel,
+                makeupLevel: state?.makeupLevel,
+                currentMessage: state?.currentMessage,
+                printCount: state?.printCount,
+              });
+            }
+          }
         });
         
         return updatedPrinters;
