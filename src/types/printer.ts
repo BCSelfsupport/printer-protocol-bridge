@@ -58,14 +58,14 @@ export interface PrintMessage {
 }
 
 export interface PrintSettings {
-  width: number;
-  height: number;
-  delay: number;
-  rotation: 'Normal' | 'Inverted' | '90CW' | '90CCW';
-  bold: number;
+  width: number;       // 0-1000
+  height: number;      // 0-10
+  delay: number;       // 0-4,000,000,000
+  rotation: 'Normal' | 'Mirror' | 'Flip' | 'Mirror Flip';
+  bold: number;        // 0-9
   speed: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
-  gap: number;
-  pitch: number;
+  gap: number;         // 0-9
+  pitch: number;       // 0-4,000,000,000
   repeatAmount: number;
 }
 

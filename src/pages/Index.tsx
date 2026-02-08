@@ -60,6 +60,8 @@ const Index = () => {
     resetCounter,
     resetAllCounters,
     queryCounters,
+    savePrintSettings,
+    queryPrintSettings,
   } = usePrinterConnection();
   
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown } = useJetCountdown();
@@ -229,8 +231,19 @@ const Index = () => {
           <AdjustScreen
             settings={connectionState.settings}
             onUpdate={updateSettings}
-            onSave={() => {}}
+            onSave={async () => {
+              console.log('[AdjustScreen] Saving settings:', connectionState.settings);
+              const success = await savePrintSettings(connectionState.settings);
+              if (success) {
+                console.log('[AdjustScreen] Settings saved successfully');
+                handleHome();
+              } else {
+                console.error('[AdjustScreen] Failed to save settings');
+              }
+            }}
+            onCancel={handleHome}
             onHome={handleHome}
+            isConnected={connectionState.isConnected}
           />
         );
       case 'clean':
