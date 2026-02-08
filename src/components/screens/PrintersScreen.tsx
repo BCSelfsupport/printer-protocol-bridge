@@ -77,6 +77,7 @@ function SortablePrinterItem({
   isConnected,
   compact,
   countdownType,
+  isMobile,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -87,6 +88,7 @@ function SortablePrinterItem({
   isConnected: boolean;
   compact: boolean;
   countdownType?: 'starting' | 'stopping' | null;
+  isMobile: boolean;
 }) {
   const {
     attributes,
@@ -105,14 +107,21 @@ function SortablePrinterItem({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="relative group">
+    <div ref={setNodeRef} style={style} className="relative group select-none">
       {/* Drag handle */}
       <div
         {...attributes}
         {...listeners}
-        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded hover:bg-slate-700"
+        onPointerDown={(e) => {
+          // Prevent long-press text selection from taking over on mobile
+          e.preventDefault();
+        }}
+        className={
+          "absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-10 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded touch-none select-none " +
+          (isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100")
+        }
       >
-        <GripVertical className="w-4 h-4 text-slate-400" />
+        <GripVertical className="w-4 h-4 text-muted-foreground" />
       </div>
       <PrinterListItem
         printer={printer}
@@ -320,6 +329,7 @@ export function PrintersScreen({
                       isConnected={connectedPrinter?.id === printer.id}
                       compact={!!showDashboardInPanel}
                       countdownType={connectedPrinter?.id === printer.id ? countdownType : null}
+                      isMobile={isMobile}
                     />
                   ))}
                 </SortableContext>
