@@ -14,6 +14,7 @@ import { CounterDialog } from '@/components/messages/CounterDialog';
 import { UserDefineDialog, UserDefineConfig } from '@/components/messages/UserDefineDialog';
 import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
 import { BlockFieldDialog, BlockFieldConfig } from '@/components/messages/BlockFieldDialog';
+import { GraphicFieldDialog, GraphicFieldConfig } from '@/components/messages/GraphicFieldDialog';
 import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
 import {
   Dialog,
@@ -134,6 +135,7 @@ export function EditMessageScreen({
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [counterDialogOpen, setCounterDialogOpen] = useState(false);
   const [userDefineDialogOpen, setUserDefineDialogOpen] = useState(false);
+  const [graphicDialogOpen, setGraphicDialogOpen] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   // Mobile: lock the parent horizontal scroller while long-press dragging fields
@@ -456,6 +458,30 @@ export function EditMessageScreen({
     setSelectedFieldId(newId);
   };
 
+  const handleAddGraphic = (config: GraphicFieldConfig) => {
+    const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
+    
+    // Create graphic field representation
+    const graphicLabel = `[GRAPHIC: ${config.name}]`;
+    
+    const newField: MessageField = {
+      id: newId,
+      type: 'logo',
+      data: graphicLabel,
+      x: message.fields.length * 50,
+      y: 32 - message.height,
+      width: 32, // Fixed width for graphic placeholder
+      height: Math.min(message.height, 32),
+      fontSize: 'Standard16High',
+    };
+    
+    setMessage((prev) => ({
+      ...prev,
+      fields: [...prev.fields, newField],
+    }));
+    setSelectedFieldId(newId);
+  };
+
   const handleDeleteField = () => {
     if (!selectedFieldId || message.fields.length <= 1) return;
     setMessage((prev) => ({
@@ -729,6 +755,7 @@ export function EditMessageScreen({
             onOpenBarcode={() => setBarcodeDialogOpen(true)}
             onOpenBlock={() => setBlockDialogOpen(true)}
             onOpenUserDefine={() => setUserDefineDialogOpen(true)}
+            onOpenGraphic={() => setGraphicDialogOpen(true)}
           />
 
           {/* AutoCode Field Dialog */}
@@ -788,6 +815,14 @@ export function EditMessageScreen({
             onOpenChange={setUserDefineDialogOpen}
             onBack={() => setNewFieldDialogOpen(true)}
             onAddField={handleAddUserDefine}
+          />
+
+          {/* Graphic Field Dialog */}
+          <GraphicFieldDialog
+            open={graphicDialogOpen}
+            onOpenChange={setGraphicDialogOpen}
+            onBack={() => setNewFieldDialogOpen(true)}
+            onAddGraphic={handleAddGraphic}
           />
 
           {/* Message Settings Dialog */}

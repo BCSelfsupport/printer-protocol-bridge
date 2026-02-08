@@ -22,6 +22,7 @@ interface NewFieldDialogProps {
   onOpenBarcode: () => void;
   onOpenBlock: () => void;
   onOpenUserDefine: () => void;
+  onOpenGraphic: () => void;
 }
 
 export function NewFieldDialog({ 
@@ -32,6 +33,7 @@ export function NewFieldDialog({
   onOpenBarcode,
   onOpenBlock,
   onOpenUserDefine,
+  onOpenGraphic,
 }: NewFieldDialogProps) {
   const handleSelect = (fieldType: typeof FIELD_TYPES[number]) => {
     if (fieldType.value === 'autocode') {
@@ -52,6 +54,11 @@ export function NewFieldDialog({
     if (fieldType.value === 'userdefine') {
       onOpenChange(false);
       onOpenUserDefine();
+      return;
+    }
+    if (fieldType.value === 'logo') {
+      onOpenChange(false);
+      onOpenGraphic();
       return;
     }
     onSelectFieldType(fieldType.value);
