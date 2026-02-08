@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil, RotateCcw } from 'lucide-react';
+import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil, RotateCcw, Power, FileText, SlidersHorizontal, Brush, Settings, Wrench } from 'lucide-react';
 import { Wifi } from 'lucide-react';
 import { PrinterStatus } from '@/types/printer';
 import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
 import { MessageDetails, MessageField } from '@/components/screens/EditMessageScreen';
 import { CountersDialog } from '@/components/counters/CountersDialog';
-import { BottomNav, NavItem } from '@/components/layout/BottomNav';
+import { NavItem } from '@/components/layout/BottomNav';
 
 interface DashboardProps {
   status: PrinterStatus | null;
@@ -289,21 +289,51 @@ export function Dashboard({
       onMount={onQueryCounters}
     />
     
-    {/* Combined Bottom Nav with version info */}
+    {/* Combined Bottom Nav with version info - all on one line */}
     {onNavigate && onTurnOff && (
-      <div className="bg-sidebar">
-        {/* Nav buttons row */}
-        <BottomNav
-          activeItem="home"
-          onNavigate={onNavigate}
-          onTurnOff={onTurnOff}
-          showPrinterControls={true}
-        />
-        {/* Version footer row */}
-        <div className="bg-sidebar text-sidebar-foreground px-4 py-1.5 flex justify-between text-sm border-t border-sidebar-border">
-          <span>Build 1.0.0</span>
-          <span>{status?.printerVersion ?? ''}</span>
+      <div className="bg-sidebar h-14 flex items-center px-3">
+        {/* Left version */}
+        <span className="text-sidebar-foreground text-sm whitespace-nowrap">Build 1.0.0</span>
+        
+        {/* Center nav buttons */}
+        <div className="flex-1 flex justify-center">
+          <div className="flex">
+            <button 
+              onClick={onTurnOff}
+              className="flex flex-col items-center justify-center gap-0.5 px-4 py-2 industrial-button-gray text-white rounded-l"
+            >
+              <Power className="w-5 h-5" />
+              <span className="text-[10px] font-medium">Turn Off</span>
+            </button>
+            
+            {[
+              { id: 'messages' as const, label: 'Messages', icon: <FileText className="w-5 h-5" /> },
+              { id: 'adjust' as const, label: 'Adjust', icon: <SlidersHorizontal className="w-5 h-5" /> },
+              { id: 'clean' as const, label: 'Clean', icon: <Brush className="w-5 h-5" />, disabled: true },
+              { id: 'setup' as const, label: 'Setup', icon: <Settings className="w-5 h-5" />, disabled: true },
+              { id: 'service' as const, label: 'Service', icon: <Wrench className="w-5 h-5" /> },
+            ].map((item, idx, arr) => (
+              <button
+                key={item.id}
+                onClick={() => !item.disabled && onNavigate(item.id)}
+                disabled={item.disabled}
+                className={`flex flex-col items-center justify-center gap-0.5 px-4 py-2 transition-all ${
+                  idx === arr.length - 1 ? 'rounded-r' : ''
+                } ${
+                  item.disabled
+                    ? 'bg-sidebar/50 text-sidebar-foreground/40 cursor-not-allowed'
+                    : 'industrial-button text-white'
+                }`}
+              >
+                {item.icon}
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
+        
+        {/* Right version */}
+        <span className="text-sidebar-foreground text-sm whitespace-nowrap">{status?.printerVersion ?? ''}</span>
       </div>
     )}
   </div>
