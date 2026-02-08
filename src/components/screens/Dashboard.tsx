@@ -74,27 +74,27 @@ export function Dashboard({
   
   return (
     <div className="flex-1 flex flex-col">
-      {/* Countdown banner - shown during jet startup/shutdown */}
-      {showCountdown && (
-        <div className={`w-full py-3 px-6 flex items-center justify-center ${
-          countdownType === 'starting' 
+      {/* Status banner - fixed height to prevent layout shift */}
+      <div className={`w-full h-12 flex items-center justify-center ${
+        showCountdown 
+          ? countdownType === 'starting' 
             ? 'bg-gradient-to-r from-red-600 via-red-500 to-red-400' 
             : 'bg-gradient-to-r from-orange-600 via-orange-500 to-orange-400'
-        }`}>
+          : showReady 
+            ? 'bg-gradient-to-r from-green-600 via-green-500 to-green-400'
+            : 'bg-muted'
+      }`}>
+        {showCountdown && (
           <span className="text-xl font-bold text-white tracking-wide drop-shadow-md font-mono">
             {countdownType === 'starting' ? 'Starting...' : 'Stopping...'} {formatCountdown(countdownSeconds)}
           </span>
-        </div>
-      )}
-      
-      {/* Ready banner - only shown when HV is on and no countdown */}
-      {showReady && (
-        <div className="w-full py-3 px-6 flex items-center justify-center bg-gradient-to-r from-green-600 via-green-500 to-green-400">
+        )}
+        {showReady && (
           <span className="text-xl font-bold text-white tracking-wide drop-shadow-md">
             Ready
           </span>
-        </div>
-      )}
+        )}
+      </div>
       
       <div className="flex-1 p-2 md:p-4 flex flex-col gap-2 md:gap-4 overflow-hidden">
       {/* Top row buttons - horizontal scroll on mobile */}
