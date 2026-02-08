@@ -1271,15 +1271,13 @@ export function usePrinterConnection() {
 
   // Save PER-MESSAGE settings using ^CM (Change Message) command
   // Per BestCode v2.0 protocol, ^CM updates the STORED message definition:
-  // ^CM t; s; o; p
+  // ^CM t; s; o
   // t = Template size (0-16) - handled by template selection
   // s = Print Speed (0=Fast, 1=Faster, 2=Fastest, 3=Ultra Fast)
   // o = Orientation (0=Normal, 1=Flip, 2=Mirror, 3=Mirror Flip)
-  // p = Print Mode (0=Normal, 1=Auto, 2=Repeat, 3=Reverse)
   const saveMessageSettings = useCallback(async (settings: {
     speed: PrintSettings['speed'];
     rotation: PrintSettings['rotation'];
-    printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse';
   }): Promise<boolean> => {
     console.log('[saveMessageSettings] Called with:', settings);
     if (!connectionState.isConnected || !connectionState.connectedPrinter) {
@@ -1302,16 +1300,9 @@ export function usePrinterConnection() {
       'Fastest': 2,
       'Ultra Fast': 3,
     };
-    const printModeMap: Record<string, number> = {
-      'Normal': 0,
-      'Auto': 1,
-      'Repeat': 2,
-      'Reverse': 3,
-    };
 
-    // ^CM with named parameters: s=speed, o=orientation, p=printMode
-    const printModeValue = printModeMap[settings.printMode ?? 'Normal'];
-    const command = `^CM s${speedMap[settings.speed]};o${orientationMap[settings.rotation]};p${printModeValue}`;
+    // ^CM with named parameters: s=speed, o=orientation
+    const command = `^CM s${speedMap[settings.speed]};o${orientationMap[settings.rotation]}`;
 
     if (shouldUseEmulator()) {
       console.log('[saveMessageSettings] Using emulator');

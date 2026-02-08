@@ -15,17 +15,14 @@ import { Input } from '@/components/ui/input';
 // t = Template size (0-16) - handled by template selection
 // s = Print Speed (0=Fast, 1=Faster, 2=Fastest, 3=Ultra Fast)
 // o = Orientation (0=Normal, 1=Flip, 2=Mirror, 3=Mirror Flip)
-// p = Print Mode (0=Normal, 1=Auto, 2=Repeat, 3=Reverse)
 export interface MessageSettings {
   speed: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
   rotation: 'Normal' | 'Mirror' | 'Flip' | 'Mirror Flip';
-  printMode: 'Normal' | 'Auto' | 'Repeat' | 'Reverse';
 }
 
 export const defaultMessageSettings: MessageSettings = {
   speed: 'Fastest',
   rotation: 'Normal',
-  printMode: 'Normal',
 };
 
 interface SettingCardProps {
@@ -152,7 +149,6 @@ interface MessageSettingsDialogProps {
 
 const rotationValues: MessageSettings['rotation'][] = ['Normal', 'Mirror', 'Flip', 'Mirror Flip'];
 const speedValues: MessageSettings['speed'][] = ['Fast', 'Faster', 'Fastest', 'Ultra Fast'];
-const printModeValues: MessageSettings['printMode'][] = ['Normal', 'Auto', 'Repeat', 'Reverse'];
 
 export function MessageSettingsDialog({
   open,
@@ -175,15 +171,6 @@ export function MessageSettingsDialog({
     onUpdate({ speed: speedValues[Math.max(0, idx - 1)] });
   };
 
-  const cyclePrintModeUp = () => {
-    const idx = printModeValues.indexOf(settings.printMode ?? 'Normal');
-    onUpdate({ printMode: printModeValues[Math.min(3, idx + 1)] });
-  };
-
-  const cyclePrintModeDown = () => {
-    const idx = printModeValues.indexOf(settings.printMode ?? 'Normal');
-    onUpdate({ printMode: printModeValues[Math.max(0, idx - 1)] });
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -213,14 +200,6 @@ export function MessageSettingsDialog({
               showRotate
             />
 
-            {/* Print Mode: Normal, Auto, Repeat, Reverse */}
-            <SettingCard
-              label="Print Mode (p)"
-              value={settings.printMode ?? 'Normal'}
-              onIncrease={cyclePrintModeUp}
-              onDecrease={cyclePrintModeDown}
-              showInput={false}
-            />
           </div>
           
           {/* Info text */}
@@ -228,7 +207,7 @@ export function MessageSettingsDialog({
             These settings are stored with the message via ^CM command
           </p>
           <p className="text-[10px] text-slate-500 text-center mt-1">
-            Template (t) is set via template selection • s=Speed • o=Orientation • p=PrintMode
+            Template (t) is set via template selection • s=Speed • o=Orientation
           </p>
         </div>
         
