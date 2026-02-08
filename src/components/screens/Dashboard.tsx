@@ -340,7 +340,7 @@ const ZOOM_LEVELS = [1, 1.5, 2];
 function MessagePreviewCanvas({ message, printerTime, messageContent }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dotSize, setDotSize] = useState<number>(DOT_SIZE_DESKTOP);
-  const [zoomIndex, setZoomIndex] = useState(0);
+  const [zoomIndex, setZoomIndex] = useState(2); // Default to 2x zoom
 
   // Current zoom multiplier based on index
   const zoomMultiplier = ZOOM_LEVELS[zoomIndex];
