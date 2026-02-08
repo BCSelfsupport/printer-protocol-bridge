@@ -10,6 +10,7 @@ import { NewFieldDialog } from '@/components/messages/NewFieldDialog';
 import { AutoCodeFieldDialog } from '@/components/messages/AutoCodeFieldDialog';
 import { TimeCodesDialog } from '@/components/messages/TimeCodesDialog';
 import { DateCodesDialog } from '@/components/messages/DateCodesDialog';
+import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
 import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
 import {
   Dialog,
@@ -126,6 +127,7 @@ export function EditMessageScreen({
   const [timeCodesDialogOpen, setTimeCodesDialogOpen] = useState(false);
   const [dateCodesDialogOpen, setDateCodesDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   // Mobile: lock the parent horizontal scroller while long-press dragging fields
@@ -369,6 +371,30 @@ export function EditMessageScreen({
       height: Math.min(16, message.height),
       fontSize: 'Standard16High',
     };
+    setMessage((prev) => ({
+      ...prev,
+      fields: [...prev.fields, newField],
+    }));
+    setSelectedFieldId(newId);
+  };
+
+  const handleAddBarcode = (config: BarcodeFieldConfig) => {
+    const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
+    
+    // Format barcode data string with encoding info for display/protocol
+    const barcodeLabel = `[${config.encoding.toUpperCase()}] ${config.data}`;
+    
+    const newField: MessageField = {
+      id: newId,
+      type: 'barcode',
+      data: barcodeLabel,
+      x: message.fields.length * 50,
+      y: 32 - message.height,
+      width: Math.max(60, config.data.length * 8), // Estimate width based on data length
+      height: Math.min(message.height, 32),
+      fontSize: 'Standard16High',
+    };
+    
     setMessage((prev) => ({
       ...prev,
       fields: [...prev.fields, newField],
@@ -646,6 +672,7 @@ export function EditMessageScreen({
             onOpenChange={setNewFieldDialogOpen}
             onSelectFieldType={handleAddField}
             onOpenAutoCode={() => setAutoCodeDialogOpen(true)}
+            onOpenBarcode={() => setBarcodeDialogOpen(true)}
           />
 
           {/* AutoCode Field Dialog */}
@@ -672,6 +699,14 @@ export function EditMessageScreen({
             onOpenChange={setDateCodesDialogOpen}
             onBack={() => setAutoCodeDialogOpen(true)}
             onAddField={handleAddField}
+          />
+
+          {/* Barcode Field Dialog */}
+          <BarcodeFieldDialog
+            open={barcodeDialogOpen}
+            onOpenChange={setBarcodeDialogOpen}
+            onBack={() => setNewFieldDialogOpen(true)}
+            onAddBarcode={handleAddBarcode}
           />
 
           {/* Message Settings Dialog */}
