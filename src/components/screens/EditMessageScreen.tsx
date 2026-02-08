@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, X, FilePlus, SaveAll, Trash2, Settings } from 'lucide-react';
+import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -385,6 +385,41 @@ export function EditMessageScreen({
     setSelectedFieldId(message.fields[0]?.id ?? null);
   };
 
+  /**
+   * ^AL - Align Fields: Eliminates overlap by shifting overlapping fields to the right
+   * Per protocol: If one field overlaps another, the field that starts farther to the right is moved
+   */
+  const handleAlignFields = () => {
+    if (message.fields.length < 2) return;
+    
+    // Sort fields by X position (leftmost first)
+    const sortedFields = [...message.fields].sort((a, b) => a.x - b.x);
+    
+    // Build new field positions, eliminating overlaps
+    const newFields = sortedFields.map((field, idx) => {
+      if (idx === 0) return field;
+      
+      // Check previous fields for overlaps
+      let newX = field.x;
+      for (let i = 0; i < idx; i++) {
+        const prevField = sortedFields[i];
+        const prevRight = prevField.x + prevField.width;
+        
+        // Check if this field overlaps with previous field (same Y-line)
+        const sameRow = Math.abs(field.y - prevField.y) < field.height;
+        if (sameRow && newX < prevRight) {
+          // Move field to eliminate overlap (add 2 pixel gap)
+          newX = prevRight + 2;
+        }
+      }
+      
+      return { ...field, x: newX };
+    });
+    
+    setMessage((prev) => ({ ...prev, fields: newFields }));
+    setFieldError(null);
+  };
+
   const handleCanvasClick = (x: number, y: number) => {
     // Find which field was clicked
     const clickedField = message.fields.find(
@@ -556,6 +591,16 @@ export function EditMessageScreen({
               >
                 <Trash2 className="w-5 h-5 md:w-7 md:h-7 mb-1" />
                 <span className="text-[10px] md:text-sm font-medium">Delete</span>
+              </button>
+
+              <button
+                onClick={handleAlignFields}
+                disabled={message.fields.length < 2}
+                className="industrial-button text-white px-4 md:px-8 py-3 md:py-4 rounded-lg flex flex-col items-center min-w-[80px] md:min-w-[100px] disabled:opacity-50"
+                title="Auto-align overlapping fields (^AL)"
+              >
+                <AlignHorizontalDistributeCenter className="w-5 h-5 md:w-7 md:h-7 mb-1" />
+                <span className="text-[10px] md:text-sm font-medium">Align</span>
               </button>
 
               <button

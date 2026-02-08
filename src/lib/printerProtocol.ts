@@ -17,6 +17,8 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
   inkLevel: string;
   makeupLevel: string;
   printStatus: string;
+  printheadTemp: number;
+  electronicsTemp: number;
   subsystems: {
     v300up: boolean;
     vltOn: boolean;
@@ -106,6 +108,8 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
     inkLevel,
     makeupLevel,
     printStatus,
+    printheadTemp: 0, // Will be populated from ^TP command
+    electronicsTemp: 0, // Will be populated from ^TP command
     subsystems: {
       v300up,
       vltOn,
@@ -113,6 +117,40 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
       modOn,
     },
   };
+}
+
+/**
+ * Parse ^TP temperature response
+ * Example (echo off): P[24.71] E[30.78]
+ * Example (echo on): TEMPS: Printhead[24.71°C] Electric[30.78°C]
+ */
+export function parseTemperatureResponse(response: string): { printheadTemp: number; electronicsTemp: number } | null {
+  // Debug: log raw response
+  console.log('[parseTemperatureResponse] raw:', response);
+
+  // Try verbose format first
+  let printheadMatch = response.match(/Printhead\[\s*([\d.]+)/i);
+  let electronicsMatch = response.match(/Electric\[\s*([\d.]+)/i);
+
+  // Fall back to terse format
+  if (!printheadMatch) {
+    printheadMatch = response.match(/P\[\s*([\d.]+)/);
+  }
+  if (!electronicsMatch) {
+    electronicsMatch = response.match(/E\[\s*([\d.]+)/);
+  }
+
+  if (!printheadMatch && !electronicsMatch) {
+    console.log('[parseTemperatureResponse] no temperature data found');
+    return null;
+  }
+
+  const printheadTemp = printheadMatch ? parseFloat(printheadMatch[1]) : 0;
+  const electronicsTemp = electronicsMatch ? parseFloat(electronicsMatch[1]) : 0;
+
+  console.log('[parseTemperatureResponse] parsed:', { printheadTemp, electronicsTemp });
+
+  return { printheadTemp, electronicsTemp };
 }
 
 /**

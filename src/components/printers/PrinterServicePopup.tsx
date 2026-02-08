@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings2, Activity, Thermometer, Droplets, Gauge, Zap, Clock, RefreshCw } from 'lucide-react';
+import { Settings2, Activity, Thermometer, Droplets, Gauge, Zap, Clock, RefreshCw, Cpu } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -185,6 +185,40 @@ export function PrinterServicePopup({
                 unit="%"
                 status={metrics.phaseQual >= 80 ? 'good' : metrics.phaseQual >= 60 ? 'warn' : 'error'}
               />
+            </div>
+
+            {/* Temperature Section */}
+            <div className="bg-slate-800/50 rounded-lg p-3">
+              <div className="text-xs font-medium text-slate-300 mb-2 flex items-center gap-2">
+                <Thermometer className="w-3 h-3" />
+                Temperature
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-md bg-slate-700 flex items-center justify-center">
+                    <Droplets className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-400">Printhead</div>
+                    <div className="text-sm font-bold tabular-nums text-foreground">
+                      {metrics.printheadTemp?.toFixed(1) ?? '0.0'}
+                      <span className="text-xs font-normal text-slate-400 ml-1">°C</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-md bg-slate-700 flex items-center justify-center">
+                    <Cpu className="w-4 h-4 text-warning" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-slate-400">Electronics</div>
+                    <div className="text-sm font-bold tabular-nums text-foreground">
+                      {metrics.electronicsTemp?.toFixed(1) ?? '0.0'}
+                      <span className="text-xs font-normal text-slate-400 ml-1">°C</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Consumables */}

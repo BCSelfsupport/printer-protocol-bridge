@@ -101,6 +101,7 @@ export const PROTOCOL_COMMANDS: ProtocolCommand[] = [
   { code: '^UT 1', name: 'UTF-8 On', description: 'Enable UTF-8 mode', category: 'system' },
   { code: '^LG', name: 'Login', description: 'Sign in with password (^LG password)', category: 'system' },
   { code: '^LO', name: 'Logout', description: 'Sign out of the printer', category: 'system' },
+  { code: '^AO', name: 'Auto Output', description: 'Enable automatic event notifications (0=None, 1=Serial, 2=Network, 3=Both)', category: 'system' },
   
   // Query Commands
   { code: '^SU', name: 'Status Update', description: 'Query printer status (modulation, charge, pressure, etc.)', category: 'query' },
@@ -124,20 +125,21 @@ export const PROTOCOL_COMMANDS: ProtocolCommand[] = [
   // Message Commands
   { code: '^SM', name: 'Select Message', description: 'Select a message for printing', category: 'message' },
   { code: '^NM', name: 'New Message', description: 'Create a new message', category: 'message' },
-  { code: '^CM', name: 'Change Message', description: 'Change message parameters', category: 'message' },
+  { code: '^CM', name: 'Change Message', description: 'Change message parameters (template, speed, orientation, print mode)', category: 'message' },
   { code: '^DM', name: 'Delete Message', description: 'Delete a message', category: 'message' },
-  { code: '^VM', name: 'View Message', description: 'View message as bitmap', category: 'message' },
+  { code: '^VM', name: 'View Message', description: 'View message as bitmap (returns base64 img tag)', category: 'message' },
   { code: '^MD', name: 'Message Data', description: 'Modify message field data', category: 'message' },
-  { code: '^CF', name: 'Change Field', description: 'Change field parameters', category: 'message' },
+  { code: '^CF', name: 'Change Field', description: 'Change field parameters (position, size)', category: 'message' },
+  { code: '^AL', name: 'Align Fields', description: 'Auto-align fields to eliminate overlap', category: 'message' },
   
   // Settings Commands
-  { code: '^DA', name: 'Delay Adjust', description: 'Adjust print delay', category: 'settings' },
+  { code: '^DA', name: 'Delay Adjust', description: 'Adjust print delay (0-4,000,000,000)', category: 'settings' },
   { code: '^DR', name: 'Delay Reverse', description: 'Adjust reverse print delay', category: 'settings' },
-  { code: '^DP', name: 'Delay Print Trigger', description: 'Adjust trigger delay for 1-1 mode', category: 'settings' },
-  { code: '^PA', name: 'Pitch Adjust', description: 'Adjust print pitch', category: 'settings' },
+  { code: '^DP', name: 'Delay Print Trigger', description: 'Adjust trigger delay for 1-1 mode (0-30000ms)', category: 'settings' },
+  { code: '^PA', name: 'Pitch Adjust', description: 'Adjust print pitch (0-4,000,000,000)', category: 'settings' },
   { code: '^PH', name: 'Print Height', description: 'Adjust print height (0-10)', category: 'settings' },
   { code: '^PW', name: 'Print Width', description: 'Adjust print width (0-16000)', category: 'settings' },
-  { code: '^RA', name: 'Repeat Adjust', description: 'Adjust repeat count', category: 'settings' },
+  { code: '^RA', name: 'Repeat Adjust', description: 'Adjust repeat count (0-30000)', category: 'settings' },
   { code: '^GP', name: 'Set Gap', description: 'Adjust character gap (0-9)', category: 'settings' },
   { code: '^SB', name: 'Set Bold', description: 'Adjust bold value', category: 'settings' },
   { code: '^SA', name: 'Set Auto Align', description: 'Enable/disable auto alignment', category: 'settings' },
@@ -146,8 +148,8 @@ export const PROTOCOL_COMMANDS: ProtocolCommand[] = [
   { code: '^CH', name: 'Change Time Delimiter', description: 'Change time separator character', category: 'settings' },
   
   // One-to-One Mode Commands
-  { code: '^MB', name: 'One-to-One Begin', description: 'Enter One-to-One print mode', category: 'one-to-one' },
-  { code: '^ME', name: 'One-to-One End', description: 'Exit One-to-One print mode', category: 'one-to-one' },
+  { code: '^MB', name: 'One-to-One Begin', description: 'Enter One-to-One print mode (high-speed variable data)', category: 'one-to-one' },
+  { code: '^ME', name: 'One-to-One End', description: 'Exit One-to-One print mode, save last message', category: 'one-to-one' },
 ];
 
 const defaultState: EmulatorState = {
@@ -399,6 +401,10 @@ class PrinterEmulator {
         response = this.cmdHelpMD();
       } else if (trimmedCommand.startsWith('^HN')) {
         response = this.cmdHelpNM();
+      } else if (trimmedCommand.startsWith('^AL')) {
+        response = this.cmdAlignFields(trimmedCommand);
+      } else if (trimmedCommand.startsWith('^AO')) {
+        response = this.cmdAutoOutput(trimmedCommand);
       } else {
         // Unknown command
         response = this.formatError(3, 'CmdNotRec', 'Command not recognized');
@@ -796,8 +802,34 @@ class PrinterEmulator {
   }
 
   private cmdViewMessage(_cmd: string): string {
-    // Return a placeholder for message view
-    return '<img alt="" src="data:image/bmp;base64,..." />';
+    // Return a placeholder for message view (base64 BMP as per protocol)
+    return '<img alt="" src="data:image/bmp;base64,Qk0eAAAAAAAAAB4AAAAMAAAACAACAAEAAQAAAMAAAAMAAAAwAAAAAAAA" />';
+  }
+
+  /**
+   * ^AL - Align Fields: Eliminates overlap by shifting overlapping fields
+   * Per protocol: If one field overlaps another, the field that starts farther to the right is moved
+   */
+  private cmdAlignFields(_cmd: string): string {
+    // In real printer this adjusts internal field positions
+    // In emulator we just acknowledge
+    return this.formatSuccess();
+  }
+
+  /**
+   * ^AO - Automatic Output: Controls real-time event notifications
+   * 0: None, 1: Serial port, 2: Network, 3: Both
+   */
+  private cmdAutoOutput(cmd: string): string {
+    const match = cmd.match(/\^AO\s*([0-3])/);
+    if (match) {
+      const option = parseInt(match[1], 10);
+      const destinations = ['None', 'Serial port', 'Network connection', 'Both'];
+      return this.state.echoOn 
+        ? `Automatic Output: ${destinations[option]}\r\nCommand Successful!`
+        : `AO:${option}`;
+    }
+    return this.formatError(2, 'CmdFormat', 'Invalid command format');
   }
 
   // ============ Helper Methods ============

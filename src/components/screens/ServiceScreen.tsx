@@ -70,6 +70,11 @@ export function ServiceScreen({ metrics, onHome, onControl, onMount, onUnmount }
               </div>
             </ServicePanel>
 
+            <ServicePanel title="Temperature">
+              <MetricRow label="Printhead" value={metrics.printheadTemp?.toFixed(1) ?? '0.0'} unit="°C" />
+              <MetricRow label="Electronics" value={metrics.electronicsTemp?.toFixed(1) ?? '0.0'} unit="°C" />
+            </ServicePanel>
+
             <ServicePanel title="System Info">
               <MetricRow label="HV Deflection" value={metrics.hvDeflection ? "Enabled" : "Disabled"} />
               <MetricRow label="Power Hours" value={metrics.powerHours} />
