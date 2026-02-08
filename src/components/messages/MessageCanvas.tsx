@@ -723,6 +723,12 @@ export function MessageCanvas({
     setIsScrollDragging(true);
   };
 
+  const handleScrollbarTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsScrollDragging(true);
+  };
+
   const handleScrollTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!scrollTrackRef.current || isScrollDragging) return;
     
@@ -737,34 +743,68 @@ export function MessageCanvas({
     setScrollX(newScrollX);
   };
 
+  const handleScrollTrackTouch = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!scrollTrackRef.current) return;
+    
+    const touch = e.touches[0];
+    if (!touch) return;
+    
+    const rect = scrollTrackRef.current.getBoundingClientRect();
+    const touchX = touch.clientX - rect.left;
+    const trackWidth = rect.width;
+    const thumbWidth = (visibleCols / width) * trackWidth;
+    
+    // Calculate new scroll position centered on touch
+    const touchRatio = (touchX - thumbWidth / 2) / (trackWidth - thumbWidth);
+    const newScrollX = Math.round(Math.max(0, Math.min(maxScroll, touchRatio * maxScroll)));
+    setScrollX(newScrollX);
+  };
+
   useEffect(() => {
     if (!isScrollDragging) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMove = (clientX: number) => {
       if (!scrollTrackRef.current) return;
       
       const rect = scrollTrackRef.current.getBoundingClientRect();
       const trackWidth = rect.width;
       const thumbWidth = (visibleCols / width) * trackWidth;
       
-      const mouseX = e.clientX - rect.left;
+      const posX = clientX - rect.left;
       const scrollableWidth = trackWidth - thumbWidth;
-      const scrollRatio = (mouseX - thumbWidth / 2) / scrollableWidth;
+      const scrollRatio = (posX - thumbWidth / 2) / scrollableWidth;
       
       const newScrollX = Math.round(Math.max(0, Math.min(maxScroll, scrollRatio * maxScroll)));
       setScrollX(newScrollX);
     };
 
-    const handleMouseUp = () => {
+    const handleMouseMove = (e: MouseEvent) => {
+      handleMove(e.clientX);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) {
+        e.preventDefault();
+        handleMove(e.touches[0].clientX);
+      }
+    };
+
+    const handleEnd = () => {
       setIsScrollDragging(false);
     };
 
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleEnd);
+    window.addEventListener('touchcancel', handleEnd);
     
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleEnd);
+      window.removeEventListener('touchcancel', handleEnd);
     };
   }, [isScrollDragging, maxScroll, visibleCols, width]);
 
@@ -921,16 +961,19 @@ export function MessageCanvas({
           </button>
         </div>
         
-        {/* Scroll track - clickable */}
+        {/* Scroll track - clickable and touch-draggable */}
         <div 
           ref={scrollTrackRef}
           onClick={handleScrollTrackClick}
-          className="flex-1 h-5 bg-sky-300 rounded relative cursor-pointer"
+          onTouchStart={handleScrollTrackTouch}
+          onTouchMove={handleScrollTrackTouch}
+          className="flex-1 h-8 bg-sky-300 rounded relative cursor-pointer touch-none"
         >
-          {/* Scroll thumb - draggable */}
+          {/* Scroll thumb - draggable via mouse and touch */}
           <div 
             onMouseDown={handleScrollbarMouseDown}
-            className={`absolute h-full bg-sky-600 rounded cursor-grab active:cursor-grabbing hover:bg-sky-700 transition-colors ${isScrollDragging ? 'bg-sky-700' : ''}`}
+            onTouchStart={handleScrollbarTouchStart}
+            className={`absolute h-full bg-sky-600 rounded cursor-grab active:cursor-grabbing hover:bg-sky-700 transition-colors touch-none ${isScrollDragging ? 'bg-sky-700' : ''}`}
             style={{
               left: `${maxScroll > 0 ? (scrollX / maxScroll) * (100 - (visibleCols / width) * 100) : 0}%`,
               width: `${Math.min(100, (visibleCols / width) * 100)}%`,
