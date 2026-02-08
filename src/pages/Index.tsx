@@ -52,6 +52,7 @@ const Index = () => {
     signOut,
     addPrinter,
     removePrinter,
+    reorderPrinters,
     setServiceScreenOpen,
     setControlScreenOpen,
     addMessage,
@@ -267,6 +268,7 @@ const Index = () => {
             onHome={handleHome}
             onAddPrinter={addPrinter}
             onRemovePrinter={removePrinter}
+            onReorderPrinters={reorderPrinters}
             isDevSignedIn={isDevSignedIn}
             onDevSignIn={() => setDevSignInDialogOpen(true)}
             onDevSignOut={() => setIsDevSignedIn(false)}

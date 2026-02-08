@@ -68,7 +68,7 @@ const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectr
 const shouldUseEmulator = () => printerEmulator.enabled;
 
 export function usePrinterConnection() {
-  const { printers, addPrinter, removePrinter, updatePrinterStatus, updatePrinter } = usePrinterStorage();
+  const { printers, addPrinter, removePrinter, updatePrinterStatus, updatePrinter, setPrinters } = usePrinterStorage();
   const [isChecking, setIsChecking] = useState(false);
   // Now using ICMP ping instead of TCP, so safe to enable by default
   const [availabilityPollingEnabled, setAvailabilityPollingEnabled] = useState(true);
@@ -1311,6 +1311,11 @@ export function usePrinterConnection() {
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
+  // Reorder printers (for drag-and-drop)
+  const reorderPrinters = useCallback((newOrder: Printer[]) => {
+    setPrinters(newOrder);
+  }, [setPrinters]);
+
   return {
     printers,
     connectionState,
@@ -1328,6 +1333,7 @@ export function usePrinterConnection() {
     checkPrinterStatus,
     addPrinter,
     removePrinter,
+    reorderPrinters,
     setServiceScreenOpen,
     setControlScreenOpen,
     setAvailabilityPollingEnabled,
