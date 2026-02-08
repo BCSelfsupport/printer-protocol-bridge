@@ -174,11 +174,11 @@ export function AdjustDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Settings grid */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Settings grid - single column on mobile, 2 columns on tablet+ */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* Width: 0-16000 */}
             <AdjustCard
-              label="Width (0-16000)"
+              label="Width"
               value={settings.width}
               onIncrease={() => handleLiveUpdate('width', settings.width + 1)}
               onDecrease={() => handleLiveUpdate('width', settings.width - 1)}
@@ -190,7 +190,7 @@ export function AdjustDialog({
 
             {/* Height: 0-10 */}
             <AdjustCard
-              label="Height (0-10)"
+              label="Height"
               value={settings.height}
               onIncrease={() => handleLiveUpdate('height', settings.height + 1)}
               onDecrease={() => handleLiveUpdate('height', settings.height - 1)}
@@ -202,7 +202,7 @@ export function AdjustDialog({
 
             {/* Delay: 0-4,000,000,000 */}
             <AdjustCard
-              label="Delay (0-4B)"
+              label="Delay"
               value={settings.delay}
               onIncrease={() => handleLiveUpdate('delay', settings.delay + 10)}
               onDecrease={() => handleLiveUpdate('delay', settings.delay - 10)}
@@ -214,7 +214,7 @@ export function AdjustDialog({
 
             {/* Bold: 0-9 */}
             <AdjustCard
-              label="Bold (0-9)"
+              label="Bold"
               value={settings.bold}
               onIncrease={() => handleLiveUpdate('bold', settings.bold + 1)}
               onDecrease={() => handleLiveUpdate('bold', settings.bold - 1)}
@@ -226,7 +226,7 @@ export function AdjustDialog({
 
             {/* Gap: 0-9 */}
             <AdjustCard
-              label="Gap (0-9)"
+              label="Gap"
               value={settings.gap}
               onIncrease={() => handleLiveUpdate('gap', settings.gap + 1)}
               onDecrease={() => handleLiveUpdate('gap', settings.gap - 1)}
@@ -238,7 +238,7 @@ export function AdjustDialog({
 
             {/* Pitch: 0-4,000,000,000 */}
             <AdjustCard
-              label="Pitch (0-4B)"
+              label="Pitch"
               value={settings.pitch}
               onIncrease={() => handleLiveUpdate('pitch', settings.pitch + 1)}
               onDecrease={() => handleLiveUpdate('pitch', settings.pitch - 1)}
@@ -250,7 +250,7 @@ export function AdjustDialog({
 
             {/* Repeat: 0-30,000 */}
             <AdjustCard
-              label="Repeat (0-30000)"
+              label="Repeat"
               value={settings.repeatAmount}
               onIncrease={() => handleLiveUpdate('repeatAmount', settings.repeatAmount + 1)}
               onDecrease={() => handleLiveUpdate('repeatAmount', settings.repeatAmount - 1)}
@@ -263,7 +263,7 @@ export function AdjustDialog({
 
           {/* Info text */}
           <p className="text-xs text-slate-400 text-center">
-            Changes are sent to the printer immediately (^PW, ^PH, ^DA, ^SB, ^GP, ^PA, ^RA)
+            Changes sent immediately (^PW, ^PH, ^DA, ^SB, ^GP, ^PA, ^RA)
           </p>
         </div>
       </DialogContent>
