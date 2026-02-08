@@ -111,8 +111,8 @@ export function PrinterListItem({
             
             {/* Message name with print count */}
             {printer.currentMessage && (
-              <div className="flex items-center gap-2 mt-1.5 text-xs text-primary">
-                <FileText className="w-3.5 h-3.5 flex-shrink-0" />
+              <div className="flex items-center gap-2 mt-1.5 text-sm text-primary">
+                <FileText className="w-4 h-4 flex-shrink-0" />
                 <span className="truncate font-medium">{printer.currentMessage}</span>
                 {printer.printCount !== undefined && (
                   <span className="flex-shrink-0">
