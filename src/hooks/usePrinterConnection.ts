@@ -1333,6 +1333,7 @@ export function usePrinterConnection() {
     checkPrinterStatus,
     addPrinter,
     removePrinter,
+    updatePrinter,
     reorderPrinters,
     setServiceScreenOpen,
     setControlScreenOpen,
