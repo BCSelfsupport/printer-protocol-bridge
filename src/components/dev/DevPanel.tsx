@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { printerEmulator, EmulatorState, CommandLogEntry, PROTOCOL_COMMANDS } from '@/lib/printerEmulator';
+import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { cn } from '@/lib/utils';
 import { 
   ChevronLeft, 
@@ -48,7 +49,9 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
   }, []);
 
   const handleEmulatorToggle = (enabled: boolean) => {
+    // Sync both emulators
     printerEmulator.enabled = enabled;
+    multiPrinterEmulator.enabled = enabled;
     setEmulatorEnabled(enabled);
   };
 
