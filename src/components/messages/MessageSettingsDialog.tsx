@@ -11,20 +11,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 // Per-message settings that are STORED with the message via ^CM
+// According to BestCode v2.0 protocol, ^CM parameters are:
+// t = Template size (0-16) - handled by template selection
+// s = Print Speed (0=Fast, 1=Faster, 2=Fastest, 3=Ultra Fast)
+// o = Orientation (0=Normal, 1=Flip, 2=Mirror, 3=Mirror Flip)
+// p = Print Mode (0=Normal, 1=Auto, 2=Repeat, 3=Reverse)
 export interface MessageSettings {
   speed: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
   rotation: 'Normal' | 'Mirror' | 'Flip' | 'Mirror Flip';
-  bold: number;    // 0-9 (^SB equivalent for per-message)
-  gap: number;     // 0-9 (^GP equivalent for per-message)
-  width: number;   // 0-16000 (^PW equivalent for per-message)
+  printMode: 'Normal' | 'Auto' | 'Repeat' | 'Reverse';
 }
 
 export const defaultMessageSettings: MessageSettings = {
   speed: 'Fastest',
   rotation: 'Normal',
-  bold: 0,
-  gap: 0,
-  width: 1000,
+  printMode: 'Normal',
 };
 
 interface SettingCardProps {
@@ -151,6 +152,7 @@ interface MessageSettingsDialogProps {
 
 const rotationValues: MessageSettings['rotation'][] = ['Normal', 'Mirror', 'Flip', 'Mirror Flip'];
 const speedValues: MessageSettings['speed'][] = ['Fast', 'Faster', 'Fastest', 'Ultra Fast'];
+const printModeValues: MessageSettings['printMode'][] = ['Normal', 'Auto', 'Repeat', 'Reverse'];
 
 export function MessageSettingsDialog({
   open,
@@ -173,19 +175,14 @@ export function MessageSettingsDialog({
     onUpdate({ speed: speedValues[Math.max(0, idx - 1)] });
   };
 
-  const handleBoldChange = (delta: number) => {
-    const newValue = Math.max(0, Math.min(9, (settings.bold ?? 0) + delta));
-    onUpdate({ bold: newValue });
+  const cyclePrintModeUp = () => {
+    const idx = printModeValues.indexOf(settings.printMode ?? 'Normal');
+    onUpdate({ printMode: printModeValues[Math.min(3, idx + 1)] });
   };
 
-  const handleGapChange = (delta: number) => {
-    const newValue = Math.max(0, Math.min(9, (settings.gap ?? 0) + delta));
-    onUpdate({ gap: newValue });
-  };
-
-  const handleWidthChange = (delta: number) => {
-    const newValue = Math.max(0, Math.min(16000, (settings.width ?? 1000) + delta));
-    onUpdate({ width: newValue });
+  const cyclePrintModeDown = () => {
+    const idx = printModeValues.indexOf(settings.printMode ?? 'Normal');
+    onUpdate({ printMode: printModeValues[Math.max(0, idx - 1)] });
   };
 
   return (
@@ -199,7 +196,7 @@ export function MessageSettingsDialog({
           <div className="space-y-3">
             {/* Speed: Fast, Faster, Fastest, Ultra Fast */}
             <SettingCard
-              label="Speed"
+              label="Speed (s)"
               value={settings.speed}
               onIncrease={cycleSpeedUp}
               onDecrease={cycleSpeedDown}
@@ -208,7 +205,7 @@ export function MessageSettingsDialog({
 
             {/* Rotation: Normal, Mirror, Flip, Mirror Flip */}
             <SettingCard
-              label="Rotation"
+              label="Orientation (o)"
               value={settings.rotation}
               onIncrease={cycleRotation}
               onDecrease={cycleRotation}
@@ -216,46 +213,22 @@ export function MessageSettingsDialog({
               showRotate
             />
 
-            {/* Bold: 0-9 */}
+            {/* Print Mode: Normal, Auto, Repeat, Reverse */}
             <SettingCard
-              label="Bold (0-9)"
-              value={settings.bold ?? 0}
-              onIncrease={() => handleBoldChange(1)}
-              onDecrease={() => handleBoldChange(-1)}
-              onEdit={(val) => onUpdate({ bold: Math.max(0, Math.min(9, val)) })}
-              showInput
-              min={0}
-              max={9}
-            />
-
-            {/* Gap: 0-9 */}
-            <SettingCard
-              label="Gap (0-9)"
-              value={settings.gap ?? 0}
-              onIncrease={() => handleGapChange(1)}
-              onDecrease={() => handleGapChange(-1)}
-              onEdit={(val) => onUpdate({ gap: Math.max(0, Math.min(9, val)) })}
-              showInput
-              min={0}
-              max={9}
-            />
-
-            {/* Width: 0-16000 */}
-            <SettingCard
-              label="Width (0-16000)"
-              value={settings.width ?? 1000}
-              onIncrease={() => handleWidthChange(10)}
-              onDecrease={() => handleWidthChange(-10)}
-              onEdit={(val) => onUpdate({ width: Math.max(0, Math.min(16000, val)) })}
-              showInput
-              min={0}
-              max={16000}
+              label="Print Mode (p)"
+              value={settings.printMode ?? 'Normal'}
+              onIncrease={cyclePrintModeUp}
+              onDecrease={cyclePrintModeDown}
+              showInput={false}
             />
           </div>
           
           {/* Info text */}
           <p className="text-xs text-slate-400 text-center mt-4">
-            These settings are stored with the message (^CM protocol)
+            These settings are stored with the message via ^CM command
+          </p>
+          <p className="text-[10px] text-slate-500 text-center mt-1">
+            Template (t) is set via template selection • s=Speed • o=Orientation • p=PrintMode
           </p>
         </div>
         
