@@ -84,17 +84,24 @@ export function PrinterListItem({
             </div>
           </div>
 
-          {/* Status badge */}
-          <span className={`text-[10px] px-2 py-0.5 rounded font-medium flex-shrink-0 ${
-            printer.status === 'ready' 
-              ? 'bg-success text-white' 
-              : printer.status === 'not_ready'
-              ? 'bg-warning text-white'
-              : 'bg-muted text-muted-foreground'
-          }`}>
-            {printer.status === 'ready' ? 'RDY' : 
-             printer.status === 'not_ready' ? 'WAIT' : 'OFF'}
-          </span>
+          {/* Status badges */}
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+              printer.status === 'ready' 
+                ? 'bg-success text-white' 
+                : printer.status === 'not_ready'
+                ? 'bg-warning text-white'
+                : 'bg-muted text-muted-foreground'
+            }`}>
+              {printer.status === 'ready' ? 'RDY' : 
+               printer.status === 'not_ready' ? 'WAIT' : 'OFF'}
+            </span>
+            {printer.hasActiveErrors && (
+              <span className="text-[10px] px-2 py-0.5 rounded bg-destructive text-white font-medium">
+                ERR
+              </span>
+            )}
+          </div>
         </div>
       </button>
     );
