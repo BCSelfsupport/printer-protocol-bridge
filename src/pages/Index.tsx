@@ -60,7 +60,8 @@ const Index = () => {
     resetCounter,
     resetAllCounters,
     queryCounters,
-    savePrintSettings,
+    saveGlobalAdjust,
+    saveMessageSettings,
     queryPrintSettings,
   } = usePrinterConnection();
   
@@ -232,8 +233,8 @@ const Index = () => {
             settings={connectionState.settings}
             onUpdate={updateSettings}
             onSave={async () => {
-              console.log('[AdjustScreen] Saving settings:', connectionState.settings);
-              const success = await savePrintSettings(connectionState.settings);
+              console.log('[AdjustScreen] Saving global adjust settings:', connectionState.settings);
+              const success = await saveGlobalAdjust(connectionState.settings);
               if (success) {
                 console.log('[AdjustScreen] Settings saved successfully');
                 handleHome();

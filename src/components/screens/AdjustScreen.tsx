@@ -13,19 +13,17 @@ interface AdjustScreenProps {
   isConnected: boolean;
 }
 
-// Validation constraints from protocol documentation
+// Validation constraints from BestCode v2.0 protocol documentation
 const CONSTRAINTS = {
-  width: { min: 0, max: 1000 },
-  height: { min: 0, max: 10 },
-  delay: { min: 0, max: 4000000000 },
-  bold: { min: 0, max: 9 },
-  gap: { min: 0, max: 9 },
-  pitch: { min: 0, max: 4000000000 },
-  repeatAmount: { min: 0, max: 9999 },
+  width: { min: 0, max: 16000 },   // ^PW command: 0-16000
+  height: { min: 0, max: 10 },      // ^PH command: 0-10
+  delay: { min: 0, max: 4000000000 }, // ^DA command: 0-4B
+  bold: { min: 0, max: 9 },         // ^SB command: 0-9
+  gap: { min: 0, max: 9 },          // ^GP command: 0-9
+  pitch: { min: 0, max: 4000000000 }, // ^PA command: 0-4B
+  repeatAmount: { min: 0, max: 30000 }, // ^RA command: 0-30000
 } as const;
 
-const ROTATION_VALUES: PrintSettings['rotation'][] = ['Normal', 'Mirror', 'Flip', 'Mirror Flip'];
-const SPEED_VALUES: PrintSettings['speed'][] = ['Fast', 'Faster', 'Fastest', 'Ultra Fast'];
 
 interface AdjustCardProps {
   label: string;
@@ -150,20 +148,6 @@ function AdjustCard({
 }
 
 export function AdjustScreen({ settings, onUpdate, onSave, onCancel, onHome, isConnected }: AdjustScreenProps) {
-  const cycleRotation = () => {
-    const idx = ROTATION_VALUES.indexOf(settings.rotation);
-    onUpdate({ rotation: ROTATION_VALUES[(idx + 1) % ROTATION_VALUES.length] });
-  };
-
-  const cycleSpeedUp = () => {
-    const idx = SPEED_VALUES.indexOf(settings.speed);
-    onUpdate({ speed: SPEED_VALUES[Math.min(SPEED_VALUES.length - 1, idx + 1)] });
-  };
-
-  const cycleSpeedDown = () => {
-    const idx = SPEED_VALUES.indexOf(settings.speed);
-    onUpdate({ speed: SPEED_VALUES[Math.max(0, idx - 1)] });
-  };
 
   return (
     <div className="flex-1 flex flex-col bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950">
@@ -178,9 +162,9 @@ export function AdjustScreen({ settings, onUpdate, onSave, onCancel, onHome, isC
           {/* Settings grid */}
           <div className="bg-gradient-to-b from-slate-700 to-slate-800 rounded-xl p-4 border border-slate-600 shadow-xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* Width: 0-1000 */}
+              {/* Width: 0-16000 */}
               <AdjustCard
-                label="Width (0-1000)"
+                label="Width (0-16000)"
                 value={settings.width}
                 onIncrease={() => onUpdate({ width: Math.min(CONSTRAINTS.width.max, settings.width + 1) })}
                 onDecrease={() => onUpdate({ width: Math.max(CONSTRAINTS.width.min, settings.width - 1) })}
@@ -214,17 +198,6 @@ export function AdjustScreen({ settings, onUpdate, onSave, onCancel, onHome, isC
                 max={CONSTRAINTS.delay.max}
               />
 
-              {/* Rotation: Normal, Mirror, Flip, Mirror Flip */}
-              <AdjustCard
-                label="Rotation"
-                value={settings.rotation}
-                onIncrease={cycleRotation}
-                onDecrease={cycleRotation}
-                disabled={!isConnected}
-                showInput={false}
-                showRotate
-              />
-
               {/* Bold: 0-9 */}
               <AdjustCard
                 label="Bold (0-9)"
@@ -235,16 +208,6 @@ export function AdjustScreen({ settings, onUpdate, onSave, onCancel, onHome, isC
                 disabled={!isConnected}
                 min={CONSTRAINTS.bold.min}
                 max={CONSTRAINTS.bold.max}
-              />
-
-              {/* Speed: Fast, Faster, Fastest, Ultra Fast */}
-              <AdjustCard
-                label="Speed"
-                value={settings.speed}
-                onIncrease={cycleSpeedUp}
-                onDecrease={cycleSpeedDown}
-                disabled={!isConnected}
-                showInput={false}
               />
 
               {/* Gap: 0-9 */}
@@ -269,6 +232,18 @@ export function AdjustScreen({ settings, onUpdate, onSave, onCancel, onHome, isC
                 disabled={!isConnected}
                 min={CONSTRAINTS.pitch.min}
                 max={CONSTRAINTS.pitch.max}
+              />
+
+              {/* Repeat: 0-30,000 */}
+              <AdjustCard
+                label="Repeat (0-30000)"
+                value={settings.repeatAmount}
+                onIncrease={() => onUpdate({ repeatAmount: Math.min(CONSTRAINTS.repeatAmount.max, settings.repeatAmount + 1) })}
+                onDecrease={() => onUpdate({ repeatAmount: Math.max(CONSTRAINTS.repeatAmount.min, settings.repeatAmount - 1) })}
+                onEdit={(val) => onUpdate({ repeatAmount: val })}
+                disabled={!isConnected}
+                min={CONSTRAINTS.repeatAmount.min}
+                max={CONSTRAINTS.repeatAmount.max}
               />
             </div>
 
