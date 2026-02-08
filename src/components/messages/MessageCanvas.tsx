@@ -66,16 +66,22 @@ export function MessageCanvas({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   
-  // Canvas swipe scroll state for mobile (refs so it updates immediately during touch)
+  // Canvas swipe scroll state for mobile (refs so it updates immediately during touch/pointer)
   const swipeModeRef = useRef(false);
   const swipeStartXRef = useRef<number>(0);
   const swipeStartYRef = useRef<number>(0);
   const swipeStartScrollXRef = useRef<number>(0);
-  
+
+  // Pointer-pan state (more reliable than touch listeners in some mobile browsers)
+  const pointerPanActiveRef = useRef(false);
+  const pointerIdRef = useRef<number | null>(null);
+
   // Touch/long-press state for mobile drag
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isLongPressActive, setIsLongPressActive] = useState(false);
   const [isLongPressPending, setIsLongPressPending] = useState(false); // Waiting for long press
+  const isLongPressActiveRef = useRef(false);
+  const isLongPressPendingRef = useRef(false);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const LONG_PRESS_DURATION = 400; // ms to hold before drag activates
   const TOUCH_MOVE_THRESHOLD = 10; // pixels - if moved more than this, cancel long press and allow swipe
@@ -92,6 +98,15 @@ export function MessageCanvas({
   useEffect(() => {
     onScrollLockChange?.(scrollLock);
   }, [scrollLock, onScrollLockChange]);
+
+  // Keep refs in sync so pointer handlers can read synchronously
+  useEffect(() => {
+    isLongPressActiveRef.current = isLongPressActive;
+  }, [isLongPressActive]);
+
+  useEffect(() => {
+    isLongPressPendingRef.current = isLongPressPending;
+  }, [isLongPressPending]);
   
   // Calculate blocked rows (from top)
   const blockedRows = TOTAL_ROWS - templateHeight;
@@ -698,6 +713,68 @@ export function MessageCanvas({
     setIsLongPressActive(false);
   };
 
+  // Pointer Events swipe-to-scroll (works reliably on mobile Chrome/Android)
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerType !== 'touch') return;
+    if (isLongPressActiveRef.current || isLongPressPendingRef.current) return;
+
+    pointerPanActiveRef.current = false;
+    pointerIdRef.current = e.pointerId;
+
+    swipeModeRef.current = false;
+    touchStartPosRef.current = { x: e.clientX, y: e.clientY };
+    swipeStartXRef.current = e.clientX;
+    swipeStartYRef.current = e.clientY;
+    swipeStartScrollXRef.current = scrollX;
+
+    // Capture so we keep receiving move events even if finger leaves canvas
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerType !== 'touch') return;
+    if (pointerIdRef.current !== e.pointerId) return;
+    if (!touchStartPosRef.current) return;
+    if (isLongPressActiveRef.current || isLongPressPendingRef.current) return;
+
+    const dx = e.clientX - touchStartPosRef.current.x;
+    const dy = e.clientY - touchStartPosRef.current.y;
+
+    if (!pointerPanActiveRef.current) {
+      const isHorizontal = Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > TOUCH_MOVE_THRESHOLD;
+      if (!isHorizontal) return;
+      pointerPanActiveRef.current = true;
+    }
+
+    // We are panning horizontally → prevent browser from trying to pan horizontally
+    e.preventDefault();
+
+    const deltaX = swipeStartXRef.current - e.clientX;
+    const deltaInDots = Math.round(deltaX / DOT_SIZE);
+    const newScrollX = Math.max(0, Math.min(maxScroll, swipeStartScrollXRef.current + deltaInDots));
+    setScrollX(newScrollX);
+  };
+
+  const endPointerPan = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e.pointerType !== 'touch') return;
+    if (pointerIdRef.current !== e.pointerId) return;
+
+    pointerIdRef.current = null;
+    pointerPanActiveRef.current = false;
+    swipeModeRef.current = false;
+    touchStartPosRef.current = null;
+
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+  };
+
   // Max scroll calculation for swipe scrolling
   const maxScroll = Math.max(0, width - visibleCols);
 
@@ -863,8 +940,12 @@ export function MessageCanvas({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchCancel}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={endPointerPan}
+          onPointerCancel={endPointerPan}
           className={`w-full outline-none ${isDragging && isLongPressActive ? 'cursor-grabbing' : isEditing ? 'cursor-text' : 'cursor-crosshair'}`}
-          style={{ touchAction: 'none' }}
+          style={{ touchAction: 'pan-y' }}
         />
         
         {/* Scroll position indicator - subtle, shown when scrolled */}
