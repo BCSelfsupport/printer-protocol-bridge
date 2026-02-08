@@ -208,22 +208,18 @@ export function Dashboard({
               <button
                 onClick={onStart}
                 disabled={!isConnected || status?.isRunning}
-                className={`industrial-button-success text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all min-w-[100px] md:min-w-[160px] ${
-                  showCountdown && countdownType === 'starting' ? 'animate-[pulse_1s_ease-in-out_infinite] ring-4 ring-green-300 shadow-[0_0_20px_rgba(74,222,128,0.6)]' : ''
-                }`}
+                className="industrial-button-success text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all min-w-[100px] md:min-w-[160px]"
               >
-                <Play className="w-6 h-6 md:w-10 md:h-10" />
+                <Play className={`w-6 h-6 md:w-10 md:h-10 ${showCountdown && countdownType === 'starting' ? 'animate-spin' : ''}`} />
                 <span className="text-base md:text-2xl font-medium">Start</span>
               </button>
 
               <button
                 onClick={onJetStop}
                 disabled={!isConnected || !status?.isRunning}
-                className={`industrial-button-danger text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all min-w-[100px] md:min-w-[160px] ${
-                  showCountdown && countdownType === 'stopping' ? 'animate-[pulse_1s_ease-in-out_infinite] ring-4 ring-red-300 shadow-[0_0_20px_rgba(248,113,113,0.6)]' : ''
-                }`}
+                className="industrial-button-danger text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all min-w-[100px] md:min-w-[160px]"
               >
-                <Square className="w-6 h-6 md:w-10 md:h-10" />
+                <Square className={`w-6 h-6 md:w-10 md:h-10 ${showCountdown && countdownType === 'stopping' ? 'animate-spin' : ''}`} />
                 <span className="text-base md:text-2xl font-medium">Stop</span>
               </button>
             </div>
