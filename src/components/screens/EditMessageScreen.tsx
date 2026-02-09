@@ -678,7 +678,7 @@ export function EditMessageScreen({
   };
 
   return (
-    <div className="flex-1 p-2 md:p-4 flex flex-col h-full min-h-0 overflow-y-auto md:overflow-hidden">
+    <div className="flex-1 p-2 md:p-4 flex flex-col h-full min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y md:overflow-hidden">
       <SubPageHeader title={`Edit: ${messageName}`} onHome={onCancel} />
 
       {loading ? (
