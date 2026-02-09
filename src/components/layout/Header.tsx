@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Settings, Sun, Moon, Home } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import codesyncIcon from '@/assets/codesync-icon.png';
 
 interface HeaderProps {
   isConnected: boolean;
@@ -35,6 +36,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
     <header className="bg-muted overflow-x-auto">
       <div className="flex items-center justify-between px-2 md:px-4 py-2 min-w-max">
         <div className="flex items-center gap-2 flex-shrink-0">
+          <img src={codesyncIcon} alt="CodeSync Pro" className="w-10 h-10 md:w-12 md:h-12 rounded-lg" />
           <div className="flex items-baseline">
             <span className="text-xl md:text-3xl font-bold italic text-blue-600">
               Code
