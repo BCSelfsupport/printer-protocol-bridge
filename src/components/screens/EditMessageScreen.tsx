@@ -232,6 +232,22 @@ export function EditMessageScreen({
     }));
   };
 
+  // Combined list of all templates for navigation
+  const ALL_TEMPLATES = [
+    ...SINGLE_TEMPLATES.map(t => ({ ...t, type: 'single' as const })),
+    ...MULTILINE_TEMPLATES.map(t => ({ ...t, type: 'multi' as const })),
+  ];
+
+  // Handle template navigation (delta-based: +1 = next, -1 = prev)
+  const handleTemplateNavigate = (delta: number) => {
+    const currentValue = getCurrentTemplateValue();
+    const currentIdx = ALL_TEMPLATES.findIndex(t => t.value === currentValue);
+    const newIdx = Math.max(0, Math.min(ALL_TEMPLATES.length - 1, currentIdx + delta));
+    if (newIdx !== currentIdx) {
+      handleTemplateChange(ALL_TEMPLATES[newIdx].value);
+    }
+  };
+
   // Get the current template value for the dropdown
   const getCurrentTemplateValue = (): string => {
     return message.templateValue || message.height.toString();
@@ -682,6 +698,7 @@ export function EditMessageScreen({
               onGapChange={(v) => handleUpdateFieldSetting('gap', v)}
               onRotationChange={(v) => handleUpdateFieldSetting('rotation', v)}
               onAutoNumeralsChange={(v) => handleUpdateFieldSetting('autoNumerals', v)}
+              onTemplateChange={handleTemplateNavigate}
               disabled={!selectedFieldId}
               allowedFonts={getAllowedFonts()}
               currentFontIndex={getAllowedFonts().findIndex(f => f.value === selectedField.fontSize)}
