@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useCallback, ChangeEvent } from 'react';
 import { renderText, getFontInfo, PRINTER_FONTS } from '@/lib/dotMatrixFonts';
+import { parseBarcodeLabelData, renderBarcodeToCanvas } from '@/lib/barcodeRenderer';
 
 interface CanvasField {
   id: number;
+  type?: 'text' | 'date' | 'time' | 'counter' | 'logo' | 'userdefine' | 'block' | 'barcode';
   data: string;
   x: number;
   y: number;
@@ -59,6 +61,9 @@ export function MessageCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const hiddenInputRef = useRef<HTMLInputElement>(null); // Hidden input for mobile keyboard
   const [canvasWidth, setCanvasWidth] = useState(640);
+  
+  // Cache for rendered barcode images
+  const barcodeImagesRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   
   // Drag state for fields
   const [isDragging, setIsDragging] = useState(false);
@@ -134,6 +139,54 @@ export function MessageCanvas({
     
     return () => clearInterval(interval);
   }, [isEditing]);
+
+  // Load barcode images asynchronously and trigger re-render
+  const [barcodeImages, setBarcodeImages] = useState<Map<string, HTMLCanvasElement>>(new Map());
+  
+  useEffect(() => {
+    // Find all barcode fields and load their images
+    const barcodeFields = fields.filter(f => f.type === 'barcode');
+    if (barcodeFields.length === 0) return;
+    
+    let cancelled = false;
+    
+    const loadBarcodes = async () => {
+      const newImages = new Map(barcodeImages);
+      let hasChanges = false;
+      
+      for (const field of barcodeFields) {
+        const parsed = parseBarcodeLabelData(field.data);
+        if (!parsed) continue;
+        
+        const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${templateHeight}`;
+        if (newImages.has(cacheKey)) continue;
+        
+        try {
+          const barcodeCanvas = await renderBarcodeToCanvas(
+            parsed.encoding,
+            parsed.data,
+            templateHeight
+          );
+          if (barcodeCanvas && !cancelled) {
+            newImages.set(cacheKey, barcodeCanvas);
+            hasChanges = true;
+          }
+        } catch (err) {
+          console.warn('Failed to render barcode:', err);
+        }
+      }
+      
+      if (hasChanges && !cancelled) {
+        setBarcodeImages(newImages);
+      }
+    };
+    
+    loadBarcodes();
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [fields, templateHeight]);
   
   // Render the dot matrix grid
   useEffect(() => {
@@ -242,6 +295,7 @@ export function MessageCanvas({
       const isBeingDragged = isDragging && field.id === dragFieldId;
       const isBeingEdited = isEditing && field.id === editingFieldId;
       const fontInfo = getFontInfo(field.fontSize);
+      const isBarcode = field.type === 'barcode';
 
       // Use drag position if being dragged, otherwise use field position
       const displayX = isBeingDragged ? dragPosition.x : field.x;
@@ -251,24 +305,34 @@ export function MessageCanvas({
       const fieldX = displayX * DOT_SIZE;
       const fieldY = displayY * DOT_SIZE;
 
-      // Ensure minimum visible width for empty fields (3 chars minimum)
-      const minChars = 3;
-      const textLength = Math.max(field.data.length, minChars);
-      const textWidth = textLength * (fontInfo.charWidth + 1) * DOT_SIZE;
-      const fieldH = fontInfo.height * DOT_SIZE;
+      // Calculate field dimensions
+      let fieldW: number;
+      let fieldH: number;
+      
+      if (isBarcode) {
+        // For barcodes, use the stored width or estimate from data
+        fieldW = field.width * DOT_SIZE;
+        fieldH = templateHeight * DOT_SIZE;
+      } else {
+        // Ensure minimum visible width for empty fields (3 chars minimum)
+        const minChars = 3;
+        const textLength = Math.max(field.data.length, minChars);
+        fieldW = textLength * (fontInfo.charWidth + 1) * DOT_SIZE;
+        fieldH = fontInfo.height * DOT_SIZE;
+      }
 
       // Skip if field is outside visible viewport (optimization)
-      if (fieldX + textWidth < viewLeftPx || fieldX > viewRightPx) return;
+      if (fieldX + fieldW < viewLeftPx || fieldX > viewRightPx) return;
 
       // Draw drag preview with semi-transparency
       if (isBeingDragged) {
         ctx.globalAlpha = 0.7;
         ctx.fillStyle = 'rgba(100, 149, 237, 0.3)'; // Cornflower blue
-        ctx.fillRect(fieldX, fieldY, textWidth, fieldH);
+        ctx.fillRect(fieldX, fieldY, fieldW, fieldH);
         ctx.strokeStyle = '#6495ED';
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 2]);
-        ctx.strokeRect(fieldX, fieldY, textWidth, fieldH);
+        ctx.strokeRect(fieldX, fieldY, fieldW, fieldH);
         ctx.setLineDash([]);
       }
       // Draw selection highlight (including when editing) - always show for empty fields
@@ -278,23 +342,65 @@ export function MessageCanvas({
             ? 'rgba(255, 220, 100, 0.4)'
             : field.data.length === 0
               ? 'rgba(200, 200, 200, 0.5)'
-              : 'rgba(255, 193, 7, 0.3)';
+              : isBarcode
+                ? 'rgba(100, 200, 255, 0.3)' // Light blue for barcodes
+                : 'rgba(255, 193, 7, 0.3)';
         const borderColor =
-          isBeingEdited ? '#ff6600' : field.data.length === 0 ? '#999999' : '#ffc107';
+          isBeingEdited ? '#ff6600' : field.data.length === 0 ? '#999999' : isBarcode ? '#0088cc' : '#ffc107';
         ctx.fillStyle = highlightColor;
-        ctx.fillRect(fieldX, fieldY, textWidth, fieldH);
+        ctx.fillRect(fieldX, fieldY, fieldW, fieldH);
         ctx.strokeStyle = borderColor;
         ctx.lineWidth = 2;
-        ctx.strokeRect(fieldX, fieldY, textWidth, fieldH);
+        ctx.strokeRect(fieldX, fieldY, fieldW, fieldH);
       }
 
-      // Draw the field text using the font system
-      ctx.fillStyle = '#1a1a1a';
-      renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE);
+      // Draw the field content
+      if (isBarcode) {
+        // Try to render actual barcode
+        const parsed = parseBarcodeLabelData(field.data);
+        if (parsed) {
+          const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${templateHeight}`;
+          const barcodeCanvas = barcodeImages.get(cacheKey);
+          
+          if (barcodeCanvas) {
+            // Draw the barcode image, scaled to fit the field height
+            const scale = fieldH / barcodeCanvas.height;
+            const drawWidth = Math.min(barcodeCanvas.width * scale, fieldW);
+            ctx.drawImage(
+              barcodeCanvas,
+              0, 0, barcodeCanvas.width, barcodeCanvas.height,
+              fieldX, fieldY, drawWidth, fieldH
+            );
+          } else {
+            // Placeholder while loading - draw barcode icon pattern
+            ctx.fillStyle = '#1a1a1a';
+            const barWidth = 2;
+            const numBars = Math.floor(fieldW / (barWidth * 2));
+            for (let i = 0; i < numBars; i++) {
+              const barX = fieldX + i * barWidth * 2;
+              const barH = fieldH * (0.6 + Math.random() * 0.3); // Varying heights
+              ctx.fillRect(barX, fieldY + (fieldH - barH) / 2, barWidth, barH);
+            }
+            // Show encoding label
+            ctx.font = '10px sans-serif';
+            ctx.fillStyle = '#666';
+            ctx.fillText(parsed.encoding.toUpperCase(), fieldX + 2, fieldY + 10);
+          }
+        } else {
+          // Fallback: render as text if parsing fails
+          ctx.fillStyle = '#1a1a1a';
+          renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE);
+        }
+      } else {
+        // Regular text field
+        ctx.fillStyle = '#1a1a1a';
+        renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE);
+      }
+      
       ctx.globalAlpha = 1.0; // Reset alpha
 
-      // Draw blinking cursor if editing this field
-      if (isBeingEdited && cursorVisible) {
+      // Draw blinking cursor if editing this field (not for barcodes)
+      if (isBeingEdited && cursorVisible && !isBarcode) {
         const charWidth = (fontInfo.charWidth + 1) * DOT_SIZE;
         const cursorX = fieldX + cursorPosition * charWidth;
 
@@ -307,7 +413,7 @@ export function MessageCanvas({
         ctx.stroke();
       }
     });
-  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, canvasWidth, multilineTemplate, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible]);
+  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, canvasWidth, multilineTemplate, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible, barcodeImages]);
   
   const getMousePosition = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current?.getBoundingClientRect();
