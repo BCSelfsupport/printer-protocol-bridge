@@ -1,4 +1,4 @@
-import { ChevronUp, ChevronDown, RotateCcw, Pencil } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Pencil } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 
@@ -65,46 +65,51 @@ function SettingCard({
 
   return (
     <div className={`bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border ${disabled ? 'opacity-50' : ''}`}>
-      <div className="flex items-center gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="text-[10px] text-muted-foreground font-medium truncate">{label}</div>
-          {isEditing && showInput ? (
-            <Input
-              type="number"
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onBlur={handleEditSubmit}
-              onKeyDown={(e) => e.key === 'Enter' && handleEditSubmit()}
-              className="h-6 text-sm font-bold"
-              autoFocus
-              min={min}
-              max={max}
-            />
-          ) : (
-            <div className="text-sm font-bold tabular-nums truncate">
-              {typeof value === 'number' ? value : value}
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-0.5">
+      {/* Mobile: stack vertically with horizontal buttons */}
+      <div className="flex flex-col gap-1">
+        {/* Label and value row */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-[10px] text-muted-foreground font-medium">{label}</div>
           {showInput && onEdit && !disabled && (
             <button
               onClick={() => {
                 setEditValue(value.toString());
                 setIsEditing(true);
               }}
-              className="industrial-button text-white p-1.5 rounded"
+              className="industrial-button text-white p-1 rounded"
               title="Edit value"
             >
-              <Pencil className="w-4 h-4" />
+              <Pencil className="w-3 h-3" />
             </button>
           )}
+        </div>
+        
+        {/* Value display */}
+        {isEditing && showInput ? (
+          <Input
+            type="number"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleEditSubmit}
+            onKeyDown={(e) => e.key === 'Enter' && handleEditSubmit()}
+            className="h-6 text-sm font-bold"
+            autoFocus
+            min={min}
+            max={max}
+          />
+        ) : (
+          <div className="text-sm font-bold tabular-nums">
+            {typeof value === 'number' ? value : value}
+          </div>
+        )}
+        
+        {/* Buttons row - horizontal on mobile */}
+        <div className="flex gap-1 mt-1">
           {showRotate ? (
             <button
               onClick={onIncrease}
               disabled={disabled}
-              className="industrial-button text-white p-2 rounded disabled:opacity-50"
+              className="industrial-button text-white p-2 rounded disabled:opacity-50 flex-1 flex items-center justify-center"
               title="Rotate"
             >
               <RotateCcw className="w-4 h-4" />
@@ -114,18 +119,18 @@ function SettingCard({
               <button
                 onClick={onDecrease}
                 disabled={disabled}
-                className="industrial-button text-white p-2 rounded disabled:opacity-50"
+                className="industrial-button text-white p-2 rounded disabled:opacity-50 flex-1 flex items-center justify-center"
                 title="Decrease"
               >
-                <ChevronDown className="w-5 h-5" />
+                <ChevronLeft className="w-5 h-5" />
               </button>
               <button
                 onClick={onIncrease}
                 disabled={disabled}
-                className="industrial-button text-white p-2 rounded disabled:opacity-50"
+                className="industrial-button text-white p-2 rounded disabled:opacity-50 flex-1 flex items-center justify-center"
                 title="Increase"
               >
-                <ChevronUp className="w-5 h-5" />
+                <ChevronRight className="w-5 h-5" />
               </button>
             </>
           )}
