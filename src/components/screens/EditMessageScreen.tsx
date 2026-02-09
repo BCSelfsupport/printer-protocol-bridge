@@ -803,8 +803,8 @@ export function EditMessageScreen({
             </div>
           </div>
 
-          {/* Navigation and Action buttons */}
-          <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
+          {/* Navigation and Action buttons - scrollable on mobile */}
+          <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0 pb-2 scrollbar-thin">
             {/* Field navigation row */}
             <div className="flex gap-2 justify-center mb-2">
               <button
