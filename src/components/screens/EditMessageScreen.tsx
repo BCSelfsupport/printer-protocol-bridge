@@ -188,14 +188,25 @@ export function EditMessageScreen({
 
   const selectedField = message.fields.find((f) => f.id === selectedFieldId);
 
+  // Auto-size message width to fit all fields (with some padding)
+  const autoResizeWidth = (fields: MessageField[]) => {
+    if (fields.length === 0) return 200; // Default minimum
+    const maxRight = Math.max(...fields.map(f => f.x + f.width));
+    return Math.max(200, maxRight + 20); // At least 200, plus 20px padding
+  };
+
   const handleFieldDataChange = (value: string) => {
     if (!selectedFieldId) return;
-    setMessage((prev) => ({
-      ...prev,
-      fields: prev.fields.map((f) =>
+    setMessage((prev) => {
+      const updatedFields = prev.fields.map((f) =>
         f.id === selectedFieldId ? { ...f, data: value } : f
-      ),
-    }));
+      );
+      return {
+        ...prev,
+        fields: updatedFields,
+        width: autoResizeWidth(updatedFields),
+      };
+    });
   };
 
   const handleTemplateChange = async (value: string) => {
@@ -454,10 +465,14 @@ export function EditMessageScreen({
       height: Math.min(16, message.height),
       fontSize: 'Standard16High',
     };
-    setMessage((prev) => ({
-      ...prev,
-      fields: [...prev.fields, newField],
-    }));
+    setMessage((prev) => {
+      const updatedFields = [...prev.fields, newField];
+      return {
+        ...prev,
+        fields: updatedFields,
+        width: autoResizeWidth(updatedFields),
+      };
+    });
     setSelectedFieldId(newId);
   };
 
@@ -478,10 +493,14 @@ export function EditMessageScreen({
       fontSize: 'Standard16High',
     };
     
-    setMessage((prev) => ({
-      ...prev,
-      fields: [...prev.fields, newField],
-    }));
+    setMessage((prev) => {
+      const updatedFields = [...prev.fields, newField];
+      return {
+        ...prev,
+        fields: updatedFields,
+        width: autoResizeWidth(updatedFields),
+      };
+    });
     setSelectedFieldId(newId);
   };
 
@@ -502,10 +521,14 @@ export function EditMessageScreen({
       fontSize: 'Standard16High',
     };
     
-    setMessage((prev) => ({
-      ...prev,
-      fields: [...prev.fields, newField],
-    }));
+    setMessage((prev) => {
+      const updatedFields = [...prev.fields, newField];
+      return {
+        ...prev,
+        fields: updatedFields,
+        width: autoResizeWidth(updatedFields),
+      };
+    });
     setSelectedFieldId(newId);
   };
 
@@ -526,10 +549,14 @@ export function EditMessageScreen({
       fontSize: 'Standard16High',
     };
     
-    setMessage((prev) => ({
-      ...prev,
-      fields: [...prev.fields, newField],
-    }));
+    setMessage((prev) => {
+      const updatedFields = [...prev.fields, newField];
+      return {
+        ...prev,
+        fields: updatedFields,
+        width: autoResizeWidth(updatedFields),
+      };
+    });
     setSelectedFieldId(newId);
   };
 
@@ -550,10 +577,14 @@ export function EditMessageScreen({
       fontSize: 'Standard16High',
     };
     
-    setMessage((prev) => ({
-      ...prev,
-      fields: [...prev.fields, newField],
-    }));
+    setMessage((prev) => {
+      const updatedFields = [...prev.fields, newField];
+      return {
+        ...prev,
+        fields: updatedFields,
+        width: autoResizeWidth(updatedFields),
+      };
+    });
     setSelectedFieldId(newId);
   };
 
@@ -664,12 +695,16 @@ export function EditMessageScreen({
   };
 
   const handleFieldMove = (fieldId: number, newX: number, newY: number) => {
-    setMessage((prev) => ({
-      ...prev,
-      fields: prev.fields.map((f) =>
+    setMessage((prev) => {
+      const updatedFields = prev.fields.map((f) =>
         f.id === fieldId ? { ...f, x: newX, y: newY } : f
-      ),
-    }));
+      );
+      return {
+        ...prev,
+        fields: updatedFields,
+        width: autoResizeWidth(updatedFields),
+      };
+    });
     setFieldError(null);
   };
 
@@ -756,54 +791,6 @@ export function EditMessageScreen({
               />
             )}
 
-            {/* Message properties row */}
-            <div className="bg-card rounded-lg p-2 md:p-3 mb-2 overflow-x-auto touch-pan-y">
-              <div className="flex gap-2 md:gap-3 min-w-max">
-                <div className="min-w-[120px]">
-                  <Label className="text-[10px] md:text-xs">Template</Label>
-                  <Select
-                    value={getCurrentTemplateValue()}
-                    onValueChange={handleTemplateChange}
-                  >
-                    <SelectTrigger className="mt-1 h-8 text-xs">
-                      <SelectValue placeholder="Select template" />
-                    </SelectTrigger>
-                    <SelectContent className="z-[100] max-h-[300px]">
-                      <SelectItem value="header-single" disabled className="font-semibold text-muted-foreground text-xs">
-                        Single Height
-                      </SelectItem>
-                      {SINGLE_TEMPLATES.map((t) => (
-                        <SelectItem key={t.value} value={t.value} className="text-xs">
-                          {t.label}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="header-multi" disabled className="font-semibold text-muted-foreground mt-2 text-xs">
-                        Multi-Line
-                      </SelectItem>
-                      {MULTILINE_TEMPLATES.map((t) => (
-                        <SelectItem key={t.value} value={t.value} className="text-xs">
-                          {t.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="min-w-[80px]">
-                  <Label className="text-[10px] md:text-xs">Width</Label>
-                  <Input
-                    type="number"
-                    value={message.width}
-                    onChange={(e) =>
-                      setMessage((prev) => ({
-                        ...prev,
-                        width: parseInt(e.target.value) || 135,
-                      }))
-                    }
-                    className="mt-1 h-8 text-xs"
-                  />
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Sticky action bar (always reachable on mobile) */}
