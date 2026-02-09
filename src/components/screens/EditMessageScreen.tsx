@@ -735,7 +735,7 @@ export function EditMessageScreen({
               autoNumerals={selectedField.autoNumerals ?? 0}
               templateLabel={getCurrentTemplateValue().startsWith('multi-') 
                 ? MULTILINE_TEMPLATES.find(t => t.value === getCurrentTemplateValue())?.label || getCurrentTemplateValue()
-                : `${message.height} dots`
+                : `${message.height}`
               }
               onFontSizeChange={(delta) => {
                 const fonts = getAllowedFonts();

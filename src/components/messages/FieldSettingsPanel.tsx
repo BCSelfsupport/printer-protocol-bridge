@@ -112,20 +112,20 @@ function SettingCard({
           ) : (
             <>
               <button
-                onClick={onIncrease}
-                disabled={disabled}
-                className="industrial-button text-white p-2 rounded disabled:opacity-50"
-                title="Increase"
-              >
-                <ChevronUp className="w-5 h-5" />
-              </button>
-              <button
                 onClick={onDecrease}
                 disabled={disabled}
                 className="industrial-button text-white p-2 rounded disabled:opacity-50"
                 title="Decrease"
               >
                 <ChevronDown className="w-5 h-5" />
+              </button>
+              <button
+                onClick={onIncrease}
+                disabled={disabled}
+                className="industrial-button text-white p-2 rounded disabled:opacity-50"
+                title="Increase"
+              >
+                <ChevronUp className="w-5 h-5" />
               </button>
             </>
           )}
@@ -191,7 +191,7 @@ export function FieldSettingsPanel({
       <div className="grid grid-cols-3 gap-2">
         {/* Font Size */}
         <SettingCard
-          label="Font Size"
+          label="Font"
           value={fontLabel}
           onIncrease={() => onFontSizeChange(1)}
           onDecrease={() => onFontSizeChange(-1)}
@@ -200,7 +200,7 @@ export function FieldSettingsPanel({
         
         {/* Template - now with navigation */}
         <SettingCard
-          label="Template"
+          label="Temp"
           value={templateLabel}
           onIncrease={() => onTemplateChange?.(1)}
           onDecrease={() => onTemplateChange?.(-1)}
@@ -227,8 +227,8 @@ export function FieldSettingsPanel({
         
         {/* Rotation */}
         <SettingCard
-          label="Rotation"
-          value={rotation}
+          label="Rotate"
+          value={rotation === 'Normal' ? 'Norm' : rotation === 'Mirror Flip' ? 'M-Flip' : rotation}
           onIncrease={cycleRotation}
           onDecrease={cycleRotation}
           showRotate
@@ -237,8 +237,8 @@ export function FieldSettingsPanel({
         
         {/* Auto-Numerals */}
         <SettingCard
-          label="Auto-Numerals"
-          value={`0, 1, 2, 3, 4`.split(', ').slice(0, autoNumerals + 1).join(', ') || '0'}
+          label="Auto#"
+          value={autoNumerals}
           onIncrease={() => cycleAutoNumerals(1)}
           onDecrease={() => cycleAutoNumerals(-1)}
           disabled={disabled}
