@@ -321,7 +321,7 @@ const Index = () => {
   };
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-background">
+    <div className="min-h-dvh h-dvh overflow-hidden flex flex-col bg-background">
       <Header
         isConnected={connectionState.isConnected}
         connectedIp={connectionState.connectedPrinter?.ipAddress}
