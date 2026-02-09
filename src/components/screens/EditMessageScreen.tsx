@@ -206,6 +206,9 @@ export function EditMessageScreen({
       ? multiTemplate.height 
       : (value === '5s' ? 5 : parseInt(value) || 16);
     
+    // For multi-line templates, max font height is dotsPerLine; for single, it's the full height
+    const maxFontHeight = multiTemplate ? multiTemplate.dotsPerLine : height;
+    
     // Try to load the template file if available
     const templateFile = multiTemplate?.file || singleTemplate?.file;
     if (templateFile) {
@@ -223,12 +226,30 @@ export function EditMessageScreen({
       ...prev,
       height,
       templateValue: value, // Store the actual template selection
-      // Update field Y positions to be within the template area
-      fields: prev.fields.map((f) => ({
-        ...f,
-        y: Math.max(32 - height, f.y), // Ensure field is in visible area
-        height: Math.min(f.height, height),
-      })),
+      // Update fields: adjust font if too tall, reposition Y, clamp height
+      fields: prev.fields.map((f) => {
+        const currentFontHeight = FONT_SIZES.find(fs => fs.value === f.fontSize)?.height || 16;
+        
+        // If current font is too tall for the new template, find the largest font that fits
+        let newFontSize = f.fontSize;
+        let newFieldHeight = f.height;
+        if (currentFontHeight > maxFontHeight) {
+          const fittingFonts = FONT_SIZES.filter(fs => fs.height <= maxFontHeight);
+          if (fittingFonts.length > 0) {
+            // Pick the largest font that fits
+            const bestFont = fittingFonts[fittingFonts.length - 1];
+            newFontSize = bestFont.value;
+            newFieldHeight = bestFont.height;
+          }
+        }
+        
+        return {
+          ...f,
+          fontSize: newFontSize,
+          height: Math.min(newFieldHeight, maxFontHeight),
+          y: Math.max(32 - height, f.y), // Ensure field is in visible area
+        };
+      }),
     }));
   };
 
