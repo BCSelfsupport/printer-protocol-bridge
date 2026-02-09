@@ -209,6 +209,22 @@ export function EditMessageScreen({
     
     // For multi-line templates, max font height is dotsPerLine; for single, it's the full height
     const maxFontHeight = multiTemplate ? multiTemplate.dotsPerLine : height;
+    const blockedRows = 32 - height;
+    
+    // Calculate line positions for multi-line templates
+    const getLinePositions = () => {
+      if (!multiTemplate) return null;
+      const { lines, dotsPerLine } = multiTemplate;
+      const positions: number[] = [];
+      let currentY = blockedRows;
+      for (let i = 0; i < lines; i++) {
+        positions.push(currentY);
+        currentY += dotsPerLine + 1; // +1 for the 1-dot gap
+      }
+      return positions;
+    };
+    
+    const linePositions = getLinePositions();
     
     // Try to load the template file if available
     const templateFile = multiTemplate?.file || singleTemplate?.file;
@@ -227,13 +243,13 @@ export function EditMessageScreen({
       ...prev,
       height,
       templateValue: value, // Store the actual template selection
-      // Update fields: adjust font if too tall, reposition Y, clamp height
-      fields: prev.fields.map((f) => {
+      // Update fields: adjust font if too tall, reposition Y to fit in lines
+      fields: prev.fields.map((f, index) => {
         const currentFontHeight = FONT_SIZES.find(fs => fs.value === f.fontSize)?.height || 16;
         
         // If current font is too tall for the new template, find the largest font that fits
         let newFontSize = f.fontSize;
-        let newFieldHeight = f.height;
+        let newFieldHeight = currentFontHeight;
         if (currentFontHeight > maxFontHeight) {
           const fittingFonts = FONT_SIZES.filter(fs => fs.height <= maxFontHeight);
           if (fittingFonts.length > 0) {
@@ -244,11 +260,22 @@ export function EditMessageScreen({
           }
         }
         
+        // Calculate new Y position
+        let newY = f.y;
+        if (multiTemplate && linePositions) {
+          // For multi-line templates, assign fields to lines (distribute them)
+          const lineIndex = Math.min(index, linePositions.length - 1);
+          newY = linePositions[lineIndex];
+        } else {
+          // For single-line templates, position at the bottom of the template area
+          newY = Math.max(blockedRows, 32 - newFieldHeight);
+        }
+        
         return {
           ...f,
           fontSize: newFontSize,
-          height: Math.min(newFieldHeight, maxFontHeight),
-          y: Math.max(32 - height, f.y), // Ensure field is in visible area
+          height: newFieldHeight,
+          y: newY,
         };
       }),
     }));
