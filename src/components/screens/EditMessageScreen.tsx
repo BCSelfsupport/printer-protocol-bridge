@@ -678,7 +678,7 @@ export function EditMessageScreen({
   };
 
   return (
-    <div className="flex-1 p-2 md:p-4 flex flex-col h-full overflow-y-auto md:overflow-hidden">
+    <div className="flex-1 p-2 md:p-4 flex flex-col h-full min-h-0 overflow-y-auto md:overflow-hidden">
       <SubPageHeader title={`Edit: ${messageName}`} onHome={onCancel} />
 
       {loading ? (
@@ -698,7 +698,7 @@ export function EditMessageScreen({
           {/* Message Canvas - component handles its own horizontal scrolling */}
           <div
             ref={canvasScrollerRef}
-            className={`mb-2 md:mb-4 -mx-2 px-2 md:mx-0 md:px-0 pb-2`}
+            className={`mb-2 md:mb-4 -mx-2 px-2 md:mx-0 md:px-0 pb-2 touch-pan-y`}
           >
             <MessageCanvas
               templateHeight={message.height}
@@ -755,7 +755,7 @@ export function EditMessageScreen({
           )}
 
           {/* Message properties row */}
-          <div className="bg-card rounded-lg p-2 md:p-3 mb-2 overflow-x-auto">
+          <div className="bg-card rounded-lg p-2 md:p-3 mb-2 overflow-x-auto touch-pan-y">
             <div className="flex gap-2 md:gap-3 min-w-max">
               <div className="min-w-[120px]">
                 <Label className="text-[10px] md:text-xs">Template</Label>
@@ -804,7 +804,7 @@ export function EditMessageScreen({
           </div>
 
           {/* Navigation and Action buttons - scrollable on mobile */}
-          <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0 pb-2 scrollbar-thin">
+          <div className="overflow-x-auto touch-pan-y -mx-2 px-2 md:mx-0 md:px-0 pb-2 scrollbar-thin">
             {/* Field navigation row */}
             <div className="flex gap-2 justify-center mb-2">
               <button
