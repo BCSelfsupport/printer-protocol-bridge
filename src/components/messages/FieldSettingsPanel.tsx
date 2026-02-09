@@ -150,6 +150,7 @@ interface FieldSettingsPanelProps {
   onGapChange: (value: number) => void;
   onRotationChange: (value: FieldSettings['rotation']) => void;
   onAutoNumeralsChange: (value: number) => void;
+  onTemplateChange?: (delta: number) => void;
   disabled?: boolean;
   allowedFonts: { value: string; label: string; height: number }[];
   currentFontIndex: number;
@@ -167,6 +168,7 @@ export function FieldSettingsPanel({
   onGapChange,
   onRotationChange,
   onAutoNumeralsChange,
+  onTemplateChange,
   disabled = false,
   allowedFonts,
   currentFontIndex,
@@ -196,11 +198,14 @@ export function FieldSettingsPanel({
           disabled={disabled}
         />
         
-        {/* Template - display only */}
-        <div className="bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
-          <div className="text-[10px] text-muted-foreground font-medium">Template</div>
-          <div className="text-sm font-bold truncate">{templateLabel}</div>
-        </div>
+        {/* Template - now with navigation */}
+        <SettingCard
+          label="Template"
+          value={templateLabel}
+          onIncrease={() => onTemplateChange?.(1)}
+          onDecrease={() => onTemplateChange?.(-1)}
+          disabled={disabled || !onTemplateChange}
+        />
         
         {/* Bold */}
         <SettingCard
