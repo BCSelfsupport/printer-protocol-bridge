@@ -479,8 +479,12 @@ export function EditMessageScreen({
   const handleAddBarcode = (config: BarcodeFieldConfig) => {
     const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
     
-    // Format barcode data string with encoding info for display/protocol
-    const barcodeLabel = `[${config.encoding.toUpperCase()}] ${config.data}`;
+    // Format barcode data string with encoding info and flags for display/protocol
+    // Include HR flag if human readable is enabled
+    const encodingWithFlags = config.humanReadable 
+      ? `${config.encoding.toUpperCase()}|HR`
+      : config.encoding.toUpperCase();
+    const barcodeLabel = `[${encodingWithFlags}] ${config.data}`;
     
     const newField: MessageField = {
       id: newId,
