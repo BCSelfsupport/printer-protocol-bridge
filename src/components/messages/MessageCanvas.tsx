@@ -196,25 +196,38 @@ export function MessageCanvas({
       }
     }
 
-    // Draw multi-line template dividers (red dotted lines between lines)
+    // Draw multi-line template dividers (solid red lines between lines)
     if (multilineTemplate && multilineTemplate.lines > 1) {
       const { lines, dotsPerLine } = multilineTemplate;
-      const startY = blockedRows;
+      
+      // Calculate total content dots and available space for gaps
+      const totalContentDots = lines * dotsPerLine;
+      const totalGapDots = templateHeight - totalContentDots;
+      const numGaps = lines - 1;
+      
+      // Distribute gaps evenly (some may get an extra dot)
+      const baseGap = Math.floor(totalGapDots / numGaps);
+      const extraGaps = totalGapDots % numGaps;
 
       ctx.strokeStyle = 'rgba(220, 53, 69, 0.9)';
       ctx.lineWidth = 2;
-      ctx.setLineDash([4, 4]); // Dotted line
+      // Solid lines instead of dotted
 
       // Draw horizontal divider lines between each text line
-      for (let line = 1; line < lines; line++) {
-        const lineY = (startY + line * dotsPerLine) * DOT_SIZE;
-        ctx.beginPath();
-        ctx.moveTo(0, lineY);
-        ctx.lineTo(canvas.width, lineY);
-        ctx.stroke();
+      let currentY = blockedRows;
+      for (let line = 0; line < lines; line++) {
+        currentY += dotsPerLine;
+        if (line < lines - 1) {
+          // Add gap (distribute extra dots to earlier gaps)
+          const gap = baseGap + (line < extraGaps ? 1 : 0);
+          const dividerY = currentY * DOT_SIZE;
+          ctx.beginPath();
+          ctx.moveTo(0, dividerY);
+          ctx.lineTo(canvas.width, dividerY);
+          ctx.stroke();
+          currentY += gap;
+        }
       }
-
-      ctx.setLineDash([]); // Reset to solid line
     }
 
     // Draw each field with its font size
@@ -320,12 +333,23 @@ export function MessageCanvas({
     if (!multilineTemplate) return null;
     
     const { lines, dotsPerLine } = multilineTemplate;
-    const startY = blockedRows;
     
+    // Calculate spacing between lines
+    const totalContentDots = lines * dotsPerLine;
+    const totalGapDots = templateHeight - totalContentDots;
+    const numGaps = lines - 1;
+    const baseGap = numGaps > 0 ? Math.floor(totalGapDots / numGaps) : 0;
+    const extraGaps = numGaps > 0 ? totalGapDots % numGaps : 0;
+    
+    let currentY = blockedRows;
     for (let i = 0; i < lines; i++) {
-      const lineY = startY + i * dotsPerLine;
+      const lineY = currentY;
       if (y >= lineY && y < lineY + dotsPerLine) {
         return { lineIndex: i, lineY, lineHeight: dotsPerLine };
+      }
+      currentY += dotsPerLine;
+      if (i < lines - 1) {
+        currentY += baseGap + (i < extraGaps ? 1 : 0);
       }
     }
     return null;

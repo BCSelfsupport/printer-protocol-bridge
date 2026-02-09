@@ -69,23 +69,24 @@ const SINGLE_TEMPLATES = [
 ] as const;
 
 // Multi-line templates - loaded from .BIN files
+// Heights are set to use full 32-dot canvas with inter-line spacing
 const MULTILINE_TEMPLATES = [
-  { value: 'multi-5x5', label: '5 lines × 5 dots', height: 25, lines: 5, dotsPerLine: 5, file: '5L5U.BIN' },
-  { value: 'multi-5x5-2', label: '5 lines × 5 dots (v2)', height: 25, lines: 5, dotsPerLine: 5, file: '5L5U-2.BIN' },
-  { value: 'multi-4x7', label: '4 lines × 7 dots', height: 28, lines: 4, dotsPerLine: 7, file: '4L7U.BIN' },
-  { value: 'multi-4x5', label: '4 lines × 5 dots', height: 20, lines: 4, dotsPerLine: 5, file: '4L5U.BIN' },
-  { value: 'multi-4x5h', label: '4 lines × 5 dots (H)', height: 20, lines: 4, dotsPerLine: 5, file: '4L5H.BIN' },
-  { value: 'multi-4x5g', label: '4 lines × 5 dots (G)', height: 20, lines: 4, dotsPerLine: 5, file: '4L5G.BIN' },
-  { value: 'multi-4x5f', label: '4 lines × 5 dots (F)', height: 20, lines: 4, dotsPerLine: 5, file: '4L5F.BIN' },
-  { value: 'multi-3x9', label: '3 lines × 9 dots', height: 27, lines: 3, dotsPerLine: 9, file: '3L9U.BIN' },
-  { value: 'multi-3x7', label: '3 lines × 7 dots', height: 21, lines: 3, dotsPerLine: 7, file: '3L7U.BIN' },
-  { value: 'multi-2x12', label: '2 lines × 12 dots', height: 24, lines: 2, dotsPerLine: 12, file: '2L12U.BIN' },
-  { value: 'multi-2x9', label: '2 lines × 9 dots', height: 18, lines: 2, dotsPerLine: 9, file: '2L9U.BIN' },
+  { value: 'multi-5x5', label: '5 lines × 5 dots', height: 32, lines: 5, dotsPerLine: 5, file: '5L5U.BIN' },  // 5x5=25 + 7 spacing (1,2,2,2) = 32
+  { value: 'multi-5x5-2', label: '5 lines × 5 dots (v2)', height: 32, lines: 5, dotsPerLine: 5, file: '5L5U-2.BIN' },
+  { value: 'multi-4x7', label: '4 lines × 7 dots', height: 32, lines: 4, dotsPerLine: 7, file: '4L7U.BIN' },  // 4x7=28 + 4 spacing = 32
+  { value: 'multi-4x5', label: '4 lines × 5 dots', height: 32, lines: 4, dotsPerLine: 5, file: '4L5U.BIN' },  // 4x5=20 + 12 spacing = 32
+  { value: 'multi-4x5h', label: '4 lines × 5 dots (H)', height: 32, lines: 4, dotsPerLine: 5, file: '4L5H.BIN' },
+  { value: 'multi-4x5g', label: '4 lines × 5 dots (G)', height: 32, lines: 4, dotsPerLine: 5, file: '4L5G.BIN' },
+  { value: 'multi-4x5f', label: '4 lines × 5 dots (F)', height: 32, lines: 4, dotsPerLine: 5, file: '4L5F.BIN' },
+  { value: 'multi-3x9', label: '3 lines × 9 dots', height: 32, lines: 3, dotsPerLine: 9, file: '3L9U.BIN' },  // 3x9=27 + 5 spacing = 32
+  { value: 'multi-3x7', label: '3 lines × 7 dots', height: 32, lines: 3, dotsPerLine: 7, file: '3L7U.BIN' },  // 3x7=21 + 11 spacing = 32
+  { value: 'multi-2x12', label: '2 lines × 12 dots', height: 32, lines: 2, dotsPerLine: 12, file: '2L12U.BIN' },  // 2x12=24 + 8 spacing = 32
+  { value: 'multi-2x9', label: '2 lines × 9 dots', height: 32, lines: 2, dotsPerLine: 9, file: '2L9U.BIN' },  // 2x9=18 + 14 spacing = 32
   { value: 'multi-2x7', label: '2 lines × 7 dots', height: 16, lines: 2, dotsPerLine: 7, file: '2L7U.BIN' },  // 2x7=14 + 2 spacing = 16
   { value: 'multi-2x7-2', label: '2 lines × 7 dots (v2)', height: 16, lines: 2, dotsPerLine: 7, file: '2L7U-2.BIN' },
   { value: 'multi-2x7s', label: '2 lines × 7 dots (narrow)', height: 16, lines: 2, dotsPerLine: 7, file: '2L7sU.BIN' },
   { value: 'multi-2x7s-2', label: '2 lines × 7 dots narrow (v2)', height: 16, lines: 2, dotsPerLine: 7, file: '2L7sU-2.BIN' },
-  { value: 'multi-2x5', label: '2 lines × 5 dots', height: 10, lines: 2, dotsPerLine: 5, file: '2L5U.BIN' },
+  { value: 'multi-2x5', label: '2 lines × 5 dots', height: 32, lines: 2, dotsPerLine: 5, file: '2L5U.BIN' },  // 2x5=10 + 22 spacing = 32
 ] as const;
 
 // Font size options - matching actual printer fonts
