@@ -196,7 +196,7 @@ export function FieldSettingsPanel({
       <div className="grid grid-cols-3 gap-2">
         {/* Font Size */}
         <SettingCard
-          label="Font"
+          label="Font Size"
           value={fontLabel}
           onIncrease={() => onFontSizeChange(1)}
           onDecrease={() => onFontSizeChange(-1)}
@@ -205,7 +205,7 @@ export function FieldSettingsPanel({
         
         {/* Template - now with navigation */}
         <SettingCard
-          label="Temp"
+          label="Template"
           value={templateLabel}
           onIncrease={() => onTemplateChange?.(1)}
           onDecrease={() => onTemplateChange?.(-1)}
@@ -232,8 +232,8 @@ export function FieldSettingsPanel({
         
         {/* Rotation */}
         <SettingCard
-          label="Rotate"
-          value={rotation === 'Normal' ? 'Norm' : rotation === 'Mirror Flip' ? 'M-Flip' : rotation}
+          label="Rotation"
+          value={rotation}
           onIncrease={cycleRotation}
           onDecrease={cycleRotation}
           showRotate
@@ -242,7 +242,7 @@ export function FieldSettingsPanel({
         
         {/* Auto-Numerals */}
         <SettingCard
-          label="Auto#"
+          label="Auto-Numerals"
           value={autoNumerals}
           onIncrease={() => cycleAutoNumerals(1)}
           onDecrease={() => cycleAutoNumerals(-1)}
