@@ -196,7 +196,7 @@ export function MessageCanvas({
       }
     }
 
-    // Draw multi-line template dividers (solid red lines between lines)
+    // Draw multi-line template spacing as filled red rows (like blocked area)
     if (multilineTemplate && multilineTemplate.lines > 1) {
       const { lines, dotsPerLine } = multilineTemplate;
       
@@ -206,25 +206,40 @@ export function MessageCanvas({
       const numGaps = lines - 1;
       
       // Distribute gaps evenly (some may get an extra dot)
-      const baseGap = Math.floor(totalGapDots / numGaps);
-      const extraGaps = totalGapDots % numGaps;
+      const baseGap = numGaps > 0 ? Math.floor(totalGapDots / numGaps) : 0;
+      const extraGaps = numGaps > 0 ? totalGapDots % numGaps : 0;
 
-      ctx.strokeStyle = 'rgba(220, 53, 69, 0.9)';
-      ctx.lineWidth = 2;
-      // Solid lines instead of dotted
-
-      // Draw horizontal divider lines between each text line
+      // Draw filled red rows for inter-line spacing
       let currentY = blockedRows;
       for (let line = 0; line < lines; line++) {
         currentY += dotsPerLine;
         if (line < lines - 1) {
           // Add gap (distribute extra dots to earlier gaps)
           const gap = baseGap + (line < extraGaps ? 1 : 0);
-          const dividerY = currentY * DOT_SIZE;
-          ctx.beginPath();
-          ctx.moveTo(0, dividerY);
-          ctx.lineTo(canvas.width, dividerY);
-          ctx.stroke();
+          if (gap > 0) {
+            const gapY = currentY * DOT_SIZE;
+            const gapHeight = gap * DOT_SIZE;
+            
+            // Fill with same red as blocked area
+            ctx.fillStyle = 'rgba(220, 90, 100, 0.9)';
+            ctx.fillRect(0, gapY, canvas.width, gapHeight);
+            
+            // Redraw grid lines over the red gap area
+            ctx.strokeStyle = 'rgba(180, 60, 70, 0.5)';
+            ctx.lineWidth = 0.5;
+            for (let x = 0; x <= totalCols; x++) {
+              ctx.beginPath();
+              ctx.moveTo(x * DOT_SIZE, gapY);
+              ctx.lineTo(x * DOT_SIZE, gapY + gapHeight);
+              ctx.stroke();
+            }
+            for (let y = 0; y <= gap; y++) {
+              ctx.beginPath();
+              ctx.moveTo(0, gapY + y * DOT_SIZE);
+              ctx.lineTo(canvas.width, gapY + y * DOT_SIZE);
+              ctx.stroke();
+            }
+          }
           currentY += gap;
         }
       }
