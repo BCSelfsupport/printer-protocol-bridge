@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, X, Keyboard, Hash, User, ChevronRight } from 'lucide-react';
 import {
   Dialog,
@@ -15,7 +15,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 const BARCODE_ENCODINGS = [
   { value: 'i25', label: 'Interleaved 2 of 5', group: '1D' },
@@ -204,11 +203,26 @@ export function BarcodeFieldDialog({
     onOpenChange(false);
   };
 
+  const dataInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    // iOS/Android: focusing immediately on open can fail; queue it.
+    const t = window.setTimeout(() => {
+      dataInputRef.current?.focus();
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [open]);
+
+  const focusDataInput = () => {
+    dataInputRef.current?.focus();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden max-h-[90vh]">
+      <DialogContent className="sm:max-w-lg p-0 overflow-hidden h-[100dvh] max-h-[100dvh] md:h-auto md:max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-b from-muted to-muted/80 px-4 py-3 flex items-center gap-3 border-b">
+        <div className="bg-gradient-to-b from-muted to-muted/80 px-4 py-3 flex items-center gap-3 border-b shrink-0">
           <button
             onClick={handleBack}
             className="industrial-button p-2 rounded"
@@ -220,19 +234,30 @@ export function BarcodeFieldDialog({
           </DialogTitle>
         </div>
 
-        <ScrollArea className="max-h-[calc(90vh-60px)]">
+        {/* Body (scrolls) */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y">
           <div className="bg-card p-4 space-y-4">
             {/* Data input with clear button */}
-            <div className="flex gap-2">
+            <div className="flex gap-2" onClick={focusDataInput}>
               <Input
+                ref={dataInputRef}
                 value={data}
                 onChange={(e) => setData(e.target.value)}
                 placeholder="Enter barcode data..."
                 className="flex-1"
+                inputMode="text"
+                enterKeyHint="done"
+                autoCapitalize="characters"
               />
               <button
-                onClick={handleClearData}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClearData();
+                  // Keep focus so keyboard stays up
+                  requestAnimationFrame(() => dataInputRef.current?.focus());
+                }}
                 className="industrial-button p-2 rounded text-destructive"
+                aria-label="Clear barcode data"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -422,6 +447,7 @@ export function BarcodeFieldDialog({
                       min={5}
                       max={32}
                       className="bg-gradient-to-b from-muted to-muted/60 border-border"
+                      inputMode="numeric"
                     />
                   </div>
 
@@ -434,6 +460,7 @@ export function BarcodeFieldDialog({
                       min={10}
                       max={200}
                       className="bg-gradient-to-b from-muted to-muted/60 border-border"
+                      inputMode="numeric"
                     />
                   </div>
                 </>
@@ -444,7 +471,8 @@ export function BarcodeFieldDialog({
             <div className="grid grid-cols-3 gap-3">
               <button
                 className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 hover:from-muted/80 hover:to-muted/40 border border-border rounded-lg p-3 transition-colors"
-                onClick={() => {/* Keyboard input - TODO */}}
+                onClick={focusDataInput}
+                type="button"
               >
                 <span className="text-sm font-medium">Keyboard</span>
                 <div className="industrial-button p-1.5 rounded">
@@ -454,7 +482,11 @@ export function BarcodeFieldDialog({
 
               <button
                 className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 hover:from-muted/80 hover:to-muted/40 border border-border rounded-lg p-3 transition-colors"
-                onClick={() => {/* AutoCode - TODO */}}
+                onClick={() => {
+                  // Placeholder for future: open AutoCode selector to inject barcode data
+                  focusDataInput();
+                }}
+                type="button"
               >
                 <span className="text-sm font-medium">AutoCode</span>
                 <div className="industrial-button p-1.5 rounded">
@@ -464,7 +496,11 @@ export function BarcodeFieldDialog({
 
               <button
                 className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 hover:from-muted/80 hover:to-muted/40 border border-border rounded-lg p-3 transition-colors"
-                onClick={() => {/* User Define - TODO */}}
+                onClick={() => {
+                  // Placeholder for future: open User Define selector to inject barcode data
+                  focusDataInput();
+                }}
+                type="button"
               >
                 <span className="text-sm font-medium">User Define</span>
                 <div className="industrial-button p-1.5 rounded">
@@ -472,17 +508,19 @@ export function BarcodeFieldDialog({
                 </div>
               </button>
             </div>
-
-            {/* Add button */}
-            <Button 
-              onClick={handleAdd}
-              disabled={!data.trim()}
-              className="w-full"
-            >
-              Add Barcode Field
-            </Button>
           </div>
-        </ScrollArea>
+        </div>
+
+        {/* Sticky bottom add button */}
+        <div className="shrink-0 bg-background border-t border-border p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <Button 
+            onClick={handleAdd}
+            disabled={!data.trim()}
+            className="w-full"
+          >
+            Add Barcode Field
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
