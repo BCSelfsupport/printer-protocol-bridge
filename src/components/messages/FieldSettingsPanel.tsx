@@ -81,13 +81,13 @@ function SettingCard({
               max={max}
             />
           ) : (
-            <div className="text-sm font-bold tabular-nums">
+            <div className="text-sm font-bold tabular-nums truncate">
               {typeof value === 'number' ? value : value}
             </div>
           )}
         </div>
 
-        <div className="flex gap-1">
+        <div className="flex flex-col gap-0.5">
           {showInput && onEdit && !disabled && (
             <button
               onClick={() => {
@@ -97,35 +97,35 @@ function SettingCard({
               className="industrial-button text-white p-1.5 rounded"
               title="Edit value"
             >
-              <Pencil className="w-3 h-3" />
+              <Pencil className="w-4 h-4" />
             </button>
           )}
           {showRotate ? (
             <button
               onClick={onIncrease}
               disabled={disabled}
-              className="industrial-button text-white p-1.5 rounded disabled:opacity-50"
+              className="industrial-button text-white p-2 rounded disabled:opacity-50"
               title="Rotate"
             >
-              <RotateCcw className="w-3 h-3" />
+              <RotateCcw className="w-4 h-4" />
             </button>
           ) : (
             <>
               <button
-                onClick={onDecrease}
-                disabled={disabled}
-                className="industrial-button text-white p-1.5 rounded disabled:opacity-50"
-                title="Decrease"
-              >
-                <ChevronDown className="w-3 h-3" />
-              </button>
-              <button
                 onClick={onIncrease}
                 disabled={disabled}
-                className="industrial-button text-white p-1.5 rounded disabled:opacity-50"
+                className="industrial-button text-white p-2 rounded disabled:opacity-50"
                 title="Increase"
               >
-                <ChevronUp className="w-3 h-3" />
+                <ChevronUp className="w-5 h-5" />
+              </button>
+              <button
+                onClick={onDecrease}
+                disabled={disabled}
+                className="industrial-button text-white p-2 rounded disabled:opacity-50"
+                title="Decrease"
+              >
+                <ChevronDown className="w-5 h-5" />
               </button>
             </>
           )}
