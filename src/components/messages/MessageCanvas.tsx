@@ -196,50 +196,41 @@ export function MessageCanvas({
       }
     }
 
-    // Draw multi-line template spacing as filled red rows (like blocked area)
+    // Draw multi-line template spacing as filled red rows (1 dot between each line)
     if (multilineTemplate && multilineTemplate.lines > 1) {
       const { lines, dotsPerLine } = multilineTemplate;
-      
-      // Calculate total content dots and available space for gaps
-      const totalContentDots = lines * dotsPerLine;
-      const totalGapDots = templateHeight - totalContentDots;
-      const numGaps = lines - 1;
-      
-      // Distribute gaps evenly (some may get an extra dot)
-      const baseGap = numGaps > 0 ? Math.floor(totalGapDots / numGaps) : 0;
-      const extraGaps = numGaps > 0 ? totalGapDots % numGaps : 0;
+      const gap = 1; // Always 1 dot spacing between lines
 
       // Draw filled red rows for inter-line spacing
       let currentY = blockedRows;
       for (let line = 0; line < lines; line++) {
         currentY += dotsPerLine;
         if (line < lines - 1) {
-          // Add gap (distribute extra dots to earlier gaps)
-          const gap = baseGap + (line < extraGaps ? 1 : 0);
-          if (gap > 0) {
-            const gapY = currentY * DOT_SIZE;
-            const gapHeight = gap * DOT_SIZE;
-            
-            // Fill with same red as blocked area
-            ctx.fillStyle = 'rgba(220, 90, 100, 0.9)';
-            ctx.fillRect(0, gapY, canvas.width, gapHeight);
-            
-            // Redraw grid lines over the red gap area
-            ctx.strokeStyle = 'rgba(180, 60, 70, 0.5)';
-            ctx.lineWidth = 0.5;
-            for (let x = 0; x <= totalCols; x++) {
-              ctx.beginPath();
-              ctx.moveTo(x * DOT_SIZE, gapY);
-              ctx.lineTo(x * DOT_SIZE, gapY + gapHeight);
-              ctx.stroke();
-            }
-            for (let y = 0; y <= gap; y++) {
-              ctx.beginPath();
-              ctx.moveTo(0, gapY + y * DOT_SIZE);
-              ctx.lineTo(canvas.width, gapY + y * DOT_SIZE);
-              ctx.stroke();
-            }
+          const gapY = currentY * DOT_SIZE;
+          const gapHeight = gap * DOT_SIZE;
+          
+          // Fill with same red as blocked area
+          ctx.fillStyle = 'rgba(220, 90, 100, 0.9)';
+          ctx.fillRect(0, gapY, canvas.width, gapHeight);
+          
+          // Redraw grid lines over the red gap area
+          ctx.strokeStyle = 'rgba(180, 60, 70, 0.5)';
+          ctx.lineWidth = 0.5;
+          for (let x = 0; x <= totalCols; x++) {
+            ctx.beginPath();
+            ctx.moveTo(x * DOT_SIZE, gapY);
+            ctx.lineTo(x * DOT_SIZE, gapY + gapHeight);
+            ctx.stroke();
           }
+          ctx.beginPath();
+          ctx.moveTo(0, gapY);
+          ctx.lineTo(canvas.width, gapY);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(0, gapY + gapHeight);
+          ctx.lineTo(canvas.width, gapY + gapHeight);
+          ctx.stroke();
+          
           currentY += gap;
         }
       }
@@ -348,13 +339,7 @@ export function MessageCanvas({
     if (!multilineTemplate) return null;
     
     const { lines, dotsPerLine } = multilineTemplate;
-    
-    // Calculate spacing between lines
-    const totalContentDots = lines * dotsPerLine;
-    const totalGapDots = templateHeight - totalContentDots;
-    const numGaps = lines - 1;
-    const baseGap = numGaps > 0 ? Math.floor(totalGapDots / numGaps) : 0;
-    const extraGaps = numGaps > 0 ? totalGapDots % numGaps : 0;
+    const gap = 1; // Always 1 dot spacing between lines
     
     let currentY = blockedRows;
     for (let i = 0; i < lines; i++) {
@@ -364,7 +349,7 @@ export function MessageCanvas({
       }
       currentY += dotsPerLine;
       if (i < lines - 1) {
-        currentY += baseGap + (i < extraGaps ? 1 : 0);
+        currentY += gap;
       }
     }
     return null;
