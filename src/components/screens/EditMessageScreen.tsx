@@ -678,7 +678,7 @@ export function EditMessageScreen({
   };
 
   return (
-    <div className="flex-1 p-2 md:p-4 flex flex-col h-full min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y pb-[calc(7rem+env(safe-area-inset-bottom))] scroll-pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-0 md:scroll-pb-0 md:overflow-hidden">
+    <div className="flex-1 p-2 md:p-4 flex flex-col h-full min-h-0 md:overflow-hidden">
       <SubPageHeader title={`Edit: ${messageName}`} onHome={onCancel} />
 
       {loading ? (
@@ -687,228 +687,234 @@ export function EditMessageScreen({
         </div>
       ) : (
         <>
-          {/* Error message */}
-          {fieldError && (
-            <div className="mb-2 p-2 md:p-3 bg-destructive/10 border border-destructive rounded-lg text-destructive text-xs md:text-sm flex items-center gap-2">
-              <span className="font-medium">⚠️ Error:</span>
-              <span>{fieldError}</span>
-            </div>
-          )}
-
-          {/* Message Canvas - component handles its own horizontal scrolling */}
-          <div
-            ref={canvasScrollerRef}
-            className={`mb-2 md:mb-4 -mx-2 px-2 md:mx-0 md:px-0 pb-2 touch-pan-y`}
-          >
-            <MessageCanvas
-              templateHeight={message.height}
-              width={message.width}
-              fields={message.fields}
-              onCanvasClick={handleCanvasClick}
-              onFieldMove={handleFieldMove}
-              onFieldDataChange={(fieldId, newData) => {
-                setMessage((prev) => ({
-                  ...prev,
-                  fields: prev.fields.map((f) =>
-                    f.id === fieldId ? { ...f, data: newData } : f
-                  ),
-                }));
-              }}
-              onFieldError={handleFieldError}
-              selectedFieldId={selectedFieldId}
-              multilineTemplate={currentMultilineTemplate ? {
-                lines: currentMultilineTemplate.lines,
-                dotsPerLine: currentMultilineTemplate.dotsPerLine,
-              } : null}
-              onScrollLockChange={setIsCanvasScrollLocked}
-            />
-            <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click a field to edit text inline</p>
-          </div>
-
-          {/* Field Settings Panel - Per-field settings like manual page 49-50 */}
-          {selectedField && (
-            <FieldSettingsPanel
-              fontSize={selectedField.fontSize}
-              bold={selectedField.bold ?? 0}
-              gap={selectedField.gap ?? 1}
-              rotation={selectedField.rotation ?? 'Normal'}
-              autoNumerals={selectedField.autoNumerals ?? 0}
-              templateLabel={getCurrentTemplateValue().startsWith('multi-') 
-                ? MULTILINE_TEMPLATES.find(t => t.value === getCurrentTemplateValue())?.label || getCurrentTemplateValue()
-                : `${message.height}`
-              }
-              onFontSizeChange={(delta) => {
-                const fonts = getAllowedFonts();
-                const currentIdx = fonts.findIndex(f => f.value === selectedField.fontSize);
-                const newIdx = Math.max(0, Math.min(fonts.length - 1, currentIdx + delta));
-                handleUpdateFieldSetting('fontSize', fonts[newIdx].value);
-              }}
-              onBoldChange={(v) => handleUpdateFieldSetting('bold', v)}
-              onGapChange={(v) => handleUpdateFieldSetting('gap', v)}
-              onRotationChange={(v) => handleUpdateFieldSetting('rotation', v)}
-              onAutoNumeralsChange={(v) => handleUpdateFieldSetting('autoNumerals', v)}
-              onTemplateChange={handleTemplateNavigate}
-              disabled={!selectedFieldId}
-              allowedFonts={getAllowedFonts()}
-              currentFontIndex={getAllowedFonts().findIndex(f => f.value === selectedField.fontSize)}
-            />
-          )}
-
-          {/* Message properties row */}
-          <div className="bg-card rounded-lg p-2 md:p-3 mb-2 overflow-x-auto touch-pan-y">
-            <div className="flex gap-2 md:gap-3 min-w-max">
-              <div className="min-w-[120px]">
-                <Label className="text-[10px] md:text-xs">Template</Label>
-                <Select
-                  value={getCurrentTemplateValue()}
-                  onValueChange={handleTemplateChange}
-                >
-                  <SelectTrigger className="mt-1 h-8 text-xs">
-                    <SelectValue placeholder="Select template" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[100] max-h-[300px]">
-                    <SelectItem value="header-single" disabled className="font-semibold text-muted-foreground text-xs">
-                      Single Height
-                    </SelectItem>
-                    {SINGLE_TEMPLATES.map((t) => (
-                      <SelectItem key={t.value} value={t.value} className="text-xs">
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="header-multi" disabled className="font-semibold text-muted-foreground mt-2 text-xs">
-                      Multi-Line
-                    </SelectItem>
-                    {MULTILINE_TEMPLATES.map((t) => (
-                      <SelectItem key={t.value} value={t.value} className="text-xs">
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {/* Scrollable content (everything above the sticky action bar) */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y pb-[calc(12rem+env(safe-area-inset-bottom))] scroll-pb-[calc(12rem+env(safe-area-inset-bottom))] md:pb-0 md:scroll-pb-0">
+            {/* Error message */}
+            {fieldError && (
+              <div className="mb-2 p-2 md:p-3 bg-destructive/10 border border-destructive rounded-lg text-destructive text-xs md:text-sm flex items-center gap-2">
+                <span className="font-medium">⚠️ Error:</span>
+                <span>{fieldError}</span>
               </div>
-              <div className="min-w-[80px]">
-                <Label className="text-[10px] md:text-xs">Width</Label>
-                <Input
-                  type="number"
-                  value={message.width}
-                  onChange={(e) =>
-                    setMessage((prev) => ({
-                      ...prev,
-                      width: parseInt(e.target.value) || 135,
-                    }))
-                  }
-                  className="mt-1 h-8 text-xs"
-                />
-              </div>
-            </div>
-          </div>
+            )}
 
-          {/* Navigation and Action buttons - scrollable on mobile */}
-          <div className="overflow-x-auto touch-pan-y -mx-2 px-2 md:mx-0 md:px-0 pb-2 scrollbar-thin">
-            {/* Field navigation row */}
-            <div className="flex gap-2 justify-center mb-2">
-              <button
-                onClick={handlePrevField}
-                disabled={message.fields.length <= 1}
-                className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-1 disabled:opacity-50"
-                title="Previous Field"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span className="text-xs">Prev</span>
-              </button>
-              <button
-                onClick={handleNextField}
-                disabled={message.fields.length <= 1}
-                className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-1 disabled:opacity-50"
-                title="Next Field"
-              >
-                <span className="text-xs">Next</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-              <button
-                onClick={handleCopyField}
-                disabled={!selectedFieldId}
-                className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-1 disabled:opacity-50"
-                title="Copy Field"
-              >
-                <Copy className="w-4 h-4" />
-                <span className="text-xs">Copy</span>
-              </button>
-            </div>
-
-            {/* Main action buttons */}
-            <div className="flex gap-2 md:gap-3 justify-center min-w-max">
-              <button
-                onClick={() => setNewFieldDialogOpen(true)}
-                className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
-              >
-                <FilePlus className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
-                <span className="text-[9px] md:text-xs font-medium">New</span>
-              </button>
-
-              <button
-                onClick={handleDeleteField}
-                disabled={!selectedFieldId || message.fields.length <= 1}
-                className="industrial-button-danger text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px] disabled:opacity-50"
-              >
-                <Trash2 className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
-                <span className="text-[9px] md:text-xs font-medium">Delete</span>
-              </button>
-
-              <button
-                onClick={handleAlignFields}
-                disabled={message.fields.length < 2}
-                className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px] disabled:opacity-50"
-                title="Auto-align overlapping fields (^AL)"
-              >
-                <AlignHorizontalDistributeCenter className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
-                <span className="text-[9px] md:text-xs font-medium">Align</span>
-              </button>
-
-              <button
-                onClick={() => setSettingsDialogOpen(true)}
-                className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
-              >
-                <Settings className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
-                <span className="text-[9px] md:text-xs font-medium">Settings</span>
-              </button>
-
-              <button
-                onClick={() => setAdvancedSettingsDialogOpen(true)}
-                className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
-              >
-                <SlidersHorizontal className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
-                <span className="text-[9px] md:text-xs font-medium">Advanced</span>
-              </button>
-
-              <button
-                onClick={() => onSave(message, false)}
-                className="industrial-button-success text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
-              >
-                <Save className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
-                <span className="text-[9px] md:text-xs font-medium">Save</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setSaveAsName(message.name + '_copy');
-                  setSaveAsDialogOpen(true);
+            {/* Message Canvas - component handles its own horizontal scrolling */}
+            <div
+              ref={canvasScrollerRef}
+              className={`mb-2 md:mb-4 -mx-2 px-2 md:mx-0 md:px-0 pb-2 touch-pan-y`}
+            >
+              <MessageCanvas
+                templateHeight={message.height}
+                width={message.width}
+                fields={message.fields}
+                onCanvasClick={handleCanvasClick}
+                onFieldMove={handleFieldMove}
+                onFieldDataChange={(fieldId, newData) => {
+                  setMessage((prev) => ({
+                    ...prev,
+                    fields: prev.fields.map((f) =>
+                      f.id === fieldId ? { ...f, data: newData } : f
+                    ),
+                  }));
                 }}
-                className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
-              >
-                <SaveAll className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
-                <span className="text-[9px] md:text-xs font-medium">Save As</span>
-              </button>
+                onFieldError={handleFieldError}
+                selectedFieldId={selectedFieldId}
+                multilineTemplate={currentMultilineTemplate ? {
+                  lines: currentMultilineTemplate.lines,
+                  dotsPerLine: currentMultilineTemplate.dotsPerLine,
+                } : null}
+                onScrollLockChange={setIsCanvasScrollLocked}
+              />
+              <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click a field to edit text inline</p>
+            </div>
 
-              <button
-                onClick={onCancel}
-                className="industrial-button-gray text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
-              >
-                <X className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
-                <span className="text-[9px] md:text-xs font-medium">Cancel</span>
-              </button>
+            {/* Field Settings Panel - Per-field settings like manual page 49-50 */}
+            {selectedField && (
+              <FieldSettingsPanel
+                fontSize={selectedField.fontSize}
+                bold={selectedField.bold ?? 0}
+                gap={selectedField.gap ?? 1}
+                rotation={selectedField.rotation ?? 'Normal'}
+                autoNumerals={selectedField.autoNumerals ?? 0}
+                templateLabel={getCurrentTemplateValue().startsWith('multi-') 
+                  ? MULTILINE_TEMPLATES.find(t => t.value === getCurrentTemplateValue())?.label || getCurrentTemplateValue()
+                  : `${message.height}`
+                }
+                onFontSizeChange={(delta) => {
+                  const fonts = getAllowedFonts();
+                  const currentIdx = fonts.findIndex(f => f.value === selectedField.fontSize);
+                  const newIdx = Math.max(0, Math.min(fonts.length - 1, currentIdx + delta));
+                  handleUpdateFieldSetting('fontSize', fonts[newIdx].value);
+                }}
+                onBoldChange={(v) => handleUpdateFieldSetting('bold', v)}
+                onGapChange={(v) => handleUpdateFieldSetting('gap', v)}
+                onRotationChange={(v) => handleUpdateFieldSetting('rotation', v)}
+                onAutoNumeralsChange={(v) => handleUpdateFieldSetting('autoNumerals', v)}
+                onTemplateChange={handleTemplateNavigate}
+                disabled={!selectedFieldId}
+                allowedFonts={getAllowedFonts()}
+                currentFontIndex={getAllowedFonts().findIndex(f => f.value === selectedField.fontSize)}
+              />
+            )}
+
+            {/* Message properties row */}
+            <div className="bg-card rounded-lg p-2 md:p-3 mb-2 overflow-x-auto touch-pan-y">
+              <div className="flex gap-2 md:gap-3 min-w-max">
+                <div className="min-w-[120px]">
+                  <Label className="text-[10px] md:text-xs">Template</Label>
+                  <Select
+                    value={getCurrentTemplateValue()}
+                    onValueChange={handleTemplateChange}
+                  >
+                    <SelectTrigger className="mt-1 h-8 text-xs">
+                      <SelectValue placeholder="Select template" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[100] max-h-[300px]">
+                      <SelectItem value="header-single" disabled className="font-semibold text-muted-foreground text-xs">
+                        Single Height
+                      </SelectItem>
+                      {SINGLE_TEMPLATES.map((t) => (
+                        <SelectItem key={t.value} value={t.value} className="text-xs">
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="header-multi" disabled className="font-semibold text-muted-foreground mt-2 text-xs">
+                        Multi-Line
+                      </SelectItem>
+                      {MULTILINE_TEMPLATES.map((t) => (
+                        <SelectItem key={t.value} value={t.value} className="text-xs">
+                          {t.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="min-w-[80px]">
+                  <Label className="text-[10px] md:text-xs">Width</Label>
+                  <Input
+                    type="number"
+                    value={message.width}
+                    onChange={(e) =>
+                      setMessage((prev) => ({
+                        ...prev,
+                        width: parseInt(e.target.value) || 135,
+                      }))
+                    }
+                    className="mt-1 h-8 text-xs"
+                  />
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Sticky action bar (always reachable on mobile) */}
+          <div className="shrink-0 -mx-2 px-2 md:mx-0 md:px-0 pt-2 pb-[env(safe-area-inset-bottom)] bg-background border-t border-border">
+            <div className="overflow-x-auto touch-pan-x pb-2 scrollbar-thin">
+              {/* Field navigation row */}
+              <div className="flex gap-2 justify-center mb-2 min-w-max">
+                <button
+                  onClick={handlePrevField}
+                  disabled={message.fields.length <= 1}
+                  className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-1 disabled:opacity-50"
+                  title="Previous Field"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="text-xs">Prev</span>
+                </button>
+                <button
+                  onClick={handleNextField}
+                  disabled={message.fields.length <= 1}
+                  className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-1 disabled:opacity-50"
+                  title="Next Field"
+                >
+                  <span className="text-xs">Next</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleCopyField}
+                  disabled={!selectedFieldId}
+                  className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-1 disabled:opacity-50"
+                  title="Copy Field"
+                >
+                  <Copy className="w-4 h-4" />
+                  <span className="text-xs">Copy</span>
+                </button>
+              </div>
+
+              {/* Main action buttons */}
+              <div className="flex gap-2 md:gap-3 justify-center min-w-max">
+                <button
+                  onClick={() => setNewFieldDialogOpen(true)}
+                  className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
+                >
+                  <FilePlus className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                  <span className="text-[9px] md:text-xs font-medium">New</span>
+                </button>
+
+                <button
+                  onClick={handleDeleteField}
+                  disabled={!selectedFieldId || message.fields.length <= 1}
+                  className="industrial-button-danger text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px] disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                  <span className="text-[9px] md:text-xs font-medium">Delete</span>
+                </button>
+
+                <button
+                  onClick={handleAlignFields}
+                  disabled={message.fields.length < 2}
+                  className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px] disabled:opacity-50"
+                  title="Auto-align overlapping fields (^AL)"
+                >
+                  <AlignHorizontalDistributeCenter className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                  <span className="text-[9px] md:text-xs font-medium">Align</span>
+                </button>
+
+                <button
+                  onClick={() => setSettingsDialogOpen(true)}
+                  className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
+                >
+                  <Settings className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                  <span className="text-[9px] md:text-xs font-medium">Settings</span>
+                </button>
+
+                <button
+                  onClick={() => setAdvancedSettingsDialogOpen(true)}
+                  className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
+                >
+                  <SlidersHorizontal className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                  <span className="text-[9px] md:text-xs font-medium">Advanced</span>
+                </button>
+
+                <button
+                  onClick={() => onSave(message, false)}
+                  className="industrial-button-success text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
+                >
+                  <Save className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                  <span className="text-[9px] md:text-xs font-medium">Save</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setSaveAsName(message.name + '_copy');
+                    setSaveAsDialogOpen(true);
+                  }}
+                  className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
+                >
+                  <SaveAll className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                  <span className="text-[9px] md:text-xs font-medium">Save As</span>
+                </button>
+
+                <button
+                  onClick={onCancel}
+                  className="industrial-button-gray text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
+                >
+                  <X className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                  <span className="text-[9px] md:text-xs font-medium">Cancel</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
 
           {/* New Field Dialog */}
           <NewFieldDialog
