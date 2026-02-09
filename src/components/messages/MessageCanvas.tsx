@@ -158,14 +158,15 @@ export function MessageCanvas({
         const parsed = parseBarcodeLabelData(field.data);
         if (!parsed) continue;
         
-        const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${templateHeight}`;
+        const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${templateHeight}:${parsed.humanReadable}`;
         if (newImages.has(cacheKey)) continue;
         
         try {
           const barcodeCanvas = await renderBarcodeToCanvas(
             parsed.encoding,
             parsed.data,
-            templateHeight
+            templateHeight,
+            parsed.humanReadable
           );
           if (barcodeCanvas && !cancelled) {
             newImages.set(cacheKey, barcodeCanvas);
@@ -359,7 +360,7 @@ export function MessageCanvas({
         // Try to render actual barcode
         const parsed = parseBarcodeLabelData(field.data);
         if (parsed) {
-          const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${templateHeight}`;
+          const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${templateHeight}:${parsed.humanReadable}`;
           const barcodeCanvas = barcodeImages.get(cacheKey);
           
           if (barcodeCanvas) {

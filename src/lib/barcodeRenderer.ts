@@ -18,13 +18,21 @@ const ENCODING_MAP: Record<string, string> = {
   'dotcode': 'dotcode',
 };
 
-// Extract encoding type from barcode field data string like "[CODE128] 12345"
-export function parseBarcodeLabelData(label: string): { encoding: string; data: string } | null {
+// Extract encoding type and settings from barcode field data string like "[CODE128|HR] 12345"
+// HR = Human Readable enabled
+export function parseBarcodeLabelData(label: string): { encoding: string; data: string; humanReadable: boolean } | null {
+  // Match pattern: [ENCODING|FLAGS] data or [ENCODING] data
   const match = label.match(/^\[([^\]]+)\]\s*(.*)$/);
   if (!match) return null;
   
-  const encodingLabel = match[1].toLowerCase();
+  const encodingPart = match[1];
   const data = match[2];
+  
+  // Check for flags (e.g., CODE128|HR)
+  const parts = encodingPart.split('|');
+  const encodingLabel = parts[0].toLowerCase();
+  const flags = parts.slice(1).map(f => f.toUpperCase());
+  const humanReadable = flags.includes('HR');
   
   // Map label back to encoding key
   const encodingMap: Record<string, string> = {
@@ -56,7 +64,7 @@ export function parseBarcodeLabelData(label: string): { encoding: string; data: 
   };
   
   const encoding = encodingMap[encodingLabel] || 'code128';
-  return { encoding, data };
+  return { encoding, data, humanReadable };
 }
 
 // Cache for rendered barcode images
@@ -65,11 +73,12 @@ const barcodeCache = new Map<string, HTMLCanvasElement>();
 export async function renderBarcodeToCanvas(
   encoding: string,
   data: string,
-  targetHeight: number // in dots
+  targetHeight: number, // in dots
+  humanReadable: boolean = false
 ): Promise<HTMLCanvasElement | null> {
   if (!data || data.trim() === '') return null;
   
-  const cacheKey = `${encoding}:${data}:${targetHeight}`;
+  const cacheKey = `${encoding}:${data}:${targetHeight}:${humanReadable}`;
   if (barcodeCache.has(cacheKey)) {
     return barcodeCache.get(cacheKey)!;
   }
@@ -82,7 +91,10 @@ export async function renderBarcodeToCanvas(
     
     // Scale factor for reasonable resolution
     const scale = 2;
-    const pixelHeight = targetHeight * 8; // 8 pixels per dot
+    // Reserve space for text if human readable
+    const textHeightDots = humanReadable ? 2 : 0; // 2 dots for text below barcode
+    const barcodeHeightDots = targetHeight - textHeightDots;
+    const pixelHeight = barcodeHeightDots * 8; // 8 pixels per dot
     
     // Configure barcode options based on type
     const is2D = ['datamatrix', 'qrcode', 'dotcode'].includes(encoding);
@@ -91,20 +103,48 @@ export async function renderBarcodeToCanvas(
       bcid: bwipEncoder,
       text: data,
       scale: scale,
-      includetext: false, // We won't show human readable text on the dot matrix
+      includetext: false, // We'll draw text separately for better control
       backgroundcolor: 'f5e6c8', // Match canvas background
     };
     
     if (is2D) {
-      // 2D barcodes - constrain to target height
+      // 2D barcodes - constrain to target height (no human readable for 2D)
       options.height = Math.floor(pixelHeight / scale / 2);
       options.width = Math.floor(pixelHeight / scale / 2);
     } else {
-      // 1D barcodes - use target height
+      // 1D barcodes - use target height minus text space
       options.height = Math.floor(pixelHeight / scale / 2);
     }
     
     await bwipjs.toCanvas(tempCanvas, options);
+    
+    // If human readable, create a new canvas with text below
+    if (humanReadable && !is2D) {
+      const finalCanvas = document.createElement('canvas');
+      const textHeight = 14; // pixels for text
+      finalCanvas.width = tempCanvas.width;
+      finalCanvas.height = tempCanvas.height + textHeight;
+      
+      const ctx = finalCanvas.getContext('2d');
+      if (ctx) {
+        // Fill background
+        ctx.fillStyle = '#f5e6c8';
+        ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+        
+        // Draw barcode
+        ctx.drawImage(tempCanvas, 0, 0);
+        
+        // Draw human readable text below
+        ctx.fillStyle = '#1a1a1a';
+        ctx.font = `bold ${textHeight - 2}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(data, finalCanvas.width / 2, finalCanvas.height - 1);
+        
+        barcodeCache.set(cacheKey, finalCanvas);
+        return finalCanvas;
+      }
+    }
     
     // Cache the result
     barcodeCache.set(cacheKey, tempCanvas);
