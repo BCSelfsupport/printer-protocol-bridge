@@ -44,7 +44,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
             <span className="text-xl md:text-3xl font-bold italic text-emerald-500">
               Sync
             </span>
-            <span className="text-[8px] md:text-xs font-normal text-muted-foreground align-top ml-0.5">™</span>
+            <span className="text-[10px] md:text-sm font-normal text-muted-foreground align-top ml-0.5">™</span>
           </div>
           <div className="px-1.5 md:px-2 py-0.5 bg-gradient-to-r from-blue-600 to-emerald-500 rounded text-[8px] md:text-[10px] font-bold text-white uppercase tracking-wider">
             Pro
