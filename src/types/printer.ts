@@ -8,7 +8,7 @@ export interface Printer {
   status: 'ready' | 'not_ready' | 'error' | 'offline';
   hasActiveErrors: boolean;
   // Quick status fields for overview display
-  inkLevel?: 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+  inkLevel?: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
   makeupLevel?: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
   currentMessage?: string | null;
   printCount?: number;
@@ -27,7 +27,7 @@ export interface PrinterStatus {
   printerVersion: string | null;
   printerTime: Date | null;
   // Detailed consumable levels from ^SU
-  inkLevel: 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+  inkLevel: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
   makeupLevel: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
 }
 
@@ -44,6 +44,9 @@ export interface PrinterMetrics {
   inkLevel: string;
   makeupLevel: string;
   printStatus: string;
+  // AllowErrors and active error flag from ^SU (v2.6)
+  allowErrors: boolean;
+  errorActive: boolean;
   // Temperature readings from ^TP command
   printheadTemp: number;
   electronicsTemp: number;

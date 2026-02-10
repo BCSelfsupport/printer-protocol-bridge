@@ -17,6 +17,8 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
   inkLevel: string;
   makeupLevel: string;
   printStatus: string;
+  allowErrors: boolean;
+  errorActive: boolean;
   printheadTemp: number;
   electronicsTemp: number;
   subsystems: {
@@ -92,9 +94,15 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
   // V300UP may stay at 1 even when HV is toggled off, so we use HVDeflection instead.
   const printStatus = hvDeflection ? 'Ready' : 'Not ready';
 
+  // AllowErrors and Err flags (v2.6)
+  const allowErrors =
+    (extract(/AllowErrors\[\s*(\d)\s*\]/i) || extract(/\bAEr\[\s*(\d)\s*\]/i)) === '1';
+  const errorActive =
+    (extract(/\bErr\[\s*(\d)\s*\]/i) || extract(/\bError\[\s*(\d)\s*\]/i)) === '1';
+
   console.log('[parseStatusResponse] parsed:', {
     modulation, charge, pressure, rps, phaseQual, hvDeflection, viscosity,
-    inkLevel, makeupLevel, printStatus, v300up, vltOn, gutOn, modOn,
+    inkLevel, makeupLevel, printStatus, allowErrors, errorActive, v300up, vltOn, gutOn, modOn,
   });
 
   return {
@@ -108,6 +116,8 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
     inkLevel,
     makeupLevel,
     printStatus,
+    allowErrors,
+    errorActive,
     printheadTemp: 0, // Will be populated from ^TP command
     electronicsTemp: 0, // Will be populated from ^TP command
     subsystems: {
