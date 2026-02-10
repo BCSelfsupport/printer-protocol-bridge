@@ -103,6 +103,8 @@ export function ServiceScreen({ metrics, onHome, onControl, onMount, onUnmount, 
             </ServicePanel>
 
             <ServicePanel title="System Info">
+              <MetricRow label="Allow Errors" value={metrics.allowErrors ? "On" : "Off"} />
+              <MetricRow label="Error Active" value={metrics.errorActive ? "Yes" : "No"} />
               <MetricRow label="HV Deflection" value={metrics.hvDeflection ? "Enabled" : "Disabled"} />
               <MetricRow label="Power Hours" value={metrics.powerHours} />
               <MetricRow label="Stream Hours" value={metrics.streamHours} />

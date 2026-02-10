@@ -54,6 +54,8 @@ const mockMetrics: PrinterMetrics = {
   inkLevel: 'FULL',
   makeupLevel: 'GOOD',
   printStatus: 'Not ready',
+  allowErrors: true,
+  errorActive: false,
   printheadTemp: 24.71,
   electronicsTemp: 30.78,
   subsystems: {
@@ -266,7 +268,7 @@ export function usePrinterConnection() {
       console.log('[handleServiceResponse] Updating state, previous isRunning:', prev.status?.isRunning, '-> new:', hvOn);
 
       // Map parsed levels to status-compatible types
-      const inkLevel = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+      const inkLevel = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
       const makeupLevel = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
 
       return {
@@ -288,6 +290,8 @@ export function usePrinterConnection() {
           inkLevel: parsed.inkLevel ?? previous.inkLevel,
           makeupLevel: parsed.makeupLevel ?? previous.makeupLevel,
           printStatus: parsed.printStatus ?? previous.printStatus,
+          allowErrors: parsed.allowErrors ?? previous.allowErrors,
+          errorActive: parsed.errorActive ?? previous.errorActive,
           subsystems: parsed.subsystems ?? previous.subsystems,
         },
       };
@@ -369,7 +373,7 @@ export function usePrinterConnection() {
           });
           
           // Map parsed levels to status-compatible types
-          const inkLevel = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+          const inkLevel = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
           const makeupLevel = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
           
           setConnectionState((prev) => ({
@@ -389,6 +393,8 @@ export function usePrinterConnection() {
               inkLevel: parsed.inkLevel ?? prev.metrics.inkLevel,
               makeupLevel: parsed.makeupLevel ?? prev.metrics.makeupLevel,
               printStatus: parsed.printStatus ?? prev.metrics.printStatus,
+              allowErrors: parsed.allowErrors ?? prev.metrics.allowErrors,
+              errorActive: parsed.errorActive ?? prev.metrics.errorActive,
               subsystems: parsed.subsystems ?? prev.metrics.subsystems,
             } : null,
           }));
@@ -438,7 +444,7 @@ export function usePrinterConnection() {
             ...mockStatus,
             isRunning: emulatorState.hvOn,
             currentMessage: emulatorState.currentMessage,
-            inkLevel: emulatorState.inkLevel as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN',
+            inkLevel: emulatorState.inkLevel as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
             makeupLevel: emulatorState.makeupLevel as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
             printCount: emulatorState.printCount,
             productCount: emulatorState.productCount,
@@ -487,7 +493,7 @@ export function usePrinterConnection() {
           ...mockStatus,
           isRunning: emulatorState.hvOn,
           currentMessage: emulatorState.currentMessage,
-          inkLevel: emulatorState.inkLevel as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN',
+          inkLevel: emulatorState.inkLevel as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
           makeupLevel: emulatorState.makeupLevel as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
         },
         metrics: {
@@ -1480,9 +1486,11 @@ export function usePrinterConnection() {
                 rps: parsed.rps ?? 0,
                 phaseQual: parsed.phaseQual ?? 0,
                 hvDeflection: parsed.hvDeflection ?? false,
-                inkLevel: (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN',
+                inkLevel: (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
                 makeupLevel: (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
                 printStatus: parsed.hvDeflection ? 'Ready' : 'Not Ready',
+                allowErrors: parsed.allowErrors ?? true,
+                errorActive: parsed.errorActive ?? false,
                 printheadTemp: parsed.printheadTemp ?? 0,
                 electronicsTemp: parsed.electronicsTemp ?? 0,
                 subsystems: {
@@ -1511,9 +1519,11 @@ export function usePrinterConnection() {
             rps: parsed.rps ?? 0,
             phaseQual: parsed.phaseQual ?? 0,
             hvDeflection: parsed.hvDeflection ?? false,
-            inkLevel: (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN',
+            inkLevel: (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
             makeupLevel: (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
             printStatus: parsed.hvDeflection ? 'Ready' : 'Not Ready',
+            allowErrors: parsed.allowErrors ?? true,
+            errorActive: parsed.errorActive ?? false,
             printheadTemp: parsed.printheadTemp ?? 0,
             electronicsTemp: parsed.electronicsTemp ?? 0,
             subsystems: {
@@ -1551,9 +1561,11 @@ export function usePrinterConnection() {
               rps: parsed.rps ?? 0,
               phaseQual: parsed.phaseQual ?? 0,
               hvDeflection: parsed.hvDeflection ?? false,
-              inkLevel: (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'LOW' | 'EMPTY' | 'UNKNOWN',
+              inkLevel: (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
               makeupLevel: (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
               printStatus: parsed.hvDeflection ? 'Ready' : 'Not Ready',
+              allowErrors: parsed.allowErrors ?? true,
+              errorActive: parsed.errorActive ?? false,
               printheadTemp: parsed.printheadTemp ?? 0,
               electronicsTemp: parsed.electronicsTemp ?? 0,
               subsystems: {

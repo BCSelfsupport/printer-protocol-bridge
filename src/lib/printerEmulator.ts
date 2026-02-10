@@ -28,7 +28,7 @@ export interface EmulatorState {
   
   // Levels - based on float switch positions
   // Ink: 2 floats (top=FULL, bottom triggers LOW then EMPTY)
-  inkLevel: 'FULL' | 'LOW' | 'EMPTY';
+  inkLevel: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY';
   // Makeup: 3 floats (top=FULL, middle=GOOD/half, bottom triggers LOW then EMPTY)
   makeupLevel: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY';
   
@@ -869,7 +869,7 @@ class PrinterEmulator {
    * Ink has 2 float switches: top (FULL), bottom (LOW/EMPTY)
    */
   cycleInkLevel() {
-    const levels: Array<'FULL' | 'LOW' | 'EMPTY'> = ['FULL', 'LOW', 'EMPTY'];
+    const levels: Array<'FULL' | 'GOOD' | 'LOW' | 'EMPTY'> = ['FULL', 'GOOD', 'LOW', 'EMPTY'];
     const currentIdx = levels.indexOf(this.state.inkLevel);
     const nextIdx = (currentIdx + 1) % levels.length;
     this.state.inkLevel = levels[nextIdx];

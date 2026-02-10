@@ -15,11 +15,11 @@ import { Input } from '@/components/ui/input';
 // t = Template size (0-16) - handled by template selection
 // s = Print Speed (0=Fast, 1=Faster, 2=Fastest, 3=Ultra Fast)
 // o = Orientation (0-7: Normal, Flip, Mirror, Mirror Flip, Tower Normal, Tower Flip, Tower Mirror, Tower Mirror Flip)
-// p = Print Mode (0=Normal, 1=Auto, 2=Repeat, 3=Reverse)
+// p = Print Mode (0=Normal, 1=Auto, 2=Repeat, 3=Reverse, 5=Auto Encoder, 6=Auto Encoder Reverse)
 export interface MessageSettings {
   speed: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
   rotation: 'Normal' | 'Flip' | 'Mirror' | 'Mirror Flip' | 'Tower' | 'Tower Flip' | 'Tower Mirror' | 'Tower Mirror Flip';
-  printMode: 'Normal' | 'Auto' | 'Repeat' | 'Reverse';
+  printMode: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
 }
 
 export const defaultMessageSettings: MessageSettings = {
@@ -155,7 +155,7 @@ const rotationValues: MessageSettings['rotation'][] = [
   'Tower', 'Tower Flip', 'Tower Mirror', 'Tower Mirror Flip'
 ];
 const speedValues: MessageSettings['speed'][] = ['Fast', 'Faster', 'Fastest', 'Ultra Fast'];
-const printModeValues: MessageSettings['printMode'][] = ['Normal', 'Auto', 'Repeat', 'Reverse'];
+const printModeValues: MessageSettings['printMode'][] = ['Normal', 'Auto', 'Repeat', 'Reverse', 'Auto Encoder', 'Auto Encoder Reverse'];
 
 export function MessageSettingsDialog({
   open,
@@ -180,7 +180,7 @@ export function MessageSettingsDialog({
 
   const cyclePrintModeUp = () => {
     const idx = printModeValues.indexOf(settings.printMode ?? 'Normal');
-    onUpdate({ printMode: printModeValues[Math.min(3, idx + 1)] });
+    onUpdate({ printMode: printModeValues[Math.min(printModeValues.length - 1, idx + 1)] });
   };
 
   const cyclePrintModeDown = () => {
