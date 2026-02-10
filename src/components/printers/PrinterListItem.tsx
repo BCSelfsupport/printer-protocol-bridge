@@ -198,13 +198,13 @@ export function PrinterListItem({
   return (
     <button
       onClick={onSelect}
-      className={`w-full text-left p-3 rounded-lg transition-all border ${
+      className={`w-full text-left p-3 rounded-lg transition-all border overflow-hidden ${
         isSelected 
           ? 'bg-primary/20 border-primary shadow-lg' 
           : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600'
       }`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 md:gap-3">
         {/* Status indicator - clickable for edit */}
         <button
           onClick={(e) => {
@@ -312,9 +312,9 @@ export function PrinterListItem({
                   onConnect();
                 }}
                 size="sm"
-                className="h-6 text-[10px] px-2 bg-gradient-to-r from-success to-success/80 hover:from-success/90 hover:to-success/70"
+                className="h-6 text-[10px] px-1.5 md:px-2 bg-gradient-to-r from-success to-success/80 hover:from-success/90 hover:to-success/70"
               >
-                <Plug className="w-2.5 h-2.5 mr-1" />
+                <Plug className="w-2.5 h-2.5 mr-0.5 md:mr-1" />
                 Connect
               </Button>
             )}
