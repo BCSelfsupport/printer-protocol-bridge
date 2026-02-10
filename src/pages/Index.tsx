@@ -252,7 +252,7 @@ const Index = () => {
       case 'clean':
         return <CleanScreen onHome={handleHome} />;
       case 'setup':
-        return <SetupScreen onHome={handleHome} />;
+        return <SetupScreen onHome={handleHome} onSendCommand={sendCommand} />;
       case 'service':
         return (
           <ServiceScreen
