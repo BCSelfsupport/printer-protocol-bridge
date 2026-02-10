@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  "appId": "com.bestcode.printer-control",
-  "productName": "BestCode Printer Control",
+  "appId": "com.bestcode.codesync",
+  "productName": "CodeSync",
   "directories": {
     "output": "release",
     "buildResources": "electron/resources"
@@ -11,6 +11,9 @@
     "electron/**/*",
     "public/**/*"
   ],
+  "extraMetadata": {
+    "main": "electron/main.cjs"
+  },
   "win": {
     "target": [
       {
@@ -22,11 +25,10 @@
   },
   "nsis": {
     "oneClick": false,
-    "allowToChangeInstallationDirectory": true
-  },
-  "publish": {
-    "provider": "github",
-    "owner": "your-github-username",
-    "repo": "bestcode-printer-control"
+    "allowToChangeInstallationDirectory": true,
+    "installerIcon": "public/codesync-icon.png",
+    "uninstallerIcon": "public/codesync-icon.png",
+    "installerHeaderIcon": "public/codesync-icon.png",
+    "shortcutName": "CodeSync"
   }
 }
