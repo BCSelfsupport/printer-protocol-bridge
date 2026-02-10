@@ -123,7 +123,7 @@ export function SplashScreen({ onComplete, minimumDuration = 3000 }: SplashScree
       >
         <span className="text-4xl md:text-5xl font-bold italic text-blue-500">Code</span>
         <span className="text-4xl md:text-5xl font-bold italic text-emerald-500">Sync</span>
-        <span className="text-xs md:text-sm font-normal text-slate-500 mt-1 ml-0.5 leading-none">™</span>
+        <span className="text-sm md:text-base font-normal text-slate-500 mt-1 ml-0.5 leading-none">™</span>
       </div>
 
       {/* Loading indicator */}
