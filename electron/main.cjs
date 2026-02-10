@@ -32,7 +32,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    icon: path.join(__dirname, '../public/favicon.ico'),
+    icon: path.join(__dirname, '../public/codesync-icon.png'),
   });
 
   // In development, load from Vite dev server
