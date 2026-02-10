@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { PrinterMetrics } from '@/types/printer';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
+import { Printer } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   ConsumableDot,
   MetricRow,
@@ -14,14 +16,25 @@ interface ServiceScreenProps {
   onControl: () => void;
   onMount?: () => void;
   onUnmount?: () => void;
+  onSendCommand?: (command: string) => Promise<any>;
 }
 
-export function ServiceScreen({ metrics, onHome, onControl, onMount, onUnmount }: ServiceScreenProps) {
+export function ServiceScreen({ metrics, onHome, onControl, onMount, onUnmount, onSendCommand }: ServiceScreenProps) {
   // Notify parent when screen is mounted/unmounted (for polling control)
   useEffect(() => {
     onMount?.();
     return () => onUnmount?.();
   }, [onMount, onUnmount]);
+
+  const handleForcePrint = useCallback(async () => {
+    if (!onSendCommand) return;
+    try {
+      await onSendCommand('^PT');
+      toast.success('Force Print triggered');
+    } catch (e) {
+      toast.error('Force Print failed');
+    }
+  }, [onSendCommand]);
 
   if (!metrics) {
     return (
@@ -35,7 +48,21 @@ export function ServiceScreen({ metrics, onHome, onControl, onMount, onUnmount }
     <div className="flex-1 flex flex-col overflow-hidden bg-industrial-dark">
       <div className="border-b bg-industrial-dark px-4 py-3">
         <div className="max-w-6xl mx-auto">
-          <SubPageHeader title="Service" onHome={onControl} />
+          <SubPageHeader
+            title="Service"
+            onHome={onControl}
+            rightContent={
+              <button
+                onClick={handleForcePrint}
+                disabled={!onSendCommand}
+                className="industrial-button text-white px-3 py-2 md:px-4 md:py-3 rounded-lg flex items-center gap-2 disabled:opacity-50"
+                title="Force Print (^PT)"
+              >
+                <Printer className="w-5 h-5 md:w-6 md:h-6" />
+                <span className="hidden md:inline text-sm font-medium">Force Print</span>
+              </button>
+            }
+          />
         </div>
       </div>
 

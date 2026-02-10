@@ -261,6 +261,7 @@ const Index = () => {
             onControl={() => setCurrentScreen('control')}
             onMount={() => setServiceScreenOpen(true)}
             onUnmount={() => setServiceScreenOpen(false)}
+            onSendCommand={sendCommand}
           />
         );
       default:
