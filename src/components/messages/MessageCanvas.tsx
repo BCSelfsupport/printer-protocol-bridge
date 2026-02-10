@@ -602,6 +602,90 @@ export function MessageCanvas({
     }
   }, [isEditing, cursorPosition]);
 
+  // Track whether mouse actually moved during drag (to distinguish click from drag)
+  const mouseDragMovedRef = useRef(false);
+  const mouseDragFieldRef = useRef<number | null>(null);
+  const mouseDragOffsetRef = useRef({ x: 0, y: 0 });
+
+  // Helper to get mouse position from a native MouseEvent (for document-level listeners)
+  const getMousePositionFromEvent = useCallback((e: MouseEvent) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    const x = Math.floor((e.clientX - rect.left) / DOT_SIZE) + scrollLeftDotsRef.current;
+    const y = Math.floor((e.clientY - rect.top) / DOT_SIZE);
+    return { x, y };
+  }, []);
+
+  // Document-level mouse move/up for reliable desktop drag
+  useEffect(() => {
+    const handleDocMouseMove = (e: MouseEvent) => {
+      if (!isDragging || dragFieldId === null || isLongPressActive) return;
+
+      const draggedField = fields.find(f => f.id === dragFieldId);
+      if (!draggedField) return;
+
+      mouseDragMovedRef.current = true;
+      const fontInfo = getFontInfo(draggedField.fontSize);
+      const pos = getMousePositionFromEvent(e);
+      let newX = pos.x - mouseDragOffsetRef.current.x;
+      let newY = pos.y - mouseDragOffsetRef.current.y;
+
+      // Clamp to valid area
+      newX = Math.max(0, newX);
+      newY = Math.max(blockedRows, newY);
+      newY = Math.min(TOTAL_ROWS - fontInfo.height, newY);
+
+      // Snap to line if multiline template
+      if (multilineTemplate) {
+        const lineInfo = getLineForY(newY);
+        if (lineInfo) {
+          newY = lineInfo.lineY;
+        }
+      }
+
+      setDragPosition({ x: newX, y: newY });
+      e.preventDefault();
+    };
+
+    const handleDocMouseUp = (e: MouseEvent) => {
+      if (!isDragging || dragFieldId === null || isLongPressActive) return;
+
+      if (mouseDragMovedRef.current) {
+        const draggedField = fields.find(f => f.id === dragFieldId);
+        if (draggedField && onFieldMove) {
+          const fontInfo = getFontInfo(draggedField.fontSize);
+
+          if (multilineTemplate) {
+            const lineInfo = getLineForY(dragPosition.y);
+            if (lineInfo && fontInfo.height > lineInfo.lineHeight) {
+              onFieldError?.(dragFieldId, `Font "${fontInfo.height}px" is too tall for this line (max ${lineInfo.lineHeight}px)`);
+            } else {
+              onFieldError?.(dragFieldId, null);
+              onFieldMove(dragFieldId, dragPosition.x, dragPosition.y);
+            }
+          } else {
+            onFieldMove(dragFieldId, dragPosition.x, dragPosition.y);
+          }
+        }
+      }
+
+      setIsDragging(false);
+      setDragFieldId(null);
+      mouseDragMovedRef.current = false;
+      mouseDragFieldRef.current = null;
+    };
+
+    if (isDragging && !isLongPressActive) {
+      document.addEventListener('mousemove', handleDocMouseMove);
+      document.addEventListener('mouseup', handleDocMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleDocMouseMove);
+      document.removeEventListener('mouseup', handleDocMouseUp);
+    };
+  }, [isDragging, dragFieldId, isLongPressActive, fields, blockedRows, multilineTemplate, dragPosition, onFieldMove, onFieldError, getMousePositionFromEvent]);
+
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // If currently editing, stop editing on click elsewhere
     if (isEditing) {
@@ -632,6 +716,9 @@ export function MessageCanvas({
     const field = findFieldAtPosition(pos.x, pos.y);
     
     if (field) {
+      mouseDragMovedRef.current = false;
+      mouseDragFieldRef.current = field.id;
+      mouseDragOffsetRef.current = { x: pos.x - field.x, y: pos.y - field.y };
       setIsDragging(true);
       setDragFieldId(field.id);
       setDragOffset({ x: pos.x - field.x, y: pos.y - field.y });
@@ -650,68 +737,6 @@ export function MessageCanvas({
     if (field) {
       startEditing(field.id, pos.x);
       e.preventDefault();
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging || dragFieldId === null) return;
-    
-    const draggedField = fields.find(f => f.id === dragFieldId);
-    if (!draggedField) return;
-    
-    const fontInfo = getFontInfo(draggedField.fontSize);
-    const pos = getMousePosition(e);
-    let newX = pos.x - dragOffset.x;
-    let newY = pos.y - dragOffset.y;
-    
-    // Clamp to valid area - prevent dropping off top (blocked rows) or bottom (past row 32)
-    newX = Math.max(0, newX);
-    newY = Math.max(blockedRows, newY);
-    newY = Math.min(TOTAL_ROWS - fontInfo.height, newY); // Prevent going past bottom
-    
-    // Snap to line if multiline template
-    if (multilineTemplate) {
-      const lineInfo = getLineForY(newY);
-      if (lineInfo) {
-        newY = lineInfo.lineY;
-      }
-    }
-    
-    setDragPosition({ x: newX, y: newY });
-  };
-
-  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging || dragFieldId === null) return;
-    
-    const draggedField = fields.find(f => f.id === dragFieldId);
-    if (draggedField && onFieldMove) {
-      const fontInfo = getFontInfo(draggedField.fontSize);
-      
-      // Check if font fits in the target line
-      if (multilineTemplate) {
-        const lineInfo = getLineForY(dragPosition.y);
-        if (lineInfo && fontInfo.height > lineInfo.lineHeight) {
-          onFieldError?.(dragFieldId, `Font "${fontInfo.height}px" is too tall for this line (max ${lineInfo.lineHeight}px)`);
-          // Reset to original position
-          setIsDragging(false);
-          setDragFieldId(null);
-          return;
-        } else {
-          onFieldError?.(dragFieldId, null); // Clear error
-        }
-      }
-      
-      onFieldMove(dragFieldId, dragPosition.x, dragPosition.y);
-    }
-    
-    setIsDragging(false);
-    setDragFieldId(null);
-  };
-
-  const handleMouseLeave = () => {
-    if (isDragging) {
-      setIsDragging(false);
-      setDragFieldId(null);
     }
   };
 
@@ -896,9 +921,6 @@ export function MessageCanvas({
             height={TOTAL_ROWS * DOT_SIZE}
             tabIndex={0}
             onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
             onDoubleClick={handleDoubleClick}
             onKeyDown={handleKeyDown}
             onTouchStart={handleTouchStart}
