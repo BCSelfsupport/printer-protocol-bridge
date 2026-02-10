@@ -37,14 +37,14 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
       <div className="flex items-center justify-between px-2 md:px-4 py-2 min-w-max">
         <div className="flex items-center gap-2 flex-shrink-0">
           
-          <div className="flex items-baseline">
+          <div className="flex items-start">
             <span className="text-xl md:text-3xl font-bold italic text-blue-600">
               Code
             </span>
             <span className="text-xl md:text-3xl font-bold italic text-emerald-500">
               Sync
             </span>
-            <span className="text-[10px] md:text-sm font-normal text-muted-foreground align-top ml-0.5">™</span>
+            <span className="text-[8px] md:text-xs font-normal text-muted-foreground mt-0.5 ml-0.5 leading-none">™</span>
           </div>
           <div className="px-1.5 md:px-2 py-0.5 bg-gradient-to-r from-blue-600 to-emerald-500 rounded text-[8px] md:text-[10px] font-bold text-white uppercase tracking-wider">
             Pro
