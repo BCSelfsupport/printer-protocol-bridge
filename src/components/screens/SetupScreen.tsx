@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Calendar, Clock, Send, ChevronUp, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { ProgramDateCodesScreen } from './ProgramDateCodesScreen';
+import { ProgramTimeCodesScreen } from './ProgramTimeCodesScreen';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -97,7 +98,7 @@ export function SetupScreen({ onHome, onSendCommand }: SetupScreenProps) {
   const [dateFormat, setDateFormat] = useState<DateFormat>('MMDDYYYY');
   const [weekStart, setWeekStart] = useState<WeekStart>('ISO Week Date');
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [subScreen, setSubScreen] = useState<'dateCodes' | null>(null);
+  const [subScreen, setSubScreen] = useState<'dateCodes' | 'timeCodes' | null>(null);
 
   // Live clock
   useEffect(() => {
@@ -165,6 +166,9 @@ export function SetupScreen({ onHome, onSendCommand }: SetupScreenProps) {
   // Sub-screen routing
   if (subScreen === 'dateCodes') {
     return <ProgramDateCodesScreen onBack={() => setSubScreen(null)} />;
+  }
+  if (subScreen === 'timeCodes') {
+    return <ProgramTimeCodesScreen onBack={() => setSubScreen(null)} />;
   }
 
   return (
@@ -275,12 +279,16 @@ export function SetupScreen({ onHome, onSendCommand }: SetupScreenProps) {
             <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </button>
 
-          <SetupRow
-            label="Program Time Codes"
-            value="—"
-            icon={<ChevronRight className="w-5 h-5" />}
-            className="opacity-60"
-          />
+          <button
+            onClick={() => setSubScreen('timeCodes')}
+            className="bg-card rounded-lg p-4 flex items-center justify-between border border-border min-h-[72px] w-full text-left hover:bg-accent/50 transition-colors"
+          >
+            <div>
+              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Program Time Codes</div>
+              <div className="text-lg font-semibold text-foreground">Configure</div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </button>
 
           {/* Live clock display */}
           <div className="md:col-span-2 bg-card rounded-lg p-4 border border-border text-center">
