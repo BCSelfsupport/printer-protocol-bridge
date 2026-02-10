@@ -335,6 +335,10 @@ class PrinterEmulator {
         response = this.cmdShowTemperature();
       } else if (trimmedCommand.startsWith('^SD')) {
         response = this.cmdShowDate();
+      } else if (trimmedCommand.startsWith('^DS')) {
+        response = this.cmdSetDate(trimmedCommand);
+      } else if (trimmedCommand.startsWith('^TS')) {
+        response = this.cmdSetTime(trimmedCommand);
       } else if (trimmedCommand.startsWith('^DA')) {
         response = this.cmdDelayAdjust(trimmedCommand);
       } else if (trimmedCommand.startsWith('^DR')) {
@@ -538,6 +542,26 @@ class PrinterEmulator {
   private cmdShowDate(): string {
     const now = new Date();
     return now.toLocaleString();
+  }
+
+  private cmdSetDate(cmd: string): string {
+    // ^DS MM/DD/YYYY
+    const match = cmd.match(/\^DS\s+(\d{2}\/\d{2}\/\d{4})/);
+    if (match) {
+      console.log('[Emulator] Date set to:', match[1]);
+      return `Date set to ${match[1]}`;
+    }
+    return 'ERR: Invalid date format (use MM/DD/YYYY)';
+  }
+
+  private cmdSetTime(cmd: string): string {
+    // ^TS HH:MM:SS
+    const match = cmd.match(/\^TS\s+([\d:]+)/);
+    if (match) {
+      console.log('[Emulator] Time set to:', match[1]);
+      return `Time set to ${match[1]}`;
+    }
+    return 'ERR: Invalid time format (use HH:MM:SS)';
   }
 
   private cmdDelayAdjust(cmd: string): string {
