@@ -47,7 +47,7 @@ function PulseRing({ x, y, delay }: { x: number; y: number; delay: number }) {
   );
 }
 
-export function SplashScreen({ onComplete, minimumDuration = 3000 }: SplashScreenProps) {
+export function SplashScreen({ onComplete, minimumDuration = 4000 }: SplashScreenProps) {
   const [fadeOut, setFadeOut] = useState(false);
   const [showBrand, setShowBrand] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
