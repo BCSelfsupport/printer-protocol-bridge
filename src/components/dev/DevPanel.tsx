@@ -207,14 +207,24 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
       </button>
 
       {/* Panel */}
-      <div
-        className={cn(
-          "fixed right-0 top-0 h-full w-80 z-40",
-          "bg-white border-l-2 border-border shadow-xl",
-          "transform transition-transform duration-300 ease-in-out",
-          isOpen ? "translate-x-0" : "translate-x-full"
-        )}
-      >
+      {isOpen && (
+        <div className="fixed inset-0 z-40">
+          {/* Backdrop */}
+          <button
+            type="button"
+            aria-label="Close developer panel"
+            onClick={onToggle}
+            className="absolute inset-0 bg-background/60"
+          />
+
+          {/* Drawer */}
+          <div
+            className={cn(
+              "absolute right-0 top-0 h-full w-80",
+              "bg-white border-l-2 border-border shadow-xl"
+            )}
+          >
+
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="p-4 border-b border-border">
@@ -795,6 +805,8 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
           </div>
         </div>
       </div>
+    </div>
+  )}
     </>
   );
 }
