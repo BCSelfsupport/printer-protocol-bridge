@@ -222,10 +222,11 @@ export function PrintersScreen({
   }, [printers]);
 
   // Compute slave count per master
+  // Count only AVAILABLE slaves per master (matches actual sync behavior)
   const slaveCountMap = useMemo(() => {
     const map = new Map<number, number>();
     printers.forEach(p => {
-      if (p.role === 'slave' && p.masterId !== undefined) {
+      if (p.role === 'slave' && p.masterId !== undefined && p.isAvailable) {
         map.set(p.masterId, (map.get(p.masterId) ?? 0) + 1);
       }
     });

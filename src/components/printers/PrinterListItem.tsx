@@ -166,7 +166,7 @@ export function PrinterListItem({
             {printer.currentMessage && (
               <div className={`flex items-center gap-2 mt-1.5 text-sm ${subTextColor}`}>
                 <FileText className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate font-medium">{printer.currentMessage}</span>
+                <span className="font-medium break-all">{printer.currentMessage}</span>
                 {printer.printCount !== undefined && (
                   <span className="flex-shrink-0">
                     PRINTS: <span className="font-semibold">{printer.printCount.toString().padStart(7, '0')}</span>
@@ -311,7 +311,7 @@ export function PrinterListItem({
           {printer.currentMessage && (
             <div className={`flex items-center gap-2 mt-1 text-[10px] ${subTextColor}`}>
               <FileText className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate font-medium">{printer.currentMessage}</span>
+              <span className="font-medium break-all">{printer.currentMessage}</span>
               {printer.printCount !== undefined && (
                 <span className="font-semibold flex-shrink-0">
                   #{printer.printCount.toLocaleString()}
