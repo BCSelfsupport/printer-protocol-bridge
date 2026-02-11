@@ -368,12 +368,15 @@ function calculateRequiredWidth(messageContent: MessageDetails | undefined, mess
 
   // Fallback path: message string with time/date on right
   if (message) {
+    const upperMsg = message.toUpperCase();
+    const isSystem = upperMsg === 'BESTCODE' || upperMsg === 'BESTCODE-AUTO';
+    const displayText = isSystem ? 'BC-GEN2' : message;
     const mainFontInfo = getFontInfo('Standard16High');
     const smallFontInfo = getFontInfo('Standard7High');
     const padding = 10;
     
     // Calculate message text width
-    const messageWidth = message.length * (mainFontInfo.charWidth + 1) * dotSize;
+    const messageWidth = displayText.length * (mainFontInfo.charWidth + 1) * dotSize;
     
     // Time string is typically "HH:MM:SS" = 8 chars, date is "MM/DD/YY" = 8 chars
     const timeWidth = 8 * (smallFontInfo.charWidth + 1) * dotSize;
@@ -495,6 +498,11 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
       // Home preview only: shift everything up by 1 dot row to avoid bottom-row clipping on some devices.
       const previewYOffsetDots = 1;
 
+      // System messages use known default content from the printer
+      const upperMessage = message.toUpperCase();
+      const isSystemMessage = upperMessage === 'BESTCODE' || upperMessage === 'BESTCODE-AUTO';
+      const displayText = isSystemMessage ? 'BC-GEN2' : message;
+
       const mainFontName = 'Standard16High';
       const mainFontInfo = getFontInfo(mainFontName);
 
@@ -502,7 +510,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
       const mainY = mainYDots * effectiveDotSize;
       const padding = 10;
 
-      renderText(ctx, message, padding, mainY, mainFontName, effectiveDotSize);
+      renderText(ctx, displayText, padding, mainY, mainFontName, effectiveDotSize);
 
       const time = printerTime ?? new Date();
       const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
