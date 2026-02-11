@@ -112,6 +112,8 @@ export function usePrinterConnection() {
             isAvailable: true,
             status: sim.status,
             hasActiveErrors: hasErrors(state?.inkLevel, state?.makeupLevel),
+            inkLevel: state?.inkLevel as Printer['inkLevel'],
+            makeupLevel: state?.makeupLevel as Printer['makeupLevel'],
           });
         });
 
@@ -275,12 +277,16 @@ export function usePrinterConnection() {
     const hvOn = parsed.printStatus === 'Ready';
     console.log('[handleServiceResponse] Parsed ready state (printStatus):', parsed.printStatus, '-> hvOn:', hvOn);
 
-    // Sync the printer's status in the list with the HV state
+    // Sync the printer's status in the list with the HV state + fluid levels
+    const inkLevelCard = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['inkLevel'];
+    const makeupLevelCard = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['makeupLevel'];
     if (connectedPrinterId) {
       updatePrinterStatus(connectedPrinterId, {
         isAvailable: true,
         status: hvOn ? 'ready' : 'not_ready',
-        hasActiveErrors: false,
+        hasActiveErrors: parsed.errorActive ?? false,
+        inkLevel: inkLevelCard,
+        makeupLevel: makeupLevelCard,
       });
     }
 
@@ -387,11 +393,15 @@ export function usePrinterConnection() {
           // Per v2.0 protocol, HVDeflection is the authoritative HV indicator
           const hvOn = parsed.hvDeflection ?? false;
           
+          const inkLevelQ = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['inkLevel'];
+          const makeupLevelQ = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['makeupLevel'];
           // Update the printer list status so Networking Config Screen reflects real state
           updatePrinterStatus(printer.id, {
             isAvailable: true,
             status: hvOn ? 'ready' : 'not_ready',
-            hasActiveErrors: false,
+            hasActiveErrors: parsed.errorActive ?? false,
+            inkLevel: inkLevelQ,
+            makeupLevel: makeupLevelQ,
           });
           
           // Map parsed levels to status-compatible types

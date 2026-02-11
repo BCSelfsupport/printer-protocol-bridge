@@ -236,7 +236,7 @@ export function usePrinterStorage() {
     ));
   }, []);
 
-  const updatePrinterStatus = useCallback((printerId: number, status: Pick<Printer, 'isAvailable' | 'status' | 'hasActiveErrors'>) => {
+  const updatePrinterStatus = useCallback((printerId: number, status: Pick<Printer, 'isAvailable' | 'status' | 'hasActiveErrors'> & Partial<Pick<Printer, 'inkLevel' | 'makeupLevel' | 'currentMessage' | 'printCount'>>) => {
     setPrinters(prev => prev.map(p => 
       p.id === printerId ? { ...p, ...status } : p
     ));
