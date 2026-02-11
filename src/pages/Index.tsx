@@ -174,6 +174,7 @@ const Index = () => {
         return editingMessage ? (
           <EditMessageScreen
             messageName={editingMessage.name}
+            printerTime={connectionState.status?.printerTime}
             onSave={async (details: MessageDetails, isNew?: boolean) => {
               console.log('Save message:', details, 'isNew:', isNew);
               const targetName = isNew ? details.name : editingMessage.name;

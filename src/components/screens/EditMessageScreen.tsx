@@ -111,6 +111,7 @@ interface EditMessageScreenProps {
   onSave: (message: MessageDetails, isNew?: boolean) => void;
   onCancel: () => void;
   onGetMessageDetails?: (name: string) => Promise<MessageDetails | null>;
+  printerTime?: Date | null;
 }
 
 export function EditMessageScreen({
@@ -118,6 +119,7 @@ export function EditMessageScreen({
   onSave,
   onCancel,
   onGetMessageDetails,
+  printerTime,
 }: EditMessageScreenProps) {
   const [message, setMessage] = useState<MessageDetails>({
     name: messageName,
@@ -328,9 +330,12 @@ export function EditMessageScreen({
     return FONT_SIZES.filter(fs => fs.height <= message.height);
   };
 
+  // Helper to get current time source (printer time if synced, otherwise local)
+  const getCurrentTime = () => printerTime ?? new Date();
+
   // Helper to format time based on format string
   const formatTimeValue = (format: string): string => {
-    const now = new Date();
+    const now = getCurrentTime();
     const hours = now.getHours().toString().padStart(2, '0');
     const minutes = now.getMinutes().toString().padStart(2, '0');
     const seconds = now.getSeconds().toString().padStart(2, '0');
@@ -348,7 +353,7 @@ export function EditMessageScreen({
 
   // Helper to format date based on format string
   const formatDateValue = (format: string, expiryDays: number = 0): string => {
-    const now = new Date();
+    const now = getCurrentTime();
     // Add expiry days if specified
     if (expiryDays > 0) {
       now.setDate(now.getDate() + expiryDays);
@@ -380,7 +385,7 @@ export function EditMessageScreen({
 
   // Helper to get specific date code value
   const getDateCodeValue = (codeType: string, expiryDays: number = 0): string => {
-    const now = new Date();
+    const now = getCurrentTime();
     if (expiryDays > 0) {
       now.setDate(now.getDate() + expiryDays);
     }
@@ -435,11 +440,11 @@ export function EditMessageScreen({
     if (fieldType === 'time' && format) {
       fieldData = formatTimeValue(format);
     } else if (fieldType === 'program_hour') {
-      fieldData = new Date().getHours().toString().padStart(2, '0');
+      fieldData = getCurrentTime().getHours().toString().padStart(2, '0');
     } else if (fieldType === 'program_minute') {
-      fieldData = new Date().getMinutes().toString().padStart(2, '0');
+      fieldData = getCurrentTime().getMinutes().toString().padStart(2, '0');
     } else if (fieldType === 'program_second') {
-      fieldData = new Date().getSeconds().toString().padStart(2, '0');
+      fieldData = getCurrentTime().getSeconds().toString().padStart(2, '0');
     } else if (fieldType.startsWith('date_')) {
       // Parse date field type: date_normal, date_expiry, date_normal_yyyy, etc.
       const parts = fieldType.split('_');
