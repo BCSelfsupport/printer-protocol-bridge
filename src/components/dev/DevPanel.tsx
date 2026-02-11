@@ -21,7 +21,12 @@ import {
   List,
   Palette,
   Upload,
-  Loader2
+  Loader2,
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ExternalLink
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
@@ -29,6 +34,19 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+
+function getTimeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay}d ago`;
+}
 
 interface DevPanelProps {
   isOpen: boolean;
@@ -43,6 +61,25 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [buildTriggering, setBuildTriggering] = useState(false);
   const [buildResult, setBuildResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [buildRuns, setBuildRuns] = useState<any[]>([]);
+  const [buildRunsLoading, setBuildRunsLoading] = useState(false);
+
+  const fetchBuildStatus = async () => {
+    setBuildRunsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('github-build-status');
+      if (error) throw error;
+      setBuildRuns(data?.runs || []);
+    } catch (err) {
+      console.error('Failed to fetch build status:', err);
+    } finally {
+      setBuildRunsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBuildStatus();
+  }, []);
 
   const handleTriggerBuild = async () => {
     setBuildTriggering(true);
@@ -51,6 +88,8 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
       const { data, error } = await supabase.functions.invoke('trigger-build');
       if (error) throw error;
       setBuildResult({ success: true, message: 'Build triggered! Check GitHub Actions.' });
+      // Auto-refresh build status after a short delay
+      setTimeout(() => fetchBuildStatus(), 3000);
     } catch (err: any) {
       setBuildResult({ success: false, message: err.message || 'Failed to trigger build' });
     } finally {
@@ -644,8 +683,75 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
             </TabsContent>
           </Tabs>
 
-          {/* Push Update & Footer */}
+          {/* Build Status & Push Update Footer */}
           <div className="p-3 border-t border-gray-200 space-y-2">
+            {/* Build Runs */}
+            <div className="bg-gray-50 rounded-lg border border-gray-200 p-2">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Build Status</h4>
+                <button
+                  onClick={fetchBuildStatus}
+                  disabled={buildRunsLoading}
+                  className="p-1 rounded hover:bg-gray-200 transition-colors"
+                  title="Refresh"
+                >
+                  <RefreshCw className={cn("w-3 h-3 text-gray-500", buildRunsLoading && "animate-spin")} />
+                </button>
+              </div>
+              {buildRuns.length === 0 && !buildRunsLoading && (
+                <div className="text-[10px] text-gray-400 text-center py-2">No recent builds</div>
+              )}
+              {buildRunsLoading && buildRuns.length === 0 && (
+                <div className="text-[10px] text-gray-400 text-center py-2">Loading...</div>
+              )}
+              <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                {buildRuns.map((run) => {
+                  const isRunning = run.status === 'in_progress' || run.status === 'queued';
+                  const isSuccess = run.conclusion === 'success';
+                  const isFailed = run.conclusion === 'failure' || run.conclusion === 'cancelled';
+                  const timeAgo = getTimeAgo(run.created_at);
+
+                  return (
+                    <div key={run.id} className="flex items-center gap-2 text-[10px]">
+                      {isRunning ? (
+                        <Clock className="w-3 h-3 text-yellow-500 animate-pulse flex-shrink-0" />
+                      ) : isSuccess ? (
+                        <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
+                      ) : isFailed ? (
+                        <XCircle className="w-3 h-3 text-red-500 flex-shrink-0" />
+                      ) : (
+                        <Clock className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium text-gray-700">#{run.run_number}</span>
+                          <span className={cn(
+                            "px-1 rounded text-[9px] font-medium",
+                            isRunning ? "bg-yellow-100 text-yellow-700" :
+                            isSuccess ? "bg-green-100 text-green-700" :
+                            isFailed ? "bg-red-100 text-red-700" :
+                            "bg-gray-100 text-gray-600"
+                          )}>
+                            {isRunning ? run.status : run.conclusion || run.status}
+                          </span>
+                          <span className="text-gray-400 ml-auto">{timeAgo}</span>
+                        </div>
+                      </div>
+                      <a 
+                        href={run.html_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="p-0.5 hover:bg-gray-200 rounded"
+                        title="View on GitHub"
+                      >
+                        <ExternalLink className="w-2.5 h-2.5 text-gray-400" />
+                      </a>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             <Button
               variant="default"
               size="sm"
