@@ -42,6 +42,10 @@ export interface MessageField {
   gap?: number;
   rotation?: FieldSettings['rotation'];
   autoNumerals?: number;
+  // AutoCode metadata for live refresh
+  autoCodeFormat?: string;       // e.g. 'HH:MM:SS', 'MM/DD/YY'
+  autoCodeFieldType?: string;    // e.g. 'time', 'date_normal', 'program_hour'
+  autoCodeExpiryDays?: number;   // expiry offset
 }
 
 export interface MessageDetails {
@@ -187,6 +191,69 @@ export function EditMessageScreen({
     el.addEventListener('touchmove', onTouchMove, { passive: false });
     return () => el.removeEventListener('touchmove', onTouchMove);
   }, [isCanvasScrollLocked]);
+
+  // Live-refresh time and date fields every second using printer time
+  useEffect(() => {
+    const hasAutoCodeFields = message.fields.some(
+      f => f.type === 'time' || f.type === 'date'
+    );
+    if (!hasAutoCodeFields) return;
+
+    const interval = setInterval(() => {
+      setMessage((prev) => ({
+        ...prev,
+        fields: prev.fields.map((f) => {
+          if (!f.autoCodeFieldType) return f;
+          const now = printerTime ?? new Date();
+          let newData = f.data;
+
+          if (f.autoCodeFieldType === 'time' && f.autoCodeFormat) {
+            const h = now.getHours().toString().padStart(2, '0');
+            const m = now.getMinutes().toString().padStart(2, '0');
+            const s = now.getSeconds().toString().padStart(2, '0');
+            switch (f.autoCodeFormat) {
+              case 'HH:MM:SS': newData = `${h}:${m}:${s}`; break;
+              case 'HH:MM': newData = `${h}:${m}`; break;
+              case 'HH': newData = h; break;
+              case 'MM:SS': newData = `${m}:${s}`; break;
+              case 'MM': newData = m; break;
+              case 'SS': newData = s; break;
+              default: newData = `${h}:${m}:${s}`;
+            }
+          } else if (f.autoCodeFieldType === 'program_hour') {
+            newData = now.getHours().toString().padStart(2, '0');
+          } else if (f.autoCodeFieldType === 'program_minute') {
+            newData = now.getMinutes().toString().padStart(2, '0');
+          } else if (f.autoCodeFieldType === 'program_second') {
+            newData = now.getSeconds().toString().padStart(2, '0');
+          } else if (f.autoCodeFieldType.startsWith('date_') && f.autoCodeFormat) {
+            const d = new Date(now.getTime());
+            if (f.autoCodeExpiryDays) d.setDate(d.getDate() + f.autoCodeExpiryDays);
+            const day = d.getDate().toString().padStart(2, '0');
+            const month = (d.getMonth() + 1).toString().padStart(2, '0');
+            const yearShort = d.getFullYear().toString().slice(-2);
+            const cleanFmt = f.autoCodeFormat.split('|')[0];
+            switch (cleanFmt) {
+              case 'MM/DD/YY': newData = `${month}/${day}/${yearShort}`; break;
+              case 'DD/MM/YY': newData = `${day}/${month}/${yearShort}`; break;
+              case 'YY/MM/DD': newData = `${yearShort}/${month}/${day}`; break;
+              case 'MM-DD-YY': newData = `${month}-${day}-${yearShort}`; break;
+              case 'DD-MM-YY': newData = `${day}-${month}-${yearShort}`; break;
+              case 'YY-MM-DD': newData = `${yearShort}-${month}-${day}`; break;
+              case 'MMDDYY': newData = `${month}${day}${yearShort}`; break;
+              case 'DDMMYY': newData = `${day}${month}${yearShort}`; break;
+              case 'YYMMDD': newData = `${yearShort}${month}${day}`; break;
+              default: newData = `${month}/${day}/${yearShort}`;
+            }
+          }
+
+          return newData !== f.data ? { ...f, data: newData } : f;
+        }),
+      }));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [message.fields.length, printerTime]);
 
   const selectedField = message.fields.find((f) => f.id === selectedFieldId);
 
@@ -460,15 +527,38 @@ export function EditMessageScreen({
       }
     }
     
+    // Calculate Y position: distribute fields vertically if font is shorter than template
+    const fontHeight = Math.min(16, message.height);
+    const blockedRows = 32 - message.height;
+    let newY = blockedRows; // default: top of template area
+    
+    // For single-line templates, if there are existing fields and font is shorter than template,
+    // try to stack vertically
+    if (!message.templateValue?.startsWith('multi-') && message.fields.length > 0) {
+      // Find the lowest occupied Y + height
+      const occupiedBottom = Math.max(...message.fields.map(f => f.y + f.height));
+      if (occupiedBottom + fontHeight <= 32) {
+        // Room below existing fields
+        newY = occupiedBottom;
+      } else {
+        // No room below, use same Y as first field
+        newY = message.fields[0]?.y ?? blockedRows;
+      }
+    }
+    
     const newField: MessageField = {
       id: newId,
       type: fieldType === 'time' || fieldType.startsWith('program_') ? 'time' : fieldType as MessageField['type'],
       data: fieldData,
       x: message.fields.length * 50,
-      y: 32 - message.height,
+      y: newY,
       width: 50,
-      height: Math.min(16, message.height),
+      height: fontHeight,
       fontSize: 'Standard16High',
+      // Store AutoCode metadata for live refresh
+      autoCodeFormat: format,
+      autoCodeFieldType: fieldType,
+      autoCodeExpiryDays: expiryDays || undefined,
     };
     setMessage((prev) => {
       const updatedFields = [...prev.fields, newField];
