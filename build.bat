@@ -58,14 +58,11 @@ if errorlevel 1 (
 )
 echo.
 
-REM Step 4: Convert PNG icon to ICO format
-echo [4/5] Converting icon to ICO...
+REM Step 4: Ensure icon is ready
+echo [4/5] Preparing icon...
 if not exist "electron\resources" mkdir "electron\resources"
-call npx png-to-ico public/codesync-icon.png > electron/resources/icon.ico
-if errorlevel 1 (
-    echo WARNING: ICO conversion failed. Trying alternative...
-    copy public\codesync-icon.png electron\resources\icon.png >nul 2>&1
-)
+copy /Y public\codesync-icon.png electron\resources\icon.png >nul 2>&1
+echo [OK] Icon ready
 echo.
 
 REM Step 5: Package and optionally publish
