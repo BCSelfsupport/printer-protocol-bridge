@@ -178,20 +178,19 @@ const Index = () => {
               console.log('Save message:', details, 'isNew:', isNew);
               const targetName = isNew ? details.name : editingMessage.name;
               
-              if (isNew) {
-                // Save As - send ^NM command to create new message on printer
-                console.log('Creating new message with name:', details.name);
-                const success = await createMessageOnPrinter(details.name);
-                if (!success) {
-                  console.error('Failed to create message on printer');
-                } else {
-                  // Now save the field content
-                  await saveMessageContent(details.name, details.fields);
-                }
-              } else {
-                // Regular save - update existing message content
-                console.log('Updating existing message:', editingMessage.name);
-                await saveMessageContent(editingMessage.name, details.fields);
+              // Send full ^NM command with field subcommands to printer
+              // For existing messages, saveMessageContent will ^DM first then ^NM
+              console.log(isNew ? 'Creating new message:' : 'Updating message:', targetName);
+              const success = await saveMessageContent(
+                targetName,
+                details.fields,
+                details.templateValue,
+                isNew,
+              );
+              if (!success) {
+                console.error('Failed to save message on printer');
+              }
+              if (!isNew) {
                 updateMessage(editingMessage.id, details.name);
               }
               
@@ -231,12 +230,7 @@ const Index = () => {
               setCurrentScreen('editMessage');
             }}
             onNew={(name: string) => {
-              // Create a new message on the printer via ^NM and go to edit
-              createMessageOnPrinter(name).then(success => {
-                if (!success) {
-                  console.error('Failed to create message on printer via ^NM');
-                }
-              });
+              // Just create locally - ^NM with fields will be sent on Save
               addMessage(name);
               const newId = Math.max(0, ...connectionState.messages.map(m => m.id)) + 1;
               setEditingMessage({ id: newId, name });

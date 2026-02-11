@@ -1069,53 +1069,84 @@ export function usePrinterConnection() {
     });
   }, []);
 
-  // Create a new message on the printer via ^NM command
-  const createMessageOnPrinter = useCallback(async (name: string): Promise<boolean> => {
-    console.log('[createMessageOnPrinter] Called with name:', name);
-    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
-      console.log('[createMessageOnPrinter] Not connected');
-      return false;
-    }
-    
-    const printer = connectionState.connectedPrinter;
-    const command = `^NM ${name}`;
-    
-    if (shouldUseEmulator()) {
-      console.log('[createMessageOnPrinter] Using emulator');
-      const result = printerEmulator.processCommand(command);
-      console.log('[createMessageOnPrinter] Emulator result:', result);
-      
-      if (result.success) {
-        // Add to local state
-        addMessage(name);
-        return true;
-      }
-      return false;
-    } else if (isElectron && window.electronAPI) {
-      try {
-        console.log('[createMessageOnPrinter] Sending ^NM command:', command);
-        const result = await window.electronAPI.printer.sendCommand(printer.id, command);
-        console.log('[createMessageOnPrinter] Result:', JSON.stringify(result));
-        
-        if (result?.success) {
-          addMessage(name);
-          return true;
-        }
-        return false;
-      } catch (e) {
-        console.error('[createMessageOnPrinter] Failed to send ^NM command:', e);
-        return false;
-      }
-    } else {
-      // Web preview mock
-      console.log('[createMessageOnPrinter] Web preview mock');
-      addMessage(name);
-      return true;
-    }
-  }, [connectionState.isConnected, connectionState.connectedPrinter, addMessage]);
+  // Template value to protocol template code mapping (per v2.6 spec section 4.2.1)
+  const templateToProtocolCode = (templateValue?: string): number => {
+    const map: Record<string, number> = {
+      '5': 0, '7': 1, '9': 2, '12': 3, '16': 4, '19': 5, '25': 6, '32': 7,
+      '5s': 20, '7s': 21,
+      'multi-2x7': 8, 'multi-2x7-2': 8, 'multi-2x7s': 23, 'multi-2x7s-2': 23,
+      'multi-2x9': 9, 'multi-2x12': 10, 'multi-2x5': 17,
+      'multi-3x7': 12, 'multi-3x9': 13,
+      'multi-4x7': 14, 'multi-4x5': 15, 'multi-4x5h': 15, 'multi-4x5g': 15, 'multi-4x5f': 15,
+      'multi-5x5': 15, 'multi-5x5-2': 15,
+    };
+    return map[templateValue || '16'] ?? 4; // Default to 1x16
+  };
 
-  // Save message content (fields) to the printer
-  // Uses ^CF (Change Field) command: ^CF <msg>,<field>,<type>,<x>,<y>,<font>,<data>
+  // Font size name to protocol font code (per v2.6 spec section 4.2.5)
+  const fontToProtocolCode = (fontSize: string): number => {
+    const map: Record<string, number> = {
+      'Standard5High': 0,
+      'Standard7High': 1,
+      'Narrow7High': 2,
+      'Standard9High': 3,
+      'Standard12High': 4,
+      'Standard16High': 5,
+      'Standard19High': 6,
+      'Standard25High': 7,
+      'Standard32High': 8,
+    };
+    return map[fontSize] ?? 5; // Default to 16-high
+  };
+
+  // Build field subcommand for ^NM (per v2.6 spec section 5.33.2)
+  const buildFieldSubcommand = (field: {
+    id: number;
+    type: string;
+    data: string;
+    x: number;
+    y: number;
+    fontSize: string;
+    bold?: number;
+    gap?: number;
+  }, fieldNum: number): string => {
+    const fontCode = fontToProtocolCode(field.fontSize);
+    
+    switch (field.type) {
+      case 'text':
+      case 'userdefine':
+        // ^AT n; x; y; s; data
+        return `^AT${fieldNum};${field.x};${field.y};${fontCode};${field.data}`;
+      case 'date':
+        // ^AD n; x; y; s; d (default to date type 12 = MM/DD/YY with delimiters)
+        return `^AD${fieldNum};${field.x};${field.y};${fontCode};12`;
+      case 'time':
+        // ^AH n; x; y; s; t (default to time type 7 = HH:MM:SS with delimiters)
+        return `^AH${fieldNum};${field.x};${field.y};${fontCode};7`;
+      case 'counter':
+        // ^AC n; x; y; s; c (default to print counter = 0)
+        return `^AC${fieldNum};${field.x};${field.y};${fontCode};0`;
+      case 'barcode':
+        // ^AB n; x; y; f; t; m; r; data (default Code128, auto checksum, human readable)
+        return `^AB${fieldNum};${field.x};${field.y};${fontCode};6;0;1;${field.data}`;
+      case 'logo':
+        // ^AL n; x; y; logoname
+        return `^AL${fieldNum};${field.x};${field.y};${field.data}`;
+      default:
+        return `^AT${fieldNum};${field.x};${field.y};${fontCode};${field.data}`;
+    }
+  };
+
+  // Create a new message locally (no protocol command sent yet - fields are needed for ^NM)
+  const createMessageOnPrinter = useCallback(async (name: string): Promise<boolean> => {
+    console.log('[createMessageOnPrinter] Adding message locally:', name);
+    addMessage(name);
+    return true;
+  }, [addMessage]);
+
+  // Save message content to the printer using proper ^NM command with field subcommands
+  // Per BestCode v2.6 protocol: ^NM t;s;o;p;name^AT1;x;y;s;data^AT2;x;y;s;data...
+  // For existing messages: ^DM name first, then ^NM to recreate
   const saveMessageContent = useCallback(async (
     messageName: string,
     fields: Array<{
@@ -1125,69 +1156,77 @@ export function usePrinterConnection() {
       x: number;
       y: number;
       fontSize: string;
-    }>
+      bold?: number;
+      gap?: number;
+    }>,
+    templateValue?: string,
+    isNew?: boolean,
   ): Promise<boolean> => {
-    console.log('[saveMessageContent] Called with:', messageName, fields);
+    console.log('[saveMessageContent] Called with:', messageName, fields, 'template:', templateValue, 'isNew:', isNew);
     if (!connectionState.isConnected || !connectionState.connectedPrinter) {
       console.log('[saveMessageContent] Not connected');
       return false;
     }
 
+    if (fields.length === 0) {
+      console.log('[saveMessageContent] No fields to save');
+      return false;
+    }
+
     const printer = connectionState.connectedPrinter;
+    const templateCode = templateToProtocolCode(templateValue);
+    
+    // Build field subcommands
+    const fieldSubcommands = fields.map((field, index) => 
+      buildFieldSubcommand(field, index + 1)
+    ).join('');
 
-    // Build commands for each field
-    // ^CF message,field_num,type,x,y,font,data
+    // Build the full ^NM command: ^NM t;s;o;p;name^AT1;...^AT2;...
+    // Speed=0 (Fast), Orientation=0 (Normal), Mode=0 (Normal) as defaults
+    const nmCommand = `^NM ${templateCode};0;0;0;${messageName}${fieldSubcommands}`;
+    
+    console.log('[saveMessageContent] ^NM command:', nmCommand);
+
+    // For existing messages, delete first then recreate
     const commands: string[] = [];
-    fields.forEach((field, index) => {
-      const fieldNum = index + 1;
-      // Map field type to printer type code
-      const typeCode = field.type === 'text' ? 'TXT' : 
-                       field.type === 'time' ? 'TIM' :
-                       field.type === 'date' ? 'DAT' :
-                       field.type === 'counter' ? 'CNT' :
-                       field.type === 'barcode' ? 'BAR' :
-                       field.type === 'logo' ? 'LOG' :
-                       'TXT';
-      
-      // Font name mapping (strip 'Standard' prefix for protocol)
-      const fontCode = field.fontSize.replace('Standard', '').replace('High', '');
-      
-      commands.push(`^CF ${messageName},${fieldNum},${typeCode},${field.x},${field.y},${fontCode},${field.data}`);
-    });
-
-    console.log('[saveMessageContent] Commands to send:', commands);
+    if (!isNew) {
+      commands.push(`^DM ${messageName}`);
+    }
+    commands.push(nmCommand);
 
     if (shouldUseEmulator()) {
       console.log('[saveMessageContent] Using emulator');
-      // Process all commands
       for (const cmd of commands) {
         const result = printerEmulator.processCommand(cmd);
         console.log('[saveMessageContent] Emulator result for', cmd, ':', result);
       }
+      // Ensure message is in local state
+      addMessage(messageName);
       return true;
     } else if (isElectron && window.electronAPI) {
       try {
-        // Send all field commands
         for (const cmd of commands) {
           console.log('[saveMessageContent] Sending:', cmd);
           const result = await window.electronAPI.printer.sendCommand(printer.id, cmd);
           console.log('[saveMessageContent] Result:', JSON.stringify(result));
-          if (!result?.success) {
+          // Don't fail on ^DM error (message might not exist yet)
+          if (!result?.success && !cmd.startsWith('^DM')) {
             console.error('[saveMessageContent] Command failed:', cmd);
             return false;
           }
         }
+        addMessage(messageName);
         return true;
       } catch (e) {
         console.error('[saveMessageContent] Failed:', e);
         return false;
       }
     } else {
-      // Web preview mock - just log
+      // Web preview mock
       console.log('[saveMessageContent] Web preview mock - commands:', commands);
       return true;
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter, addMessage]);
 
   // Update an existing message
   const updateMessage = useCallback((id: number, name: string) => {
