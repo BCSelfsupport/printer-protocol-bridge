@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2 } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link } from 'lucide-react';
 import { Printer } from '@/types/printer';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -121,6 +121,16 @@ export function PrinterListItem({
                   ACTIVE
                 </span>
               )}
+              {printer.role === 'master' && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-semibold flex items-center gap-0.5">
+                  <Crown className="w-2.5 h-2.5" /> MASTER
+                </span>
+              )}
+              {printer.role === 'slave' && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-semibold flex items-center gap-0.5">
+                  <Link className="w-2.5 h-2.5" /> SLAVE
+                </span>
+              )}
             </div>
             <div className={`text-sm font-mono truncate ${subTextColor}`}>
               {printer.ipAddress}:{printer.port}
@@ -238,6 +248,16 @@ export function PrinterListItem({
             <span className={`text-[10px] px-1.5 py-0.5 rounded bg-slate-700 ${mutedTextColor}`}>
               ID: {printer.id}
             </span>
+            {printer.role === 'master' && (
+              <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 font-semibold flex items-center gap-0.5">
+                <Crown className="w-2 h-2" /> M
+              </span>
+            )}
+            {printer.role === 'slave' && (
+              <span className="text-[9px] px-1 py-0.5 rounded bg-blue-500/20 text-blue-400 font-semibold flex items-center gap-0.5">
+                <Link className="w-2 h-2" /> S
+              </span>
+            )}
           </div>
           <div className={`text-xs font-mono ${subTextColor}`}>
             {printer.ipAddress}:{printer.port}

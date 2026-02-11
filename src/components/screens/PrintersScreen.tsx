@@ -244,7 +244,7 @@ export function PrintersScreen({
     setEditDialogOpen(true);
   };
 
-  const handleSaveEdit = (printerId: number, updates: { name: string; ipAddress: string; port: number }) => {
+  const handleSaveEdit = (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: import('@/types/printer').PrinterRole; masterId?: number }) => {
     onUpdatePrinter?.(printerId, updates);
   };
 
@@ -432,6 +432,7 @@ export function PrintersScreen({
         printer={printerToEdit}
         onSave={handleSaveEdit}
         onDelete={onRemovePrinter}
+        allPrinters={printers}
       />
 
       {/* Service Popup */}
