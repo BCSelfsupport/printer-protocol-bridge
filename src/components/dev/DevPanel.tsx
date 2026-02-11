@@ -655,6 +655,21 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                 {buildResult.message}
               </div>
             )}
+            {(() => {
+              const expiry = new Date('2026-03-01');
+              const now = new Date();
+              const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+              const isExpired = daysLeft <= 0;
+              const isWarning = daysLeft <= 30 && daysLeft > 0;
+              return (isExpired || isWarning) ? (
+                <div className={cn(
+                  "text-[10px] text-center py-1 px-2 rounded",
+                  isExpired ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"
+                )}>
+                  {isExpired ? '⚠️ GitHub token expired! Renew it.' : `⚠️ GitHub token expires in ${daysLeft} days`}
+                </div>
+              ) : null;
+            })()}
             <div className="text-[10px] text-gray-500 text-center">
               Printer Emulator v2.0 • Bestcode Protocol • Dev Mode Only
             </div>
