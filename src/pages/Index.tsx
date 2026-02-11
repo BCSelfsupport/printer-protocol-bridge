@@ -231,9 +231,13 @@ const Index = () => {
               setCurrentScreen('editMessage');
             }}
             onNew={(name: string) => {
-              // Create a new message with the given name and go to edit
+              // Create a new message on the printer via ^NM and go to edit
+              createMessageOnPrinter(name).then(success => {
+                if (!success) {
+                  console.error('Failed to create message on printer via ^NM');
+                }
+              });
               addMessage(name);
-              // Find the newly added message (will have highest ID)
               const newId = Math.max(0, ...connectionState.messages.map(m => m.id)) + 1;
               setEditingMessage({ id: newId, name });
               setCurrentScreen('editMessage');
