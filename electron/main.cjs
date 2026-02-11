@@ -51,7 +51,14 @@ function createWindow() {
 
   // Check for updates after window is ready
   mainWindow.once('ready-to-show', () => {
-    autoUpdater?.checkForUpdatesAndNotify?.();
+    console.log('[auto-updater] ready-to-show fired, isDev:', isDev, 'isPackaged:', app.isPackaged);
+    console.log('[auto-updater] autoUpdater available:', !!autoUpdater);
+    if (autoUpdater) {
+      console.log('[auto-updater] Calling checkForUpdatesAndNotify...');
+      autoUpdater.checkForUpdatesAndNotify()
+        .then((result) => console.log('[auto-updater] Check result:', JSON.stringify(result)))
+        .catch((err) => console.error('[auto-updater] Check error:', err.message));
+    }
   });
 }
 
@@ -484,11 +491,21 @@ ipcMain.handle('printer:send-command', async (event, { printerId, command }) => 
 });
 
 if (autoUpdater) {
+  autoUpdater.on('checking-for-update', () => {
+    console.log('[auto-updater] Checking for update...');
+  });
+
   autoUpdater.on('update-available', (info) => {
+    console.log('[auto-updater] Update available:', JSON.stringify(info));
     mainWindow?.webContents.send('update-available', info);
   });
 
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('[auto-updater] No update available. Current version:', app.getVersion(), 'Latest:', info?.version);
+  });
+
   autoUpdater.on('download-progress', (progress) => {
+    console.log('[auto-updater] Download progress:', Math.round(progress.percent) + '%');
     mainWindow?.webContents.send('update-download-progress', {
       percent: progress.percent,
       bytesPerSecond: progress.bytesPerSecond,
@@ -498,11 +515,12 @@ if (autoUpdater) {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
+    console.log('[auto-updater] Update downloaded:', JSON.stringify(info));
     mainWindow?.webContents.send('update-downloaded', info);
   });
 
   autoUpdater.on('error', (err) => {
-    console.error('Auto-updater error:', err);
+    console.error('[auto-updater] Error:', err.message);
   });
 }
 
