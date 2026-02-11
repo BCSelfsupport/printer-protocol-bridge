@@ -1130,8 +1130,48 @@ export function usePrinterConnection() {
           return false;
         }
         
-        // Query status after a delay to reflect new counter values
-        setTimeout(() => queryPrinterStatus(printer), 500);
+        // Query counters via ^CN after a delay to reflect new values
+        setTimeout(async () => {
+          try {
+            const cnResult = await window.electronAPI!.printer.sendCommand(printer.id, '^CN');
+            console.log('[resetCounter] ^CN result:', JSON.stringify(cnResult));
+            if (cnResult?.success && cnResult.response) {
+              const response = cnResult.response;
+              let parts: number[] = [];
+              if (response.includes('Product:')) {
+                const productMatch = response.match(/Product:(\d+)/);
+                const printMatch = response.match(/Print:(\d+)/);
+                const custom1Match = response.match(/Custom1:(\d+)/);
+                const custom2Match = response.match(/Custom2:(\d+)/);
+                const custom3Match = response.match(/Custom3:(\d+)/);
+                const custom4Match = response.match(/Custom4:(\d+)/);
+                parts = [
+                  productMatch ? parseInt(productMatch[1], 10) : 0,
+                  printMatch ? parseInt(printMatch[1], 10) : 0,
+                  custom1Match ? parseInt(custom1Match[1], 10) : 0,
+                  custom2Match ? parseInt(custom2Match[1], 10) : 0,
+                  custom3Match ? parseInt(custom3Match[1], 10) : 0,
+                  custom4Match ? parseInt(custom4Match[1], 10) : 0,
+                ];
+              } else {
+                parts = response.split(',').map((s: string) => parseInt(s.trim(), 10));
+              }
+              if (parts.length >= 6) {
+                setConnectionState(prev => ({
+                  ...prev,
+                  status: prev.status ? {
+                    ...prev.status,
+                    productCount: parts[0],
+                    printCount: parts[1],
+                    customCounters: [parts[2], parts[3], parts[4], parts[5]],
+                  } : null,
+                }));
+              }
+            }
+          } catch (e) {
+            console.error('[resetCounter] Failed to query ^CN after reset:', e);
+          }
+        }, 500);
         return true;
       } catch (e) {
         console.error('[resetCounter] Failed to send ^CC:', e);
@@ -1142,7 +1182,7 @@ export function usePrinterConnection() {
       console.log('[resetCounter] Web preview mock - would send:', command);
       return true;
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
   // Reset all counters
   const resetAllCounters = useCallback(async () => {
