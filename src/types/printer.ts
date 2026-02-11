@@ -56,6 +56,8 @@ export interface PrinterMetrics {
     gutOn: boolean;
     modOn: boolean;
   };
+  // Printer's own clock from ^SD
+  printerTime?: Date | null;
 }
 
 export interface PrintMessage {

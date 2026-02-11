@@ -120,12 +120,17 @@ export function PrinterServicePopup({
           </DialogTitle>
           <div className="flex items-center justify-between text-xs text-slate-400">
             <span className="font-mono">{printer.ipAddress}:{printer.port}</span>
-            {lastUpdated && (
+            {metrics?.printerTime ? (
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {metrics.printerTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+            ) : lastUpdated ? (
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {lastUpdated.toLocaleTimeString()}
               </span>
-            )}
+            ) : null}
           </div>
         </DialogHeader>
 

@@ -1743,6 +1743,12 @@ export function usePrinterConnection() {
         const instance = multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port);
         if (instance) {
           const result = instance.processCommand('^SU');
+          const sdResult = instance.processCommand('^SD');
+          let pTime: Date | null = null;
+          if (sdResult.success && sdResult.response) {
+            const p = new Date(sdResult.response.replace(/[^\x20-\x7E]/g, '').trim());
+            if (!isNaN(p.getTime())) pTime = p;
+          }
           if (result.success && result.response) {
             const parsed = parseStatusResponse(result.response);
             if (parsed) {
@@ -1769,6 +1775,7 @@ export function usePrinterConnection() {
                   gutOn: parsed.subsystems?.gutOn ?? false,
                   modOn: parsed.subsystems?.modOn ?? false,
                 },
+                printerTime: pTime,
               };
             }
           }
@@ -1818,6 +1825,19 @@ export function usePrinterConnection() {
         const result = await window.electronAPI.printer.sendCommand(printer.id, '^SU');
         console.log('[queryPrinterMetrics] ^SU response:', result);
 
+        // Also fetch printer time
+        let pTime: Date | null = null;
+        try {
+          const sdResult = await window.electronAPI.printer.sendCommand(printer.id, '^SD');
+          if (sdResult.success && sdResult.response) {
+            const cleaned = sdResult.response.replace(/[^\x20-\x7E]/g, '').trim();
+            const p = new Date(cleaned);
+            if (!isNaN(p.getTime())) pTime = p;
+          }
+        } catch (e2) {
+          console.error('[queryPrinterMetrics] Failed to query ^SD:', e2);
+        }
+
         if (result.success && result.response) {
           const parsed = parseStatusResponse(result.response);
           if (parsed) {
@@ -1844,6 +1864,7 @@ export function usePrinterConnection() {
                 gutOn: parsed.subsystems?.gutOn ?? false,
                 modOn: parsed.subsystems?.modOn ?? false,
               },
+              printerTime: pTime,
             };
           }
         }
