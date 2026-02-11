@@ -340,11 +340,6 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                     <button
                       onClick={() => {
                         printerEmulator.cycleInkLevel();
-                        // Also cycle on all multi-printer emulator instances
-                        multiPrinterEmulator.getEmulatedPrinters().forEach(p => {
-                          const inst = multiPrinterEmulator.getInstanceByIp(p.ipAddress, p.port);
-                          inst?.cycleInkLevel();
-                        });
                       }}
                       disabled={!emulatorEnabled}
                       className={cn(
@@ -364,10 +359,6 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                     <button
                       onClick={() => {
                         printerEmulator.cycleMakeupLevel();
-                        multiPrinterEmulator.getEmulatedPrinters().forEach(p => {
-                          const inst = multiPrinterEmulator.getInstanceByIp(p.ipAddress, p.port);
-                          inst?.cycleMakeupLevel();
-                        });
                       }}
                       disabled={!emulatorEnabled}
                       className={cn(
