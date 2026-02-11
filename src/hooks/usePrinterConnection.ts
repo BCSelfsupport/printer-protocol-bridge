@@ -1452,8 +1452,48 @@ export function usePrinterConnection() {
       console.log('[queryCounters] Emulator result:', result);
       
       if (result.success && result.response) {
-        // Parse response: "Product,Print,Custom1,Custom2,Custom3,Custom4"
-        const parts = result.response.split(',').map(s => parseInt(s.trim(), 10));
+        // Parse emulator response - could be terse format: PC[308] PrC[7] C1[10] C2[21] C3[34] C4[45]
+        // or verbose: Product Count: 308\r\nPrint Count: 7\r\n...
+        const response = result.response;
+        let parts: number[] = [];
+        
+        if (response.includes('PC[')) {
+          // Terse format from emulator: PC[x] PrC[x] C1[x] C2[x] C3[x] C4[x]
+          const pcMatch = response.match(/PC\[(\d+)\]/);
+          const prcMatch = response.match(/PrC\[(\d+)\]/);
+          const c1Match = response.match(/C1\[(\d+)\]/);
+          const c2Match = response.match(/C2\[(\d+)\]/);
+          const c3Match = response.match(/C3\[(\d+)\]/);
+          const c4Match = response.match(/C4\[(\d+)\]/);
+          parts = [
+            pcMatch ? parseInt(pcMatch[1], 10) : 0,
+            prcMatch ? parseInt(prcMatch[1], 10) : 0,
+            c1Match ? parseInt(c1Match[1], 10) : 0,
+            c2Match ? parseInt(c2Match[1], 10) : 0,
+            c3Match ? parseInt(c3Match[1], 10) : 0,
+            c4Match ? parseInt(c4Match[1], 10) : 0,
+          ];
+        } else if (response.includes('Product Count:')) {
+          // Verbose format
+          const productMatch = response.match(/Product Count:\s*(\d+)/);
+          const printMatch = response.match(/Print Count:\s*(\d+)/);
+          const c1Match = response.match(/Counter 1:\s*(\d+)/);
+          const c2Match = response.match(/Counter 2:\s*(\d+)/);
+          const c3Match = response.match(/Counter 3:\s*(\d+)/);
+          const c4Match = response.match(/Counter 4:\s*(\d+)/);
+          parts = [
+            productMatch ? parseInt(productMatch[1], 10) : 0,
+            printMatch ? parseInt(printMatch[1], 10) : 0,
+            c1Match ? parseInt(c1Match[1], 10) : 0,
+            c2Match ? parseInt(c2Match[1], 10) : 0,
+            c3Match ? parseInt(c3Match[1], 10) : 0,
+            c4Match ? parseInt(c4Match[1], 10) : 0,
+          ];
+        } else {
+          // Comma-separated fallback
+          parts = response.split(',').map((s: string) => parseInt(s.trim(), 10));
+        }
+        
         if (parts.length >= 6) {
           setConnectionState(prev => ({
             ...prev,
