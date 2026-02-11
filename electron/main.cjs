@@ -1,7 +1,16 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
 const net = require('net');
 const { execFile } = require('child_process');
 const path = require('path');
+const fs = require('fs');
+
+// Log file for debugging auto-updater in packaged builds
+const logFile = path.join(app.getPath('userData'), 'codesync-updater.log');
+function logToFile(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  try { fs.appendFileSync(logFile, line); } catch (_) {}
+  console.log(msg);
+}
 
 let mainWindow;
 
@@ -12,15 +21,20 @@ const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
 
 // Auto-updater (optional)
 let autoUpdater;
+logToFile(`[init] isDev=${!app.isPackaged ? 'true' : 'false'}, isPackaged=${app.isPackaged}, version=${app.getVersion()}`);
+logToFile(`[init] userData=${app.getPath('userData')}`);
 if (!isDev && app.isPackaged) {
   try {
-    // electron-updater is only needed for packaged production builds.
     ({ autoUpdater } = require('electron-updater'));
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.logger = { info: (m) => logToFile(`[updater-info] ${m}`), warn: (m) => logToFile(`[updater-warn] ${m}`), error: (m) => logToFile(`[updater-error] ${m}`), debug: (m) => logToFile(`[updater-debug] ${m}`) };
+    logToFile('[init] electron-updater loaded successfully');
   } catch (e) {
-    console.warn('[auto-updater] electron-updater not installed; updates disabled');
+    logToFile(`[init] electron-updater NOT available: ${e.message}`);
   }
+} else {
+  logToFile('[init] Skipping auto-updater (dev mode)');
 }
 
 function createWindow() {
@@ -51,14 +65,21 @@ function createWindow() {
 
   // Check for updates after window is ready
   mainWindow.once('ready-to-show', () => {
-    console.log('[auto-updater] ready-to-show fired, isDev:', isDev, 'isPackaged:', app.isPackaged);
-    console.log('[auto-updater] autoUpdater available:', !!autoUpdater);
+    logToFile(`[ready-to-show] isDev=${isDev}, isPackaged=${app.isPackaged}, version=${app.getVersion()}`);
+    logToFile(`[ready-to-show] autoUpdater available: ${!!autoUpdater}`);
     if (autoUpdater) {
-      console.log('[auto-updater] Calling checkForUpdatesAndNotify...');
+      logToFile('[ready-to-show] Calling checkForUpdatesAndNotify...');
       autoUpdater.checkForUpdatesAndNotify()
-        .then((result) => console.log('[auto-updater] Check result:', JSON.stringify(result)))
-        .catch((err) => console.error('[auto-updater] Check error:', err.message));
+        .then((result) => logToFile(`[ready-to-show] Check result: ${JSON.stringify(result)}`))
+        .catch((err) => logToFile(`[ready-to-show] Check error: ${err.message}`));
     }
+
+    // Allow Ctrl+Shift+I to open DevTools in packaged builds
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      if (input.control && input.shift && input.key === 'I') {
+        mainWindow.webContents.toggleDevTools();
+      }
+    });
   });
 }
 
@@ -492,20 +513,20 @@ ipcMain.handle('printer:send-command', async (event, { printerId, command }) => 
 
 if (autoUpdater) {
   autoUpdater.on('checking-for-update', () => {
-    console.log('[auto-updater] Checking for update...');
+    logToFile('[event] Checking for update...');
   });
 
   autoUpdater.on('update-available', (info) => {
-    console.log('[auto-updater] Update available:', JSON.stringify(info));
+    logToFile(`[event] Update available: ${JSON.stringify(info)}`);
     mainWindow?.webContents.send('update-available', info);
   });
 
   autoUpdater.on('update-not-available', (info) => {
-    console.log('[auto-updater] No update available. Current version:', app.getVersion(), 'Latest:', info?.version);
+    logToFile(`[event] No update available. Current: ${app.getVersion()}, Latest: ${info?.version}`);
   });
 
   autoUpdater.on('download-progress', (progress) => {
-    console.log('[auto-updater] Download progress:', Math.round(progress.percent) + '%');
+    logToFile(`[event] Download progress: ${Math.round(progress.percent)}%`);
     mainWindow?.webContents.send('update-download-progress', {
       percent: progress.percent,
       bytesPerSecond: progress.bytesPerSecond,
@@ -515,14 +536,15 @@ if (autoUpdater) {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
-    console.log('[auto-updater] Update downloaded:', JSON.stringify(info));
+    logToFile(`[event] Update downloaded: ${JSON.stringify(info)}`);
     mainWindow?.webContents.send('update-downloaded', info);
   });
 
   autoUpdater.on('error', (err) => {
-    console.error('[auto-updater] Error:', err.message);
+    logToFile(`[event] Error: ${err.message}\n${err.stack}`);
   });
 }
+
 
 ipcMain.handle('app:check-for-updates', () => {
   autoUpdater?.checkForUpdatesAndNotify?.();
