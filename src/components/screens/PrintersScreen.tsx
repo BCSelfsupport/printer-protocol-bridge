@@ -1,6 +1,6 @@
 import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Server, GripVertical } from 'lucide-react';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
 import { AddPrinterDialog } from '@/components/printers/AddPrinterDialog';
 import { EditPrinterDialog } from '@/components/printers/EditPrinterDialog';
@@ -81,6 +81,7 @@ function SortablePrinterItem({
   compact,
   countdownType,
   isMobile,
+  syncGroupIndex,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -93,6 +94,7 @@ function SortablePrinterItem({
   compact: boolean;
   countdownType?: 'starting' | 'stopping' | null;
   isMobile: boolean;
+  syncGroupIndex?: number;
 }) {
   const {
     attributes,
@@ -138,6 +140,7 @@ function SortablePrinterItem({
         isConnected={isConnected}
         compact={compact}
         countdownType={countdownType}
+        syncGroupIndex={syncGroupIndex}
       />
     </div>
   );
@@ -185,6 +188,30 @@ export function PrintersScreen({
   const [servicePopupOpen, setServicePopupOpen] = useState(false);
   const [servicePrinter, setServicePrinter] = useState<Printer | null>(null);
   const isMobile = useIsMobile();
+
+  // Compute sync group color index for each printer
+  // Each master gets a unique index; its slaves share the same index
+  const syncGroupMap = useMemo(() => {
+    const map = new Map<number, number>();
+    let groupIdx = 0;
+    // First pass: assign indices to masters
+    printers.forEach(p => {
+      if (p.role === 'master') {
+        map.set(p.id, groupIdx);
+        groupIdx++;
+      }
+    });
+    // Second pass: slaves inherit their master's index
+    printers.forEach(p => {
+      if (p.role === 'slave' && p.masterId !== undefined) {
+        const masterIdx = map.get(p.masterId);
+        if (masterIdx !== undefined) {
+          map.set(p.id, masterIdx);
+        }
+      }
+    });
+    return map;
+  }, [printers]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -344,6 +371,7 @@ export function PrintersScreen({
                       compact={!!showDashboardInPanel}
                       countdownType={connectedPrinter?.id === printer.id ? countdownType : null}
                       isMobile={isMobile}
+                      syncGroupIndex={syncGroupMap.get(printer.id)}
                     />
                   ))}
                 </SortableContext>

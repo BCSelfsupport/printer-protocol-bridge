@@ -3,6 +3,16 @@ import { Printer } from '@/types/printer';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+// Color palette for sync groups (left border stripe)
+const SYNC_GROUP_COLORS = [
+  { border: 'border-l-amber-400', bg: 'bg-amber-400/5', badge: 'bg-amber-500/20 text-amber-400' },
+  { border: 'border-l-cyan-400', bg: 'bg-cyan-400/5', badge: 'bg-cyan-500/20 text-cyan-400' },
+  { border: 'border-l-rose-400', bg: 'bg-rose-400/5', badge: 'bg-rose-500/20 text-rose-400' },
+  { border: 'border-l-emerald-400', bg: 'bg-emerald-400/5', badge: 'bg-emerald-500/20 text-emerald-400' },
+  { border: 'border-l-violet-400', bg: 'bg-violet-400/5', badge: 'bg-violet-500/20 text-violet-400' },
+  { border: 'border-l-orange-400', bg: 'bg-orange-400/5', badge: 'bg-orange-500/20 text-orange-400' },
+];
+
 interface PrinterListItemProps {
   printer: Printer;
   isSelected: boolean;
@@ -14,6 +24,8 @@ interface PrinterListItemProps {
   isConnected?: boolean;
   compact?: boolean;
   countdownType?: 'starting' | 'stopping' | null;
+  /** Index into the sync group color palette (-1 or undefined = no group) */
+  syncGroupIndex?: number;
 }
 
 // Helper to get color for fluid levels
@@ -42,7 +54,13 @@ export function PrinterListItem({
   isConnected = false,
   compact = false,
   countdownType,
+  syncGroupIndex,
 }: PrinterListItemProps) {
+  
+  const groupColor = syncGroupIndex !== undefined && syncGroupIndex >= 0
+    ? SYNC_GROUP_COLORS[syncGroupIndex % SYNC_GROUP_COLORS.length]
+    : null;
+  const groupBorderClass = groupColor ? `border-l-4 ${groupColor.border}` : '';
   
   // Determine effective status (countdown overrides ready state)
   const getEffectiveStatus = () => {
@@ -78,12 +96,14 @@ export function PrinterListItem({
     return (
       <button
         onClick={onSelect}
-        className={`w-full text-left p-4 rounded-xl transition-all border ${
+        className={`w-full text-left p-4 rounded-xl transition-all border ${groupBorderClass} ${
           isConnected
             ? 'bg-success/20 border-success ring-2 ring-success/30'
             : isSelected 
               ? 'bg-primary/20 border-primary' 
-              : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600'
+              : groupColor
+                ? `${groupColor.bg} border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600`
+                : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600'
         }`}
       >
         <div className="flex items-start gap-4">
@@ -122,12 +142,12 @@ export function PrinterListItem({
                 </span>
               )}
               {printer.role === 'master' && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-semibold flex items-center gap-0.5">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 ${groupColor?.badge ?? 'bg-amber-500/20 text-amber-400'}`}>
                   <Crown className="w-2.5 h-2.5" /> MASTER
                 </span>
               )}
               {printer.role === 'slave' && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-semibold flex items-center gap-0.5">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 ${groupColor?.badge ?? 'bg-blue-500/20 text-blue-400'}`}>
                   <Link className="w-2.5 h-2.5" /> SLAVE
                 </span>
               )}
@@ -209,10 +229,12 @@ export function PrinterListItem({
   return (
     <button
       onClick={onSelect}
-      className={`w-full text-left p-3 rounded-lg transition-all border overflow-hidden ${
+      className={`w-full text-left p-3 rounded-lg transition-all border overflow-hidden ${groupBorderClass} ${
         isSelected 
           ? 'bg-primary/20 border-primary shadow-lg' 
-          : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600'
+          : groupColor
+            ? `${groupColor.bg} border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600`
+            : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600'
       }`}
     >
       <div className="flex items-center gap-2 md:gap-3">
@@ -249,12 +271,12 @@ export function PrinterListItem({
               ID: {printer.id}
             </span>
             {printer.role === 'master' && (
-              <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 font-semibold flex items-center gap-0.5">
+              <span className={`text-[9px] px-1 py-0.5 rounded font-semibold flex items-center gap-0.5 ${groupColor?.badge ?? 'bg-amber-500/20 text-amber-400'}`}>
                 <Crown className="w-2 h-2" /> M
               </span>
             )}
             {printer.role === 'slave' && (
-              <span className="text-[9px] px-1 py-0.5 rounded bg-blue-500/20 text-blue-400 font-semibold flex items-center gap-0.5">
+              <span className={`text-[9px] px-1 py-0.5 rounded font-semibold flex items-center gap-0.5 ${groupColor?.badge ?? 'bg-blue-500/20 text-blue-400'}`}>
                 <Link className="w-2 h-2" /> S
               </span>
             )}
