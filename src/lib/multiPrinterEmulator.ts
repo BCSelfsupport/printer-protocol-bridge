@@ -276,6 +276,8 @@ class PrinterEmulatorInstance {
         response = this.cmdLogout();
       } else if (trimmedCommand.startsWith('^CC')) {
         response = this.cmdChangeCounter(trimmedCommand);
+      } else if (trimmedCommand.startsWith('^DM')) {
+        response = this.cmdDeleteMessage(trimmedCommand);
       } else {
         response = this.formatError(3, 'CmdNotRec', 'Command not recognized');
         success = false;
@@ -493,6 +495,23 @@ class PrinterEmulatorInstance {
       return this.formatError(4, 'OutOfRange', 'Counter ID must be 1-4');
     }
     return this.formatError(2, 'CmdFormat', 'Usage: ^CC counterId value');
+  }
+
+  private cmdDeleteMessage(cmd: string): string {
+    const match = cmd.match(/\^DM\s+(.+)/);
+    if (match) {
+      const msgName = match[1].trim().toUpperCase();
+      if (msgName === this.state.currentMessage) {
+        return this.formatError(8, 'DelFailed', 'Failed to delete message');
+      }
+      const idx = this.state.messages.indexOf(msgName);
+      if (idx === -1) {
+        return this.formatError(4, 'MsgNotFnd', 'Message not found');
+      }
+      this.state.messages.splice(idx, 1);
+      return this.state.echoOn ? 'Command Successful!' : 'OK';
+    }
+    return this.formatError(2, 'CmdFormat', 'Invalid command format');
   }
 
   private formatError(code: number, type: string, message: string): string {
