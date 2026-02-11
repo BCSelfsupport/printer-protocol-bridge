@@ -493,9 +493,11 @@ export function usePrinterConnection() {
         for (const line of lines) {
           // Strip non-printable / control characters (garbage bytes from firmware)
           const trimmed = line.replace(/[^\x20-\x7E]/g, '').trim();
-          // Skip EOL marker, prompts, command echoes, and status lines
+          // Skip EOL marker, prompts, command echoes, status lines, and echo responses
+          const upper = trimmed.toUpperCase();
           if (!trimmed || trimmed === '//EOL' || trimmed === '>' || trimmed.startsWith('^')
-              || trimmed.includes('COMMAND SUCCESSFUL') || trimmed.includes('COMMAND FAILED')) continue;
+              || upper.includes('COMMAND SUCCESSFUL') || upper.includes('COMMAND FAILED')
+              || upper.startsWith('MESSAGES (')) continue;
           messageNames.push(trimmed.toUpperCase());
         }
         if (messageNames.length > 0) {
@@ -1072,9 +1074,13 @@ export function usePrinterConnection() {
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
-  // Add a new message to the list (local only)
+  // Add a new message to the list (local only) — deduplicates by name
   const addMessage = useCallback((name: string) => {
     setConnectionState((prev) => {
+      // Skip if a message with this name already exists (case-insensitive)
+      if (prev.messages.some(m => m.name.toUpperCase() === name.toUpperCase())) {
+        return prev;
+      }
       const newId = Math.max(0, ...prev.messages.map(m => m.id)) + 1;
       const newMessage: PrintMessage = { id: newId, name };
       return {
