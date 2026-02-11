@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import '@/types/electron.d.ts';
 
 export function UpdateNotification() {
@@ -8,12 +9,19 @@ export function UpdateNotification() {
   const [updateReady, setUpdateReady] = useState(false);
   const [version, setVersion] = useState('');
   const [dismissed, setDismissed] = useState(false);
+  const [downloadPercent, setDownloadPercent] = useState(0);
+  const [downloadSpeed, setDownloadSpeed] = useState(0);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.electronAPI) {
       window.electronAPI.onUpdateAvailable((info) => {
         setUpdateAvailable(true);
         setVersion(info.version);
+      });
+
+      window.electronAPI.onUpdateDownloadProgress((progress) => {
+        setDownloadPercent(Math.round(progress.percent));
+        setDownloadSpeed(progress.bytesPerSecond);
       });
 
       window.electronAPI.onUpdateDownloaded((info) => {
@@ -29,6 +37,12 @@ export function UpdateNotification() {
     }
   };
 
+  const formatSpeed = (bps: number) => {
+    if (bps > 1048576) return `${(bps / 1048576).toFixed(1)} MB/s`;
+    if (bps > 1024) return `${(bps / 1024).toFixed(0)} KB/s`;
+    return `${bps} B/s`;
+  };
+
   if (dismissed || (!updateAvailable && !updateReady)) {
     return null;
   }
@@ -39,14 +53,20 @@ export function UpdateNotification() {
         <Download className="w-5 h-5 mt-0.5 flex-shrink-0" />
         <div className="flex-1">
           <h4 className="font-semibold">
-            {updateReady ? 'Update Ready' : 'Update Available'}
+            {updateReady ? 'Update Ready' : 'Downloading Update'}
           </h4>
-          <p className="text-sm opacity-90 mt-1">
-            {updateReady 
-              ? `Version ${version} is ready to install. Restart to apply the update.`
-              : `Version ${version} is downloading...`
-            }
-          </p>
+          {updateReady ? (
+            <p className="text-sm opacity-90 mt-1">
+              Version {version} is ready. Restart to apply.
+            </p>
+          ) : (
+            <div className="mt-2 space-y-1.5">
+              <Progress value={downloadPercent} className="h-2 bg-primary-foreground/20" />
+              <p className="text-xs opacity-80">
+                v{version} — {downloadPercent}% · {formatSpeed(downloadSpeed)}
+              </p>
+            </div>
+          )}
           {updateReady && (
             <Button 
               variant="secondary" 

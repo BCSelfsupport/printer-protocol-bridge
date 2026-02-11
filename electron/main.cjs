@@ -484,9 +484,17 @@ ipcMain.handle('printer:send-command', async (event, { printerId, command }) => 
 });
 
 if (autoUpdater) {
-  // Auto-updater events
   autoUpdater.on('update-available', (info) => {
     mainWindow?.webContents.send('update-available', info);
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    mainWindow?.webContents.send('update-download-progress', {
+      percent: progress.percent,
+      bytesPerSecond: progress.bytesPerSecond,
+      transferred: progress.transferred,
+      total: progress.total,
+    });
   });
 
   autoUpdater.on('update-downloaded', (info) => {
