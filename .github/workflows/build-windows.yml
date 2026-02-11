@@ -30,7 +30,9 @@ jobs:
         run: npm install
 
       - name: Install Electron build tools
-        run: npm install --save-dev electron electron-builder electron-updater
+        run: |
+          npm install --save-dev electron electron-builder
+          npm install electron-updater
 
       - name: Build frontend
         run: npm run build
