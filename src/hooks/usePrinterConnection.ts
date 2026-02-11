@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Printer, PrinterStatus, PrinterMetrics, PrintMessage, PrintSettings, ConnectionState } from '@/types/printer';
 import { usePrinterStorage } from '@/hooks/usePrinterStorage';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,6 +77,8 @@ export function usePrinterConnection() {
   const [isChecking, setIsChecking] = useState(false);
   // Now using ICMP ping instead of TCP, so safe to enable by default
   const [availabilityPollingEnabled, setAvailabilityPollingEnabled] = useState(true);
+  // Hysteresis: track consecutive offline counts per printer to prevent flapping
+  const offlineCountsRef = useRef<Record<number, number>>({});
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     isConnected: false,
     connectedPrinter: null,
@@ -172,6 +174,7 @@ export function usePrinterConnection() {
         results.forEach((status: { id: number; isAvailable: boolean; status: string }) => {
           // If we're actively connected to this printer, don't let background polling overwrite its state.
           if (connectionState.isConnected && connectionState.connectedPrinter?.id === status.id) {
+            offlineCountsRef.current[status.id] = 0;
             updatePrinterStatus(status.id, {
               isAvailable: true,
               // Keep whatever status we already have (HV-derived), don't force READY here.
@@ -181,13 +184,30 @@ export function usePrinterConnection() {
             return;
           }
 
-          // Availability polling is ICMP-based; it tells us ONLINE/OFFLINE, not HV readiness.
-          // Never mark a printer READY from availability polling.
-          updatePrinterStatus(status.id, {
-            isAvailable: status.isAvailable,
-            status: status.isAvailable ? 'not_ready' : 'offline',
-            hasActiveErrors: false,
-          });
+          // Hysteresis: require 3 consecutive offline results before marking offline
+          // to prevent UI flapping from intermittent ping failures.
+          const OFFLINE_THRESHOLD = 3;
+          if (status.isAvailable) {
+            // Online: reset counter immediately and mark available
+            offlineCountsRef.current[status.id] = 0;
+            updatePrinterStatus(status.id, {
+              isAvailable: true,
+              status: 'not_ready',
+              hasActiveErrors: false,
+            });
+          } else {
+            // Offline: increment counter, only mark offline after threshold
+            const count = (offlineCountsRef.current[status.id] || 0) + 1;
+            offlineCountsRef.current[status.id] = count;
+            if (count >= OFFLINE_THRESHOLD) {
+              updatePrinterStatus(status.id, {
+                isAvailable: false,
+                status: 'offline',
+                hasActiveErrors: false,
+              });
+            }
+            // else: keep previous state (stays online until threshold reached)
+          }
         });
       }
     } catch (err) {
