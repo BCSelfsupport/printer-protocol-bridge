@@ -1257,13 +1257,48 @@ export function usePrinterConnection() {
     }));
   }, []);
 
-  // Delete a message
-  const deleteMessage = useCallback((id: number) => {
+  // Delete a message — also sends ^DM to the printer/emulator
+  const deleteMessage = useCallback(async (id: number) => {
+    // Find message name before removing from state
+    const msg = connectionState.messages.find(m => m.id === id);
+    const msgName = msg?.name;
+
+    // Remove from local state
     setConnectionState((prev) => ({
       ...prev,
       messages: prev.messages.filter(m => m.id !== id),
     }));
-  }, []);
+
+    // Send ^DM to printer/emulator
+    if (msgName && connectionState.isConnected && connectionState.connectedPrinter) {
+      const command = `^DM ${msgName}`;
+      console.log('[deleteMessage] Sending:', command);
+
+      if (shouldUseEmulator()) {
+        const multiInstance = multiPrinterEmulator.enabled
+          ? multiPrinterEmulator.getInstanceByIp(
+              connectionState.connectedPrinter.ipAddress,
+              connectionState.connectedPrinter.port,
+            )
+          : null;
+        if (multiInstance) {
+          multiInstance.processCommand(command);
+        } else if (printerEmulator.enabled) {
+          printerEmulator.processCommand(command);
+        }
+      } else if (isElectron && window.electronAPI) {
+        try {
+          const result = await window.electronAPI.printer.sendCommand(
+            connectionState.connectedPrinter.id,
+            command,
+          );
+          console.log('[deleteMessage] ^DM result:', result);
+        } catch (e) {
+          console.error('[deleteMessage] Failed to send ^DM:', e);
+        }
+      }
+    }
+  }, [connectionState.messages, connectionState.isConnected, connectionState.connectedPrinter]);
 
   // Reset or set a counter value using ^CC command
   // Counter IDs: 0 = Print Counter, 1-4 = Custom Counters, 6 = Product Counter
