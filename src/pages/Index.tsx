@@ -98,6 +98,7 @@ const Index = () => {
   };
 
   const handleTurnOff = () => {
+    cancelCountdown();
     disconnect();
     setCurrentScreen('home');
   };
@@ -105,6 +106,8 @@ const Index = () => {
   const isMobile = useIsMobile();
   
   const handleConnect = async (printer: typeof printers[0]) => {
+    // Cancel any running countdown from the previous printer
+    cancelCountdown();
     await connect(printer);
     // On mobile, navigate to full-screen Dashboard
     // On desktop, stay on home screen (Dashboard is embedded in split-view)
