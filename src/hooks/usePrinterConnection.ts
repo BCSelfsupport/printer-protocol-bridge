@@ -977,13 +977,18 @@ export function usePrinterConnection() {
     const printer = connectionState.connectedPrinter;
     
     if (shouldUseEmulator()) {
-      // Use emulator
-      console.log('[selectMessage] Using emulator');
-      const result = printerEmulator.processCommand(`^SM ${message.name}`);
+      // Use multi-emulator instance if available for the connected printer
+      const multiInstance = multiPrinterEmulator.enabled
+        ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
+        : null;
+      const emulator = multiInstance || printerEmulator;
+      
+      console.log('[selectMessage] Using emulator, multi:', !!multiInstance);
+      const result = emulator.processCommand(`^SM ${message.name}`);
       console.log('[selectMessage] Emulator result:', result);
       
       if (result.success) {
-        const state = printerEmulator.getState();
+        const state = emulator.getState();
         setConnectionState(prev => ({
           ...prev,
           status: prev.status ? { ...prev.status, currentMessage: state.currentMessage } : null,
