@@ -21,14 +21,13 @@
         "arch": ["x64"]
       }
     ],
-    "icon": "public/codesync-icon.png"
+    "icon": "electron/resources/icon.ico"
   },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
-    "installerIcon": "public/codesync-icon.png",
-    "uninstallerIcon": "public/codesync-icon.png",
-    "installerHeaderIcon": "public/codesync-icon.png",
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
     "shortcutName": "CodeSync"
   }
 }
