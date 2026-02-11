@@ -8,10 +8,23 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Bump patch version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          npm version patch --no-git-tag-version
+          $version = (node -p "require('./package.json').version")
+          echo "NEW_VERSION=$version" >> $env:GITHUB_ENV
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to $version"
+          git push
 
       - name: Install dependencies
         run: npm install
