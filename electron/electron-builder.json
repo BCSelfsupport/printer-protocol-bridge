@@ -18,6 +18,7 @@
     "provider": "github",
     "releaseType": "release"
   },
+  "forceCodeSigning": false,
   "win": {
     "target": [
       {
@@ -25,7 +26,9 @@
         "arch": ["x64"]
       }
     ],
-    "icon": "electron/resources/icon"
+    "icon": "electron/resources/icon",
+    "signAndEditExecutable": false,
+    "sign": null
   },
   "nsis": {
     "oneClick": false,
