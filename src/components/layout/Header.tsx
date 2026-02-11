@@ -16,9 +16,13 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
   const [currentTime, setCurrentTime] = useState(new Date());
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [appVersion, setAppVersion] = useState<string>(
-    typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
-  );
+  const [appVersion, setAppVersion] = useState<string>(() => {
+    try {
+      return typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
+    } catch {
+      return '0.0.0';
+    }
+  });
 
   useEffect(() => {
     setMounted(true);
