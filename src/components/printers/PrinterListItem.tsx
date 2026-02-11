@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, RefreshCcw } from 'lucide-react';
 import { Printer } from '@/types/printer';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,10 @@ interface PrinterListItemProps {
   countdownType?: 'starting' | 'stopping' | null;
   /** Index into the sync group color palette (-1 or undefined = no group) */
   syncGroupIndex?: number;
+  /** Number of slaves for this master (only relevant when role === 'master') */
+  slaveCount?: number;
+  /** Callback to trigger sync for this master */
+  onSync?: () => void;
 }
 
 // Helper to get color for fluid levels
@@ -55,6 +59,8 @@ export function PrinterListItem({
   compact = false,
   countdownType,
   syncGroupIndex,
+  slaveCount = 0,
+  onSync,
 }: PrinterListItemProps) {
   
   const groupColor = syncGroupIndex !== undefined && syncGroupIndex >= 0
@@ -219,6 +225,22 @@ export function PrinterListItem({
                 Service
               </Button>
             )}
+            {/* Sync button for masters */}
+            {printer.role === 'master' && slaveCount > 0 && onSync && (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSync();
+                }}
+                size="sm"
+                variant="ghost"
+                className={`h-6 text-[10px] px-2 hover:bg-slate-600 ${groupColor?.badge?.split(' ')[1] ?? 'text-amber-400'}`}
+                title={`Sync messages to ${slaveCount} slave(s)`}
+              >
+                <RefreshCcw className="w-3 h-3 mr-1" />
+                Sync {slaveCount}
+              </Button>
+            )}
           </div>
         </div>
       </button>
@@ -349,6 +371,21 @@ export function PrinterListItem({
                 title="View service metrics"
               >
                 <Settings2 className="w-3 h-3" />
+              </Button>
+            )}
+            {/* Sync button for masters */}
+            {printer.role === 'master' && slaveCount > 0 && onSync && (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSync();
+                }}
+                size="sm"
+                variant="ghost"
+                className={`h-6 text-[10px] px-1.5 hover:bg-slate-600 ${groupColor?.badge?.split(' ')[1] ?? 'text-amber-400'}`}
+                title={`Sync messages to ${slaveCount} slave(s)`}
+              >
+                <RefreshCcw className="w-3 h-3" />
               </Button>
             )}
             {showConnectButton && printer.isAvailable && onConnect && (

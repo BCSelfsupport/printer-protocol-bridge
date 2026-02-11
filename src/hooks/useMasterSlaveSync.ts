@@ -146,7 +146,7 @@ export function useMasterSlaveSync({
     isMaster,
     slaveCount: isMaster ? getSlaves().length : 0,
     getSlaves,
-    // Manual sync: push all messages from master to slaves
+    // Manual sync for the connected master
     syncAllMessages: useCallback(async () => {
       if (!isMaster) return;
       const slaves = getSlaves();
@@ -159,7 +159,6 @@ export function useMasterSlaveSync({
         for (const msg of messages) {
           await sendCommandToPrinter(slave, `^NM ${msg.name}`);
         }
-        // Also sync the current selection
         if (currentMessage) {
           await sendCommandToPrinter(slave, `^SM ${currentMessage}`);
         }
@@ -168,5 +167,57 @@ export function useMasterSlaveSync({
       syncingRef.current = false;
       console.log('[MasterSlaveSync] Full sync complete');
     }, [isMaster, messages, currentMessage, getSlaves, sendCommandToPrinter]),
+
+    // Sync a specific master's messages to its slaves (works for any master, not just connected)
+    syncMaster: useCallback(async (masterId: number) => {
+      const master = printers.find(p => p.id === masterId && p.role === 'master');
+      if (!master) return;
+
+      const slaves = printers.filter(
+        p => p.role === 'slave' && p.masterId === masterId && p.isAvailable
+      );
+      if (slaves.length === 0) return;
+
+      // Get the master's message list from its emulator instance or current state
+      let masterMessages: string[] = [];
+      let masterCurrentMsg: string | null = null;
+
+      if (shouldUseEmulator()) {
+        const instance = multiPrinterEmulator.enabled
+          ? multiPrinterEmulator.getInstanceByIp(master.ipAddress, master.port)
+          : null;
+        if (instance) {
+          const state = instance.getState();
+          masterMessages = state.messages;
+          masterCurrentMsg = state.currentMessage;
+        }
+      }
+
+      // If connected to this master, use connection state messages
+      if (masterId === connectedPrinterId) {
+        masterMessages = messages.map(m => m.name);
+        masterCurrentMsg = currentMessage ?? null;
+      }
+
+      if (masterMessages.length === 0 && !masterCurrentMsg) {
+        console.log(`[MasterSlaveSync] No messages to sync from master ${master.name}`);
+        return;
+      }
+
+      console.log(`[MasterSlaveSync] Syncing master "${master.name}" (${masterMessages.length} msgs) → ${slaves.length} slave(s)`);
+      syncingRef.current = true;
+
+      for (const slave of slaves) {
+        for (const msgName of masterMessages) {
+          await sendCommandToPrinter(slave, `^NM ${msgName}`);
+        }
+        if (masterCurrentMsg) {
+          await sendCommandToPrinter(slave, `^SM ${masterCurrentMsg}`);
+        }
+      }
+
+      syncingRef.current = false;
+      console.log(`[MasterSlaveSync] Master "${master.name}" sync complete`);
+    }, [printers, connectedPrinterId, messages, currentMessage, sendCommandToPrinter]),
   };
 }

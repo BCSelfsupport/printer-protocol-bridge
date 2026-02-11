@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Server, GripVertical, RefreshCcw } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Server, GripVertical } from 'lucide-react';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 import { useState, useEffect, useMemo } from 'react';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
@@ -66,10 +66,8 @@ interface PrintersScreenProps {
   // Bottom nav props
   onNavigate?: (item: NavItem) => void;
   onTurnOff?: () => void;
-  // Master/Slave sync
-  isMasterConnected?: boolean;
-  slaveCount?: number;
-  onSyncAll?: () => void;
+  // Master/Slave sync - per master
+  onSyncMaster?: (masterId: number) => void;
 }
 
 // Sortable wrapper for PrinterListItem
@@ -86,6 +84,8 @@ function SortablePrinterItem({
   countdownType,
   isMobile,
   syncGroupIndex,
+  slaveCount,
+  onSync,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -99,6 +99,8 @@ function SortablePrinterItem({
   countdownType?: 'starting' | 'stopping' | null;
   isMobile: boolean;
   syncGroupIndex?: number;
+  slaveCount?: number;
+  onSync?: () => void;
 }) {
   const {
     attributes,
@@ -123,7 +125,6 @@ function SortablePrinterItem({
         {...attributes}
         {...listeners}
         onPointerDown={(e) => {
-          // Prevent long-press text selection from taking over on mobile
           e.preventDefault();
         }}
         className={
@@ -145,6 +146,8 @@ function SortablePrinterItem({
         compact={compact}
         countdownType={countdownType}
         syncGroupIndex={syncGroupIndex}
+        slaveCount={slaveCount}
+        onSync={onSync}
       />
     </div>
   );
@@ -184,9 +187,7 @@ export function PrintersScreen({
   onControlUnmount,
   onNavigate,
   onTurnOff,
-  isMasterConnected = false,
-  slaveCount = 0,
-  onSyncAll,
+  onSyncMaster,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -215,6 +216,17 @@ export function PrintersScreen({
         if (masterIdx !== undefined) {
           map.set(p.id, masterIdx);
         }
+      }
+    });
+    return map;
+  }, [printers]);
+
+  // Compute slave count per master
+  const slaveCountMap = useMemo(() => {
+    const map = new Map<number, number>();
+    printers.forEach(p => {
+      if (p.role === 'slave' && p.masterId !== undefined) {
+        map.set(p.masterId, (map.get(p.masterId) ?? 0) + 1);
       }
     });
     return map;
@@ -330,18 +342,6 @@ export function PrintersScreen({
               <Plus className="w-3 h-3 mr-1" />
               Add
             </Button>
-            {isMasterConnected && slaveCount > 0 && onSyncAll && (
-              <Button
-                onClick={onSyncAll}
-                size="sm"
-                variant="outline"
-                className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 h-8 text-xs"
-                title={`Sync all messages to ${slaveCount} slave(s)`}
-              >
-                <RefreshCcw className="w-3 h-3 mr-1" />
-                Sync ({slaveCount})
-              </Button>
-            )}
             {selectedPrinter && (
               <Button
                 onClick={handleRemoveSelected}
@@ -391,6 +391,8 @@ export function PrintersScreen({
                       countdownType={connectedPrinter?.id === printer.id ? countdownType : null}
                       isMobile={isMobile}
                       syncGroupIndex={syncGroupMap.get(printer.id)}
+                      slaveCount={printer.role === 'master' ? slaveCountMap.get(printer.id) ?? 0 : undefined}
+                      onSync={printer.role === 'master' && onSyncMaster ? () => onSyncMaster(printer.id) : undefined}
                     />
                   ))}
                 </SortableContext>
