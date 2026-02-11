@@ -124,6 +124,83 @@ const Index = () => {
     startCountdown('stopping', 106); // 1:46 countdown for stopping too
   }, [jetStop, startCountdown]);
 
+  // Build right panel content for desktop split-view (messages/editMessage screens)
+  const getRightPanelContent = (): React.ReactNode | undefined => {
+    if (isMobile) return undefined;
+    
+    if (currentScreen === 'messages') {
+      return (
+        <MessagesScreen
+          messages={connectionState.messages}
+          currentMessageName={connectionState.status?.currentMessage ?? null}
+          onSelect={async (message) => {
+            const success = await selectMessage(message);
+            if (success) {
+              setCurrentScreen('home');
+            }
+            return success;
+          }}
+          onEdit={(message) => {
+            setEditingMessage(message);
+            setCurrentScreen('editMessage');
+          }}
+          onNew={(name: string) => {
+            addMessage(name);
+            const newId = Math.max(0, ...connectionState.messages.map(m => m.id)) + 1;
+            setEditingMessage({ id: newId, name });
+            setCurrentScreen('editMessage');
+          }}
+          onDelete={(message) => {
+            deleteMessage(message.id);
+            deleteStoredMessage(message.name);
+          }}
+          onHome={() => setCurrentScreen('home')}
+          openNewDialogOnMount={openNewDialogOnMount}
+          onNewDialogOpened={() => setOpenNewDialogOnMount(false)}
+        />
+      );
+    }
+
+    if (currentScreen === 'editMessage' && editingMessage) {
+      return (
+        <EditMessageScreen
+          messageName={editingMessage.name}
+          printerTime={connectionState.status?.printerTime}
+          onSave={async (details: MessageDetails, isNew?: boolean) => {
+            const targetName = isNew ? details.name : editingMessage.name;
+            const success = await saveMessageContent(
+              targetName,
+              details.fields,
+              details.templateValue,
+              isNew,
+            );
+            if (!success) {
+              console.error('Failed to save message on printer');
+            }
+            if (!isNew) {
+              updateMessage(editingMessage.id, details.name);
+            }
+            saveMessage({
+              ...details,
+              name: targetName,
+            });
+            setCurrentScreen('messages');
+            setEditingMessage(null);
+          }}
+          onCancel={() => {
+            setCurrentScreen('messages');
+            setEditingMessage(null);
+          }}
+          onGetMessageDetails={async (name: string) => {
+            return getMessage(name);
+          }}
+        />
+      );
+    }
+
+    return undefined;
+  };
+
   const renderScreen = () => {
     switch (currentScreen) {
       case 'network':
@@ -155,13 +232,11 @@ const Index = () => {
             onEditMessage={() => setCurrentScreen('messages')}
             onSignIn={async () => {
               if (isSignedIn) {
-                // Sign out directly
                 const success = await signOut();
                 if (success) {
                   setIsSignedIn(false);
                 }
               } else {
-                // Show sign in dialog
                 setSignInDialogOpen(true);
               }
             }}
@@ -180,17 +255,17 @@ const Index = () => {
           />
         );
       case 'editMessage':
+        // On mobile, render full-screen; on desktop, handled via rightPanelContent
+        if (!isMobile) {
+          // Fall through to default (PrintersScreen with rightPanelContent)
+          break;
+        }
         return editingMessage ? (
           <EditMessageScreen
             messageName={editingMessage.name}
             printerTime={connectionState.status?.printerTime}
             onSave={async (details: MessageDetails, isNew?: boolean) => {
-              console.log('Save message:', details, 'isNew:', isNew);
               const targetName = isNew ? details.name : editingMessage.name;
-              
-              // Send full ^NM command with field subcommands to printer
-              // For existing messages, saveMessageContent will ^DM first then ^NM
-              console.log(isNew ? 'Creating new message:' : 'Updating message:', targetName);
               const success = await saveMessageContent(
                 targetName,
                 details.fields,
@@ -203,13 +278,10 @@ const Index = () => {
               if (!isNew) {
                 updateMessage(editingMessage.id, details.name);
               }
-              
-              // Store message content locally for retrieval (persisted)
               saveMessage({
                 ...details,
                 name: targetName,
               });
-              
               setCurrentScreen('messages');
               setEditingMessage(null);
             }}
@@ -218,12 +290,15 @@ const Index = () => {
               setEditingMessage(null);
             }}
             onGetMessageDetails={async (name: string) => {
-              // Return stored message details from local storage
               return getMessage(name);
             }}
           />
         ) : null;
       case 'messages':
+        // On mobile, render full-screen; on desktop, handled via rightPanelContent
+        if (!isMobile) {
+          break;
+        }
         return (
           <MessagesScreen
             messages={connectionState.messages}
@@ -240,14 +315,12 @@ const Index = () => {
               setCurrentScreen('editMessage');
             }}
             onNew={(name: string) => {
-              // Just create locally - ^NM with fields will be sent on Save
               addMessage(name);
               const newId = Math.max(0, ...connectionState.messages.map(m => m.id)) + 1;
               setEditingMessage({ id: newId, name });
               setCurrentScreen('editMessage');
             }}
             onDelete={(message) => {
-              console.log('Delete message:', message.name);
               deleteMessage(message.id);
               deleteStoredMessage(message.name);
             }}
@@ -256,8 +329,6 @@ const Index = () => {
             onNewDialogOpened={() => setOpenNewDialogOnMount(false)}
           />
         );
-      // 'adjust' is now handled as a dialog, not a screen
-      // This case shouldn't be reached, but redirect to control just in case
       case 'clean':
         return <CleanScreen onHome={handleHome} />;
       case 'setup':
@@ -274,61 +345,63 @@ const Index = () => {
           />
         );
       default:
-        // Home is now the Printers config screen with split-view Dashboard on desktop
-        const homeMsgName = connectionState.status?.currentMessage;
-        const homeMsgContent = homeMsgName ? getMessage(homeMsgName) : undefined;
-        
-        return (
-          <PrintersScreen
-            printers={printers}
-            onConnect={handleConnect}
-            onHome={handleHome}
-            onAddPrinter={addPrinter}
-            onRemovePrinter={removePrinter}
-            onReorderPrinters={reorderPrinters}
-            onUpdatePrinter={updatePrinter}
-            onQueryPrinterMetrics={queryPrinterMetrics}
-            isDevSignedIn={isDevSignedIn}
-            onDevSignIn={() => setDevSignInDialogOpen(true)}
-            onDevSignOut={() => setIsDevSignedIn(false)}
-            // Dashboard props for split-view on desktop
-            isConnected={connectionState.isConnected}
-            connectedPrinter={connectionState.connectedPrinter}
-            status={connectionState.status}
-            onStart={handleStartPrint}
-            onStop={stopPrint}
-            onJetStop={handleJetStop}
-            onNewMessage={() => {
-              setOpenNewDialogOnMount(true);
-              setCurrentScreen('messages');
-            }}
-            onEditMessage={() => setCurrentScreen('messages')}
-            onSignIn={async () => {
-              if (isSignedIn) {
-                const success = await signOut();
-                if (success) {
-                  setIsSignedIn(false);
-                }
-              } else {
-                setSignInDialogOpen(true);
-              }
-            }}
-            onHelp={() => setHelpDialogOpen(true)}
-            onResetCounter={resetCounter}
-            onResetAllCounters={resetAllCounters}
-            onQueryCounters={queryCounters}
-            isSignedIn={isSignedIn}
-            countdownSeconds={countdownSeconds}
-            countdownType={countdownType}
-            messageContent={homeMsgContent}
-            onControlMount={() => setControlScreenOpen(true)}
-            onControlUnmount={() => setControlScreenOpen(false)}
-            onNavigate={handleNavigate}
-            onTurnOff={handleTurnOff}
-            onSyncMaster={syncMaster}
-          />
-        );
+        break;
     }
+    
+    // Default / home / desktop messages+editMessage: render PrintersScreen with optional right panel
+    const homeMsgName = connectionState.status?.currentMessage;
+    const homeMsgContent = homeMsgName ? getMessage(homeMsgName) : undefined;
+    
+    return (
+      <PrintersScreen
+        printers={printers}
+        onConnect={handleConnect}
+        onHome={handleHome}
+        onAddPrinter={addPrinter}
+        onRemovePrinter={removePrinter}
+        onReorderPrinters={reorderPrinters}
+        onUpdatePrinter={updatePrinter}
+        onQueryPrinterMetrics={queryPrinterMetrics}
+        isDevSignedIn={isDevSignedIn}
+        onDevSignIn={() => setDevSignInDialogOpen(true)}
+        onDevSignOut={() => setIsDevSignedIn(false)}
+        isConnected={connectionState.isConnected}
+        connectedPrinter={connectionState.connectedPrinter}
+        status={connectionState.status}
+        onStart={handleStartPrint}
+        onStop={stopPrint}
+        onJetStop={handleJetStop}
+        onNewMessage={() => {
+          setOpenNewDialogOnMount(true);
+          setCurrentScreen('messages');
+        }}
+        onEditMessage={() => setCurrentScreen('messages')}
+        onSignIn={async () => {
+          if (isSignedIn) {
+            const success = await signOut();
+            if (success) {
+              setIsSignedIn(false);
+            }
+          } else {
+            setSignInDialogOpen(true);
+          }
+        }}
+        onHelp={() => setHelpDialogOpen(true)}
+        onResetCounter={resetCounter}
+        onResetAllCounters={resetAllCounters}
+        onQueryCounters={queryCounters}
+        isSignedIn={isSignedIn}
+        countdownSeconds={countdownSeconds}
+        countdownType={countdownType}
+        messageContent={homeMsgContent}
+        onControlMount={() => setControlScreenOpen(true)}
+        onControlUnmount={() => setControlScreenOpen(false)}
+        onNavigate={handleNavigate}
+        onTurnOff={handleTurnOff}
+        onSyncMaster={syncMaster}
+        rightPanelContent={getRightPanelContent()}
+      />
+    );
   };
 
   return (
