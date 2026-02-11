@@ -484,17 +484,25 @@ class PrinterEmulatorInstance {
   }
 
   private cmdChangeCounter(cmd: string): string {
-    const match = cmd.match(/\^CC\s+(\d+)\s+(\d+)/);
+    // ^CC C;V - Set counter C to value V
+    // Counter IDs: 0 = Print, 1-4 = Custom, 6 = Product
+    const match = cmd.match(/\^CC\s*(\d+)[;\s]+(\d+)/);
     if (match) {
       const counterId = parseInt(match[1]);
       const value = parseInt(match[2]);
-      if (counterId >= 1 && counterId <= 4) {
+      if (counterId === 0) {
+        this.state.printCount = value;
+        return this.state.echoOn ? `Command Successful!\r\nPrint Counter: ${value}` : `PC: ${value}`;
+      } else if (counterId === 6) {
+        this.state.productCount = value;
+        return this.state.echoOn ? `Command Successful!\r\nProduct Counter: ${value}` : `PrC: ${value}`;
+      } else if (counterId >= 1 && counterId <= 4) {
         this.state.customCounters[counterId - 1] = value;
         return this.state.echoOn ? `Command Successful!\r\nCounter ${counterId}: ${value}` : `C${counterId}: ${value}`;
       }
-      return this.formatError(4, 'OutOfRange', 'Counter ID must be 1-4');
+      return this.formatError(4, 'OutOfRange', 'Counter ID must be 0, 1-4, or 6');
     }
-    return this.formatError(2, 'CmdFormat', 'Usage: ^CC counterId value');
+    return this.formatError(2, 'CmdFormat', 'Usage: ^CC counterId;value');
   }
 
   private cmdDeleteMessage(cmd: string): string {
