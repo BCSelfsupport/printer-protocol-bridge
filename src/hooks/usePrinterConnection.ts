@@ -892,28 +892,10 @@ export function usePrinterConnection() {
       const result = printerEmulator.processCommand(`^LG ${password}`);
       console.log('[signIn] Emulator result:', result);
       return result.success && !result.response.includes('AuthFail');
-    } else if (isElectron && window.electronAPI) {
-      try {
-        console.log('[signIn] Sending ^LG command');
-        const result = await window.electronAPI.printer.sendCommand(printer.id, `^LG ${password}`);
-        console.log('[signIn] Result:', JSON.stringify(result));
-        
-        if (result?.success && result?.response) {
-          // Check if response indicates failure; otherwise treat as success
-          const response = result.response.toUpperCase();
-          const isFail = response.includes('FAIL') || response.includes('INVALID') || response.includes('DENIED') || response.includes('ERROR') || response.includes('AUTHFAIL');
-          console.log('[signIn] Response check - isFail:', isFail, 'response:', result.response);
-          return !isFail;
-        }
-        // If command sent successfully but no response text, treat as success
-        return result?.success ?? false;
-      } catch (e) {
-        console.error('[signIn] Failed to send ^LG command:', e);
-        return false;
-      }
     } else {
-      // Web preview mock - accept "TEXAS" as password
-      console.log('[signIn] Web preview mock');
+      // ^LG is not part of the BestCode Remote Protocol V2.6.
+      // Sign-in is a local HMI feature only. Gate access locally with password.
+      console.log('[signIn] Local password check (^LG not supported by protocol)');
       return password.toUpperCase() === 'TEXAS';
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
