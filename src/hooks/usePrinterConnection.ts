@@ -345,9 +345,14 @@ export function usePrinterConnection() {
     onResponse: handleServiceResponse,
   });
 
-  // Poll printer date/time via ^SD alongside ^SU
+  // Poll printer date/time via ^SD whenever connected (not just on Service/Dashboard)
+  // so the header clock always shows the printer's time.
+  const shouldPollDateTime = useMemo(() => {
+    return Boolean(connectionState.isConnected && connectedPrinterId);
+  }, [connectionState.isConnected, connectedPrinterId]);
+
   useServiceStatusPolling({
-    enabled: shouldPollStatus,
+    enabled: shouldPollDateTime,
     printerId: connectedPrinterId,
     printerIp: connectionState.connectedPrinter?.ipAddress,
     printerPort: connectionState.connectedPrinter?.port,
