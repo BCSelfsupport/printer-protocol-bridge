@@ -547,6 +547,12 @@ export function usePrinterConnection() {
           hasActiveErrors: false,
         });
 
+        // Build message list from emulator state
+        const emulatorMessages: PrintMessage[] = emulatorState.messages.map((name, idx) => ({
+          id: idx + 1,
+          name,
+        }));
+
         setConnectionState({
           isConnected: true,
           connectedPrinter: { ...printer, isConnected: true },
@@ -579,7 +585,7 @@ export function usePrinterConnection() {
             },
           },
           settings: defaultSettings,
-          messages: mockMessages,
+          messages: emulatorMessages,
         });
         return;
       }
@@ -596,6 +602,10 @@ export function usePrinterConnection() {
       });
 
       const emulatorState = printerEmulator.getState();
+      const emulatorMessages: PrintMessage[] = emulatorState.messages.map((name, idx) => ({
+        id: idx + 1,
+        name,
+      }));
       setConnectionState({
         isConnected: true,
         connectedPrinter: { ...printer, isConnected: true },
@@ -626,7 +636,7 @@ export function usePrinterConnection() {
           },
         },
         settings: defaultSettings,
-        messages: mockMessages,
+        messages: emulatorMessages,
       });
       return;
     }
