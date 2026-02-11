@@ -38,7 +38,7 @@ const Index = () => {
   const [helpDialogOpen, setHelpDialogOpen] = useState(false);
   
   // Local message storage (persists to localStorage)
-  const { saveMessage, getMessage } = useMessageStorage();
+  const { saveMessage, getMessage, deleteMessage: deleteStoredMessage } = useMessageStorage();
   
   const {
     printers,
@@ -240,6 +240,7 @@ const Index = () => {
             onDelete={(message) => {
               console.log('Delete message:', message.name);
               deleteMessage(message.id);
+              deleteStoredMessage(message.name);
             }}
             onHome={() => setCurrentScreen('control')}
             openNewDialogOnMount={openNewDialogOnMount}
