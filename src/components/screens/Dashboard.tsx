@@ -310,7 +310,7 @@ export function Dashboard({
               { id: 'messages' as const, label: 'Messages', icon: <FileText className="w-5 h-5 md:w-6 md:h-6" /> },
               { id: 'adjust' as const, label: 'Adjust', icon: <SlidersHorizontal className="w-5 h-5 md:w-6 md:h-6" /> },
               { id: 'clean' as const, label: 'Clean', icon: <Brush className="w-5 h-5 md:w-6 md:h-6" />, disabled: true },
-              { id: 'setup' as const, label: 'Setup', icon: <Settings className="w-5 h-5 md:w-6 md:h-6" />, disabled: true },
+              { id: 'setup' as const, label: 'Setup', icon: <Settings className="w-5 h-5 md:w-6 md:h-6" /> },
               { id: 'service' as const, label: 'Service', icon: <Wrench className="w-5 h-5 md:w-6 md:h-6" /> },
             ].map((item) => (
               <button
