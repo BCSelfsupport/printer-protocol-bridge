@@ -773,13 +773,17 @@ export function usePrinterConnection() {
     // IMPORTANT: Do NOT optimistically flip UI to green.
     // We only show HV On after a confirmed ^SU response (V300UP:1).
     if (shouldUseEmulator()) {
-      // Use emulator
-      console.log('[startPrint] Using emulator');
-      const result = printerEmulator.processCommand('^PR 1');
+      // Use the specific emulator instance for this printer
+      const multiInstance = multiPrinterEmulator.enabled
+        ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
+        : null;
+      const emulator = multiInstance || printerEmulator;
+      console.log('[startPrint] Using emulator for', printer.ipAddress);
+      const result = emulator.processCommand('^PR 1');
       console.log('[startPrint] Emulator result:', result);
       
       // Update state from emulator
-      const state = printerEmulator.getState();
+      const state = emulator.getState();
       setConnectionState(prev => ({
         ...prev,
         status: prev.status ? { ...prev.status, isRunning: state.hvOn } : null,
@@ -841,13 +845,17 @@ export function usePrinterConnection() {
     // IMPORTANT: Do NOT optimistically flip UI.
     // We only show HV Off after a confirmed ^SU response (V300UP:0).
     if (shouldUseEmulator()) {
-      // Use emulator
-      console.log('[stopPrint] Using emulator');
-      const result = printerEmulator.processCommand('^PR 0');
+      // Use the specific emulator instance for this printer
+      const multiInstance = multiPrinterEmulator.enabled
+        ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
+        : null;
+      const emulator = multiInstance || printerEmulator;
+      console.log('[stopPrint] Using emulator for', printer.ipAddress);
+      const result = emulator.processCommand('^PR 0');
       console.log('[stopPrint] Emulator result:', result);
       
       // Update state from emulator
-      const state = printerEmulator.getState();
+      const state = emulator.getState();
       setConnectionState(prev => ({
         ...prev,
         status: prev.status ? { ...prev.status, isRunning: state.hvOn } : null,
@@ -903,13 +911,17 @@ export function usePrinterConnection() {
     const printer = connectionState.connectedPrinter;
     
     if (shouldUseEmulator()) {
-      // Use emulator
-      console.log('[jetStop] Using emulator');
-      const result = printerEmulator.processCommand('^SJ 0');
+      // Use the specific emulator instance for this printer
+      const multiInstance = multiPrinterEmulator.enabled
+        ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
+        : null;
+      const emulator = multiInstance || printerEmulator;
+      console.log('[jetStop] Using emulator for', printer.ipAddress);
+      const result = emulator.processCommand('^SJ 0');
       console.log('[jetStop] Emulator result:', result);
       
       // Update state from emulator
-      const state = printerEmulator.getState();
+      const state = emulator.getState();
       setConnectionState(prev => ({
         ...prev,
         status: prev.status ? { ...prev.status, isRunning: state.hvOn } : null,
