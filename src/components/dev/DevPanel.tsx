@@ -196,11 +196,11 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
       <button
         onClick={onToggle}
         className={cn(
-          "fixed right-0 top-1/2 -translate-y-1/2 z-50",
+          "fixed top-1/2 -translate-y-1/2 z-50",
           "bg-sidebar border border-border border-r-0 rounded-l-md",
           "p-2 shadow-lg transition-all",
           "hover:bg-muted",
-          isOpen && "translate-x-[320px]"
+          isOpen ? "right-80" : "right-0"
         )}
       >
         {isOpen ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
