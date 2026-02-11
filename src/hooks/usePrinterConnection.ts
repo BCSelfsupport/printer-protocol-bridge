@@ -899,11 +899,14 @@ export function usePrinterConnection() {
         console.log('[signIn] Result:', JSON.stringify(result));
         
         if (result?.success && result?.response) {
-          // Check if response indicates successful login
+          // Check if response indicates failure; otherwise treat as success
           const response = result.response.toUpperCase();
-          return response.includes('OK') || response.includes('SUCCESSFUL') || response.includes('ACCEPTED');
+          const isFail = response.includes('FAIL') || response.includes('INVALID') || response.includes('DENIED') || response.includes('ERROR') || response.includes('AUTHFAIL');
+          console.log('[signIn] Response check - isFail:', isFail, 'response:', result.response);
+          return !isFail;
         }
-        return false;
+        // If command sent successfully but no response text, treat as success
+        return result?.success ?? false;
       } catch (e) {
         console.error('[signIn] Failed to send ^LG command:', e);
         return false;
