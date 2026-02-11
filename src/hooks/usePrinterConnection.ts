@@ -1344,6 +1344,7 @@ export function usePrinterConnection() {
       
       // Update local state from emulator - include all counters
       const state = emulator.getState();
+      console.log('[resetCounter] Emulator state after reset - printCount:', state.printCount, 'productCount:', state.productCount);
       setConnectionState(prev => ({
         ...prev,
         status: prev.status ? {
@@ -1353,6 +1354,13 @@ export function usePrinterConnection() {
           customCounters: [...state.customCounters],
         } : null,
       }));
+      
+      // Also immediately update the printer card's stored count
+      if (printer) {
+        updatePrinter(printer.id, {
+          printCount: state.printCount,
+        });
+      }
       return true;
     } else if (isElectron && window.electronAPI) {
       try {
