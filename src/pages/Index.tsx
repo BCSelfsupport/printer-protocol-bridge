@@ -77,7 +77,7 @@ const Index = () => {
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown } = useJetCountdown();
 
   // Master/Slave sync: auto-syncs messages and selections from master to slaves
-  const { isMaster, slaveCount, syncAllMessages } = useMasterSlaveSync({
+  const { isMaster, slaveCount, syncAllMessages, syncMaster } = useMasterSlaveSync({
     printers,
     connectedPrinterId: connectionState.connectedPrinter?.id,
     currentMessage: connectionState.status?.currentMessage,
@@ -325,9 +325,7 @@ const Index = () => {
             onControlUnmount={() => setControlScreenOpen(false)}
             onNavigate={handleNavigate}
             onTurnOff={handleTurnOff}
-            isMasterConnected={isMaster}
-            slaveCount={slaveCount}
-            onSyncAll={syncAllMessages}
+            onSyncMaster={syncMaster}
           />
         );
     }
