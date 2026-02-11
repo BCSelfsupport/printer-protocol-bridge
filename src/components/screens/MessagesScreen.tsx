@@ -1,6 +1,7 @@
 import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe } from 'lucide-react';
 import { PrintMessage } from '@/types/printer';
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import {
   Dialog,
@@ -153,7 +154,13 @@ export function MessagesScreen({
           </button>
 
           <button 
-            onClick={() => selectedMessage && setDeleteConfirmOpen(true)}
+            onClick={() => {
+              if (selectedMessage && selectedMessage.name === currentMessageName) {
+                toast.error("Can't delete this message — it is currently selected for printing on the printer.");
+                return;
+              }
+              selectedMessage && setDeleteConfirmOpen(true);
+            }}
             disabled={!selectedMessage}
             className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
           >
