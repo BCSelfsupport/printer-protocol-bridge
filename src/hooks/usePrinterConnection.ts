@@ -79,6 +79,7 @@ export function usePrinterConnection() {
   const [availabilityPollingEnabled, setAvailabilityPollingEnabled] = useState(true);
   // Hysteresis: track consecutive offline counts per printer to prevent flapping
   const offlineCountsRef = useRef<Record<number, number>>({});
+  const disconnectRef = useRef<() => void>(() => {});
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     isConnected: false,
     connectedPrinter: null,
@@ -138,24 +139,21 @@ export function usePrinterConnection() {
     
     setIsChecking(true);
     try {
-      // IMPORTANT: never query the currently-connected printer in the background.
-      // Many printers visibly refresh their UI on status queries.
-      const connectedId = connectionState.connectedPrinter?.id ?? null;
+      // Include ALL printers in availability polling (including the connected one).
+      // ICMP ping does not cause the printer UI to flash — only TCP connections do.
       const printerData = printers
-        .filter((p) => p.id !== connectedId)
         .map((p) => ({
           id: p.id,
           ipAddress: p.ipAddress,
           port: p.port,
         }));
 
-      // If the only printer in the list is currently connected, there's nothing to poll.
       if (printerData.length === 0) return;
 
       let results;
 
       if (isElectron && window.electronAPI) {
-        // Use Electron's native TCP sockets
+        // Use Electron's native ICMP ping
         results = await window.electronAPI.printer.checkStatus(printerData);
       } else {
         // Fallback to cloud function (won't work for local network, but keeps the code path)
@@ -172,17 +170,7 @@ export function usePrinterConnection() {
 
       if (results) {
         results.forEach((status: { id: number; isAvailable: boolean; status: string }) => {
-          // If we're actively connected to this printer, don't let background polling overwrite its state.
-          if (connectionState.isConnected && connectionState.connectedPrinter?.id === status.id) {
-            offlineCountsRef.current[status.id] = 0;
-            updatePrinterStatus(status.id, {
-              isAvailable: true,
-              // Keep whatever status we already have (HV-derived), don't force READY here.
-              status: connectionState.connectedPrinter.status,
-              hasActiveErrors: false,
-            });
-            return;
-          }
+          const isConnectedPrinter = connectionState.isConnected && connectionState.connectedPrinter?.id === status.id;
 
           // Hysteresis: require 3 consecutive offline results before marking offline
           // to prevent UI flapping from intermittent ping failures.
@@ -190,11 +178,20 @@ export function usePrinterConnection() {
           if (status.isAvailable) {
             // Online: reset counter immediately and mark available
             offlineCountsRef.current[status.id] = 0;
-            updatePrinterStatus(status.id, {
-              isAvailable: true,
-              status: 'not_ready',
-              hasActiveErrors: false,
-            });
+            if (isConnectedPrinter) {
+              // Keep existing HV-derived status for connected printer
+              updatePrinterStatus(status.id, {
+                isAvailable: true,
+                status: connectionState.connectedPrinter!.status,
+                hasActiveErrors: false,
+              });
+            } else {
+              updatePrinterStatus(status.id, {
+                isAvailable: true,
+                status: 'not_ready',
+                hasActiveErrors: false,
+              });
+            }
           } else {
             // Offline: increment counter, only mark offline after threshold
             const count = (offlineCountsRef.current[status.id] || 0) + 1;
@@ -205,6 +202,11 @@ export function usePrinterConnection() {
                 status: 'offline',
                 hasActiveErrors: false,
               });
+              // Auto-disconnect if the connected printer goes offline
+              if (isConnectedPrinter) {
+                console.log('[availability] Connected printer went offline, auto-disconnecting');
+                disconnectRef.current();
+              }
             }
             // else: keep previous state (stays online until threshold reached)
           }
@@ -610,6 +612,9 @@ export function usePrinterConnection() {
       messages: [],
     });
   }, [connectionState.connectedPrinter, updatePrinter]);
+
+  // Keep ref in sync so polling can auto-disconnect without circular deps
+  disconnectRef.current = disconnect;
 
   const startPrint = useCallback(async () => {
     console.log('[startPrint] Called, isConnected:', connectionState.isConnected, 'printer:', connectionState.connectedPrinter?.id);
