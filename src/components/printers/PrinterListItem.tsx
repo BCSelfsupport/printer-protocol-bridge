@@ -164,13 +164,15 @@ export function PrinterListItem({
             
             {/* Message name with print count */}
             {printer.currentMessage && (
-              <div className={`flex items-center gap-2 mt-1.5 text-sm ${subTextColor} flex-wrap`}>
-                <FileText className="w-4 h-4 flex-shrink-0" />
-                <span className="font-medium">{printer.currentMessage}</span>
+              <div className={`mt-1.5 text-sm ${subTextColor}`}>
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 flex-shrink-0" />
+                  <span className="font-medium">{printer.currentMessage}</span>
+                </div>
                 {printer.printCount !== undefined && (
-                  <span className="flex-shrink-0">
+                  <div className="ml-6 mt-0.5">
                     PRINTS: <span className="font-semibold">{printer.printCount.toString().padStart(7, '0')}</span>
-                  </span>
+                  </div>
                 )}
               </div>
             )}
@@ -309,13 +311,15 @@ export function PrinterListItem({
           
           {/* Current message with print count - inline */}
           {printer.currentMessage && (
-            <div className={`flex items-center gap-2 mt-1 text-[10px] ${subTextColor} flex-wrap`}>
-              <FileText className="w-3 h-3 flex-shrink-0" />
-              <span className="font-medium">{printer.currentMessage}</span>
+            <div className={`mt-1 text-[10px] ${subTextColor}`}>
+              <div className="flex items-center gap-2">
+                <FileText className="w-3 h-3 flex-shrink-0" />
+                <span className="font-medium">{printer.currentMessage}</span>
+              </div>
               {printer.printCount !== undefined && (
-                <span className="font-semibold flex-shrink-0">
+                <div className="ml-5 mt-0.5 font-semibold">
                   #{printer.printCount.toLocaleString()}
-                </span>
+                </div>
               )}
             </div>
           )}
