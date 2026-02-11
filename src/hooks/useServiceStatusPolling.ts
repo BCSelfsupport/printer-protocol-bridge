@@ -56,32 +56,28 @@ export function useServiceStatusPolling(options: {
       inFlightRef.current = true;
 
       try {
-        const useMultiEmulator = multiPrinterEmulator.enabled;
-        const useSingleEmulator = printerEmulator.enabled;
+        const isEmulatorEnabled = multiPrinterEmulator.enabled || printerEmulator.enabled;
         const hasElectronAPI = !!window.electronAPI;
 
-        if (!useMultiEmulator && !useSingleEmulator && !hasElectronAPI) {
+        if (!isEmulatorEnabled && !hasElectronAPI) {
           console.log('[useServiceStatusPolling] No electronAPI and emulator not enabled, skip tick');
           return;
         }
 
-        console.log('[useServiceStatusPolling] Sending command:', command, 'useMultiEmulator:', useMultiEmulator, 'useSingleEmulator:', useSingleEmulator);
+        console.log('[useServiceStatusPolling] Sending command:', command, 'printerIp:', printerIp);
 
         let result: { success: boolean; response?: string; error?: string };
 
-        if (useMultiEmulator && printerIp) {
-          // Use the specific emulator instance for this printer
-          const instance = multiPrinterEmulator.getInstanceByIp(printerIp, printerPort);
-          if (instance) {
-            const emulatorResult = instance.processCommand(command);
-            result = { success: emulatorResult.success, response: emulatorResult.response };
+        if (isEmulatorEnabled) {
+          // Always resolve the correct emulator instance for this printer's IP
+          let emulator: { processCommand: (cmd: string) => { success: boolean; response: string } };
+          if (multiPrinterEmulator.enabled && printerIp) {
+            const instance = multiPrinterEmulator.getInstanceByIp(printerIp, printerPort);
+            emulator = instance || printerEmulator;
           } else {
-            // Fall back to single emulator if no instance found
-            const emulatorResult = printerEmulator.processCommand(command);
-            result = { success: emulatorResult.success, response: emulatorResult.response };
+            emulator = printerEmulator;
           }
-        } else if (useSingleEmulator) {
-          const emulatorResult = printerEmulator.processCommand(command);
+          const emulatorResult = emulator.processCommand(command);
           result = { success: emulatorResult.success, response: emulatorResult.response };
         } else {
           result = await window.electronAPI!.printer.sendCommand(printerId, command);

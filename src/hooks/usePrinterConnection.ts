@@ -68,6 +68,16 @@ const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectr
 // Helper to check if emulator should be used
 const shouldUseEmulator = () => printerEmulator.enabled || multiPrinterEmulator.enabled;
 
+// Resolve the correct emulator instance for a given printer IP.
+// Always prefers the multi-printer instance; only falls back to singleton if no match.
+const getEmulatorForPrinter = (ipAddress?: string, port?: number) => {
+  if (multiPrinterEmulator.enabled && ipAddress) {
+    const instance = multiPrinterEmulator.getInstanceByIp(ipAddress, port);
+    if (instance) return instance;
+  }
+  return printerEmulator;
+};
+
 export function usePrinterConnection() {
   const { printers, addPrinter, removePrinter, updatePrinterStatus, updatePrinter, setPrinters } = usePrinterStorage();
   const [isChecking, setIsChecking] = useState(false);
@@ -770,11 +780,7 @@ export function usePrinterConnection() {
     // IMPORTANT: Do NOT optimistically flip UI to green.
     // We only show HV On after a confirmed ^SU response (V300UP:1).
     if (shouldUseEmulator()) {
-      // Use the specific emulator instance for this printer
-      const multiInstance = multiPrinterEmulator.enabled
-        ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
-        : null;
-      const emulator = multiInstance || printerEmulator;
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
       console.log('[startPrint] Using emulator for', printer.ipAddress);
       const result = emulator.processCommand('^PR 1');
       console.log('[startPrint] Emulator result:', result);
@@ -842,11 +848,7 @@ export function usePrinterConnection() {
     // IMPORTANT: Do NOT optimistically flip UI.
     // We only show HV Off after a confirmed ^SU response (V300UP:0).
     if (shouldUseEmulator()) {
-      // Use the specific emulator instance for this printer
-      const multiInstance = multiPrinterEmulator.enabled
-        ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
-        : null;
-      const emulator = multiInstance || printerEmulator;
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
       console.log('[stopPrint] Using emulator for', printer.ipAddress);
       const result = emulator.processCommand('^PR 0');
       console.log('[stopPrint] Emulator result:', result);
@@ -908,11 +910,7 @@ export function usePrinterConnection() {
     const printer = connectionState.connectedPrinter;
     
     if (shouldUseEmulator()) {
-      // Use the specific emulator instance for this printer
-      const multiInstance = multiPrinterEmulator.enabled
-        ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
-        : null;
-      const emulator = multiInstance || printerEmulator;
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
       console.log('[jetStop] Using emulator for', printer.ipAddress);
       const result = emulator.processCommand('^SJ 0');
       console.log('[jetStop] Emulator result:', result);
@@ -986,13 +984,9 @@ export function usePrinterConnection() {
     const printer = connectionState.connectedPrinter;
     
     if (shouldUseEmulator()) {
-      // Use multi-emulator instance if available for the connected printer
-      const multiInstance = multiPrinterEmulator.enabled
-        ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
-        : null;
-      const emulator = multiInstance || printerEmulator;
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
       
-      console.log('[selectMessage] Using emulator, multi:', !!multiInstance);
+      console.log('[selectMessage] Using emulator');
       const result = emulator.processCommand(`^SM ${message.name}`);
       console.log('[selectMessage] Emulator result:', result);
       
@@ -1045,9 +1039,9 @@ export function usePrinterConnection() {
     const printer = connectionState.connectedPrinter;
     
     if (shouldUseEmulator()) {
-      // Use emulator
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
       console.log('[signIn] Using emulator');
-      const result = printerEmulator.processCommand(`^LG ${password}`);
+      const result = emulator.processCommand(`^LG ${password}`);
       console.log('[signIn] Emulator result:', result);
       return result.success && !result.response.includes('AuthFail');
     } else {
@@ -1069,8 +1063,9 @@ export function usePrinterConnection() {
     const printer = connectionState.connectedPrinter;
     
     if (shouldUseEmulator()) {
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
       console.log('[signOut] Using emulator');
-      const result = printerEmulator.processCommand('^LO');
+      const result = emulator.processCommand('^LO');
       console.log('[signOut] Emulator result:', result);
       return result.success;
     } else if (isElectron && window.electronAPI) {
@@ -1232,9 +1227,10 @@ export function usePrinterConnection() {
     commands.push(nmCommand);
 
     if (shouldUseEmulator()) {
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
       console.log('[saveMessageContent] Using emulator');
       for (const cmd of commands) {
-        const result = printerEmulator.processCommand(cmd);
+        const result = emulator.processCommand(cmd);
         console.log('[saveMessageContent] Emulator result for', cmd, ':', result);
       }
       // Ensure message is in local state
@@ -1291,17 +1287,11 @@ export function usePrinterConnection() {
       console.log('[deleteMessage] Sending:', command);
 
       if (shouldUseEmulator()) {
-        const multiInstance = multiPrinterEmulator.enabled
-          ? multiPrinterEmulator.getInstanceByIp(
-              connectionState.connectedPrinter.ipAddress,
-              connectionState.connectedPrinter.port,
-            )
-          : null;
-        if (multiInstance) {
-          multiInstance.processCommand(command);
-        } else if (printerEmulator.enabled) {
-          printerEmulator.processCommand(command);
-        }
+        const emulator = getEmulatorForPrinter(
+          connectionState.connectedPrinter.ipAddress,
+          connectionState.connectedPrinter.port,
+        );
+        emulator.processCommand(command);
       } else if (isElectron && window.electronAPI) {
         try {
           const result = await window.electronAPI.printer.sendCommand(
@@ -1329,14 +1319,11 @@ export function usePrinterConnection() {
     const command = `^CC ${counterId};${value}`;
     
     if (shouldUseEmulator()) {
-      // Use multi-emulator instance if available for the connected printer
-      const multiInstance = multiPrinterEmulator.enabled
-        ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
-        : null;
-      const emulator = multiInstance || printerEmulator;
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
       
-      console.log('[resetCounter] Using emulator, command:', command, 'multi:', !!multiInstance);
+      console.log('[resetCounter] Using emulator, command:', command);
       const result = emulator.processCommand(command);
+      console.log('[resetCounter] Emulator result:', result);
       console.log('[resetCounter] Emulator result:', result);
       
       // Update local state from emulator - include all counters
@@ -1446,13 +1433,9 @@ export function usePrinterConnection() {
     const printer = connectionState.connectedPrinter;
     
     if (shouldUseEmulator()) {
-      // Use multi-emulator instance if available for the connected printer
-      const multiInstance = multiPrinterEmulator.enabled
-        ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
-        : null;
-      const emulator = multiInstance || printerEmulator;
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
       
-      console.log('[queryCounters] Using emulator, multi:', !!multiInstance);
+      console.log('[queryCounters] Using emulator');
       const result = emulator.processCommand('^CN');
       console.log('[queryCounters] Emulator result:', result);
       
@@ -1592,9 +1575,10 @@ export function usePrinterConnection() {
     ];
 
     if (shouldUseEmulator()) {
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
       console.log('[saveGlobalAdjust] Using emulator');
       for (const cmd of commands) {
-        const result = printerEmulator.processCommand(cmd);
+        const result = emulator.processCommand(cmd);
         console.log('[saveGlobalAdjust] Emulator result for', cmd, ':', result);
       }
       return true;
@@ -1674,8 +1658,9 @@ export function usePrinterConnection() {
     const command = `^CM s${speedMap[settings.speed]};o${orientationValue};p${printModeValue}`;
 
     if (shouldUseEmulator()) {
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
       console.log('[saveMessageSettings] Using emulator');
-      const result = printerEmulator.processCommand(command);
+      const result = emulator.processCommand(command);
       console.log('[saveMessageSettings] Emulator result:', result);
       return result.success;
     } else if (isElectron && window.electronAPI) {
@@ -1786,8 +1771,9 @@ export function usePrinterConnection() {
     const printer = connectionState.connectedPrinter;
 
     if (shouldUseEmulator()) {
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
       console.log('[sendCommand] Using emulator');
-      return printerEmulator.processCommand(command);
+      return emulator.processCommand(command);
     } else if (isElectron && window.electronAPI) {
       try {
         console.log('[sendCommand] Sending:', command);
@@ -1814,51 +1800,14 @@ export function usePrinterConnection() {
     console.log('[queryPrinterMetrics] Called for printer:', printer.id, printer.ipAddress);
 
     if (shouldUseEmulator()) {
-      // Multi-printer emulator
-      if (multiPrinterEmulator.enabled) {
-        const instance = multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port);
-        if (instance) {
-          const result = instance.processCommand('^SU');
-          const sdResult = instance.processCommand('^SD');
-          let pTime: Date | null = null;
-          if (sdResult.success && sdResult.response) {
-            const p = new Date(sdResult.response.replace(/[^\x20-\x7E]/g, '').trim());
-            if (!isNaN(p.getTime())) pTime = p;
-          }
-          if (result.success && result.response) {
-            const parsed = parseStatusResponse(result.response);
-            if (parsed) {
-              return {
-                powerHours: parsed.powerHours ?? '0:00',
-                streamHours: parsed.streamHours ?? '0:00',
-                modulation: parsed.modulation ?? 0,
-                viscosity: parsed.viscosity ?? 0,
-                charge: parsed.charge ?? 0,
-                pressure: parsed.pressure ?? 0,
-                rps: parsed.rps ?? 0,
-                phaseQual: parsed.phaseQual ?? 0,
-                hvDeflection: parsed.hvDeflection ?? false,
-                inkLevel: (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
-                makeupLevel: (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
-                printStatus: parsed.hvDeflection ? 'Ready' : 'Not Ready',
-                allowErrors: parsed.allowErrors ?? true,
-                errorActive: parsed.errorActive ?? false,
-                printheadTemp: parsed.printheadTemp ?? 0,
-                electronicsTemp: parsed.electronicsTemp ?? 0,
-                subsystems: {
-                  v300up: parsed.subsystems?.v300up ?? false,
-                  vltOn: parsed.subsystems?.vltOn ?? false,
-                  gutOn: parsed.subsystems?.gutOn ?? false,
-                  modOn: parsed.subsystems?.modOn ?? false,
-                },
-                printerTime: pTime,
-              };
-            }
-          }
-        }
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
+      const result = emulator.processCommand('^SU');
+      const sdResult = emulator.processCommand('^SD');
+      let pTime: Date | null = null;
+      if (sdResult.success && sdResult.response) {
+        const p = new Date(sdResult.response.replace(/[^\x20-\x7E]/g, '').trim());
+        if (!isNaN(p.getTime())) pTime = p;
       }
-      // Fallback to single emulator
-      const result = printerEmulator.processCommand('^SU');
       if (result.success && result.response) {
         const parsed = parseStatusResponse(result.response);
         if (parsed) {
@@ -1885,6 +1834,7 @@ export function usePrinterConnection() {
               gutOn: parsed.subsystems?.gutOn ?? false,
               modOn: parsed.subsystems?.modOn ?? false,
             },
+            printerTime: pTime,
           };
         }
       }
