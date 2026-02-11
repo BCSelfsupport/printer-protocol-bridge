@@ -188,7 +188,7 @@ class PrinterEmulatorInstance {
       ipAddress: this.config.ipAddress,
       port: this.config.port,
       isAvailable: true,
-      status: this.state.hvOn ? 'ready' : 'not_ready',
+      status: this.state.hvOn && this.state.jetRunning ? 'ready' : 'not_ready',
     };
   }
 

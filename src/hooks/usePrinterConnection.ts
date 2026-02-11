@@ -537,9 +537,7 @@ export function usePrinterConnection() {
         : null;
 
       if (multiInstance) {
-        // Use the specific emulator instance for this printer
-        multiInstance.processCommand('^SJ 1'); // Start jet
-        
+        // Read the current state of this specific emulator instance — do NOT force jet start
         const emulatorState = multiInstance.getState();
         const simPrinter = multiInstance.getSimulatedPrinter();
         
@@ -580,7 +578,7 @@ export function usePrinterConnection() {
             hvDeflection: emulatorState.hvOn,
             inkLevel: emulatorState.inkLevel,
             makeupLevel: emulatorState.makeupLevel,
-            printStatus: emulatorState.hvOn ? 'Ready' : 'Not ready',
+            printStatus: emulatorState.hvOn && emulatorState.jetRunning ? 'Ready' : 'Not ready',
             subsystems: {
               v300up: emulatorState.v300up,
               vltOn: emulatorState.vltOn,
@@ -594,8 +592,8 @@ export function usePrinterConnection() {
         return;
       }
 
-      // Fall back to single emulator (backward compat)
-      printerEmulator.processCommand('^SJ 1');
+      // Fall back to single emulator (backward compat) — read state, don't force jet
+      const emulatorState = printerEmulator.getState();
       
       // Update printer status
       updatePrinter(printer.id, {
@@ -605,7 +603,6 @@ export function usePrinterConnection() {
         hasActiveErrors: false,
       });
 
-      const emulatorState = printerEmulator.getState();
       const emulatorMessages: PrintMessage[] = emulatorState.messages.map((name, idx) => ({
         id: idx + 1,
         name,
