@@ -996,6 +996,8 @@ export function usePrinterConnection() {
           ...prev,
           status: prev.status ? { ...prev.status, currentMessage: state.currentMessage } : null,
         }));
+        // Immediately update the printer card's currentMessage
+        updatePrinter(printer.id, { currentMessage: state.currentMessage });
         return true;
       }
       return false;
@@ -1010,6 +1012,7 @@ export function usePrinterConnection() {
             ...prev,
             status: prev.status ? { ...prev.status, currentMessage: message.name } : null,
           }));
+          updatePrinter(printer.id, { currentMessage: message.name });
           return true;
         }
         return false;
@@ -1024,9 +1027,10 @@ export function usePrinterConnection() {
         ...prev,
         status: prev.status ? { ...prev.status, currentMessage: message.name } : null,
       }));
+      updatePrinter(printer.id, { currentMessage: message.name });
       return true;
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter, updatePrinter]);
 
   // Printer sign-in: send ^LG password command
   const signIn = useCallback(async (password: string): Promise<boolean> => {
