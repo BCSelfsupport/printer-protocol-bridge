@@ -89,10 +89,13 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
     HVDeflection: extract(/HVDeflection\[\s*(\d)\s*\]/i),
   });
 
-  // HV status: Per v2.0 protocol, HVDeflection[1] = HV ON, HVDeflection[0] = HV OFF.
-  // This is the authoritative field for whether printing is enabled.
-  // V300UP may stay at 1 even when HV is toggled off, so we use HVDeflection instead.
-  const printStatus = hvDeflection ? 'Ready' : 'Not ready';
+  // Print Status: Use the printer's own "Print Status:" line if available,
+  // as HVDeflection alone is not reliable (can be 1 even when jet is off).
+  // Fall back to HVDeflection only if the printer doesn't include a Print Status line.
+  const rawPrintStatus = extract(/Print\s+Status\s*:\s*([\w\s]+)/i)?.trim();
+  const printStatus = rawPrintStatus 
+    ? (/ready/i.test(rawPrintStatus) && !/not\s+ready/i.test(rawPrintStatus) ? 'Ready' : 'Not ready')
+    : (hvDeflection ? 'Ready' : 'Not ready');
 
   // AllowErrors and Err flags (v2.6)
   const allowErrors =

@@ -248,10 +248,10 @@ export function usePrinterConnection() {
       return;
     }
 
-    // Per v2.0 protocol, HVDeflection is the authoritative HV indicator (1=ON, 0=OFF).
-    // V300UP may remain at 1 even when HV is toggled off.
-    const hvOn = parsed.hvDeflection ?? false;
-    console.log('[handleServiceResponse] Parsed HV state (hvDeflection):', hvOn, 'raw hvDeflection:', parsed.hvDeflection);
+    // Use the printer's own Print Status field (parsed as printStatus) as the authoritative
+    // ready indicator. HVDeflection alone is unreliable — it can be 1 even when the jet is off.
+    const hvOn = parsed.printStatus === 'Ready';
+    console.log('[handleServiceResponse] Parsed ready state (printStatus):', parsed.printStatus, '-> hvOn:', hvOn);
 
     // Sync the printer's status in the list with the HV state
     if (connectedPrinterId) {
