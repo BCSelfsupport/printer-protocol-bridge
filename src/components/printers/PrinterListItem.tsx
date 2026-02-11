@@ -208,7 +208,7 @@ export function PrinterListItem({
             })()}
             {printer.hasActiveErrors && (
               <span className="text-xs px-2.5 py-1 rounded bg-destructive text-white font-medium">
-                ERROR
+                WARNING
               </span>
             )}
             {/* Service button */}
@@ -358,7 +358,7 @@ export function PrinterListItem({
           })()}
           {printer.hasActiveErrors && (
             <span className="text-[10px] px-2 py-0.5 rounded bg-destructive text-white font-medium max-w-[110px] truncate">
-              ERROR
+              WARNING
             </span>
           )}
           <div className="flex items-center gap-1 mt-1 min-w-0">
