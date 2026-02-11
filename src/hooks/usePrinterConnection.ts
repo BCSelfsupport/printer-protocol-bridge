@@ -110,6 +110,8 @@ export function usePrinterConnection() {
             hasActiveErrors: hasErrors(state?.inkLevel, state?.makeupLevel),
             inkLevel: state?.inkLevel as Printer['inkLevel'],
             makeupLevel: state?.makeupLevel as Printer['makeupLevel'],
+            currentMessage: state?.currentMessage,
+            printCount: state?.printCount,
           });
         });
 
@@ -1313,12 +1315,18 @@ export function usePrinterConnection() {
     const command = `^CC ${counterId};${value}`;
     
     if (shouldUseEmulator()) {
-      console.log('[resetCounter] Using emulator, command:', command);
-      const result = printerEmulator.processCommand(command);
+      // Use multi-emulator instance if available for the connected printer
+      const multiInstance = multiPrinterEmulator.enabled
+        ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
+        : null;
+      const emulator = multiInstance || printerEmulator;
+      
+      console.log('[resetCounter] Using emulator, command:', command, 'multi:', !!multiInstance);
+      const result = emulator.processCommand(command);
       console.log('[resetCounter] Emulator result:', result);
       
       // Update local state from emulator - include all counters
-      const state = printerEmulator.getState();
+      const state = emulator.getState();
       setConnectionState(prev => ({
         ...prev,
         status: prev.status ? {
@@ -1416,8 +1424,14 @@ export function usePrinterConnection() {
     const printer = connectionState.connectedPrinter;
     
     if (shouldUseEmulator()) {
-      console.log('[queryCounters] Using emulator');
-      const result = printerEmulator.processCommand('^CN');
+      // Use multi-emulator instance if available for the connected printer
+      const multiInstance = multiPrinterEmulator.enabled
+        ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
+        : null;
+      const emulator = multiInstance || printerEmulator;
+      
+      console.log('[queryCounters] Using emulator, multi:', !!multiInstance);
+      const result = emulator.processCommand('^CN');
       console.log('[queryCounters] Emulator result:', result);
       
       if (result.success && result.response) {
