@@ -24,6 +24,7 @@ interface ElectronAPI {
   printer: PrinterAPI;
   app: AppAPI;
   onUpdateAvailable: (callback: (info: { version: string }) => void) => void;
+  onUpdateDownloadProgress: (callback: (progress: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => void;
   onUpdateDownloaded: (callback: (info: { version: string }) => void) => void;
   onPrinterConnectionLost: (callback: (payload: { printerId: number }) => void) => void;
 }
