@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+declare const __APP_VERSION__: string;
+
 interface SplashScreenProps {
   onComplete: () => void;
   minimumDuration?: number;
@@ -51,6 +53,20 @@ export function SplashScreen({ onComplete, minimumDuration = 4000 }: SplashScree
   const [fadeOut, setFadeOut] = useState(false);
   const [showBrand, setShowBrand] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
+  const [appVersion, setAppVersion] = useState<string>(() => {
+    try {
+      const v = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '';
+      return v && v !== 'undefined' ? v : '0.0.0';
+    } catch {
+      return '0.0.0';
+    }
+  });
+
+  useEffect(() => {
+    if (window.electronAPI?.app?.getVersion) {
+      window.electronAPI.app.getVersion().then(v => setAppVersion(v)).catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     const brandTimer = setTimeout(() => setShowBrand(true), 800);
@@ -128,16 +144,19 @@ export function SplashScreen({ onComplete, minimumDuration = 4000 }: SplashScree
 
       {/* Loading indicator */}
       <div
-        className={`mt-6 flex items-center gap-2 transition-all duration-500 ${
+        className={`mt-6 flex flex-col items-center gap-3 transition-all duration-500 ${
           showLoading ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        <div className="flex gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" style={{ animationDelay: '0s' }} />
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" style={{ animationDelay: '0.3s' }} />
-          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" style={{ animationDelay: '0.6s' }} />
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" style={{ animationDelay: '0s' }} />
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" style={{ animationDelay: '0.3s' }} />
+            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" style={{ animationDelay: '0.6s' }} />
+          </div>
+          <span className="text-slate-500 text-sm tracking-widest uppercase">Connecting</span>
         </div>
-        <span className="text-slate-500 text-sm tracking-widest uppercase">Connecting</span>
+        <span className="text-slate-600 text-xs font-mono">v{appVersion}</span>
       </div>
     </div>
   );
