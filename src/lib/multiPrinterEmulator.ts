@@ -498,6 +498,22 @@ class PrinterEmulatorInstance {
     this.notifyListeners();
   }
 
+  cycleInkLevel() {
+    const levels: Array<'FULL' | 'GOOD' | 'LOW' | 'EMPTY'> = ['FULL', 'GOOD', 'LOW', 'EMPTY'];
+    const currentIdx = levels.indexOf(this.state.inkLevel);
+    const nextIdx = (currentIdx + 1) % levels.length;
+    this.state.inkLevel = levels[nextIdx];
+    this.notifyListeners();
+  }
+
+  cycleMakeupLevel() {
+    const levels: Array<'FULL' | 'GOOD' | 'LOW' | 'EMPTY'> = ['FULL', 'GOOD', 'LOW', 'EMPTY'];
+    const currentIdx = levels.indexOf(this.state.makeupLevel);
+    const nextIdx = (currentIdx + 1) % levels.length;
+    this.state.makeupLevel = levels[nextIdx];
+    this.notifyListeners();
+  }
+
   reset() {
     this.state = createDefaultState(this.config.initialState);
     this.commandLog = [];

@@ -287,7 +287,14 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
                     <button
-                      onClick={() => printerEmulator.cycleInkLevel()}
+                      onClick={() => {
+                        printerEmulator.cycleInkLevel();
+                        // Also cycle on all multi-printer emulator instances
+                        multiPrinterEmulator.getEmulatedPrinters().forEach(p => {
+                          const inst = multiPrinterEmulator.getInstanceByIp(p.ipAddress, p.port);
+                          inst?.cycleInkLevel();
+                        });
+                      }}
                       disabled={!emulatorEnabled}
                       className={cn(
                         "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all border",
@@ -304,7 +311,13 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                       Ink: {emulatorState.inkLevel}
                     </button>
                     <button
-                      onClick={() => printerEmulator.cycleMakeupLevel()}
+                      onClick={() => {
+                        printerEmulator.cycleMakeupLevel();
+                        multiPrinterEmulator.getEmulatedPrinters().forEach(p => {
+                          const inst = multiPrinterEmulator.getInstanceByIp(p.ipAddress, p.port);
+                          inst?.cycleMakeupLevel();
+                        });
+                      }}
                       disabled={!emulatorEnabled}
                       className={cn(
                         "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all border",
