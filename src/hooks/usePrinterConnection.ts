@@ -19,11 +19,7 @@ const defaultSettings: PrintSettings = {
   repeatAmount: 0,
 };
 
-const mockMessages: PrintMessage[] = [
-  { id: 1, name: 'BESTCODE' },
-  { id: 2, name: 'BESTCODE-AUTO' },
-  { id: 3, name: 'MOBA_00A' },
-];
+const mockMessages: PrintMessage[] = [];
 
 const mockStatus: PrinterStatus = {
   printOn: true,
