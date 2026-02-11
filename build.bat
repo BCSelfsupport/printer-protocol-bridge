@@ -58,12 +58,13 @@ if errorlevel 1 (
 )
 echo.
 
-REM Step 4: Generate .ico from PNG (electron-builder needs .ico for NSIS installer)
-echo [4/5] Generating icon...
+REM Step 4: Convert PNG icon to ICO format
+echo [4/5] Converting icon to ICO...
 if not exist "electron\resources" mkdir "electron\resources"
-call npx icon-gen -i public/codesync-icon.png -o electron/resources --ico --ico-name icon --ico-sizes 16,32,48,64,128,256
+call npx png-to-ico public/codesync-icon.png > electron/resources/icon.ico
 if errorlevel 1 (
-    echo WARNING: Icon generation failed. Installer may lack custom icon.
+    echo WARNING: ICO conversion failed. Trying alternative...
+    copy public\codesync-icon.png electron\resources\icon.png >nul 2>&1
 )
 echo.
 
