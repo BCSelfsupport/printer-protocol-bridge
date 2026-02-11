@@ -27,8 +27,7 @@
       }
     ],
     "icon": "electron/resources/icon",
-    "signAndEditExecutable": false,
-    "sign": null
+    "signAndEditExecutable": false
   },
   "nsis": {
     "oneClick": false,
