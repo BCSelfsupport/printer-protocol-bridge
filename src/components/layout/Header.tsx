@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Settings, Sun, Moon, Home } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
@@ -35,13 +35,31 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
     }
   }, []);
 
+  // Calculate offset between printer time and local time for smooth ticking
+  const printerOffsetMs = useRef(0);
+  
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+    if (isConnected && printerTime) {
+      // Calculate how far the printer clock is from local clock
+      printerOffsetMs.current = printerTime.getTime() - Date.now();
+    } else {
+      printerOffsetMs.current = 0;
+    }
+  }, [isConnected, printerTime]);
 
-  // Use printer time when connected, otherwise use local time
-  const displayTime = isConnected && printerTime ? printerTime : currentTime;
+  useEffect(() => {
+    const timer = setInterval(() => {
+      // Apply the printer offset to local time for smooth ticking
+      if (isConnected && printerTime) {
+        setCurrentTime(new Date(Date.now() + printerOffsetMs.current));
+      } else {
+        setCurrentTime(new Date());
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isConnected, printerTime]);
+
+  const displayTime = currentTime;
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
