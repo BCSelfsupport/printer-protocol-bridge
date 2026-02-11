@@ -51,7 +51,7 @@ const createDefaultState = (overrides?: Partial<EmulatorState>): EmulatorState =
   powerHours: 165.0,
   streamHours: 120.5,
   
-  messages: ['BESTCODE', 'BESTCODE-AUTO', 'MOBA_00A', 'TEST', 'SAMPLE', 'BC-GEN2'],
+  messages: ['BESTCODE', 'BESTCODE-AUTO', 'TEST', 'SAMPLE', 'BC-GEN2'],
   logos: ['ENCODER.BMP', 'highVolt.bmp', 'phaseWave.bmp', 'running_2.bmp', 'USBdrive.bmp'],
   
   errorsOn: false,
@@ -88,7 +88,7 @@ const EMULATED_PRINTERS: EmulatedPrinterConfig[] = [
     ipAddress: '192.168.1.56',
     port: 23,
     initialState: {
-      currentMessage: 'MOBA_00A',
+      currentMessage: 'TEST',
       printCount: 892,
       productCount: 3421,
       inkLevel: 'FULL',
