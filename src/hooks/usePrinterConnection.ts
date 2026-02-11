@@ -30,15 +30,15 @@ const mockStatus: PrinterStatus = {
   makeupGood: true,
   inkFull: true,
   isRunning: false,
-  productCount: 8,
+  productCount: 0,
   printCount: 0,
   customCounters: [0, 0, 0, 0], // Custom counters 1-4
-  currentMessage: 'BESTCODE',  // Match first mockMessage name
+  currentMessage: null,
   errorMessage: null,
   printerVersion: 'v01.09.00.14',
   printerTime: new Date(),
-  inkLevel: 'FULL',
-  makeupLevel: 'GOOD',
+  inkLevel: 'UNKNOWN',
+  makeupLevel: 'UNKNOWN',
 };
 
 const mockMetrics: PrinterMetrics = {
@@ -623,13 +623,51 @@ export function usePrinterConnection() {
       messages: mockMessages,
     });
 
-    // Query initial status and message list from printer
+    // Query initial status, counters, and message list from printer
     if (isElectron) {
       // Small delay to let state update, then query
-      setTimeout(() => {
+      setTimeout(async () => {
         queryPrinterStatus(printer);
-        // Fetch real message list from printer after a short additional delay
-        setTimeout(() => queryMessageList(printer), 300);
+        // Fetch real counters and message list after short additional delay
+        setTimeout(async () => {
+          queryMessageList(printer);
+          // Query counters via ^CN
+          try {
+            const cnResult = await window.electronAPI!.printer.sendCommand(printer.id, '^CN');
+            if (cnResult?.success && cnResult.response) {
+              const response = cnResult.response;
+              let parts: number[] = [];
+              if (response.includes('Product:')) {
+                const pm = response.match(/Product:(\d+)/);
+                const prm = response.match(/Print:(\d+)/);
+                const c1 = response.match(/Custom1:(\d+)/);
+                const c2 = response.match(/Custom2:(\d+)/);
+                const c3 = response.match(/Custom3:(\d+)/);
+                const c4 = response.match(/Custom4:(\d+)/);
+                parts = [
+                  pm ? parseInt(pm[1], 10) : 0, prm ? parseInt(prm[1], 10) : 0,
+                  c1 ? parseInt(c1[1], 10) : 0, c2 ? parseInt(c2[1], 10) : 0,
+                  c3 ? parseInt(c3[1], 10) : 0, c4 ? parseInt(c4[1], 10) : 0,
+                ];
+              } else {
+                parts = response.split(',').map((s: string) => parseInt(s.trim(), 10));
+              }
+              if (parts.length >= 2) {
+                setConnectionState(prev => ({
+                  ...prev,
+                  status: prev.status ? {
+                    ...prev.status,
+                    productCount: parts[0],
+                    printCount: parts[1],
+                    customCounters: parts.length >= 6 ? [parts[2], parts[3], parts[4], parts[5]] : prev.status.customCounters,
+                  } : null,
+                }));
+              }
+            }
+          } catch (e) {
+            console.error('[connect] Failed to query ^CN:', e);
+          }
+        }, 300);
       }, 500);
     }
   }, [updatePrinter, queryPrinterStatus, queryMessageList]);
