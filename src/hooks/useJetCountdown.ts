@@ -39,18 +39,24 @@ export function useJetCountdown(): UseJetCountdownReturn {
     intervalRef.current = window.setInterval(() => {
       setCountdownSeconds(prev => {
         if (prev === null || prev <= 1) {
-          // Countdown complete
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-          }
-          setCountdownType(null);
-          return null;
+          return 0; // Signal completion, cleanup handled by effect
         }
         return prev - 1;
       });
     }, 1000);
   }, [cancelCountdown]);
+
+  // When countdown reaches 0, clean up
+  useEffect(() => {
+    if (countdownSeconds === 0) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setCountdownSeconds(null);
+      setCountdownType(null);
+    }
+  }, [countdownSeconds]);
 
   // Cleanup on unmount
   useEffect(() => {
