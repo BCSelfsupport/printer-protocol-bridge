@@ -68,6 +68,8 @@ interface PrintersScreenProps {
   onTurnOff?: () => void;
   // Master/Slave sync - per master
   onSyncMaster?: (masterId: number) => void;
+  // Optional content to render in the right panel instead of Dashboard
+  rightPanelContent?: React.ReactNode;
 }
 
 // Sortable wrapper for PrinterListItem
@@ -188,6 +190,7 @@ export function PrintersScreen({
   onNavigate,
   onTurnOff,
   onSyncMaster,
+  rightPanelContent,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -312,13 +315,14 @@ export function PrintersScreen({
     setServicePopupOpen(true);
   };
 
-  // Desktop shows split-view with Dashboard when connected
+  // Desktop shows split-view with Dashboard when connected (or rightPanelContent override)
   const showDashboardInPanel = !isMobile && isConnected && connectedPrinter;
+  const showRightPanel = showDashboardInPanel || (!isMobile && rightPanelContent);
 
   return (
     <div className="flex-1 flex flex-col md:flex-row bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-3 md:p-4 gap-3 md:gap-4 overflow-y-auto md:overflow-hidden">
       {/* Left Panel - Printer List (narrower on desktop when showing Dashboard) */}
-      <div className={`${showDashboardInPanel ? 'w-full md:w-96 lg:w-[420px]' : 'w-full md:w-96'} flex-shrink-0 flex flex-col bg-slate-900/50 rounded-xl border border-slate-800 overflow-visible md:overflow-hidden`}>
+      <div className={`${showRightPanel ? 'w-full md:w-96 lg:w-[420px]' : 'w-full md:w-96'} flex-shrink-0 flex flex-col bg-slate-900/50 rounded-xl border border-slate-800 overflow-visible md:overflow-hidden`}>
         {/* Header */}
         <div className="p-3 border-b border-slate-800 bg-slate-900/80">
           <div className="flex items-center justify-between mb-3">
@@ -386,9 +390,9 @@ export function PrintersScreen({
                       onConnect={() => onConnect(printer)}
                       onEdit={() => handleEditPrinter(printer)}
                       onService={() => handleOpenService(printer)}
-                      showConnectButton={!showDashboardInPanel}
+                      showConnectButton={!showRightPanel}
                       isConnected={connectedPrinter?.id === printer.id}
-                      compact={!!showDashboardInPanel}
+                      compact={!!showRightPanel}
                       countdownType={connectedPrinter?.id === printer.id ? countdownType : null}
                       isMobile={isMobile}
                       syncGroupIndex={syncGroupMap.get(printer.id)}
@@ -430,9 +434,13 @@ export function PrintersScreen({
         </div>
       </div>
 
-      {/* Right Panel - Dashboard (when connected) or Empty State - no scrollbar */}
+      {/* Right Panel - Dashboard, custom content, or Empty State */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {showDashboardInPanel ? (
+        {rightPanelContent ? (
+          <div className="flex-1 flex flex-col bg-background rounded-xl border border-slate-700 overflow-hidden">
+            {rightPanelContent}
+          </div>
+        ) : showDashboardInPanel ? (
           <div className="flex-1 flex flex-col bg-background rounded-xl border border-slate-700 overflow-hidden">
             <Dashboard
               status={status ?? null}
