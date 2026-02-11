@@ -481,6 +481,7 @@ export function PrintersScreen({
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onAdd={onAddPrinter}
+        existingIps={printers.map(p => p.ipAddress)}
       />
 
       {/* Edit Printer Dialog */}
