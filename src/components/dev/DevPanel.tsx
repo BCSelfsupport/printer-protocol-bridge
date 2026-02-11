@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { printerEmulator, EmulatorState, CommandLogEntry, PROTOCOL_COMMANDS } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { cn } from '@/lib/utils';
@@ -54,6 +55,7 @@ interface DevPanelProps {
 }
 
 export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
+  const isMobile = useIsMobile();
   const [emulatorState, setEmulatorState] = useState<EmulatorState>(printerEmulator.getState());
   const [commandLog, setCommandLog] = useState<CommandLogEntry[]>(printerEmulator.getCommandLog());
   const [emulatorEnabled, setEmulatorEnabled] = useState(printerEmulator.enabled);
@@ -200,7 +202,7 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
           "bg-sidebar border border-border border-r-0 rounded-l-md",
           "p-2 shadow-lg transition-all",
           "hover:bg-muted",
-          isOpen ? "right-80" : "right-0"
+          isMobile ? "left-0" : isOpen ? "right-80" : "right-0"
         )}
       >
         {isOpen ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
