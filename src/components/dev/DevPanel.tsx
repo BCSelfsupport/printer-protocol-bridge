@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { printerEmulator, EmulatorState, CommandLogEntry, PROTOCOL_COMMANDS } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -18,7 +19,9 @@ import {
   Play,
   Square,
   List,
-  Palette
+  Palette,
+  Upload,
+  Loader2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
@@ -38,6 +41,23 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
   const [emulatorEnabled, setEmulatorEnabled] = useState(printerEmulator.enabled);
   const [manualCommand, setManualCommand] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [buildTriggering, setBuildTriggering] = useState(false);
+  const [buildResult, setBuildResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleTriggerBuild = async () => {
+    setBuildTriggering(true);
+    setBuildResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('trigger-build');
+      if (error) throw error;
+      setBuildResult({ success: true, message: 'Build triggered! Check GitHub Actions.' });
+    } catch (err: any) {
+      setBuildResult({ success: false, message: err.message || 'Failed to trigger build' });
+    } finally {
+      setBuildTriggering(false);
+      setTimeout(() => setBuildResult(null), 5000);
+    }
+  };
 
   useEffect(() => {
     const unsubState = printerEmulator.subscribe(setEmulatorState);
@@ -611,9 +631,33 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
             </TabsContent>
           </Tabs>
 
-          {/* Footer */}
-          <div className="p-3 border-t border-gray-200 text-[10px] text-gray-500 text-center">
-            Printer Emulator v2.0 • Bestcode Protocol • Dev Mode Only
+          {/* Push Update & Footer */}
+          <div className="p-3 border-t border-gray-200 space-y-2">
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full"
+              onClick={handleTriggerBuild}
+              disabled={buildTriggering}
+            >
+              {buildTriggering ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4 mr-2" />
+              )}
+              {buildTriggering ? 'Triggering...' : 'Push Update'}
+            </Button>
+            {buildResult && (
+              <div className={cn(
+                "text-[10px] text-center py-1 px-2 rounded",
+                buildResult.success ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+              )}>
+                {buildResult.message}
+              </div>
+            )}
+            <div className="text-[10px] text-gray-500 text-center">
+              Printer Emulator v2.0 • Bestcode Protocol • Dev Mode Only
+            </div>
           </div>
         </div>
       </div>
