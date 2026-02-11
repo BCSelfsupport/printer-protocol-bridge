@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Settings, Sun, Moon, Home } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
+declare const __APP_VERSION__: string;
 
 interface HeaderProps {
   isConnected: boolean;
@@ -15,11 +16,13 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
   const [currentTime, setCurrentTime] = useState(new Date());
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [appVersion, setAppVersion] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string>(
+    typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
+  );
 
   useEffect(() => {
     setMounted(true);
-    // Fetch app version from Electron
+    // Prefer Electron version if available
     if (window.electronAPI?.app?.getVersion) {
       window.electronAPI.app.getVersion().then(v => setAppVersion(v)).catch(() => {});
     }
