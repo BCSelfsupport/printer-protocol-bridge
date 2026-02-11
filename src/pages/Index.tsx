@@ -325,6 +325,9 @@ const Index = () => {
             onControlUnmount={() => setControlScreenOpen(false)}
             onNavigate={handleNavigate}
             onTurnOff={handleTurnOff}
+            isMasterConnected={isMaster}
+            slaveCount={slaveCount}
+            onSyncAll={syncAllMessages}
           />
         );
     }

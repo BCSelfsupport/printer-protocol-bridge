@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Server, GripVertical } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Server, GripVertical, RefreshCcw } from 'lucide-react';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 import { useState, useEffect, useMemo } from 'react';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
@@ -66,6 +66,10 @@ interface PrintersScreenProps {
   // Bottom nav props
   onNavigate?: (item: NavItem) => void;
   onTurnOff?: () => void;
+  // Master/Slave sync
+  isMasterConnected?: boolean;
+  slaveCount?: number;
+  onSyncAll?: () => void;
 }
 
 // Sortable wrapper for PrinterListItem
@@ -180,6 +184,9 @@ export function PrintersScreen({
   onControlUnmount,
   onNavigate,
   onTurnOff,
+  isMasterConnected = false,
+  slaveCount = 0,
+  onSyncAll,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -323,6 +330,18 @@ export function PrintersScreen({
               <Plus className="w-3 h-3 mr-1" />
               Add
             </Button>
+            {isMasterConnected && slaveCount > 0 && onSyncAll && (
+              <Button
+                onClick={onSyncAll}
+                size="sm"
+                variant="outline"
+                className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 h-8 text-xs"
+                title={`Sync all messages to ${slaveCount} slave(s)`}
+              >
+                <RefreshCcw className="w-3 h-3 mr-1" />
+                Sync ({slaveCount})
+              </Button>
+            )}
             {selectedPrinter && (
               <Button
                 onClick={handleRemoveSelected}
