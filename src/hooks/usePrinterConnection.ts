@@ -427,6 +427,38 @@ export function usePrinterConnection() {
     }
   }, [updatePrinterStatus]);
 
+  // Query message list from printer via ^LM command
+  const queryMessageList = useCallback(async (printer: Printer) => {
+    if (!isElectron || !window.electronAPI) return;
+    try {
+      const result = await window.electronAPI.printer.sendCommand(printer.id, '^LM');
+      console.log('[queryMessageList] ^LM response:', result);
+      if (result.success && result.response) {
+        const lines = result.response.split(/[\r\n]+/).filter(Boolean);
+        const messageNames: string[] = [];
+        for (const line of lines) {
+          const trimmed = line.trim();
+          // Skip the EOL marker and empty/prompt lines
+          if (!trimmed || trimmed === '//EOL' || trimmed === '>' || trimmed.startsWith('^')) continue;
+          messageNames.push(trimmed.toUpperCase());
+        }
+        if (messageNames.length > 0) {
+          const printerMessages: PrintMessage[] = messageNames.map((name, idx) => ({
+            id: idx + 1,
+            name,
+          }));
+          console.log('[queryMessageList] Parsed messages:', printerMessages);
+          setConnectionState((prev) => ({
+            ...prev,
+            messages: printerMessages,
+          }));
+        }
+      }
+    } catch (e) {
+      console.error('[queryMessageList] Failed to query ^LM:', e);
+    }
+  }, []);
+
   const connect = useCallback(async (printer: Printer) => {
     // If using emulator, simulate connection
     if (shouldUseEmulator()) {
@@ -581,12 +613,16 @@ export function usePrinterConnection() {
       messages: mockMessages,
     });
 
-    // Query initial status from printer (get real HV state)
+    // Query initial status and message list from printer
     if (isElectron) {
       // Small delay to let state update, then query
-      setTimeout(() => queryPrinterStatus(printer), 500);
+      setTimeout(() => {
+        queryPrinterStatus(printer);
+        // Fetch real message list from printer after a short additional delay
+        setTimeout(() => queryMessageList(printer), 300);
+      }, 500);
     }
-  }, [updatePrinter, queryPrinterStatus]);
+  }, [updatePrinter, queryPrinterStatus, queryMessageList]);
 
   const disconnect = useCallback(async () => {
     if (isElectron && window.electronAPI && connectionState.connectedPrinter) {
