@@ -9,15 +9,30 @@ interface AddPrinterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAdd: (printer: { name: string; ipAddress: string; port: number }) => void;
+  existingIps?: string[];
 }
 
-export function AddPrinterDialog({ open, onOpenChange, onAdd }: AddPrinterDialogProps) {
+export function AddPrinterDialog({ open, onOpenChange, onAdd, existingIps = [] }: AddPrinterDialogProps) {
   const [name, setName] = useState('');
   const [ipAddress, setIpAddress] = useState('');
   const [port, setPort] = useState('23');
+  const [ipError, setIpError] = useState('');
+
+  const handleIpChange = (value: string) => {
+    setIpAddress(value);
+    if (existingIps.includes(value.trim())) {
+      setIpError('This IP address is already in use');
+    } else {
+      setIpError('');
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (existingIps.includes(ipAddress.trim())) {
+      setIpError('This IP address is already in use');
+      return;
+    }
     if (name && ipAddress && port) {
       onAdd({
         name,
@@ -57,11 +72,13 @@ export function AddPrinterDialog({ open, onOpenChange, onAdd }: AddPrinterDialog
             <Input
               id="ip-address"
               value={ipAddress}
-              onChange={(e) => setIpAddress(e.target.value)}
+              onChange={(e) => handleIpChange(e.target.value)}
               placeholder="e.g., 192.168.1.55"
               pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"
               required
+              className={ipError ? 'border-red-500' : ''}
             />
+            {ipError && <p className="text-xs text-red-500">{ipError}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="port">Port</Label>

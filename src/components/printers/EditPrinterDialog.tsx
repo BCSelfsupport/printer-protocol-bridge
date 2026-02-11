@@ -33,7 +33,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
   const [port, setPort] = useState('23');
   const [role, setRole] = useState<PrinterRole>('none');
   const [masterId, setMasterId] = useState<string>('');
-
+  const [ipError, setIpError] = useState('');
   // Sync form when printer changes
   useEffect(() => {
     if (printer) {
@@ -45,9 +45,25 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
     }
   }, [printer]);
 
+  const existingIps = allPrinters.filter(p => p.id !== printer?.id).map(p => p.ipAddress);
+
+  const handleIpChange = (value: string) => {
+    setIpAddress(value);
+    if (existingIps.includes(value.trim())) {
+      setIpError('This IP address is already in use');
+    } else {
+      setIpError('');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!printer) return;
+
+    if (existingIps.includes(ipAddress.trim())) {
+      setIpError('This IP address is already in use');
+      return;
+    }
     
     const portNum = parseInt(port, 10);
     if (!name.trim() || !ipAddress.trim() || isNaN(portNum) || portNum < 1 || portNum > 65535) {
@@ -107,10 +123,11 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
             <Input
               id="edit-ip"
               value={ipAddress}
-              onChange={(e) => setIpAddress(e.target.value)}
+              onChange={(e) => handleIpChange(e.target.value)}
               placeholder="e.g., 192.168.1.100"
               className="bg-slate-800 border-slate-600 text-white font-mono"
             />
+            {ipError && <p className="text-xs text-red-500 mt-1">{ipError}</p>}
           </div>
 
           <div className="space-y-2">
