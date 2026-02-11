@@ -1,0 +1,33 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Electron build tools
+        run: npm install --save-dev electron electron-builder electron-updater
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Prepare icon
+        run: |
+          if (!(Test-Path "electron\resources")) { New-Item -ItemType Directory -Path "electron\resources" }
+          Copy-Item "public\codesync-icon.png" "electron\resources\icon.png" -Force
+
+      - name: Build and publish installer
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: npx electron-builder --config electron/electron-builder.json --win --publish always
