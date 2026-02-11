@@ -16,6 +16,8 @@
   },
   "publish": {
     "provider": "github",
+    "owner": "BCSelfsupport",
+    "repo": "printer-protocol-bridge",
     "releaseType": "release"
   },
   "forceCodeSigning": false,
