@@ -142,11 +142,6 @@ export function PrinterListItem({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className={`font-bold truncate text-base ${textColor}`}>{printer.name}</span>
-              {isConnected && (
-                <span className="text-xs px-2 py-0.5 rounded bg-success text-white font-medium">
-                  ACTIVE
-                </span>
-              )}
               {printer.role === 'master' && (
                 <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 ${groupColor?.badge ?? 'bg-amber-500/20 text-amber-400'}`}>
                   <Crown className="w-2.5 h-2.5" /> MASTER
