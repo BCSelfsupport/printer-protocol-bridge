@@ -1,3 +1,5 @@
+export type PrinterRole = 'none' | 'master' | 'slave';
+
 export interface Printer {
   id: number;
   name: string;
@@ -12,6 +14,9 @@ export interface Printer {
   makeupLevel?: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
   currentMessage?: string | null;
   printCount?: number;
+  // Master/Slave configuration
+  role?: PrinterRole;
+  masterId?: number; // ID of the master printer (when role === 'slave')
 }
 
 export interface PrinterStatus {

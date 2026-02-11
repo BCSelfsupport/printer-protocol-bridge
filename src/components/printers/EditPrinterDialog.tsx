@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Printer } from '@/types/printer';
+import { Printer, PrinterRole } from '@/types/printer';
 import {
   Dialog,
   DialogContent,
@@ -9,20 +9,30 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Printer as PrinterIcon, Save, Trash2 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Printer as PrinterIcon, Save, Trash2, Crown, Link } from 'lucide-react';
 
 interface EditPrinterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   printer: Printer | null;
-  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number }) => void;
+  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number }) => void;
   onDelete?: (printerId: number) => void;
+  allPrinters?: Printer[];
 }
 
-export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelete }: EditPrinterDialogProps) {
+export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelete, allPrinters = [] }: EditPrinterDialogProps) {
   const [name, setName] = useState('');
   const [ipAddress, setIpAddress] = useState('');
   const [port, setPort] = useState('23');
+  const [role, setRole] = useState<PrinterRole>('none');
+  const [masterId, setMasterId] = useState<string>('');
 
   // Sync form when printer changes
   useEffect(() => {
@@ -30,6 +40,8 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       setName(printer.name);
       setIpAddress(printer.ipAddress);
       setPort(printer.port.toString());
+      setRole(printer.role ?? 'none');
+      setMasterId(printer.masterId?.toString() ?? '');
     }
   }, [printer]);
 
@@ -46,6 +58,8 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       name: name.trim(),
       ipAddress: ipAddress.trim(),
       port: portNum,
+      role,
+      masterId: role === 'slave' && masterId ? parseInt(masterId, 10) : undefined,
     });
     onOpenChange(false);
   };
@@ -55,6 +69,11 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
     onDelete(printer.id);
     onOpenChange(false);
   };
+
+  // Available masters: other printers that are set as master (or could be)
+  const availableMasters = allPrinters.filter(
+    p => p.id !== printer?.id && p.role === 'master'
+  );
 
   if (!printer) return null;
 
@@ -107,6 +126,55 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
               className="bg-slate-800 border-slate-600 text-white font-mono w-24"
             />
           </div>
+
+          {/* Master/Slave Role */}
+          <div className="space-y-2">
+            <Label className="text-slate-300 flex items-center gap-1.5">
+              <Crown className="w-3.5 h-3.5" />
+              Sync Role
+            </Label>
+            <Select value={role} onValueChange={(v) => setRole(v as PrinterRole)}>
+              <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="master">Master</SelectItem>
+                <SelectItem value="slave">Slave</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-slate-500">
+              {role === 'master' && 'Messages and selections will sync to slave printers.'}
+              {role === 'slave' && 'This printer will receive messages and selections from its master.'}
+              {role === 'none' && 'No message synchronization.'}
+            </p>
+          </div>
+
+          {/* Master selection (only shown for slaves) */}
+          {role === 'slave' && (
+            <div className="space-y-2">
+              <Label className="text-slate-300 flex items-center gap-1.5">
+                <Link className="w-3.5 h-3.5" />
+                Assigned Master
+              </Label>
+              {availableMasters.length === 0 ? (
+                <p className="text-xs text-warning">No printers are configured as Master. Set a printer's role to "Master" first.</p>
+              ) : (
+                <Select value={masterId} onValueChange={setMasterId}>
+                  <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
+                    <SelectValue placeholder="Select master printer..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableMasters.map(m => (
+                      <SelectItem key={m.id} value={m.id.toString()}>
+                        {m.name} ({m.ipAddress})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
 
           <div className="flex justify-between pt-2">
             {onDelete && (

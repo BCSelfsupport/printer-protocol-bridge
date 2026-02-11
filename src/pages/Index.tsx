@@ -19,6 +19,7 @@ import { useJetCountdown } from '@/hooks/useJetCountdown';
 import { useMessageStorage, isReadOnlyMessage } from '@/hooks/useMessageStorage';
 import { DevPanel } from '@/components/dev/DevPanel';
 import { PrintMessage } from '@/types/printer';
+import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
 
@@ -74,6 +75,14 @@ const Index = () => {
   } = usePrinterConnection();
   
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown } = useJetCountdown();
+
+  // Master/Slave sync: auto-syncs messages and selections from master to slaves
+  const { isMaster, slaveCount, syncAllMessages } = useMasterSlaveSync({
+    printers,
+    connectedPrinterId: connectionState.connectedPrinter?.id,
+    currentMessage: connectionState.status?.currentMessage,
+    messages: connectionState.messages,
+  });
 
   const handleNavigate = (item: NavItem) => {
     // Adjust opens as a dialog, not a screen
