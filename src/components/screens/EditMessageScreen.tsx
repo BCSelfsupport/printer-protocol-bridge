@@ -527,13 +527,48 @@ export function EditMessageScreen({
       }
     }
     
-    // Calculate Y position: place on the same line as existing fields for single-line templates
-    const fontHeight = Math.min(16, message.height);
+    // Calculate Y position and font size based on template
     const blockedRows = 32 - message.height;
+    const multiTemplate = message.templateValue?.startsWith('multi-')
+      ? MULTILINE_TEMPLATES.find(t => t.value === message.templateValue)
+      : null;
+    
+    // For multi-line templates, pick the largest font that fits the line height
+    let fontHeight: number;
+    let fontSize: string;
+    if (multiTemplate) {
+      const maxH = multiTemplate.dotsPerLine;
+      const fittingFonts = FONT_SIZES.filter(fs => fs.height <= maxH);
+      const bestFont = fittingFonts.length > 0 ? fittingFonts[fittingFonts.length - 1] : FONT_SIZES[0];
+      fontHeight = bestFont.height;
+      fontSize = bestFont.value;
+    } else {
+      fontHeight = Math.min(16, message.height);
+      fontSize = 'Standard16High';
+      // Ensure font fits single-line template height
+      if (fontHeight > message.height) {
+        const fittingFonts = FONT_SIZES.filter(fs => fs.height <= message.height);
+        const bestFont = fittingFonts.length > 0 ? fittingFonts[fittingFonts.length - 1] : FONT_SIZES[0];
+        fontHeight = bestFont.height;
+        fontSize = bestFont.value;
+      }
+    }
+    
     let newY = blockedRows; // default: top of template area
     
-    // For single-line templates, new fields go on the same row as the first field
-    if (!message.templateValue?.startsWith('multi-') && message.fields.length > 0) {
+    if (multiTemplate) {
+      // For multi-line templates, distribute fields across lines round-robin
+      const { lines: numLines, dotsPerLine } = multiTemplate;
+      const linePositions: number[] = [];
+      let cy = blockedRows;
+      for (let i = 0; i < numLines; i++) {
+        linePositions.push(cy);
+        cy += dotsPerLine + 1; // +1 for 1-dot gap
+      }
+      const lineIndex = message.fields.length % numLines;
+      newY = linePositions[lineIndex];
+    } else if (message.fields.length > 0) {
+      // For single-line templates, new fields go on the same row as the first field
       newY = message.fields[0]?.y ?? blockedRows;
     }
     
@@ -545,7 +580,7 @@ export function EditMessageScreen({
       y: newY,
       width: 50,
       height: fontHeight,
-      fontSize: 'Standard16High',
+      fontSize,
       // Store AutoCode metadata for live refresh
       autoCodeFormat: format,
       autoCodeFieldType: fieldType,
