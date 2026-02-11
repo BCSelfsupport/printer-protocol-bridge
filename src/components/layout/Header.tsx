@@ -15,9 +15,14 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
   const [currentTime, setCurrentTime] = useState(new Date());
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    // Fetch app version from Electron
+    if (window.electronAPI?.app?.getVersion) {
+      window.electronAPI.app.getVersion().then(v => setAppVersion(v)).catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
@@ -46,6 +51,11 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
             </span>
             <span className="text-xs md:text-base font-normal text-muted-foreground mt-0.5 ml-0.5 leading-none">™</span>
           </div>
+          {appVersion && (
+            <span className="text-[10px] text-muted-foreground font-mono ml-1 self-end mb-0.5">
+              v{appVersion}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2 md:gap-4 flex-shrink-0 ml-4">
