@@ -541,7 +541,8 @@ class PrinterEmulator {
 
   private cmdShowDate(): string {
     const now = new Date();
-    return now.toLocaleString();
+    // Return ISO format for reliable parsing
+    return now.toISOString();
   }
 
   private cmdSetDate(cmd: string): string {

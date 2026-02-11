@@ -268,6 +268,8 @@ class PrinterEmulatorInstance {
         response = this.cmdDelayAdjust(trimmedCommand);
       } else if (trimmedCommand.startsWith('^PA')) {
         response = this.cmdPitchAdjust(trimmedCommand);
+      } else if (trimmedCommand.startsWith('^SD')) {
+        response = this.cmdShowDate();
       } else if (trimmedCommand.startsWith('^LG')) {
         response = this.cmdLogin(trimmedCommand);
       } else if (trimmedCommand.startsWith('^LO')) {
@@ -373,6 +375,12 @@ class PrinterEmulatorInstance {
       return this.formatError(14, 'FileNotFound', `Message '${msgName}' not found`);
     }
     return this.formatError(2, 'CmdFormat', 'Usage: ^SM messagename');
+  }
+
+  private cmdShowDate(): string {
+    const now = new Date();
+    // Return ISO format for reliable parsing
+    return now.toISOString();
   }
 
   private cmdListMessages(): string {
