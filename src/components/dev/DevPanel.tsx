@@ -202,7 +202,7 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
           "bg-sidebar border border-border border-r-0 rounded-l-md",
           "p-2 shadow-lg transition-all",
           "hover:bg-muted",
-          isMobile ? "left-0" : isOpen ? "right-80" : "right-0"
+          isOpen ? "right-80" : "right-0"
         )}
       >
         {isOpen ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
