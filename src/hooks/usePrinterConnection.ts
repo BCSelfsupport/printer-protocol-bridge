@@ -447,9 +447,11 @@ export function usePrinterConnection() {
         const lines = result.response.split(/[\r\n]+/).filter(Boolean);
         const messageNames: string[] = [];
         for (const line of lines) {
-          const trimmed = line.trim();
-          // Skip the EOL marker and empty/prompt lines
-          if (!trimmed || trimmed === '//EOL' || trimmed === '>' || trimmed.startsWith('^')) continue;
+          // Strip non-printable / control characters (garbage bytes from firmware)
+          const trimmed = line.replace(/[^\x20-\x7E]/g, '').trim();
+          // Skip EOL marker, prompts, command echoes, and status lines
+          if (!trimmed || trimmed === '//EOL' || trimmed === '>' || trimmed.startsWith('^')
+              || trimmed.includes('COMMAND SUCCESSFUL') || trimmed.includes('COMMAND FAILED')) continue;
           messageNames.push(trimmed.toUpperCase());
         }
         if (messageNames.length > 0) {
