@@ -322,6 +322,19 @@ export function usePrinterConnection() {
     });
   }, [connectedPrinterId, updatePrinterStatus]);
 
+  // Stable callback for ^SD (date/time) polling
+  const handleDateTimeResponse = useCallback((raw: string) => {
+    const cleaned = raw.replace(/[^\x20-\x7E]/g, '').trim();
+    if (!cleaned) return;
+    const parsed = new Date(cleaned);
+    if (!isNaN(parsed.getTime())) {
+      setConnectionState((prev) => ({
+        ...prev,
+        status: prev.status ? { ...prev.status, printerTime: parsed } : null,
+      }));
+    }
+  }, []);
+
   useServiceStatusPolling({
     enabled: shouldPollStatus,
     printerId: connectedPrinterId,
@@ -330,6 +343,17 @@ export function usePrinterConnection() {
     intervalMs: 3000,
     command: '^SU',
     onResponse: handleServiceResponse,
+  });
+
+  // Poll printer date/time via ^SD alongside ^SU
+  useServiceStatusPolling({
+    enabled: shouldPollStatus,
+    printerId: connectedPrinterId,
+    printerIp: connectionState.connectedPrinter?.ipAddress,
+    printerPort: connectionState.connectedPrinter?.port,
+    intervalMs: 5000,
+    command: '^SD',
+    onResponse: handleDateTimeResponse,
   });
 
   // Lazy TCP connect: only open the Electron socket while a polling screen is open.
@@ -427,6 +451,25 @@ export function usePrinterConnection() {
             } : null,
           }));
         }
+      }
+
+      // Also query printer date/time via ^SD
+      try {
+        const sdResult = await window.electronAPI.printer.sendCommand(printer.id, '^SD');
+        console.log('[queryPrinterStatus] ^SD response:', sdResult);
+        if (sdResult.success && sdResult.response) {
+          const raw = sdResult.response.replace(/[^\x20-\x7E]/g, '').trim();
+          // Try to parse the date/time string from the printer
+          const parsed_dt = new Date(raw);
+          if (!isNaN(parsed_dt.getTime())) {
+            setConnectionState((prev) => ({
+              ...prev,
+              status: prev.status ? { ...prev.status, printerTime: parsed_dt } : null,
+            }));
+          }
+        }
+      } catch (e2) {
+        console.error('[queryPrinterStatus] Failed to query ^SD:', e2);
       }
     } catch (e) {
       console.error('[queryPrinterStatus] Failed to query status:', e);
