@@ -1,6 +1,7 @@
 import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2 } from 'lucide-react';
 import { Printer } from '@/types/printer';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface PrinterListItemProps {
   printer: Printer;
@@ -275,21 +276,24 @@ export function PrinterListItem({
         </div>
 
         {/* Right side: status + service + connect */}
-        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <div className="flex flex-col items-end gap-1 min-w-0">
           {(() => {
             const badge = getStatusBadge();
             return (
-              <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${badge.className}`}>
+              <span className={cn(
+                "text-[10px] px-2 py-0.5 rounded font-medium max-w-[110px] truncate",
+                badge.className
+              )}>
                 {badge.label}
               </span>
             );
           })()}
           {printer.hasActiveErrors && (
-            <span className="text-[10px] px-2 py-0.5 rounded bg-destructive text-white font-medium">
+            <span className="text-[10px] px-2 py-0.5 rounded bg-destructive text-white font-medium max-w-[110px] truncate">
               ERROR
             </span>
           )}
-          <div className="flex items-center gap-1 mt-1">
+          <div className="flex items-center gap-1 mt-1 min-w-0">
             {/* Service button */}
             {printer.isAvailable && onService && (
               <Button
@@ -314,8 +318,8 @@ export function PrinterListItem({
                 size="sm"
                 className="h-6 text-[10px] px-1.5 md:px-2 bg-gradient-to-r from-success to-success/80 hover:from-success/90 hover:to-success/70"
               >
-                <Plug className="w-2.5 h-2.5 mr-0.5 md:mr-1" />
-                Connect
+                <Plug className="w-2.5 h-2.5" />
+                <span className="hidden min-[420px]:inline ml-1">Connect</span>
               </Button>
             )}
           </div>
