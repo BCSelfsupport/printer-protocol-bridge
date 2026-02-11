@@ -527,23 +527,14 @@ export function EditMessageScreen({
       }
     }
     
-    // Calculate Y position: distribute fields vertically if font is shorter than template
+    // Calculate Y position: place on the same line as existing fields for single-line templates
     const fontHeight = Math.min(16, message.height);
     const blockedRows = 32 - message.height;
     let newY = blockedRows; // default: top of template area
     
-    // For single-line templates, if there are existing fields and font is shorter than template,
-    // try to stack vertically
+    // For single-line templates, new fields go on the same row as the first field
     if (!message.templateValue?.startsWith('multi-') && message.fields.length > 0) {
-      // Find the lowest occupied Y + height
-      const occupiedBottom = Math.max(...message.fields.map(f => f.y + f.height));
-      if (occupiedBottom + fontHeight <= 32) {
-        // Room below existing fields
-        newY = occupiedBottom;
-      } else {
-        // No room below, use same Y as first field
-        newY = message.fields[0]?.y ?? blockedRows;
-      }
+      newY = message.fields[0]?.y ?? blockedRows;
     }
     
     const newField: MessageField = {
