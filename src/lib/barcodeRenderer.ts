@@ -18,6 +18,79 @@ const ENCODING_MAP: Record<string, string> = {
   'dotcode': 'dotcode',
 };
 
+// ── Validation rules per encoding ──────────────────────────────────────
+export interface BarcodeValidation {
+  valid: boolean;
+  error?: string;
+}
+
+const DIGITS_ONLY = /^\d+$/;
+const ALPHANUMERIC = /^[A-Z0-9 \-.$\/+%]+$/i;
+
+export function validateBarcodeData(encoding: string, data: string): BarcodeValidation {
+  if (!data || data.trim() === '') {
+    return { valid: false, error: 'Data cannot be empty' };
+  }
+
+  const d = data.trim();
+
+  switch (encoding) {
+    case 'upce':
+      // UPC-E: 6, 7, or 8 digits (bwip-js accepts 6-digit core or 7/8 with check)
+      if (!DIGITS_ONLY.test(d)) return { valid: false, error: 'UPC-E requires digits only' };
+      if (d.length < 6 || d.length > 8) return { valid: false, error: `UPC-E requires 6-8 digits (got ${d.length})` };
+      return { valid: true };
+
+    case 'upca':
+      // UPC-A: 11 or 12 digits
+      if (!DIGITS_ONLY.test(d)) return { valid: false, error: 'UPC-A requires digits only' };
+      if (d.length < 11 || d.length > 12) return { valid: false, error: `UPC-A requires 11-12 digits (got ${d.length})` };
+      return { valid: true };
+
+    case 'ean13':
+      // EAN-13: 12 or 13 digits
+      if (!DIGITS_ONLY.test(d)) return { valid: false, error: 'EAN-13 requires digits only' };
+      if (d.length < 12 || d.length > 13) return { valid: false, error: `EAN-13 requires 12-13 digits (got ${d.length})` };
+      return { valid: true };
+
+    case 'ean8':
+      // EAN-8: 7 or 8 digits
+      if (!DIGITS_ONLY.test(d)) return { valid: false, error: 'EAN-8 requires digits only' };
+      if (d.length < 7 || d.length > 8) return { valid: false, error: `EAN-8 requires 7-8 digits (got ${d.length})` };
+      return { valid: true };
+
+    case 'i25':
+      // Interleaved 2 of 5: digits only, must be even count
+      if (!DIGITS_ONLY.test(d)) return { valid: false, error: 'I2of5 requires digits only' };
+      if (d.length < 2) return { valid: false, error: 'I2of5 requires at least 2 digits' };
+      if (d.length % 2 !== 0) return { valid: false, error: `I2of5 requires even number of digits (got ${d.length})` };
+      return { valid: true };
+
+    case 'code39':
+      // Code 39: uppercase alphanumeric + some special chars
+      if (!ALPHANUMERIC.test(d)) return { valid: false, error: 'Code 39: A-Z, 0-9, space, -.$/+% only' };
+      return { valid: true };
+
+    case 'code128':
+    case 'code128_ucc':
+    case 'code128_sscc':
+    case 'code128_multi':
+      // Code 128: full ASCII
+      if (d.length < 1) return { valid: false, error: 'Data cannot be empty' };
+      return { valid: true };
+
+    case 'datamatrix':
+    case 'qrcode':
+    case 'dotcode':
+      // 2D codes are flexible
+      if (d.length < 1) return { valid: false, error: 'Data cannot be empty' };
+      return { valid: true };
+
+    default:
+      return { valid: true };
+  }
+}
+
 // Extract encoding type and settings from barcode field data string like "[CODE128|HR] 12345"
 // HR = Human Readable enabled
 export function parseBarcodeLabelData(label: string): { encoding: string; data: string; humanReadable: boolean } | null {
@@ -67,6 +140,47 @@ export function parseBarcodeLabelData(label: string): { encoding: string; data: 
   return { encoding, data, humanReadable };
 }
 
+// ── Width estimation per encoding (in dots) ────────────────────────────
+// Based on v2.6 protocol width formulas; bold=0 (standard weight)
+export function estimateBarcodeWidthDots(encoding: string, data: string, humanReadable: boolean): number {
+  const n = data.length;
+  const bold = 0; // standard weight
+
+  switch (encoding) {
+    case 'upce':
+      // 51 × (bold + 1)
+      return 51 * (bold + 1);
+    case 'upca':
+      // 95 × (bold + 1)
+      return 95 * (bold + 1);
+    case 'ean13':
+      // 95 × (bold + 1)
+      return 95 * (bold + 1);
+    case 'ean8':
+      // 67 × (bold + 1)
+      return 67 * (bold + 1);
+    case 'i25':
+      // (6n + 9 + n + 3) × (bold + 1) simplified
+      return (7 * n + 12) * (bold + 1);
+    case 'code39':
+      // (12n + 12 + n + 3) × (bold + 1)
+      return (13 * n + 15) * (bold + 1);
+    case 'code128':
+    case 'code128_ucc':
+    case 'code128_sscc':
+    case 'code128_multi':
+      // (11n + 35) × (bold + 1)  — approximation
+      return (11 * n + 35) * (bold + 1);
+    case 'datamatrix':
+    case 'qrcode':
+    case 'dotcode':
+      // 2D codes: square-ish, use height as width estimate
+      return 32; // will be overridden by actual render
+    default:
+      return Math.max(40, n * 8);
+  }
+}
+
 // Cache for rendered barcode images
 const barcodeCache = new Map<string, HTMLCanvasElement>();
 
@@ -78,6 +192,13 @@ export async function renderBarcodeToCanvas(
 ): Promise<HTMLCanvasElement | null> {
   if (!data || data.trim() === '') return null;
   
+  // Validate data before attempting render
+  const validation = validateBarcodeData(encoding, data);
+  if (!validation.valid) {
+    console.warn(`Barcode validation failed (${encoding}): ${validation.error}`);
+    return null;
+  }
+  
   const cacheKey = `${encoding}:${data}:${targetHeight}:${humanReadable}`;
   if (barcodeCache.has(cacheKey)) {
     return barcodeCache.get(cacheKey)!;
@@ -86,18 +207,15 @@ export async function renderBarcodeToCanvas(
   const bwipEncoder = ENCODING_MAP[encoding] || 'code128';
   
   try {
-    // Create a temporary canvas for bwip-js to render to
     const tempCanvas = document.createElement('canvas');
     
-    // Reserve space for text if human readable
-    const textHeightDots = humanReadable ? 2 : 0;
+    // Reserve space for human readable text (in dots)
+    const is2D = ['datamatrix', 'qrcode', 'dotcode'].includes(encoding);
+    const textHeightDots = (humanReadable && !is2D) ? 3 : 0;
     const barcodeHeightDots = targetHeight - textHeightDots;
     
-    // Configure barcode options based on type
-    const is2D = ['datamatrix', 'qrcode', 'dotcode'].includes(encoding);
-    
-    // Use scale=1 and set height in mm-like units that bwip-js expects
-    // bwip-js height is in millimeters at 72dpi by default
+    // bwip-js uses mm at 72dpi; we want dot-level control
+    // scale=1 → 1 module = 1 pixel; height in mm ≈ pixels at 72dpi
     const options: bwipjs.RenderOptions = {
       bcid: bwipEncoder,
       text: data,
@@ -107,22 +225,25 @@ export async function renderBarcodeToCanvas(
     };
     
     if (is2D) {
-      // 2D barcodes - constrain to target dot height
-      options.height = barcodeHeightDots;
-      options.width = barcodeHeightDots;
+      // 2D barcodes: constrain to square matching target height
+      const size = Math.max(4, barcodeHeightDots);
+      options.height = size;
+      options.width = size;
     } else {
-      // 1D barcodes - keep compact; height proportional to dots
-      options.height = Math.max(4, barcodeHeightDots);
+      // 1D barcodes: height in bwip-js units
+      // Use a reasonable height that fits the dot matrix
+      options.height = Math.max(3, Math.floor(barcodeHeightDots * 0.8));
     }
     
     await bwipjs.toCanvas(tempCanvas, options);
     
-    // If human readable, create a new canvas with text below
+    // If human readable, composite barcode + text
     if (humanReadable && !is2D) {
       const finalCanvas = document.createElement('canvas');
-      const textHeight = Math.max(8, Math.floor(tempCanvas.height * 0.2));
+      // Text area: proportional to barcode, minimum 8px
+      const textPx = Math.max(8, Math.floor(tempCanvas.height * 0.25));
       finalCanvas.width = tempCanvas.width;
-      finalCanvas.height = tempCanvas.height + textHeight;
+      finalCanvas.height = tempCanvas.height + textPx;
       
       const ctx = finalCanvas.getContext('2d');
       if (ctx) {
@@ -130,20 +251,37 @@ export async function renderBarcodeToCanvas(
         ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
         ctx.drawImage(tempCanvas, 0, 0);
         
+        // Draw human-readable text below barcode
         ctx.fillStyle = '#1a1a1a';
-        ctx.font = `bold ${Math.max(6, textHeight - 2)}px monospace`;
+        const fontSize = Math.max(7, textPx - 2);
+        ctx.font = `${fontSize}px monospace`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(data, finalCanvas.width / 2, finalCanvas.height - 1);
+        
+        // For UPC/EAN, format the text with spaces (mimic guard bar splits)
+        let displayText = data;
+        if (encoding === 'upca' && data.length >= 11) {
+          // UPC-A: X XXXXX XXXXX X
+          displayText = `${data[0]} ${data.substring(1, 6)} ${data.substring(6, 11)} ${data[11] || ''}`.trim();
+        } else if (encoding === 'upce' && data.length >= 6) {
+          // UPC-E: X XXXXXX X
+          displayText = `${data[0] || '0'} ${data.substring(data.length >= 8 ? 1 : 0, data.length >= 8 ? 7 : 6)} ${data[data.length - 1] || ''}`.trim();
+        } else if (encoding === 'ean13' && data.length >= 12) {
+          // EAN-13: X XXXXXX XXXXXX
+          displayText = `${data[0]} ${data.substring(1, 7)} ${data.substring(7, 13)}`.trim();
+        } else if (encoding === 'ean8' && data.length >= 7) {
+          // EAN-8: XXXX XXXX
+          displayText = `${data.substring(0, 4)} ${data.substring(4, 8)}`.trim();
+        }
+        
+        ctx.fillText(displayText, finalCanvas.width / 2, finalCanvas.height - 1);
         
         barcodeCache.set(cacheKey, finalCanvas);
         return finalCanvas;
       }
     }
     
-    // Cache the result
     barcodeCache.set(cacheKey, tempCanvas);
-    
     return tempCanvas;
   } catch (error) {
     console.warn(`Failed to render barcode (${encoding}): ${data}`, error);

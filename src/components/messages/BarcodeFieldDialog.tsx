@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, X, Keyboard, Hash, User, ChevronRight } from 'lucide-react';
+import { useEffect, useRef, useState, useMemo } from 'react';
+import { ArrowLeft, X, Keyboard, Hash, User, ChevronRight, AlertTriangle } from 'lucide-react';
+import { validateBarcodeData } from '@/lib/barcodeRenderer';
 import {
   Dialog,
   DialogContent,
@@ -161,6 +162,12 @@ export function BarcodeFieldDialog({
   const isQR = encoding === 'qrcode';
   const isDotCode = encoding === 'dotcode';
 
+  // Live validation
+  const validation = useMemo(() => {
+    if (!data.trim()) return { valid: false, error: undefined };
+    return validateBarcodeData(encoding, data.trim());
+  }, [data, encoding]);
+
   const handleBack = () => {
     onOpenChange(false);
     onBack();
@@ -171,7 +178,7 @@ export function BarcodeFieldDialog({
   };
 
   const handleAdd = () => {
-    if (!data.trim()) return;
+    if (!data.trim() || !validation.valid) return;
     
     onAddBarcode({
       data: data.trim(),
@@ -262,6 +269,14 @@ export function BarcodeFieldDialog({
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Validation error */}
+            {validation.error && data.trim() && (
+              <div className="flex items-center gap-2 text-destructive text-xs bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>{validation.error}</span>
+              </div>
+            )}
 
             {/* Encoding selector - full width */}
             <div className="space-y-1.5">
@@ -515,7 +530,7 @@ export function BarcodeFieldDialog({
         <div className="shrink-0 bg-background border-t border-border p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <Button 
             onClick={handleAdd}
-            disabled={!data.trim()}
+            disabled={!data.trim() || !validation.valid}
             className="w-full"
           >
             Add Barcode Field
