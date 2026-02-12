@@ -24,6 +24,7 @@ interface PrinterListItemProps {
   isConnected?: boolean;
   compact?: boolean;
   countdownType?: 'starting' | 'stopping' | null;
+  countdownSeconds?: number | null;
   /** Index into the sync group color palette (-1 or undefined = no group) */
   syncGroupIndex?: number;
   /** Number of slaves for this master (only relevant when role === 'master') */
@@ -58,6 +59,7 @@ export function PrinterListItem({
   isConnected = false,
   compact = false,
   countdownType,
+  countdownSeconds,
   syncGroupIndex,
   slaveCount = 0,
   onSync,
@@ -77,14 +79,21 @@ export function PrinterListItem({
   
   const effectiveStatus = getEffectiveStatus();
   
+  const formatCountdown = (s: number) => {
+    const mins = Math.floor(s / 60);
+    const secs = s % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const getStatusBadge = () => {
+    const cdLabel = countdownSeconds && countdownSeconds > 0 ? ` ${formatCountdown(countdownSeconds)}` : '';
     switch (effectiveStatus) {
       case 'ready':
         return { label: 'READY', className: 'bg-success text-white' };
       case 'starting':
-        return { label: 'STARTING', className: 'bg-destructive text-white' };
+        return { label: `STARTING${cdLabel}`, className: 'bg-destructive text-white' };
       case 'stopping':
-        return { label: 'STOPPING', className: 'bg-warning text-white' };
+        return { label: `STOPPING${cdLabel}`, className: 'bg-warning text-white' };
       case 'not_ready':
         return { label: 'NOT READY', className: 'bg-warning text-white' };
       default:
