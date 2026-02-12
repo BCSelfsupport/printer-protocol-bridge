@@ -6,8 +6,6 @@ import {
 } from '@/components/ui/dialog';
 
 const COUNTER_OPTIONS = [
-  { id: 'product_count', label: 'Product Count', description: 'Total print trigger activations' },
-  { id: 'print_count', label: 'Print Count', description: 'Times message printed' },
   { id: 'counter_1', label: 'Counter 1', description: 'Programmable counter' },
   { id: 'counter_2', label: 'Counter 2', description: 'Programmable counter' },
   { id: 'counter_3', label: 'Counter 3', description: 'Programmable counter' },
