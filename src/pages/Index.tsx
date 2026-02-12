@@ -40,6 +40,7 @@ const Index = () => {
   const [openNewDialogOnMount, setOpenNewDialogOnMount] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
+  const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [helpDialogOpen, setHelpDialogOpen] = useState(false);
   
   // Local message storage (persists to localStorage)
@@ -117,6 +118,10 @@ const Index = () => {
     }
     if (item === 'setup') {
       setSetupDialogOpen(true);
+      return;
+    }
+    if (item === 'service') {
+      setServiceDialogOpen(true);
       return;
     }
     setCurrentScreen(item);
@@ -362,16 +367,8 @@ const Index = () => {
         // Now handled as dialog
         break;
       case 'service':
-        return (
-          <ServiceScreen
-            metrics={connectionState.metrics}
-            onHome={handleHome}
-            onControl={() => setCurrentScreen('control')}
-            onMount={() => setServiceScreenOpen(true)}
-            onUnmount={() => setServiceScreenOpen(false)}
-            onSendCommand={sendCommand}
-          />
-        );
+        // Now handled as dialog
+        break;
       default:
         break;
     }
@@ -535,6 +532,16 @@ const Index = () => {
       <SetupScreen
         open={setupDialogOpen}
         onOpenChange={setSetupDialogOpen}
+        onSendCommand={sendCommand}
+      />
+
+      {/* Service Dialog */}
+      <ServiceScreen
+        open={serviceDialogOpen}
+        onOpenChange={setServiceDialogOpen}
+        metrics={connectionState.metrics}
+        onMount={() => setServiceScreenOpen(true)}
+        onUnmount={() => setServiceScreenOpen(false)}
         onSendCommand={sendCommand}
       />
     </div>
