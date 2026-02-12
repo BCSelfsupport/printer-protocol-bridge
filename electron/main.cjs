@@ -68,8 +68,8 @@ function createWindow() {
     logToFile(`[ready-to-show] isDev=${isDev}, isPackaged=${app.isPackaged}, version=${app.getVersion()}`);
     logToFile(`[ready-to-show] autoUpdater available: ${!!autoUpdater}`);
     if (autoUpdater) {
-      logToFile('[ready-to-show] Calling checkForUpdatesAndNotify...');
-      autoUpdater.checkForUpdatesAndNotify()
+      logToFile('[ready-to-show] Calling checkForUpdates...');
+      autoUpdater.checkForUpdates()
         .then((result) => logToFile(`[ready-to-show] Check result: ${JSON.stringify(result)}`))
         .catch((err) => logToFile(`[ready-to-show] Check error: ${err.message}`));
     }
