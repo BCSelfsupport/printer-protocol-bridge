@@ -13,7 +13,7 @@ import { DateCodesDialog } from '@/components/messages/DateCodesDialog';
 import { CounterDialog } from '@/components/messages/CounterDialog';
 import { UserDefineDialog, UserDefineConfig } from '@/components/messages/UserDefineDialog';
 import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
-import { BlockFieldDialog, BlockFieldConfig } from '@/components/messages/BlockFieldDialog';
+
 import { GraphicFieldDialog, GraphicFieldConfig } from '@/components/messages/GraphicFieldDialog';
 import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
 import { AdvancedSettingsDialog, AdvancedSettings, defaultAdvancedSettings } from '@/components/messages/AdvancedSettingsDialog';
@@ -31,7 +31,7 @@ import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValid
 
 export interface MessageField {
   id: number;
-  type: 'text' | 'date' | 'time' | 'counter' | 'logo' | 'userdefine' | 'block' | 'barcode';
+  type: 'text' | 'date' | 'time' | 'counter' | 'logo' | 'userdefine' | 'barcode';
   data: string;
   x: number;
   y: number;
@@ -143,7 +143,7 @@ export function EditMessageScreen({
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [advancedSettingsDialogOpen, setAdvancedSettingsDialogOpen] = useState(false);
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
-  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  
   const [counterDialogOpen, setCounterDialogOpen] = useState(false);
   const [userDefineDialogOpen, setUserDefineDialogOpen] = useState(false);
   const [graphicDialogOpen, setGraphicDialogOpen] = useState(false);
@@ -646,33 +646,6 @@ export function EditMessageScreen({
     setSelectedFieldId(newId);
   };
 
-  const handleAddBlock = (config: BlockFieldConfig) => {
-    const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
-    
-    // Create block field representation
-    const blockLabel = `[BLOCK L:${config.blockLength} G:${config.gap}]`;
-    
-    const newField: MessageField = {
-      id: newId,
-      type: 'block',
-      data: blockLabel,
-      x: message.fields.length * 50,
-      y: 32 - message.height,
-      width: config.blockLength + config.gap + 8, // Width based on block+gap
-      height: Math.min(message.height, 32),
-      fontSize: 'Standard16High',
-    };
-    
-    setMessage((prev) => {
-      const updatedFields = [...prev.fields, newField];
-      return {
-        ...prev,
-        fields: updatedFields,
-        width: autoResizeWidth(updatedFields),
-      };
-    });
-    setSelectedFieldId(newId);
-  };
 
   const handleAddUserDefine = (config: UserDefineConfig) => {
     const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
@@ -1052,7 +1025,7 @@ export function EditMessageScreen({
             onSelectFieldType={handleAddField}
             onOpenAutoCode={() => setAutoCodeDialogOpen(true)}
             onOpenBarcode={() => setBarcodeDialogOpen(true)}
-            onOpenBlock={() => setBlockDialogOpen(true)}
+            
             onOpenUserDefine={() => setUserDefineDialogOpen(true)}
             onOpenGraphic={() => setGraphicDialogOpen(true)}
           />
@@ -1100,13 +1073,6 @@ export function EditMessageScreen({
             onAddBarcode={handleAddBarcode}
           />
 
-          {/* Block Field Dialog */}
-          <BlockFieldDialog
-            open={blockDialogOpen}
-            onOpenChange={setBlockDialogOpen}
-            onSave={handleAddBlock}
-            maxHeight={message.height}
-          />
 
           {/* User Define Dialog */}
           <UserDefineDialog

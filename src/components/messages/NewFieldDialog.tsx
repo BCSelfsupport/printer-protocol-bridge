@@ -1,4 +1,4 @@
-import { FileText, Hash, User, Square, Barcode, Image, ChevronRight, Plus, ArrowLeft } from 'lucide-react';
+import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,6 @@ const FIELD_TYPES = [
   { value: 'text', label: 'Text Field', icon: FileText, action: 'add' },
   { value: 'autocode', label: 'AutoCode Field', icon: Hash, action: 'submenu' },
   { value: 'userdefine', label: 'User Define', icon: User, action: 'submenu' },
-  { value: 'block', label: 'Block Field', icon: Square, action: 'submenu' },
   { value: 'barcode', label: 'Barcode Field', icon: Barcode, action: 'submenu' },
   { value: 'logo', label: 'Graphic Field', icon: Image, action: 'submenu' },
 ] as const;
@@ -20,7 +19,6 @@ interface NewFieldDialogProps {
   onSelectFieldType: (type: string) => void;
   onOpenAutoCode: () => void;
   onOpenBarcode: () => void;
-  onOpenBlock: () => void;
   onOpenUserDefine: () => void;
   onOpenGraphic: () => void;
 }
@@ -31,7 +29,6 @@ export function NewFieldDialog({
   onSelectFieldType,
   onOpenAutoCode,
   onOpenBarcode,
-  onOpenBlock,
   onOpenUserDefine,
   onOpenGraphic,
 }: NewFieldDialogProps) {
@@ -44,11 +41,6 @@ export function NewFieldDialog({
     if (fieldType.value === 'barcode') {
       onOpenChange(false);
       onOpenBarcode();
-      return;
-    }
-    if (fieldType.value === 'block') {
-      onOpenChange(false);
-      onOpenBlock();
       return;
     }
     if (fieldType.value === 'userdefine') {
