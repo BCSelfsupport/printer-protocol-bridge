@@ -616,7 +616,7 @@ export function MessageCanvas({
   const getMousePositionFromEvent = useCallback((e: MouseEvent) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
-    const x = Math.floor((e.clientX - rect.left) / DOT_SIZE) + scrollLeftDotsRef.current;
+    const x = Math.floor((e.clientX - rect.left) / DOT_SIZE);
     const y = Math.floor((e.clientY - rect.top) / DOT_SIZE);
     return { x, y };
   }, []);
