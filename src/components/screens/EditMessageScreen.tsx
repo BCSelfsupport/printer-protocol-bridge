@@ -805,14 +805,20 @@ export function EditMessageScreen({
     setFieldError(null);
   };
 
-  const handleCanvasClick = (x: number, y: number) => {
-    // Find which field was clicked
+  const handleCanvasClick = (x: number, y: number, fieldId?: number) => {
+    // Use field ID from canvas hit detection if provided (more accurate)
+    if (fieldId != null) {
+      setSelectedFieldId(fieldId);
+      setFieldError(null);
+      return;
+    }
+    // Fallback: find which field was clicked using stored dimensions
     const clickedField = message.fields.find(
       (f) => x >= f.x && x < f.x + f.width && y >= f.y && y < f.y + f.height
     );
     if (clickedField) {
       setSelectedFieldId(clickedField.id);
-      setFieldError(null); // Clear error on new selection
+      setFieldError(null);
     }
   };
 
