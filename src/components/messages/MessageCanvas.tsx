@@ -305,25 +305,33 @@ export function MessageCanvas({
       const displayY = isBeingDragged ? dragPosition.y : field.y;
 
       // Canvas is physically wide and is clipped by the scroll container, so don't offset drawing.
-      const fieldX = displayX * DOT_SIZE;
+      let fieldX = displayX * DOT_SIZE;
       const fieldY = displayY * DOT_SIZE;
 
       // Calculate field dimensions
       let fieldW: number;
       let fieldH: number;
       
+      // Quiet zone offset for barcodes (in pixels) — applied to fieldX so the
+      // selection box is centered around the barcode with quiet zones on each side.
+      let quietZonePx = 0;
+      
       if (isBarcode) {
-        // Size the field to match the actual rendered barcode
         const parsed = parseBarcodeLabelData(field.data);
         const cacheKey = parsed ? `${field.id}:${parsed.encoding}:${parsed.data}:${templateHeight}:${parsed.humanReadable}` : '';
         const barcodeCanvas = parsed ? barcodeImages.get(cacheKey) : null;
+        const quietZoneDots = 10; // 10-dot quiet zone on each side
+        quietZonePx = quietZoneDots * DOT_SIZE;
         if (barcodeCanvas) {
           const scale = (templateHeight * DOT_SIZE) / barcodeCanvas.height;
-          fieldW = Math.ceil(barcodeCanvas.width * scale);
+          const barcodeW = Math.ceil(barcodeCanvas.width * scale);
+          fieldW = barcodeW + quietZonePx * 2;
         } else {
-          fieldW = field.width * DOT_SIZE;
+          fieldW = field.width * DOT_SIZE + quietZonePx * 2;
         }
         fieldH = templateHeight * DOT_SIZE;
+        // Shift box left so barcode sits in the center with equal quiet zones
+        fieldX -= quietZonePx;
       } else {
         const minChars = 3;
         const textLength = Math.max(field.data.length, minChars);
@@ -377,10 +385,11 @@ export function MessageCanvas({
             ctx.imageSmoothingEnabled = false;
             const scale = fieldH / barcodeCanvas.height;
             const drawWidth = Math.min(barcodeCanvas.width * scale, fieldW);
+            // Draw barcode centered within quiet zones
             ctx.drawImage(
               barcodeCanvas,
               0, 0, barcodeCanvas.width, barcodeCanvas.height,
-              fieldX, fieldY, drawWidth, fieldH
+              fieldX + quietZonePx, fieldY, drawWidth, fieldH
             );
             ctx.imageSmoothingEnabled = true;
           } else {
