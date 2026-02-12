@@ -156,9 +156,9 @@ const defaultState: EmulatorState = {
   hvOn: false,
   jetRunning: false,
   v300up: false,
-  vltOn: true,
-  gutOn: true,
-  modOn: true,
+  vltOn: false,
+  gutOn: false,
+  modOn: false,
   echoOn: false,
   utf8Mode: false,
   oneToOneMode: false,
@@ -469,6 +469,8 @@ class PrinterEmulator {
       if (start) {
         this.state.jetRunning = true;
         this.state.vltOn = true;
+        this.state.gutOn = true;
+        this.state.modOn = true;
         // Simulate startup progress
         return this.state.echoOn 
           ? 'Command Successful!\r\nProgress: 100%'
@@ -478,6 +480,8 @@ class PrinterEmulator {
         this.state.hvOn = false;
         this.state.v300up = false;
         this.state.vltOn = false;
+        this.state.gutOn = false;
+        this.state.modOn = false;
         return this.state.echoOn 
           ? 'Command Successful!\r\nProgress: 100%'
           : 'Progress: 100%';
