@@ -127,11 +127,11 @@ export function Dashboard({
           </button>
 
           <button 
-            onClick={showReady ? (isHvOn ? (onHvOff ?? onStop) : (onHvOn ?? onStart)) : undefined}
-            className={`${showReady && isHvOn ? 'industrial-button-success' : 'industrial-button-danger'} text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[100px] flex-shrink-0`}
+            onClick={!showCountdown && isConnected ? (isHvOn ? (onHvOff ?? onStop) : (onHvOn ?? onStart)) : undefined}
+            className={`${!showCountdown && isHvOn ? 'industrial-button-success' : 'industrial-button-danger'} text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[100px] flex-shrink-0`}
           >
             <PrinterIcon className="w-7 h-7 md:w-10 md:h-10 mb-1" />
-            <span className="text-[10px] md:text-sm">{showReady && isHvOn ? 'HV On' : 'HV Off'}</span>
+            <span className="text-[10px] md:text-sm">{!showCountdown && isHvOn ? 'HV On' : 'HV Off'}</span>
           </button>
 
           {/* Makeup Level Indicator */}
