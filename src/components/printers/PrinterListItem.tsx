@@ -293,18 +293,18 @@ export function PrinterListItem({
 
         {/* Printer info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className={`font-bold truncate text-sm ${textColor}`}>{printer.name}</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded bg-slate-700 ${mutedTextColor}`}>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={`font-bold text-sm ${textColor} break-all`}>{printer.name}</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded bg-slate-700 whitespace-nowrap ${mutedTextColor}`}>
               ID: {printer.id}
             </span>
             {printer.role === 'master' && (
-              <span className={`text-[9px] px-1 py-0.5 rounded font-semibold flex items-center gap-0.5 ${groupColor?.badge ?? 'bg-amber-500/20 text-amber-400'}`}>
+              <span className={`text-[9px] px-1 py-0.5 rounded font-semibold flex items-center gap-0.5 whitespace-nowrap ${groupColor?.badge ?? 'bg-amber-500/20 text-amber-400'}`}>
                 <Crown className="w-2 h-2" /> M
               </span>
             )}
             {printer.role === 'slave' && (
-              <span className={`text-[9px] px-1 py-0.5 rounded font-semibold flex items-center gap-0.5 ${groupColor?.badge ?? 'bg-blue-500/20 text-blue-400'}`}>
+              <span className={`text-[9px] px-1 py-0.5 rounded font-semibold flex items-center gap-0.5 whitespace-nowrap ${groupColor?.badge ?? 'bg-blue-500/20 text-blue-400'}`}>
                 <Link className="w-2 h-2" /> S
               </span>
             )}
