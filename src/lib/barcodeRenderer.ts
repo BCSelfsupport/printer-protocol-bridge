@@ -209,52 +209,46 @@ export async function renderBarcodeToCanvas(
   try {
     const tempCanvas = document.createElement('canvas');
     
-    // Reserve space for human readable text (in dots)
     const is2D = ['datamatrix', 'qrcode', 'dotcode'].includes(encoding);
-    const textHeightDots = (humanReadable && !is2D) ? 3 : 0;
+    // Reserve dots for human readable text below barcode
+    const textHeightDots = (humanReadable && !is2D) ? 5 : 0;
     const barcodeHeightDots = targetHeight - textHeightDots;
     
-    // DOT_SIZE = 8px per dot on the message canvas.
-    // We render bwip-js at a scale that produces an image whose height already
-    // matches the target pixel height (barcodeHeightDots * 8) so no further
-    // scaling is needed when we draw it on the message canvas → no aliasing.
     const DOT_PX = 8;
-    const targetHeightPx = barcodeHeightDots * DOT_PX;
+    const targetBarPx = barcodeHeightDots * DOT_PX; // target bar pixel height
     
     const options: bwipjs.RenderOptions = {
       bcid: bwipEncoder,
       text: data,
-      scale: 1, // will be overridden below
+      scale: 1,
       includetext: false,
       backgroundcolor: 'f5e6c8',
     };
     
     if (is2D) {
-      // 2D barcodes: constrain to square matching target pixel height
       const size = Math.max(4, barcodeHeightDots);
       options.height = size;
       options.width = size;
-      // Scale 2D modules so the output is close to targetHeightPx
-      options.scale = Math.max(1, Math.floor(targetHeightPx / (size * 2)));
+      options.scale = Math.max(1, Math.floor(targetBarPx / (size * 2)));
     } else {
-      // 1D barcodes: bwip-js height is in "points" at the given scale.
-      // We set scale so that 1 module = a few pixels, then set height
-      // so the total pixel height = targetHeightPx.
-      // bwip-js: pixel height ≈ height * scale, so height = targetHeightPx / scale
+      // bwip-js height is in mm at 72dpi. 1mm ≈ 2.835 pixels at 72dpi.
+      // With scale=S, pixel height ≈ height_mm * 2.835 * S
+      // We want pixel height ≈ targetBarPx, so pick scale first then solve height.
       const moduleScale = 2;
+      // height_mm = targetBarPx / (2.835 * scale)
+      const heightMm = Math.max(5, Math.round(targetBarPx / (2.835 * moduleScale)));
       options.scale = moduleScale;
-      options.height = Math.max(5, Math.round(targetHeightPx / moduleScale));
+      options.height = heightMm;
     }
     
     await bwipjs.toCanvas(tempCanvas, options);
     
-    // If human readable, composite barcode + text
+    // If human readable, composite barcode + text below
     if (humanReadable && !is2D) {
       const finalCanvas = document.createElement('canvas');
-      // Text area: proportional to barcode, minimum 8px
-      const textPx = Math.max(8, Math.floor(tempCanvas.height * 0.25));
+      const textPx = Math.max(12, Math.floor(tempCanvas.height * 0.18));
       finalCanvas.width = tempCanvas.width;
-      finalCanvas.height = tempCanvas.height + textPx;
+      finalCanvas.height = tempCanvas.height + textPx + 2;
       
       const ctx = finalCanvas.getContext('2d');
       if (ctx) {
@@ -264,25 +258,30 @@ export async function renderBarcodeToCanvas(
         
         // Draw human-readable text below barcode
         ctx.fillStyle = '#1a1a1a';
-        const fontSize = Math.max(7, textPx - 2);
-        ctx.font = `${fontSize}px monospace`;
+        const fontSize = Math.max(10, textPx - 1);
+        ctx.font = `bold ${fontSize}px monospace`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
         
-        // For UPC/EAN, format the text with spaces (mimic guard bar splits)
+        // Format text with guard bar splits for UPC/EAN
         let displayText = data;
         if (encoding === 'upca' && data.length >= 11) {
-          // UPC-A: X XXXXX XXXXX X
           displayText = `${data[0]} ${data.substring(1, 6)} ${data.substring(6, 11)} ${data[11] || ''}`.trim();
         } else if (encoding === 'upce' && data.length >= 6) {
-          // UPC-E: X XXXXXX X
           displayText = `${data[0] || '0'} ${data.substring(data.length >= 8 ? 1 : 0, data.length >= 8 ? 7 : 6)} ${data[data.length - 1] || ''}`.trim();
         } else if (encoding === 'ean13' && data.length >= 12) {
-          // EAN-13: X XXXXXX XXXXXX
           displayText = `${data[0]} ${data.substring(1, 7)} ${data.substring(7, 13)}`.trim();
         } else if (encoding === 'ean8' && data.length >= 7) {
-          // EAN-8: XXXX XXXX
           displayText = `${data.substring(0, 4)} ${data.substring(4, 8)}`.trim();
+        }
+        
+        // Ensure text fits canvas width — shrink font if needed
+        let textWidth = ctx.measureText(displayText).width;
+        let adjustedFontSize = fontSize;
+        while (textWidth > finalCanvas.width - 4 && adjustedFontSize > 6) {
+          adjustedFontSize--;
+          ctx.font = `bold ${adjustedFontSize}px monospace`;
+          textWidth = ctx.measureText(displayText).width;
         }
         
         ctx.fillText(displayText, finalCanvas.width / 2, finalCanvas.height - 1);
