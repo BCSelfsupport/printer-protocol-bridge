@@ -223,7 +223,7 @@ export function Dashboard({
             <div className="flex gap-2 md:flex-col flex-shrink-0">
               <button
                 onClick={onStart}
-                disabled={!isConnected || showCountdown || status?.isRunning}
+                disabled={!isConnected || showCountdown || status?.jetRunning}
                 className="industrial-button-success text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all min-w-[100px] md:min-w-[160px]"
               >
                 <Play className={`w-6 h-6 md:w-10 md:h-10 ${showCountdown && countdownType === 'starting' ? 'animate-spin' : ''}`} />
@@ -232,7 +232,7 @@ export function Dashboard({
 
               <button
                 onClick={onJetStop}
-                disabled={!isConnected || showCountdown || !status?.isRunning}
+                disabled={!isConnected || showCountdown || !status?.jetRunning}
                 className="industrial-button-danger text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all min-w-[100px] md:min-w-[160px]"
               >
                 <Square className={`w-6 h-6 md:w-10 md:h-10 ${showCountdown && countdownType === 'stopping' ? 'animate-spin' : ''}`} />

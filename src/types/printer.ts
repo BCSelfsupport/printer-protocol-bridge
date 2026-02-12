@@ -24,6 +24,7 @@ export interface PrinterStatus {
   makeupGood: boolean;
   inkFull: boolean;
   isRunning: boolean;
+  jetRunning: boolean; // Whether the ink jet is active (independent of HV)
   productCount: number;
   printCount: number;
   customCounters: number[]; // Custom counters 1-4
