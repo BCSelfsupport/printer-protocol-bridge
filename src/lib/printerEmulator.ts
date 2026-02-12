@@ -468,6 +468,7 @@ class PrinterEmulator {
       const start = match[1] === '1';
       if (start) {
         this.state.jetRunning = true;
+        this.state.vltOn = true;
         // Simulate startup progress
         return this.state.echoOn 
           ? 'Command Successful!\r\nProgress: 100%'
@@ -476,6 +477,7 @@ class PrinterEmulator {
         this.state.jetRunning = false;
         this.state.hvOn = false;
         this.state.v300up = false;
+        this.state.vltOn = false;
         return this.state.echoOn 
           ? 'Command Successful!\r\nProgress: 100%'
           : 'Progress: 100%';
