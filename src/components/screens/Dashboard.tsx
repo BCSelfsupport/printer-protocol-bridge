@@ -296,7 +296,7 @@ export function Dashboard({
     />
     
     {/* Combined Bottom Nav with version info - all on one line */}
-    {onNavigate && onTurnOff && (
+    {onNavigate && (
       <div className="bg-sidebar h-20 flex items-center px-2 md:px-4 pb-safe flex-shrink-0">
         {/* Left version */}
         <span className="text-sidebar-foreground text-xs md:text-sm whitespace-nowrap flex-shrink-0">Build 1.0.0</span>
@@ -304,13 +304,6 @@ export function Dashboard({
         {/* Center nav buttons - horizontally scrollable on mobile */}
         <div className="flex-1 overflow-x-auto mx-2 md:mx-4">
           <div className="flex gap-1 justify-center min-w-max px-2">
-            <button 
-              onClick={onTurnOff}
-              className="flex flex-col items-center justify-center gap-1 px-4 md:px-5 py-2 md:py-2.5 industrial-button-gray text-white rounded"
-            >
-              <Power className="w-5 h-5 md:w-6 md:h-6" />
-              <span className="text-[10px] md:text-xs font-medium">Turn Off</span>
-            </button>
             
             {[
               { id: 'messages' as const, label: 'Messages', icon: <FileText className="w-5 h-5 md:w-6 md:h-6" /> },
