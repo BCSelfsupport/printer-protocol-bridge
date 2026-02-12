@@ -429,7 +429,9 @@ const Index = () => {
       {(import.meta.env.DEV || isDevSignedIn) && (
         <DevPanel 
           isOpen={devPanelOpen} 
-          onToggle={() => setDevPanelOpen(!devPanelOpen)} 
+          onToggle={() => setDevPanelOpen(!devPanelOpen)}
+          connectedPrinterIp={connectionState.connectedPrinter?.ipAddress}
+          connectedPrinterPort={connectionState.connectedPrinter?.port}
         />
       )}
       
