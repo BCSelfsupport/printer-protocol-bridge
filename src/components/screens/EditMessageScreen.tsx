@@ -26,6 +26,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
 
 
 export interface MessageField {
@@ -1166,11 +1167,15 @@ export function EditMessageScreen({
                 <Input
                   id="saveAsName"
                   value={saveAsName}
-                  onChange={(e) => setSaveAsName(e.target.value.toUpperCase())}
+                  onChange={(e) => setSaveAsName(sanitizeMessageName(e.target.value))}
                   placeholder="Enter message name"
+                  maxLength={20}
                   className="mt-2"
                   autoFocus
                 />
+                {saveAsName && !validateMessageName(saveAsName).valid && (
+                  <p className="text-sm text-destructive mt-1">{validateMessageName(saveAsName).error}</p>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setSaveAsDialogOpen(false)}>
@@ -1178,12 +1183,12 @@ export function EditMessageScreen({
                 </Button>
                 <Button
                   onClick={() => {
-                    if (saveAsName.trim()) {
-                      onSave({ ...message, name: saveAsName.trim() }, true);
+                    if (validateMessageName(saveAsName).valid) {
+                      onSave({ ...message, name: saveAsName.trim().toUpperCase() }, true);
                       setSaveAsDialogOpen(false);
                     }
                   }}
-                  disabled={!saveAsName.trim()}
+                  disabled={!validateMessageName(saveAsName).valid}
                 >
                   Save
                 </Button>

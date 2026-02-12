@@ -23,6 +23,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
 
 interface MessagesScreenProps {
   messages: PrintMessage[];
@@ -81,8 +82,10 @@ export function MessagesScreen({
     }
   };
 
+  const nameValidation = validateMessageName(newMessageName);
+
   const handleNewMessage = () => {
-    if (newMessageName.trim()) {
+    if (nameValidation.valid) {
       onNew(newMessageName.trim().toUpperCase());
       setNewDialogOpen(false);
       setNewMessageName('');
@@ -186,8 +189,9 @@ export function MessagesScreen({
             <Input
               id="newMsgName"
               value={newMessageName}
-              onChange={(e) => setNewMessageName(e.target.value.toUpperCase())}
+              onChange={(e) => setNewMessageName(sanitizeMessageName(e.target.value))}
               placeholder="Enter message name"
+              maxLength={20}
               className="mt-2"
               autoFocus
               onKeyDown={(e) => {
@@ -196,6 +200,9 @@ export function MessagesScreen({
                 }
               }}
             />
+            {newMessageName && !nameValidation.valid && (
+              <p className="text-sm text-destructive mt-1">{nameValidation.error}</p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewDialogOpen(false)}>
@@ -203,7 +210,7 @@ export function MessagesScreen({
             </Button>
             <Button
               onClick={handleNewMessage}
-              disabled={!newMessageName.trim()}
+              disabled={!nameValidation.valid}
             >
               Create
             </Button>
