@@ -198,6 +198,24 @@ export function Dashboard({
             </div>
           </div>
 
+          {/* New/Edit buttons */}
+          <div className="flex gap-2 flex-shrink-0">
+            <button 
+              onClick={onNewMessage}
+              className="industrial-button text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[100px]"
+            >
+              <Plus className="w-7 h-7 md:w-10 md:h-10 mb-1" />
+              <span className="text-[10px] md:text-sm">New</span>
+            </button>
+            <button 
+              onClick={onEditMessage}
+              className="industrial-button text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[100px]"
+            >
+              <Pencil className="w-7 h-7 md:w-10 md:h-10 mb-1" />
+              <span className="text-[10px] md:text-sm">Edit</span>
+            </button>
+          </div>
+
           {/* Start/Stop buttons with Count panel */}
           <div className="flex gap-2 md:ml-auto flex-shrink-0">
             {/* Count panel */}
@@ -243,29 +261,13 @@ export function Dashboard({
       </div>
       </div>
 
-      {/* Message name with New/Edit buttons inline */}
-      <div className="bg-card rounded-lg p-2 md:p-3 flex items-center justify-between">
+      {/* Message name */}
+      <div className="bg-card rounded-lg p-2 md:p-3 flex items-center">
         <div className="text-xs md:text-base">
           <div className="font-medium">Message name</div>
           <div className="text-foreground truncate">
             {status?.currentMessage || 'No message selected'}
           </div>
-        </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={onNewMessage}
-            className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4 md:w-5 md:h-5" />
-            <span className="text-sm md:text-base font-medium">New</span>
-          </button>
-          <button 
-            onClick={onEditMessage}
-            className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5"
-          >
-            <Pencil className="w-4 h-4 md:w-5 md:h-5" />
-            <span className="text-sm md:text-base font-medium">Edit</span>
-          </button>
         </div>
       </div>
 
