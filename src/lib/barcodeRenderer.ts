@@ -89,31 +89,30 @@ export async function renderBarcodeToCanvas(
     // Create a temporary canvas for bwip-js to render to
     const tempCanvas = document.createElement('canvas');
     
-    // Scale factor for reasonable resolution
-    const scale = 2;
     // Reserve space for text if human readable
-    const textHeightDots = humanReadable ? 2 : 0; // 2 dots for text below barcode
+    const textHeightDots = humanReadable ? 2 : 0;
     const barcodeHeightDots = targetHeight - textHeightDots;
-    const pixelHeight = barcodeHeightDots * 8; // 8 pixels per dot
     
     // Configure barcode options based on type
     const is2D = ['datamatrix', 'qrcode', 'dotcode'].includes(encoding);
     
+    // Use scale=1 and set height in mm-like units that bwip-js expects
+    // bwip-js height is in millimeters at 72dpi by default
     const options: bwipjs.RenderOptions = {
       bcid: bwipEncoder,
       text: data,
-      scale: scale,
-      includetext: false, // We'll draw text separately for better control
-      backgroundcolor: 'f5e6c8', // Match canvas background
+      scale: 1,
+      includetext: false,
+      backgroundcolor: 'f5e6c8',
     };
     
     if (is2D) {
-      // 2D barcodes - constrain to target height (no human readable for 2D)
-      options.height = Math.floor(pixelHeight / scale / 2);
-      options.width = Math.floor(pixelHeight / scale / 2);
+      // 2D barcodes - constrain to target dot height
+      options.height = barcodeHeightDots;
+      options.width = barcodeHeightDots;
     } else {
-      // 1D barcodes - use target height minus text space
-      options.height = Math.floor(pixelHeight / scale / 2);
+      // 1D barcodes - keep compact; height proportional to dots
+      options.height = Math.max(4, barcodeHeightDots);
     }
     
     await bwipjs.toCanvas(tempCanvas, options);
@@ -121,22 +120,18 @@ export async function renderBarcodeToCanvas(
     // If human readable, create a new canvas with text below
     if (humanReadable && !is2D) {
       const finalCanvas = document.createElement('canvas');
-      const textHeight = 14; // pixels for text
+      const textHeight = Math.max(8, Math.floor(tempCanvas.height * 0.2));
       finalCanvas.width = tempCanvas.width;
       finalCanvas.height = tempCanvas.height + textHeight;
       
       const ctx = finalCanvas.getContext('2d');
       if (ctx) {
-        // Fill background
         ctx.fillStyle = '#f5e6c8';
         ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-        
-        // Draw barcode
         ctx.drawImage(tempCanvas, 0, 0);
         
-        // Draw human readable text below
         ctx.fillStyle = '#1a1a1a';
-        ctx.font = `bold ${textHeight - 2}px monospace`;
+        ctx.font = `bold ${Math.max(6, textHeight - 2)}px monospace`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
         ctx.fillText(data, finalCanvas.width / 2, finalCanvas.height - 1);
