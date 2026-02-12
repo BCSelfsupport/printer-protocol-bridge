@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { CountdownType } from '@/hooks/useJetCountdown';
+import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Header } from '@/components/layout/Header';
 import { NavItem } from '@/components/layout/BottomNav';
@@ -80,12 +81,22 @@ const Index = () => {
   const handleCountdownComplete = useCallback((printerId: number, type: CountdownType) => {
     console.log('[handleCountdownComplete] printerId:', printerId, 'type:', type);
     if (type === 'starting') {
-      // Emulator: auto-enable HV after jet startup countdown
-      // Real printer: HV is enabled automatically by the printer itself;
-      // status polling will pick up the change via ^SU response
-      startPrint();
+      // Auto-enable HV after jet startup countdown
+      // Find the printer by ID to target the correct emulator instance
+      const printer = printers.find(p => p.id === printerId);
+      if (printer && multiPrinterEmulator.enabled) {
+        const instance = multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port);
+        if (instance) {
+          console.log('[handleCountdownComplete] Sending ^PR 1 to', printer.ipAddress);
+          instance.processCommand('^PR 1');
+        }
+      }
+      // For connected printer, also update via startPrint
+      if (printerId === connectedPrinterId) {
+        startPrint();
+      }
     }
-  }, [startPrint]);
+  }, [startPrint, printers, connectedPrinterId]);
 
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown, getCountdown } = useJetCountdown(connectedPrinterId, handleCountdownComplete);
 
