@@ -282,7 +282,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             {emulatorEnabled && (
               <div className="flex items-center gap-2 text-xs text-green-600 font-medium">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                Emulator Active - Protocol v2.0
+                Emulator Active - Protocol v2.6
               </div>
             )}
           </div>
@@ -482,7 +482,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                 <div className="flex items-center gap-2 mb-3">
                   <BookOpen className="w-4 h-4 text-gray-500" />
                   <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Protocol v2.0 Commands
+                    Protocol v2.6 Commands
                   </h3>
                 </div>
 
