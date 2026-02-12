@@ -44,13 +44,12 @@ export interface AdvancedSettings {
     counterResets: 'Off' | 'Select' | 'Print Off';
   }[];
   
-  // Print Mode Tab
-  printMode: 'Normal' | 'Advanced';
-  autoPrint: boolean;
+  // Print Mode Tab (protocol modes: 0=Normal, 1=Auto, 2=Repeat, 4=Select ID, 5=Auto Encoder, 6=Auto Encoder Reverse)
+  printMode: 0 | 1 | 2 | 4 | 5 | 6;
   delay: number;        // 0-4,000,000,000
   pitch: number;        // 0-4,000,000,000
-  selectCode: { enabled: boolean; value: number }; // Disabled or 1-255
-  repeatPrint: { enabled: boolean; value: number }; // Disabled or 1-32000
+  selectCode: { enabled: boolean; value: number }; // Disabled or 1-255, used when printMode=4
+  repeatPrint: { enabled: boolean; value: number }; // Disabled or 1-32000, used when printMode=2
 }
 
 export const defaultAdvancedSettings: AdvancedSettings = {
@@ -81,8 +80,7 @@ export const defaultAdvancedSettings: AdvancedSettings = {
     counterResets: 'Off' as const,
   })),
   
-  printMode: 'Normal',
-  autoPrint: false,
+  printMode: 0,
   delay: 0,
   pitch: 0,
   selectCode: { enabled: false, value: 1 },
@@ -421,14 +419,20 @@ export function AdvancedSettingsDialog({
           <TabsContent value="printmode" className="p-4 space-y-2 overflow-y-auto max-h-[50vh]">
             <SettingRow
               label="Print Mode"
-              value={settings.printMode}
-              onIncrease={() => onUpdate({ printMode: settings.printMode === 'Normal' ? 'Advanced' : 'Normal' })}
-              onDecrease={() => onUpdate({ printMode: settings.printMode === 'Normal' ? 'Advanced' : 'Normal' })}
-            />
-            <ToggleRow
-              label="AutoPrint"
-              checked={settings.autoPrint}
-              onChange={(v) => onUpdate({ autoPrint: v })}
+              value={(() => {
+                const modeLabels: Record<number, string> = { 0: 'Normal', 1: 'Auto', 2: 'Repeat', 4: 'Select ID', 5: 'Auto Encoder', 6: 'Auto Encoder Rev' };
+                return modeLabels[settings.printMode] ?? 'Normal';
+              })()}
+              onIncrease={() => {
+                const modes: (0 | 1 | 2 | 4 | 5 | 6)[] = [0, 1, 2, 4, 5, 6];
+                const idx = modes.indexOf(settings.printMode);
+                onUpdate({ printMode: modes[(idx + 1) % modes.length] });
+              }}
+              onDecrease={() => {
+                const modes: (0 | 1 | 2 | 4 | 5 | 6)[] = [0, 1, 2, 4, 5, 6];
+                const idx = modes.indexOf(settings.printMode);
+                onUpdate({ printMode: modes[(idx + modes.length - 1) % modes.length] });
+              }}
             />
             <SettingRow
               label="Delay"
