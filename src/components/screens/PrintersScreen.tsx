@@ -70,6 +70,8 @@ interface PrintersScreenProps {
   onSyncMaster?: (masterId: number) => void;
   // Optional content to render in the right panel instead of Dashboard
   rightPanelContent?: React.ReactNode;
+  // Per-printer countdown lookup
+  getCountdown?: (printerId: number) => { seconds: number | null; type: 'starting' | 'stopping' | null };
 }
 
 // Sortable wrapper for PrinterListItem
@@ -191,6 +193,7 @@ export function PrintersScreen({
   onTurnOff,
   onSyncMaster,
   rightPanelContent,
+  getCountdown,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -393,7 +396,7 @@ export function PrintersScreen({
                       showConnectButton={!showRightPanel}
                       isConnected={connectedPrinter?.id === printer.id}
                       compact={!!showRightPanel}
-                      countdownType={connectedPrinter?.id === printer.id ? countdownType : null}
+                      countdownType={getCountdown ? getCountdown(printer.id).type : (connectedPrinter?.id === printer.id ? countdownType : null)}
                       isMobile={isMobile}
                       syncGroupIndex={syncGroupMap.get(printer.id)}
                       slaveCount={printer.role === 'master' ? slaveCountMap.get(printer.id) ?? 0 : undefined}

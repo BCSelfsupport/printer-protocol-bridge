@@ -2,76 +2,102 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 
 export type CountdownType = 'starting' | 'stopping' | null;
 
+interface PrinterCountdown {
+  seconds: number;
+  type: CountdownType;
+}
+
 interface UseJetCountdownReturn {
+  /** Get countdown for a specific printer (null if none active) */
+  getCountdown: (printerId: number) => { seconds: number | null; type: CountdownType };
+  /** Start a countdown for a specific printer */
+  startCountdown: (printerId: number, type: CountdownType, durationSeconds?: number) => void;
+  /** Cancel countdown for a specific printer */
+  cancelCountdown: (printerId: number) => void;
+  /** Legacy: get countdown for connected printer */
   countdownSeconds: number | null;
   countdownType: CountdownType;
-  startCountdown: (type: CountdownType, durationSeconds?: number) => void;
-  cancelCountdown: () => void;
   isCountingDown: boolean;
 }
 
 // Default countdown duration: 1:46 = 106 seconds
 const DEFAULT_COUNTDOWN_SECONDS = 106;
 
-export function useJetCountdown(): UseJetCountdownReturn {
-  const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
-  const [countdownType, setCountdownType] = useState<CountdownType>(null);
-  const intervalRef = useRef<number | null>(null);
+export function useJetCountdown(connectedPrinterId?: number | null): UseJetCountdownReturn {
+  // Map of printerId -> countdown state
+  const [countdowns, setCountdowns] = useState<Record<number, PrinterCountdown>>({});
+  const intervalsRef = useRef<Record<number, number>>({});
 
-  const cancelCountdown = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+  const cancelCountdown = useCallback((printerId: number) => {
+    if (intervalsRef.current[printerId]) {
+      clearInterval(intervalsRef.current[printerId]);
+      delete intervalsRef.current[printerId];
     }
-    setCountdownSeconds(null);
-    setCountdownType(null);
+    setCountdowns(prev => {
+      const next = { ...prev };
+      delete next[printerId];
+      return next;
+    });
   }, []);
 
-  const startCountdown = useCallback((type: CountdownType, durationSeconds: number = DEFAULT_COUNTDOWN_SECONDS) => {
-    // Cancel any existing countdown
-    cancelCountdown();
-    
+  const startCountdown = useCallback((printerId: number, type: CountdownType, durationSeconds: number = DEFAULT_COUNTDOWN_SECONDS) => {
+    // Cancel any existing countdown for this printer
+    if (intervalsRef.current[printerId]) {
+      clearInterval(intervalsRef.current[printerId]);
+      delete intervalsRef.current[printerId];
+    }
+
     if (!type) return;
-    
-    setCountdownType(type);
-    setCountdownSeconds(durationSeconds);
-    
-    intervalRef.current = window.setInterval(() => {
-      setCountdownSeconds(prev => {
-        if (prev === null || prev <= 1) {
-          return 0; // Signal completion, cleanup handled by effect
+
+    setCountdowns(prev => ({
+      ...prev,
+      [printerId]: { seconds: durationSeconds, type },
+    }));
+
+    intervalsRef.current[printerId] = window.setInterval(() => {
+      setCountdowns(prev => {
+        const current = prev[printerId];
+        if (!current || current.seconds <= 1) {
+          // Countdown complete — clean up
+          clearInterval(intervalsRef.current[printerId]);
+          delete intervalsRef.current[printerId];
+          const next = { ...prev };
+          delete next[printerId];
+          return next;
         }
-        return prev - 1;
+        return {
+          ...prev,
+          [printerId]: { ...current, seconds: current.seconds - 1 },
+        };
       });
     }, 1000);
-  }, [cancelCountdown]);
+  }, []);
 
-  // When countdown reaches 0, clean up
-  useEffect(() => {
-    if (countdownSeconds === 0) {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      setCountdownSeconds(null);
-      setCountdownType(null);
-    }
-  }, [countdownSeconds]);
+  const getCountdown = useCallback((printerId: number) => {
+    const cd = countdowns[printerId];
+    return {
+      seconds: cd?.seconds ?? null,
+      type: cd?.type ?? null,
+    };
+  }, [countdowns]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      Object.values(intervalsRef.current).forEach(id => clearInterval(id));
     };
   }, []);
 
+  // Legacy: provide countdown for the currently connected printer
+  const connectedCd = connectedPrinterId ? countdowns[connectedPrinterId] : undefined;
+
   return {
-    countdownSeconds,
-    countdownType,
+    getCountdown,
     startCountdown,
     cancelCountdown,
-    isCountingDown: countdownSeconds !== null && countdownSeconds > 0,
+    // Legacy accessors for connected printer
+    countdownSeconds: connectedCd?.seconds ?? null,
+    countdownType: connectedCd?.type ?? null,
+    isCountingDown: (connectedCd?.seconds ?? 0) > 0,
   };
 }
