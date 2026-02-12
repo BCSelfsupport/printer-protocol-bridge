@@ -135,88 +135,67 @@ export function Dashboard({
               <span className="text-[10px] md:text-sm">{!showCountdown && isHvOn ? 'HV On' : 'HV Off'}</span>
             </button>
 
-            {/* Makeup + Ink columns with New/Edit directly below */}
-            <div className="flex gap-2 flex-shrink-0">
-              {/* Makeup column */}
-              <div className="flex flex-col gap-2">
-                <div className={`w-[80px] md:w-[120px] h-[70px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 ${
-                  status?.makeupLevel === 'EMPTY' ? 'bg-destructive' :
-                  status?.makeupLevel === 'LOW' ? 'bg-warning' :
-                  'industrial-button'
-                }`}>
-                  <div className="flex flex-col items-center">
-                    <div className="relative">
-                      <Droplets className="w-5 h-5 md:w-8 md:h-8 text-white" />
-                      {(status?.makeupLevel === 'FULL' || status?.makeupLevel === 'GOOD') && (
-                        <Wifi className="w-2 h-2 md:w-3 md:h-3 absolute -top-0.5 -right-0.5 text-white" />
-                      )}
-                    </div>
-                    <span className="text-[8px] md:text-xs text-white font-medium mt-1">Makeup</span>
-                  </div>
-                  <div className="flex flex-col-reverse gap-0.5 h-10 md:h-16 w-3 md:w-5 bg-black/20 rounded p-0.5">
-                    {[0, 1, 2, 3].map((seg) => {
-                      const level = status?.makeupLevel;
-                      const filledSegments = level === 'FULL' ? 4 : level === 'GOOD' ? 2 : level === 'LOW' ? 1 : 0;
-                      const isFilled = seg < filledSegments;
-                      return (
-                        <div
-                          key={seg}
-                          className={`flex-1 rounded-sm transition-colors ${
-                            isFilled ? 'bg-white' : 'bg-white/20'
-                          }`}
-                        />
-                      );
-                    })}
-                  </div>
+            {/* Makeup Level Indicator */}
+            <div className={`w-[80px] md:w-[120px] h-[70px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 flex-shrink-0 ${
+              status?.makeupLevel === 'EMPTY' ? 'bg-destructive' :
+              status?.makeupLevel === 'LOW' ? 'bg-warning' :
+              'industrial-button'
+            }`}>
+              <div className="flex flex-col items-center">
+                <div className="relative">
+                  <Droplets className="w-5 h-5 md:w-8 md:h-8 text-white" />
+                  {(status?.makeupLevel === 'FULL' || status?.makeupLevel === 'GOOD') && (
+                    <Wifi className="w-2 h-2 md:w-3 md:h-3 absolute -top-0.5 -right-0.5 text-white" />
+                  )}
                 </div>
-                <button 
-                  onClick={onNewMessage}
-                  className="industrial-button text-white py-1.5 md:py-2 rounded-lg flex items-center justify-center gap-1.5 w-[80px] md:w-[120px]"
-                >
-                  <Plus className="w-4 h-4 md:w-5 md:h-5" />
-                  <span className="text-sm md:text-base font-medium">New</span>
-                </button>
+                <span className="text-[8px] md:text-xs text-white font-medium mt-1">Makeup</span>
               </div>
+              <div className="flex flex-col-reverse gap-0.5 h-10 md:h-16 w-3 md:w-5 bg-black/20 rounded p-0.5">
+                {[0, 1, 2, 3].map((seg) => {
+                  const level = status?.makeupLevel;
+                  const filledSegments = level === 'FULL' ? 4 : level === 'GOOD' ? 2 : level === 'LOW' ? 1 : 0;
+                  const isFilled = seg < filledSegments;
+                  return (
+                    <div
+                      key={seg}
+                      className={`flex-1 rounded-sm transition-colors ${
+                        isFilled ? 'bg-white' : 'bg-white/20'
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+            </div>
 
-              {/* Ink column */}
-              <div className="flex flex-col gap-2">
-                <div className={`w-[80px] md:w-[120px] h-[70px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 ${
-                  status?.inkLevel === 'EMPTY' ? 'bg-destructive' :
-                  status?.inkLevel === 'LOW' ? 'bg-warning' :
-                  'industrial-button'
-                }`}>
-                  <div className="flex flex-col items-center">
-                    <div className="relative">
-                      <Palette className="w-5 h-5 md:w-8 md:h-8 text-white" />
-                      {status?.inkLevel === 'FULL' && (
-                        <span className="absolute -top-0.5 -right-0.5 text-white text-[10px] md:text-sm">✓</span>
-                      )}
-                    </div>
-                    <span className="text-[8px] md:text-xs text-white font-medium mt-1">Ink</span>
-                  </div>
-                  <div className="flex flex-col-reverse gap-0.5 h-10 md:h-16 w-3 md:w-5 bg-black/20 rounded p-0.5">
-                    {[0, 1, 2, 3].map((seg) => {
-                      const level = status?.inkLevel;
-                      const filledSegments = level === 'FULL' ? 4 : level === 'LOW' ? 1 : 0;
-                      const isFilled = seg < filledSegments;
-                      return (
-                        <div
-                          key={seg}
-                          className={`flex-1 rounded-sm transition-colors ${
-                            isFilled ? 'bg-white' : 'bg-white/20'
-                          }`}
-                        />
-                      );
-                    })}
-                  </div>
+            {/* Ink Level Indicator */}
+            <div className={`w-[80px] md:w-[120px] h-[70px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 flex-shrink-0 ${
+              status?.inkLevel === 'EMPTY' ? 'bg-destructive' :
+              status?.inkLevel === 'LOW' ? 'bg-warning' :
+              'industrial-button'
+            }`}>
+              <div className="flex flex-col items-center">
+                <div className="relative">
+                  <Palette className="w-5 h-5 md:w-8 md:h-8 text-white" />
+                  {status?.inkLevel === 'FULL' && (
+                    <span className="absolute -top-0.5 -right-0.5 text-white text-[10px] md:text-sm">✓</span>
+                  )}
                 </div>
-                <button 
-                  onClick={onEditMessage}
-                  className="industrial-button text-white py-1.5 md:py-2 rounded-lg flex items-center justify-center gap-1.5 w-[80px] md:w-[120px]"
-                >
-                  <Pencil className="w-4 h-4 md:w-5 md:h-5" />
-                  <span className="text-sm md:text-base font-medium">Edit</span>
-                </button>
+                <span className="text-[8px] md:text-xs text-white font-medium mt-1">Ink</span>
+              </div>
+              <div className="flex flex-col-reverse gap-0.5 h-10 md:h-16 w-3 md:w-5 bg-black/20 rounded p-0.5">
+                {[0, 1, 2, 3].map((seg) => {
+                  const level = status?.inkLevel;
+                  const filledSegments = level === 'FULL' ? 4 : level === 'LOW' ? 1 : 0;
+                  const isFilled = seg < filledSegments;
+                  return (
+                    <div
+                      key={seg}
+                      className={`flex-1 rounded-sm transition-colors ${
+                        isFilled ? 'bg-white' : 'bg-white/20'
+                      }`}
+                    />
+                  );
+                })}
               </div>
             </div>
 
@@ -264,14 +243,30 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* Message name */}
-      <div className="bg-card rounded-lg p-2 md:p-3">
-        <div className="text-xs md:text-base truncate">
-          <span className="font-medium">Message: </span>
-          <span className="text-foreground">
-            {status?.currentMessage || 'No message selected'}
-          </span>
+      {/* Message name with New/Edit on right */}
+      <div className="flex items-center gap-2">
+        <div className="bg-card rounded-lg p-2 md:p-3 flex-1 min-w-0">
+          <div className="text-xs md:text-base truncate">
+            <span className="font-medium">Message: </span>
+            <span className="text-foreground">
+              {status?.currentMessage || 'No message selected'}
+            </span>
+          </div>
         </div>
+        <button 
+          onClick={onNewMessage}
+          className="industrial-button text-white px-3 md:px-5 py-2 md:py-3 rounded-lg flex items-center gap-1.5 flex-shrink-0"
+        >
+          <Plus className="w-4 h-4 md:w-5 md:h-5" />
+          <span className="text-sm md:text-base font-medium">New</span>
+        </button>
+        <button 
+          onClick={onEditMessage}
+          className="industrial-button text-white px-3 md:px-5 py-2 md:py-3 rounded-lg flex items-center gap-1.5 flex-shrink-0"
+        >
+          <Pencil className="w-4 h-4 md:w-5 md:h-5" />
+          <span className="text-sm md:text-base font-medium">Edit</span>
+        </button>
       </div>
 
       {/* Message preview area - horizontal scroll, no vertical overflow */}
