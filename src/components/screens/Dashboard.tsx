@@ -243,7 +243,7 @@ export function Dashboard({
       </div>
       </div>
 
-      {/* Second row: Message name + New/Edit buttons */}
+      {/* Message name row with New/Edit aligned right (under Makeup/Ink) */}
       <div className="flex items-center gap-2">
         <div className="bg-card rounded-lg p-2 md:p-3 flex-1 min-w-0">
           <div className="text-xs md:text-base truncate">
@@ -253,20 +253,22 @@ export function Dashboard({
             </span>
           </div>
         </div>
-        <button 
-          onClick={onNewMessage}
-          className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5 flex-shrink-0"
-        >
-          <Plus className="w-4 h-4 md:w-5 md:h-5" />
-          <span className="text-sm md:text-base font-medium">New</span>
-        </button>
-        <button 
-          onClick={onEditMessage}
-          className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5 flex-shrink-0"
-        >
-          <Pencil className="w-4 h-4 md:w-5 md:h-5" />
-          <span className="text-sm md:text-base font-medium">Edit</span>
-        </button>
+        <div className="flex gap-2 flex-shrink-0 ml-auto">
+          <button 
+            onClick={onNewMessage}
+            className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="text-sm md:text-base font-medium">New</span>
+          </button>
+          <button 
+            onClick={onEditMessage}
+            className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5"
+          >
+            <Pencil className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="text-sm md:text-base font-medium">Edit</span>
+          </button>
+        </div>
       </div>
 
       {/* Message preview area - horizontal scroll, no vertical overflow */}
