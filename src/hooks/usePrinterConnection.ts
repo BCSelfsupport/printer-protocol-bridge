@@ -26,6 +26,7 @@ const mockStatus: PrinterStatus = {
   makeupGood: true,
   inkFull: true,
   isRunning: false,
+  jetRunning: false,
   productCount: 0,
   printCount: 0,
   customCounters: [0, 0, 0, 0], // Custom counters 1-4
@@ -283,7 +284,9 @@ export function usePrinterConnection() {
     // Use the printer's own Print Status field (parsed as printStatus) as the authoritative
     // ready indicator. HVDeflection alone is unreliable — it can be 1 even when the jet is off.
     const hvOn = parsed.printStatus === 'Ready';
-    console.log('[handleServiceResponse] Parsed ready state (printStatus):', parsed.printStatus, '-> hvOn:', hvOn);
+    // Jet running is determined by VLT_ON subsystem flag (jet active even if HV is off)
+    const jetActive = parsed.subsystems?.vltOn || hvOn;
+    console.log('[handleServiceResponse] Parsed ready state (printStatus):', parsed.printStatus, '-> hvOn:', hvOn, 'jetActive:', jetActive);
 
     // Sync the printer's status in the list with the HV state + fluid levels
     const inkLevelCard = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['inkLevel'];
@@ -312,8 +315,8 @@ export function usePrinterConnection() {
         // Update isRunning and consumable levels based on ^SU response
         // IMPORTANT: Preserve currentMessage - it's only updated by selectMessage
         status: prev.status 
-          ? { ...prev.status, isRunning: hvOn, inkLevel, makeupLevel } 
-          : { ...mockStatus, isRunning: hvOn, inkLevel, makeupLevel, currentMessage: prev.status?.currentMessage ?? mockStatus.currentMessage },
+          ? { ...prev.status, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel } 
+          : { ...mockStatus, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel, currentMessage: prev.status?.currentMessage ?? mockStatus.currentMessage },
         metrics: {
           ...previous,
           modulation: parsed.modulation ?? previous.modulation,
@@ -448,7 +451,7 @@ export function usePrinterConnection() {
           setConnectionState((prev) => ({
             ...prev,
             status: prev.status 
-              ? { ...prev.status, isRunning: hvOn, inkLevel, makeupLevel } 
+              ? { ...prev.status, isRunning: hvOn, jetRunning: parsed.subsystems?.vltOn || hvOn, inkLevel, makeupLevel } 
               : null,
             metrics: prev.metrics ? {
               ...prev.metrics,
@@ -571,6 +574,7 @@ export function usePrinterConnection() {
           status: {
             ...mockStatus,
             isRunning: emulatorState.hvOn,
+            jetRunning: emulatorState.jetRunning,
             currentMessage: emulatorState.currentMessage,
             inkLevel: emulatorState.inkLevel as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
             makeupLevel: emulatorState.makeupLevel as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
@@ -623,6 +627,7 @@ export function usePrinterConnection() {
         status: {
           ...mockStatus,
           isRunning: emulatorState.hvOn,
+          jetRunning: emulatorState.jetRunning,
           currentMessage: emulatorState.currentMessage,
           inkLevel: emulatorState.inkLevel as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
           makeupLevel: emulatorState.makeupLevel as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN',
@@ -919,7 +924,7 @@ export function usePrinterConnection() {
       const state = emulator.getState();
       setConnectionState(prev => ({
         ...prev,
-        status: prev.status ? { ...prev.status, isRunning: state.hvOn } : null,
+        status: prev.status ? { ...prev.status, isRunning: state.hvOn, jetRunning: state.jetRunning } : null,
       }));
       
       if (connectionState.connectedPrinter) {
@@ -949,7 +954,7 @@ export function usePrinterConnection() {
       console.log('[jetStop] Web preview mock - setting HV off');
       setConnectionState(prev => ({
         ...prev,
-        status: prev.status ? { ...prev.status, isRunning: false } : null,
+        status: prev.status ? { ...prev.status, isRunning: false, jetRunning: false } : null,
       }));
       
       // Also update printer status in list
