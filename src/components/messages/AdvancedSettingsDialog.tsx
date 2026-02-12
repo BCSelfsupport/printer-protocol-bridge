@@ -24,13 +24,7 @@ export interface AdvancedSettings {
   dateDelimiter: string;
   day60366Switch: boolean; // Off = Feb 29 = day 60, On = Feb 29 = day 366
   
-  // Shift Codes
-  totalShifts: number; // 1-24 (global: how many shifts divide the 24h day)
-  shifts: {
-    shift: number;      // 1..totalShifts
-    startTime: string;  // HH:MM format
-    code: string;       // Programmable value
-  }[];
+  // (Shift codes are device-local only — no remote protocol command exists)
   
   // Counters Tab (per counter 1-4)
   counters: {
@@ -62,12 +56,7 @@ export const defaultAdvancedSettings: AdvancedSettings = {
   dateDelimiter: '/',
   day60366Switch: false,
   
-  totalShifts: 3,
-  shifts: Array.from({ length: 3 }, (_, i) => ({
-    shift: i + 1,
-    startTime: `${String(i * 8).padStart(2, '0')}:00`,
-    code: String(i + 1),
-  })),
+  
   
   counters: [1, 2, 3, 4].map(id => ({
     id,
@@ -195,24 +184,14 @@ export function AdvancedSettingsDialog({
 }: AdvancedSettingsDialogProps) {
   const [activeTab, setActiveTab] = useState('general');
   const [selectedCounter, setSelectedCounter] = useState(1);
-  const [selectedShift, setSelectedShift] = useState(1);
-  const effectiveTotalShifts = settings.totalShifts ?? settings.shifts?.length ?? 3;
 
   const currentCounter = settings.counters.find(c => c.id === selectedCounter) || settings.counters[0];
-  const currentShift = settings.shifts?.find(s => s.shift === selectedShift) || settings.shifts?.[0];
 
   const updateCounter = (updates: Partial<typeof currentCounter>) => {
     const newCounters = settings.counters.map(c =>
       c.id === selectedCounter ? { ...c, ...updates } : c
     );
     onUpdate({ counters: newCounters });
-  };
-
-  const updateShift = (updates: Partial<typeof currentShift>) => {
-    const newShifts = settings.shifts.map(s =>
-      s.shift === selectedShift ? { ...s, ...updates } : s
-    );
-    onUpdate({ shifts: newShifts });
   };
 
   return (
@@ -293,55 +272,6 @@ export function AdvancedSettingsDialog({
               />
             </div>
 
-            {/* Shift Codes Section */}
-            <div className="pt-2 border-t">
-              <h4 className="text-sm font-semibold mb-2">Shift Codes</h4>
-              <div className="space-y-2">
-                <SettingRow
-                  label="Total Shifts"
-                  value={effectiveTotalShifts}
-                  onIncrease={() => {
-                    const newTotal = Math.min(24, effectiveTotalShifts + 1);
-                    const newShifts = Array.from({ length: newTotal }, (_, i) => {
-                      const existing = settings.shifts?.find(s => s.shift === i + 1);
-                      return existing || { shift: i + 1, startTime: '00:00', code: String(i + 1) };
-                    });
-                    onUpdate({ totalShifts: newTotal, shifts: newShifts });
-                    if (selectedShift > newTotal) setSelectedShift(newTotal);
-                  }}
-                  onDecrease={() => {
-                    const newTotal = Math.max(1, effectiveTotalShifts - 1);
-                    const newShifts = (settings.shifts ?? []).slice(0, newTotal);
-                    onUpdate({ totalShifts: newTotal, shifts: newShifts });
-                    if (selectedShift > newTotal) setSelectedShift(newTotal);
-                  }}
-                />
-                <SettingRow
-                  label="Shift"
-                  value={`${selectedShift} of ${effectiveTotalShifts}`}
-                  onIncrease={() => setSelectedShift(Math.min(effectiveTotalShifts, selectedShift + 1))}
-                  onDecrease={() => setSelectedShift(Math.max(1, selectedShift - 1))}
-                />
-                <div className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
-                  <Label className="text-sm font-medium">Start Time</Label>
-                  <Input
-                    type="time"
-                    value={currentShift?.startTime ?? '00:00'}
-                    onChange={(e) => updateShift({ startTime: e.target.value })}
-                    className="w-28 h-8"
-                  />
-                </div>
-                <div className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
-                  <Label className="text-sm font-medium">Code</Label>
-                  <Input
-                    value={currentShift?.code ?? ''}
-                    onChange={(e) => updateShift({ code: e.target.value })}
-                    className="w-24 h-8"
-                    maxLength={10}
-                  />
-                </div>
-              </div>
-            </div>
           </TabsContent>
 
           {/* Counters Tab */}
