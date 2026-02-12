@@ -27,11 +27,14 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Network
 } from 'lucide-react';
+import { CommandTerminal } from '@/components/terminal/CommandTerminal';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -54,9 +57,11 @@ interface DevPanelProps {
   onToggle: () => void;
   connectedPrinterIp?: string;
   connectedPrinterPort?: number;
+  defaultTab?: string;
+  showToggleButton?: boolean;
 }
 
-export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinterPort }: DevPanelProps) {
+export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinterPort, defaultTab, showToggleButton = true }: DevPanelProps) {
   const isMobile = useIsMobile();
   
   // Resolve the correct emulator instance for the connected printer
@@ -76,6 +81,38 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
   const [buildResult, setBuildResult] = useState<{ success: boolean; message: string } | null>(null);
   const [buildRuns, setBuildRuns] = useState<any[]>([]);
   const [buildRunsLoading, setBuildRunsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState(defaultTab || 'status');
+
+  // Network config state
+  const NETWORK_STORAGE_KEY = 'printer-network-settings';
+  const defaultNetSettings = {
+    ipAddress: '192.168.1.55',
+    subnetMask: '255.255.255.0',
+    gateway: '192.168.1.1',
+    dns1: '8.8.8.8',
+    dns2: '8.8.4.4',
+    port: '23',
+  };
+  const [netSettings, setNetSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem(NETWORK_STORAGE_KEY);
+      if (saved) return { ...defaultNetSettings, ...JSON.parse(saved) };
+    } catch (e) { /* ignore */ }
+    return defaultNetSettings;
+  });
+
+  const handleNetChange = (field: string, value: string) => {
+    setNetSettings((prev: typeof defaultNetSettings) => {
+      const updated = { ...prev, [field]: value };
+      try { localStorage.setItem(NETWORK_STORAGE_KEY, JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+  };
+
+  // Sync activeTab when defaultTab prop changes
+  useEffect(() => {
+    if (defaultTab) setActiveTab(defaultTab);
+  }, [defaultTab]);
 
   const fetchBuildStatus = async () => {
     setBuildRunsLoading(true);
@@ -220,19 +257,21 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
 
   return (
     <>
-      {/* Toggle Button (always visible) */}
-      <button
-        onClick={onToggle}
-        className={cn(
-          "fixed top-1/2 -translate-y-1/2 z-50",
-          "bg-sidebar border border-border border-r-0 rounded-l-md",
-          "p-2 shadow-lg transition-all",
-          "hover:bg-muted",
-          isOpen ? "right-80" : "right-0"
-        )}
-      >
-        {isOpen ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-      </button>
+      {/* Toggle Button (visible only when showToggleButton is true) */}
+      {showToggleButton && (
+        <button
+          onClick={onToggle}
+          className={cn(
+            "fixed top-1/2 -translate-y-1/2 z-50",
+            "bg-sidebar border border-border border-r-0 rounded-l-md",
+            "p-2 shadow-lg transition-all",
+            "hover:bg-muted",
+            isOpen ? "right-80" : "right-0"
+          )}
+        >
+          {isOpen ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        </button>
+      )}
 
       {/* Panel */}
       {isOpen && (
@@ -287,12 +326,13 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             )}
           </div>
 
-          <Tabs defaultValue="status" className="flex-1 flex flex-col">
-            <TabsList className="mx-4 mt-2 grid grid-cols-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+            <TabsList className="mx-4 mt-2 grid grid-cols-5">
               <TabsTrigger value="status" className="text-xs">Status</TabsTrigger>
               <TabsTrigger value="protocol" className="text-xs">Protocol</TabsTrigger>
               <TabsTrigger value="commands" className="text-xs">Log</TabsTrigger>
               <TabsTrigger value="manual" className="text-xs">Manual</TabsTrigger>
+              <TabsTrigger value="network" className="text-xs">Network</TabsTrigger>
             </TabsList>
 
             {/* Status Tab */}
@@ -708,6 +748,88 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   <p>• Parameters separated by ; (semicolon)</p>
                   <p>• Case insensitive (except message data)</p>
                   <p>• Example: ^SM BESTCODE</p>
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            {/* Network Tab */}
+            <TabsContent value="network" className="flex-1 overflow-hidden m-0">
+              <ScrollArea className="h-full p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Network className="w-4 h-4 text-gray-500" />
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Network Configuration
+                  </h3>
+                </div>
+
+                <div className="space-y-3 mb-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-gray-600">IP Address</Label>
+                    <Input
+                      value={netSettings.ipAddress}
+                      onChange={(e) => handleNetChange('ipAddress', e.target.value)}
+                      placeholder="192.168.1.55"
+                      className="h-8 text-xs font-mono"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-600">Subnet Mask</Label>
+                      <Input
+                        value={netSettings.subnetMask}
+                        onChange={(e) => handleNetChange('subnetMask', e.target.value)}
+                        placeholder="255.255.255.0"
+                        className="h-8 text-xs font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-600">Port</Label>
+                      <Input
+                        value={netSettings.port}
+                        onChange={(e) => handleNetChange('port', e.target.value)}
+                        placeholder="23"
+                        className="h-8 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-gray-600">Gateway</Label>
+                    <Input
+                      value={netSettings.gateway}
+                      onChange={(e) => handleNetChange('gateway', e.target.value)}
+                      placeholder="192.168.1.1"
+                      className="h-8 text-xs font-mono"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-600">DNS 1</Label>
+                      <Input
+                        value={netSettings.dns1}
+                        onChange={(e) => handleNetChange('dns1', e.target.value)}
+                        placeholder="8.8.8.8"
+                        className="h-8 text-xs font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-600">DNS 2</Label>
+                      <Input
+                        value={netSettings.dns2}
+                        onChange={(e) => handleNetChange('dns2', e.target.value)}
+                        placeholder="8.8.4.4"
+                        className="h-8 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Embedded Terminal */}
+                <div className="border border-gray-200 rounded-lg overflow-hidden" style={{ height: '300px' }}>
+                  <CommandTerminal
+                    printerId={connectedPrinterIp ? 1 : null}
+                    ipAddress={netSettings.ipAddress}
+                    port={parseInt(netSettings.port, 10) || 23}
+                  />
                 </div>
               </ScrollArea>
             </TabsContent>
