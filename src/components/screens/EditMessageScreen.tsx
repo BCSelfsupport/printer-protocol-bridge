@@ -110,6 +110,7 @@ interface EditMessageScreenProps {
   onCancel: () => void;
   onGetMessageDetails?: (name: string) => Promise<MessageDetails | null>;
   printerTime?: Date | null;
+  customCounters?: number[];
 }
 
 export function EditMessageScreen({
@@ -118,6 +119,7 @@ export function EditMessageScreen({
   onCancel,
   onGetMessageDetails,
   printerTime,
+  customCounters,
 }: EditMessageScreenProps) {
   const [message, setMessage] = useState<MessageDetails>({
     name: messageName,
@@ -189,7 +191,7 @@ export function EditMessageScreen({
   // Live-refresh time and date fields every second using printer time
   useEffect(() => {
     const hasAutoCodeFields = message.fields.some(
-      f => f.type === 'time' || f.type === 'date'
+      f => f.type === 'time' || f.type === 'date' || f.type === 'counter'
     );
     if (!hasAutoCodeFields) return;
 
@@ -239,6 +241,10 @@ export function EditMessageScreen({
               case 'YYMMDD': newData = `${yearShort}${month}${day}`; break;
               default: newData = `${month}/${day}/${yearShort}`;
             }
+          } else if (f.autoCodeFieldType?.startsWith('counter_') && customCounters) {
+            const ctrId = parseInt(f.autoCodeFieldType.split('_')[1]) || 1;
+            const ctrValue = customCounters[ctrId - 1] ?? 0;
+            newData = ctrValue.toString();
           }
 
           return newData !== f.data ? { ...f, data: newData } : f;
@@ -247,7 +253,7 @@ export function EditMessageScreen({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [message.fields.length, printerTime]);
+  }, [message.fields.length, printerTime, customCounters]);
 
   const selectedField = message.fields.find((f) => f.id === selectedFieldId);
 
