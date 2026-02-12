@@ -372,7 +372,7 @@ export function PrintersScreen({
 
         {/* Printer List with ScrollArea */}
         <ScrollArea className="flex-1">
-          <div className="p-3 space-y-2">
+          <div className="p-3 pr-5 space-y-2">
             {printers.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-slate-500 py-8">
                 <PrinterIcon className="w-10 h-10 mb-3 opacity-50" />
