@@ -23,10 +23,15 @@ interface UseJetCountdownReturn {
 // Default countdown duration: 1:46 = 106 seconds
 const DEFAULT_COUNTDOWN_SECONDS = 106;
 
-export function useJetCountdown(connectedPrinterId?: number | null): UseJetCountdownReturn {
+export function useJetCountdown(
+  connectedPrinterId?: number | null,
+  onComplete?: (printerId: number, type: CountdownType) => void,
+): UseJetCountdownReturn {
   // Map of printerId -> countdown state
   const [countdowns, setCountdowns] = useState<Record<number, PrinterCountdown>>({});
   const intervalsRef = useRef<Record<number, number>>({});
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   const cancelCountdown = useCallback((printerId: number) => {
     if (intervalsRef.current[printerId]) {
@@ -63,6 +68,10 @@ export function useJetCountdown(connectedPrinterId?: number | null): UseJetCount
           delete intervalsRef.current[printerId];
           const next = { ...prev };
           delete next[printerId];
+          // Fire onComplete callback
+          if (current?.type) {
+            setTimeout(() => onCompleteRef.current?.(printerId, current.type), 0);
+          }
           return next;
         }
         return {

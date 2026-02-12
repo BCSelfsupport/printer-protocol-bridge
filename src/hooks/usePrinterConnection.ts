@@ -968,6 +968,55 @@ export function usePrinterConnection() {
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus, updatePrinterStatus]);
 
+  // Jet Start - send ^SJ 1 command to start the ink jet
+  const jetStart = useCallback(async () => {
+    console.log('[jetStart] Called, isConnected:', connectionState.isConnected, 'printer:', connectionState.connectedPrinter?.id);
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[jetStart] Not connected, aborting');
+      return;
+    }
+    
+    const printer = connectionState.connectedPrinter;
+    
+    if (shouldUseEmulator()) {
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
+      console.log('[jetStart] Using emulator for', printer.ipAddress);
+      const result = emulator.processCommand('^SJ 1');
+      console.log('[jetStart] Emulator result:', result);
+      
+      const state = emulator.getState();
+      setConnectionState(prev => ({
+        ...prev,
+        status: prev.status ? { ...prev.status, jetRunning: state.jetRunning } : null,
+      }));
+      
+      if (connectionState.connectedPrinter) {
+        updatePrinterStatus(connectionState.connectedPrinter.id, {
+          isAvailable: true,
+          status: 'not_ready',
+          hasActiveErrors: false,
+        });
+      }
+    } else if (isElectron && window.electronAPI) {
+      try {
+        console.log('[jetStart] Sending ^SJ 1');
+        const result = await window.electronAPI.printer.sendCommand(printer.id, '^SJ 1');
+        console.log('[jetStart] Result:', JSON.stringify(result));
+        if (!result?.success) {
+          console.error('[jetStart] ^SJ 1 command failed:', result?.error);
+        }
+      } catch (e) {
+        console.error('[jetStart] Failed to send ^SJ 1:', e);
+      }
+    } else {
+      console.log('[jetStart] Web preview mock - starting jet');
+      setConnectionState(prev => ({
+        ...prev,
+        status: prev.status ? { ...prev.status, jetRunning: true } : null,
+      }));
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus, updatePrinterStatus]);
+
   const updateSettings = useCallback((newSettings: Partial<PrintSettings>) => {
     setConnectionState(prev => ({
       ...prev,
@@ -1924,6 +1973,7 @@ export function usePrinterConnection() {
     startPrint,
     stopPrint,
     jetStop,
+    jetStart,
     updateSettings,
     selectMessage,
     signIn,

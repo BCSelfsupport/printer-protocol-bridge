@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import type { CountdownType } from '@/hooks/useJetCountdown';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Header } from '@/components/layout/Header';
 import { NavItem } from '@/components/layout/BottomNav';
@@ -49,6 +50,7 @@ const Index = () => {
     startPrint,
     stopPrint,
     jetStop,
+    jetStart,
     updateSettings,
     selectMessage,
     signIn,
@@ -75,7 +77,15 @@ const Index = () => {
   } = usePrinterConnection();
   
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
-  const { countdownSeconds, countdownType, startCountdown, cancelCountdown, getCountdown } = useJetCountdown(connectedPrinterId);
+  const handleCountdownComplete = useCallback((printerId: number, type: CountdownType) => {
+    console.log('[handleCountdownComplete] printerId:', printerId, 'type:', type);
+    if (type === 'starting') {
+      // Jet startup complete — auto-enable HV
+      startPrint();
+    }
+  }, [startPrint]);
+
+  const { countdownSeconds, countdownType, startCountdown, cancelCountdown, getCountdown } = useJetCountdown(connectedPrinterId, handleCountdownComplete);
 
   // Master/Slave sync: auto-syncs messages and selections from master to slaves
   const { isMaster, slaveCount, syncAllMessages, syncMaster } = useMasterSlaveSync({
@@ -119,9 +129,9 @@ const Index = () => {
   
   // Wrapped handlers that trigger countdown
   const handleStartPrint = useCallback(() => {
-    startPrint();
+    jetStart();
     if (connectedPrinterId) startCountdown(connectedPrinterId, 'starting', 106);
-  }, [startPrint, startCountdown, connectedPrinterId]);
+  }, [jetStart, startCountdown, connectedPrinterId]);
   
   const handleJetStop = useCallback(() => {
     jetStop();
