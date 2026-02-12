@@ -50,6 +50,8 @@ interface PrintersScreenProps {
   onStart?: () => void;
   onStop?: () => void;
   onJetStop?: () => void;
+  onHvOn?: () => void;
+  onHvOff?: () => void;
   onNewMessage?: () => void;
   onEditMessage?: () => void;
   onSignIn?: () => void;
@@ -179,6 +181,8 @@ export function PrintersScreen({
   onStart,
   onStop,
   onJetStop,
+  onHvOn,
+  onHvOff,
   onNewMessage,
   onEditMessage,
   onSignIn,
@@ -455,6 +459,8 @@ export function PrintersScreen({
               onStart={onStart ?? (() => {})}
               onStop={onStop ?? (() => {})}
               onJetStop={onJetStop ?? (() => {})}
+              onHvOn={onHvOn}
+              onHvOff={onHvOff}
               onNewMessage={onNewMessage ?? (() => {})}
               onEditMessage={onEditMessage ?? (() => {})}
               onSignIn={onSignIn ?? (() => {})}

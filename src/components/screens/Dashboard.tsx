@@ -13,6 +13,8 @@ interface DashboardProps {
   onStart: () => void;
   onStop: () => void;
   onJetStop: () => void;
+  onHvOn?: () => void;
+  onHvOff?: () => void;
   onNewMessage: () => void;
   onEditMessage: () => void;
   onSignIn: () => void;
@@ -40,6 +42,8 @@ export function Dashboard({
   onStart,
   onStop,
   onJetStop,
+  onHvOn,
+  onHvOff,
   onNewMessage,
   onEditMessage,
   onSignIn,
@@ -123,8 +127,8 @@ export function Dashboard({
           </button>
 
           <button 
-            onClick={isHvOn ? onStop : onStart}
-            disabled={!isConnected || showCountdown}
+            onClick={isHvOn ? (onHvOff ?? onStop) : (onHvOn ?? onStart)}
+            disabled={!isConnected}
             className={`${isHvOn ? 'industrial-button-success' : 'industrial-button-danger'} text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[100px] flex-shrink-0 disabled:opacity-50`}
           >
             <PrinterIcon className="w-7 h-7 md:w-10 md:h-10 mb-1" />

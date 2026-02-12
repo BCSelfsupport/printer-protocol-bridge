@@ -229,6 +229,8 @@ const Index = () => {
             onStart={handleStartPrint}
             onStop={stopPrint}
             onJetStop={handleJetStop}
+            onHvOn={startPrint}
+            onHvOff={stopPrint}
             onNewMessage={() => {
               setOpenNewDialogOnMount(true);
               setCurrentScreen('messages');
@@ -375,6 +377,8 @@ const Index = () => {
         onStart={handleStartPrint}
         onStop={stopPrint}
         onJetStop={handleJetStop}
+        onHvOn={startPrint}
+        onHvOff={stopPrint}
         onNewMessage={() => {
           setOpenNewDialogOnMount(true);
           setCurrentScreen('messages');
