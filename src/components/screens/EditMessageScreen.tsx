@@ -241,10 +241,16 @@ export function EditMessageScreen({
               case 'YYMMDD': newData = `${yearShort}${month}${day}`; break;
               default: newData = `${month}/${day}/${yearShort}`;
             }
-          } else if (f.autoCodeFieldType?.startsWith('counter_') && customCounters) {
+          } else if (f.autoCodeFieldType?.startsWith('counter_')) {
             const ctrId = parseInt(f.autoCodeFieldType.split('_')[1]) || 1;
-            const ctrValue = customCounters[ctrId - 1] ?? 0;
-            newData = ctrValue.toString();
+            // Use live counter value if available, otherwise show from advanced settings
+            const ctrConfig = prev.advancedSettings?.counters?.find(c => c.id === ctrId);
+            const ctrValue = customCounters?.[ctrId - 1] ?? ctrConfig?.startCount ?? 0;
+            const endCount = ctrConfig?.endCount ?? 9999;
+            const digits = endCount.toString().length;
+            newData = ctrConfig?.leadingZeroes 
+              ? ctrValue.toString().padStart(digits, '0') 
+              : ctrValue.toString();
           }
 
           return newData !== f.data ? { ...f, data: newData } : f;
@@ -253,7 +259,7 @@ export function EditMessageScreen({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [message.fields.length, printerTime, customCounters]);
+  }, [message.fields.length, message.advancedSettings, printerTime, customCounters]);
 
   const selectedField = message.fields.find((f) => f.id === selectedFieldId);
 
@@ -528,7 +534,13 @@ export function EditMessageScreen({
       }
     } else if (fieldType.startsWith('counter_')) {
       counterId = parseInt(fieldType.split('_')[1]) || 1;
-      fieldData = `CTR${counterId}`;
+      const ctrConfig = message.advancedSettings?.counters?.find(c => c.id === counterId);
+      const startVal = ctrConfig?.startCount ?? 0;
+      const endCount = ctrConfig?.endCount ?? 9999;
+      const digits = endCount.toString().length;
+      fieldData = ctrConfig?.leadingZeroes 
+        ? startVal.toString().padStart(digits, '0') 
+        : startVal.toString();
     }
     
     // Calculate Y position and font size based on template
