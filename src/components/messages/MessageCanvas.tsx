@@ -718,6 +718,8 @@ export function MessageCanvas({
     const pos = getMousePosition(e);
     const field = findFieldAtPosition(pos.x, pos.y);
     
+    console.log('[Canvas] mouseDown at', pos, 'found field:', field?.id, 'selectedFieldId:', selectedFieldId, 'fields:', fields.map(f => ({ id: f.id, x: f.x, y: f.y, data: f.data, w: Math.max(f.data.length, 3) * (getFontInfo(f.fontSize).charWidth + 1), h: getFontInfo(f.fontSize).height })));
+    
     if (field) {
       mouseDragMovedRef.current = false;
       mouseDragFieldRef.current = field.id;
