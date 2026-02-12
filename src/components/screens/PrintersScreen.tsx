@@ -446,7 +446,7 @@ export function PrintersScreen({
       </div>
 
       {/* Right Panel - Dashboard, custom content, or Empty State */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={`flex-1 flex flex-col overflow-hidden ${!showRightPanel ? 'hidden md:flex' : ''}`}>
         {rightPanelContent ? (
           <div className="flex-1 flex flex-col bg-background rounded-xl border border-slate-700 overflow-hidden">
             {rightPanelContent}
