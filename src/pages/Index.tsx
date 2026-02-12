@@ -80,7 +80,9 @@ const Index = () => {
   const handleCountdownComplete = useCallback((printerId: number, type: CountdownType) => {
     console.log('[handleCountdownComplete] printerId:', printerId, 'type:', type);
     if (type === 'starting') {
-      // Jet startup complete — auto-enable HV
+      // Emulator: auto-enable HV after jet startup countdown
+      // Real printer: HV is enabled automatically by the printer itself;
+      // status polling will pick up the change via ^SU response
       startPrint();
     }
   }, [startPrint]);
