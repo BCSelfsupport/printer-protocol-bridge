@@ -1,5 +1,6 @@
 // @ts-ignore - bwip-js browser bundle
 import bwipjs from 'bwip-js/browser';
+import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
 
 // Map our encoding names to bwip-js encoder names
 const ENCODING_MAP: Record<string, string> = {
@@ -243,12 +244,31 @@ export async function renderBarcodeToCanvas(
     
     await bwipjs.toCanvas(tempCanvas, options);
     
-    // If human readable, composite barcode + text below
+    // If human readable, composite barcode + dot-matrix text below
     if (humanReadable && !is2D) {
+      const DOT_PX = 8;
+      const hrFont = 'Standard5High';
+      const fontInfo = getFontInfo(hrFont);
+      const textRowsPx = (fontInfo.height + 1) * DOT_PX; // 5 dots + 1 gap = 6 dots
+      
+      // Format text with guard bar splits for UPC/EAN
+      let displayText = data;
+      if (encoding === 'upca' && data.length >= 11) {
+        displayText = `${data[0]} ${data.substring(1, 6)} ${data.substring(6, 11)} ${data[11] || ''}`.trim();
+      } else if (encoding === 'upce' && data.length >= 6) {
+        displayText = `${data[0] || '0'} ${data.substring(data.length >= 8 ? 1 : 0, data.length >= 8 ? 7 : 6)} ${data[data.length - 1] || ''}`.trim();
+      } else if (encoding === 'ean13' && data.length >= 12) {
+        displayText = `${data[0]} ${data.substring(1, 7)} ${data.substring(7, 13)}`.trim();
+      } else if (encoding === 'ean8' && data.length >= 7) {
+        displayText = `${data.substring(0, 4)} ${data.substring(4, 8)}`.trim();
+      }
+      
+      // Calculate text width in pixels
+      const textWidthPx = displayText.length * (fontInfo.charWidth + 1) * DOT_PX;
+      
       const finalCanvas = document.createElement('canvas');
-      const textPx = Math.max(12, Math.floor(tempCanvas.height * 0.18));
-      finalCanvas.width = tempCanvas.width;
-      finalCanvas.height = tempCanvas.height + textPx + 2;
+      finalCanvas.width = Math.max(tempCanvas.width, textWidthPx);
+      finalCanvas.height = tempCanvas.height + textRowsPx;
       
       const ctx = finalCanvas.getContext('2d');
       if (ctx) {
@@ -256,35 +276,10 @@ export async function renderBarcodeToCanvas(
         ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
         ctx.drawImage(tempCanvas, 0, 0);
         
-        // Draw human-readable text below barcode
+        // Render human-readable text using dot-matrix 5-high font, centered below barcode
         ctx.fillStyle = '#1a1a1a';
-        const fontSize = Math.max(10, textPx - 1);
-        ctx.font = `bold ${fontSize}px monospace`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        
-        // Format text with guard bar splits for UPC/EAN
-        let displayText = data;
-        if (encoding === 'upca' && data.length >= 11) {
-          displayText = `${data[0]} ${data.substring(1, 6)} ${data.substring(6, 11)} ${data[11] || ''}`.trim();
-        } else if (encoding === 'upce' && data.length >= 6) {
-          displayText = `${data[0] || '0'} ${data.substring(data.length >= 8 ? 1 : 0, data.length >= 8 ? 7 : 6)} ${data[data.length - 1] || ''}`.trim();
-        } else if (encoding === 'ean13' && data.length >= 12) {
-          displayText = `${data[0]} ${data.substring(1, 7)} ${data.substring(7, 13)}`.trim();
-        } else if (encoding === 'ean8' && data.length >= 7) {
-          displayText = `${data.substring(0, 4)} ${data.substring(4, 8)}`.trim();
-        }
-        
-        // Ensure text fits canvas width — shrink font if needed
-        let textWidth = ctx.measureText(displayText).width;
-        let adjustedFontSize = fontSize;
-        while (textWidth > finalCanvas.width - 4 && adjustedFontSize > 6) {
-          adjustedFontSize--;
-          ctx.font = `bold ${adjustedFontSize}px monospace`;
-          textWidth = ctx.measureText(displayText).width;
-        }
-        
-        ctx.fillText(displayText, finalCanvas.width / 2, finalCanvas.height - 1);
+        const textX = Math.max(0, Math.floor((finalCanvas.width - textWidthPx) / 2));
+        renderText(ctx, displayText, textX, tempCanvas.height, hrFont, DOT_PX);
         
         barcodeCache.set(cacheKey, finalCanvas);
         return finalCanvas;
