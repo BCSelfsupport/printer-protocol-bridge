@@ -3,19 +3,24 @@ import { Calendar, Clock, Send, ChevronUp, ChevronDown, ChevronRight, RefreshCw 
 import { format } from 'date-fns';
 import { ProgramDateCodesScreen } from './ProgramDateCodesScreen';
 import { ProgramTimeCodesScreen } from './ProgramTimeCodesScreen';
-import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
-import { Button } from '@/components/ui/button';
 
-interface SetupScreenProps {
-  onHome: () => void;
+interface SetupDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSendCommand?: (command: string) => Promise<any>;
 }
 
@@ -24,42 +29,6 @@ const WEEK_STARTS = ['ISO Week Date', 'Sunday = 1', 'Monday = 1', 'Monday = 2', 
 
 type DateFormat = typeof DATE_FORMATS[number];
 type WeekStart = typeof WEEK_STARTS[number];
-
-/** Row matching the printer's setup screen: label on left, action button on right */
-function SetupRow({
-  label,
-  value,
-  icon,
-  onClick,
-  className,
-}: {
-  label: string;
-  value: string;
-  icon?: React.ReactNode;
-  onClick?: () => void;
-  className?: string;
-}) {
-  return (
-    <div className={cn(
-      "bg-card rounded-lg p-4 flex items-center justify-between border border-border min-h-[72px]",
-      className,
-    )}>
-      <div className="min-w-0 flex-1">
-        <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</div>
-        <div className="text-lg font-semibold text-foreground tabular-nums truncate">{value}</div>
-      </div>
-      {onClick && (
-        <button
-          onClick={onClick}
-          className="industrial-button text-white p-3 rounded-lg ml-3 shrink-0"
-          title={label}
-        >
-          {icon ?? <Send className="w-5 h-5" />}
-        </button>
-      )}
-    </div>
-  );
-}
 
 /** Cycle selector row with up/down arrows */
 function CycleRow({
@@ -91,7 +60,7 @@ function CycleRow({
   );
 }
 
-export function SetupScreen({ onHome, onSendCommand }: SetupScreenProps) {
+export function SetupScreen({ open, onOpenChange, onSendCommand }: SetupDialogProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string>(format(new Date(), 'HH:mm:ss'));
@@ -102,9 +71,10 @@ export function SetupScreen({ onHome, onSendCommand }: SetupScreenProps) {
 
   // Live clock
   useEffect(() => {
+    if (!open) return;
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [open]);
 
   const handleSetDate = useCallback(async () => {
     if (!onSendCommand) return;
@@ -163,39 +133,46 @@ export function SetupScreen({ onHome, onSendCommand }: SetupScreenProps) {
     }
   };
 
-  // Sub-screen routing
-  if (subScreen === 'dateCodes') {
-    return <ProgramDateCodesScreen onBack={() => setSubScreen(null)} />;
+  // Sub-screen routing inside dialog
+  if (open && subScreen === 'dateCodes') {
+    return (
+      <Dialog open={open} onOpenChange={(o) => { if (!o) { setSubScreen(null); onOpenChange(false); } }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <ProgramDateCodesScreen onBack={() => setSubScreen(null)} />
+        </DialogContent>
+      </Dialog>
+    );
   }
-  if (subScreen === 'timeCodes') {
-    return <ProgramTimeCodesScreen onBack={() => setSubScreen(null)} />;
+  if (open && subScreen === 'timeCodes') {
+    return (
+      <Dialog open={open} onOpenChange={(o) => { if (!o) { setSubScreen(null); onOpenChange(false); } }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <ProgramTimeCodesScreen onBack={() => setSubScreen(null)} />
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-industrial-dark">
-      <div className="border-b bg-industrial-dark px-4 py-3">
-        <div className="max-w-4xl mx-auto">
-          <SubPageHeader
-            title="Setup: Date / Time"
-            onHome={onHome}
-            rightContent={
-              <button
-                onClick={handleSyncToPc}
-                disabled={!onSendCommand}
-                className="industrial-button text-white px-3 py-2 md:px-4 md:py-3 rounded-lg flex items-center gap-2 disabled:opacity-50"
-                title="Sync printer clock to PC time"
-              >
-                <RefreshCw className="w-5 h-5 md:w-6 md:h-6" />
-                <span className="hidden md:inline text-sm font-medium">Sync to PC</span>
-              </button>
-            }
-          />
-        </div>
-      </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Setup: Date / Time</DialogTitle>
+            <button
+              onClick={handleSyncToPc}
+              disabled={!onSendCommand}
+              className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-2 disabled:opacity-50"
+              title="Sync printer clock to PC time"
+            >
+              <RefreshCw className="w-5 h-5" />
+              <span className="text-sm font-medium">Sync to PC</span>
+            </button>
+          </div>
+        </DialogHeader>
 
-      <div className="flex-1 overflow-auto px-4 pb-6">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Row 1: Date + Format */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          {/* Date + Format */}
           <div className="bg-card rounded-lg p-4 flex items-center justify-between border border-border min-h-[72px]">
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
@@ -238,7 +215,7 @@ export function SetupScreen({ onHome, onSendCommand }: SetupScreenProps) {
             onDown={() => cycleDateFormat(-1)}
           />
 
-          {/* Row 2: Time + Week Start */}
+          {/* Time + Week Start */}
           <div className="bg-card rounded-lg p-4 flex items-center justify-between border border-border min-h-[72px]">
             <div className="min-w-0 flex-1">
               <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Time</div>
@@ -267,7 +244,7 @@ export function SetupScreen({ onHome, onSendCommand }: SetupScreenProps) {
             onDown={() => cycleWeekStart(-1)}
           />
 
-          {/* Row 3: Program Date Codes / Program Time Codes */}
+          {/* Program Date Codes / Program Time Codes */}
           <button
             onClick={() => setSubScreen('dateCodes')}
             className="bg-card rounded-lg p-4 flex items-center justify-between border border-border min-h-[72px] w-full text-left hover:bg-accent/50 transition-colors"
@@ -299,7 +276,7 @@ export function SetupScreen({ onHome, onSendCommand }: SetupScreenProps) {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

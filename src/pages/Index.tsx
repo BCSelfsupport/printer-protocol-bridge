@@ -39,6 +39,7 @@ const Index = () => {
   // Control whether to auto-open the new message dialog
   const [openNewDialogOnMount, setOpenNewDialogOnMount] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+  const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   const [helpDialogOpen, setHelpDialogOpen] = useState(false);
   
   // Local message storage (persists to localStorage)
@@ -110,9 +111,12 @@ const Index = () => {
   });
 
   const handleNavigate = (item: NavItem) => {
-    // Adjust opens as a dialog, not a screen
     if (item === 'adjust') {
       setAdjustDialogOpen(true);
+      return;
+    }
+    if (item === 'setup') {
+      setSetupDialogOpen(true);
       return;
     }
     setCurrentScreen(item);
@@ -355,7 +359,8 @@ const Index = () => {
       case 'clean':
         return <CleanScreen onHome={handleHome} />;
       case 'setup':
-        return <SetupScreen onHome={handleHome} onSendCommand={sendCommand} />;
+        // Now handled as dialog
+        break;
       case 'service':
         return (
           <ServiceScreen
@@ -524,6 +529,13 @@ const Index = () => {
         onOpenChange={setHelpDialogOpen}
         onSendCommand={sendCommand}
         isConnected={connectionState.isConnected}
+      />
+
+      {/* Setup Dialog */}
+      <SetupScreen
+        open={setupDialogOpen}
+        onOpenChange={setSetupDialogOpen}
+        onSendCommand={sendCommand}
       />
     </div>
   );
