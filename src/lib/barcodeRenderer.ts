@@ -182,6 +182,27 @@ export function estimateBarcodeWidthDots(encoding: string, data: string, humanRe
   }
 }
 
+// ── Check digit calculators ───────────────────────────────────────────
+/** UPC/EAN check digit (works for UPC-A 11 digits, EAN-8 7 digits, UPC-E 7 digits) */
+function calcUPCCheckDigit(digits: string): string {
+  let sum = 0;
+  for (let i = 0; i < digits.length; i++) {
+    const d = parseInt(digits[i], 10);
+    sum += (i % 2 === 0) ? d * 3 : d;
+  }
+  return ((10 - (sum % 10)) % 10).toString();
+}
+
+/** EAN-13 check digit (12 digits input) */
+function calcEAN13CheckDigit(digits: string): string {
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    const d = parseInt(digits[i], 10);
+    sum += (i % 2 === 0) ? d : d * 3;
+  }
+  return ((10 - (sum % 10)) % 10).toString();
+}
+
 // Cache for rendered barcode images
 const barcodeCache = new Map<string, HTMLCanvasElement>();
 
@@ -251,16 +272,27 @@ export async function renderBarcodeToCanvas(
       const fontInfo = getFontInfo(hrFont);
       const textRowsPx = (fontInfo.height + 1) * DOT_PX; // 5 dots + 1 gap = 6 dots
       
-      // Format text with guard bar splits for UPC/EAN
-      let displayText = data;
-      if (encoding === 'upca' && data.length >= 11) {
-        displayText = `${data[0]} ${data.substring(1, 6)} ${data.substring(6, 11)} ${data[11] || ''}`.trim();
-      } else if (encoding === 'upce' && data.length >= 6) {
-        displayText = `${data[0] || '0'} ${data.substring(data.length >= 8 ? 1 : 0, data.length >= 8 ? 7 : 6)} ${data[data.length - 1] || ''}`.trim();
-      } else if (encoding === 'ean13' && data.length >= 12) {
-        displayText = `${data[0]} ${data.substring(1, 7)} ${data.substring(7, 13)}`.trim();
-      } else if (encoding === 'ean8' && data.length >= 7) {
-        displayText = `${data.substring(0, 4)} ${data.substring(4, 8)}`.trim();
+      // Compute check digit if needed, then format with guard bar splits
+      let fullData = data;
+      if (encoding === 'upca' && data.length === 11) {
+        fullData = data + calcUPCCheckDigit(data);
+      } else if (encoding === 'ean13' && data.length === 12) {
+        fullData = data + calcEAN13CheckDigit(data);
+      } else if (encoding === 'ean8' && data.length === 7) {
+        fullData = data + calcUPCCheckDigit(data); // EAN-8 uses same algo as UPC
+      } else if (encoding === 'upce' && data.length === 7) {
+        fullData = data + calcUPCCheckDigit(data);
+      }
+      
+      let displayText = fullData;
+      if (encoding === 'upca' && fullData.length >= 12) {
+        displayText = `${fullData[0]} ${fullData.substring(1, 6)} ${fullData.substring(6, 11)} ${fullData[11]}`;
+      } else if (encoding === 'upce' && fullData.length >= 7) {
+        displayText = `${fullData[0] || '0'} ${fullData.substring(1, 7)} ${fullData[fullData.length - 1] || ''}`.trim();
+      } else if (encoding === 'ean13' && fullData.length >= 13) {
+        displayText = `${fullData[0]} ${fullData.substring(1, 7)} ${fullData.substring(7, 13)}`;
+      } else if (encoding === 'ean8' && fullData.length >= 8) {
+        displayText = `${fullData.substring(0, 4)} ${fullData.substring(4, 8)}`;
       }
       
       // Calculate text width in pixels
