@@ -295,21 +295,19 @@ export function PrinterListItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <span className={`font-bold truncate text-sm ${textColor}`}>{printer.name}</span>
-            <div className="flex items-center gap-1 ml-auto flex-shrink-0">
-              <span className={`text-[10px] px-1.5 py-0.5 rounded bg-slate-700 whitespace-nowrap ${mutedTextColor}`}>
-                ID: {printer.id}
+            <span className={`text-[10px] px-1.5 py-0.5 rounded bg-slate-700 whitespace-nowrap flex-shrink-0 ${mutedTextColor}`}>
+              ID: {printer.id}
+            </span>
+            {printer.role === 'master' && (
+              <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 whitespace-nowrap flex-shrink-0 ${groupColor?.badge ?? 'bg-amber-500/20 text-amber-400'}`}>
+                <Crown className="w-2.5 h-2.5" /> MASTER
               </span>
-              {printer.role === 'master' && (
-                <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 whitespace-nowrap ${groupColor?.badge ?? 'bg-amber-500/20 text-amber-400'}`}>
-                  <Crown className="w-2.5 h-2.5" /> MASTER
-                </span>
-              )}
-              {printer.role === 'slave' && (
-                <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 whitespace-nowrap ${groupColor?.badge ?? 'bg-blue-500/20 text-blue-400'}`}>
-                  <Link className="w-2.5 h-2.5" /> SLAVE
-                </span>
-              )}
-            </div>
+            )}
+            {printer.role === 'slave' && (
+              <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 whitespace-nowrap flex-shrink-0 ${groupColor?.badge ?? 'bg-blue-500/20 text-blue-400'}`}>
+                <Link className="w-2.5 h-2.5" /> SLAVE
+              </span>
+            )}
           </div>
           <div className={`text-xs font-mono ${subTextColor}`}>
             {printer.ipAddress}:{printer.port}
