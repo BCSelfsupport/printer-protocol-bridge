@@ -243,31 +243,29 @@ export function Dashboard({
       </div>
       </div>
 
-      {/* New/Edit buttons row */}
-      <div className="flex gap-2">
-        <button 
-          onClick={onNewMessage}
-          className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5"
-        >
-          <Plus className="w-4 h-4 md:w-5 md:h-5" />
-          <span className="text-sm md:text-base font-medium">New</span>
-        </button>
-        <button 
-          onClick={onEditMessage}
-          className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5"
-        >
-          <Pencil className="w-4 h-4 md:w-5 md:h-5" />
-          <span className="text-sm md:text-base font-medium">Edit</span>
-        </button>
-      </div>
-
-      {/* Message name */}
-      <div className="bg-card rounded-lg p-2 md:p-3 flex items-center">
+      {/* Message name with New/Edit buttons inline */}
+      <div className="bg-card rounded-lg p-2 md:p-3 flex items-center justify-between">
         <div className="text-xs md:text-base">
           <div className="font-medium">Message name</div>
           <div className="text-foreground truncate">
             {status?.currentMessage || 'No message selected'}
           </div>
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={onNewMessage}
+            className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="text-sm md:text-base font-medium">New</span>
+          </button>
+          <button 
+            onClick={onEditMessage}
+            className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5"
+          >
+            <Pencil className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="text-sm md:text-base font-medium">Edit</span>
+          </button>
         </div>
       </div>
 
