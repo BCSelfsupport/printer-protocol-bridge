@@ -421,19 +421,25 @@ export function MessageCanvas({
   };
 
   const findFieldAtPosition = (x: number, y: number) => {
-    // Find which field is at this position (check in reverse order for z-index)
-    for (let i = fields.length - 1; i >= 0; i--) {
-      const field = fields[i];
+    const isInside = (field: CanvasField) => {
       const fontInfo = getFontInfo(field.fontSize);
-      // Ensure minimum clickable width of 3 characters for empty fields
+      const isBarcode = field.type === 'barcode';
       const textLength = Math.max(field.data.length, 3);
-      const fieldWidth = textLength * (fontInfo.charWidth + 1);
-      const fieldHeight = fontInfo.height;
-      
-      if (x >= field.x && x < field.x + fieldWidth &&
-          y >= field.y && y < field.y + fieldHeight) {
-        return field;
-      }
+      const fieldWidth = isBarcode ? field.width : textLength * (fontInfo.charWidth + 1);
+      const fieldHeight = isBarcode ? templateHeight : fontInfo.height;
+      return x >= field.x && x < field.x + fieldWidth &&
+             y >= field.y && y < field.y + fieldHeight;
+    };
+
+    // Prioritize the currently selected field so overlapping fields don't block it
+    if (selectedFieldId != null) {
+      const selected = fields.find(f => f.id === selectedFieldId);
+      if (selected && isInside(selected)) return selected;
+    }
+
+    // Otherwise check in reverse order (last added = top z-index)
+    for (let i = fields.length - 1; i >= 0; i--) {
+      if (isInside(fields[i])) return fields[i];
     }
     return null;
   };
