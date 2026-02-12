@@ -421,27 +421,46 @@ export function MessageCanvas({
   };
 
   const findFieldAtPosition = (x: number, y: number) => {
-    const isInside = (field: CanvasField) => {
+    const getFieldBounds = (field: CanvasField) => {
       const fontInfo = getFontInfo(field.fontSize);
       const isBarcode = field.type === 'barcode';
       const textLength = Math.max(field.data.length, 3);
-      const fieldWidth = isBarcode ? field.width : textLength * (fontInfo.charWidth + 1);
-      const fieldHeight = isBarcode ? templateHeight : fontInfo.height;
-      return x >= field.x && x < field.x + fieldWidth &&
-             y >= field.y && y < field.y + fieldHeight;
+      const w = isBarcode ? field.width : textLength * (fontInfo.charWidth + 1);
+      const h = isBarcode ? templateHeight : fontInfo.height;
+      return { w, h };
+    };
+    const isInside = (field: CanvasField) => {
+      const { w, h } = getFieldBounds(field);
+      return x >= field.x && x < field.x + w &&
+             y >= field.y && y < field.y + h;
     };
 
-    // Prioritize the currently selected field so overlapping fields don't block it
+    // Collect all fields under the click point
+    const hits = fields.filter(f => isInside(f));
+    if (hits.length === 0) return null;
+    if (hits.length === 1) return hits[0];
+
+    // If the currently selected field is among the hits, keep it selected
+    // so the user can drag it without losing focus
     if (selectedFieldId != null) {
-      const selected = fields.find(f => f.id === selectedFieldId);
-      if (selected && isInside(selected)) return selected;
+      const selected = hits.find(f => f.id === selectedFieldId);
+      if (selected) return selected;
     }
 
-    // Otherwise check in reverse order (last added = top z-index)
-    for (let i = fields.length - 1; i >= 0; i--) {
-      if (isInside(fields[i])) return fields[i];
+    // Among overlapping fields, pick the one whose center is closest to the click
+    let best = hits[0];
+    let bestDist = Infinity;
+    for (const f of hits) {
+      const { w, h } = getFieldBounds(f);
+      const cx = f.x + w / 2;
+      const cy = f.y + h / 2;
+      const dist = Math.abs(x - cx) + Math.abs(y - cy);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = f;
+      }
     }
-    return null;
+    return best;
   };
 
   const getLineForY = (y: number): { lineIndex: number; lineY: number; lineHeight: number } | null => {
