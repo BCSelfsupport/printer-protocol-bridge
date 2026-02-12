@@ -52,10 +52,21 @@ function getTimeAgo(dateStr: string): string {
 interface DevPanelProps {
   isOpen: boolean;
   onToggle: () => void;
+  connectedPrinterIp?: string;
+  connectedPrinterPort?: number;
 }
 
-export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
+export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinterPort }: DevPanelProps) {
   const isMobile = useIsMobile();
+  
+  // Resolve the correct emulator instance for the connected printer
+  const getConnectedEmulator = () => {
+    if (multiPrinterEmulator.enabled && connectedPrinterIp) {
+      return multiPrinterEmulator.getInstanceByIp(connectedPrinterIp, connectedPrinterPort) || printerEmulator;
+    }
+    return printerEmulator;
+  };
+  
   const [emulatorState, setEmulatorState] = useState<EmulatorState>(printerEmulator.getState());
   const [commandLog, setCommandLog] = useState<CommandLogEntry[]>(printerEmulator.getCommandLog());
   const [emulatorEnabled, setEmulatorEnabled] = useState(printerEmulator.enabled);
@@ -103,11 +114,26 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
   useEffect(() => {
     const unsubState = printerEmulator.subscribe(setEmulatorState);
     const unsubLog = printerEmulator.subscribeToLog(setCommandLog);
+    
+    // Also subscribe to the connected multi-emulator instance for state updates
+    let unsubMulti: (() => void) | null = null;
+    if (multiPrinterEmulator.enabled && connectedPrinterIp) {
+      unsubMulti = multiPrinterEmulator.subscribe(connectedPrinterIp, connectedPrinterPort ?? 23, (state) => {
+        setEmulatorState(state);
+      });
+      // Immediately read the connected instance's state
+      const instance = multiPrinterEmulator.getInstanceByIp(connectedPrinterIp, connectedPrinterPort);
+      if (instance) {
+        setEmulatorState(instance.getState());
+      }
+    }
+    
     return () => {
       unsubState();
       unsubLog();
+      unsubMulti?.();
     };
-  }, []);
+  }, [connectedPrinterIp, connectedPrinterPort]);
 
   const handleEmulatorToggle = (enabled: boolean) => {
     // Sync both emulators
@@ -339,7 +365,7 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => {
-                        printerEmulator.cycleInkLevel();
+                        getConnectedEmulator().cycleInkLevel();
                       }}
                       disabled={!emulatorEnabled}
                       className={cn(
@@ -358,7 +384,7 @@ export function DevPanel({ isOpen, onToggle }: DevPanelProps) {
                     </button>
                     <button
                       onClick={() => {
-                        printerEmulator.cycleMakeupLevel();
+                        getConnectedEmulator().cycleMakeupLevel();
                       }}
                       disabled={!emulatorEnabled}
                       className={cn(
