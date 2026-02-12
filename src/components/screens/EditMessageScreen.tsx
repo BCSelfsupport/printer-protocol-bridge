@@ -568,8 +568,31 @@ export function EditMessageScreen({
       const lineIndex = message.fields.length % numLines;
       newY = linePositions[lineIndex];
     } else if (message.fields.length > 0) {
-      // For single-line templates, new fields go on the same row as the first field
-      newY = message.fields[0]?.y ?? blockedRows;
+      // For single-line templates, try to stack fields vertically if font is shorter than template
+      // Find the lowest available Y that doesn't overlap existing fields
+      const existingYRanges = message.fields.map(f => ({ y: f.y, bottom: f.y + f.height }));
+      existingYRanges.sort((a, b) => a.y - b.y);
+      
+      // Try to place below existing fields first
+      let placed = false;
+      for (const range of existingYRanges) {
+        const candidateY = range.bottom;
+        if (candidateY + fontHeight <= 32) {
+          // Check no overlap with other fields at this Y
+          const overlaps = existingYRanges.some(r => 
+            candidateY < r.bottom && candidateY + fontHeight > r.y
+          );
+          if (!overlaps) {
+            newY = candidateY;
+            placed = true;
+            break;
+          }
+        }
+      }
+      if (!placed) {
+        // Fall back to same row as first field
+        newY = message.fields[0]?.y ?? blockedRows;
+      }
     }
     
     const newField: MessageField = {
