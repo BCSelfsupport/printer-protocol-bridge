@@ -13,6 +13,7 @@ import { DateCodesDialog } from '@/components/messages/DateCodesDialog';
 import { CounterDialog } from '@/components/messages/CounterDialog';
 import { UserDefineDialog, UserDefineConfig } from '@/components/messages/UserDefineDialog';
 import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
+import { estimateBarcodeWidthDots } from '@/lib/barcodeRenderer';
 
 import { GraphicFieldDialog, GraphicFieldConfig } from '@/components/messages/GraphicFieldDialog';
 import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
@@ -649,13 +650,16 @@ export function EditMessageScreen({
       : config.encoding.toUpperCase();
     const barcodeLabel = `[${encodingWithFlags}] ${config.data}`;
     
+    // Estimate barcode width in dots based on encoding type and data
+    const widthDots = estimateBarcodeWidthDots(config.encoding, config.data, config.humanReadable);
+    
     const newField: MessageField = {
       id: newId,
       type: 'barcode',
       data: barcodeLabel,
       x: message.fields.length * 50,
       y: 32 - message.height,
-      width: Math.max(60, config.data.length * 8), // Estimate width based on data length
+      width: widthDots,
       height: Math.min(message.height, 32),
       fontSize: 'Standard16High',
     };
