@@ -91,9 +91,9 @@ export function PrinterListItem({
       case 'ready':
         return { label: 'READY', className: 'bg-success text-white' };
       case 'starting':
-        return { label: `STARTING${cdLabel}`, className: 'bg-destructive text-white' };
+        return { label: `STARTING${cdLabel}`, className: 'bg-destructive text-white animate-pulse' };
       case 'stopping':
-        return { label: `STOPPING${cdLabel}`, className: 'bg-warning text-white' };
+        return { label: `STOPPING${cdLabel}`, className: 'bg-warning text-white animate-pulse' };
       case 'not_ready':
         return { label: 'NOT READY', className: 'bg-warning text-white' };
       default:
