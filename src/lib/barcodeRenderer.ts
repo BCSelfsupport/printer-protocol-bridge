@@ -267,18 +267,24 @@ export async function renderBarcodeToCanvas(
       const textWidthPx = displayText.length * (fontInfo.charWidth + 1) * DOT_PX;
       
       const finalCanvas = document.createElement('canvas');
-      finalCanvas.width = Math.max(tempCanvas.width, textWidthPx);
+      const finalWidth = Math.max(tempCanvas.width, textWidthPx);
+      finalCanvas.width = finalWidth;
       finalCanvas.height = tempCanvas.height + textRowsPx;
       
       const ctx = finalCanvas.getContext('2d');
       if (ctx) {
         ctx.fillStyle = '#f5e6c8';
         ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-        ctx.drawImage(tempCanvas, 0, 0);
+        
+        // Stretch barcode to match the final width so bars align with HR text
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height,
+                      0, 0, finalWidth, tempCanvas.height);
+        ctx.imageSmoothingEnabled = true;
         
         // Render human-readable text using dot-matrix 5-high font, centered below barcode
         ctx.fillStyle = '#1a1a1a';
-        const textX = Math.max(0, Math.floor((finalCanvas.width - textWidthPx) / 2));
+        const textX = Math.max(0, Math.floor((finalWidth - textWidthPx) / 2));
         renderText(ctx, displayText, textX, tempCanvas.height, hrFont, DOT_PX);
         
         barcodeCache.set(cacheKey, finalCanvas);
