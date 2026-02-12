@@ -68,10 +68,10 @@ export function PrinterListItem({
     : null;
   const groupBorderClass = groupColor ? `border-l-4 ${groupColor.border}` : '';
   
-  // Determine effective status (countdown overrides ready state)
+  // Determine effective status (countdown overrides ready state regardless of connection)
   const getEffectiveStatus = () => {
-    if (isConnected && countdownType === 'starting') return 'starting';
-    if (isConnected && countdownType === 'stopping') return 'stopping';
+    if (countdownType === 'starting') return 'starting';
+    if (countdownType === 'stopping') return 'stopping';
     return printer.status;
   };
   
