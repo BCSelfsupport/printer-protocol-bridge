@@ -243,8 +243,16 @@ export function Dashboard({
       </div>
       </div>
 
-      {/* Second row: New/Edit buttons + Message name */}
+      {/* Second row: Message name + New/Edit buttons */}
       <div className="flex items-center gap-2">
+        <div className="bg-card rounded-lg p-2 md:p-3 flex-1 min-w-0">
+          <div className="text-xs md:text-base truncate">
+            <span className="font-medium">Message: </span>
+            <span className="text-foreground">
+              {status?.currentMessage || 'No message selected'}
+            </span>
+          </div>
+        </div>
         <button 
           onClick={onNewMessage}
           className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5 flex-shrink-0"
@@ -259,14 +267,6 @@ export function Dashboard({
           <Pencil className="w-4 h-4 md:w-5 md:h-5" />
           <span className="text-sm md:text-base font-medium">Edit</span>
         </button>
-        <div className="bg-card rounded-lg p-2 md:p-3 flex-1 min-w-0">
-          <div className="text-xs md:text-base truncate">
-            <span className="font-medium">Message: </span>
-            <span className="text-foreground">
-              {status?.currentMessage || 'No message selected'}
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* Message preview area - horizontal scroll, no vertical overflow */}
