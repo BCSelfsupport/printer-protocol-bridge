@@ -4,7 +4,7 @@ import { parseBarcodeLabelData, renderBarcodeToCanvas } from '@/lib/barcodeRende
 
 interface CanvasField {
   id: number;
-  type?: 'text' | 'date' | 'time' | 'counter' | 'logo' | 'userdefine' | 'block' | 'barcode';
+  type?: 'text' | 'date' | 'time' | 'counter' | 'logo' | 'userdefine' | 'barcode';
   data: string;
   x: number;
   y: number;
@@ -290,12 +290,6 @@ export function MessageCanvas({
       }
     }
 
-    // Helper to parse block field params from data string like "[BLOCK L:3 G:1]"
-    const parseBlockParams = (data: string): { blockLength: number; gap: number } | null => {
-      const match = data.match(/\[BLOCK L:(\d+) G:(\d+)\]/);
-      if (!match) return null;
-      return { blockLength: parseInt(match[1]), gap: parseInt(match[2]) };
-    };
 
     // Draw each field with its font size
     fields.forEach((field) => {
@@ -304,7 +298,7 @@ export function MessageCanvas({
       const isBeingEdited = isEditing && field.id === editingFieldId;
       const fontInfo = getFontInfo(field.fontSize);
       const isBarcode = field.type === 'barcode';
-      const isBlock = field.type === 'block';
+      
 
       // Use drag position if being dragged, otherwise use field position
       const displayX = isBeingDragged ? dragPosition.x : field.x;
@@ -317,17 +311,9 @@ export function MessageCanvas({
       // Calculate field dimensions
       let fieldW: number;
       let fieldH: number;
-      const blockParams = isBlock ? parseBlockParams(field.data) : null;
       
       if (isBarcode) {
         fieldW = field.width * DOT_SIZE;
-        fieldH = templateHeight * DOT_SIZE;
-      } else if (isBlock && blockParams) {
-        // Block field: repeating pattern of (blockLength filled + gap blank) columns
-        // Show at least 3 full cycles for visual clarity
-        const cycleWidth = blockParams.blockLength + blockParams.gap;
-        const numCycles = Math.max(3, Math.ceil(field.width / Math.max(1, cycleWidth)));
-        fieldW = numCycles * cycleWidth * DOT_SIZE;
         fieldH = templateHeight * DOT_SIZE;
       } else {
         const minChars = 3;
@@ -357,13 +343,11 @@ export function MessageCanvas({
             ? 'rgba(255, 220, 100, 0.4)'
             : field.data.length === 0
               ? 'rgba(200, 200, 200, 0.5)'
-              : isBarcode
+               : isBarcode
                 ? 'rgba(100, 200, 255, 0.3)'
-                : isBlock
-                  ? 'rgba(100, 200, 150, 0.2)'
-                  : 'rgba(255, 193, 7, 0.3)';
+                : 'rgba(255, 193, 7, 0.3)';
         const borderColor =
-          isBeingEdited ? '#ff6600' : field.data.length === 0 ? '#999999' : isBarcode ? '#0088cc' : isBlock ? '#22aa66' : '#ffc107';
+          isBeingEdited ? '#ff6600' : field.data.length === 0 ? '#999999' : isBarcode ? '#0088cc' : '#ffc107';
         ctx.fillStyle = highlightColor;
         ctx.fillRect(fieldX, fieldY, fieldW, fieldH);
         ctx.strokeStyle = borderColor;
@@ -372,29 +356,7 @@ export function MessageCanvas({
       }
 
       // Draw the field content
-      if (isBlock && blockParams) {
-        // Render block field as filled dot columns (blockLength) + empty columns (gap), repeating
-        const cycleWidth = blockParams.blockLength + blockParams.gap;
-        const numCycles = Math.max(3, Math.ceil(field.width / Math.max(1, cycleWidth)));
-        
-        for (let cycle = 0; cycle < numCycles; cycle++) {
-          const cycleStartX = fieldX + cycle * cycleWidth * DOT_SIZE;
-          
-          // Draw filled block columns
-          for (let col = 0; col < blockParams.blockLength; col++) {
-            const colX = cycleStartX + col * DOT_SIZE;
-            // Draw each dot in the column
-            for (let row = 0; row < templateHeight; row++) {
-              const dotX = colX + 1;
-              const dotY = fieldY + row * DOT_SIZE + 1;
-              ctx.fillStyle = '#1a1a1a';
-              ctx.fillRect(dotX, dotY, DOT_SIZE - 2, DOT_SIZE - 2);
-            }
-          }
-          
-          // Gap columns are left empty (no drawing needed)
-        }
-      } else if (isBarcode) {
+      if (isBarcode) {
         // Try to render actual barcode
         const parsed = parseBarcodeLabelData(field.data);
         if (parsed) {
