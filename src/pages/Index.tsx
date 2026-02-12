@@ -74,7 +74,8 @@ const Index = () => {
     queryPrinterMetrics,
   } = usePrinterConnection();
   
-  const { countdownSeconds, countdownType, startCountdown, cancelCountdown } = useJetCountdown();
+  const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
+  const { countdownSeconds, countdownType, startCountdown, cancelCountdown, getCountdown } = useJetCountdown(connectedPrinterId);
 
   // Master/Slave sync: auto-syncs messages and selections from master to slaves
   const { isMaster, slaveCount, syncAllMessages, syncMaster } = useMasterSlaveSync({
@@ -98,7 +99,7 @@ const Index = () => {
   };
 
   const handleTurnOff = () => {
-    cancelCountdown();
+    if (connectedPrinterId) cancelCountdown(connectedPrinterId);
     disconnect();
     setCurrentScreen('home');
   };
@@ -107,7 +108,7 @@ const Index = () => {
   
   const handleConnect = async (printer: typeof printers[0]) => {
     // Cancel any running countdown from the previous printer
-    cancelCountdown();
+    // Don't cancel countdown — let the previous printer's countdown continue independently
     await connect(printer);
     // On mobile, navigate to full-screen Dashboard
     // On desktop, stay on home screen (Dashboard is embedded in split-view)
@@ -119,13 +120,13 @@ const Index = () => {
   // Wrapped handlers that trigger countdown
   const handleStartPrint = useCallback(() => {
     startPrint();
-    startCountdown('starting', 106); // 1:46 countdown
-  }, [startPrint, startCountdown]);
+    if (connectedPrinterId) startCountdown(connectedPrinterId, 'starting', 106);
+  }, [startPrint, startCountdown, connectedPrinterId]);
   
   const handleJetStop = useCallback(() => {
     jetStop();
-    startCountdown('stopping', 106); // 1:46 countdown for stopping too
-  }, [jetStop, startCountdown]);
+    if (connectedPrinterId) startCountdown(connectedPrinterId, 'stopping', 106);
+  }, [jetStop, startCountdown, connectedPrinterId]);
 
   // Build right panel content for desktop split-view (messages/editMessage screens)
   const getRightPanelContent = (): React.ReactNode | undefined => {
@@ -403,6 +404,7 @@ const Index = () => {
         onTurnOff={handleTurnOff}
         onSyncMaster={syncMaster}
         rightPanelContent={getRightPanelContent()}
+        getCountdown={getCountdown}
       />
     );
   };
