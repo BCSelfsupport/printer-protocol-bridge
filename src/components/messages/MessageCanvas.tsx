@@ -415,7 +415,9 @@ export function MessageCanvas({
   const getMousePosition = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
-    const x = Math.floor((e.clientX - rect.left) / DOT_SIZE) + scrollX;
+    // Canvas is physically wide inside a scrollable container, so
+    // clientX - rect.left already gives the absolute position (no scroll offset needed)
+    const x = Math.floor((e.clientX - rect.left) / DOT_SIZE);
     const y = Math.floor((e.clientY - rect.top) / DOT_SIZE);
     return { x, y };
   };
@@ -718,7 +720,6 @@ export function MessageCanvas({
     const pos = getMousePosition(e);
     const field = findFieldAtPosition(pos.x, pos.y);
     
-    console.log('[Canvas] mouseDown at', pos, 'found field:', field?.id, 'selectedFieldId:', selectedFieldId, 'fields:', fields.map(f => ({ id: f.id, x: f.x, y: f.y, data: f.data, w: Math.max(f.data.length, 3) * (getFontInfo(f.fontSize).charWidth + 1), h: getFontInfo(f.fontSize).height })));
     
     if (field) {
       mouseDragMovedRef.current = false;
@@ -749,7 +750,7 @@ export function MessageCanvas({
   const getTouchPosition = (e: React.TouchEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect || !e.touches[0]) return { x: 0, y: 0 };
-    const x = Math.floor((e.touches[0].clientX - rect.left) / DOT_SIZE) + scrollX;
+    const x = Math.floor((e.touches[0].clientX - rect.left) / DOT_SIZE);
     const y = Math.floor((e.touches[0].clientY - rect.top) / DOT_SIZE);
     return { x, y };
   };
