@@ -10,9 +10,9 @@ const createDefaultState = (overrides?: Partial<EmulatorState>): EmulatorState =
   hvOn: false,
   jetRunning: false,
   v300up: false,
-  vltOn: true,
-  gutOn: true,
-  modOn: true,
+  vltOn: false,
+  gutOn: false,
+  modOn: false,
   echoOn: false,
   utf8Mode: false,
   oneToOneMode: false,
@@ -93,8 +93,8 @@ const EMULATED_PRINTERS: EmulatedPrinterConfig[] = [
       productCount: 3421,
       inkLevel: 'FULL',
       makeupLevel: 'LOW' as const,
-      hvOn: true,
-      jetRunning: true,
+      hvOn: false,
+      jetRunning: false,
     },
   },
   {
@@ -108,8 +108,8 @@ const EMULATED_PRINTERS: EmulatedPrinterConfig[] = [
       productCount: 128456,
       inkLevel: 'LOW',
       makeupLevel: 'GOOD' as const,
-      hvOn: true,
-      jetRunning: true,
+      hvOn: false,
+      jetRunning: false,
     },
   },
   {
@@ -153,8 +153,8 @@ const EMULATED_PRINTERS: EmulatedPrinterConfig[] = [
       productCount: 42156,
       inkLevel: 'FULL',
       makeupLevel: 'GOOD' as const,
-      hvOn: true,
-      jetRunning: true,
+      hvOn: false,
+      jetRunning: false,
     },
   },
 ];
@@ -336,11 +336,17 @@ class PrinterEmulatorInstance {
       if (start) {
         this.state.jetRunning = true;
         this.state.v300up = true;
+        this.state.vltOn = true;
+        this.state.gutOn = true;
+        this.state.modOn = true;
         return this.state.echoOn ? 'Command Successful!\r\nJet starting...' : 'Jet OK';
       } else {
         this.state.jetRunning = false;
         this.state.hvOn = false;
         this.state.v300up = false;
+        this.state.vltOn = false;
+        this.state.gutOn = false;
+        this.state.modOn = false;
         return this.state.echoOn ? 'Command Successful!\r\nJet stopping...' : 'Jet Stop OK';
       }
     }
@@ -353,8 +359,7 @@ class PrinterEmulatorInstance {
       const enable = match[1] === '1';
       if (enable) {
         if (!this.state.jetRunning) {
-          this.state.jetRunning = true;
-          this.state.v300up = true;
+          return this.state.echoOn ? 'Error 59: Cannot enable printing - jet not running' : 'Err[59]';
         }
         this.state.hvOn = true;
         return this.state.echoOn ? 'Command Successful!\r\nHV Deflection ON' : 'HV ON';
