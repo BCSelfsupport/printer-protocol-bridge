@@ -30,6 +30,7 @@ type ScreenType = NavItem | 'network' | 'control' | 'editMessage';
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
   const [devPanelOpen, setDevPanelOpen] = useState(false);
+  const [devPanelTab, setDevPanelTab] = useState<string | undefined>(undefined);
   const [signInDialogOpen, setSignInDialogOpen] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [isDevSignedIn, setIsDevSignedIn] = useState(false);
@@ -231,16 +232,7 @@ const Index = () => {
 
   const renderScreen = () => {
     switch (currentScreen) {
-      case 'network':
-        return (
-          <NetworkConfigScreen
-            onHome={handleHome}
-            isConnected={connectionState.isConnected}
-            connectedPrinter={connectionState.connectedPrinter}
-            onConnect={connect}
-            onDisconnect={disconnect}
-          />
-        );
+      // 'network' case removed - now handled in DevPanel Network tab
       case 'control':
         // Get the current message content from local storage
         const currentMsgName = connectionState.status?.currentMessage;
@@ -443,7 +435,10 @@ const Index = () => {
       <Header
         isConnected={connectionState.isConnected}
         connectedIp={connectionState.connectedPrinter?.ipAddress}
-        onSettings={() => setCurrentScreen('network')}
+        onSettings={() => {
+          setDevPanelTab('network');
+          setDevPanelOpen(true);
+        }}
         onHome={currentScreen !== 'home' ? handleHome : undefined}
         printerTime={connectionState.status?.printerTime}
       />
@@ -454,15 +449,18 @@ const Index = () => {
 
       {/* BottomNav and Footer now rendered inside Dashboard/PrintersScreen right panel */}
 
-      {/* Dev Panel - shown in dev mode OR when signed in with CITEC */}
-      {(import.meta.env.DEV || isDevSignedIn) && (
-        <DevPanel 
-          isOpen={devPanelOpen} 
-          onToggle={() => setDevPanelOpen(!devPanelOpen)}
-          connectedPrinterIp={connectionState.connectedPrinter?.ipAddress}
-          connectedPrinterPort={connectionState.connectedPrinter?.port}
-        />
-      )}
+      {/* Dev Panel - always rendered, toggle button only visible in dev mode */}
+      <DevPanel 
+        isOpen={devPanelOpen} 
+        onToggle={() => {
+          setDevPanelOpen(!devPanelOpen);
+          if (devPanelOpen) setDevPanelTab(undefined);
+        }}
+        connectedPrinterIp={connectionState.connectedPrinter?.ipAddress}
+        connectedPrinterPort={connectionState.connectedPrinter?.port}
+        defaultTab={devPanelTab}
+        showToggleButton={import.meta.env.DEV || isDevSignedIn}
+      />
       
       {/* Printer Sign In Dialog */}
       <SignInDialog
