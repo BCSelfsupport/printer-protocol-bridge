@@ -39,15 +39,15 @@ function MetricCard({
   };
 
   return (
-    <div className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
-      <div className="w-8 h-8 rounded-md bg-slate-700 flex items-center justify-center">
+    <div className="flex items-center gap-3 p-3 bg-secondary rounded-lg">
+      <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
         <Icon className="w-4 h-4 text-primary" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-xs text-slate-400">{label}</div>
+        <div className="text-xs text-muted-foreground">{label}</div>
         <div className={cn("text-sm font-bold tabular-nums", statusColors[status ?? 'neutral'])}>
           {value}
-          {unit && <span className="text-xs font-normal text-slate-400 ml-1">{unit}</span>}
+          {unit && <span className="text-xs font-normal text-muted-foreground ml-1">{unit}</span>}
         </div>
       </div>
     </div>
@@ -61,7 +61,7 @@ function SubsystemIndicator({ label, active }: { label: string; active: boolean 
       "px-2 py-1 rounded text-[10px] font-bold",
       active 
         ? "bg-success/20 text-success" 
-        : "bg-slate-700 text-slate-400"
+        : "bg-muted text-muted-foreground"
     )}>
       {label}: {active ? 'ON' : 'OFF'}
     </div>
@@ -112,13 +112,13 @@ export function PrinterServicePopup({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-md max-h-[85vh] p-4 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 border-slate-700 overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-md max-h-[85vh] p-4 overflow-y-auto">
         <DialogHeader className="pb-2">
-          <DialogTitle className="text-base text-white flex items-center gap-2">
+          <DialogTitle className="text-base flex items-center gap-2">
             <Settings2 className="w-5 h-5 text-primary" />
             <span className="truncate">{printer.name} - Service</span>
           </DialogTitle>
-          <div className="flex items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span className="font-mono">{printer.ipAddress}:{printer.port}</span>
             {metrics?.printerTime ? (
               <span className="flex items-center gap-1">
@@ -135,7 +135,7 @@ export function PrinterServicePopup({
         </DialogHeader>
 
         {!printer.isAvailable ? (
-          <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
             <Settings2 className="w-12 h-12 mb-3 opacity-50" />
             <p className="font-medium">Printer Offline</p>
             <p className="text-xs">Connect to view service data</p>
@@ -193,33 +193,33 @@ export function PrinterServicePopup({
             </div>
 
             {/* Temperature Section */}
-            <div className="bg-slate-800/50 rounded-lg p-3">
-              <div className="text-xs font-medium text-slate-300 mb-2 flex items-center gap-2">
+            <div className="bg-secondary rounded-lg p-3">
+              <div className="text-xs font-medium text-foreground mb-2 flex items-center gap-2">
                 <Thermometer className="w-3 h-3" />
                 Temperature
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-md bg-slate-700 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
                     <Droplets className="w-4 h-4 text-primary" />
                   </div>
                   <div>
-                    <div className="text-[10px] text-slate-400">Printhead</div>
+                    <div className="text-[10px] text-muted-foreground">Printhead</div>
                     <div className="text-sm font-bold tabular-nums text-foreground">
                       {metrics.printheadTemp?.toFixed(1) ?? '0.0'}
-                      <span className="text-xs font-normal text-slate-400 ml-1">°C</span>
+                      <span className="text-xs font-normal text-muted-foreground ml-1">°C</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-md bg-slate-700 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
                     <Cpu className="w-4 h-4 text-warning" />
                   </div>
                   <div>
-                    <div className="text-[10px] text-slate-400">Electronics</div>
+                    <div className="text-[10px] text-muted-foreground">Electronics</div>
                     <div className="text-sm font-bold tabular-nums text-foreground">
                       {metrics.electronicsTemp?.toFixed(1) ?? '0.0'}
-                      <span className="text-xs font-normal text-slate-400 ml-1">°C</span>
+                      <span className="text-xs font-normal text-muted-foreground ml-1">°C</span>
                     </div>
                   </div>
                 </div>
@@ -227,8 +227,8 @@ export function PrinterServicePopup({
             </div>
 
             {/* Consumables */}
-            <div className="bg-slate-800/50 rounded-lg p-3">
-              <div className="text-xs font-medium text-slate-300 mb-2">Consumables</div>
+            <div className="bg-secondary rounded-lg p-3">
+              <div className="text-xs font-medium text-foreground mb-2">Consumables</div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <div className={cn(
@@ -237,7 +237,7 @@ export function PrinterServicePopup({
                       ? 'bg-primary' 
                       : metrics.inkLevel === 'LOW' ? 'bg-warning' : 'bg-destructive'
                   )} />
-                  <span className="text-xs text-slate-300">Ink: <span className="font-bold">{metrics.inkLevel}</span></span>
+                  <span className="text-xs text-foreground">Ink: <span className="font-bold">{metrics.inkLevel}</span></span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className={cn(
@@ -246,14 +246,14 @@ export function PrinterServicePopup({
                       ? 'bg-warning' 
                       : metrics.makeupLevel === 'LOW' ? 'bg-warning/60' : 'bg-destructive'
                   )} />
-                  <span className="text-xs text-slate-300">Makeup: <span className="font-bold">{metrics.makeupLevel}</span></span>
+                  <span className="text-xs text-foreground">Makeup: <span className="font-bold">{metrics.makeupLevel}</span></span>
                 </div>
               </div>
             </div>
 
             {/* Subsystems */}
-            <div className="bg-slate-800/50 rounded-lg p-3">
-              <div className="text-xs font-medium text-slate-300 mb-2">Subsystems</div>
+            <div className="bg-secondary rounded-lg p-3">
+              <div className="text-xs font-medium text-foreground mb-2">Subsystems</div>
               <div className="flex flex-wrap gap-2">
                 <SubsystemIndicator label="V300UP" active={metrics.subsystems.v300up} />
                 <SubsystemIndicator label="VLT" active={metrics.subsystems.vltOn} />
@@ -264,16 +264,16 @@ export function PrinterServicePopup({
             </div>
 
             {/* System Info */}
-            <div className="bg-slate-800/50 rounded-lg p-3">
-              <div className="text-xs font-medium text-slate-300 mb-2">Runtime</div>
+            <div className="bg-secondary rounded-lg p-3">
+              <div className="text-xs font-medium text-foreground mb-2">Runtime</div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Power Hours</span>
-                  <span className="font-mono text-slate-200">{metrics.powerHours}</span>
+                  <span className="text-muted-foreground">Power Hours</span>
+                  <span className="font-mono text-foreground">{metrics.powerHours}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Stream Hours</span>
-                  <span className="font-mono text-slate-200">{metrics.streamHours}</span>
+                  <span className="text-muted-foreground">Stream Hours</span>
+                  <span className="font-mono text-foreground">{metrics.streamHours}</span>
                 </div>
               </div>
             </div>
@@ -284,14 +284,14 @@ export function PrinterServicePopup({
               size="sm"
               onClick={fetchMetrics}
               disabled={isLoading}
-              className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
+              className="w-full"
             >
               <RefreshCw className={cn("w-3 h-3 mr-2", isLoading && "animate-spin")} />
               Refresh Now
             </Button>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
             <Settings2 className="w-12 h-12 mb-3 opacity-50" />
             <p className="font-medium">No data available</p>
             <Button variant="outline" size="sm" onClick={fetchMetrics} className="mt-2">

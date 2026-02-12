@@ -1,4 +1,4 @@
-import { RotateCcw, Pencil, X } from 'lucide-react';
+import { RotateCcw, Pencil } from 'lucide-react';
 import { PrinterStatus } from '@/types/printer';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogClose,
 } from '@/components/ui/dialog';
 
 interface CountersDialogProps {
@@ -48,11 +47,11 @@ function CounterCard({ label, value, onReset, onEdit, disabled }: CounterCardPro
   };
 
   return (
-    <div className="bg-gradient-to-b from-slate-100 to-slate-200 rounded-lg p-3 border border-slate-300 shadow-sm">
+    <div className="bg-secondary rounded-lg p-3 border border-border shadow-sm">
       <div className="flex items-center gap-2">
         {/* Counter info */}
         <div className="flex-1 min-w-0">
-          <div className="text-xs text-slate-600 font-medium truncate">{label}</div>
+          <div className="text-xs text-muted-foreground font-medium truncate">{label}</div>
           {isEditing ? (
             <Input
               type="number"
@@ -60,12 +59,12 @@ function CounterCard({ label, value, onReset, onEdit, disabled }: CounterCardPro
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={handleEditSubmit}
               onKeyDown={(e) => e.key === 'Enter' && handleEditSubmit()}
-              className="h-7 text-lg font-bold bg-white"
+              className="h-7 text-lg font-bold"
               autoFocus
               min={0}
             />
           ) : (
-            <div className="text-lg font-bold text-slate-800 tabular-nums">
+            <div className="text-lg font-bold text-foreground tabular-nums">
               {value.toLocaleString()}
             </div>
           )}
@@ -114,10 +113,6 @@ export function CountersDialog({
     }
   }, [open, onMount]);
 
-  // Counter IDs from protocol:
-  // 0 = Print Counter
-  // 1-4 = Custom Counters
-  // 6 = Product Counter
   const customCounters = status?.customCounters ?? [0, 0, 0, 0];
 
   const counters = [
@@ -131,14 +126,9 @@ export function CountersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl bg-gradient-to-b from-slate-700 to-slate-800 border-slate-600">
-        <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle className="text-xl text-white">Counters</DialogTitle>
-          <DialogClose asChild>
-            <button className="rounded-full p-1 hover:bg-white/10 transition-colors">
-              <X className="w-5 h-5 text-white" />
-            </button>
-          </DialogClose>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Counters</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -167,7 +157,7 @@ export function CountersDialog({
           </button>
 
           {/* Info text */}
-          <p className="text-xs text-slate-400 text-center">
+          <p className="text-xs text-muted-foreground text-center">
             Counters can be reset or manually edited using the buttons next to each counter.
           </p>
         </div>
