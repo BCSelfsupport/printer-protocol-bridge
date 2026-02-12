@@ -290,6 +290,13 @@ export function MessageCanvas({
       }
     }
 
+    // Helper to parse block field params from data string like "[BLOCK L:3 G:1]"
+    const parseBlockParams = (data: string): { blockLength: number; gap: number } | null => {
+      const match = data.match(/\[BLOCK L:(\d+) G:(\d+)\]/);
+      if (!match) return null;
+      return { blockLength: parseInt(match[1]), gap: parseInt(match[2]) };
+    };
+
     // Draw each field with its font size
     fields.forEach((field) => {
       const isSelected = field.id === selectedFieldId;
@@ -297,6 +304,7 @@ export function MessageCanvas({
       const isBeingEdited = isEditing && field.id === editingFieldId;
       const fontInfo = getFontInfo(field.fontSize);
       const isBarcode = field.type === 'barcode';
+      const isBlock = field.type === 'block';
 
       // Use drag position if being dragged, otherwise use field position
       const displayX = isBeingDragged ? dragPosition.x : field.x;
@@ -309,13 +317,19 @@ export function MessageCanvas({
       // Calculate field dimensions
       let fieldW: number;
       let fieldH: number;
+      const blockParams = isBlock ? parseBlockParams(field.data) : null;
       
       if (isBarcode) {
-        // For barcodes, use the stored width or estimate from data
         fieldW = field.width * DOT_SIZE;
         fieldH = templateHeight * DOT_SIZE;
+      } else if (isBlock && blockParams) {
+        // Block field: repeating pattern of (blockLength filled + gap blank) columns
+        // Show at least 3 full cycles for visual clarity
+        const cycleWidth = blockParams.blockLength + blockParams.gap;
+        const numCycles = Math.max(3, Math.ceil(field.width / Math.max(1, cycleWidth)));
+        fieldW = numCycles * cycleWidth * DOT_SIZE;
+        fieldH = templateHeight * DOT_SIZE;
       } else {
-        // Ensure minimum visible width for empty fields (3 chars minimum)
         const minChars = 3;
         const textLength = Math.max(field.data.length, minChars);
         fieldW = textLength * (fontInfo.charWidth + 1) * DOT_SIZE;
@@ -328,7 +342,7 @@ export function MessageCanvas({
       // Draw drag preview with semi-transparency
       if (isBeingDragged) {
         ctx.globalAlpha = 0.7;
-        ctx.fillStyle = 'rgba(100, 149, 237, 0.3)'; // Cornflower blue
+        ctx.fillStyle = 'rgba(100, 149, 237, 0.3)';
         ctx.fillRect(fieldX, fieldY, fieldW, fieldH);
         ctx.strokeStyle = '#6495ED';
         ctx.lineWidth = 2;
@@ -344,10 +358,12 @@ export function MessageCanvas({
             : field.data.length === 0
               ? 'rgba(200, 200, 200, 0.5)'
               : isBarcode
-                ? 'rgba(100, 200, 255, 0.3)' // Light blue for barcodes
-                : 'rgba(255, 193, 7, 0.3)';
+                ? 'rgba(100, 200, 255, 0.3)'
+                : isBlock
+                  ? 'rgba(100, 200, 150, 0.2)'
+                  : 'rgba(255, 193, 7, 0.3)';
         const borderColor =
-          isBeingEdited ? '#ff6600' : field.data.length === 0 ? '#999999' : isBarcode ? '#0088cc' : '#ffc107';
+          isBeingEdited ? '#ff6600' : field.data.length === 0 ? '#999999' : isBarcode ? '#0088cc' : isBlock ? '#22aa66' : '#ffc107';
         ctx.fillStyle = highlightColor;
         ctx.fillRect(fieldX, fieldY, fieldW, fieldH);
         ctx.strokeStyle = borderColor;
@@ -356,7 +372,29 @@ export function MessageCanvas({
       }
 
       // Draw the field content
-      if (isBarcode) {
+      if (isBlock && blockParams) {
+        // Render block field as filled dot columns (blockLength) + empty columns (gap), repeating
+        const cycleWidth = blockParams.blockLength + blockParams.gap;
+        const numCycles = Math.max(3, Math.ceil(field.width / Math.max(1, cycleWidth)));
+        
+        for (let cycle = 0; cycle < numCycles; cycle++) {
+          const cycleStartX = fieldX + cycle * cycleWidth * DOT_SIZE;
+          
+          // Draw filled block columns
+          for (let col = 0; col < blockParams.blockLength; col++) {
+            const colX = cycleStartX + col * DOT_SIZE;
+            // Draw each dot in the column
+            for (let row = 0; row < templateHeight; row++) {
+              const dotX = colX + 1;
+              const dotY = fieldY + row * DOT_SIZE + 1;
+              ctx.fillStyle = '#1a1a1a';
+              ctx.fillRect(dotX, dotY, DOT_SIZE - 2, DOT_SIZE - 2);
+            }
+          }
+          
+          // Gap columns are left empty (no drawing needed)
+        }
+      } else if (isBarcode) {
         // Try to render actual barcode
         const parsed = parseBarcodeLabelData(field.data);
         if (parsed) {
@@ -364,7 +402,6 @@ export function MessageCanvas({
           const barcodeCanvas = barcodeImages.get(cacheKey);
           
           if (barcodeCanvas) {
-            // Draw the barcode image, scaled to fit the field height
             const scale = fieldH / barcodeCanvas.height;
             const drawWidth = Math.min(barcodeCanvas.width * scale, fieldW);
             ctx.drawImage(
@@ -373,22 +410,19 @@ export function MessageCanvas({
               fieldX, fieldY, drawWidth, fieldH
             );
           } else {
-            // Placeholder while loading - draw barcode icon pattern
             ctx.fillStyle = '#1a1a1a';
             const barWidth = 2;
             const numBars = Math.floor(fieldW / (barWidth * 2));
             for (let i = 0; i < numBars; i++) {
               const barX = fieldX + i * barWidth * 2;
-              const barH = fieldH * (0.6 + Math.random() * 0.3); // Varying heights
+              const barH = fieldH * (0.6 + Math.random() * 0.3);
               ctx.fillRect(barX, fieldY + (fieldH - barH) / 2, barWidth, barH);
             }
-            // Show encoding label
             ctx.font = '10px sans-serif';
             ctx.fillStyle = '#666';
             ctx.fillText(parsed.encoding.toUpperCase(), fieldX + 2, fieldY + 10);
           }
         } else {
-          // Fallback: render as text if parsing fails
           ctx.fillStyle = '#1a1a1a';
           renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE);
         }
