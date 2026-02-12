@@ -25,8 +25,8 @@ interface MessageCanvasProps {
   width?: number;
   /** The fields to render on the canvas */
   fields?: CanvasField[];
-  /** Callback when canvas is clicked (for field selection) */
-  onCanvasClick?: (x: number, y: number) => void;
+  /** Callback when canvas is clicked (for field selection). Receives click coords and optional matched field ID */
+  onCanvasClick?: (x: number, y: number, fieldId?: number) => void;
   /** Callback when a field is moved */
   onFieldMove?: (fieldId: number, newX: number, newY: number) => void;
   /** Callback when field text is changed */
@@ -726,7 +726,7 @@ export function MessageCanvas({
       setDragFieldId(field.id);
       setDragOffset({ x: pos.x - field.x, y: pos.y - field.y });
       setDragPosition({ x: field.x, y: field.y });
-      onCanvasClick?.(pos.x, pos.y); // Also select the field
+      onCanvasClick?.(pos.x, pos.y, field.id); // Also select the field
       e.preventDefault();
     } else {
       onCanvasClick?.(pos.x, pos.y);
@@ -785,7 +785,7 @@ export function MessageCanvas({
         setDragFieldId(field.id);
         setDragOffset({ x: pos.x - field.x, y: pos.y - field.y });
         setDragPosition({ x: field.x, y: field.y });
-        onCanvasClick?.(pos.x, pos.y); // Select the field
+        onCanvasClick?.(pos.x, pos.y, field.id); // Select the field
 
         // Provide haptic feedback if available
         if (navigator.vibrate) {
