@@ -157,19 +157,20 @@ export function SetupScreen({ open, onOpenChange, onSendCommand }: SetupDialogPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Setup: Date / Time</DialogTitle>
-            <button
-              onClick={handleSyncToPc}
-              disabled={!onSendCommand}
-              className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-2 disabled:opacity-50"
-              title="Sync printer clock to PC time"
-            >
-              <RefreshCw className="w-5 h-5" />
-              <span className="text-sm font-medium">Sync to PC</span>
-            </button>
-          </div>
+          <DialogTitle>Setup: Date / Time</DialogTitle>
         </DialogHeader>
+
+        <div className="flex justify-end -mt-2">
+          <button
+            onClick={handleSyncToPc}
+            disabled={!onSendCommand}
+            className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-2 disabled:opacity-50"
+            title="Sync printer clock to PC time"
+          >
+            <RefreshCw className="w-5 h-5" />
+            <span className="text-sm font-medium">Sync to PC</span>
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           {/* Date + Format */}
