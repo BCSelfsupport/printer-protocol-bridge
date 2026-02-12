@@ -364,6 +364,8 @@ export function MessageCanvas({
           const barcodeCanvas = barcodeImages.get(cacheKey);
           
           if (barcodeCanvas) {
+            // Disable smoothing so barcode bars stay crisp (nearest-neighbor)
+            ctx.imageSmoothingEnabled = false;
             const scale = fieldH / barcodeCanvas.height;
             const drawWidth = Math.min(barcodeCanvas.width * scale, fieldW);
             ctx.drawImage(
@@ -371,6 +373,7 @@ export function MessageCanvas({
               0, 0, barcodeCanvas.width, barcodeCanvas.height,
               fieldX, fieldY, drawWidth, fieldH
             );
+            ctx.imageSmoothingEnabled = true;
           } else {
             ctx.fillStyle = '#1a1a1a';
             const barWidth = 2;
