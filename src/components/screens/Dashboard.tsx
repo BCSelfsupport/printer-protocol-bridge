@@ -83,7 +83,7 @@ export function Dashboard({
   const showReady = isHvOn && !showCountdown;
   
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col min-h-0">
       {/* Status banner - fixed height to prevent layout shift */}
       <div className={`w-full h-12 flex items-center justify-center ${
         showCountdown 
@@ -294,7 +294,7 @@ export function Dashboard({
     
     {/* Combined Bottom Nav with version info - all on one line */}
     {onNavigate && onTurnOff && (
-      <div className="bg-sidebar h-20 flex items-center px-2 md:px-4">
+      <div className="bg-sidebar h-20 flex items-center px-2 md:px-4 pb-safe flex-shrink-0">
         {/* Left version */}
         <span className="text-sidebar-foreground text-xs md:text-sm whitespace-nowrap flex-shrink-0">Build 1.0.0</span>
         
