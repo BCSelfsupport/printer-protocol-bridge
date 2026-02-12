@@ -25,9 +25,9 @@ export interface AdvancedSettings {
   day60366Switch: boolean; // Off = Feb 29 = day 60, On = Feb 29 = day 366
   
   // Shift Codes
+  totalShifts: number; // 1-24 (global: how many shifts divide the 24h day)
   shifts: {
-    shift: number;      // 1-24
-    totalShifts: number; // 2-24
+    shift: number;      // 1..totalShifts
     startTime: string;  // HH:MM format
     code: string;       // Programmable value
   }[];
@@ -63,10 +63,10 @@ export const defaultAdvancedSettings: AdvancedSettings = {
   dateDelimiter: '/',
   day60366Switch: false,
   
-  shifts: Array.from({ length: 24 }, (_, i) => ({
+  totalShifts: 3,
+  shifts: Array.from({ length: 3 }, (_, i) => ({
     shift: i + 1,
-    totalShifts: 24,
-    startTime: `${String(i).padStart(2, '0')}:00`,
+    startTime: `${String(i * 8).padStart(2, '0')}:00`,
     code: String(i + 1),
   })),
   
@@ -299,22 +299,35 @@ export function AdvancedSettingsDialog({
               <h4 className="text-sm font-semibold mb-2">Shift Codes</h4>
               <div className="space-y-2">
                 <SettingRow
-                  label="Shift"
-                  value={selectedShift}
-                  onIncrease={() => setSelectedShift(Math.min(24, selectedShift + 1))}
-                  onDecrease={() => setSelectedShift(Math.max(1, selectedShift - 1))}
+                  label="Total Shifts"
+                  value={settings.totalShifts}
+                  onIncrease={() => {
+                    const newTotal = Math.min(24, settings.totalShifts + 1);
+                    const newShifts = Array.from({ length: newTotal }, (_, i) => {
+                      const existing = settings.shifts.find(s => s.shift === i + 1);
+                      return existing || { shift: i + 1, startTime: '00:00', code: String(i + 1) };
+                    });
+                    onUpdate({ totalShifts: newTotal, shifts: newShifts });
+                    if (selectedShift > newTotal) setSelectedShift(newTotal);
+                  }}
+                  onDecrease={() => {
+                    const newTotal = Math.max(1, settings.totalShifts - 1);
+                    const newShifts = settings.shifts.slice(0, newTotal);
+                    onUpdate({ totalShifts: newTotal, shifts: newShifts });
+                    if (selectedShift > newTotal) setSelectedShift(newTotal);
+                  }}
                 />
                 <SettingRow
-                  label="Total Shifts"
-                  value={currentShift.totalShifts}
-                  onIncrease={() => updateShift({ totalShifts: Math.min(24, currentShift.totalShifts + 1) })}
-                  onDecrease={() => updateShift({ totalShifts: Math.max(2, currentShift.totalShifts - 1) })}
+                  label="Shift"
+                  value={`${selectedShift} of ${settings.totalShifts}`}
+                  onIncrease={() => setSelectedShift(Math.min(settings.totalShifts, selectedShift + 1))}
+                  onDecrease={() => setSelectedShift(Math.max(1, selectedShift - 1))}
                 />
                 <div className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
                   <Label className="text-sm font-medium">Start Time</Label>
                   <Input
                     type="time"
-                    value={currentShift.startTime}
+                    value={currentShift?.startTime ?? '00:00'}
                     onChange={(e) => updateShift({ startTime: e.target.value })}
                     className="w-28 h-8"
                   />
@@ -322,7 +335,7 @@ export function AdvancedSettingsDialog({
                 <div className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
                   <Label className="text-sm font-medium">Code</Label>
                   <Input
-                    value={currentShift.code}
+                    value={currentShift?.code ?? ''}
                     onChange={(e) => updateShift({ code: e.target.value })}
                     className="w-24 h-8"
                     maxLength={10}
