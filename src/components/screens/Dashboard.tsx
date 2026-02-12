@@ -107,167 +107,170 @@ export function Dashboard({
       </div>
       
       <div className="flex-1 p-2 md:p-4 flex flex-col gap-2 md:gap-4 overflow-hidden">
-      {/* Top row buttons - horizontal scroll on mobile */}
+      {/* Top section - two rows with Makeup/Ink spanning both */}
       <div className="overflow-x-auto pb-2 -mx-2 px-2 md:mx-0 md:px-0 md:overflow-visible">
-        <div className="flex gap-2 min-w-max md:min-w-0 md:flex-wrap">
-          <button 
-            onClick={onSignIn}
-            className={`${isSignedIn ? 'industrial-button-success' : 'industrial-button-gray'} text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[100px] flex-shrink-0`}
-          >
-            <Key className="w-7 h-7 md:w-10 md:h-10 mb-1" />
-            <span className="text-[10px] md:text-sm">{isSignedIn ? 'Sign Out' : 'Sign In'}</span>
-          </button>
+        <div className="min-w-max md:min-w-0">
+          <div className="flex gap-2 md:flex-wrap">
+            <button 
+              onClick={onSignIn}
+              className={`${isSignedIn ? 'industrial-button-success' : 'industrial-button-gray'} text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[100px] flex-shrink-0`}
+            >
+              <Key className="w-7 h-7 md:w-10 md:h-10 mb-1" />
+              <span className="text-[10px] md:text-sm">{isSignedIn ? 'Sign Out' : 'Sign In'}</span>
+            </button>
 
-          <button 
-            onClick={onHelp}
-            className="industrial-button text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[100px] flex-shrink-0"
-          >
-            <HelpCircle className="w-7 h-7 md:w-10 md:h-10 mb-1" />
-            <span className="text-[10px] md:text-sm">Help</span>
-          </button>
+            <button 
+              onClick={onHelp}
+              className="industrial-button text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[100px] flex-shrink-0"
+            >
+              <HelpCircle className="w-7 h-7 md:w-10 md:h-10 mb-1" />
+              <span className="text-[10px] md:text-sm">Help</span>
+            </button>
 
-          <button 
-            onClick={!showCountdown && isConnected ? (isHvOn ? (onHvOff ?? onStop) : (onHvOn ?? onStart)) : undefined}
-            className={`${!showCountdown && isHvOn ? 'industrial-button-success' : 'industrial-button-danger'} text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[100px] flex-shrink-0`}
-          >
-            <PrinterIcon className="w-7 h-7 md:w-10 md:h-10 mb-1" />
-            <span className="text-[10px] md:text-sm">{!showCountdown && isHvOn ? 'HV On' : 'HV Off'}</span>
-          </button>
+            <button 
+              onClick={!showCountdown && isConnected ? (isHvOn ? (onHvOff ?? onStop) : (onHvOn ?? onStart)) : undefined}
+              className={`${!showCountdown && isHvOn ? 'industrial-button-success' : 'industrial-button-danger'} text-white px-3 md:px-4 py-2 md:py-3 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[100px] flex-shrink-0`}
+            >
+              <PrinterIcon className="w-7 h-7 md:w-10 md:h-10 mb-1" />
+              <span className="text-[10px] md:text-sm">{!showCountdown && isHvOn ? 'HV On' : 'HV Off'}</span>
+            </button>
 
-          {/* Makeup Level Indicator */}
-          <div className={`w-[80px] md:w-[120px] h-[70px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 flex-shrink-0 ${
-            status?.makeupLevel === 'EMPTY' ? 'bg-destructive' :
-            status?.makeupLevel === 'LOW' ? 'bg-warning' :
-            'industrial-button'
-          }`}>
-            <div className="flex flex-col items-center">
-              <div className="relative">
-                <Droplets className="w-5 h-5 md:w-8 md:h-8 text-white" />
-                {(status?.makeupLevel === 'FULL' || status?.makeupLevel === 'GOOD') && (
-                  <Wifi className="w-2 h-2 md:w-3 md:h-3 absolute -top-0.5 -right-0.5 text-white" />
-                )}
+            {/* Makeup + Ink columns with New/Edit directly below */}
+            <div className="flex gap-2 flex-shrink-0">
+              {/* Makeup column */}
+              <div className="flex flex-col gap-2">
+                <div className={`w-[80px] md:w-[120px] h-[70px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 ${
+                  status?.makeupLevel === 'EMPTY' ? 'bg-destructive' :
+                  status?.makeupLevel === 'LOW' ? 'bg-warning' :
+                  'industrial-button'
+                }`}>
+                  <div className="flex flex-col items-center">
+                    <div className="relative">
+                      <Droplets className="w-5 h-5 md:w-8 md:h-8 text-white" />
+                      {(status?.makeupLevel === 'FULL' || status?.makeupLevel === 'GOOD') && (
+                        <Wifi className="w-2 h-2 md:w-3 md:h-3 absolute -top-0.5 -right-0.5 text-white" />
+                      )}
+                    </div>
+                    <span className="text-[8px] md:text-xs text-white font-medium mt-1">Makeup</span>
+                  </div>
+                  <div className="flex flex-col-reverse gap-0.5 h-10 md:h-16 w-3 md:w-5 bg-black/20 rounded p-0.5">
+                    {[0, 1, 2, 3].map((seg) => {
+                      const level = status?.makeupLevel;
+                      const filledSegments = level === 'FULL' ? 4 : level === 'GOOD' ? 2 : level === 'LOW' ? 1 : 0;
+                      const isFilled = seg < filledSegments;
+                      return (
+                        <div
+                          key={seg}
+                          className={`flex-1 rounded-sm transition-colors ${
+                            isFilled ? 'bg-white' : 'bg-white/20'
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+                <button 
+                  onClick={onNewMessage}
+                  className="industrial-button text-white py-1.5 md:py-2 rounded-lg flex items-center justify-center gap-1.5 w-[80px] md:w-[120px]"
+                >
+                  <Plus className="w-4 h-4 md:w-5 md:h-5" />
+                  <span className="text-sm md:text-base font-medium">New</span>
+                </button>
               </div>
-              <span className="text-[8px] md:text-xs text-white font-medium mt-1">Makeup</span>
-            </div>
-            <div className="flex flex-col-reverse gap-0.5 h-10 md:h-16 w-3 md:w-5 bg-black/20 rounded p-0.5">
-              {[0, 1, 2, 3].map((seg) => {
-                const level = status?.makeupLevel;
-                const filledSegments = level === 'FULL' ? 4 : level === 'GOOD' ? 2 : level === 'LOW' ? 1 : 0;
-                const isFilled = seg < filledSegments;
-                return (
-                  <div
-                    key={seg}
-                    className={`flex-1 rounded-sm transition-colors ${
-                      isFilled ? 'bg-white' : 'bg-white/20'
-                    }`}
-                  />
-                );
-              })}
-            </div>
-          </div>
 
-          {/* Ink Level Indicator */}
-          <div className={`w-[80px] md:w-[120px] h-[70px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 flex-shrink-0 ${
-            status?.inkLevel === 'EMPTY' ? 'bg-destructive' :
-            status?.inkLevel === 'LOW' ? 'bg-warning' :
-            'industrial-button'
-          }`}>
-            <div className="flex flex-col items-center">
-              <div className="relative">
-                <Palette className="w-5 h-5 md:w-8 md:h-8 text-white" />
-                {status?.inkLevel === 'FULL' && (
-                  <span className="absolute -top-0.5 -right-0.5 text-white text-[10px] md:text-sm">✓</span>
-                )}
+              {/* Ink column */}
+              <div className="flex flex-col gap-2">
+                <div className={`w-[80px] md:w-[120px] h-[70px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 ${
+                  status?.inkLevel === 'EMPTY' ? 'bg-destructive' :
+                  status?.inkLevel === 'LOW' ? 'bg-warning' :
+                  'industrial-button'
+                }`}>
+                  <div className="flex flex-col items-center">
+                    <div className="relative">
+                      <Palette className="w-5 h-5 md:w-8 md:h-8 text-white" />
+                      {status?.inkLevel === 'FULL' && (
+                        <span className="absolute -top-0.5 -right-0.5 text-white text-[10px] md:text-sm">✓</span>
+                      )}
+                    </div>
+                    <span className="text-[8px] md:text-xs text-white font-medium mt-1">Ink</span>
+                  </div>
+                  <div className="flex flex-col-reverse gap-0.5 h-10 md:h-16 w-3 md:w-5 bg-black/20 rounded p-0.5">
+                    {[0, 1, 2, 3].map((seg) => {
+                      const level = status?.inkLevel;
+                      const filledSegments = level === 'FULL' ? 4 : level === 'LOW' ? 1 : 0;
+                      const isFilled = seg < filledSegments;
+                      return (
+                        <div
+                          key={seg}
+                          className={`flex-1 rounded-sm transition-colors ${
+                            isFilled ? 'bg-white' : 'bg-white/20'
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+                <button 
+                  onClick={onEditMessage}
+                  className="industrial-button text-white py-1.5 md:py-2 rounded-lg flex items-center justify-center gap-1.5 w-[80px] md:w-[120px]"
+                >
+                  <Pencil className="w-4 h-4 md:w-5 md:h-5" />
+                  <span className="text-sm md:text-base font-medium">Edit</span>
+                </button>
               </div>
-              <span className="text-[8px] md:text-xs text-white font-medium mt-1">Ink</span>
             </div>
-            <div className="flex flex-col-reverse gap-0.5 h-10 md:h-16 w-3 md:w-5 bg-black/20 rounded p-0.5">
-              {[0, 1, 2, 3].map((seg) => {
-                const level = status?.inkLevel;
-                const filledSegments = level === 'FULL' ? 4 : level === 'LOW' ? 1 : 0;
-                const isFilled = seg < filledSegments;
-                return (
-                  <div
-                    key={seg}
-                    className={`flex-1 rounded-sm transition-colors ${
-                      isFilled ? 'bg-white' : 'bg-white/20'
-                    }`}
-                  />
-                );
-              })}
-            </div>
-          </div>
 
-          {/* Start/Stop buttons with Count panel */}
-          <div className="flex gap-2 md:ml-auto flex-shrink-0">
-            {/* Count panel */}
-            <div className="bg-primary text-primary-foreground rounded-lg p-2 md:p-3 flex-shrink-0 min-w-[120px] md:min-w-[180px] self-start">
-              <div className="flex justify-between items-center mb-0.5 md:mb-1 gap-3">
-                <span className="text-[10px] md:text-sm whitespace-nowrap">Product:</span>
-                <span className="font-bold text-sm md:text-xl font-mono">{(status?.productCount ?? 0).toLocaleString()}</span>
+            {/* Start/Stop buttons with Count panel */}
+            <div className="flex gap-2 md:ml-auto flex-shrink-0">
+              <div className="bg-primary text-primary-foreground rounded-lg p-2 md:p-3 flex-shrink-0 min-w-[120px] md:min-w-[180px] self-start">
+                <div className="flex justify-between items-center mb-0.5 md:mb-1 gap-3">
+                  <span className="text-[10px] md:text-sm whitespace-nowrap">Product:</span>
+                  <span className="font-bold text-sm md:text-xl font-mono">{(status?.productCount ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center mb-1 md:mb-1.5 gap-3">
+                  <span className="text-[10px] md:text-sm whitespace-nowrap">Print:</span>
+                  <span className="font-bold text-sm md:text-xl font-mono">{(status?.printCount ?? 0).toLocaleString()}</span>
+                </div>
+                <button
+                  onClick={() => setCountersDialogOpen(true)}
+                  className="w-full text-[10px] md:text-xs bg-gradient-to-b from-white/30 to-white/10 hover:from-white/40 hover:to-white/20 border border-white/20 rounded-md px-2 py-1 transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_1px_2px_rgba(0,0,0,0.2)] active:shadow-[inset_0_1px_3px_rgba(0,0,0,0.2)] flex items-center justify-center gap-1"
+                >
+                  <RotateCcw className="w-3 h-3 md:w-4 md:h-4" />
+                  <span>Reset</span>
+                </button>
               </div>
-              <div className="flex justify-between items-center mb-1 md:mb-1.5 gap-3">
-                <span className="text-[10px] md:text-sm whitespace-nowrap">Print:</span>
-                <span className="font-bold text-sm md:text-xl font-mono">{(status?.printCount ?? 0).toLocaleString()}</span>
+
+              <div className="flex gap-2 md:flex-col flex-shrink-0">
+                <button
+                  onClick={onStart}
+                  disabled={!isConnected || showCountdown || status?.jetRunning}
+                  className="industrial-button-success text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all min-w-[100px] md:min-w-[160px]"
+                >
+                  <Play className={`w-6 h-6 md:w-10 md:h-10 ${showCountdown && countdownType === 'starting' ? 'animate-spin' : ''}`} />
+                  <span className="text-base md:text-2xl font-medium">Start</span>
+                </button>
+
+                <button
+                  onClick={onJetStop}
+                  disabled={!isConnected || showCountdown || !status?.jetRunning}
+                  className="industrial-button-danger text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all min-w-[100px] md:min-w-[160px]"
+                >
+                  <Square className={`w-6 h-6 md:w-10 md:h-10 ${showCountdown && countdownType === 'stopping' ? 'animate-spin' : ''}`} />
+                  <span className="text-base md:text-2xl font-medium">Stop</span>
+                </button>
               </div>
-              <button
-                onClick={() => setCountersDialogOpen(true)}
-                className="w-full text-[10px] md:text-xs bg-gradient-to-b from-white/30 to-white/10 hover:from-white/40 hover:to-white/20 border border-white/20 rounded-md px-2 py-1 transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_1px_2px_rgba(0,0,0,0.2)] active:shadow-[inset_0_1px_3px_rgba(0,0,0,0.2)] flex items-center justify-center gap-1"
-              >
-                <RotateCcw className="w-3 h-3 md:w-4 md:h-4" />
-                <span>Reset</span>
-              </button>
             </div>
-
-            {/* Start/Stop buttons */}
-            <div className="flex gap-2 md:flex-col flex-shrink-0">
-              <button
-                onClick={onStart}
-                disabled={!isConnected || showCountdown || status?.jetRunning}
-                className="industrial-button-success text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all min-w-[100px] md:min-w-[160px]"
-              >
-                <Play className={`w-6 h-6 md:w-10 md:h-10 ${showCountdown && countdownType === 'starting' ? 'animate-spin' : ''}`} />
-                <span className="text-base md:text-2xl font-medium">Start</span>
-              </button>
-
-              <button
-                onClick={onJetStop}
-                disabled={!isConnected || showCountdown || !status?.jetRunning}
-                className="industrial-button-danger text-white px-4 md:px-10 py-3 md:py-5 rounded-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-50 transition-all min-w-[100px] md:min-w-[160px]"
-              >
-                <Square className={`w-6 h-6 md:w-10 md:h-10 ${showCountdown && countdownType === 'stopping' ? 'animate-spin' : ''}`} />
-                <span className="text-base md:text-2xl font-medium">Stop</span>
-              </button>
-            </div>
-          </div>
-      </div>
-      </div>
-
-      {/* Message name row with New/Edit aligned right (under Makeup/Ink) */}
-      <div className="flex items-center gap-2">
-        <div className="bg-card rounded-lg p-2 md:p-3 flex-1 min-w-0">
-          <div className="text-xs md:text-base truncate">
-            <span className="font-medium">Message: </span>
-            <span className="text-foreground">
-              {status?.currentMessage || 'No message selected'}
-            </span>
           </div>
         </div>
-        <div className="flex gap-2 flex-shrink-0 ml-auto">
-          <button 
-            onClick={onNewMessage}
-            className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4 md:w-5 md:h-5" />
-            <span className="text-sm md:text-base font-medium">New</span>
-          </button>
-          <button 
-            onClick={onEditMessage}
-            className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5"
-          >
-            <Pencil className="w-4 h-4 md:w-5 md:h-5" />
-            <span className="text-sm md:text-base font-medium">Edit</span>
-          </button>
+      </div>
+
+      {/* Message name */}
+      <div className="bg-card rounded-lg p-2 md:p-3">
+        <div className="text-xs md:text-base truncate">
+          <span className="font-medium">Message: </span>
+          <span className="text-foreground">
+            {status?.currentMessage || 'No message selected'}
+          </span>
         </div>
       </div>
 
