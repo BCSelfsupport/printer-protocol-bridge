@@ -86,6 +86,7 @@ function SortablePrinterItem({
   isConnected,
   compact,
   countdownType,
+  countdownSeconds,
   isMobile,
   syncGroupIndex,
   slaveCount,
@@ -101,6 +102,7 @@ function SortablePrinterItem({
   isConnected: boolean;
   compact: boolean;
   countdownType?: 'starting' | 'stopping' | null;
+  countdownSeconds?: number | null;
   isMobile: boolean;
   syncGroupIndex?: number;
   slaveCount?: number;
@@ -149,6 +151,7 @@ function SortablePrinterItem({
         isConnected={isConnected}
         compact={compact}
         countdownType={countdownType}
+        countdownSeconds={countdownSeconds}
         syncGroupIndex={syncGroupIndex}
         slaveCount={slaveCount}
         onSync={onSync}
@@ -397,6 +400,7 @@ export function PrintersScreen({
                       isConnected={connectedPrinter?.id === printer.id}
                       compact={!!showRightPanel}
                       countdownType={getCountdown ? getCountdown(printer.id).type : (connectedPrinter?.id === printer.id ? countdownType : null)}
+                      countdownSeconds={getCountdown ? getCountdown(printer.id).seconds : (connectedPrinter?.id === printer.id ? countdownSeconds : null)}
                       isMobile={isMobile}
                       syncGroupIndex={syncGroupMap.get(printer.id)}
                       slaveCount={printer.role === 'master' ? slaveCountMap.get(printer.id) ?? 0 : undefined}
