@@ -490,6 +490,7 @@ export function EditMessageScreen({
     
     // Determine field data based on type
     let fieldData = fieldType === 'text' ? '' : fieldType.toUpperCase();
+    let counterId: number | undefined;
     
     // Parse expiry days from format if present
     let expiryDays = 0;
@@ -519,6 +520,9 @@ export function EditMessageScreen({
         // Full date format
         fieldData = formatDateValue(format, expiryDays);
       }
+    } else if (fieldType.startsWith('counter_')) {
+      counterId = parseInt(fieldType.split('_')[1]) || 1;
+      fieldData = `CTR${counterId}`;
     }
     
     // Calculate Y position and font size based on template
@@ -591,7 +595,10 @@ export function EditMessageScreen({
     
     const newField: MessageField = {
       id: newId,
-      type: fieldType === 'time' || fieldType.startsWith('program_') ? 'time' : fieldType as MessageField['type'],
+      type: fieldType === 'time' || fieldType.startsWith('program_') ? 'time' 
+            : fieldType.startsWith('counter_') ? 'counter'
+            : fieldType.startsWith('date_') ? 'date'
+            : fieldType as MessageField['type'],
       data: fieldData,
       x: message.fields.length * 50,
       y: newY,
