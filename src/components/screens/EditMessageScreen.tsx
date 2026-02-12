@@ -77,7 +77,6 @@ const SINGLE_TEMPLATES = [
 // Heights calculated as: (lines × dotsPerLine) + (lines - 1) for 1-dot spacing between lines
 const MULTILINE_TEMPLATES = [
   { value: 'multi-5x5', label: '5L×5', height: 29, lines: 5, dotsPerLine: 5, file: '5L5U.BIN' },
-  { value: 'multi-5x5-2', label: '5L×5 v2', height: 29, lines: 5, dotsPerLine: 5, file: '5L5U-2.BIN' },
   { value: 'multi-4x7', label: '4L×7', height: 31, lines: 4, dotsPerLine: 7, file: '4L7U.BIN' },
   { value: 'multi-4x5', label: '4L×5', height: 23, lines: 4, dotsPerLine: 5, file: '4L5U.BIN' },
   { value: 'multi-4x5h', label: '4L×5 H', height: 23, lines: 4, dotsPerLine: 5, file: '4L5H.BIN' },
