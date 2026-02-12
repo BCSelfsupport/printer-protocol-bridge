@@ -248,8 +248,9 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
           {/* Drawer */}
           <div
             className={cn(
-              "absolute right-0 top-0 h-full w-80",
-              "bg-white border-l-2 border-border shadow-xl"
+              "absolute right-0 top-0 w-80",
+              "bg-white border-l-2 border-border shadow-xl",
+              "h-[100dvh] pb-[env(safe-area-inset-bottom)]"
             )}
           >
 
