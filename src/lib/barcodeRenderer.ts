@@ -214,28 +214,36 @@ export async function renderBarcodeToCanvas(
     const textHeightDots = (humanReadable && !is2D) ? 3 : 0;
     const barcodeHeightDots = targetHeight - textHeightDots;
     
-    // Scale each barcode module to multiple pixels so bars are thick and visible.
-    // DOT_SIZE (8px per dot) means we want each module ≈ 2-3 pixels wide
-    // so the final image looks like a real barcode on the dot-matrix canvas.
-    const moduleScale = 3;
+    // DOT_SIZE = 8px per dot on the message canvas.
+    // We render bwip-js at a scale that produces an image whose height already
+    // matches the target pixel height (barcodeHeightDots * 8) so no further
+    // scaling is needed when we draw it on the message canvas → no aliasing.
+    const DOT_PX = 8;
+    const targetHeightPx = barcodeHeightDots * DOT_PX;
     
     const options: bwipjs.RenderOptions = {
       bcid: bwipEncoder,
       text: data,
-      scale: moduleScale,
+      scale: 1, // will be overridden below
       includetext: false,
       backgroundcolor: 'f5e6c8',
     };
     
     if (is2D) {
-      // 2D barcodes: constrain to square matching target height
+      // 2D barcodes: constrain to square matching target pixel height
       const size = Math.max(4, barcodeHeightDots);
       options.height = size;
       options.width = size;
+      // Scale 2D modules so the output is close to targetHeightPx
+      options.scale = Math.max(1, Math.floor(targetHeightPx / (size * 2)));
     } else {
-      // 1D barcodes: height controls the bar height in bwip-js units (mm at 72dpi)
-      // We want bars to fill the available dot-matrix height
-      options.height = Math.max(5, barcodeHeightDots);
+      // 1D barcodes: bwip-js height is in "points" at the given scale.
+      // We set scale so that 1 module = a few pixels, then set height
+      // so the total pixel height = targetHeightPx.
+      // bwip-js: pixel height ≈ height * scale, so height = targetHeightPx / scale
+      const moduleScale = 2;
+      options.scale = moduleScale;
+      options.height = Math.max(5, Math.round(targetHeightPx / moduleScale));
     }
     
     await bwipjs.toCanvas(tempCanvas, options);
