@@ -243,13 +243,29 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* Middle section - Message name - compact */}
-      <div className="bg-card rounded-lg p-2 md:p-3 flex items-center">
+      {/* Middle section - Message name with New/Edit buttons */}
+      <div className="bg-card rounded-lg p-2 md:p-3 flex items-center justify-between">
         <div className="text-xs md:text-base">
           <div className="font-medium">Message name</div>
           <div className="text-foreground truncate">
             {status?.currentMessage || 'No message selected'}
           </div>
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={onNewMessage}
+            className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="text-sm md:text-base font-medium">New</span>
+          </button>
+          <button 
+            onClick={onEditMessage}
+            className="industrial-button text-white px-3 md:px-5 py-1.5 md:py-2 rounded-lg flex items-center gap-1.5"
+          >
+            <Pencil className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="text-sm md:text-base font-medium">Edit</span>
+          </button>
         </div>
       </div>
 
@@ -260,24 +276,6 @@ export function Dashboard({
           printerTime={status?.printerTime}
           messageContent={messageContent}
         />
-      </div>
-
-      {/* New/Edit buttons - side by side below preview, tighter spacing */}
-      <div className="flex gap-2 justify-center -mt-1">
-        <button 
-          onClick={onNewMessage}
-          className="industrial-button text-white px-4 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4 md:w-6 md:h-6" />
-          <span className="text-sm md:text-lg font-medium">New</span>
-        </button>
-        <button 
-          onClick={onEditMessage}
-          className="industrial-button text-white px-4 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-2"
-        >
-          <Pencil className="w-4 h-4 md:w-6 md:h-6" />
-          <span className="text-sm md:text-lg font-medium">Edit</span>
-        </button>
       </div>
     </div>
 
