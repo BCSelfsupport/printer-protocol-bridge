@@ -1,4 +1,4 @@
-import { ChevronUp, ChevronDown, Pencil, X } from 'lucide-react';
+import { ChevronUp, ChevronDown, Pencil } from 'lucide-react';
 import { PrintSettings } from '@/types/printer';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogClose,
 } from '@/components/ui/dialog';
 
 interface AdjustDialogProps {
@@ -78,11 +77,11 @@ function AdjustCard({
   };
 
   return (
-    <div className="bg-gradient-to-b from-slate-100 to-slate-200 rounded-lg p-3 border border-slate-300 shadow-sm">
+    <div className="bg-card rounded-lg p-3 border border-border shadow-sm">
       <div className="flex items-center gap-2">
         {/* Setting info */}
         <div className="flex-1 min-w-0">
-          <div className="text-xs text-slate-600 font-medium truncate">{label}</div>
+          <div className="text-xs text-muted-foreground font-medium truncate">{label}</div>
           {isEditing && showInput ? (
             <Input
               type="number"
@@ -96,7 +95,7 @@ function AdjustCard({
               max={max}
             />
           ) : (
-            <div className="text-lg font-bold text-slate-800 tabular-nums">
+            <div className="text-lg font-bold text-foreground tabular-nums">
               {typeof value === 'number' ? value.toLocaleString() : value}
             </div>
           )}
@@ -163,14 +162,9 @@ export function AdjustDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl bg-gradient-to-b from-slate-700 to-slate-800 border-slate-600 max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle className="text-xl text-white">Adjust Settings (Live)</DialogTitle>
-          <DialogClose asChild>
-            <button className="rounded-full p-1 hover:bg-white/10 transition-colors">
-              <X className="w-5 h-5 text-white" />
-            </button>
-          </DialogClose>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Adjust Settings (Live)</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -261,10 +255,6 @@ export function AdjustDialog({
             />
           </div>
 
-          {/* Info text */}
-          <p className="text-xs text-slate-400 text-center">
-            Changes sent immediately (^PW, ^PH, ^DA, ^SB, ^GP, ^PA, ^RA)
-          </p>
         </div>
       </DialogContent>
     </Dialog>

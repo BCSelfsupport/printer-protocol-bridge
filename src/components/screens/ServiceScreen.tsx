@@ -47,19 +47,20 @@ export function ServiceScreen({ open, onOpenChange, metrics, onMount, onUnmount,
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between pr-8">
-            <DialogTitle>Service</DialogTitle>
-            <button
-              onClick={handleForcePrint}
-              disabled={!onSendCommand}
-              className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-2 disabled:opacity-50"
-              title="Force Print (^PT)"
-            >
-              <Printer className="w-5 h-5" />
-              <span className="text-sm font-medium">Force Print</span>
-            </button>
-          </div>
+          <DialogTitle>Service</DialogTitle>
         </DialogHeader>
+
+        <div className="flex justify-end -mt-2">
+          <button
+            onClick={handleForcePrint}
+            disabled={!onSendCommand}
+            className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-2 disabled:opacity-50"
+            title="Force Print"
+          >
+            <Printer className="w-5 h-5" />
+            <span className="text-sm font-medium">Force Print</span>
+          </button>
+        </div>
 
         {!metrics ? (
           <div className="flex items-center justify-center py-12">
