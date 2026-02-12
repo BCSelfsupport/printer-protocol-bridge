@@ -313,7 +313,18 @@ export function MessageCanvas({
       let fieldH: number;
       
       if (isBarcode) {
-        fieldW = field.width * DOT_SIZE;
+        // Size the field to match the actual rendered barcode + quiet zones
+        const parsed = parseBarcodeLabelData(field.data);
+        const cacheKey = parsed ? `${field.id}:${parsed.encoding}:${parsed.data}:${templateHeight}:${parsed.humanReadable}` : '';
+        const barcodeCanvas = parsed ? barcodeImages.get(cacheKey) : null;
+        if (barcodeCanvas) {
+          // Use the actual barcode image width (+ small quiet zone margin)
+          const scale = (templateHeight * DOT_SIZE) / barcodeCanvas.height;
+          const quietZoneDots = 10; // quiet zone on each side
+          fieldW = Math.ceil(barcodeCanvas.width * scale) + quietZoneDots * 2 * DOT_SIZE;
+        } else {
+          fieldW = field.width * DOT_SIZE;
+        }
         fieldH = templateHeight * DOT_SIZE;
       } else {
         const minChars = 3;
