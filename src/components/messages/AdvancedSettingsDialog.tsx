@@ -114,7 +114,7 @@ function SettingRow({
   const [editValue, setEditValue] = useState(value.toString());
 
   useEffect(() => {
-    if (!isEditing) setEditValue(value.toString());
+    if (!isEditing) setEditValue((value ?? '').toString());
   }, [value, isEditing]);
 
   const handleSubmit = () => {
@@ -145,7 +145,7 @@ function SettingRow({
           />
         ) : (
           <span className="text-sm font-bold min-w-[80px] text-right tabular-nums">
-            {typeof value === 'number' ? value.toLocaleString() : value}
+            {typeof value === 'number' ? value.toLocaleString() : (value ?? '')}
           </span>
         )}
         {showEditButton && (
@@ -198,9 +198,10 @@ export function AdvancedSettingsDialog({
   const [activeTab, setActiveTab] = useState('general');
   const [selectedCounter, setSelectedCounter] = useState(1);
   const [selectedShift, setSelectedShift] = useState(1);
+  const effectiveTotalShifts = settings.totalShifts ?? settings.shifts?.length ?? 3;
 
   const currentCounter = settings.counters.find(c => c.id === selectedCounter) || settings.counters[0];
-  const currentShift = settings.shifts.find(s => s.shift === selectedShift) || settings.shifts[0];
+  const currentShift = settings.shifts?.find(s => s.shift === selectedShift) || settings.shifts?.[0];
 
   const updateCounter = (updates: Partial<typeof currentCounter>) => {
     const newCounters = settings.counters.map(c =>
@@ -300,27 +301,27 @@ export function AdvancedSettingsDialog({
               <div className="space-y-2">
                 <SettingRow
                   label="Total Shifts"
-                  value={settings.totalShifts}
+                  value={effectiveTotalShifts}
                   onIncrease={() => {
-                    const newTotal = Math.min(24, settings.totalShifts + 1);
+                    const newTotal = Math.min(24, effectiveTotalShifts + 1);
                     const newShifts = Array.from({ length: newTotal }, (_, i) => {
-                      const existing = settings.shifts.find(s => s.shift === i + 1);
+                      const existing = settings.shifts?.find(s => s.shift === i + 1);
                       return existing || { shift: i + 1, startTime: '00:00', code: String(i + 1) };
                     });
                     onUpdate({ totalShifts: newTotal, shifts: newShifts });
                     if (selectedShift > newTotal) setSelectedShift(newTotal);
                   }}
                   onDecrease={() => {
-                    const newTotal = Math.max(1, settings.totalShifts - 1);
-                    const newShifts = settings.shifts.slice(0, newTotal);
+                    const newTotal = Math.max(1, effectiveTotalShifts - 1);
+                    const newShifts = (settings.shifts ?? []).slice(0, newTotal);
                     onUpdate({ totalShifts: newTotal, shifts: newShifts });
                     if (selectedShift > newTotal) setSelectedShift(newTotal);
                   }}
                 />
                 <SettingRow
                   label="Shift"
-                  value={`${selectedShift} of ${settings.totalShifts}`}
-                  onIncrease={() => setSelectedShift(Math.min(settings.totalShifts, selectedShift + 1))}
+                  value={`${selectedShift} of ${effectiveTotalShifts}`}
+                  onIncrease={() => setSelectedShift(Math.min(effectiveTotalShifts, selectedShift + 1))}
                   onDecrease={() => setSelectedShift(Math.max(1, selectedShift - 1))}
                 />
                 <div className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
