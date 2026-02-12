@@ -214,12 +214,15 @@ export async function renderBarcodeToCanvas(
     const textHeightDots = (humanReadable && !is2D) ? 3 : 0;
     const barcodeHeightDots = targetHeight - textHeightDots;
     
-    // bwip-js uses mm at 72dpi; we want dot-level control
-    // scale=1 → 1 module = 1 pixel; height in mm ≈ pixels at 72dpi
+    // Scale each barcode module to multiple pixels so bars are thick and visible.
+    // DOT_SIZE (8px per dot) means we want each module ≈ 2-3 pixels wide
+    // so the final image looks like a real barcode on the dot-matrix canvas.
+    const moduleScale = 3;
+    
     const options: bwipjs.RenderOptions = {
       bcid: bwipEncoder,
       text: data,
-      scale: 1,
+      scale: moduleScale,
       includetext: false,
       backgroundcolor: 'f5e6c8',
     };
@@ -230,9 +233,9 @@ export async function renderBarcodeToCanvas(
       options.height = size;
       options.width = size;
     } else {
-      // 1D barcodes: height in bwip-js units
-      // Use a reasonable height that fits the dot matrix
-      options.height = Math.max(3, Math.floor(barcodeHeightDots * 0.8));
+      // 1D barcodes: height controls the bar height in bwip-js units (mm at 72dpi)
+      // We want bars to fill the available dot-matrix height
+      options.height = Math.max(5, barcodeHeightDots);
     }
     
     await bwipjs.toCanvas(tempCanvas, options);
