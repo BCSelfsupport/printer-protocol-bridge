@@ -549,7 +549,10 @@ export function usePrinterConnection() {
           const upper = trimmed.toUpperCase();
           if (!trimmed || trimmed === '//EOL' || trimmed === '>' || trimmed.startsWith('^')
               || upper.includes('COMMAND SUCCESSFUL') || upper.includes('COMMAND FAILED')
-              || upper.startsWith('MESSAGES (')) continue;
+              || upper.startsWith('MESSAGES (')
+              // Skip counter data lines that may leak from ^CN responses
+              || upper.includes('PRODUCT:') || upper.includes('PRINT:') || upper.includes('CUSTOM1:')
+              ) continue;
           
           // Check for "(current)" marker — indicates the currently selected message
           const isCurrent = /\(current\)/i.test(trimmed);
