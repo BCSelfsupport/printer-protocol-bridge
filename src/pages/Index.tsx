@@ -13,6 +13,7 @@ import { SetupScreen } from '@/components/screens/SetupScreen';
 import { ServiceScreen } from '@/components/screens/ServiceScreen';
 import { CleanScreen } from '@/components/screens/CleanScreen';
 import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
+import { RelayConnectDialog } from '@/components/relay/RelayConnectDialog';
 
 import { SignInDialog } from '@/components/printers/SignInDialog';
 import { HelpDialog } from '@/components/help/HelpDialog';
@@ -42,6 +43,7 @@ const Index = () => {
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [helpDialogOpen, setHelpDialogOpen] = useState(false);
+  const [relayDialogOpen, setRelayDialogOpen] = useState(false);
   
   // Local message storage (persists to localStorage)
   const { saveMessage, getMessage, deleteMessage: deleteStoredMessage } = useMessageStorage();
@@ -443,6 +445,7 @@ const Index = () => {
         }}
         onHome={currentScreen !== 'home' ? handleHome : undefined}
         printerTime={connectionState.status?.printerTime}
+        onRelayConnect={() => setRelayDialogOpen(true)}
       />
 
       <main className="flex-1 flex flex-col overflow-hidden">
@@ -543,6 +546,12 @@ const Index = () => {
         onMount={() => setServiceScreenOpen(true)}
         onUnmount={() => setServiceScreenOpen(false)}
         onSendCommand={sendCommand}
+      />
+
+      {/* Relay Connect Dialog (mobile PWA) */}
+      <RelayConnectDialog
+        open={relayDialogOpen}
+        onOpenChange={setRelayDialogOpen}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Sun, Moon, Home } from 'lucide-react';
+import { Settings, Sun, Moon, Home, Smartphone } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { getRelayConfig } from '@/lib/printerTransport';
 
 declare const __APP_VERSION__: string;
 
@@ -10,9 +11,10 @@ interface HeaderProps {
   onSettings?: () => void;
   onHome?: () => void;
   printerTime?: Date | null;
+  onRelayConnect?: () => void;
 }
 
-export function Header({ isConnected, connectedIp, onSettings, onHome, printerTime }: HeaderProps) {
+export function Header({ isConnected, connectedIp, onSettings, onHome, printerTime, onRelayConnect }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -87,6 +89,21 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
         </div>
 
         <div className="flex items-center gap-2 md:gap-4 flex-shrink-0 ml-4">
+          {/* Relay mode indicator for mobile PWA */}
+          {!window.electronAPI && onRelayConnect && (
+            <button
+              onClick={onRelayConnect}
+              className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
+                getRelayConfig() 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : 'bg-muted-foreground/50 hover:bg-muted-foreground/70'
+              }`}
+              title={getRelayConfig() ? `Relay: ${getRelayConfig()?.pcIp}` : 'Connect via PC'}
+            >
+              <Smartphone className={`w-4 h-4 md:w-5 md:h-5 ${getRelayConfig() ? 'text-white' : 'text-card'}`} />
+            </button>
+          )}
+
           {isConnected && (
             <div className="px-2 md:px-4 py-1 md:py-2 rounded bg-success text-white text-xs md:text-sm font-medium flex-shrink-0">
               <div className="text-[10px] md:text-xs">Connected</div>
