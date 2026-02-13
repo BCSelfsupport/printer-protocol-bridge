@@ -285,6 +285,7 @@ const Index = () => {
             messageContent={currentMsgContent}
             onNavigate={handleNavigate}
             onTurnOff={handleTurnOff}
+            onHome={handleHome}
           />
         );
       case 'editMessage':

@@ -1,4 +1,4 @@
-import { Power, FileText, SlidersHorizontal, Brush, Settings, Wrench, ChevronUp, ChevronDown } from 'lucide-react';
+import { Power, FileText, SlidersHorizontal, Brush, Settings, Wrench, ChevronUp, ChevronDown, Wifi } from 'lucide-react';
 import { useState } from 'react';
 
 export type NavItem = 'home' | 'messages' | 'adjust' | 'clean' | 'setup' | 'service';
@@ -8,6 +8,7 @@ interface BottomNavProps {
   onNavigate: (item: NavItem) => void;
   onTurnOff: () => void;
   showPrinterControls?: boolean;
+  onHome?: () => void;
 }
 
 const navItems: { id: NavItem; label: string; icon: React.ReactNode; disabled?: boolean }[] = [
@@ -18,7 +19,7 @@ const navItems: { id: NavItem; label: string; icon: React.ReactNode; disabled?: 
   { id: 'service', label: 'Service', icon: <Wrench className="w-6 h-6" /> },
 ];
 
-export function BottomNav({ activeItem, onNavigate, onTurnOff, showPrinterControls = true }: BottomNavProps) {
+export function BottomNav({ activeItem, onNavigate, onTurnOff, showPrinterControls = true, onHome }: BottomNavProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   if (!showPrinterControls) {
@@ -47,6 +48,17 @@ export function BottomNav({ activeItem, onNavigate, onTurnOff, showPrinterContro
             <Power className="w-6 h-6" />
             <span className="text-xs font-medium">Turn Off</span>
           </button>
+
+          {/* Network / Printers button (mobile back) */}
+          {onHome && (
+            <button
+              onClick={onHome}
+              className="flex-1 flex flex-col items-center justify-center gap-1 bg-sidebar hover:bg-sidebar-accent text-sidebar-foreground transition-all"
+            >
+              <Wifi className="w-6 h-6" />
+              <span className="text-xs font-medium">Network</span>
+            </button>
+          )}
 
           {/* Nav items - evenly distributed */}
           {navItems.map((item) => (

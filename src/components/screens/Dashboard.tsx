@@ -34,6 +34,7 @@ interface DashboardProps {
   // Bottom nav props
   onNavigate?: (item: NavItem) => void;
   onTurnOff?: () => void;
+  onHome?: () => void;
 }
 
 export function Dashboard({
@@ -59,6 +60,7 @@ export function Dashboard({
   messageContent,
   onNavigate,
   onTurnOff,
+  onHome,
 }: DashboardProps) {
   const [countersDialogOpen, setCountersDialogOpen] = useState(false);
 
@@ -305,6 +307,17 @@ export function Dashboard({
         <div className="flex-1 overflow-x-auto mx-2 md:mx-4">
           <div className="flex gap-1 justify-center min-w-max px-2">
             
+            {/* Network button - back to printer list */}
+            {onHome && (
+              <button
+                onClick={onHome}
+                className="flex flex-col items-center justify-center gap-1 px-4 md:px-5 py-2 md:py-2.5 rounded transition-all industrial-button-gray text-white"
+              >
+                <Wifi className="w-5 h-5 md:w-6 md:h-6" />
+                <span className="text-[10px] md:text-xs font-medium">Network</span>
+              </button>
+            )}
+
             {[
               { id: 'messages' as const, label: 'Messages', icon: <FileText className="w-5 h-5 md:w-6 md:h-6" /> },
               { id: 'adjust' as const, label: 'Adjust', icon: <SlidersHorizontal className="w-5 h-5 md:w-6 md:h-6" /> },
