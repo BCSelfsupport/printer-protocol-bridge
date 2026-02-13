@@ -29,8 +29,7 @@ export interface ProductionSnapshot {
 export interface OEEMetrics {
   availability: number; // 0-100%
   performance: number;  // 0-100%
-  quality: number;      // 0-100% (we'll default to 100 since CIJ doesn't track rejects)
-  oee: number;          // availability * performance * quality / 10000
+  oee: number;          // availability × performance / 100
   plannedTime: number;  // total planned production time (ms)
   runTime: number;      // actual run time minus downtime (ms)
   totalDowntime: number; // total downtime (ms)
@@ -43,7 +42,7 @@ export function calculateOEE(run: ProductionRun): OEEMetrics {
   const endTime = run.endTime ?? now;
   const plannedTime = endTime - run.startTime;
 
-  // Calculate total downtime
+  // Calculate total downtime from events (jet stop / HV off periods)
   const totalDowntime = run.downtimeEvents.reduce((sum, evt) => {
     const dtEnd = evt.endTime ?? now;
     return sum + (dtEnd - evt.startTime);
@@ -54,20 +53,17 @@ export function calculateOEE(run: ProductionRun): OEEMetrics {
   // Availability = Run Time / Planned Production Time
   const availability = plannedTime > 0 ? (runTime / plannedTime) * 100 : 100;
 
-  // Performance = Actual Count / Target Count (simplified OEE Performance)
+  // Performance = Actual Count / Target Count
   const performance = run.targetCount > 0
     ? Math.min(100, (run.actualCount / run.targetCount) * 100)
     : 0;
 
-  // Quality = 100% default (CIJ printers don't track reject counts)
-  const quality = 100;
-
-  const oee = (availability * performance * quality) / 10000;
+  // OEE = Availability × Performance (quality assumed 100%)
+  const oee = (availability * performance) / 100;
 
   return {
     availability,
     performance,
-    quality,
     oee,
     plannedTime,
     runTime,

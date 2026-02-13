@@ -162,6 +162,59 @@ const Index = () => {
     });
   }, [printers, consumableStorage]);
 
+  // Auto-downtime detection: track jet/HV state transitions for active production runs
+  const prevPrinterStateRef = useRef<{ jetRunning: boolean; isRunning: boolean }>({ jetRunning: false, isRunning: false });
+  useEffect(() => {
+    const jetRunning = connectionState.status?.jetRunning ?? false;
+    const isRunning = connectionState.status?.isRunning ?? false;
+    const prev = prevPrinterStateRef.current;
+    const printerId = connectionState.connectedPrinter?.id;
+
+    if (printerId != null) {
+      const activeRuns = productionStorage.runs.filter(
+        r => r.printerId === printerId && r.endTime === null
+      );
+
+      for (const run of activeRuns) {
+        const hasActiveDowntime = run.downtimeEvents.some(e => e.endTime === null);
+
+        // Jet stopped or HV went off → start downtime
+        if ((prev.jetRunning && !jetRunning) || (prev.isRunning && !isRunning)) {
+          if (!hasActiveDowntime) {
+            const reason = !jetRunning ? 'jet_stopped' : 'hv_disabled';
+            productionStorage.addDowntimeEvent(run.id, reason);
+          }
+        }
+
+        // Jet restarted and HV back on → end downtime
+        if (jetRunning && isRunning && hasActiveDowntime) {
+          const activeEvt = run.downtimeEvents.find(e => e.endTime === null);
+          if (activeEvt) {
+            productionStorage.endDowntimeEvent(run.id, activeEvt.id);
+          }
+        }
+      }
+    }
+
+    prevPrinterStateRef.current = { jetRunning, isRunning };
+  }, [connectionState.status?.jetRunning, connectionState.status?.isRunning, connectionState.connectedPrinter?.id, productionStorage]);
+
+  // Auto-sync product count from printer to active production runs
+  useEffect(() => {
+    const printerId = connectionState.connectedPrinter?.id;
+    const productCount = connectionState.status?.productCount;
+    if (printerId == null || productCount == null || productCount === 0) return;
+
+    const activeRuns = productionStorage.runs.filter(
+      r => r.printerId === printerId && r.endTime === null
+    );
+    for (const run of activeRuns) {
+      if (run.actualCount !== productCount) {
+        productionStorage.updateRun(run.id, { actualCount: productCount });
+      }
+    }
+  }, [connectionState.status?.productCount, connectionState.connectedPrinter?.id, productionStorage]);
+
   const handleNavigate = (item: NavItem) => {
     if (item === 'adjust') {
       setAdjustDialogOpen(true);
