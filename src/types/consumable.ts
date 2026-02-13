@@ -19,9 +19,11 @@ export interface Consumable {
   type: 'ink' | 'makeup';
   partNumber: string;
   description: string;
-  currentStock: number;
-  minimumStock: number;
-  unit: string; // e.g. 'bottles', 'liters', 'cartridges'
+  currentStock: number;       // stock in "unit" (e.g. bottles)
+  minimumStock: number;       // reorder threshold in "unit"
+  unit: string;               // stock unit e.g. 'bottles'
+  reorderUnit?: string;       // reorder unit e.g. 'cases'
+  bottlesPerReorderUnit?: number; // how many stock-units per reorder-unit e.g. 5
 }
 
 export interface PrinterConsumableAssignment {

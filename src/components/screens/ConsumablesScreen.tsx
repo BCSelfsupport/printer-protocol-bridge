@@ -35,6 +35,8 @@ interface ConsumableFormData {
   currentStock: number;
   minimumStock: number;
   unit: string;
+  reorderUnit: string;
+  bottlesPerReorderUnit: number;
 }
 
 const defaultFormData: ConsumableFormData = {
@@ -42,8 +44,10 @@ const defaultFormData: ConsumableFormData = {
   partNumber: '',
   description: '',
   currentStock: 0,
-  minimumStock: 1,
-  unit: 'cases',
+  minimumStock: 3,
+  unit: 'bottles',
+  reorderUnit: 'cases',
+  bottlesPerReorderUnit: 5,
 };
 
 export function ConsumablesScreen({
@@ -86,6 +90,8 @@ export function ConsumablesScreen({
       currentStock: consumable.currentStock,
       minimumStock: consumable.minimumStock,
       unit: consumable.unit,
+      reorderUnit: consumable.reorderUnit || consumable.unit,
+      bottlesPerReorderUnit: consumable.bottlesPerReorderUnit || 1,
     });
     setAddEditOpen(true);
   };
@@ -512,17 +518,41 @@ export function ConsumablesScreen({
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Unit</Label>
+              <Label>Stock Unit</Label>
               <Select value={formData.unit} onValueChange={(v) => setFormData(prev => ({ ...prev, unit: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cases">Cases (5 x Quart)</SelectItem>
-                  <SelectItem value="bottles">Bottles (Quart)</SelectItem>
+                  <SelectItem value="bottles">Bottles</SelectItem>
                   <SelectItem value="liters">Liters</SelectItem>
                   <SelectItem value="cartridges">Cartridges</SelectItem>
                   <SelectItem value="units">Units</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-[10px] text-muted-foreground">Unit used for tracking individual stock.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Reorder Unit</Label>
+                <Select value={formData.reorderUnit} onValueChange={(v) => setFormData(prev => ({ ...prev, reorderUnit: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cases">Cases</SelectItem>
+                    <SelectItem value="boxes">Boxes</SelectItem>
+                    <SelectItem value="bottles">Bottles</SelectItem>
+                    <SelectItem value="units">Units</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Per Reorder Unit</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={formData.bottlesPerReorderUnit}
+                  onChange={e => setFormData(prev => ({ ...prev, bottlesPerReorderUnit: parseInt(e.target.value, 10) || 1 }))}
+                />
+                <p className="text-[10px] text-muted-foreground">{formData.unit} per {formData.reorderUnit.replace(/s$/, '')}</p>
+              </div>
             </div>
           </div>
           <DialogFooter>
