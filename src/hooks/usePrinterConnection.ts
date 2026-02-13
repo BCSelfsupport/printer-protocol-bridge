@@ -695,14 +695,34 @@ export function usePrinterConnection() {
       messages: mockMessages,
     });
 
-    // Query initial status, counters, and message list from printer
+    // Query initial status, counters, message list, and current message from printer
     if (isElectron) {
       // Small delay to let state update, then query
       setTimeout(async () => {
         queryPrinterStatus(printer);
-        // Fetch real counters and message list after short additional delay
+        // Fetch real counters, message list, and current message after short additional delay
         setTimeout(async () => {
           queryMessageList(printer);
+          // Query current selected message via ^SM (no argument returns current)
+          try {
+            const smResult = await window.electronAPI!.printer.sendCommand(printer.id, '^SM');
+            console.log('[connect] ^SM response:', smResult);
+            if (smResult?.success && smResult.response) {
+              // Strip control chars and prompt markers
+              const msgName = smResult.response.replace(/[^\x20-\x7E]/g, '').trim().toUpperCase();
+              // Filter out command echoes, status strings, and empty results
+              if (msgName && !msgName.startsWith('^') && !msgName.includes('COMMAND') && msgName !== '>') {
+                console.log('[connect] Current message from printer:', msgName);
+                setConnectionState(prev => ({
+                  ...prev,
+                  status: prev.status ? { ...prev.status, currentMessage: msgName } : null,
+                }));
+                updatePrinter(printer.id, { currentMessage: msgName });
+              }
+            }
+          } catch (e) {
+            console.error('[connect] Failed to query ^SM:', e);
+          }
           // Query counters via ^CN
           try {
             const cnResult = await window.electronAPI!.printer.sendCommand(printer.id, '^CN');
