@@ -126,6 +126,18 @@ function formatDuration(ms: number): string {
   return `${h}h ${m}m`;
 }
 
+const DOWNTIME_LABELS: Record<string, string> = {
+  jet_stopped: 'Jet Stopped',
+  hv_disabled: 'HV Disabled',
+  printer_error: 'Printer Error',
+  ink_empty: 'Ink Empty',
+  makeup_empty: 'Makeup Empty',
+  manual_stop: 'Manual Stop',
+  changeover: 'Changeover',
+  maintenance: 'Maintenance',
+  other: 'Other',
+};
+
 function formatDateTime(ts: number): string {
   return new Date(ts).toLocaleString('en-US', {
     month: 'short', day: 'numeric',
@@ -191,7 +203,6 @@ export function ReportsScreen({
     return {
       availability: avg('availability'),
       performance: avg('performance'),
-      quality: avg('quality'),
       oee: avg('oee'),
       plannedTime: source.reduce((s, rm) => s + rm.oee.plannedTime, 0),
       runTime: source.reduce((s, rm) => s + rm.oee.runTime, 0),
@@ -314,7 +325,6 @@ export function ReportsScreen({
               <OEEGauge value={overallOEE.oee} label="Overall OEE" size={140} isPrimary />
               <OEEGauge value={overallOEE.availability} label="Availability" size={110} />
               <OEEGauge value={overallOEE.performance} label="Performance" size={110} />
-              <OEEGauge value={overallOEE.quality} label="Quality" size={110} />
             </div>
 
             {/* Summary stat cards */}
@@ -556,7 +566,7 @@ export function ReportsScreen({
                             {run.downtimeEvents.map(evt => (
                               <div key={evt.id} className="flex items-center gap-2 text-xs bg-destructive/10 rounded-lg px-3 py-2">
                                 <ArrowDownCircle className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
-                                <span className="text-foreground font-medium">{evt.reason}</span>
+                                <span className="text-foreground font-medium">{DOWNTIME_LABELS[evt.reason] ?? evt.reason}</span>
                                 <span className="text-muted-foreground ml-auto tabular-nums">
                                   {formatDuration((evt.endTime ?? Date.now()) - evt.startTime)}
                                 </span>
