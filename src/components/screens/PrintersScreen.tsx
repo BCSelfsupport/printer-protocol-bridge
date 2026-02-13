@@ -354,30 +354,8 @@ export function PrintersScreen({
             </div>
           </div>
           
-          {/* Action buttons */}
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setAddDialogOpen(true)}
-              size="sm"
-              className="flex-1 bg-primary hover:bg-primary/90 h-8 text-xs"
-            >
-              <Plus className="w-3 h-3 mr-1" />
-              Add
-            </Button>
-            {selectedPrinter && (
-              <Button
-                onClick={handleRemoveSelected}
-                size="sm"
-                variant="outline"
-                className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300 h-8"
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            )}
-          </div>
-
           {/* Consumables & Reports navigation */}
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2 mb-2">
             <Button
               onClick={onConsumables}
               size="sm"
@@ -401,6 +379,28 @@ export function PrintersScreen({
               <BarChart3 className="w-3 h-3 mr-1" />
               Reports
             </Button>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setAddDialogOpen(true)}
+              size="sm"
+              className="flex-1 bg-primary hover:bg-primary/90 h-8 text-xs"
+            >
+              <Plus className="w-3 h-3 mr-1" />
+              Add
+            </Button>
+            {selectedPrinter && (
+              <Button
+                onClick={handleRemoveSelected}
+                size="sm"
+                variant="outline"
+                className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300 h-8"
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            )}
           </div>
         </div>
 
