@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { printerEmulator } from "@/lib/printerEmulator";
 import { multiPrinterEmulator } from "@/lib/multiPrinterEmulator";
+import { printerTransport, isRelayMode } from "@/lib/printerTransport";
 
 /**
  * Polls a connected printer with a command (default: ^SU) at a fixed interval.
@@ -58,9 +59,10 @@ export function useServiceStatusPolling(options: {
       try {
         const isEmulatorEnabled = multiPrinterEmulator.enabled || printerEmulator.enabled;
         const hasElectronAPI = !!window.electronAPI;
+        const relayMode = isRelayMode();
 
-        if (!isEmulatorEnabled && !hasElectronAPI) {
-          console.log('[useServiceStatusPolling] No electronAPI and emulator not enabled, skip tick');
+        if (!isEmulatorEnabled && !hasElectronAPI && !relayMode) {
+          console.log('[useServiceStatusPolling] No transport available, skip tick');
           return;
         }
 
@@ -80,7 +82,8 @@ export function useServiceStatusPolling(options: {
           const emulatorResult = emulator.processCommand(command);
           result = { success: emulatorResult.success, response: emulatorResult.response };
         } else {
-          result = await window.electronAPI!.printer.sendCommand(printerId, command);
+          // Use unified transport (Electron or relay)
+          result = await printerTransport.sendCommand(printerId, command);
         }
 
         if (cancelled) return;
