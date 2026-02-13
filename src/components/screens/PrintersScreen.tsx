@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Server, GripVertical } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Server, GripVertical, Package, BarChart3 } from 'lucide-react';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 import { useState, useEffect, useMemo } from 'react';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
@@ -74,6 +74,10 @@ interface PrintersScreenProps {
   rightPanelContent?: React.ReactNode;
   // Per-printer countdown lookup
   getCountdown?: (printerId: number) => { seconds: number | null; type: 'starting' | 'stopping' | null };
+  // Navigation to Consumables / Reports
+  onConsumables?: () => void;
+  onReports?: () => void;
+  lowStockCount?: number;
 }
 
 // Sortable wrapper for PrinterListItem
@@ -201,6 +205,9 @@ export function PrintersScreen({
   onSyncMaster,
   rightPanelContent,
   getCountdown,
+  onConsumables,
+  onReports,
+  lowStockCount = 0,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -367,6 +374,33 @@ export function PrintersScreen({
                 <Trash2 className="w-3 h-3" />
               </Button>
             )}
+          </div>
+
+          {/* Consumables & Reports navigation */}
+          <div className="flex gap-2 mt-2">
+            <Button
+              onClick={onConsumables}
+              size="sm"
+              variant="outline"
+              className="flex-1 h-8 text-xs border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+            >
+              <Package className="w-3 h-3 mr-1" />
+              Consumables
+              {lowStockCount > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full bg-destructive text-destructive-foreground">
+                  {lowStockCount}
+                </span>
+              )}
+            </Button>
+            <Button
+              onClick={onReports}
+              size="sm"
+              variant="outline"
+              className="flex-1 h-8 text-xs border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+            >
+              <BarChart3 className="w-3 h-3 mr-1" />
+              Reports
+            </Button>
           </div>
         </div>
 
