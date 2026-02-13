@@ -347,7 +347,7 @@ export function ReportsScreen({
               <div className="w-8 h-8 rounded-lg industrial-button flex items-center justify-center">
                 <Gauge className="w-4 h-4 text-white" />
               </div>
-              <h2 className="text-lg md:text-xl font-bold text-foreground">Fleet OEE</h2>
+              <h2 className="text-lg md:text-xl font-bold text-foreground">Combined Printer OEE</h2>
               <span className={`ml-auto px-4 py-1.5 rounded-full text-xs font-bold shadow-sm ${
                 overallOEE.oee >= 85 ? 'bg-success text-success-foreground' :
                 overallOEE.oee >= 60 ? 'bg-warning text-warning-foreground' :
