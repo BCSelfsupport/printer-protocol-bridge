@@ -148,9 +148,12 @@ export function usePrinterConnection() {
     
     setIsChecking(true);
     try {
-      // Include ALL printers in availability polling (including the connected one).
-      // ICMP ping does not cause the printer UI to flash — only TCP connections do.
+      // Exclude the connected printer from availability polling to prevent status
+      // oscillation when the cloud function can't reach local-network printers.
+      // The connected printer's status is already maintained by ^SU polling.
+      const connectedId = connectionState.connectedPrinter?.id;
       const printerData = printers
+        .filter((p) => p.id !== connectedId)
         .map((p) => ({
           id: p.id,
           ipAddress: p.ipAddress,
@@ -1284,9 +1287,30 @@ export function usePrinterConnection() {
     const printer = connectionState.connectedPrinter;
     const templateCode = templateToProtocolCode(templateValue);
     
-    // Build field subcommands
+    // Convert absolute 32-dot canvas Y coordinates to template-relative Y coordinates.
+    // The canvas places the template area at the bottom of a 32-dot grid, so a 7-dot
+    // template starts at y=25 (32-7). The printer expects y=0 for the top of the template.
+    const templateHeight = (() => {
+      if (!templateValue) return 32;
+      // Single-line templates: '7', '9', '16', etc.
+      const parsed = parseInt(templateValue);
+      if (!isNaN(parsed)) return parsed;
+      // Multi-line templates: 'multi-2x7' → height from known map
+      const multiHeightMap: Record<string, number> = {
+        'multi-5x5': 29, 'multi-4x7': 31, 'multi-4x5': 23,
+        'multi-3x9': 29, 'multi-3x7': 23,
+        'multi-2x12': 25, 'multi-2x9': 19, 'multi-2x7': 16, 'multi-2x5': 11,
+      };
+      return multiHeightMap[templateValue] ?? 32;
+    })();
+    const blockedRows = 32 - templateHeight;
+    
+    // Build field subcommands with corrected coordinates
     const fieldSubcommands = fields.map((field, index) => 
-      buildFieldSubcommand(field, index + 1)
+      buildFieldSubcommand({
+        ...field,
+        y: field.y - blockedRows, // Convert to template-relative Y
+      }, index + 1)
     ).join('');
 
     // Build the full ^NM command: ^NM t;s;o;p;name^AT1;...^AT2;...
