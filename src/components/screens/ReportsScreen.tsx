@@ -173,6 +173,17 @@ function StatCard({ icon: Icon, label, value, accent }: {
   );
 }
 
+// Live tick hook: forces re-render every second when active runs exist
+function useLiveTick(hasActiveRuns: boolean) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!hasActiveRuns) return;
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [hasActiveRuns]);
+  return tick;
+}
+
 /* ================================================================
    MAIN COMPONENT
    ================================================================ */
@@ -193,7 +204,10 @@ export function ReportsScreen({
   const [newMessageName, setNewMessageName] = useState('');
   const [newTargetCount, setNewTargetCount] = useState('');
 
-  // Per-printer run data
+  const hasActiveRuns = runs.some(r => r.endTime === null);
+  const tick = useLiveTick(hasActiveRuns);
+
+  // Per-printer run data (recalculates every second when active runs exist)
   const printerRunData = useMemo(() => {
     const map = new Map<number, { runs: ProductionRun[]; metrics: { run: ProductionRun; oee: OEEMetrics }[] }>();
     printers.forEach(p => map.set(p.id, { runs: [], metrics: [] }));
@@ -205,10 +219,12 @@ export function ReportsScreen({
       }
     });
     return map;
-  }, [runs, printers]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runs, printers, tick]);
 
   // Overall stats across all printers
-  const allMetrics = useMemo(() => runs.map(run => ({ run, oee: calculateOEE(run) })), [runs]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const allMetrics = useMemo(() => runs.map(run => ({ run, oee: calculateOEE(run) })), [runs, tick]);
 
   const overallOEE = useMemo((): OEEMetrics | null => {
     if (allMetrics.length === 0) return null;
@@ -552,21 +568,25 @@ function PrinterReportDetail({
 }) {
   const activeRuns = runs.filter(r => r.endTime === null);
   const completedRuns = runs.filter(r => r.endTime !== null);
+  const tick = useLiveTick(activeRuns.length > 0);
 
   const printerOEE = useMemo((): OEEMetrics | null => {
     if (metrics.length === 0) return null;
     const completed = metrics.filter(rm => rm.run.endTime !== null);
     const source = completed.length > 0 ? completed : metrics;
-    const avg = (field: keyof OEEMetrics) => source.reduce((s, rm) => s + (rm.oee[field] as number), 0) / source.length;
+    // Recalculate OEE live for active runs
+    const liveMetrics = source.map(rm => rm.run.endTime === null ? { ...rm, oee: calculateOEE(rm.run) } : rm);
+    const avg = (field: keyof OEEMetrics) => liveMetrics.reduce((s, rm) => s + (rm.oee[field] as number), 0) / liveMetrics.length;
     return {
       availability: avg('availability'), performance: avg('performance'), oee: avg('oee'),
-      plannedTime: source.reduce((s, rm) => s + rm.oee.plannedTime, 0),
-      runTime: source.reduce((s, rm) => s + rm.oee.runTime, 0),
-      totalDowntime: source.reduce((s, rm) => s + rm.oee.totalDowntime, 0),
-      targetCount: source.reduce((s, rm) => s + rm.oee.targetCount, 0),
-      actualCount: source.reduce((s, rm) => s + rm.oee.actualCount, 0),
+      plannedTime: liveMetrics.reduce((s, rm) => s + rm.oee.plannedTime, 0),
+      runTime: liveMetrics.reduce((s, rm) => s + rm.oee.runTime, 0),
+      totalDowntime: liveMetrics.reduce((s, rm) => s + rm.oee.totalDowntime, 0),
+      targetCount: liveMetrics.reduce((s, rm) => s + rm.oee.targetCount, 0),
+      actualCount: liveMetrics.reduce((s, rm) => s + rm.oee.actualCount, 0),
     };
-  }, [metrics]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metrics, tick]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -835,6 +855,11 @@ function ActiveRunCard({
   onUpdateCount: (count: string) => void;
 }) {
   const [endCount, setEndCount] = useState(String(run.actualCount));
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
   const elapsed = formatDuration(Date.now() - run.startTime);
   const perfPct = run.targetCount > 0 ? Math.min(100, (run.actualCount / run.targetCount) * 100) : 0;
 
