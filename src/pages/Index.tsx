@@ -499,25 +499,7 @@ const Index = () => {
         onOpenChange={setAdjustDialogOpen}
         settings={connectionState.settings}
         onUpdate={updateSettings}
-        onSendCommand={async (command: string) => {
-          console.log('[AdjustDialog] Sending live command:', command);
-          // Send command directly via the connection hook
-          if (connectionState.isConnected && connectionState.connectedPrinter) {
-            const printerId = connectionState.connectedPrinter.id;
-            // Use emulator or electron API
-            if (window.electronAPI) {
-              const result = await window.electronAPI.printer.sendCommand(printerId, command);
-              console.log('[AdjustDialog] Command result:', result);
-            } else {
-              // Emulator fallback handled in usePrinterConnection
-              const { printerEmulator } = await import('@/lib/printerEmulator');
-              if (printerEmulator.enabled) {
-                const result = printerEmulator.processCommand(command);
-                console.log('[AdjustDialog] Emulator result:', result);
-              }
-            }
-          }
-        }}
+        onSendCommand={sendCommand}
         isConnected={connectionState.isConnected}
       />
 
