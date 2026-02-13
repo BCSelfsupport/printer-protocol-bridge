@@ -15,6 +15,7 @@ import { CleanScreen } from '@/components/screens/CleanScreen';
 import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
 import { RelayConnectDialog } from '@/components/relay/RelayConnectDialog';
 import { ConsumablesScreen } from '@/components/screens/ConsumablesScreen';
+import { LowStockAlert, LowStockAlertData } from '@/components/consumables/LowStockAlert';
 
 import { SignInDialog } from '@/components/printers/SignInDialog';
 import { HelpDialog } from '@/components/help/HelpDialog';
@@ -25,7 +26,7 @@ import { useConsumableStorage } from '@/hooks/useConsumableStorage';
 import { DevPanel } from '@/components/dev/DevPanel';
 import { PrintMessage } from '@/types/printer';
 import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
-import { useToast } from '@/hooks/use-toast';
+
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
 
@@ -53,7 +54,7 @@ const Index = () => {
   
   // Consumable storage
   const consumableStorage = useConsumableStorage();
-  const { toast } = useToast();
+  
   
   const {
     printers,
@@ -117,33 +118,44 @@ const Index = () => {
     messages: connectionState.messages,
   });
 
-  // Low-stock alerts: check when printer signals LOW/EMPTY on linked consumables
+  // Low-stock alerts: auto-deduct and show popup when printer signals LOW/EMPTY
+  const [lowStockAlertQueue, setLowStockAlertQueue] = useState<LowStockAlertData[]>([]);
   const alertedConsumablesRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     printers.forEach(printer => {
       if (!printer.isAvailable) return;
       const linked = consumableStorage.getConsumablesForPrinter(printer.id);
       
-      const checkAndAlert = (level: string | undefined, consumable: ReturnType<typeof consumableStorage.getConsumablesForPrinter>['ink'], label: string) => {
+      const checkAndDeduct = (level: string | undefined, consumable: ReturnType<typeof consumableStorage.getConsumablesForPrinter>['ink'], label: 'Ink' | 'Makeup') => {
         if (!consumable || !level) return;
-        if ((level === 'LOW' || level === 'EMPTY') && consumable.currentStock <= consumable.minimumStock) {
-          const alertKey = `${consumable.id}-${level}`;
-          if (!alertedConsumablesRef.current.has(alertKey)) {
-            alertedConsumablesRef.current.add(alertKey);
-            toast({
-              title: `Low ${label} Stock Alert`,
-              description: `${printer.name}: ${label} level is ${level}. ${consumable.partNumber} stock is ${consumable.currentStock} ${consumable.unit} (minimum: ${consumable.minimumStock}). Order more supplies.`,
-              variant: 'destructive',
-              duration: 10000,
-            });
-          }
+        if (level !== 'LOW' && level !== 'EMPTY') return;
+        
+        const alertKey = `${printer.id}-${consumable.id}-${level}`;
+        if (alertedConsumablesRef.current.has(alertKey)) return;
+        alertedConsumablesRef.current.add(alertKey);
+        
+        // Auto-deduct 1 unit
+        let deducted = false;
+        if (consumable.currentStock > 0) {
+          consumableStorage.adjustStock(consumable.id, -1);
+          deducted = true;
         }
+        
+        // Queue a popup alert with updated stock info
+        const updatedStock = deducted ? consumable.currentStock - 1 : consumable.currentStock;
+        setLowStockAlertQueue(prev => [...prev, {
+          printerName: printer.name,
+          label,
+          level: level as 'LOW' | 'EMPTY',
+          consumable: { ...consumable, currentStock: updatedStock },
+          deducted,
+        }]);
       };
       
-      checkAndAlert(printer.inkLevel, linked.ink, 'Ink');
-      checkAndAlert(printer.makeupLevel, linked.makeup, 'Makeup');
+      checkAndDeduct(printer.inkLevel, linked.ink, 'Ink');
+      checkAndDeduct(printer.makeupLevel, linked.makeup, 'Makeup');
     });
-  }, [printers, consumableStorage, toast]);
+  }, [printers, consumableStorage]);
 
   const handleNavigate = (item: NavItem) => {
     if (item === 'adjust') {
@@ -585,6 +597,16 @@ const Index = () => {
       <RelayConnectDialog
         open={relayDialogOpen}
         onOpenChange={setRelayDialogOpen}
+      />
+
+      {/* Low Stock Alert Popup */}
+      <LowStockAlert
+        alert={lowStockAlertQueue.length > 0 ? lowStockAlertQueue[0] : null}
+        onDismiss={() => setLowStockAlertQueue(prev => prev.slice(1))}
+        onNavigateToConsumables={() => {
+          setLowStockAlertQueue(prev => prev.slice(1));
+          setCurrentScreen('consumables');
+        }}
       />
     </div>
   );
