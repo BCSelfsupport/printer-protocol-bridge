@@ -318,6 +318,7 @@ class PrinterEmulatorInstance {
         `Makeup Level: ${s.makeupLevel}`,
         `V300UP: ${s.v300up ? 1 : 0} VLT_ON: ${s.vltOn ? 1 : 0} GUT_ON: ${s.gutOn ? 1 : 0} MOD_ON: ${s.modOn ? 1 : 0}`,
         `Print Status: ${s.hvOn && s.jetRunning ? 'Ready' : 'Not ready'}`,
+        `Message: ${s.currentMessage || 'NONE'}`,
       ].join('\r\n');
     } else {
       return [
@@ -325,6 +326,7 @@ class PrinterEmulatorInstance {
         `INK: ${s.inkLevel} MAKEUP: ${s.makeupLevel}`,
         `V300UP: ${s.v300up ? 1 : 0} VLT_ON: ${s.vltOn ? 1 : 0} GUT_ON: ${s.gutOn ? 1 : 0} MOD_ON: ${s.modOn ? 1 : 0}`,
         `PRINT: ${s.hvOn && s.jetRunning ? 'Ready' : 'Not ready'}`,
+        `MSG: ${s.currentMessage || 'NONE'}`,
       ].join('\r\n');
     }
   }

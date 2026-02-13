@@ -296,6 +296,8 @@ export function usePrinterConnection() {
     // Sync the printer's status in the list with the HV state + fluid levels
     const inkLevelCard = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['inkLevel'];
     const makeupLevelCard = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['makeupLevel'];
+    // Extract current message from ^SU if available (ignore "NONE" placeholder)
+    const parsedMessage = parsed.currentMessage && parsed.currentMessage !== 'NONE' ? parsed.currentMessage.toUpperCase() : undefined;
     if (connectedPrinterId) {
       updatePrinterStatus(connectedPrinterId, {
         isAvailable: true,
@@ -303,6 +305,7 @@ export function usePrinterConnection() {
         hasActiveErrors: parsed.errorActive ?? false,
         inkLevel: inkLevelCard,
         makeupLevel: makeupLevelCard,
+        currentMessage: parsedMessage,
       });
     }
 
@@ -318,10 +321,10 @@ export function usePrinterConnection() {
       return {
         ...prev,
         // Update isRunning and consumable levels based on ^SU response
-        // IMPORTANT: Preserve currentMessage - it's only updated by selectMessage
+        // Also update currentMessage if parsed from ^SU (keeps it in sync with printer state)
         status: prev.status 
-          ? { ...prev.status, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel } 
-          : { ...mockStatus, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel, currentMessage: prev.status?.currentMessage ?? mockStatus.currentMessage },
+          ? { ...prev.status, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel, ...(parsedMessage ? { currentMessage: parsedMessage } : {}) } 
+          : { ...mockStatus, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel, currentMessage: parsedMessage ?? prev.status?.currentMessage ?? mockStatus.currentMessage },
         metrics: {
           ...previous,
           modulation: parsed.modulation ?? previous.modulation,
