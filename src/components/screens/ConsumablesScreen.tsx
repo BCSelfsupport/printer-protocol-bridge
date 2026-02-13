@@ -41,7 +41,7 @@ const defaultFormData: ConsumableFormData = {
   description: '',
   currentStock: 0,
   minimumStock: 1,
-  unit: 'bottles',
+  unit: 'cases',
 };
 
 export function ConsumablesScreen({
@@ -312,9 +312,10 @@ export function ConsumablesScreen({
               <Select value={formData.unit} onValueChange={(v) => setFormData(prev => ({ ...prev, unit: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bottles">Bottles</SelectItem>
-                  <SelectItem value="cartridges">Cartridges</SelectItem>
+                  <SelectItem value="cases">Cases (5 x Quart)</SelectItem>
+                  <SelectItem value="bottles">Bottles (Quart)</SelectItem>
                   <SelectItem value="liters">Liters</SelectItem>
+                  <SelectItem value="cartridges">Cartridges</SelectItem>
                   <SelectItem value="units">Units</SelectItem>
                 </SelectContent>
               </Select>
