@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { CountdownType } from '@/hooks/useJetCountdown';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -14,15 +14,18 @@ import { ServiceScreen } from '@/components/screens/ServiceScreen';
 import { CleanScreen } from '@/components/screens/CleanScreen';
 import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
 import { RelayConnectDialog } from '@/components/relay/RelayConnectDialog';
+import { ConsumablesScreen } from '@/components/screens/ConsumablesScreen';
 
 import { SignInDialog } from '@/components/printers/SignInDialog';
 import { HelpDialog } from '@/components/help/HelpDialog';
 import { usePrinterConnection } from '@/hooks/usePrinterConnection';
 import { useJetCountdown } from '@/hooks/useJetCountdown';
 import { useMessageStorage, isReadOnlyMessage } from '@/hooks/useMessageStorage';
+import { useConsumableStorage } from '@/hooks/useConsumableStorage';
 import { DevPanel } from '@/components/dev/DevPanel';
 import { PrintMessage } from '@/types/printer';
 import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
+import { useToast } from '@/hooks/use-toast';
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
 
@@ -44,9 +47,14 @@ const Index = () => {
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [helpDialogOpen, setHelpDialogOpen] = useState(false);
   const [relayDialogOpen, setRelayDialogOpen] = useState(false);
+  const [homeTab, setHomeTab] = useState<'printers' | 'consumables'>('printers');
   
   // Local message storage (persists to localStorage)
   const { saveMessage, getMessage, deleteMessage: deleteStoredMessage } = useMessageStorage();
+  
+  // Consumable storage
+  const consumableStorage = useConsumableStorage();
+  const { toast } = useToast();
   
   const {
     printers,
@@ -109,6 +117,34 @@ const Index = () => {
     currentMessage: connectionState.status?.currentMessage,
     messages: connectionState.messages,
   });
+
+  // Low-stock alerts: check when printer signals LOW/EMPTY on linked consumables
+  const alertedConsumablesRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    printers.forEach(printer => {
+      if (!printer.isAvailable) return;
+      const linked = consumableStorage.getConsumablesForPrinter(printer.id);
+      
+      const checkAndAlert = (level: string | undefined, consumable: ReturnType<typeof consumableStorage.getConsumablesForPrinter>['ink'], label: string) => {
+        if (!consumable || !level) return;
+        if ((level === 'LOW' || level === 'EMPTY') && consumable.currentStock <= consumable.minimumStock) {
+          const alertKey = `${consumable.id}-${level}`;
+          if (!alertedConsumablesRef.current.has(alertKey)) {
+            alertedConsumablesRef.current.add(alertKey);
+            toast({
+              title: `Low ${label} Stock Alert`,
+              description: `${printer.name}: ${label} level is ${level}. ${consumable.partNumber} stock is ${consumable.currentStock} ${consumable.unit} (minimum: ${consumable.minimumStock}). Order more supplies.`,
+              variant: 'destructive',
+              duration: 10000,
+            });
+          }
+        }
+      };
+      
+      checkAndAlert(printer.inkLevel, linked.ink, 'Ink');
+      checkAndAlert(printer.makeupLevel, linked.makeup, 'Makeup');
+    });
+  }, [printers, consumableStorage, toast]);
 
   const handleNavigate = (item: NavItem) => {
     if (item === 'adjust') {
@@ -373,62 +409,125 @@ const Index = () => {
         break;
     }
     
-    // Default / home / desktop messages+editMessage: render PrintersScreen with optional right panel
+    // Default / home / desktop messages+editMessage: render with top-level tabs
     const homeMsgName = connectionState.status?.currentMessage;
     const homeMsgContent = homeMsgName ? getMessage(homeMsgName) : undefined;
+
+    const lowStockCount = consumableStorage.getLowStockConsumables().length;
+    
+    // If on the Consumables tab (and not in a printer-control sub-screen), show consumables
+    if (homeTab === 'consumables' && (currentScreen === 'home' || currentScreen === 'messages' || currentScreen === 'editMessage')) {
+      return (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Top-level tab bar */}
+          <div className="flex border-b bg-muted/30">
+            <button
+              onClick={() => setHomeTab('printers')}
+              className="flex-1 px-4 py-2.5 text-sm font-medium transition-colors text-muted-foreground hover:text-foreground"
+            >
+              Printers
+            </button>
+            <button
+              onClick={() => setHomeTab('consumables')}
+              className="flex-1 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 border-primary text-foreground"
+            >
+              Consumables
+              {lowStockCount > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-xs font-bold rounded-full bg-destructive text-destructive-foreground">
+                  {lowStockCount}
+                </span>
+              )}
+            </button>
+          </div>
+          <ConsumablesScreen
+            consumables={consumableStorage.consumables}
+            assignments={consumableStorage.assignments}
+            printers={printers}
+            onAddConsumable={consumableStorage.addConsumable}
+            onUpdateConsumable={consumableStorage.updateConsumable}
+            onRemoveConsumable={consumableStorage.removeConsumable}
+            onSetStock={consumableStorage.setStock}
+            onAdjustStock={consumableStorage.adjustStock}
+            onAssignConsumable={consumableStorage.assignConsumable}
+          />
+        </div>
+      );
+    }
     
     return (
-      <PrintersScreen
-        printers={printers}
-        onConnect={handleConnect}
-        onHome={handleHome}
-        onAddPrinter={addPrinter}
-        onRemovePrinter={removePrinter}
-        onReorderPrinters={reorderPrinters}
-        onUpdatePrinter={updatePrinter}
-        onQueryPrinterMetrics={queryPrinterMetrics}
-        isDevSignedIn={isDevSignedIn}
-        onDevSignIn={() => setDevSignInDialogOpen(true)}
-        onDevSignOut={() => setIsDevSignedIn(false)}
-        isConnected={connectionState.isConnected}
-        connectedPrinter={connectionState.connectedPrinter}
-        status={connectionState.status}
-        onStart={handleStartPrint}
-        onStop={stopPrint}
-        onJetStop={handleJetStop}
-        onHvOn={startPrint}
-        onHvOff={stopPrint}
-        onNewMessage={() => {
-          setOpenNewDialogOnMount(true);
-          setCurrentScreen('messages');
-        }}
-        onEditMessage={() => setCurrentScreen('messages')}
-        onSignIn={async () => {
-          if (isSignedIn) {
-            const success = await signOut();
-            if (success) {
-              setIsSignedIn(false);
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top-level tab bar */}
+        <div className="flex border-b bg-muted/30">
+          <button
+            onClick={() => setHomeTab('printers')}
+            className="flex-1 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 border-primary text-foreground"
+          >
+            Printers
+          </button>
+          <button
+            onClick={() => setHomeTab('consumables')}
+            className="flex-1 px-4 py-2.5 text-sm font-medium transition-colors text-muted-foreground hover:text-foreground"
+          >
+            Consumables
+            {lowStockCount > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-xs font-bold rounded-full bg-destructive text-destructive-foreground">
+                {lowStockCount}
+              </span>
+            )}
+          </button>
+        </div>
+        <PrintersScreen
+          printers={printers}
+          onConnect={handleConnect}
+          onHome={handleHome}
+          onAddPrinter={addPrinter}
+          onRemovePrinter={removePrinter}
+          onReorderPrinters={reorderPrinters}
+          onUpdatePrinter={updatePrinter}
+          onQueryPrinterMetrics={queryPrinterMetrics}
+          isDevSignedIn={isDevSignedIn}
+          onDevSignIn={() => setDevSignInDialogOpen(true)}
+          onDevSignOut={() => setIsDevSignedIn(false)}
+          isConnected={connectionState.isConnected}
+          connectedPrinter={connectionState.connectedPrinter}
+          status={connectionState.status}
+          onStart={handleStartPrint}
+          onStop={stopPrint}
+          onJetStop={handleJetStop}
+          onHvOn={startPrint}
+          onHvOff={stopPrint}
+          onNewMessage={() => {
+            setOpenNewDialogOnMount(true);
+            setCurrentScreen('messages');
+          }}
+          onEditMessage={() => setCurrentScreen('messages')}
+          onSignIn={async () => {
+            if (isSignedIn) {
+              const success = await signOut();
+              if (success) {
+                setIsSignedIn(false);
+              }
+            } else {
+              setSignInDialogOpen(true);
             }
-          } else {
-            setSignInDialogOpen(true);
-          }
-        }}
-        onHelp={() => setHelpDialogOpen(true)}
-        onResetCounter={resetCounter}
-        onResetAllCounters={resetAllCounters}
-        onQueryCounters={queryCounters}
-        isSignedIn={isSignedIn}
-        countdownSeconds={countdownSeconds}
-        countdownType={countdownType}
-        messageContent={homeMsgContent}
-        onControlMount={() => setControlScreenOpen(true)}
-        onControlUnmount={() => setControlScreenOpen(false)}
-        onNavigate={handleNavigate}
-        onTurnOff={handleTurnOff}
-        onSyncMaster={syncMaster}
-        rightPanelContent={getRightPanelContent()}
-        getCountdown={getCountdown}
-      />
+          }}
+          onHelp={() => setHelpDialogOpen(true)}
+          onResetCounter={resetCounter}
+          onResetAllCounters={resetAllCounters}
+          onQueryCounters={queryCounters}
+          isSignedIn={isSignedIn}
+          countdownSeconds={countdownSeconds}
+          countdownType={countdownType}
+          messageContent={homeMsgContent}
+          onControlMount={() => setControlScreenOpen(true)}
+          onControlUnmount={() => setControlScreenOpen(false)}
+          onNavigate={handleNavigate}
+          onTurnOff={handleTurnOff}
+          onSyncMaster={syncMaster}
+          rightPanelContent={getRightPanelContent()}
+          getCountdown={getCountdown}
+        />
+      </div>
     );
   };
 
