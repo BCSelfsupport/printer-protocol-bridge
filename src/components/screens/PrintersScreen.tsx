@@ -360,7 +360,7 @@ export function PrintersScreen({
               onClick={onConsumables}
               size="sm"
               variant="outline"
-              className="flex-1 h-8 text-xs border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+              className="flex-1 h-8 text-xs border-slate-500 text-white bg-slate-700/50 hover:bg-slate-600 hover:text-white"
             >
               <Package className="w-3 h-3 mr-1" />
               Consumables
@@ -374,7 +374,7 @@ export function PrintersScreen({
               onClick={onReports}
               size="sm"
               variant="outline"
-              className="flex-1 h-8 text-xs border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+              className="flex-1 h-8 text-xs border-slate-500 text-white bg-slate-700/50 hover:bg-slate-600 hover:text-white"
             >
               <BarChart3 className="w-3 h-3 mr-1" />
               Reports
