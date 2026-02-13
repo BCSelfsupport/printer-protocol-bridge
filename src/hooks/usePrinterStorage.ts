@@ -41,7 +41,23 @@ export function usePrinterStorage() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored);
+        let parsed: Printer[] = JSON.parse(stored);
+        // If not in emulator mode, reset all printers to offline on load.
+        // Actual availability will be determined by polling once a transport is available.
+        const isEmulator = multiPrinterEmulator.enabled;
+        if (!isEmulator) {
+          parsed = parsed.map(p => ({
+            ...p,
+            isAvailable: false,
+            status: 'offline' as const,
+            hasActiveErrors: false,
+            inkLevel: undefined,
+            makeupLevel: undefined,
+            currentMessage: undefined,
+            printCount: undefined,
+          }));
+        }
+        return parsed;
       }
     } catch (e) {
       console.error('Failed to load printers from storage:', e);
