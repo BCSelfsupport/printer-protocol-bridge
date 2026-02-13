@@ -153,12 +153,12 @@ const Index = () => {
   // Wrapped handlers that trigger countdown
   const handleStartPrint = useCallback(() => {
     jetStart();
-    if (connectedPrinterId) startCountdown(connectedPrinterId, 'starting', 106);
+    if (connectedPrinterId) startCountdown(connectedPrinterId, 'starting');
   }, [jetStart, startCountdown, connectedPrinterId]);
   
   const handleJetStop = useCallback(() => {
     jetStop();
-    if (connectedPrinterId) startCountdown(connectedPrinterId, 'stopping', 106);
+    if (connectedPrinterId) startCountdown(connectedPrinterId, 'stopping');
   }, [jetStop, startCountdown, connectedPrinterId]);
 
   // Build right panel content for desktop split-view (messages/editMessage screens)
