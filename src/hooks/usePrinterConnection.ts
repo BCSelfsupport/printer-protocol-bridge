@@ -1195,8 +1195,8 @@ export function usePrinterConnection() {
   const fontToProtocolCode = (fontSize: string): number => {
     const map: Record<string, number> = {
       'Standard5High': 0,
-      'Standard7High': 1,
-      'Narrow7High': 2,
+      'Standard7High': 2,
+      'Narrow7High': 1,
       'Standard9High': 3,
       'Standard12High': 4,
       'Standard16High': 5,
