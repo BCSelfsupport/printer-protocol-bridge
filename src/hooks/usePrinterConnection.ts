@@ -3,7 +3,7 @@ import { Printer, PrinterStatus, PrinterMetrics, PrintMessage, PrintSettings, Co
 import { usePrinterStorage } from '@/hooks/usePrinterStorage';
 import { supabase } from '@/integrations/supabase/client';
 import '@/types/electron.d.ts';
-import { parseStatusResponse } from '@/lib/printerProtocol';
+import { parseStatusResponse, parseTemperatureResponse } from '@/lib/printerProtocol';
 import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
@@ -358,6 +358,20 @@ export function usePrinterConnection() {
     }
   }, []);
 
+  // Stable callback for ^TP (temperature) polling
+  const handleTemperatureResponse = useCallback((raw: string) => {
+    const parsed = parseTemperatureResponse(raw);
+    if (!parsed) return;
+    setConnectionState((prev) => ({
+      ...prev,
+      metrics: prev.metrics ? {
+        ...prev.metrics,
+        printheadTemp: parsed.printheadTemp,
+        electronicsTemp: parsed.electronicsTemp,
+      } : null,
+    }));
+  }, []);
+
   useServiceStatusPolling({
     enabled: shouldPollStatus,
     printerId: connectedPrinterId,
@@ -366,6 +380,17 @@ export function usePrinterConnection() {
     intervalMs: 3000,
     command: '^SU',
     onResponse: handleServiceResponse,
+  });
+
+  // Poll temperature via ^TP while Service or Dashboard screen is open
+  useServiceStatusPolling({
+    enabled: shouldPollStatus,
+    printerId: connectedPrinterId,
+    printerIp: connectionState.connectedPrinter?.ipAddress,
+    printerPort: connectionState.connectedPrinter?.port,
+    intervalMs: 5000,
+    command: '^TP',
+    onResponse: handleTemperatureResponse,
   });
 
   // Poll printer date/time via ^SD whenever connected (not just on Service/Dashboard)
@@ -419,6 +444,7 @@ export function usePrinterConnection() {
       cancelled = true;
     };
   }, [serviceScreenOpen, controlScreenOpen, connectionState.isConnected, connectionState.connectedPrinter]);
+
 
   // Query printer status (^SU) and update state - used on connect and after commands
   const queryPrinterStatus = useCallback(async (printer: Printer) => {
@@ -561,6 +587,24 @@ export function usePrinterConnection() {
       console.error('[queryMessageList] Failed to query ^LM:', e);
     }
   }, [updatePrinter]);
+
+  // Re-query message list when a polling screen opens (socket is now ready).
+  // This ensures messages are fetched even if the initial connect-time query missed.
+  const prevShouldPollRef = useRef(false);
+  useEffect(() => {
+    if (shouldPollStatus && !prevShouldPollRef.current && connectionState.connectedPrinter) {
+      console.log('[usePrinterConnection] Polling screen opened, re-querying message list');
+      // Small delay to let socket fully open
+      const timer = setTimeout(() => {
+        if (connectionState.connectedPrinter) {
+          queryMessageList(connectionState.connectedPrinter);
+        }
+      }, 800);
+      prevShouldPollRef.current = shouldPollStatus;
+      return () => clearTimeout(timer);
+    }
+    prevShouldPollRef.current = shouldPollStatus;
+  }, [shouldPollStatus, connectionState.connectedPrinter, queryMessageList]);
 
   const connect = useCallback(async (printer: Printer) => {
     // If using emulator, simulate connection
