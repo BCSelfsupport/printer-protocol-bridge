@@ -42,31 +42,71 @@ function OEEGauge({ value, label, size = 120, isPrimary = false }: { value: numb
     return () => clearTimeout(timer);
   }, [value]);
 
-  const strokeWidth = isPrimary ? size * 0.12 : size * 0.1;
+  const strokeWidth = isPrimary ? size * 0.09 : size * 0.08;
+  const trackWidth = isPrimary ? size * 0.04 : size * 0.035;
   const radius = (size - strokeWidth) / 2;
+  const innerRadius = radius - strokeWidth * 0.8;
   const circumference = 2 * Math.PI * radius;
+  const innerCircumference = 2 * Math.PI * innerRadius;
   const offset = circumference - (Math.min(100, animatedValue) / 100) * circumference;
+  const innerOffset = innerCircumference - (Math.min(100, animatedValue) / 100) * innerCircumference;
   const center = size / 2;
   const color = getOEEColor(value);
 
+  // Position of the end dot on the arc
+  const angle = (Math.min(100, animatedValue) / 100) * 360 - 90;
+  const dotX = center + radius * Math.cos((angle * Math.PI) / 180);
+  const dotY = center + radius * Math.sin((angle * Math.PI) / 180);
+
   return (
-    <div className="flex flex-col items-center gap-1.5">
-      <div className="relative" style={{ width: size, height: size }}>
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative group" style={{ width: size, height: size }}>
+        {/* Outer glow */}
         {isPrimary && (
-          <div className="absolute inset-0 rounded-full blur-xl opacity-20" style={{ backgroundColor: color }} />
+          <div className="absolute inset-[-8px] rounded-full opacity-25 blur-xl transition-opacity duration-500 group-hover:opacity-40"
+               style={{ background: `radial-gradient(circle, ${color} 0%, transparent 70%)` }} />
         )}
+        {/* Inner soft glow */}
+        <div className="absolute inset-[15%] rounded-full opacity-10 blur-lg"
+             style={{ backgroundColor: color }} />
+
         <svg width={size} height={size} className="transform -rotate-90 relative z-10">
           <defs>
             <linearGradient id={`gauge-grad-${label}-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-              <stop offset="100%" stopColor={color} stopOpacity={1} />
+              <stop offset="0%" stopColor={color} stopOpacity={0.6} />
+              <stop offset="50%" stopColor={color} stopOpacity={1} />
+              <stop offset="100%" stopColor={color} stopOpacity={0.8} />
             </linearGradient>
             <filter id={`gauge-glow-${label}-${size}`}>
-              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feGaussianBlur stdDeviation="2.5" result="blur" />
               <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
+            <filter id={`gauge-shadow-${label}-${size}`}>
+              <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor={color} floodOpacity="0.4" />
+            </filter>
           </defs>
-          <circle cx={center} cy={center} r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth={strokeWidth} opacity={0.5} />
+
+          {/* Background track - outer */}
+          <circle cx={center} cy={center} r={radius} fill="none"
+                  stroke="hsl(var(--muted))" strokeWidth={trackWidth} opacity={0.3} />
+
+          {/* Background track - inner */}
+          <circle cx={center} cy={center} r={innerRadius} fill="none"
+                  stroke="hsl(var(--muted))" strokeWidth={trackWidth * 0.6} opacity={0.15} />
+
+          {/* Inner progress ring (thinner, subtle) */}
+          <circle
+            cx={center} cy={center} r={innerRadius} fill="none"
+            stroke={color}
+            strokeWidth={trackWidth * 0.6}
+            strokeDasharray={innerCircumference}
+            strokeDashoffset={innerOffset}
+            strokeLinecap="round"
+            opacity={0.25}
+            className="transition-all duration-1000 ease-out"
+          />
+
+          {/* Main progress arc */}
           <circle
             cx={center} cy={center} r={radius} fill="none"
             stroke={`url(#gauge-grad-${label}-${size})`}
@@ -74,17 +114,32 @@ function OEEGauge({ value, label, size = 120, isPrimary = false }: { value: numb
             strokeDasharray={circumference}
             strokeDashoffset={offset}
             strokeLinecap="round"
-            filter={`url(#gauge-glow-${label}-${size})`}
+            filter={`url(#gauge-shadow-${label}-${size})`}
             className="transition-all duration-1000 ease-out"
           />
+
+          {/* End dot */}
+          {animatedValue > 2 && (
+            <circle
+              cx={dotX} cy={dotY} r={strokeWidth * 0.35}
+              fill="white"
+              filter={`url(#gauge-glow-${label}-${size})`}
+              className="transition-all duration-1000 ease-out"
+              opacity={0.9}
+            />
+          )}
         </svg>
+
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-          <span className={`font-bold tabular-nums ${isPrimary ? 'text-2xl md:text-3xl' : 'text-lg md:text-xl'}`} style={{ color }}>
+          <span className={`font-black tabular-nums tracking-tight ${isPrimary ? 'text-3xl md:text-4xl' : 'text-xl md:text-2xl'}`}
+                style={{ color, textShadow: `0 0 20px ${color}33` }}>
             {animatedValue.toFixed(1)}%
           </span>
         </div>
       </div>
-      <span className={`font-semibold text-muted-foreground ${isPrimary ? 'text-sm md:text-base' : 'text-xs md:text-sm'}`}>{label}</span>
+      <span className={`font-semibold tracking-wide uppercase ${isPrimary ? 'text-xs md:text-sm' : 'text-[10px] md:text-xs'} text-muted-foreground`}>
+        {label}
+      </span>
     </div>
   );
 }
@@ -154,21 +209,32 @@ const DOWNTIME_LABELS: Record<string, string> = {
 function StatCard({ icon: Icon, label, value, accent }: {
   icon: React.ElementType; label: string; value: string; accent: 'primary' | 'success' | 'destructive' | 'warning';
 }) {
-  const accentClasses = {
-    primary: 'from-primary/15 to-transparent border-primary/20 text-primary',
-    success: 'from-success/15 to-transparent border-success/20 text-success',
-    destructive: 'from-destructive/15 to-transparent border-destructive/20 text-destructive',
-    warning: 'from-warning/15 to-transparent border-warning/20 text-warning',
+  const bgMap = {
+    primary: 'from-primary/10 via-primary/5 to-transparent',
+    success: 'from-success/10 via-success/5 to-transparent',
+    destructive: 'from-destructive/10 via-destructive/5 to-transparent',
+    warning: 'from-warning/10 via-warning/5 to-transparent',
   };
-  const iconClasses = { primary: 'text-primary', success: 'text-success', destructive: 'text-destructive', warning: 'text-warning' };
+  const borderMap = {
+    primary: 'border-primary/20 hover:border-primary/40',
+    success: 'border-success/20 hover:border-success/40',
+    destructive: 'border-destructive/20 hover:border-destructive/40',
+    warning: 'border-warning/20 hover:border-warning/40',
+  };
+  const iconColorMap = { primary: 'text-primary', success: 'text-success', destructive: 'text-destructive', warning: 'text-warning' };
+  const dotColorMap = { primary: 'bg-primary', success: 'bg-success', destructive: 'bg-destructive', warning: 'bg-warning' };
 
   return (
-    <div className={`rounded-xl border bg-gradient-to-br ${accentClasses[accent]} p-3 md:p-4`}>
-      <div className="flex items-center gap-2 mb-1">
-        <Icon className={`w-4 h-4 md:w-5 md:h-5 ${iconClasses[accent]}`} />
-        <span className="text-xs md:text-sm text-muted-foreground font-medium">{label}</span>
+    <div className={`rounded-2xl border backdrop-blur-sm bg-gradient-to-br ${bgMap[accent]} ${borderMap[accent]} p-4 md:p-5 transition-all duration-300 group relative overflow-hidden`}>
+      {/* Decorative corner glow */}
+      <div className={`absolute -top-4 -right-4 w-16 h-16 rounded-full ${dotColorMap[accent]} opacity-[0.07] blur-xl`} />
+      <div className="flex items-center gap-2.5 mb-2 relative z-10">
+        <div className={`w-7 h-7 md:w-8 md:h-8 rounded-lg bg-gradient-to-br ${bgMap[accent]} flex items-center justify-center border ${borderMap[accent]}`}>
+          <Icon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${iconColorMap[accent]}`} />
+        </div>
+        <span className="text-xs md:text-sm text-muted-foreground font-medium tracking-wide">{label}</span>
       </div>
-      <div className="text-lg md:text-2xl font-bold text-foreground tabular-nums pl-6 md:pl-7">{value}</div>
+      <div className="text-2xl md:text-3xl font-black text-foreground tabular-nums pl-0 relative z-10 tracking-tight">{value}</div>
     </div>
   );
 }
@@ -361,47 +427,69 @@ export function ReportsScreen({
 
         {/* ===== Selected Printer OEE Detail (at top) ===== */}
         {selectedPrinter && selectedOEE && (
-          <div className="rounded-xl border bg-gradient-to-br from-card via-card to-secondary/50 p-5 md:p-6 shadow-lg relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl" />
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-success/5 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
+          <div className="rounded-2xl border border-primary/15 p-6 md:p-8 shadow-xl relative overflow-hidden animate-fade-in"
+               style={{
+                 background: 'linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--secondary) / 0.5) 50%, hsl(var(--card)) 100%)',
+               }}>
+            {/* Ambient light effects */}
+            <div className="absolute top-0 right-0 w-72 h-72 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl pointer-events-none"
+                 style={{ background: `radial-gradient(circle, ${getOEEColor(selectedOEE.oee)}15 0%, transparent 70%)` }} />
+            <div className="absolute bottom-0 left-0 w-56 h-56 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl pointer-events-none"
+                 style={{ background: `radial-gradient(circle, hsl(var(--primary) / 0.08) 0%, transparent 70%)` }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl pointer-events-none"
+                 style={{ background: `radial-gradient(circle, hsl(var(--success) / 0.04) 0%, transparent 60%)` }} />
 
-            <div className="flex items-center gap-2 mb-5 relative z-10">
-              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                <PrinterIcon className="w-4 h-4 text-primary" />
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6 relative z-10">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20 shadow-sm">
+                <PrinterIcon className="w-5 h-5 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-lg md:text-xl font-bold text-foreground truncate">{selectedPrinter.name}</h2>
-                <p className="text-[10px] text-muted-foreground">{selectedPrinter.ipAddress}:{selectedPrinter.port}</p>
+                <h2 className="text-xl md:text-2xl font-black text-foreground truncate tracking-tight">{selectedPrinter.name}</h2>
+                <p className="text-[11px] text-muted-foreground font-mono tracking-wider">{selectedPrinter.ipAddress}:{selectedPrinter.port}</p>
               </div>
-              <span className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm ${
+              <span className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-lg ${
                 selectedOEE.oee >= 85 ? 'bg-success text-success-foreground' :
                 selectedOEE.oee >= 60 ? 'bg-warning text-warning-foreground' :
                 'bg-destructive text-destructive-foreground'
-              }`}>
+              }`}
+                    style={{
+                      boxShadow: `0 4px 15px ${
+                        selectedOEE.oee >= 85 ? 'hsl(var(--success) / 0.3)' :
+                        selectedOEE.oee >= 60 ? 'hsl(var(--warning) / 0.3)' :
+                        'hsl(var(--destructive) / 0.3)'
+                      }`
+                    }}>
                 {getOEELabel(selectedOEE.oee)}
               </span>
             </div>
 
-            <div className="flex justify-around items-end flex-wrap gap-6 md:gap-8 relative z-10 mb-5">
-              <OEEGauge value={selectedOEE.oee} label="OEE" size={130} isPrimary />
-              <OEEGauge value={selectedOEE.availability} label="Availability" size={100} />
-              <OEEGauge value={selectedOEE.performance} label="Performance" size={100} />
+            {/* Separator line */}
+            <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mb-6 relative z-10" />
+
+            {/* Gauges row */}
+            <div className="flex justify-center items-end gap-8 md:gap-16 relative z-10 mb-8">
+              <OEEGauge value={selectedOEE.availability} label="Availability" size={110} />
+              <OEEGauge value={selectedOEE.oee} label="OEE" size={150} isPrimary />
+              <OEEGauge value={selectedOEE.performance} label="Performance" size={110} />
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative z-10 mb-4">
+            {/* Stat cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 relative z-10 mb-6">
               <StatCard icon={Target} label="Target" value={selectedOEE.targetCount.toLocaleString()} accent="primary" />
               <StatCard icon={CheckCircle2} label="Actual" value={selectedOEE.actualCount.toLocaleString()} accent="success" />
-              <StatCard icon={Timer} label="Run Time" value={formatDuration(selectedOEE.runTime)} accent="primary" />
+              <StatCard icon={Timer} label="Run Time" value={formatDuration(selectedOEE.runTime)} accent="warning" />
               <StatCard icon={AlertTriangle} label="Downtime" value={formatDuration(selectedOEE.totalDowntime)} accent="destructive" />
             </div>
 
+            {/* View full report button */}
             <div className="flex justify-center relative z-10">
               <Button
                 size="sm"
                 onClick={() => setDetailPrinterId(selectedPrinterId)}
-                className="industrial-button text-white border-0"
+                className="industrial-button text-white border-0 px-6 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-shadow"
               >
-                <BarChart3 className="w-4 h-4 mr-1.5" /> View Full Report
+                <BarChart3 className="w-4 h-4 mr-2" /> View Full Report
               </Button>
             </div>
           </div>
