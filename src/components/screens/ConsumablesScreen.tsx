@@ -131,59 +131,49 @@ export function ConsumablesScreen({
 
     return (
       <Card key={c.id} className={`transition-all ${status === 'critical' ? 'border-destructive/50 bg-destructive/5' : status === 'low' ? 'border-yellow-500/50 bg-yellow-500/5' : ''}`}>
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                {c.type === 'ink' ? (
-                  <Droplets className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                ) : (
-                  <Package className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                )}
-                <span className="font-semibold text-foreground truncate">{c.partNumber}</span>
-                {getStockBadge(c)}
-              </div>
-              {c.description && (
-                <p className="text-sm text-muted-foreground mb-2 truncate">{c.description}</p>
+        <CardContent className="p-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1 min-w-0 flex items-center gap-2">
+              {c.type === 'ink' ? (
+                <Droplets className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+              ) : (
+                <Package className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
               )}
-              <div className="flex items-center gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Stock: </span>
-                  <span className={`font-medium ${status === 'critical' ? 'text-destructive' : status === 'low' ? 'text-yellow-600' : 'text-foreground'}`}>
-                    {c.currentStock} {c.unit}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Min: </span>
-                  <span className="font-medium text-foreground">{c.minimumStock} {c.unit}</span>
-                </div>
-              </div>
+              <span className="font-semibold text-sm text-foreground truncate">{c.partNumber}</span>
+              {getStockBadge(c)}
+              {c.description && (
+                <span className="text-xs text-muted-foreground truncate hidden sm:inline">— {c.description}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 text-xs flex-shrink-0">
+              <span className={`font-medium ${status === 'critical' ? 'text-destructive' : status === 'low' ? 'text-yellow-600' : 'text-foreground'}`}>
+                {c.currentStock}/{c.minimumStock} {c.unit}
+              </span>
               {printersUsing.length > 0 && (
-                <div className="flex items-center gap-1 mt-2 flex-wrap">
-                  <Link className="w-3 h-3 text-muted-foreground" />
+                <div className="flex items-center gap-1">
                   {printersUsing.map(p => (
-                    <Badge key={p.id} variant="outline" className="text-xs">{p.name}</Badge>
+                    <Badge key={p.id} variant="outline" className="text-[10px] px-1.5 py-0">{p.name}</Badge>
                   ))}
                 </div>
               )}
             </div>
-            <div className="flex flex-col gap-1 flex-shrink-0">
-              <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => onAdjustStock(c.id, 1)} title="Add 1">
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => onAdjustStock(c.id, 1)} title="Add 1">
                 <Plus className="w-3 h-3" />
               </Button>
-              <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => onAdjustStock(c.id, -1)} title="Remove 1" disabled={c.currentStock === 0}>
+              <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => onAdjustStock(c.id, -1)} title="Remove 1" disabled={c.currentStock === 0}>
                 <Minus className="w-3 h-3" />
               </Button>
-              <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => {
+              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => {
                 setStockAdjustId(c.id);
                 setStockAdjustValue(String(c.currentStock));
               }} title="Set stock">
                 <Package className="w-3 h-3" />
               </Button>
-              <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => openEdit(c)}>
+              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => openEdit(c)}>
                 <Pencil className="w-3 h-3" />
               </Button>
-              <Button size="sm" variant="ghost" className="h-8 px-2 text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(c.id)}>
+              <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(c.id)}>
                 <Trash2 className="w-3 h-3" />
               </Button>
             </div>
@@ -237,15 +227,15 @@ export function ConsumablesScreen({
               <TabsTrigger value="ink">Ink ({inkConsumables.length})</TabsTrigger>
               <TabsTrigger value="makeup">Makeup ({makeupConsumables.length})</TabsTrigger>
             </TabsList>
-            <TabsContent value="all" className="space-y-3 mt-0">
+            <TabsContent value="all" className="space-y-1.5 mt-0">
               {consumables.map(renderConsumableCard)}
             </TabsContent>
-            <TabsContent value="ink" className="space-y-3 mt-0">
+            <TabsContent value="ink" className="space-y-1.5 mt-0">
               {inkConsumables.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No ink consumables added.</p>
               ) : inkConsumables.map(renderConsumableCard)}
             </TabsContent>
-            <TabsContent value="makeup" className="space-y-3 mt-0">
+            <TabsContent value="makeup" className="space-y-1.5 mt-0">
               {makeupConsumables.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No makeup consumables added.</p>
               ) : makeupConsumables.map(renderConsumableCard)}
