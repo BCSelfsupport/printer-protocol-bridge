@@ -268,94 +268,102 @@ export function ConsumablesScreen({
     );
   };
 
-  // ── Right panel: Stock row ──
+  // ── Right panel: Stock row with graphical bottle columns ──
   const renderStockRow = (c: Consumable) => {
     const status = getStockStatus(c);
-    const percent = getStockPercent(c);
     const isInk = c.type === 'ink';
+    const maxDisplay = Math.max(c.currentStock, c.minimumStock + 2, 6);
 
     return (
       <Card key={c.id} className={`overflow-hidden transition-all ${
         status === 'critical' ? 'border-destructive/50' :
-        status === 'low' ? 'border-yellow-500/50' : ''
+        status === 'low' ? 'border-warning/50' : ''
       }`}>
         <CardContent className="p-0">
-          <div className={`h-1 ${
-            status === 'critical' ? 'bg-destructive' :
-            status === 'low' ? 'bg-yellow-500' :
-            isInk ? 'bg-blue-500' : 'bg-purple-500'
-          }`} />
-          <div className="p-2.5 space-y-1.5">
-            {/* Part + description */}
+          <div className="p-3 space-y-2">
+            {/* Part header + status badge */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <div className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 ${
-                  isInk ? 'bg-blue-500/15 text-blue-500' : 'bg-purple-500/15 text-purple-500'
+              <div className="flex items-center gap-2 min-w-0">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  isInk ? 'bg-primary/15 text-primary' : 'bg-primary/15 text-primary'
                 }`}>
-                  {isInk ? <Droplets className="w-3.5 h-3.5" /> : <Package className="w-3.5 h-3.5" />}
+                  {isInk ? <Droplets className="w-4 h-4" /> : <Package className="w-4 h-4" />}
                 </div>
                 <div className="min-w-0">
-                  <span className="text-sm font-semibold text-foreground block truncate">{c.partNumber}</span>
+                  <span className="text-sm font-bold text-foreground block truncate">{c.partNumber}</span>
                   {c.description && (
                     <span className="text-[10px] text-muted-foreground block truncate">{c.description}</span>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 {status === 'critical' && (
-                  <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4">OUT</Badge>
+                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5">OUT</Badge>
                 )}
                 {status === 'low' && (
-                  <Badge className="text-[9px] px-1 py-0 h-4 bg-yellow-500 hover:bg-yellow-600 text-white">LOW</Badge>
+                  <Badge className="text-[10px] px-1.5 py-0 h-5 bg-warning text-warning-foreground">LOW</Badge>
                 )}
               </div>
             </div>
 
-            {/* Gauge */}
-            <div>
-              <div className="flex justify-between text-[10px] mb-0.5">
-                <span className="text-muted-foreground">Stock</span>
-                <span className={`font-bold ${
-                  status === 'critical' ? 'text-destructive' :
-                  status === 'low' ? 'text-yellow-600' : 'text-foreground'
-                }`}>
-                  {c.currentStock} {c.unit} <span className="font-normal text-muted-foreground">/ min {c.minimumStock}</span>
-                </span>
+            {/* Graphical bottle columns */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-[10px]">
+                <span className="text-muted-foreground font-medium">{c.currentStock} {c.unit}</span>
+                <span className="text-muted-foreground">min {c.minimumStock}</span>
               </div>
-              <Progress
-                value={percent}
-                className={`h-1.5 ${
-                  status === 'critical' ? '[&>div]:bg-destructive' :
-                  status === 'low' ? '[&>div]:bg-yellow-500' :
-                  isInk ? '[&>div]:bg-blue-500' : '[&>div]:bg-purple-500'
-                }`}
-              />
+              <div className="flex items-end gap-0.5 h-10 px-1 py-1 bg-muted/30 rounded-md">
+                {Array.from({ length: maxDisplay }).map((_, i) => {
+                  const isFilled = i < c.currentStock;
+                  const isBelowMin = i < c.minimumStock;
+                  return (
+                    <div
+                      key={i}
+                      className={`flex-1 max-w-3 rounded-sm transition-all duration-300 ${
+                        isFilled
+                          ? status === 'critical' ? 'bg-destructive'
+                            : status === 'low' ? 'bg-warning'
+                            : 'bg-primary'
+                          : isBelowMin
+                            ? 'bg-destructive/15 border border-dashed border-destructive/30'
+                            : 'bg-muted/40'
+                      }`}
+                      style={{ height: isFilled ? '100%' : '60%' }}
+                    />
+                  );
+                })}
+              </div>
+              {c.reorderUnit && c.reorderUnit !== c.unit && c.bottlesPerReorderUnit && (
+                <p className="text-[10px] text-muted-foreground">
+                  1 {c.reorderUnit.replace(/s$/, '')} = {c.bottlesPerReorderUnit} {c.unit}
+                </p>
+              )}
             </div>
 
             {/* Actions */}
             <div className="flex items-center gap-1 pt-0.5">
-              <Button size="sm" variant="outline" className="h-6 px-1.5 text-[10px] flex-1" onClick={() => onAdjustStock(c.id, 1)}>
-                <Plus className="w-2.5 h-2.5 mr-0.5" />Add
+              <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] flex-1" onClick={() => onAdjustStock(c.id, 1)}>
+                <Plus className="w-3 h-3 mr-0.5" />Add
               </Button>
-              <Button size="sm" variant="outline" className="h-6 px-1.5 text-[10px] flex-1" onClick={() => onAdjustStock(c.id, -1)} disabled={c.currentStock === 0}>
-                <Minus className="w-2.5 h-2.5 mr-0.5" />Use
+              <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] flex-1" onClick={() => onAdjustStock(c.id, -1)} disabled={c.currentStock === 0}>
+                <Minus className="w-3 h-3 mr-0.5" />Use
               </Button>
               {reorderConfig.action !== 'none' && (
-                <Button size="sm" variant="outline" className="h-6 px-1.5 text-[10px] flex-1" onClick={() => handleReorder(c)}>
-                  <ShoppingCart className="w-2.5 h-2.5 mr-0.5" />Order
+                <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] flex-1" onClick={() => handleReorder(c)}>
+                  <ShoppingCart className="w-3 h-3 mr-0.5" />Order
                 </Button>
               )}
-              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => {
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => {
                 setStockAdjustId(c.id);
                 setStockAdjustValue(String(c.currentStock));
               }} title="Set stock">
-                <Package className="w-2.5 h-2.5" />
+                <Package className="w-3 h-3" />
               </Button>
-              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => openEdit(c)} title="Edit">
-                <Pencil className="w-2.5 h-2.5" />
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(c)} title="Edit">
+                <Pencil className="w-3 h-3" />
               </Button>
-              <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(c.id)} title="Delete">
-                <Trash2 className="w-2.5 h-2.5" />
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(c.id)} title="Delete">
+                <Trash2 className="w-3 h-3" />
               </Button>
             </div>
           </div>
