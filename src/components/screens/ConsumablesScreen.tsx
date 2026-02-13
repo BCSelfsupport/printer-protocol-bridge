@@ -221,25 +221,8 @@ export function ConsumablesScreen({
           </div>
         </div>
 
-        {/* Assignment dropdowns */}
+        {/* Assignment dropdowns — Makeup first, Ink second (matching indicators above) */}
         <div className="px-3 pb-3 grid grid-cols-2 gap-2">
-          <div>
-            <Label className="text-[10px] text-muted-foreground">Ink Part</Label>
-            <Select
-              value={assignment?.inkConsumableId ?? 'none'}
-              onValueChange={(v) => onAssignConsumable(printer.id, 'ink', v === 'none' ? undefined : v)}
-            >
-              <SelectTrigger className="h-7 text-xs">
-                <SelectValue placeholder="Assign..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {inkConsumables.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.partNumber}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
           <div>
             <Label className="text-[10px] text-muted-foreground">Makeup Part</Label>
             <Select
@@ -252,6 +235,23 @@ export function ConsumablesScreen({
               <SelectContent>
                 <SelectItem value="none">None</SelectItem>
                 {makeupConsumables.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.partNumber}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-[10px] text-muted-foreground">Ink Part</Label>
+            <Select
+              value={assignment?.inkConsumableId ?? 'none'}
+              onValueChange={(v) => onAssignConsumable(printer.id, 'ink', v === 'none' ? undefined : v)}
+            >
+              <SelectTrigger className="h-7 text-xs">
+                <SelectValue placeholder="Assign..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {inkConsumables.map(c => (
                   <SelectItem key={c.id} value={c.id}>{c.partNumber}</SelectItem>
                 ))}
               </SelectContent>
