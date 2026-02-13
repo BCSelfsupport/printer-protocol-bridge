@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, Package, Droplets, AlertTriangle, Minus, Link } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Droplets, AlertTriangle, Minus, Link, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +23,7 @@ interface ConsumablesScreenProps {
   onSetStock: (id: string, amount: number) => void;
   onAdjustStock: (id: string, delta: number) => void;
   onAssignConsumable: (printerId: number, type: 'ink' | 'makeup', consumableId: string | undefined) => void;
+  onHome?: () => void;
 }
 
 interface ConsumableFormData {
@@ -53,6 +54,7 @@ export function ConsumablesScreen({
   onSetStock,
   onAdjustStock,
   onAssignConsumable,
+  onHome,
 }: ConsumablesScreenProps) {
   const [addEditOpen, setAddEditOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -195,7 +197,14 @@ export function ConsumablesScreen({
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header with actions */}
       <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-lg font-semibold text-foreground">Consumables</h2>
+        <div className="flex items-center gap-2">
+          {onHome && (
+            <Button size="sm" variant="ghost" onClick={onHome} className="h-8 px-2">
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+          )}
+          <h2 className="text-lg font-semibold text-foreground">Consumables</h2>
+        </div>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => setAssignDialogOpen(true)}>
             <Link className="w-4 h-4 mr-1" />
