@@ -85,10 +85,20 @@ const Index = () => {
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
   const handleCountdownComplete = useCallback((printerId: number, type: CountdownType) => {
     console.log('[handleCountdownComplete] printerId:', printerId, 'type:', type);
-    // Jet startup/shutdown countdown finished — HV is NOT auto-enabled.
-    // The operator must manually press "HV On" after the jet is running.
-    // No command is sent here; the UI simply exits the countdown state.
-  }, []);
+    if (type === 'starting') {
+      // The real printer firmware auto-enables HV after jet startup.
+      // The PC HMI does NOT send ^PR 1 — it relies on ^SU polling to detect the change.
+      // For the emulator, simulate this firmware behavior by enabling HV directly.
+      const printer = printers.find(p => p.id === printerId);
+      if (printer && multiPrinterEmulator.enabled) {
+        const instance = multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port);
+        if (instance) {
+          console.log('[handleCountdownComplete] Emulator: auto-enabling HV for', printer.ipAddress);
+          instance.processCommand('^PR 1');
+        }
+      }
+    }
+  }, [printers]);
 
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown, getCountdown } = useJetCountdown(connectedPrinterId, handleCountdownComplete);
 
