@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Consumable, PrinterConsumableAssignment } from '@/types/consumable';
+import { Consumable, PrinterConsumableAssignment, ReorderConfig, defaultReorderConfig } from '@/types/consumable';
 
 const CONSUMABLES_KEY = 'codesync-consumables';
 const ASSIGNMENTS_KEY = 'codesync-consumable-assignments';
+const REORDER_CONFIG_KEY = 'codesync-reorder-config';
 
 export function useConsumableStorage() {
   const [consumables, setConsumables] = useState<Consumable[]>(() => {
@@ -23,6 +24,15 @@ export function useConsumableStorage() {
     }
   });
 
+  const [reorderConfig, setReorderConfig] = useState<ReorderConfig>(() => {
+    try {
+      const stored = localStorage.getItem(REORDER_CONFIG_KEY);
+      return stored ? { ...defaultReorderConfig, ...JSON.parse(stored) } : defaultReorderConfig;
+    } catch {
+      return defaultReorderConfig;
+    }
+  });
+
   // Persist consumables
   useEffect(() => {
     try {
@@ -40,6 +50,19 @@ export function useConsumableStorage() {
       console.error('Failed to save consumable assignments:', e);
     }
   }, [assignments]);
+
+  // Persist reorder config
+  useEffect(() => {
+    try {
+      localStorage.setItem(REORDER_CONFIG_KEY, JSON.stringify(reorderConfig));
+    } catch (e) {
+      console.error('Failed to save reorder config:', e);
+    }
+  }, [reorderConfig]);
+
+  const updateReorderConfig = useCallback((updates: Partial<ReorderConfig>) => {
+    setReorderConfig(prev => ({ ...prev, ...updates }));
+  }, []);
 
   const addConsumable = useCallback((consumable: Omit<Consumable, 'id'>) => {
     const newConsumable: Consumable = {
@@ -122,6 +145,8 @@ export function useConsumableStorage() {
   return {
     consumables,
     assignments,
+    reorderConfig,
+    updateReorderConfig,
     addConsumable,
     updateConsumable,
     removeConsumable,

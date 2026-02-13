@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, Package, Droplets, AlertTriangle, Minus, Link, ArrowLeft } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Droplets, AlertTriangle, Minus, Link, ArrowLeft, Settings, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,13 +10,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Consumable, PrinterConsumableAssignment } from '@/types/consumable';
+import { Progress } from '@/components/ui/progress';
+import { Consumable, PrinterConsumableAssignment, ReorderConfig, ReorderAction } from '@/types/consumable';
 import { Printer } from '@/types/printer';
 
 interface ConsumablesScreenProps {
   consumables: Consumable[];
   assignments: PrinterConsumableAssignment[];
   printers: Printer[];
+  reorderConfig: ReorderConfig;
+  onUpdateReorderConfig: (updates: Partial<ReorderConfig>) => void;
   onAddConsumable: (consumable: Omit<Consumable, 'id'>) => Consumable;
   onUpdateConsumable: (id: string, updates: Partial<Omit<Consumable, 'id'>>) => void;
   onRemoveConsumable: (id: string) => void;
@@ -48,6 +51,8 @@ export function ConsumablesScreen({
   consumables,
   assignments,
   printers,
+  reorderConfig,
+  onUpdateReorderConfig,
   onAddConsumable,
   onUpdateConsumable,
   onRemoveConsumable,
@@ -63,6 +68,7 @@ export function ConsumablesScreen({
   const [stockAdjustId, setStockAdjustId] = useState<string | null>(null);
   const [stockAdjustValue, setStockAdjustValue] = useState<string>('');
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [reorderSettingsOpen, setReorderSettingsOpen] = useState(false);
 
   const inkConsumables = consumables.filter(c => c.type === 'ink');
   const makeupConsumables = consumables.filter(c => c.type === 'makeup');
@@ -110,11 +116,10 @@ export function ConsumablesScreen({
     return 'ok';
   };
 
-  const getStockBadge = (c: Consumable) => {
-    const status = getStockStatus(c);
-    if (status === 'critical') return <Badge variant="destructive" className="text-xs"><AlertTriangle className="w-3 h-3 mr-1" />OUT OF STOCK</Badge>;
-    if (status === 'low') return <Badge className="text-xs bg-yellow-500 hover:bg-yellow-600 text-white"><AlertTriangle className="w-3 h-3 mr-1" />LOW STOCK</Badge>;
-    return <Badge variant="secondary" className="text-xs">In Stock</Badge>;
+  const getStockPercent = (c: Consumable): number => {
+    // Show percentage relative to a reasonable max (double the minimum, or current stock, whichever is higher)
+    const max = Math.max(c.minimumStock * 3, c.currentStock, 1);
+    return Math.min(100, Math.round((c.currentStock / max) * 100));
   };
 
   // Get printers assigned to a consumable
@@ -125,55 +130,121 @@ export function ConsumablesScreen({
       .filter(Boolean) as Printer[];
   };
 
+  const handleReorder = (consumable: Consumable) => {
+    if (reorderConfig.action === 'website') {
+      window.open(reorderConfig.websiteUrl, '_blank');
+    } else if (reorderConfig.action === 'email') {
+      const subject = reorderConfig.emailSubject.replace('{{partNumber}}', consumable.partNumber);
+      const body = `Reorder request for:\n\nPart Number: ${consumable.partNumber}\nDescription: ${consumable.description}\nCurrent Stock: ${consumable.currentStock} ${consumable.unit}\n\nPlease send a quote.`;
+      window.open(`mailto:${reorderConfig.emailAddress}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+    }
+  };
+
   const renderConsumableCard = (c: Consumable) => {
     const printersUsing = getPrintersUsing(c.id);
     const status = getStockStatus(c);
+    const percent = getStockPercent(c);
+    const isInk = c.type === 'ink';
 
     return (
-      <Card key={c.id} className={`transition-all ${status === 'critical' ? 'border-destructive/50 bg-destructive/5' : status === 'low' ? 'border-yellow-500/50 bg-yellow-500/5' : ''}`}>
-        <CardContent className="p-2">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex-1 min-w-0 flex items-center gap-2">
-              {c.type === 'ink' ? (
-                <Droplets className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-              ) : (
-                <Package className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
-              )}
-              <span className="font-semibold text-sm text-foreground truncate">{c.partNumber}</span>
-              {getStockBadge(c)}
-              {c.description && (
-                <span className="text-xs text-muted-foreground truncate hidden sm:inline">— {c.description}</span>
-              )}
-            </div>
-            <div className="flex items-center gap-3 text-xs flex-shrink-0">
-              <span className={`font-medium ${status === 'critical' ? 'text-destructive' : status === 'low' ? 'text-yellow-600' : 'text-foreground'}`}>
-                {c.currentStock}/{c.minimumStock} {c.unit}
-              </span>
-              {printersUsing.length > 0 && (
-                <div className="flex items-center gap-1">
-                  {printersUsing.map(p => (
-                    <Badge key={p.id} variant="outline" className="text-[10px] px-1.5 py-0">{p.name}</Badge>
-                  ))}
+      <Card
+        key={c.id}
+        className={`transition-all overflow-hidden ${
+          status === 'critical' ? 'border-destructive/60 bg-destructive/5' :
+          status === 'low' ? 'border-yellow-500/60 bg-yellow-500/5' : ''
+        }`}
+      >
+        <CardContent className="p-0">
+          {/* Colored top strip */}
+          <div className={`h-1.5 ${
+            status === 'critical' ? 'bg-destructive' :
+            status === 'low' ? 'bg-yellow-500' :
+            isInk ? 'bg-blue-500' : 'bg-purple-500'
+          }`} />
+
+          <div className="p-3">
+            {/* Header row: icon + part number + badge */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${
+                  isInk ? 'bg-blue-500/10 text-blue-500' : 'bg-purple-500/10 text-purple-500'
+                }`}>
+                  {isInk ? <Droplets className="w-4 h-4" /> : <Package className="w-4 h-4" />}
                 </div>
-              )}
+                <div className="min-w-0">
+                  <span className="font-semibold text-sm text-foreground block truncate">{c.partNumber}</span>
+                  {c.description && (
+                    <span className="text-[11px] text-muted-foreground block truncate">{c.description}</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {status === 'critical' && (
+                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                    <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />OUT
+                  </Badge>
+                )}
+                {status === 'low' && (
+                  <Badge className="text-[10px] px-1.5 py-0 bg-yellow-500 hover:bg-yellow-600 text-white">
+                    <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />LOW
+                  </Badge>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-0.5 flex-shrink-0">
-              <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => onAdjustStock(c.id, 1)} title="Add 1">
-                <Plus className="w-3 h-3" />
+
+            {/* Stock gauge */}
+            <div className="mb-2">
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-muted-foreground">Stock</span>
+                <span className={`font-bold ${
+                  status === 'critical' ? 'text-destructive' :
+                  status === 'low' ? 'text-yellow-600' : 'text-foreground'
+                }`}>
+                  {c.currentStock} {c.unit}
+                </span>
+              </div>
+              <Progress
+                value={percent}
+                className={`h-2 ${
+                  status === 'critical' ? '[&>div]:bg-destructive' :
+                  status === 'low' ? '[&>div]:bg-yellow-500' :
+                  isInk ? '[&>div]:bg-blue-500' : '[&>div]:bg-purple-500'
+                }`}
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+                <span>Min: {c.minimumStock}</span>
+                {printersUsing.length > 0 && (
+                  <span className="flex items-center gap-0.5">
+                    <Link className="w-2.5 h-2.5" />
+                    {printersUsing.map(p => p.name).join(', ')}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="outline" className="h-7 px-2 text-xs flex-1" onClick={() => onAdjustStock(c.id, 1)}>
+                <Plus className="w-3 h-3 mr-0.5" />Add
               </Button>
-              <Button size="sm" variant="outline" className="h-6 w-6 p-0" onClick={() => onAdjustStock(c.id, -1)} title="Remove 1" disabled={c.currentStock === 0}>
-                <Minus className="w-3 h-3" />
+              <Button size="sm" variant="outline" className="h-7 px-2 text-xs flex-1" onClick={() => onAdjustStock(c.id, -1)} disabled={c.currentStock === 0}>
+                <Minus className="w-3 h-3 mr-0.5" />Use
               </Button>
-              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => {
+              {reorderConfig.action !== 'none' && (
+                <Button size="sm" variant="outline" className="h-7 px-2 text-xs flex-1" onClick={() => handleReorder(c)}>
+                  <ShoppingCart className="w-3 h-3 mr-0.5" />Order
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => {
                 setStockAdjustId(c.id);
                 setStockAdjustValue(String(c.currentStock));
               }} title="Set stock">
                 <Package className="w-3 h-3" />
               </Button>
-              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => openEdit(c)}>
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(c)} title="Edit">
                 <Pencil className="w-3 h-3" />
               </Button>
-              <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(c.id)}>
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(c.id)} title="Delete">
                 <Trash2 className="w-3 h-3" />
               </Button>
             </div>
@@ -196,6 +267,9 @@ export function ConsumablesScreen({
           <h2 className="text-lg font-semibold text-foreground">Consumables</h2>
         </div>
         <div className="flex gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setReorderSettingsOpen(true)} title="Reorder Settings">
+            <Settings className="w-4 h-4" />
+          </Button>
           <Button size="sm" variant="outline" onClick={() => setAssignDialogOpen(true)}>
             <Link className="w-4 h-4 mr-1" />
             Assign
@@ -227,18 +301,28 @@ export function ConsumablesScreen({
               <TabsTrigger value="ink">Ink ({inkConsumables.length})</TabsTrigger>
               <TabsTrigger value="makeup">Makeup ({makeupConsumables.length})</TabsTrigger>
             </TabsList>
-            <TabsContent value="all" className="space-y-1.5 mt-0">
-              {consumables.map(renderConsumableCard)}
+            <TabsContent value="all" className="mt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {consumables.map(renderConsumableCard)}
+              </div>
             </TabsContent>
-            <TabsContent value="ink" className="space-y-1.5 mt-0">
+            <TabsContent value="ink" className="mt-0">
               {inkConsumables.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No ink consumables added.</p>
-              ) : inkConsumables.map(renderConsumableCard)}
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {inkConsumables.map(renderConsumableCard)}
+                </div>
+              )}
             </TabsContent>
-            <TabsContent value="makeup" className="space-y-1.5 mt-0">
+            <TabsContent value="makeup" className="mt-0">
               {makeupConsumables.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No makeup consumables added.</p>
-              ) : makeupConsumables.map(renderConsumableCard)}
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {makeupConsumables.map(renderConsumableCard)}
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </ScrollArea>
@@ -360,6 +444,69 @@ export function ConsumablesScreen({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reorder Settings Dialog */}
+      <Dialog open={reorderSettingsOpen} onOpenChange={setReorderSettingsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reorder Settings</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>When reordering, do what?</Label>
+              <Select
+                value={reorderConfig.action}
+                onValueChange={(v: ReorderAction) => onUpdateReorderConfig({ action: v })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="website">Open Website</SelectItem>
+                  <SelectItem value="email">Send Email</SelectItem>
+                  <SelectItem value="consumables">View Consumables Screen</SelectItem>
+                  <SelectItem value="none">Disabled (No reorder button)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {reorderConfig.action === 'website' && (
+              <div className="space-y-2">
+                <Label>Website URL</Label>
+                <Input
+                  value={reorderConfig.websiteUrl}
+                  onChange={e => onUpdateReorderConfig({ websiteUrl: e.target.value })}
+                  placeholder="https://www.buybestcode.co"
+                />
+              </div>
+            )}
+
+            {reorderConfig.action === 'email' && (
+              <>
+                <div className="space-y-2">
+                  <Label>Email Address</Label>
+                  <Input
+                    value={reorderConfig.emailAddress}
+                    onChange={e => onUpdateReorderConfig({ emailAddress: e.target.value })}
+                    placeholder="orders@example.com"
+                    type="email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email Subject</Label>
+                  <Input
+                    value={reorderConfig.emailSubject}
+                    onChange={e => onUpdateReorderConfig({ emailSubject: e.target.value })}
+                    placeholder="Reorder Request — {{partNumber}}"
+                  />
+                  <p className="text-xs text-muted-foreground">Use {'{{partNumber}}'} to insert the part number.</p>
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setReorderSettingsOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Assign Consumables to Printers Dialog */}
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>

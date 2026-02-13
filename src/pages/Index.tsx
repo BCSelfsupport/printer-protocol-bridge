@@ -419,6 +419,8 @@ const Index = () => {
       case 'consumables':
         return (
           <ConsumablesScreen
+            reorderConfig={consumableStorage.reorderConfig}
+            onUpdateReorderConfig={consumableStorage.updateReorderConfig}
             consumables={consumableStorage.consumables}
             assignments={consumableStorage.assignments}
             printers={printers}
@@ -601,6 +603,7 @@ const Index = () => {
 
       {/* Low Stock Alert Popup */}
       <LowStockAlert
+        reorderConfig={consumableStorage.reorderConfig}
         alert={lowStockAlertQueue.length > 0 ? lowStockAlertQueue[0] : null}
         onDismiss={() => setLowStockAlertQueue(prev => prev.slice(1))}
         onNavigateToConsumables={() => {
