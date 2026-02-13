@@ -20,8 +20,8 @@ interface UseJetCountdownReturn {
   isCountingDown: boolean;
 }
 
-// Default countdown duration: 1:46 = 106 seconds
-const DEFAULT_COUNTDOWN_SECONDS = 106;
+// Default countdown duration: 1:06 = 66 seconds
+const DEFAULT_COUNTDOWN_SECONDS = 66;
 
 export function useJetCountdown(
   connectedPrinterId?: number | null,
