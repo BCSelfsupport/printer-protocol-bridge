@@ -21,6 +21,7 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
   errorActive: boolean;
   printheadTemp: number;
   electronicsTemp: number;
+  currentMessage?: string | null;
   subsystems: {
     v300up: boolean;
     vltOn: boolean;
@@ -103,9 +104,14 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
   const errorActive =
     (extract(/\bErr\[\s*(\d)\s*\]/i) || extract(/\bError\[\s*(\d)\s*\]/i)) === '1';
 
+  // Current message name from ^SU response (verbose: "Message: NAME", terse: "MSG: NAME")
+  const currentMessage = extract(/\bMessage\s*:\s*(.+)/i)?.trim()
+    || extract(/\bMSG\s*:\s*(.+)/i)?.trim()
+    || null;
+
   console.log('[parseStatusResponse] parsed:', {
     modulation, charge, pressure, rps, phaseQual, hvDeflection, viscosity,
-    inkLevel, makeupLevel, printStatus, allowErrors, errorActive, v300up, vltOn, gutOn, modOn,
+    inkLevel, makeupLevel, printStatus, allowErrors, errorActive, v300up, vltOn, gutOn, modOn, currentMessage,
   });
 
   return {
@@ -121,6 +127,7 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
     printStatus,
     allowErrors,
     errorActive,
+    currentMessage,
     printheadTemp: 0, // Will be populated from ^TP command
     electronicsTemp: 0, // Will be populated from ^TP command
     subsystems: {
