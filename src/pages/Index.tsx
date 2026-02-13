@@ -15,6 +15,7 @@ import { CleanScreen } from '@/components/screens/CleanScreen';
 import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
 import { RelayConnectDialog } from '@/components/relay/RelayConnectDialog';
 import { ConsumablesScreen } from '@/components/screens/ConsumablesScreen';
+import { ReportsScreen } from '@/components/screens/ReportsScreen';
 import { LowStockAlert, LowStockAlertData } from '@/components/consumables/LowStockAlert';
 
 import { SignInDialog } from '@/components/printers/SignInDialog';
@@ -26,11 +27,12 @@ import { useConsumableStorage } from '@/hooks/useConsumableStorage';
 import { DevPanel } from '@/components/dev/DevPanel';
 import { PrintMessage } from '@/types/printer';
 import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
+import { useProductionStorage } from '@/hooks/useProductionStorage';
 
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
 
-type ScreenType = NavItem | 'network' | 'control' | 'editMessage' | 'consumables';
+type ScreenType = NavItem | 'network' | 'control' | 'editMessage' | 'consumables' | 'reports';
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
@@ -54,6 +56,9 @@ const Index = () => {
   
   // Consumable storage
   const consumableStorage = useConsumableStorage();
+  
+  // Production storage (IndexedDB)
+  const productionStorage = useProductionStorage();
   
   
   const {
@@ -433,7 +438,20 @@ const Index = () => {
             onHome={handleHome}
           />
         );
-      default:
+      case 'reports':
+        return (
+          <ReportsScreen
+            runs={productionStorage.runs}
+            snapshots={productionStorage.snapshots}
+            printers={printers}
+            onAddRun={productionStorage.addRun}
+            onUpdateRun={productionStorage.updateRun}
+            onDeleteRun={productionStorage.deleteRun}
+            onAddDowntime={productionStorage.addDowntimeEvent}
+            onEndDowntime={productionStorage.endDowntimeEvent}
+            onHome={handleHome}
+          />
+        );
         break;
     }
     
@@ -493,7 +511,7 @@ const Index = () => {
         rightPanelContent={getRightPanelContent()}
         getCountdown={getCountdown}
         onConsumables={() => setCurrentScreen('consumables')}
-        onReports={() => {/* TODO: Reports screen */}}
+        onReports={() => setCurrentScreen('reports')}
         lowStockCount={consumableStorage.getLowStockConsumables().length}
       />
     );
