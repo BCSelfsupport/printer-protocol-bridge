@@ -161,12 +161,12 @@ export function ConsumablesScreen({
     return (
       <div key={printer.id} className="rounded-lg border bg-card overflow-hidden">
         {/* Printer header */}
-        <div className="px-4 py-3 flex items-center gap-3 border-b">
-          <PrinterIcon className={`w-6 h-6 ${
+        <div className="px-3 py-2 flex items-center gap-2 border-b">
+          <PrinterIcon className={`w-5 h-5 ${
             printer.isAvailable ? 'text-primary' : 'text-muted-foreground'
           }`} />
           <div className="flex-1 min-w-0">
-            <span className="font-bold text-base text-foreground block truncate">{printer.name}</span>
+            <span className="font-bold text-sm text-foreground block truncate">{printer.name}</span>
             <span className={`text-xs font-semibold ${
               printer.isAvailable
                 ? printer.status === 'ready' ? 'text-success' : 'text-warning'
@@ -183,14 +183,14 @@ export function ConsumablesScreen({
         </div>
 
         {/* Fluid indicators — matching Dashboard blue cards with vertical segmented bars */}
-        <div className="p-4 flex gap-3">
+        <div className="p-3 flex gap-2">
           {/* Makeup indicator */}
-          <div className={`flex-1 h-[90px] rounded-lg flex items-center justify-between px-4 ${getLevelBg(printer.makeupLevel)}`}>
+          <div className={`flex-1 h-[70px] rounded-lg flex items-center justify-between px-3 ${getLevelBg(printer.makeupLevel)}`}>
             <div className="flex flex-col items-center">
-              <Droplets className="w-7 h-7 text-white" />
-              <span className="text-xs text-white font-medium mt-1">Makeup</span>
+              <Droplets className="w-6 h-6 text-white" />
+              <span className="text-[10px] text-white font-medium mt-0.5">Makeup</span>
             </div>
-            <div className="flex flex-col-reverse gap-0.5 h-16 w-5 bg-black/20 rounded p-0.5">
+            <div className="flex flex-col-reverse gap-0.5 h-12 w-4 bg-black/20 rounded p-0.5">
               {[0, 1, 2, 3].map((seg) => {
                 const filled = getFilledSegments(printer.makeupLevel);
                 return (
@@ -206,12 +206,12 @@ export function ConsumablesScreen({
           </div>
 
           {/* Ink indicator */}
-          <div className={`flex-1 h-[90px] rounded-lg flex items-center justify-between px-4 ${getLevelBg(printer.inkLevel)}`}>
+          <div className={`flex-1 h-[70px] rounded-lg flex items-center justify-between px-3 ${getLevelBg(printer.inkLevel)}`}>
             <div className="flex flex-col items-center">
-              <Palette className="w-7 h-7 text-white" />
-              <span className="text-xs text-white font-medium mt-1">Ink</span>
+              <Palette className="w-6 h-6 text-white" />
+              <span className="text-[10px] text-white font-medium mt-0.5">Ink</span>
             </div>
-            <div className="flex flex-col-reverse gap-0.5 h-16 w-5 bg-black/20 rounded p-0.5">
+            <div className="flex flex-col-reverse gap-0.5 h-12 w-4 bg-black/20 rounded p-0.5">
               {[0, 1, 2, 3].map((seg) => {
                 const filled = getFilledSegments(printer.inkLevel);
                 return (
@@ -228,14 +228,14 @@ export function ConsumablesScreen({
         </div>
 
         {/* Assignment dropdowns — Makeup first, Ink second (matching indicators above) */}
-        <div className="px-4 pb-4 grid grid-cols-2 gap-3">
+        <div className="px-3 pb-3 grid grid-cols-2 gap-2">
           <div>
             <Label className="text-xs text-muted-foreground">Makeup Part</Label>
             <Select
               value={assignment?.makeupConsumableId ?? 'none'}
               onValueChange={(v) => onAssignConsumable(printer.id, 'makeup', v === 'none' ? undefined : v)}
             >
-              <SelectTrigger className="h-9 text-sm">
+              <SelectTrigger className="h-7 text-xs">
                 <SelectValue placeholder="Assign..." />
               </SelectTrigger>
               <SelectContent>
@@ -252,7 +252,7 @@ export function ConsumablesScreen({
               value={assignment?.inkConsumableId ?? 'none'}
               onValueChange={(v) => onAssignConsumable(printer.id, 'ink', v === 'none' ? undefined : v)}
             >
-              <SelectTrigger className="h-9 text-sm">
+              <SelectTrigger className="h-7 text-xs">
                 <SelectValue placeholder="Assign..." />
               </SelectTrigger>
               <SelectContent>
@@ -280,17 +280,17 @@ export function ConsumablesScreen({
         status === 'low' ? 'border-warning/50' : ''
       }`}>
         <CardContent className="p-0">
-          <div className="p-4 space-y-3">
+          <div className="p-2.5 space-y-1.5">
             {/* Part header + status badge */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+              <div className="flex items-center gap-2 min-w-0">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
                   isInk ? 'bg-primary/15 text-primary' : 'bg-primary/15 text-primary'
                 }`}>
-                  {isInk ? <Droplets className="w-5 h-5" /> : <Package className="w-5 h-5" />}
+                  {isInk ? <Droplets className="w-4 h-4" /> : <Package className="w-4 h-4" />}
                 </div>
                 <div className="min-w-0">
-                  <span className="text-base font-bold text-foreground block truncate">{c.partNumber}</span>
+                  <span className="text-sm font-bold text-foreground block truncate">{c.partNumber}</span>
                   {c.description && (
                     <span className="text-xs text-muted-foreground block truncate">{c.description}</span>
                   )}
@@ -298,28 +298,28 @@ export function ConsumablesScreen({
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 {status === 'critical' && (
-                  <Badge variant="destructive" className="text-xs px-2 py-0.5">OUT</Badge>
+                  <Badge variant="destructive" className="text-xs px-1.5 py-0">OUT</Badge>
                 )}
                 {status === 'low' && (
-                  <Badge className="text-xs px-2 py-0.5 bg-warning text-warning-foreground">LOW</Badge>
+                  <Badge className="text-xs px-1.5 py-0 bg-warning text-warning-foreground">LOW</Badge>
                 )}
               </div>
             </div>
 
             {/* Graphical bottle columns */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-sm">
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground font-medium">{c.currentStock} {c.unit}</span>
                 <span className="text-muted-foreground">min {c.minimumStock}</span>
               </div>
-              <div className="flex items-end gap-1 h-12 px-1.5 py-1.5 bg-muted/30 rounded-md">
+              <div className="flex items-end gap-0.5 h-8 px-1 py-1 bg-muted/30 rounded-md">
                 {Array.from({ length: maxDisplay }).map((_, i) => {
                   const isFilled = i < c.currentStock;
                   const isBelowMin = i < c.minimumStock;
                   return (
                     <div
                       key={i}
-                      className={`flex-1 max-w-4 rounded-sm transition-all duration-300 ${
+                      className={`flex-1 max-w-3 rounded-sm transition-all duration-300 ${
                         isFilled
                           ? status === 'critical' ? 'bg-destructive'
                             : status === 'low' ? 'bg-warning'
@@ -341,29 +341,29 @@ export function ConsumablesScreen({
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-1.5 pt-1">
-              <Button size="sm" variant="outline" className="h-8 px-3 text-xs flex-1" onClick={() => onAdjustStock(c.id, 1)}>
-                <Plus className="w-3.5 h-3.5 mr-1" />Add
+            <div className="flex items-center gap-1 pt-0.5">
+              <Button size="sm" variant="outline" className="h-7 px-2 text-xs flex-1" onClick={() => onAdjustStock(c.id, 1)}>
+                <Plus className="w-3 h-3 mr-0.5" />Add
               </Button>
-              <Button size="sm" variant="outline" className="h-8 px-3 text-xs flex-1" onClick={() => onAdjustStock(c.id, -1)} disabled={c.currentStock === 0}>
-                <Minus className="w-3.5 h-3.5 mr-1" />Use
+              <Button size="sm" variant="outline" className="h-7 px-2 text-xs flex-1" onClick={() => onAdjustStock(c.id, -1)} disabled={c.currentStock === 0}>
+                <Minus className="w-3 h-3 mr-0.5" />Use
               </Button>
               {reorderConfig.action !== 'none' && (
-                <Button size="sm" variant="outline" className="h-8 px-3 text-xs flex-1" onClick={() => handleReorder(c)}>
-                  <ShoppingCart className="w-3.5 h-3.5 mr-1" />Order
+                <Button size="sm" variant="outline" className="h-7 px-2 text-xs flex-1" onClick={() => handleReorder(c)}>
+                  <ShoppingCart className="w-3 h-3 mr-0.5" />Order
                 </Button>
               )}
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => {
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => {
                 setStockAdjustId(c.id);
                 setStockAdjustValue(String(c.currentStock));
               }} title="Set stock">
-                <Package className="w-3.5 h-3.5" />
+                <Package className="w-3 h-3" />
               </Button>
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openEdit(c)} title="Edit">
-                <Pencil className="w-3.5 h-3.5" />
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openEdit(c)} title="Edit">
+                <Pencil className="w-3 h-3" />
               </Button>
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(c.id)} title="Delete">
-                <Trash2 className="w-3.5 h-3.5" />
+              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(c.id)} title="Delete">
+                <Trash2 className="w-3 h-3" />
               </Button>
             </div>
           </div>
