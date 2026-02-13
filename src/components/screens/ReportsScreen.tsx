@@ -195,6 +195,7 @@ export function ReportsScreen({
   onHome,
 }: ReportsScreenProps) {
   const [selectedPrinterId, setSelectedPrinterId] = useState<number | null>(null);
+  const [detailPrinterId, setDetailPrinterId] = useState<number | null>(null);
   const [newRunDialogOpen, setNewRunDialogOpen] = useState(false);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [downtimeDialogOpen, setDowntimeDialogOpen] = useState(false);
@@ -289,12 +290,32 @@ export function ReportsScreen({
     URL.revokeObjectURL(url);
   };
 
-  // If a printer is selected, show their detail view
-  if (selectedPrinterId !== null) {
-    const printer = printers.find(p => p.id === selectedPrinterId);
-    const data = printerRunData.get(selectedPrinterId);
+  // Compute selected printer's OEE for inline display
+  const selectedData = selectedPrinterId !== null ? printerRunData.get(selectedPrinterId) : null;
+  const selectedPrinter = selectedPrinterId !== null ? printers.find(p => p.id === selectedPrinterId) : null;
+  const selectedOEE = useMemo((): OEEMetrics | null => {
+    if (!selectedData || selectedData.metrics.length === 0) return null;
+    const completed = selectedData.metrics.filter(rm => rm.run.endTime !== null);
+    const source = completed.length > 0 ? completed : selectedData.metrics;
+    const liveMetrics = source.map(rm => rm.run.endTime === null ? { ...rm, oee: calculateOEE(rm.run) } : rm);
+    const avg = (field: keyof OEEMetrics) => liveMetrics.reduce((s, rm) => s + (rm.oee[field] as number), 0) / liveMetrics.length;
+    return {
+      availability: avg('availability'), performance: avg('performance'), oee: avg('oee'),
+      plannedTime: liveMetrics.reduce((s, rm) => s + rm.oee.plannedTime, 0),
+      runTime: liveMetrics.reduce((s, rm) => s + rm.oee.runTime, 0),
+      totalDowntime: liveMetrics.reduce((s, rm) => s + rm.oee.totalDowntime, 0),
+      targetCount: liveMetrics.reduce((s, rm) => s + rm.oee.targetCount, 0),
+      actualCount: liveMetrics.reduce((s, rm) => s + rm.oee.actualCount, 0),
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedData, tick]);
+
+  // If drilling into full detail view
+  if (detailPrinterId !== null) {
+    const printer = printers.find(p => p.id === detailPrinterId);
+    const data = printerRunData.get(detailPrinterId);
     if (!printer || !data) {
-      setSelectedPrinterId(null);
+      setDetailPrinterId(null);
       return null;
     }
     return (
@@ -302,7 +323,7 @@ export function ReportsScreen({
         printer={printer}
         runs={data.runs}
         metrics={data.metrics}
-        onBack={() => setSelectedPrinterId(null)}
+        onBack={() => setDetailPrinterId(null)}
         onHome={onHome}
         onUpdateRun={onUpdateRun}
         onDeleteRun={onDeleteRun}
@@ -371,8 +392,12 @@ export function ReportsScreen({
               return (
                 <button
                   key={printer.id}
-                  onClick={() => setSelectedPrinterId(printer.id)}
-                  className="group rounded-xl border bg-card hover:bg-secondary/50 p-4 text-left transition-all hover:shadow-md hover:border-primary/30 relative overflow-hidden"
+                  onClick={() => setSelectedPrinterId(selectedPrinterId === printer.id ? null : printer.id)}
+                  className={`group rounded-xl border p-4 text-left transition-all relative overflow-hidden ${
+                    selectedPrinterId === printer.id
+                      ? 'bg-primary/5 border-primary/40 shadow-md ring-1 ring-primary/20'
+                      : 'bg-card hover:bg-secondary/50 hover:shadow-md hover:border-primary/30'
+                  }`}
                 >
                   {/* Active run indicator */}
                   {activeRuns.length > 0 && (
@@ -470,13 +495,66 @@ export function ReportsScreen({
           </div>
         )}
 
-        {/* ===== Fleet Charts ===== */}
-        {allMetrics.length > 0 && (
+        {/* ===== Selected Printer OEE Detail ===== */}
+        {selectedPrinter && selectedOEE && (
+          <div className="rounded-xl border bg-gradient-to-br from-card via-card to-secondary/50 p-5 md:p-6 shadow-lg relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl" />
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-success/5 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
+
+            <div className="flex items-center gap-2 mb-5 relative z-10">
+              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                <PrinterIcon className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg md:text-xl font-bold text-foreground truncate">{selectedPrinter.name}</h2>
+                <p className="text-[10px] text-muted-foreground">{selectedPrinter.ipAddress}:{selectedPrinter.port}</p>
+              </div>
+              <span className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm ${
+                selectedOEE.oee >= 85 ? 'bg-success text-success-foreground' :
+                selectedOEE.oee >= 60 ? 'bg-warning text-warning-foreground' :
+                'bg-destructive text-destructive-foreground'
+              }`}>
+                {getOEELabel(selectedOEE.oee)}
+              </span>
+            </div>
+
+            <div className="flex justify-around items-end flex-wrap gap-6 md:gap-8 relative z-10 mb-5">
+              <OEEGauge value={selectedOEE.oee} label="OEE" size={130} isPrimary />
+              <OEEGauge value={selectedOEE.availability} label="Availability" size={100} />
+              <OEEGauge value={selectedOEE.performance} label="Performance" size={100} />
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative z-10 mb-4">
+              <StatCard icon={Target} label="Target" value={selectedOEE.targetCount.toLocaleString()} accent="primary" />
+              <StatCard icon={CheckCircle2} label="Actual" value={selectedOEE.actualCount.toLocaleString()} accent="success" />
+              <StatCard icon={Timer} label="Run Time" value={formatDuration(selectedOEE.runTime)} accent="primary" />
+              <StatCard icon={AlertTriangle} label="Downtime" value={formatDuration(selectedOEE.totalDowntime)} accent="destructive" />
+            </div>
+
+            <div className="flex justify-center relative z-10">
+              <Button
+                size="sm"
+                onClick={() => setDetailPrinterId(selectedPrinterId)}
+                className="industrial-button text-white border-0"
+              >
+                <BarChart3 className="w-4 h-4 mr-1.5" /> View Full Report
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ===== Charts for selected printer or all ===== */}
+        {selectedData && selectedData.metrics.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ChartOEETrend data={selectedData.metrics} />
+            <ChartTargetVsActual data={selectedData.metrics} />
+          </div>
+        ) : !selectedPrinterId && allMetrics.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <ChartOEETrend data={allMetrics} />
             <ChartTargetVsActual data={allMetrics} />
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Dialogs */}
