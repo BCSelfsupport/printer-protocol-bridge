@@ -143,6 +143,124 @@ function OEEGauge({ value, label, size = 120, isPrimary = false }: { value: numb
     </div>
   );
 }
+function CompositeOEEGauge({ oee, availability, performance }: { oee: number; availability: number; performance: number }) {
+  const [animA, setAnimA] = useState(0);
+  const [animP, setAnimP] = useState(0);
+  const [animOEE, setAnimOEE] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => { setAnimA(availability); setAnimP(performance); setAnimOEE(oee); }, 100);
+    return () => clearTimeout(t);
+  }, [oee, availability, performance]);
+
+  const size = 200;
+  const center = size / 2;
+  const colorA = getOEEColor(availability);
+  const colorP = getOEEColor(performance);
+  const colorOEE = getOEEColor(oee);
+
+  // Three concentric rings: outer=Availability, mid=Performance, inner=OEE
+  const rings = [
+    { value: animA, color: colorA, radius: 90, stroke: 8, track: 3, label: 'A' },
+    { value: animP, color: colorP, radius: 74, stroke: 8, track: 3, label: 'P' },
+    { value: animOEE, color: colorOEE, radius: 58, stroke: 10, track: 4, label: 'OEE' },
+  ];
+
+  return (
+    <div className="flex flex-col items-center relative z-10 mb-6">
+      <div className="flex items-center justify-center gap-6 md:gap-10">
+        {/* The composite ring gauge */}
+        <div className="relative" style={{ width: size, height: size }}>
+          {/* Ambient glow */}
+          <div className="absolute inset-[-10px] rounded-full opacity-20 blur-2xl"
+               style={{ background: `radial-gradient(circle, ${colorOEE} 0%, transparent 70%)` }} />
+
+          <svg width={size} height={size} className="transform -rotate-90 relative z-10">
+            <defs>
+              {rings.map((r) => (
+                <filter key={`f-${r.label}`} id={`comp-shadow-${r.label}`}>
+                  <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor={r.color} floodOpacity="0.4" />
+                </filter>
+              ))}
+            </defs>
+
+            {rings.map((r) => {
+              const circ = 2 * Math.PI * r.radius;
+              const off = circ - (Math.min(100, r.value) / 100) * circ;
+              const endAngle = (Math.min(100, r.value) / 100) * 360 - 90;
+              const dotX = center + r.radius * Math.cos((endAngle * Math.PI) / 180);
+              const dotY = center + r.radius * Math.sin((endAngle * Math.PI) / 180);
+              return (
+                <g key={r.label}>
+                  {/* Track */}
+                  <circle cx={center} cy={center} r={r.radius} fill="none"
+                          stroke="hsl(var(--muted))" strokeWidth={r.track} opacity={0.25} />
+                  {/* Progress */}
+                  <circle cx={center} cy={center} r={r.radius} fill="none"
+                          stroke={r.color} strokeWidth={r.stroke}
+                          strokeDasharray={circ} strokeDashoffset={off}
+                          strokeLinecap="round"
+                          filter={`url(#comp-shadow-${r.label})`}
+                          className="transition-all duration-1000 ease-out" />
+                  {/* End dot */}
+                  {r.value > 2 && (
+                    <circle cx={dotX} cy={dotY} r={r.stroke * 0.3}
+                            fill="white" opacity={0.85}
+                            className="transition-all duration-1000 ease-out" />
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+
+          {/* Center text */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+            <span className="text-4xl md:text-5xl font-black tabular-nums tracking-tight"
+                  style={{ color: colorOEE, textShadow: `0 0 25px ${colorOEE}33` }}>
+              {animOEE.toFixed(1)}%
+            </span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mt-0.5">OEE</span>
+          </div>
+        </div>
+
+        {/* Formula breakdown */}
+        <div className="flex flex-col gap-3">
+          {/* Availability */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: colorA, boxShadow: `0 0 8px ${colorA}55` }} />
+            <div>
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Availability</div>
+              <div className="text-lg font-black tabular-nums" style={{ color: colorA }}>{animA.toFixed(1)}%</div>
+            </div>
+          </div>
+
+          {/* × symbol */}
+          <div className="text-muted-foreground/40 font-light text-lg pl-1">×</div>
+
+          {/* Performance */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: colorP, boxShadow: `0 0 8px ${colorP}55` }} />
+            <div>
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Performance</div>
+              <div className="text-lg font-black tabular-nums" style={{ color: colorP }}>{animP.toFixed(1)}%</div>
+            </div>
+          </div>
+
+          {/* = symbol */}
+          <div className="h-px bg-gradient-to-r from-muted-foreground/30 to-transparent w-24" />
+
+          {/* OEE result */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: colorOEE, boxShadow: `0 0 8px ${colorOEE}55` }} />
+            <div>
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">= OEE</div>
+              <div className="text-lg font-black tabular-nums" style={{ color: colorOEE }}>{animOEE.toFixed(1)}%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function MiniGauge({ value, size = 40, strokeWidth = 3 }: { value: number; size?: number; strokeWidth?: number }) {
   const radius = (size - strokeWidth) / 2;
@@ -467,12 +585,12 @@ export function ReportsScreen({
             {/* Separator line */}
             <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mb-6 relative z-10" />
 
-            {/* Gauges row */}
-            <div className="flex justify-center items-end gap-8 md:gap-16 relative z-10 mb-8">
-              <OEEGauge value={selectedOEE.availability} label="Availability" size={110} />
-              <OEEGauge value={selectedOEE.oee} label="OEE" size={150} isPrimary />
-              <OEEGauge value={selectedOEE.performance} label="Performance" size={110} />
-            </div>
+            {/* Composite OEE Gauge — A × P = OEE */}
+            <CompositeOEEGauge
+              oee={selectedOEE.oee}
+              availability={selectedOEE.availability}
+              performance={selectedOEE.performance}
+            />
 
             {/* Stat cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 relative z-10 mb-6">
