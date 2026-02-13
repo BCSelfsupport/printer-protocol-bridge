@@ -14,7 +14,7 @@ interface AdjustDialogProps {
   onOpenChange: (open: boolean) => void;
   settings: PrintSettings;
   onUpdate: (settings: Partial<PrintSettings>) => void;
-  onSendCommand: (command: string) => Promise<void>;
+  onSendCommand: (command: string) => Promise<any>;
   isConnected: boolean;
 }
 
