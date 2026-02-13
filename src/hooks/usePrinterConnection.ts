@@ -106,7 +106,7 @@ export function usePrinterConnection() {
       // Multi-printer emulator: update every emulated IP in the list
       if (multiPrinterEmulator.enabled) {
         const hasErrors = (inkLevel?: string, makeupLevel?: string) =>
-          inkLevel === 'LOW' || inkLevel === 'EMPTY' || makeupLevel === 'LOW' || makeupLevel === 'EMPTY';
+          inkLevel === 'EMPTY' || makeupLevel === 'EMPTY';
 
         printers.forEach((p) => {
           const instance = multiPrinterEmulator.getInstanceByIp(p.ipAddress, p.port);
@@ -134,9 +134,7 @@ export function usePrinterConnection() {
       if (sim) {
         const state = printerEmulator.getState();
         const hasActiveErrors =
-          state.inkLevel === 'LOW' ||
           state.inkLevel === 'EMPTY' ||
-          state.makeupLevel === 'LOW' ||
           state.makeupLevel === 'EMPTY';
 
         updatePrinterStatus(sim.id, {
