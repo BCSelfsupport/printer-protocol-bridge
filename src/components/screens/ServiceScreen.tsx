@@ -33,19 +33,15 @@ export function ServiceScreen({ open, onOpenChange, metrics, onMount, onUnmount,
     }
   }, [open, onMount, onUnmount]);
 
-  const [printing, setPrinting] = useState(false);
   const handleForcePrint = useCallback(async () => {
-    if (!onSendCommand || printing) return;
-    setPrinting(true);
+    if (!onSendCommand) return;
     try {
       await onSendCommand('^PT');
       toast.success('Force Print triggered');
     } catch (e) {
       toast.error('Force Print failed');
-    } finally {
-      setTimeout(() => setPrinting(false), 1000);
     }
-  }, [onSendCommand, printing]);
+  }, [onSendCommand]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -57,12 +53,12 @@ export function ServiceScreen({ open, onOpenChange, metrics, onMount, onUnmount,
         <div className="flex justify-end -mt-2">
           <button
             onClick={handleForcePrint}
-            disabled={!onSendCommand || printing}
+            disabled={!onSendCommand}
             className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-2 disabled:opacity-50"
             title="Force Print"
           >
             <Printer className="w-5 h-5" />
-            <span className="text-sm font-medium">{printing ? 'Printing...' : 'Force Print'}</span>
+            <span className="text-sm font-medium">Force Print</span>
           </button>
         </div>
 
