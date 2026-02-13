@@ -85,23 +85,10 @@ const Index = () => {
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
   const handleCountdownComplete = useCallback((printerId: number, type: CountdownType) => {
     console.log('[handleCountdownComplete] printerId:', printerId, 'type:', type);
-    if (type === 'starting') {
-      // Auto-enable HV after jet startup countdown
-      // Find the printer by ID to target the correct emulator instance
-      const printer = printers.find(p => p.id === printerId);
-      if (printer && multiPrinterEmulator.enabled) {
-        const instance = multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port);
-        if (instance) {
-          console.log('[handleCountdownComplete] Sending ^PR 1 to', printer.ipAddress);
-          instance.processCommand('^PR 1');
-        }
-      }
-      // For connected printer, also update via startPrint
-      if (printerId === connectedPrinterId) {
-        startPrint();
-      }
-    }
-  }, [startPrint, printers, connectedPrinterId]);
+    // Jet startup/shutdown countdown finished — HV is NOT auto-enabled.
+    // The operator must manually press "HV On" after the jet is running.
+    // No command is sent here; the UI simply exits the countdown state.
+  }, []);
 
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown, getCountdown } = useJetCountdown(connectedPrinterId, handleCountdownComplete);
 
