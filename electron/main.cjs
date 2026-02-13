@@ -1,5 +1,7 @@
 const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
 const net = require('net');
+const http = require('http');
+const os = require('os');
 const { execFile } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -360,155 +362,11 @@ ipcMain.handle('printer:disconnect', async (event, printerId) => {
 });
 
 ipcMain.handle('printer:send-command', async (event, { printerId, command }) => {
-  const meta = printerMeta.get(printerId);
-  const existing = connections.get(printerId);
-
-  // Many telnet-style embedded servers will close the socket after sending a response.
-  // To make testing fast/reliable, fall back to an on-demand socket when needed.
-  const canUseExisting = !!(existing && !existing.destroyed && existing.writable);
-
-  const getSocket = async () => {
-    if (canUseExisting) return { socket: existing, ephemeral: false };
-    if (!meta) throw new Error('Printer not connected');
-
-    return await new Promise((resolve, reject) => {
-      const socket = new net.Socket();
-      socket.setTimeout(5000);
-      socket.setKeepAlive(true, 5000);
-
-      socket.once('connect', () => {
-        connections.set(printerId, socket);
-        resolve({ socket, ephemeral: true });
-      });
-
-      socket.once('timeout', () => {
-        socket.destroy();
-        connections.delete(printerId);
-        reject(new Error('Connection timeout'));
-      });
-
-      socket.once('error', (err) => {
-        socket.destroy();
-        connections.delete(printerId);
-        reject(err);
-      });
-
-      socket.once('close', () => {
-        connections.delete(printerId);
-        mainWindow?.webContents.send('printer:connection-lost', { printerId });
-      });
-
-      socket.connect(meta.port, meta.ipAddress);
-    });
-  };
-
-  const { socket, ephemeral } = await getSocket();
-
-  return await new Promise((resolve, reject) => {
-    let response = '';
-
-    // Instead of a fixed delay, wait until we observe the device prompt / idle.
-    // Bestcode responses typically end with a ">" prompt, but timing varies by device state.
-    // If we finish too early, the next poll can accidentally read the *previous* ^SU payload,
-    // making values like V300UP appear "stuck".
-    const MAX_WAIT_MS = 2200;
-    const IDLE_AFTER_DATA_MS = 220;
-    let maxTimer = null;
-    let idleTimer = null;
-    let gotAnyData = false;
-
-    const cleanup = () => {
-      socket.off('data', onData);
-      socket.off('error', onError);
-      socket.off('close', onClose);
-      socket.setTimeout(0);
-      if (maxTimer) clearTimeout(maxTimer);
-      if (idleTimer) clearTimeout(idleTimer);
-      // If we had to create a new socket just for this send, don't try to keep it alive.
-      // (The printer often closes anyway; closing quickly avoids a noisy reconnect loop.)
-      if (ephemeral && !socket.destroyed) socket.destroy();
-    };
-
-    const finish = () => {
-      cleanup();
-      resolve({ success: true, response });
-    };
-
-    const scheduleFinishWhenIdle = () => {
-      if (idleTimer) clearTimeout(idleTimer);
-      // If we received any data, finishing shortly after the last chunk is safer than a fixed delay.
-      idleTimer = setTimeout(() => {
-        finish();
-      }, IDLE_AFTER_DATA_MS);
-    };
-
-    const onError = (err) => {
-      cleanup();
-      reject({ success: false, error: err.message });
-    };
-
-    const onClose = () => {
-      // If it closed after we got data, still treat as success.
-      // If it closed before any data, surface it.
-      if (response.length > 0) finish();
-      else {
-        cleanup();
-        reject({ success: false, error: 'Connection closed by printer' });
-      }
-    };
-
-    const onData = (chunk) => {
-      // Strip/handle telnet negotiation bytes so they don't pollute responses.
-      const hadTelnet = handleTelnetNegotiation(socket, chunk);
-      if (hadTelnet) {
-        // IMPORTANT: Some devices send IAC negotiation bytes and real text in the SAME chunk.
-        // If we return early here we lose the ^SU "STATUS: ..." payload.
-        // Strip IAC bytes and keep any remaining text.
-        const stripped = stripTelnetBytes(chunk);
-        if (stripped && stripped.length > 0) {
-          response += stripped.toString();
-          gotAnyData = true;
-        }
-        // Even if it was negotiation, we may have received real text too.
-        // Keep waiting for prompt/idle.
-        if (response.includes('>')) finish();
-        else scheduleFinishWhenIdle();
-        return;
-      }
-      response += chunk.toString();
-      gotAnyData = true;
-
-      // If we see the prompt, we can finish immediately.
-      if (response.includes('>')) {
-        finish();
-        return;
-      }
-
-      // Otherwise, finish shortly after the last received chunk.
-      scheduleFinishWhenIdle();
-    };
-
-    socket.on('data', onData);
-    socket.once('error', onError);
-    socket.once('close', onClose);
-
-    maxTimer = setTimeout(() => {
-      // If we got something, treat it as success; otherwise fail.
-      if (gotAnyData) finish();
-      else {
-        cleanup();
-        reject({ success: false, error: 'No response from printer (timeout)' });
-      }
-    }, MAX_WAIT_MS);
-
-    // Telnet line endings: many devices require CRLF (\r\n) rather than only CR.
-    // Sending only CR can cause the printer to parse the command incorrectly and reply
-    // with a generic "not recognized" for otherwise valid commands.
-    socket.write(command + '\r\n', (err) => {
-      if (err) return onError(err);
-      // Wait for prompt/idle (handled in onData timers) or MAX_WAIT_MS.
-    });
-  });
+  try {
+    return await sendCommandToSocket(printerId, command);
+  } catch (err) {
+    return { success: false, error: err.message || 'Command failed' };
+  }
 });
 
 if (autoUpdater) {
@@ -558,7 +416,249 @@ ipcMain.handle('app:get-version', () => {
   return app.getVersion();
 });
 
-app.whenReady().then(createWindow);
+// --- Mobile Relay HTTP Server ---
+// Exposes a simple JSON API on port 8766 so mobile PWA clients on the same WiFi
+// can relay printer commands through this Electron app.
+const RELAY_PORT = 8766;
+let relayServer = null;
+
+function getLocalIPs() {
+  const interfaces = os.networkInterfaces();
+  const ips = [];
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        ips.push(iface.address);
+      }
+    }
+  }
+  return ips;
+}
+
+function startRelayServer() {
+  relayServer = http.createServer(async (req, res) => {
+    // CORS headers for mobile PWA
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    // Health / info endpoint
+    if (req.method === 'GET' && req.url === '/relay/info') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ relay: true, version: app.getVersion(), ips: getLocalIPs() }));
+      return;
+    }
+
+    // All other routes are POST /relay/<action>
+    if (req.method !== 'POST') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    // Parse body
+    let body = '';
+    for await (const chunk of req) body += chunk;
+    let payload;
+    try { payload = JSON.parse(body); } catch { 
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      return;
+    }
+
+    const sendJson = (status, data) => {
+      res.writeHead(status, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(data));
+    };
+
+    try {
+      const url = req.url;
+
+      if (url === '/relay/check-status') {
+        // Reuse the same ping logic as printer:check-status
+        const printers = payload.printers || [];
+        const pingHost = (ipAddress, timeoutMs = 1200) => {
+          return new Promise((resolve) => {
+            const isWin = process.platform === 'win32';
+            const args = isWin
+              ? ['-n', '1', '-w', String(timeoutMs), ipAddress]
+              : ['-c', '1', '-W', String(Math.max(1, Math.round(timeoutMs / 1000))), ipAddress];
+            execFile('ping', args, { timeout: timeoutMs + 500 }, (error) => {
+              resolve({ ok: !error });
+            });
+          });
+        };
+        const results = await Promise.all(printers.map(async (p) => {
+          const ping = await pingHost(p.ipAddress, 1200);
+          return { id: p.id, isAvailable: ping.ok, status: ping.ok ? 'ready' : 'offline' };
+        }));
+        sendJson(200, { printers: results });
+
+      } else if (url === '/relay/connect') {
+        // Store meta + connect socket
+        const printer = payload.printer;
+        printerMeta.set(printer.id, { ipAddress: printer.ipAddress, port: printer.port });
+        // Attempt TCP connect
+        const result = await new Promise((resolve) => {
+          const existing = connections.get(printer.id);
+          if (existing && !existing.destroyed && existing.writable) {
+            return resolve({ success: true, reused: true });
+          }
+          if (existing) { try { existing.destroy(); } catch(_) {} connections.delete(printer.id); }
+
+          const socket = new net.Socket();
+          socket.setTimeout(10000);
+          socket.setKeepAlive(true, 5000);
+          let resolved = false;
+
+          socket.on('connect', () => {
+            if (!resolved) { resolved = true; connections.set(printer.id, socket); resolve({ success: true }); }
+          });
+          socket.on('error', (err) => {
+            if (!resolved) { resolved = true; resolve({ success: false, error: err.message }); }
+          });
+          socket.on('close', () => { connections.delete(printer.id); });
+          socket.on('data', (data) => { handleTelnetNegotiation(socket, data); });
+          socket.connect(printer.port, printer.ipAddress);
+
+          setTimeout(() => { if (!resolved) { resolved = true; socket.destroy(); resolve({ success: false, error: 'Timeout' }); } }, 10000);
+        });
+        sendJson(200, result);
+
+      } else if (url === '/relay/disconnect') {
+        const { printerId } = payload;
+        const socket = connections.get(printerId);
+        if (socket) { socket.destroy(); connections.delete(printerId); }
+        sendJson(200, { success: true });
+
+      } else if (url === '/relay/send-command') {
+        const { printerId, command } = payload;
+        // Reuse the existing send-command logic by invoking it programmatically
+        try {
+          const result = await sendCommandToSocket(printerId, command);
+          sendJson(200, result);
+        } catch (err) {
+          sendJson(200, { success: false, error: err.message || 'Command failed' });
+        }
+
+      } else {
+        sendJson(404, { error: 'Unknown relay endpoint' });
+      }
+    } catch (err) {
+      sendJson(500, { error: err.message || 'Internal error' });
+    }
+  });
+
+  relayServer.listen(RELAY_PORT, '0.0.0.0', () => {
+    const ips = getLocalIPs();
+    logToFile(`[relay] Server listening on port ${RELAY_PORT}`);
+    logToFile(`[relay] Local IPs: ${ips.join(', ')}`);
+    // Notify renderer of relay info
+    mainWindow?.webContents.send('relay:info', { port: RELAY_PORT, ips });
+  });
+
+  relayServer.on('error', (err) => {
+    logToFile(`[relay] Server error: ${err.message}`);
+  });
+}
+
+// Extract send-command logic into a reusable function for both IPC and relay
+async function sendCommandToSocket(printerId, command) {
+  const meta = printerMeta.get(printerId);
+  const existing = connections.get(printerId);
+  const canUseExisting = !!(existing && !existing.destroyed && existing.writable);
+
+  const getSocket = async () => {
+    if (canUseExisting) return { socket: existing, ephemeral: false };
+    if (!meta) throw new Error('Printer not connected');
+    return await new Promise((resolve, reject) => {
+      const socket = new net.Socket();
+      socket.setTimeout(5000);
+      socket.setKeepAlive(true, 5000);
+      socket.once('connect', () => { connections.set(printerId, socket); resolve({ socket, ephemeral: true }); });
+      socket.once('timeout', () => { socket.destroy(); connections.delete(printerId); reject(new Error('Connection timeout')); });
+      socket.once('error', (err) => { socket.destroy(); connections.delete(printerId); reject(err); });
+      socket.once('close', () => { connections.delete(printerId); });
+      socket.connect(meta.port, meta.ipAddress);
+    });
+  };
+
+  const { socket, ephemeral } = await getSocket();
+
+  return await new Promise((resolve, reject) => {
+    let response = '';
+    const MAX_WAIT_MS = 2200;
+    const IDLE_AFTER_DATA_MS = 220;
+    let maxTimer = null;
+    let idleTimer = null;
+    let gotAnyData = false;
+
+    const cleanup = () => {
+      socket.off('data', onData);
+      socket.off('error', onError);
+      socket.off('close', onClose);
+      socket.setTimeout(0);
+      if (maxTimer) clearTimeout(maxTimer);
+      if (idleTimer) clearTimeout(idleTimer);
+      if (ephemeral && !socket.destroyed) socket.destroy();
+    };
+
+    const finish = () => { cleanup(); resolve({ success: true, response }); };
+
+    const scheduleFinishWhenIdle = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => finish(), IDLE_AFTER_DATA_MS);
+    };
+
+    const onError = (err) => { cleanup(); reject(new Error(err.message)); };
+    const onClose = () => {
+      if (response.length > 0) finish();
+      else { cleanup(); reject(new Error('Connection closed by printer')); }
+    };
+
+    const onData = (chunk) => {
+      const hadTelnet = handleTelnetNegotiation(socket, chunk);
+      if (hadTelnet) {
+        const stripped = stripTelnetBytes(chunk);
+        if (stripped && stripped.length > 0) { response += stripped.toString(); gotAnyData = true; }
+        if (response.includes('>')) finish();
+        else scheduleFinishWhenIdle();
+        return;
+      }
+      response += chunk.toString();
+      gotAnyData = true;
+      if (response.includes('>')) { finish(); return; }
+      scheduleFinishWhenIdle();
+    };
+
+    socket.on('data', onData);
+    socket.once('error', onError);
+    socket.once('close', onClose);
+
+    maxTimer = setTimeout(() => {
+      if (gotAnyData) finish();
+      else { cleanup(); reject(new Error('No response from printer (timeout)')); }
+    }, MAX_WAIT_MS);
+
+    socket.write(command + '\r\n', (err) => { if (err) return onError(err); });
+  });
+}
+
+// IPC handler for relay info
+ipcMain.handle('relay:get-info', () => {
+  return { port: RELAY_PORT, ips: getLocalIPs() };
+});
+
+app.whenReady().then(() => {
+  createWindow();
+  startRelayServer();
+});
 
 app.on('window-all-closed', () => {
   // Close all printer connections

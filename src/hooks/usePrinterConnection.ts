@@ -7,6 +7,7 @@ import { parseStatusResponse } from '@/lib/printerProtocol';
 import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
+import { printerTransport, isRelayMode } from '@/lib/printerTransport';
 const defaultSettings: PrintSettings = {
   width: 15,
   height: 8,
@@ -167,6 +168,9 @@ export function usePrinterConnection() {
       if (isElectron && window.electronAPI) {
         // Use Electron's native ICMP ping
         results = await window.electronAPI.printer.checkStatus(printerData);
+      } else if (isRelayMode()) {
+        // Use relay server on PC for ICMP ping
+        results = await printerTransport.checkStatus(printerData);
       } else {
         // Fallback to cloud function (won't work for local network, but keeps the code path)
         const { data, error } = await supabase.functions.invoke('check-printer-status', {
@@ -380,7 +384,8 @@ export function usePrinterConnection() {
   // Lazy TCP connect: only open the Electron socket while a polling screen is open.
   // This prevents the printer UI from refreshing/flashing immediately on "Connect".
   useEffect(() => {
-    if (!isElectron || !window.electronAPI) return;
+    if (!isElectron && !isRelayMode()) return;
+    if (!window.electronAPI && !isRelayMode()) return;
     const printer = connectionState.connectedPrinter;
     if (!connectionState.isConnected || !printer) return;
 
@@ -392,7 +397,7 @@ export function usePrinterConnection() {
       try {
         if (shouldConnect) {
           console.log('[usePrinterConnection] Opening socket for printer:', printer.id);
-          const result = await window.electronAPI.printer.connect({
+          const result = await printerTransport.connect({
             id: printer.id,
             ipAddress: printer.ipAddress,
             port: printer.port,
@@ -400,8 +405,7 @@ export function usePrinterConnection() {
           console.log('[usePrinterConnection] Socket connect result:', result);
         } else {
           console.log('[usePrinterConnection] Closing socket for printer:', printer.id);
-          // Close the socket when leaving polling screens to avoid any device-side UI refresh.
-          await window.electronAPI.printer.disconnect(printer.id);
+          await printerTransport.disconnect(printer.id);
         }
       } catch (e) {
         if (!cancelled) console.error('[usePrinterConnection] service socket toggle failed:', e);
@@ -415,17 +419,17 @@ export function usePrinterConnection() {
 
   // Query printer status (^SU) and update state - used on connect and after commands
   const queryPrinterStatus = useCallback(async (printer: Printer) => {
-    if (!isElectron || !window.electronAPI) return;
+    if (!isElectron && !isRelayMode()) return;
     
     try {
       // Ensure socket is connected
-      await window.electronAPI.printer.connect({
+      await printerTransport.connect({
         id: printer.id,
         ipAddress: printer.ipAddress,
         port: printer.port,
       });
       
-      const result = await window.electronAPI.printer.sendCommand(printer.id, '^SU');
+      const result = await printerTransport.sendCommand(printer.id, '^SU');
       console.log('[queryPrinterStatus] ^SU response:', result);
       
       if (result.success && result.response) {
@@ -476,7 +480,7 @@ export function usePrinterConnection() {
 
       // Also query printer date/time via ^SD
       try {
-        const sdResult = await window.electronAPI.printer.sendCommand(printer.id, '^SD');
+        const sdResult = await printerTransport.sendCommand(printer.id, '^SD');
         console.log('[queryPrinterStatus] ^SD response:', sdResult);
         if (sdResult.success && sdResult.response) {
           const raw = sdResult.response.replace(/[^\x20-\x7E]/g, '').trim();
@@ -499,9 +503,9 @@ export function usePrinterConnection() {
 
   // Query message list from printer via ^LM command
   const queryMessageList = useCallback(async (printer: Printer) => {
-    if (!isElectron || !window.electronAPI) return;
+    if (!isElectron && !isRelayMode()) return;
     try {
-      const result = await window.electronAPI.printer.sendCommand(printer.id, '^LM');
+      const result = await printerTransport.sendCommand(printer.id, '^LM');
       console.log('[queryMessageList] ^LM response:', result);
       if (result.success && result.response) {
         const lines = result.response.split(/[\r\n]+/).filter(Boolean);
@@ -661,14 +665,24 @@ export function usePrinterConnection() {
     // NOTE: Lazy-connect.
     // Do not open a TCP/Telnet session here; many printers flash/refresh their UI on connect.
     // We only open the socket when the Service screen is active.
-    if (!isElectron) {
-      // Web preview: keep simulated delay (cannot reach local network printers)
+    if (!isElectron && !isRelayMode()) {
+      // Web preview: keep simulated delay (cannot reach local network printers without relay)
       await new Promise((resolve) => setTimeout(resolve, 500));
+    } else if (isRelayMode()) {
+      // Relay mode: connect via PC relay
+      try {
+        await printerTransport.connect({
+          id: printer.id,
+          ipAddress: printer.ipAddress,
+          port: printer.port,
+        });
+      } catch (e) {
+        console.error('[connect] Relay connect failed:', e);
+      }
     } else if (window.electronAPI?.printer?.setMeta) {
       // Register connection metadata without opening a socket.
-      // This allows polling/commands to open on-demand sockets without requiring an upfront connect.
       try {
-        await window.electronAPI.printer.setMeta({
+        await printerTransport.setMeta({
           id: printer.id,
           ipAddress: printer.ipAddress,
           port: printer.port,
@@ -697,7 +711,7 @@ export function usePrinterConnection() {
     });
 
     // Query initial status, counters, message list, and current message from printer
-    if (isElectron) {
+    if (isElectron || isRelayMode()) {
       // Small delay to let state update, then query
       setTimeout(async () => {
         queryPrinterStatus(printer);
@@ -706,7 +720,7 @@ export function usePrinterConnection() {
           queryMessageList(printer);
           // Query current selected message via ^SM (no argument returns current)
           try {
-            const smResult = await window.electronAPI!.printer.sendCommand(printer.id, '^SM');
+            const smResult = await printerTransport.sendCommand(printer.id, '^SM');
             console.log('[connect] ^SM response:', smResult);
             if (smResult?.success && smResult.response) {
               // Strip control chars and prompt markers
@@ -726,7 +740,7 @@ export function usePrinterConnection() {
           }
           // Query counters via ^CN
           try {
-            const cnResult = await window.electronAPI!.printer.sendCommand(printer.id, '^CN');
+            const cnResult = await printerTransport.sendCommand(printer.id, '^CN');
             if (cnResult?.success && cnResult.response) {
               const response = cnResult.response;
               let parts: number[] = [];
@@ -766,9 +780,9 @@ export function usePrinterConnection() {
   }, [updatePrinter, queryPrinterStatus, queryMessageList]);
 
   const disconnect = useCallback(async () => {
-    if (isElectron && window.electronAPI && connectionState.connectedPrinter) {
+    if ((isElectron || isRelayMode()) && connectionState.connectedPrinter) {
       try {
-        await window.electronAPI.printer.disconnect(connectionState.connectedPrinter.id);
+        await printerTransport.disconnect(connectionState.connectedPrinter.id);
       } catch (e) {
         console.error('Failed to disconnect printer:', e);
       }
@@ -825,15 +839,14 @@ export function usePrinterConnection() {
           hasActiveErrors: false,
         });
       }
-    } else if (isElectron && window.electronAPI) {
+    } else if (isElectron || isRelayMode()) {
       try {
-        // sendCommand uses on-demand sockets, no need to call connect() first
         const tryCommands = ['^PR 1', '^PR1'] as const;
         let lastResult: any = null;
 
         for (const cmd of tryCommands) {
           console.log('[startPrint] Sending', cmd);
-          const result = await window.electronAPI.printer.sendCommand(printer.id, cmd);
+          const result = await printerTransport.sendCommand(printer.id, cmd);
           lastResult = result;
           console.log('[startPrint] Result for', cmd, ':', JSON.stringify(result));
 
@@ -893,15 +906,14 @@ export function usePrinterConnection() {
           hasActiveErrors: false,
         });
       }
-    } else if (isElectron && window.electronAPI) {
+    } else if (isElectron || isRelayMode()) {
       try {
-        // sendCommand uses on-demand sockets, no need to call connect() first
         const tryCommands = ['^PR 0', '^PR0'] as const;
         let lastResult: any = null;
 
         for (const cmd of tryCommands) {
           console.log('[stopPrint] Sending', cmd);
-          const result = await window.electronAPI.printer.sendCommand(printer.id, cmd);
+          const result = await printerTransport.sendCommand(printer.id, cmd);
           lastResult = result;
           console.log('[stopPrint] Result for', cmd, ':', JSON.stringify(result));
           if (result?.success) break;
@@ -955,10 +967,10 @@ export function usePrinterConnection() {
           hasActiveErrors: false,
         });
       }
-    } else if (isElectron && window.electronAPI) {
+    } else if (isElectron || isRelayMode()) {
       try {
         console.log('[jetStop] Sending ^SJ 0');
-        const result = await window.electronAPI.printer.sendCommand(printer.id, '^SJ 0');
+        const result = await printerTransport.sendCommand(printer.id, '^SJ 0');
         console.log('[jetStop] Result:', JSON.stringify(result));
 
         if (!result?.success) {
@@ -1018,10 +1030,10 @@ export function usePrinterConnection() {
           hasActiveErrors: false,
         });
       }
-    } else if (isElectron && window.electronAPI) {
+    } else if (isElectron || isRelayMode()) {
       try {
         console.log('[jetStart] Sending ^SJ 1');
-        const result = await window.electronAPI.printer.sendCommand(printer.id, '^SJ 1');
+        const result = await printerTransport.sendCommand(printer.id, '^SJ 1');
         console.log('[jetStart] Result:', JSON.stringify(result));
         if (!result?.success) {
           console.error('[jetStart] ^SJ 1 command failed:', result?.error);
@@ -1076,10 +1088,10 @@ export function usePrinterConnection() {
         return true;
       }
       return false;
-    } else if (isElectron && window.electronAPI) {
+    } else if (isElectron || isRelayMode()) {
       try {
         console.log('[selectMessage] Sending ^SM command:', message.name);
-        const result = await window.electronAPI.printer.sendCommand(printer.id, `^SM ${message.name}`);
+        const result = await printerTransport.sendCommand(printer.id, `^SM ${message.name}`);
         console.log('[selectMessage] Result:', JSON.stringify(result));
         
         if (result?.success) {
@@ -1147,10 +1159,10 @@ export function usePrinterConnection() {
       const result = emulator.processCommand('^LO');
       console.log('[signOut] Emulator result:', result);
       return result.success;
-    } else if (isElectron && window.electronAPI) {
+    } else if (isElectron || isRelayMode()) {
       try {
         console.log('[signOut] Sending ^LO command');
-        const result = await window.electronAPI.printer.sendCommand(printer.id, '^LO');
+        const result = await printerTransport.sendCommand(printer.id, '^LO');
         console.log('[signOut] Result:', JSON.stringify(result));
         return result?.success ?? false;
       } catch (e) {
@@ -1336,11 +1348,11 @@ export function usePrinterConnection() {
       // Ensure message is in local state
       addMessage(messageName);
       return true;
-    } else if (isElectron && window.electronAPI) {
+    } else if (isElectron || isRelayMode()) {
       try {
         for (const cmd of commands) {
           console.log('[saveMessageContent] Sending:', cmd);
-          const result = await window.electronAPI.printer.sendCommand(printer.id, cmd);
+          const result = await printerTransport.sendCommand(printer.id, cmd);
           console.log('[saveMessageContent] Result:', JSON.stringify(result));
           // Don't fail on ^DM error (message might not exist yet)
           if (!result?.success && !cmd.startsWith('^DM')) {
@@ -1392,9 +1404,9 @@ export function usePrinterConnection() {
           connectionState.connectedPrinter.port,
         );
         emulator.processCommand(command);
-      } else if (isElectron && window.electronAPI) {
+      } else if (isElectron || isRelayMode()) {
         try {
-          const result = await window.electronAPI.printer.sendCommand(
+          const result = await printerTransport.sendCommand(
             connectionState.connectedPrinter.id,
             command,
           );
@@ -1446,10 +1458,10 @@ export function usePrinterConnection() {
         });
       }
       return true;
-    } else if (isElectron && window.electronAPI) {
+    } else if (isElectron || isRelayMode()) {
       try {
         console.log('[resetCounter] Sending', command);
-        const result = await window.electronAPI.printer.sendCommand(printer.id, command);
+        const result = await printerTransport.sendCommand(printer.id, command);
         console.log('[resetCounter] Result:', JSON.stringify(result));
         
         if (!result?.success) {
@@ -1460,7 +1472,7 @@ export function usePrinterConnection() {
         // Query counters via ^CN after a delay to reflect new values
         setTimeout(async () => {
           try {
-            const cnResult = await window.electronAPI!.printer.sendCommand(printer.id, '^CN');
+            const cnResult = await printerTransport.sendCommand(printer.id, '^CN');
             console.log('[resetCounter] ^CN result:', JSON.stringify(cnResult));
             if (cnResult?.success && cnResult.response) {
               const response = cnResult.response;
@@ -1594,10 +1606,10 @@ export function usePrinterConnection() {
           }));
         }
       }
-    } else if (isElectron && window.electronAPI) {
+    } else if (isElectron || isRelayMode()) {
       try {
         console.log('[queryCounters] Sending ^CN');
-        const result = await window.electronAPI.printer.sendCommand(printer.id, '^CN');
+        const result = await printerTransport.sendCommand(printer.id, '^CN');
         console.log('[queryCounters] Result:', JSON.stringify(result));
         
         if (result?.success && result.response) {
@@ -1682,12 +1694,12 @@ export function usePrinterConnection() {
         console.log('[saveGlobalAdjust] Emulator result for', cmd, ':', result);
       }
       return true;
-    } else if (isElectron && window.electronAPI) {
+    } else if (isElectron || isRelayMode()) {
       try {
         console.log('[saveGlobalAdjust] Sending commands to printer');
         for (const cmd of commands) {
           console.log('[saveGlobalAdjust] Sending:', cmd);
-          const result = await window.electronAPI.printer.sendCommand(printer.id, cmd);
+          const result = await printerTransport.sendCommand(printer.id, cmd);
           console.log('[saveGlobalAdjust] Result:', JSON.stringify(result));
           
           if (!result?.success) {
@@ -1763,10 +1775,10 @@ export function usePrinterConnection() {
       const result = emulator.processCommand(command);
       console.log('[saveMessageSettings] Emulator result:', result);
       return result.success;
-    } else if (isElectron && window.electronAPI) {
+    } else if (isElectron || isRelayMode()) {
       try {
         console.log('[saveMessageSettings] Sending:', command);
-        const result = await window.electronAPI.printer.sendCommand(printer.id, command);
+        const result = await printerTransport.sendCommand(printer.id, command);
         console.log('[saveMessageSettings] Result:', JSON.stringify(result));
         return result?.success ?? false;
       } catch (e) {
@@ -1795,10 +1807,10 @@ export function usePrinterConnection() {
       console.log('[queryPrintSettings] Using emulator - using current settings');
       // Emulator doesn't have stored settings, use current state
       return;
-    } else if (isElectron && window.electronAPI) {
+    } else if (isElectron || isRelayMode()) {
       try {
         console.log('[queryPrintSettings] Querying settings from printer');
-        const result = await window.electronAPI.printer.sendCommand(printer.id, '^QP');
+        const result = await printerTransport.sendCommand(printer.id, '^QP');
         console.log('[queryPrintSettings] Result:', JSON.stringify(result));
 
         if (result?.success && result.response) {
@@ -1874,10 +1886,10 @@ export function usePrinterConnection() {
       const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
       console.log('[sendCommand] Using emulator');
       return emulator.processCommand(command);
-    } else if (isElectron && window.electronAPI) {
+    } else if (isElectron || isRelayMode()) {
       try {
         console.log('[sendCommand] Sending:', command);
-        const result = await window.electronAPI.printer.sendCommand(printer.id, command);
+        const result = await printerTransport.sendCommand(printer.id, command);
         console.log('[sendCommand] Result:', JSON.stringify(result));
         return {
           success: result?.success ?? false,
@@ -1939,22 +1951,22 @@ export function usePrinterConnection() {
         }
       }
       return mockMetrics;
-    } else if (isElectron && window.electronAPI) {
+    } else if (isElectron || isRelayMode()) {
       try {
         // Open temporary connection
-        await window.electronAPI.printer.connect({
+        await printerTransport.connect({
           id: printer.id,
           ipAddress: printer.ipAddress,
           port: printer.port,
         });
 
-        const result = await window.electronAPI.printer.sendCommand(printer.id, '^SU');
+        const result = await printerTransport.sendCommand(printer.id, '^SU');
         console.log('[queryPrinterMetrics] ^SU response:', result);
 
         // Also fetch printer time
         let pTime: Date | null = null;
         try {
-          const sdResult = await window.electronAPI.printer.sendCommand(printer.id, '^SD');
+          const sdResult = await printerTransport.sendCommand(printer.id, '^SD');
           if (sdResult.success && sdResult.response) {
             const cleaned = sdResult.response.replace(/[^\x20-\x7E]/g, '').trim();
             const p = new Date(cleaned);

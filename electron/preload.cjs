@@ -15,6 +15,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('printer:send-command', { printerId, command }),
   },
 
+  // Relay server info
+  relay: {
+    getInfo: () => ipcRenderer.invoke('relay:get-info'),
+  },
+
   // App operations
   app: {
     getVersion: () => ipcRenderer.invoke('app:get-version'),
@@ -36,5 +41,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Printer events
   onPrinterConnectionLost: (callback) => {
     ipcRenderer.on('printer:connection-lost', (event, payload) => callback(payload));
+  },
+
+  // Relay events
+  onRelayInfo: (callback) => {
+    ipcRenderer.on('relay:info', (event, info) => callback(info));
   },
 });

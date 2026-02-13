@@ -13,6 +13,10 @@ interface PrinterAPI {
   sendCommand: (printerId: number, command: string) => Promise<{ success: boolean; response?: string; error?: string }>;
 }
 
+interface RelayAPI {
+  getInfo: () => Promise<{ port: number; ips: string[] }>;
+}
+
 interface AppAPI {
   getVersion: () => Promise<string>;
   checkForUpdates: () => void;
@@ -22,11 +26,13 @@ interface AppAPI {
 interface ElectronAPI {
   isElectron: boolean;
   printer: PrinterAPI;
+  relay: RelayAPI;
   app: AppAPI;
   onUpdateAvailable: (callback: (info: { version: string }) => void) => void;
   onUpdateDownloadProgress: (callback: (progress: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => void;
   onUpdateDownloaded: (callback: (info: { version: string }) => void) => void;
   onPrinterConnectionLost: (callback: (payload: { printerId: number }) => void) => void;
+  onRelayInfo: (callback: (info: { port: number; ips: string[] }) => void) => void;
 }
 
 declare global {
