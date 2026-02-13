@@ -502,6 +502,8 @@ export function usePrinterConnection() {
   }, [updatePrinterStatus]);
 
   // Query message list from printer via ^LM command
+  // Also detects the currently selected message from the "(current)" marker in echo-on mode
+  // or numbered list format "1. MSGNAME (current)"
   const queryMessageList = useCallback(async (printer: Printer) => {
     if (!isElectron && !isRelayMode()) return;
     try {
@@ -510,6 +512,7 @@ export function usePrinterConnection() {
       if (result.success && result.response) {
         const lines = result.response.split(/[\r\n]+/).filter(Boolean);
         const messageNames: string[] = [];
+        let detectedCurrentMessage: string | null = null;
         for (const line of lines) {
           // Strip non-printable / control characters (garbage bytes from firmware)
           const trimmed = line.replace(/[^\x20-\x7E]/g, '').trim();
@@ -518,24 +521,43 @@ export function usePrinterConnection() {
           if (!trimmed || trimmed === '//EOL' || trimmed === '>' || trimmed.startsWith('^')
               || upper.includes('COMMAND SUCCESSFUL') || upper.includes('COMMAND FAILED')
               || upper.startsWith('MESSAGES (')) continue;
-          messageNames.push(trimmed.toUpperCase());
+          
+          // Check for "(current)" marker — indicates the currently selected message
+          const isCurrent = /\(current\)/i.test(trimmed);
+          // Strip the "(current)" marker and any leading numbering (e.g. "1. ")
+          let cleanName = trimmed.replace(/\s*\(current\)\s*/gi, '').replace(/^\d+\.\s*/, '').trim().toUpperCase();
+          
+          if (cleanName) {
+            messageNames.push(cleanName);
+            if (isCurrent) {
+              detectedCurrentMessage = cleanName;
+            }
+          }
         }
         if (messageNames.length > 0) {
           const printerMessages: PrintMessage[] = messageNames.map((name, idx) => ({
             id: idx + 1,
             name,
           }));
-          console.log('[queryMessageList] Parsed messages:', printerMessages);
+          console.log('[queryMessageList] Parsed messages:', printerMessages, 'current:', detectedCurrentMessage);
           setConnectionState((prev) => ({
             ...prev,
             messages: printerMessages,
+            // Update currentMessage if we detected one from ^LM
+            status: detectedCurrentMessage && prev.status
+              ? { ...prev.status, currentMessage: detectedCurrentMessage }
+              : prev.status,
           }));
+          // Also update the printer card in the network list
+          if (detectedCurrentMessage) {
+            updatePrinter(printer.id, { currentMessage: detectedCurrentMessage });
+          }
         }
       }
     } catch (e) {
       console.error('[queryMessageList] Failed to query ^LM:', e);
     }
-  }, []);
+  }, [updatePrinter]);
 
   const connect = useCallback(async (printer: Printer) => {
     // If using emulator, simulate connection
