@@ -52,9 +52,9 @@ export function usePrinterStorage() {
   // Subscribe to emulator state changes to update simulated printer status
   useEffect(() => {
     // Helper to determine if there are active errors based on fluid levels
+    // Only EMPTY triggers errors — LOW is a warning but printer remains operational
     const hasErrors = (inkLevel?: string, makeupLevel?: string) => {
-      return inkLevel === 'LOW' || inkLevel === 'EMPTY' || 
-             makeupLevel === 'LOW' || makeupLevel === 'EMPTY';
+      return inkLevel === 'EMPTY' || makeupLevel === 'EMPTY';
     };
 
     // Update all emulated printers from their respective emulator states
