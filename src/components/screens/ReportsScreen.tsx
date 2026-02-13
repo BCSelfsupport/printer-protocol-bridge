@@ -527,7 +527,7 @@ export function ReportsScreen({
             <p className="text-sm text-muted-foreground">Add printers to start tracking production.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
             {printers.map(printer => {
               const data = printerRunData.get(printer.id);
               const activeRuns = data?.runs.filter(r => r.endTime === null) ?? [];
@@ -539,100 +539,113 @@ export function ReportsScreen({
                 : null;
               const totalProduced = printerMetrics.reduce((s, m) => s + m.run.actualCount, 0);
               const totalTarget = printerMetrics.reduce((s, m) => s + m.run.targetCount, 0);
+              const isActive = activeRuns.length > 0;
+              const isSelected = selectedPrinterId === printer.id;
+
+              // Color scheme based on OEE status
+              const oeeVal = avgOee ?? 0;
+              const isGood = avgOee !== null && avgOee >= 60;
+              const isCritical = avgOee !== null && avgOee < 60;
+              const headerBg = avgOee === null ? 'bg-secondary' : isGood ? 'bg-success' : 'bg-destructive';
+              const headerText = avgOee === null ? 'text-foreground' : 'text-white';
+              const bodyBg = avgOee === null ? 'bg-card' : isGood ? 'bg-success/10' : 'bg-destructive/10';
+              const statusLabel = avgOee === null ? 'Idle' : isActive ? 'Active' : 'Stopped';
+
+              // Mini bar chart data from last 5 runs
+              const last5 = printerMetrics.slice(-5);
+              const maxOee = Math.max(...last5.map(m => m.oee.oee), 1);
 
               return (
                 <button
                   key={printer.id}
-                  onClick={() => setSelectedPrinterId(selectedPrinterId === printer.id ? null : printer.id)}
-                  className={`group rounded-xl border p-4 text-left transition-all relative overflow-hidden ${
-                    selectedPrinterId === printer.id
-                      ? 'bg-primary/5 border-primary/40 shadow-md ring-1 ring-primary/20'
-                      : 'bg-card hover:bg-secondary/50 hover:shadow-md hover:border-primary/30'
+                  onClick={() => setSelectedPrinterId(isSelected ? null : printer.id)}
+                  className={`group rounded-xl overflow-hidden text-left transition-all shadow-md hover:shadow-xl ${
+                    isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-[1.02]' : 'hover:scale-[1.01]'
                   }`}
                 >
-                  {activeRuns.length > 0 && (
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-success via-success to-success/50 rounded-t-xl">
-                      <div className="absolute inset-0 bg-success/50 animate-pulse rounded-t-xl" />
-                    </div>
-                  )}
-
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0">
-                      {avgOee !== null ? (
-                        <MiniGauge value={avgOee} size={48} strokeWidth={4} />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
-                          <PrinterIcon className="w-5 h-5 text-muted-foreground" />
+                  {/* Header band */}
+                  <div className={`${headerBg} px-3 py-2.5 ${headerText}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0">
+                        <div className="text-sm font-black uppercase tracking-wide truncate">{printer.name}</div>
+                        <div className={`text-[10px] ${avgOee === null ? 'text-muted-foreground' : 'text-white/70'}`}>
+                          {statusLabel} · {printer.ipAddress}
                         </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-foreground truncate">{printer.name}</span>
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${printer.isAvailable ? 'bg-success' : 'bg-muted-foreground/40'}`} />
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">{printer.ipAddress}:{printer.port}</div>
-
-                      {activeRuns.length > 0 ? (
-                        <div className="mt-2 space-y-1.5">
-                          {activeRuns.map(run => {
-                            const oee = calculateOEE(run);
-                            const perfPct = run.targetCount > 0 ? Math.min(100, (run.actualCount / run.targetCount) * 100) : 0;
-                            const hasDowntime = run.downtimeEvents.some(e => e.endTime === null);
-                            return (
-                              <div key={run.id} className="bg-success/5 rounded-lg px-2.5 py-2 border border-success/15">
-                                <div className="flex items-center gap-1.5">
-                                  <Activity className="w-3 h-3 text-success flex-shrink-0" />
-                                  <span className="text-xs font-semibold text-foreground truncate">{run.messageName}</span>
-                                  {hasDowntime && <AlertTriangle className="w-3 h-3 text-destructive animate-pulse flex-shrink-0 ml-auto" />}
-                                </div>
-                                <div className="h-1.5 bg-muted rounded-full mt-1.5 overflow-hidden">
-                                  <div
-                                    className="h-full rounded-full transition-all duration-500"
-                                    style={{
-                                      width: `${perfPct}%`,
-                                      background: perfPct >= 100 ? 'hsl(var(--success))' : 'hsl(var(--primary))',
-                                    }}
-                                  />
-                                </div>
-                                <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-                                  <span>{run.actualCount.toLocaleString()} / {run.targetCount.toLocaleString()}</span>
-                                  <span className="font-semibold" style={{ color: getOEEColor(oee.performance) }}>{perfPct.toFixed(0)}%</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="mt-2 text-xs text-muted-foreground/60 italic">No active runs</div>
-                      )}
+                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                        printer.isAvailable ? 'bg-white/80 shadow-[0_0_6px_rgba(255,255,255,0.5)]' : 'bg-white/30'
+                      }`} />
                     </div>
-
-                    <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
                   </div>
 
-                  <div className="flex items-center gap-4 mt-3 pt-2.5 border-t border-border/50">
-                    <div className="flex items-center gap-1.5">
-                      <Package className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-[11px] text-muted-foreground">
-                        <span className="font-semibold text-foreground">{totalProduced.toLocaleString()}</span>
-                        {totalTarget > 0 && <span> / {totalTarget.toLocaleString()}</span>}
-                      </span>
+                  {/* Body */}
+                  <div className={`${bodyBg} border-x border-b border-border/30 px-3 py-3`}>
+                    {/* Gauge */}
+                    <div className="flex justify-center mb-2">
+                      {avgOee !== null ? (
+                        <MiniGauge value={avgOee} size={64} strokeWidth={5} />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center">
+                          <PrinterIcon className="w-6 h-6 text-muted-foreground/50" />
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <BarChart3 className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-[11px] text-muted-foreground">
-                        <span className="font-semibold text-foreground">{completedRuns.length}</span> runs
-                      </span>
+
+                    {/* Stats row */}
+                    <div className="grid grid-cols-2 gap-1.5 mb-2">
+                      <div className="bg-background/60 rounded-lg px-2 py-1.5 text-center">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Target</div>
+                        <div className="text-sm font-black text-foreground tabular-nums">{totalTarget.toLocaleString()}</div>
+                      </div>
+                      <div className="bg-background/60 rounded-lg px-2 py-1.5 text-center">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Actual</div>
+                        <div className="text-sm font-black text-foreground tabular-nums">{totalProduced.toLocaleString()}</div>
+                      </div>
                     </div>
-                    {avgOee !== null && (
-                      <div className="flex items-center gap-1.5 ml-auto">
-                        <span className="text-[11px] font-bold" style={{ color: getOEEColor(avgOee) }}>
-                          {avgOee.toFixed(1)}% OEE
-                        </span>
+
+                    {/* Status bar */}
+                    {totalTarget > 0 && (
+                      <div className="mb-2">
+                        <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{
+                              width: `${Math.min(100, (totalProduced / totalTarget) * 100)}%`,
+                              background: isGood ? 'hsl(var(--success))' : isCritical ? 'hsl(var(--destructive))' : 'hsl(var(--primary))',
+                            }}
+                          />
+                        </div>
                       </div>
                     )}
+
+                    {/* Mini bar chart from last runs */}
+                    {last5.length > 0 && (
+                      <div className="flex items-end gap-0.5 h-6 justify-center">
+                        {last5.map((m, i) => (
+                          <div
+                            key={i}
+                            className="w-3 rounded-t-sm transition-all duration-500"
+                            style={{
+                              height: `${Math.max(10, (m.oee.oee / maxOee) * 100)}%`,
+                              backgroundColor: getOEEColor(m.oee.oee),
+                              opacity: 0.5 + (i / last5.length) * 0.5,
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Footer info */}
+                    <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-border/30">
+                      <span className="text-[10px] text-muted-foreground">
+                        <span className="font-bold text-foreground">{completedRuns.length}</span> runs
+                      </span>
+                      {avgOee !== null && (
+                        <span className="text-[10px] font-black" style={{ color: getOEEColor(avgOee) }}>
+                          {avgOee.toFixed(0)}% OEE
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </button>
               );
