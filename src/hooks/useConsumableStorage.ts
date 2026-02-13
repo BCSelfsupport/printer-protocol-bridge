@@ -9,7 +9,15 @@ export function useConsumableStorage() {
   const [consumables, setConsumables] = useState<Consumable[]>(() => {
     try {
       const stored = localStorage.getItem(CONSUMABLES_KEY);
-      return stored ? JSON.parse(stored) : [];
+      if (!stored) return [];
+      const parsed: Consumable[] = JSON.parse(stored);
+      // Migrate: old data may have unit='cases', convert to bottles
+      return parsed.map(c => {
+        if (c.unit === 'cases') {
+          return { ...c, unit: 'bottles', reorderUnit: c.reorderUnit || 'cases', bottlesPerReorderUnit: c.bottlesPerReorderUnit || 5 };
+        }
+        return c;
+      });
     } catch {
       return [];
     }
