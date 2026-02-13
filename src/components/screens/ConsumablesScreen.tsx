@@ -129,57 +129,15 @@ export function ConsumablesScreen({
     }
   };
 
-  // ── Consumable gauge used in both panels ──
-  const renderConsumableGauge = (c: Consumable, compact = false) => {
-    const status = getStockStatus(c);
-    const percent = getStockPercent(c);
-    const isInk = c.type === 'ink';
-
-    return (
-      <div key={c.id} className="space-y-1">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${
-              isInk ? 'bg-blue-500/15 text-blue-500' : 'bg-purple-500/15 text-purple-500'
-            }`}>
-              {isInk ? <Droplets className="w-3 h-3" /> : <Package className="w-3 h-3" />}
-            </div>
-            <span className="text-xs font-medium text-foreground truncate">{c.partNumber}</span>
-          </div>
-          {status === 'critical' && (
-            <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4">
-              <AlertTriangle className="w-2 h-2 mr-0.5" />OUT
-            </Badge>
-          )}
-          {status === 'low' && (
-            <Badge className="text-[9px] px-1 py-0 h-4 bg-yellow-500 hover:bg-yellow-600 text-white">
-              <AlertTriangle className="w-2 h-2 mr-0.5" />LOW
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Progress
-            value={percent}
-            className={`h-2 flex-1 ${
-              status === 'critical' ? '[&>div]:bg-destructive' :
-              status === 'low' ? '[&>div]:bg-yellow-500' :
-              isInk ? '[&>div]:bg-blue-500' : '[&>div]:bg-purple-500'
-            }`}
-          />
-          <span className={`text-[10px] font-bold min-w-[40px] text-right ${
-            status === 'critical' ? 'text-destructive' :
-            status === 'low' ? 'text-yellow-600' : 'text-muted-foreground'
-          }`}>
-            {c.currentStock} {compact ? '' : c.unit}
-          </span>
-        </div>
-        {!compact && (
-          <div className="text-[10px] text-muted-foreground">
-            Min: {c.minimumStock} {c.unit}
-          </div>
-        )}
-      </div>
-    );
+  // ── Helper: ink/makeup level color ──
+  const getLevelColor = (level?: string) => {
+    switch (level) {
+      case 'FULL': return { bg: 'bg-emerald-500', text: 'text-emerald-400', ring: 'ring-emerald-500/30', fill: 'w-full' };
+      case 'GOOD': return { bg: 'bg-emerald-500', text: 'text-emerald-400', ring: 'ring-emerald-500/30', fill: 'w-3/4' };
+      case 'LOW': return { bg: 'bg-yellow-500', text: 'text-yellow-400', ring: 'ring-yellow-500/30', fill: 'w-1/3' };
+      case 'EMPTY': return { bg: 'bg-destructive', text: 'text-red-400', ring: 'ring-red-500/30', fill: 'w-0' };
+      default: return { bg: 'bg-muted', text: 'text-muted-foreground', ring: 'ring-muted/30', fill: 'w-0' };
+    }
   };
 
   // ── Left panel: Printer cards ──
@@ -187,38 +145,66 @@ export function ConsumablesScreen({
     const assignment = assignments.find(a => a.printerId === printer.id);
     const inkConsumable = assignment?.inkConsumableId ? consumables.find(c => c.id === assignment.inkConsumableId) : undefined;
     const makeupConsumable = assignment?.makeupConsumableId ? consumables.find(c => c.id === assignment.makeupConsumableId) : undefined;
-
-    const hasIssue = (inkConsumable && getStockStatus(inkConsumable) !== 'ok') ||
-                     (makeupConsumable && getStockStatus(makeupConsumable) !== 'ok');
+    const inkColor = getLevelColor(printer.inkLevel);
+    const makeupColor = getLevelColor(printer.makeupLevel);
 
     return (
-      <Card key={printer.id} className={`overflow-hidden transition-all ${hasIssue ? 'border-yellow-500/40' : ''}`}>
+      <Card key={printer.id} className="overflow-hidden transition-all">
         <CardContent className="p-0">
-          {/* Printer header */}
-          <div className={`px-3 py-2 flex items-center gap-2 border-b ${
-            printer.isAvailable ? 'bg-muted/30' : 'bg-muted/10 opacity-60'
+          {/* Printer header bar */}
+          <div className={`px-3 py-2.5 flex items-center gap-3 ${
+            printer.isAvailable ? 'bg-slate-800' : 'bg-slate-900 opacity-50'
           }`}>
-            <PrinterIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            <span className="font-semibold text-sm text-foreground flex-1 truncate">{printer.name}</span>
-            {printer.isAvailable && (
-              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                printer.status === 'ready' ? 'bg-green-500' :
-                printer.status === 'error' ? 'bg-destructive' : 'bg-muted-foreground'
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+              printer.isAvailable
+                ? printer.status === 'ready' ? 'bg-emerald-500/20 ring-1 ring-emerald-500/40' : 'bg-amber-500/20 ring-1 ring-amber-500/40'
+                : 'bg-slate-700'
+            }`}>
+              <PrinterIcon className={`w-4.5 h-4.5 ${
+                printer.isAvailable
+                  ? printer.status === 'ready' ? 'text-emerald-400' : 'text-amber-400'
+                  : 'text-slate-500'
               }`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="font-semibold text-sm text-white block truncate">{printer.name}</span>
+              <span className={`text-[10px] font-medium ${
+                printer.isAvailable
+                  ? printer.status === 'ready' ? 'text-emerald-400' : 'text-amber-400'
+                  : 'text-slate-500'
+              }`}>
+                {printer.isAvailable ? (printer.status === 'ready' ? 'Ready' : 'Not Ready') : 'Offline'}
+              </span>
+            </div>
+            {printer.currentMessage && (
+              <span className="text-[10px] text-slate-400 truncate max-w-[80px]">
+                {printer.currentMessage}
+              </span>
             )}
           </div>
 
-          <div className="p-3 space-y-3">
-            {/* Ink section */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-500">Ink</span>
+          {/* Ink & Makeup live gauges side by side */}
+          <div className="grid grid-cols-2 divide-x divide-border">
+            {/* Ink */}
+            <div className="p-3 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Droplets className={`w-4 h-4 ${inkColor.text}`} />
+                <span className={`text-xs font-bold ${inkColor.text}`}>
+                  {printer.inkLevel || '—'}
+                </span>
+              </div>
+              {/* Visual bar */}
+              <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${inkColor.bg} ${inkColor.fill}`} />
+              </div>
+              {/* Assigned consumable */}
+              <div>
                 <Select
                   value={assignment?.inkConsumableId ?? 'none'}
                   onValueChange={(v) => onAssignConsumable(printer.id, 'ink', v === 'none' ? undefined : v)}
                 >
-                  <SelectTrigger className="h-5 text-[10px] w-auto min-w-[80px] border-none bg-transparent p-0 pr-4 shadow-none">
-                    <SelectValue placeholder="Assign..." />
+                  <SelectTrigger className="h-6 text-[10px] border-dashed border-slate-600 bg-transparent text-slate-300 px-1.5">
+                    <SelectValue placeholder="Assign ink..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
@@ -227,27 +213,32 @@ export function ConsumablesScreen({
                     ))}
                   </SelectContent>
                 </Select>
+                {inkConsumable && (
+                  <p className="text-[9px] text-slate-500 mt-0.5 truncate">{inkConsumable.description}</p>
+                )}
               </div>
-              {inkConsumable ? (
-                renderConsumableGauge(inkConsumable, true)
-              ) : (
-                <p className="text-[10px] text-muted-foreground italic">Not assigned</p>
-              )}
             </div>
 
-            {/* Divider */}
-            <div className="border-t" />
-
-            {/* Makeup section */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-500">Makeup</span>
+            {/* Makeup */}
+            <div className="p-3 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Package className={`w-4 h-4 ${makeupColor.text}`} />
+                <span className={`text-xs font-bold ${makeupColor.text}`}>
+                  {printer.makeupLevel || '—'}
+                </span>
+              </div>
+              {/* Visual bar */}
+              <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${makeupColor.bg} ${makeupColor.fill}`} />
+              </div>
+              {/* Assigned consumable */}
+              <div>
                 <Select
                   value={assignment?.makeupConsumableId ?? 'none'}
                   onValueChange={(v) => onAssignConsumable(printer.id, 'makeup', v === 'none' ? undefined : v)}
                 >
-                  <SelectTrigger className="h-5 text-[10px] w-auto min-w-[80px] border-none bg-transparent p-0 pr-4 shadow-none">
-                    <SelectValue placeholder="Assign..." />
+                  <SelectTrigger className="h-6 text-[10px] border-dashed border-slate-600 bg-transparent text-slate-300 px-1.5">
+                    <SelectValue placeholder="Assign makeup..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
@@ -256,12 +247,10 @@ export function ConsumablesScreen({
                     ))}
                   </SelectContent>
                 </Select>
+                {makeupConsumable && (
+                  <p className="text-[9px] text-slate-500 mt-0.5 truncate">{makeupConsumable.description}</p>
+                )}
               </div>
-              {makeupConsumable ? (
-                renderConsumableGauge(makeupConsumable, true)
-              ) : (
-                <p className="text-[10px] text-muted-foreground italic">Not assigned</p>
-              )}
             </div>
           </div>
         </CardContent>
