@@ -3,6 +3,13 @@ import { PrintSettings } from '@/types/printer';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -26,8 +33,34 @@ const CONSTRAINTS = {
   bold: { min: 0, max: 9, cmd: 'SB' },         // ^SB command: 0-9
   gap: { min: 0, max: 9, cmd: 'GP' },          // ^GP command: 0-9
   pitch: { min: 0, max: 4000000000, cmd: 'PA' }, // ^PA command: 0-4B
-  repeatAmount: { min: 0, max: 30000, cmd: 'RA' }, // ^RA command: 0-30000
 } as const;
+
+const ROTATION_OPTIONS = [
+  { value: 'Normal', label: 'Normal' },
+  { value: 'Flip', label: 'Flip' },
+  { value: 'Mirror', label: 'Mirror' },
+  { value: 'Mirror Flip', label: 'Mirror Flip' },
+  { value: 'Tower', label: 'Tower' },
+  { value: 'Tower Flip', label: 'Tower Flip' },
+  { value: 'Tower Mirror', label: 'Tower Mirror' },
+  { value: 'Tower Mirror Flip', label: 'Tower Mirror Flip' },
+] as const;
+
+const ORIENTATION_MAP: Record<string, number> = {
+  'Normal': 0, 'Flip': 1, 'Mirror': 2, 'Mirror Flip': 3,
+  'Tower': 4, 'Tower Flip': 5, 'Tower Mirror': 6, 'Tower Mirror Flip': 7,
+};
+
+const SPEED_OPTIONS: { value: PrintSettings['speed']; label: string }[] = [
+  { value: 'Fast', label: 'Fast' },
+  { value: 'Faster', label: 'Faster' },
+  { value: 'Fastest', label: 'Fastest' },
+  { value: 'Ultra Fast', label: 'Ultra Fast' },
+];
+
+const SPEED_MAP: Record<PrintSettings['speed'], number> = {
+  'Fast': 0, 'Faster': 1, 'Fastest': 2, 'Ultra Fast': 3,
+};
 
 type SettingKey = keyof typeof CONSTRAINTS;
 
@@ -147,7 +180,7 @@ export function AdjustDialog({
   isConnected 
 }: AdjustDialogProps) {
   
-  // Helper to update a setting and send the command immediately
+  // Helper to update a numeric setting and send the command immediately
   const handleLiveUpdate = async (key: SettingKey, newValue: number) => {
     const constraint = CONSTRAINTS[key];
     const clampedValue = Math.max(constraint.min, Math.min(constraint.max, newValue));
@@ -158,6 +191,20 @@ export function AdjustDialog({
     // Send command to printer immediately
     const command = `^${constraint.cmd} ${clampedValue}`;
     await onSendCommand(command);
+  };
+
+  // Handle rotation change via ^CM command
+  const handleRotationChange = async (value: string) => {
+    onUpdate({ rotation: value as PrintSettings['rotation'] });
+    const orientationValue = ORIENTATION_MAP[value] ?? 0;
+    await onSendCommand(`^CM o${orientationValue}`);
+  };
+
+  // Handle speed change via ^CM command
+  const handleSpeedChange = async (value: PrintSettings['speed']) => {
+    onUpdate({ speed: value });
+    const speedValue = SPEED_MAP[value];
+    await onSendCommand(`^CM s${speedValue}`);
   };
 
   return (
@@ -242,17 +289,43 @@ export function AdjustDialog({
               max={CONSTRAINTS.pitch.max}
             />
 
-            {/* Repeat: 0-30,000 */}
-            <AdjustCard
-              label="Repeat"
-              value={settings.repeatAmount}
-              onIncrease={() => handleLiveUpdate('repeatAmount', settings.repeatAmount + 1)}
-              onDecrease={() => handleLiveUpdate('repeatAmount', settings.repeatAmount - 1)}
-              onEdit={(val) => handleLiveUpdate('repeatAmount', val)}
-              disabled={!isConnected}
-              min={CONSTRAINTS.repeatAmount.min}
-              max={CONSTRAINTS.repeatAmount.max}
-            />
+            {/* Rotation: Select dropdown */}
+            <div className="bg-card rounded-lg p-3 border border-border shadow-sm">
+              <div className="text-xs text-muted-foreground font-medium mb-1">Rotation</div>
+              <Select
+                value={settings.rotation}
+                onValueChange={handleRotationChange}
+                disabled={!isConnected}
+              >
+                <SelectTrigger className="h-9 text-sm font-bold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROTATION_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Speed: Select dropdown */}
+            <div className="bg-card rounded-lg p-3 border border-border shadow-sm">
+              <div className="text-xs text-muted-foreground font-medium mb-1">Speed</div>
+              <Select
+                value={settings.speed}
+                onValueChange={(v) => handleSpeedChange(v as PrintSettings['speed'])}
+                disabled={!isConnected}
+              >
+                <SelectTrigger className="h-9 text-sm font-bold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SPEED_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
         </div>
