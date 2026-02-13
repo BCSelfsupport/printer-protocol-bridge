@@ -337,40 +337,6 @@ export function ReportsScreen({
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 md:px-4 pb-4 space-y-4">
-        {/* ===== Fleet OEE Summary ===== */}
-        {overallOEE && (
-          <div className="rounded-xl border bg-gradient-to-br from-card via-card to-secondary/50 p-5 md:p-6 shadow-lg relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl" />
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-success/5 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
-
-            <div className="flex items-center gap-2 mb-5 relative z-10">
-              <div className="w-8 h-8 rounded-lg industrial-button flex items-center justify-center">
-                <Gauge className="w-4 h-4 text-white" />
-              </div>
-              <h2 className="text-lg md:text-xl font-bold text-foreground">Combined Printer OEE</h2>
-              <span className={`ml-auto px-4 py-1.5 rounded-full text-xs font-bold shadow-sm ${
-                overallOEE.oee >= 85 ? 'bg-success text-success-foreground' :
-                overallOEE.oee >= 60 ? 'bg-warning text-warning-foreground' :
-                'bg-destructive text-destructive-foreground'
-              }`}>
-                {getOEELabel(overallOEE.oee)}
-              </span>
-            </div>
-
-            <div className="flex justify-around items-end flex-wrap gap-6 md:gap-8 relative z-10 mb-5">
-              <OEEGauge value={overallOEE.oee} label="Overall OEE" size={130} isPrimary />
-              <OEEGauge value={overallOEE.availability} label="Availability" size={100} />
-              <OEEGauge value={overallOEE.performance} label="Performance" size={100} />
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative z-10">
-              <StatCard icon={Target} label="Target" value={overallOEE.targetCount.toLocaleString()} accent="primary" />
-              <StatCard icon={CheckCircle2} label="Actual" value={overallOEE.actualCount.toLocaleString()} accent="success" />
-              <StatCard icon={Timer} label="Run Time" value={formatDuration(overallOEE.runTime)} accent="primary" />
-              <StatCard icon={AlertTriangle} label="Downtime" value={formatDuration(overallOEE.totalDowntime)} accent="destructive" />
-            </div>
-          </div>
-        )}
 
         {/* ===== Printer Cards Grid ===== */}
         <div className="flex items-center gap-2 mb-1">
