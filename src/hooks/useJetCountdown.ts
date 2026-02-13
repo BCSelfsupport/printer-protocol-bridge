@@ -20,8 +20,9 @@ interface UseJetCountdownReturn {
   isCountingDown: boolean;
 }
 
-// Default countdown duration: 1:06 = 66 seconds
-const DEFAULT_COUNTDOWN_SECONDS = 66;
+// Default countdown durations
+const DEFAULT_START_COUNTDOWN_SECONDS = 66;  // 1:06 for startup
+const DEFAULT_STOP_COUNTDOWN_SECONDS = 134;  // 2:14 for shutdown
 
 export function useJetCountdown(
   connectedPrinterId?: number | null,
@@ -45,7 +46,9 @@ export function useJetCountdown(
     });
   }, []);
 
-  const startCountdown = useCallback((printerId: number, type: CountdownType, durationSeconds: number = DEFAULT_COUNTDOWN_SECONDS) => {
+  const startCountdown = useCallback((printerId: number, type: CountdownType, durationSeconds?: number) => {
+    const defaultDuration = type === 'stopping' ? DEFAULT_STOP_COUNTDOWN_SECONDS : DEFAULT_START_COUNTDOWN_SECONDS;
+    const duration = durationSeconds ?? defaultDuration;
     // Cancel any existing countdown for this printer
     if (intervalsRef.current[printerId]) {
       clearInterval(intervalsRef.current[printerId]);
@@ -56,7 +59,7 @@ export function useJetCountdown(
 
     setCountdowns(prev => ({
       ...prev,
-      [printerId]: { seconds: durationSeconds, type },
+      [printerId]: { seconds: duration, type },
     }));
 
     intervalsRef.current[printerId] = window.setInterval(() => {
