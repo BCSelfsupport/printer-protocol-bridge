@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, Package, Droplets, AlertTriangle, Minus, ArrowLeft, Settings, ShoppingCart, Printer as PrinterIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Droplets, Palette, AlertTriangle, Minus, ArrowLeft, Settings, ShoppingCart, Printer as PrinterIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -129,77 +129,108 @@ export function ConsumablesScreen({
     }
   };
 
-  // ── Helper: ink/makeup level color (matching Dashboard style) ──
-  const getLevelColor = (level?: string) => {
+  // ── Helper: filled segments for vertical gauge (matching Dashboard) ──
+  const getFilledSegments = (level?: string) => {
     switch (level) {
-      case 'FULL': return { bg: 'bg-teal-400', text: 'text-teal-400', fill: '100%' };
-      case 'GOOD': return { bg: 'bg-teal-400', text: 'text-teal-400', fill: '75%' };
-      case 'LOW': return { bg: 'bg-amber-400', text: 'text-amber-400', fill: '33%' };
-      case 'EMPTY': return { bg: 'bg-red-500', text: 'text-red-400', fill: '5%' };
-      default: return { bg: 'bg-slate-600', text: 'text-slate-500', fill: '0%' };
+      case 'FULL': return 4;
+      case 'GOOD': return 2;
+      case 'LOW': return 1;
+      case 'EMPTY': return 0;
+      default: return 0;
     }
   };
 
-  // ── Left panel: Printer cards (matching reference design) ──
+  const getLevelBg = (level?: string) => {
+    if (level === 'EMPTY') return 'bg-destructive';
+    if (level === 'LOW') return 'bg-warning';
+    return 'industrial-button';
+  };
+
+  // ── Left panel: Printer cards (matching Dashboard fluid indicators) ──
   const renderPrinterCard = (printer: Printer) => {
     const assignment = assignments.find(a => a.printerId === printer.id);
     const inkConsumable = assignment?.inkConsumableId ? consumables.find(c => c.id === assignment.inkConsumableId) : undefined;
     const makeupConsumable = assignment?.makeupConsumableId ? consumables.find(c => c.id === assignment.makeupConsumableId) : undefined;
-    const inkColor = getLevelColor(printer.inkLevel);
-    const makeupColor = getLevelColor(printer.makeupLevel);
 
     return (
-      <div key={printer.id} className="rounded-xl border-2 border-slate-600 bg-slate-800/80 overflow-hidden transition-all">
-        {/* Printer header — dark bar with icon, name, status, current message */}
-        <div className="px-4 py-3 flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-            printer.isAvailable ? 'bg-teal-500/20' : 'bg-slate-700'
-          }`}>
-            <PrinterIcon className={`w-5 h-5 ${
-              printer.isAvailable ? 'text-teal-400' : 'text-slate-500'
-            }`} />
-          </div>
+      <div key={printer.id} className="rounded-lg border bg-card overflow-hidden">
+        {/* Printer header */}
+        <div className="px-3 py-2 flex items-center gap-2 border-b">
+          <PrinterIcon className={`w-5 h-5 ${
+            printer.isAvailable ? 'text-primary' : 'text-muted-foreground'
+          }`} />
           <div className="flex-1 min-w-0">
-            <span className="font-bold text-base text-white block truncate">{printer.name}</span>
-            <span className={`text-xs font-semibold ${
+            <span className="font-bold text-sm text-foreground block truncate">{printer.name}</span>
+            <span className={`text-[10px] font-semibold ${
               printer.isAvailable
-                ? printer.status === 'ready' ? 'text-emerald-400' : 'text-amber-400'
-                : 'text-slate-500'
+                ? printer.status === 'ready' ? 'text-success' : 'text-warning'
+                : 'text-muted-foreground'
             }`}>
               {printer.isAvailable ? (printer.status === 'ready' ? 'Ready' : 'Not Ready') : 'Offline'}
             </span>
           </div>
           {printer.currentMessage && (
-            <span className="text-xs text-slate-400 font-mono truncate max-w-[100px]">
+            <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[80px]">
               {printer.currentMessage}
             </span>
           )}
         </div>
 
-        {/* Ink & Makeup gauges — side by side panels */}
-        <div className="grid grid-cols-2 gap-px bg-slate-700">
-          {/* Ink panel */}
-          <div className="bg-slate-800/60 p-3 space-y-2">
-            <div className="flex items-center gap-1.5">
-              <Droplets className={`w-4 h-4 ${inkColor.text}`} />
-              <span className={`text-sm font-bold uppercase tracking-wide ${inkColor.text}`}>
-                {printer.inkLevel || 'UNKNOWN'}
-              </span>
+        {/* Fluid indicators — matching Dashboard blue cards with vertical segmented bars */}
+        <div className="p-3 flex gap-3">
+          {/* Makeup indicator */}
+          <div className={`flex-1 h-[80px] rounded-lg flex items-center justify-between px-3 ${getLevelBg(printer.makeupLevel)}`}>
+            <div className="flex flex-col items-center">
+              <Droplets className="w-6 h-6 text-white" />
+              <span className="text-[9px] text-white font-medium mt-1">Makeup</span>
             </div>
-            {/* Gauge bar */}
-            <div className="h-3 bg-slate-700 rounded overflow-hidden">
-              <div
-                className={`h-full rounded transition-all duration-500 ${inkColor.bg}`}
-                style={{ width: inkColor.fill }}
-              />
+            <div className="flex flex-col-reverse gap-0.5 h-14 w-4 bg-black/20 rounded p-0.5">
+              {[0, 1, 2, 3].map((seg) => {
+                const filled = getFilledSegments(printer.makeupLevel);
+                return (
+                  <div
+                    key={seg}
+                    className={`flex-1 rounded-sm transition-colors ${
+                      seg < filled ? 'bg-white' : 'bg-white/20'
+                    }`}
+                  />
+                );
+              })}
             </div>
-            {/* Assignment dropdown */}
+          </div>
+
+          {/* Ink indicator */}
+          <div className={`flex-1 h-[80px] rounded-lg flex items-center justify-between px-3 ${getLevelBg(printer.inkLevel)}`}>
+            <div className="flex flex-col items-center">
+              <Palette className="w-6 h-6 text-white" />
+              <span className="text-[9px] text-white font-medium mt-1">Ink</span>
+            </div>
+            <div className="flex flex-col-reverse gap-0.5 h-14 w-4 bg-black/20 rounded p-0.5">
+              {[0, 1, 2, 3].map((seg) => {
+                const filled = getFilledSegments(printer.inkLevel);
+                return (
+                  <div
+                    key={seg}
+                    className={`flex-1 rounded-sm transition-colors ${
+                      seg < filled ? 'bg-white' : 'bg-white/20'
+                    }`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Assignment dropdowns */}
+        <div className="px-3 pb-3 grid grid-cols-2 gap-2">
+          <div>
+            <Label className="text-[10px] text-muted-foreground">Ink Part</Label>
             <Select
               value={assignment?.inkConsumableId ?? 'none'}
               onValueChange={(v) => onAssignConsumable(printer.id, 'ink', v === 'none' ? undefined : v)}
             >
-              <SelectTrigger className="h-7 text-xs border-dashed border-slate-600 bg-slate-900/50 text-slate-300 px-2">
-                <SelectValue placeholder="Assign ink..." />
+              <SelectTrigger className="h-7 text-xs">
+                <SelectValue placeholder="Assign..." />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">None</SelectItem>
@@ -208,33 +239,15 @@ export function ConsumablesScreen({
                 ))}
               </SelectContent>
             </Select>
-            {inkConsumable && (
-              <p className="text-[10px] text-slate-500 truncate">{inkConsumable.description}</p>
-            )}
           </div>
-
-          {/* Makeup panel */}
-          <div className="bg-slate-800/60 p-3 space-y-2">
-            <div className="flex items-center gap-1.5">
-              <Package className={`w-4 h-4 ${makeupColor.text}`} />
-              <span className={`text-sm font-bold uppercase tracking-wide ${makeupColor.text}`}>
-                {printer.makeupLevel || 'UNKNOWN'}
-              </span>
-            </div>
-            {/* Gauge bar */}
-            <div className="h-3 bg-slate-700 rounded overflow-hidden">
-              <div
-                className={`h-full rounded transition-all duration-500 ${makeupColor.bg}`}
-                style={{ width: makeupColor.fill }}
-              />
-            </div>
-            {/* Assignment dropdown */}
+          <div>
+            <Label className="text-[10px] text-muted-foreground">Makeup Part</Label>
             <Select
               value={assignment?.makeupConsumableId ?? 'none'}
               onValueChange={(v) => onAssignConsumable(printer.id, 'makeup', v === 'none' ? undefined : v)}
             >
-              <SelectTrigger className="h-7 text-xs border-dashed border-slate-600 bg-slate-900/50 text-slate-300 px-2">
-                <SelectValue placeholder="Assign makeup..." />
+              <SelectTrigger className="h-7 text-xs">
+                <SelectValue placeholder="Assign..." />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">None</SelectItem>
@@ -243,9 +256,6 @@ export function ConsumablesScreen({
                 ))}
               </SelectContent>
             </Select>
-            {makeupConsumable && (
-              <p className="text-[10px] text-slate-500 truncate">{makeupConsumable.description}</p>
-            )}
           </div>
         </div>
       </div>
@@ -375,8 +385,8 @@ export function ConsumablesScreen({
       <div className="flex-1 flex overflow-hidden">
         {/* LEFT: Printer config cards */}
         <div className="w-1/2 border-r flex flex-col">
-          <div className="px-3 py-2 border-b bg-slate-900/40">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          <div className="px-3 py-2 border-b bg-muted/20">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <PrinterIcon className="w-3.5 h-3.5" />
               Printer Configuration
             </h3>
