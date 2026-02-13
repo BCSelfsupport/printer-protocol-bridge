@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   BarChart3, TrendingUp, Clock, AlertTriangle, Plus, Trash2,
   Download, Target, Activity, Gauge, ArrowDownCircle, CheckCircle2,
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Cell, PieChart, Pie
+  Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import type { ProductionRun, ProductionSnapshot, OEEMetrics } from '@/types/production';
 import { calculateOEE } from '@/types/production';
@@ -30,42 +30,81 @@ interface ReportsScreenProps {
   onHome: () => void;
 }
 
-// OEE Gauge Ring component
-function OEEGauge({ value, label, color, size = 100 }: { value: number; label: string; color: string; size?: number }) {
-  const strokeWidth = size * 0.1;
+// Animated OEE Gauge with thick gradient ring and glow
+function OEEGauge({ value, label, size = 120, isPrimary = false }: { value: number; label: string; size?: number; isPrimary?: boolean }) {
+  const [animatedValue, setAnimatedValue] = useState(0);
+  useEffect(() => {
+    const timer = setTimeout(() => setAnimatedValue(value), 100);
+    return () => clearTimeout(timer);
+  }, [value]);
+
+  const strokeWidth = isPrimary ? size * 0.12 : size * 0.1;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (Math.min(100, value) / 100) * circumference;
+  const offset = circumference - (Math.min(100, animatedValue) / 100) * circumference;
   const center = size / 2;
 
+  const color = getOEEColor(value);
+  const glowColor = value >= 85 ? '142 71% 45%' : value >= 60 ? '38 92% 50%' : '0 72% 51%';
+
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-2">
       <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="transform -rotate-90">
-          <circle
-            cx={center} cy={center} r={radius}
-            fill="none" stroke="hsl(var(--muted))" strokeWidth={strokeWidth}
+        {/* Glow effect behind the gauge */}
+        {isPrimary && (
+          <div
+            className="absolute inset-0 rounded-full blur-xl opacity-20"
+            style={{ backgroundColor: color }}
           />
+        )}
+        <svg width={size} height={size} className="transform -rotate-90 relative z-10">
+          <defs>
+            <linearGradient id={`gauge-grad-${label}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+              <stop offset="100%" stopColor={color} stopOpacity={1} />
+            </linearGradient>
+            <filter id={`gauge-glow-${label}`}>
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          {/* Background track */}
           <circle
             cx={center} cy={center} r={radius}
-            fill="none" stroke={color} strokeWidth={strokeWidth}
-            strokeDasharray={circumference} strokeDashoffset={offset}
+            fill="none"
+            stroke="hsl(var(--muted))"
+            strokeWidth={strokeWidth}
+            opacity={0.5}
+          />
+          {/* Colored arc */}
+          <circle
+            cx={center} cy={center} r={radius}
+            fill="none"
+            stroke={`url(#gauge-grad-${label})`}
+            strokeWidth={strokeWidth}
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
             strokeLinecap="round"
+            filter={`url(#gauge-glow-${label})`}
             className="transition-all duration-1000 ease-out"
           />
         </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-lg md:text-2xl font-bold text-foreground tabular-nums">
-            {value.toFixed(1)}%
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+          <span className={`font-bold tabular-nums ${isPrimary ? 'text-2xl md:text-3xl' : 'text-lg md:text-xl'}`}
+            style={{ color }}
+          >
+            {animatedValue.toFixed(1)}%
           </span>
         </div>
       </div>
-      <span className="text-xs md:text-sm font-medium text-muted-foreground">{label}</span>
+      <span className={`font-semibold text-muted-foreground ${isPrimary ? 'text-sm md:text-base' : 'text-xs md:text-sm'}`}>{label}</span>
     </div>
   );
 }
 
-// Status color for OEE values
 function getOEEColor(value: number): string {
   if (value >= 85) return 'hsl(var(--success))';
   if (value >= 60) return 'hsl(var(--warning))';
@@ -94,6 +133,34 @@ function formatDateTime(ts: number): string {
   });
 }
 
+// Stat card with icon and gradient accent
+function StatCard({ icon: Icon, label, value, accent }: {
+  icon: React.ElementType; label: string; value: string; accent: 'primary' | 'success' | 'destructive' | 'warning';
+}) {
+  const accentClasses = {
+    primary: 'from-primary/15 to-transparent border-primary/20 text-primary',
+    success: 'from-success/15 to-transparent border-success/20 text-success',
+    destructive: 'from-destructive/15 to-transparent border-destructive/20 text-destructive',
+    warning: 'from-warning/15 to-transparent border-warning/20 text-warning',
+  };
+  const iconClasses = {
+    primary: 'text-primary',
+    success: 'text-success',
+    destructive: 'text-destructive',
+    warning: 'text-warning',
+  };
+
+  return (
+    <div className={`rounded-xl border bg-gradient-to-br ${accentClasses[accent]} p-3 md:p-4`}>
+      <div className="flex items-center gap-2 mb-1">
+        <Icon className={`w-4 h-4 md:w-5 md:h-5 ${iconClasses[accent]}`} />
+        <span className="text-xs md:text-sm text-muted-foreground font-medium">{label}</span>
+      </div>
+      <div className="text-lg md:text-2xl font-bold text-foreground tabular-nums pl-6 md:pl-7">{value}</div>
+    </div>
+  );
+}
+
 export function ReportsScreen({
   runs, snapshots, printers,
   onAddRun, onUpdateRun, onDeleteRun,
@@ -101,23 +168,18 @@ export function ReportsScreen({
   onHome,
 }: ReportsScreenProps) {
   const [newRunDialogOpen, setNewRunDialogOpen] = useState(false);
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [downtimeDialogOpen, setDowntimeDialogOpen] = useState(false);
   const [downtimeReason, setDowntimeReason] = useState('');
   const [downtimeRunId, setDowntimeRunId] = useState<string | null>(null);
-
-  // New run form state
   const [newPrinterId, setNewPrinterId] = useState<string>('');
   const [newMessageName, setNewMessageName] = useState('');
   const [newTargetCount, setNewTargetCount] = useState('');
 
-  // Compute OEE for all runs
   const runMetrics = useMemo(() => {
     return runs.map(run => ({ run, oee: calculateOEE(run) }));
   }, [runs]);
 
-  // Overall OEE (average of completed runs, or latest active)
   const overallOEE = useMemo((): OEEMetrics | null => {
     if (runMetrics.length === 0) return null;
     const completedRuns = runMetrics.filter(rm => rm.run.endTime !== null);
@@ -139,7 +201,6 @@ export function ReportsScreen({
     };
   }, [runMetrics]);
 
-  // Chart data: OEE over runs
   const oeeChartData = useMemo(() => {
     return [...runMetrics].reverse().map(rm => ({
       name: rm.run.messageName.substring(0, 12),
@@ -149,7 +210,6 @@ export function ReportsScreen({
     }));
   }, [runMetrics]);
 
-  // Production bar chart data
   const productionChartData = useMemo(() => {
     return [...runMetrics].reverse().map(rm => ({
       name: rm.run.messageName.substring(0, 12),
@@ -158,7 +218,6 @@ export function ReportsScreen({
     }));
   }, [runMetrics]);
 
-  // Active runs
   const activeRuns = runs.filter(r => r.endTime === null);
 
   const handleCreateRun = async () => {
@@ -229,152 +288,129 @@ export function ReportsScreen({
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 md:px-4 pb-4 space-y-4">
-        {/* OEE Overview Gauges */}
+        {/* ========== OEE OVERVIEW ========== */}
         {overallOEE ? (
-          <div className="bg-card rounded-lg border p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Gauge className="w-5 h-5 text-primary" />
-              <h2 className="text-base md:text-lg font-bold text-foreground">OEE Overview</h2>
-              <span className={`ml-auto px-3 py-1 rounded-full text-xs font-bold ${
-                overallOEE.oee >= 85 ? 'bg-success/20 text-success' :
-                overallOEE.oee >= 60 ? 'bg-warning/20 text-warning' :
-                'bg-destructive/20 text-destructive'
+          <div className="rounded-xl border bg-gradient-to-br from-card via-card to-secondary/50 p-5 md:p-6 shadow-lg relative overflow-hidden">
+            {/* Decorative background pattern */}
+            <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl" />
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-success/5 rounded-full translate-y-1/2 -translate-x-1/4 blur-2xl" />
+
+            <div className="flex items-center gap-2 mb-6 relative z-10">
+              <div className="w-8 h-8 rounded-lg industrial-button flex items-center justify-center">
+                <Gauge className="w-4 h-4 text-white" />
+              </div>
+              <h2 className="text-lg md:text-xl font-bold text-foreground">OEE Overview</h2>
+              <span className={`ml-auto px-4 py-1.5 rounded-full text-xs font-bold shadow-sm ${
+                overallOEE.oee >= 85 ? 'bg-success text-success-foreground' :
+                overallOEE.oee >= 60 ? 'bg-warning text-warning-foreground' :
+                'bg-destructive text-destructive-foreground'
               }`}>
                 {getOEELabel(overallOEE.oee)}
               </span>
             </div>
 
-            <div className="flex justify-around items-start flex-wrap gap-4">
-              <OEEGauge
-                value={overallOEE.oee}
-                label="Overall OEE"
-                color={getOEEColor(overallOEE.oee)}
-                size={110}
-              />
-              <OEEGauge
-                value={overallOEE.availability}
-                label="Availability"
-                color={getOEEColor(overallOEE.availability)}
-                size={90}
-              />
-              <OEEGauge
-                value={overallOEE.performance}
-                label="Performance"
-                color={getOEEColor(overallOEE.performance)}
-                size={90}
-              />
-              <OEEGauge
-                value={overallOEE.quality}
-                label="Quality"
-                color={getOEEColor(overallOEE.quality)}
-                size={90}
-              />
+            {/* Gauges Row */}
+            <div className="flex justify-around items-end flex-wrap gap-6 md:gap-8 relative z-10 mb-6">
+              <OEEGauge value={overallOEE.oee} label="Overall OEE" size={140} isPrimary />
+              <OEEGauge value={overallOEE.availability} label="Availability" size={110} />
+              <OEEGauge value={overallOEE.performance} label="Performance" size={110} />
+              <OEEGauge value={overallOEE.quality} label="Quality" size={110} />
             </div>
 
-            {/* Summary stats row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-              <div className="bg-secondary rounded-lg p-3 flex items-center gap-2">
-                <Target className="w-4 h-4 text-primary flex-shrink-0" />
-                <div>
-                  <div className="text-xs text-muted-foreground">Target</div>
-                  <div className="text-sm font-bold text-foreground tabular-nums">{overallOEE.targetCount.toLocaleString()}</div>
-                </div>
-              </div>
-              <div className="bg-secondary rounded-lg p-3 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
-                <div>
-                  <div className="text-xs text-muted-foreground">Actual</div>
-                  <div className="text-sm font-bold text-foreground tabular-nums">{overallOEE.actualCount.toLocaleString()}</div>
-                </div>
-              </div>
-              <div className="bg-secondary rounded-lg p-3 flex items-center gap-2">
-                <Timer className="w-4 h-4 text-primary flex-shrink-0" />
-                <div>
-                  <div className="text-xs text-muted-foreground">Run Time</div>
-                  <div className="text-sm font-bold text-foreground">{formatDuration(overallOEE.runTime)}</div>
-                </div>
-              </div>
-              <div className="bg-secondary rounded-lg p-3 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
-                <div>
-                  <div className="text-xs text-muted-foreground">Downtime</div>
-                  <div className="text-sm font-bold text-foreground">{formatDuration(overallOEE.totalDowntime)}</div>
-                </div>
-              </div>
+            {/* Summary stat cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative z-10">
+              <StatCard icon={Target} label="Target" value={overallOEE.targetCount.toLocaleString()} accent="primary" />
+              <StatCard icon={CheckCircle2} label="Actual" value={overallOEE.actualCount.toLocaleString()} accent="success" />
+              <StatCard icon={Timer} label="Run Time" value={formatDuration(overallOEE.runTime)} accent="primary" />
+              <StatCard icon={AlertTriangle} label="Downtime" value={formatDuration(overallOEE.totalDowntime)} accent="destructive" />
             </div>
           </div>
         ) : (
-          <div className="bg-card rounded-lg border p-8 text-center">
-            <Factory className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <h2 className="text-lg font-bold text-foreground mb-1">No Production Runs Yet</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Start tracking your production by creating a new run. Set target counts, log actual production, and monitor your OEE.
+          /* Empty state */
+          <div className="rounded-xl border bg-gradient-to-br from-card to-secondary/30 p-10 text-center shadow-lg relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl" />
+            <div className="w-16 h-16 rounded-2xl industrial-button flex items-center justify-center mx-auto mb-4">
+              <Factory className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground mb-2">No Production Runs Yet</h2>
+            <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+              Start tracking your production efficiency. Create a run, set target counts, log downtime events, and monitor your OEE in real-time.
             </p>
-            <Button onClick={() => setNewRunDialogOpen(true)} className="industrial-button text-white border-0">
-              <Plus className="w-4 h-4 mr-1" /> Create First Run
+            <Button onClick={() => setNewRunDialogOpen(true)} size="lg" className="industrial-button text-white border-0 px-8">
+              <Plus className="w-5 h-5 mr-2" /> Create First Run
             </Button>
           </div>
         )}
 
-        {/* Charts Row */}
+        {/* ========== CHARTS ========== */}
         {runMetrics.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* OEE Trend Chart */}
-            <div className="bg-card rounded-lg border p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <h3 className="text-sm font-bold text-foreground">OEE Trend</h3>
+            {/* OEE Trend */}
+            <div className="rounded-xl border bg-card p-4 md:p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                </div>
+                <h3 className="text-sm md:text-base font-bold text-foreground">OEE Trend</h3>
               </div>
-              <div className="h-[200px]">
+              <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={oeeChartData}>
                     <defs>
                       <linearGradient id="oeeGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                      </linearGradient>
+                      <linearGradient id="availGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
                     <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
                     <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
+                        borderRadius: '10px',
                         fontSize: '12px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                       }}
                     />
-                    <Area type="monotone" dataKey="oee" stroke="hsl(var(--primary))" fill="url(#oeeGrad)" strokeWidth={2} name="OEE %" />
-                    <Area type="monotone" dataKey="availability" stroke="hsl(var(--success))" fill="none" strokeWidth={1.5} strokeDasharray="4 4" name="Avail %" />
-                    <Area type="monotone" dataKey="performance" stroke="hsl(var(--warning))" fill="none" strokeWidth={1.5} strokeDasharray="4 4" name="Perf %" />
+                    <Area type="monotone" dataKey="oee" stroke="hsl(var(--primary))" fill="url(#oeeGrad)" strokeWidth={2.5} name="OEE %" />
+                    <Area type="monotone" dataKey="availability" stroke="hsl(var(--success))" fill="url(#availGrad)" strokeWidth={1.5} strokeDasharray="5 3" name="Availability %" />
+                    <Area type="monotone" dataKey="performance" stroke="hsl(var(--warning))" fill="none" strokeWidth={1.5} strokeDasharray="5 3" name="Performance %" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Production vs Target Chart */}
-            <div className="bg-card rounded-lg border p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <BarChart3 className="w-4 h-4 text-primary" />
-                <h3 className="text-sm font-bold text-foreground">Target vs Actual</h3>
+            {/* Target vs Actual */}
+            <div className="rounded-xl border bg-card p-4 md:p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                </div>
+                <h3 className="text-sm md:text-base font-bold text-foreground">Target vs Actual</h3>
               </div>
-              <div className="h-[200px]">
+              <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={productionChartData} barGap={2}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <BarChart data={productionChartData} barGap={4}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
                     <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
                     <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
+                        borderRadius: '10px',
                         fontSize: '12px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                       }}
                     />
-                    <Bar dataKey="target" fill="hsl(var(--muted))" radius={[4, 4, 0, 0]} name="Target" />
-                    <Bar dataKey="actual" radius={[4, 4, 0, 0]} name="Actual">
+                    <Bar dataKey="target" fill="hsl(var(--muted))" radius={[6, 6, 0, 0]} name="Target" barSize={28} />
+                    <Bar dataKey="actual" radius={[6, 6, 0, 0]} name="Actual" barSize={28}>
                       {productionChartData.map((entry, index) => (
                         <Cell
                           key={index}
@@ -389,15 +425,17 @@ export function ReportsScreen({
           </div>
         )}
 
-        {/* Active Runs */}
+        {/* ========== ACTIVE RUNS ========== */}
         {activeRuns.length > 0 && (
-          <div className="bg-card rounded-lg border p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Zap className="w-4 h-4 text-success animate-pulse" />
-              <h3 className="text-sm font-bold text-foreground">Active Runs</h3>
-              <span className="text-xs bg-success/20 text-success px-2 py-0.5 rounded-full font-medium">{activeRuns.length} running</span>
+          <div className="rounded-xl border bg-card p-4 md:p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-success/15 flex items-center justify-center">
+                <Zap className="w-4 h-4 text-success animate-pulse" />
+              </div>
+              <h3 className="text-sm md:text-base font-bold text-foreground">Active Runs</h3>
+              <span className="text-xs bg-success text-success-foreground px-2.5 py-1 rounded-full font-bold shadow-sm">{activeRuns.length} running</span>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {activeRuns.map(run => {
                 const oee = calculateOEE(run);
                 const hasActiveDowntime = run.downtimeEvents.some(e => e.endTime === null);
@@ -421,83 +459,114 @@ export function ReportsScreen({
           </div>
         )}
 
-        {/* Run History */}
+        {/* ========== RUN HISTORY ========== */}
         {runs.filter(r => r.endTime !== null).length > 0 && (
-          <div className="bg-card rounded-lg border p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <h3 className="text-sm font-bold text-foreground">Run History</h3>
+          <div className="rounded-xl border bg-card p-4 md:p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <h3 className="text-sm md:text-base font-bold text-foreground">Run History</h3>
+              <span className="text-xs text-muted-foreground ml-1">{runs.filter(r => r.endTime !== null).length} completed</span>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {runs.filter(r => r.endTime !== null).map(run => {
                 const oee = calculateOEE(run);
                 const isExpanded = expandedRunId === run.id;
+                const perfPct = run.targetCount > 0 ? Math.min(100, (run.actualCount / run.targetCount) * 100) : 0;
                 return (
-                  <div key={run.id} className="bg-secondary rounded-lg overflow-hidden">
+                  <div key={run.id} className="rounded-lg overflow-hidden border bg-secondary/50">
                     <button
                       onClick={() => setExpandedRunId(isExpanded ? null : run.id)}
-                      className="w-full px-3 py-2.5 flex items-center gap-3 text-left hover:bg-muted/50 transition-colors"
+                      className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-muted/30 transition-colors"
                     >
+                      {/* Mini OEE indicator */}
+                      <div className="w-10 h-10 flex-shrink-0 relative">
+                        <svg width={40} height={40} className="transform -rotate-90">
+                          <circle cx={20} cy={20} r={16} fill="none" stroke="hsl(var(--muted))" strokeWidth={3} opacity={0.4} />
+                          <circle
+                            cx={20} cy={20} r={16}
+                            fill="none"
+                            stroke={getOEEColor(oee.oee)}
+                            strokeWidth={3}
+                            strokeDasharray={2 * Math.PI * 16}
+                            strokeDashoffset={2 * Math.PI * 16 * (1 - Math.min(100, oee.oee) / 100)}
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-foreground">
+                          {oee.oee.toFixed(0)}
+                        </span>
+                      </div>
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-foreground truncate">{run.messageName}</span>
-                          <span className="text-xs text-muted-foreground">• {run.printerName}</span>
+                          <span className="text-sm font-semibold text-foreground truncate">{run.messageName}</span>
+                          <span className="text-xs text-muted-foreground hidden md:inline">• {run.printerName}</span>
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5">
                           {formatDateTime(run.startTime)} → {run.endTime ? formatDateTime(run.endTime) : '...'}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <div className="text-right">
-                          <div className={`text-sm font-bold tabular-nums ${
-                            oee.oee >= 85 ? 'text-success' : oee.oee >= 60 ? 'text-warning' : 'text-destructive'
-                          }`}>
-                            {oee.oee.toFixed(1)}%
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">OEE</div>
+                        {/* Mini progress bar */}
+                        <div className="h-1.5 bg-muted rounded-full mt-1.5 overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${perfPct}%`,
+                              backgroundColor: perfPct >= 100 ? 'hsl(var(--success))' : perfPct >= 60 ? 'hsl(var(--warning))' : 'hsl(var(--destructive))',
+                            }}
+                          />
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium text-foreground tabular-nums">
-                            {run.actualCount}/{run.targetCount}
+                      </div>
+
+                      <div className="flex items-center gap-4 flex-shrink-0">
+                        <div className="text-right hidden md:block">
+                          <div className="text-sm font-bold text-foreground tabular-nums">
+                            {run.actualCount.toLocaleString()}<span className="text-muted-foreground font-normal">/{run.targetCount.toLocaleString()}</span>
                           </div>
-                          <div className="text-[10px] text-muted-foreground">count</div>
+                          <div className="text-[10px] text-muted-foreground">produced</div>
                         </div>
                         {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                       </div>
                     </button>
+
                     {isExpanded && (
-                      <div className="px-3 pb-3 border-t border-border pt-3">
-                        <div className="grid grid-cols-3 gap-3 mb-3">
-                          <div>
-                            <div className="text-[10px] text-muted-foreground">Availability</div>
-                            <div className="text-sm font-bold text-foreground">{oee.availability.toFixed(1)}%</div>
+                      <div className="px-4 pb-4 border-t border-border pt-3">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                          <div className="bg-background rounded-lg p-2.5">
+                            <div className="text-[10px] text-muted-foreground mb-0.5">Availability</div>
+                            <div className="text-base font-bold" style={{ color: getOEEColor(oee.availability) }}>{oee.availability.toFixed(1)}%</div>
                           </div>
-                          <div>
-                            <div className="text-[10px] text-muted-foreground">Performance</div>
-                            <div className="text-sm font-bold text-foreground">{oee.performance.toFixed(1)}%</div>
+                          <div className="bg-background rounded-lg p-2.5">
+                            <div className="text-[10px] text-muted-foreground mb-0.5">Performance</div>
+                            <div className="text-base font-bold" style={{ color: getOEEColor(oee.performance) }}>{oee.performance.toFixed(1)}%</div>
                           </div>
-                          <div>
-                            <div className="text-[10px] text-muted-foreground">Downtime</div>
-                            <div className="text-sm font-bold text-foreground">{formatDuration(oee.totalDowntime)}</div>
+                          <div className="bg-background rounded-lg p-2.5">
+                            <div className="text-[10px] text-muted-foreground mb-0.5">Run Time</div>
+                            <div className="text-base font-bold text-foreground">{formatDuration(oee.runTime)}</div>
+                          </div>
+                          <div className="bg-background rounded-lg p-2.5">
+                            <div className="text-[10px] text-muted-foreground mb-0.5">Downtime</div>
+                            <div className="text-base font-bold text-destructive">{formatDuration(oee.totalDowntime)}</div>
                           </div>
                         </div>
                         {run.downtimeEvents.length > 0 && (
-                          <div className="space-y-1">
-                            <div className="text-xs font-medium text-muted-foreground">Downtime Events</div>
+                          <div className="space-y-1.5 mb-3">
+                            <div className="text-xs font-semibold text-muted-foreground">Downtime Events</div>
                             {run.downtimeEvents.map(evt => (
-                              <div key={evt.id} className="flex items-center gap-2 text-xs bg-destructive/10 rounded px-2 py-1">
-                                <ArrowDownCircle className="w-3 h-3 text-destructive flex-shrink-0" />
-                                <span className="text-foreground">{evt.reason}</span>
-                                <span className="text-muted-foreground ml-auto">
+                              <div key={evt.id} className="flex items-center gap-2 text-xs bg-destructive/10 rounded-lg px-3 py-2">
+                                <ArrowDownCircle className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
+                                <span className="text-foreground font-medium">{evt.reason}</span>
+                                <span className="text-muted-foreground ml-auto tabular-nums">
                                   {formatDuration((evt.endTime ?? Date.now()) - evt.startTime)}
                                 </span>
                               </div>
                             ))}
                           </div>
                         )}
-                        <div className="flex justify-end mt-2">
-                          <Button size="sm" variant="ghost" onClick={() => onDeleteRun(run.id)} className="text-destructive hover:text-destructive">
-                            <Trash2 className="w-3 h-3 mr-1" /> Delete
+                        <div className="flex justify-end">
+                          <Button size="sm" variant="ghost" onClick={() => onDeleteRun(run.id)} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                            <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
                           </Button>
                         </div>
                       </div>
@@ -589,7 +658,7 @@ export function ReportsScreen({
   );
 }
 
-// Active run card sub-component
+// Active run card with gradient border and live performance
 function ActiveRunCard({
   run, oee, hasActiveDowntime,
   onEnd, onLogDowntime, onEndDowntime, onUpdateCount
@@ -603,57 +672,76 @@ function ActiveRunCard({
   onUpdateCount: (count: string) => void;
 }) {
   const [endCount, setEndCount] = useState(String(run.actualCount));
-  const [showEndForm, setShowEndForm] = useState(false);
   const elapsed = formatDuration(Date.now() - run.startTime);
+  const perfPct = run.targetCount > 0 ? Math.min(100, (run.actualCount / run.targetCount) * 100) : 0;
 
   return (
-    <div className="bg-secondary rounded-lg p-3 border border-success/30">
-      <div className="flex items-start justify-between gap-3">
+    <div className="rounded-xl p-4 border-2 border-success/30 bg-gradient-to-br from-success/5 to-transparent relative overflow-hidden">
+      {/* Pulsing glow */}
+      <div className="absolute top-0 right-0 w-24 h-24 bg-success/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl animate-pulse" />
+
+      <div className="flex items-start justify-between gap-3 relative z-10">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <Activity className="w-4 h-4 text-success animate-pulse" />
-            <span className="text-sm font-bold text-foreground truncate">{run.messageName}</span>
+            <Activity className="w-5 h-5 text-success animate-pulse" />
+            <span className="text-base font-bold text-foreground truncate">{run.messageName}</span>
           </div>
-          <div className="text-xs text-muted-foreground">{run.printerName} • Started {elapsed} ago</div>
+          <div className="text-sm text-muted-foreground">{run.printerName} • Started {elapsed} ago</div>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="text-right">
-            <div className={`text-lg font-bold tabular-nums ${
-              oee.performance >= 85 ? 'text-success' : oee.performance >= 60 ? 'text-warning' : 'text-destructive'
-            }`}>
-              {oee.performance.toFixed(0)}%
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Mini gauge */}
+          <div className="relative w-14 h-14">
+            <svg width={56} height={56} className="transform -rotate-90">
+              <circle cx={28} cy={28} r={22} fill="none" stroke="hsl(var(--muted))" strokeWidth={4} opacity={0.3} />
+              <circle
+                cx={28} cy={28} r={22}
+                fill="none"
+                stroke={getOEEColor(oee.performance)}
+                strokeWidth={4}
+                strokeDasharray={2 * Math.PI * 22}
+                strokeDashoffset={2 * Math.PI * 22 * (1 - Math.min(100, oee.performance) / 100)}
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-sm font-bold" style={{ color: getOEEColor(oee.performance) }}>{oee.performance.toFixed(0)}%</span>
+              <span className="text-[8px] text-muted-foreground leading-none">Perf</span>
             </div>
-            <div className="text-[10px] text-muted-foreground">Performance</div>
           </div>
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="mt-2 mb-2">
-        <div className="flex justify-between text-xs text-muted-foreground mb-1">
-          <span>{run.actualCount.toLocaleString()} / {run.targetCount.toLocaleString()}</span>
-          <span>{Math.min(100, (run.actualCount / run.targetCount * 100)).toFixed(0)}%</span>
+      <div className="mt-3 mb-3 relative z-10">
+        <div className="flex justify-between text-sm text-muted-foreground mb-1.5">
+          <span className="font-medium">{run.actualCount.toLocaleString()} <span className="text-xs">/ {run.targetCount.toLocaleString()}</span></span>
+          <span className="font-bold" style={{ color: perfPct >= 100 ? 'hsl(var(--success))' : 'hsl(var(--foreground))' }}>{perfPct.toFixed(0)}%</span>
         </div>
-        <div className="h-2 bg-muted rounded-full overflow-hidden">
+        <div className="h-3 bg-muted rounded-full overflow-hidden shadow-inner">
           <div
-            className={`h-full rounded-full transition-all duration-500 ${
-              run.actualCount >= run.targetCount ? 'bg-success' : 'bg-primary'
-            }`}
-            style={{ width: `${Math.min(100, (run.actualCount / run.targetCount) * 100)}%` }}
-          />
+            className="h-full rounded-full transition-all duration-700 relative"
+            style={{
+              width: `${perfPct}%`,
+              background: perfPct >= 100
+                ? 'linear-gradient(90deg, hsl(var(--success)), hsl(142 71% 55%))'
+                : 'linear-gradient(90deg, hsl(var(--primary)), hsl(207 90% 60%))',
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent rounded-full" />
+          </div>
         </div>
       </div>
 
       {/* Active downtime warning */}
       {hasActiveDowntime && (
-        <div className="flex items-center gap-2 bg-destructive/10 rounded px-2 py-1.5 mb-2">
-          <AlertTriangle className="w-4 h-4 text-destructive" />
-          <span className="text-xs font-medium text-destructive">Downtime in progress</span>
+        <div className="flex items-center gap-2 bg-destructive/15 border border-destructive/20 rounded-lg px-3 py-2 mb-3 relative z-10">
+          <AlertTriangle className="w-4 h-4 text-destructive animate-pulse" />
+          <span className="text-sm font-medium text-destructive">Downtime in progress</span>
           <Button
             size="sm"
             variant="outline"
-            className="ml-auto h-6 text-xs"
+            className="ml-auto h-7 text-xs border-destructive/30"
             onClick={() => {
               const activeEvt = run.downtimeEvents.find(e => e.endTime === null);
               if (activeEvt) onEndDowntime(activeEvt.id);
@@ -665,7 +753,7 @@ function ActiveRunCard({
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-2 mt-1">
+      <div className="flex items-center gap-2 relative z-10">
         <div className="flex-1">
           <Input
             type="number"
@@ -674,22 +762,22 @@ function ActiveRunCard({
               setEndCount(e.target.value);
               onUpdateCount(e.target.value);
             }}
-            className="h-7 text-sm"
+            className="h-8 text-sm"
             placeholder="Current count"
           />
         </div>
         <Button
           size="sm"
           variant="outline"
-          className="h-7 text-xs"
+          className="h-8 text-xs"
           onClick={onLogDowntime}
           disabled={hasActiveDowntime}
         >
-          <ArrowDownCircle className="w-3 h-3 mr-1" /> Downtime
+          <ArrowDownCircle className="w-3.5 h-3.5 mr-1" /> Downtime
         </Button>
         <Button
           size="sm"
-          className="h-7 text-xs industrial-button-danger text-white border-0"
+          className="h-8 text-xs industrial-button-danger text-white border-0"
           onClick={() => onEnd(endCount)}
         >
           End Run
