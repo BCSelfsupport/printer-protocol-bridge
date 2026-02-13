@@ -395,7 +395,8 @@ class PrinterEmulatorInstance {
     if (this.state.echoOn) {
       return `Messages (${msgs.length}):\r\n${msgs.map((m, i) => `${i + 1}. ${m}${m === this.state.currentMessage ? ' (current)' : ''}`).join('\r\n')}`;
     }
-    return msgs.join('\r\n');
+    // Echo-off: still mark the current message so the app can detect it
+    return msgs.map(m => m === this.state.currentMessage ? `${m} (current)` : m).join('\r\n');
   }
 
   private cmdCountQuery(): string {

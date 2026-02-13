@@ -519,7 +519,7 @@ class PrinterEmulator {
   }
 
   private cmdListMessages(): string {
-    return this.state.messages.join('\r\n') + '\r\n//EOL';
+    return this.state.messages.map(m => m === this.state.currentMessage ? `${m} (current)` : m).join('\r\n') + '\r\n//EOL';
   }
 
   private cmdListLogos(): string {
