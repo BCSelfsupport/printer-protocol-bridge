@@ -129,18 +129,18 @@ export function ConsumablesScreen({
     }
   };
 
-  // ── Helper: ink/makeup level color ──
+  // ── Helper: ink/makeup level color (matching Dashboard style) ──
   const getLevelColor = (level?: string) => {
     switch (level) {
-      case 'FULL': return { bg: 'bg-emerald-500', text: 'text-emerald-400', ring: 'ring-emerald-500/30', fill: 'w-full' };
-      case 'GOOD': return { bg: 'bg-emerald-500', text: 'text-emerald-400', ring: 'ring-emerald-500/30', fill: 'w-3/4' };
-      case 'LOW': return { bg: 'bg-yellow-500', text: 'text-yellow-400', ring: 'ring-yellow-500/30', fill: 'w-1/3' };
-      case 'EMPTY': return { bg: 'bg-destructive', text: 'text-red-400', ring: 'ring-red-500/30', fill: 'w-0' };
-      default: return { bg: 'bg-muted', text: 'text-muted-foreground', ring: 'ring-muted/30', fill: 'w-0' };
+      case 'FULL': return { bg: 'bg-teal-400', text: 'text-teal-400', fill: '100%' };
+      case 'GOOD': return { bg: 'bg-teal-400', text: 'text-teal-400', fill: '75%' };
+      case 'LOW': return { bg: 'bg-amber-400', text: 'text-amber-400', fill: '33%' };
+      case 'EMPTY': return { bg: 'bg-red-500', text: 'text-red-400', fill: '5%' };
+      default: return { bg: 'bg-slate-600', text: 'text-slate-500', fill: '0%' };
     }
   };
 
-  // ── Left panel: Printer cards ──
+  // ── Left panel: Printer cards (matching reference design) ──
   const renderPrinterCard = (printer: Printer) => {
     const assignment = assignments.find(a => a.printerId === printer.id);
     const inkConsumable = assignment?.inkConsumableId ? consumables.find(c => c.id === assignment.inkConsumableId) : undefined;
@@ -149,112 +149,106 @@ export function ConsumablesScreen({
     const makeupColor = getLevelColor(printer.makeupLevel);
 
     return (
-      <Card key={printer.id} className="overflow-hidden transition-all">
-        <CardContent className="p-0">
-          {/* Printer header bar */}
-          <div className={`px-3 py-2.5 flex items-center gap-3 ${
-            printer.isAvailable ? 'bg-slate-800' : 'bg-slate-900 opacity-50'
+      <div key={printer.id} className="rounded-xl border-2 border-slate-600 bg-slate-800/80 overflow-hidden transition-all">
+        {/* Printer header — dark bar with icon, name, status, current message */}
+        <div className="px-4 py-3 flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+            printer.isAvailable ? 'bg-teal-500/20' : 'bg-slate-700'
           }`}>
-            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+            <PrinterIcon className={`w-5 h-5 ${
+              printer.isAvailable ? 'text-teal-400' : 'text-slate-500'
+            }`} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className="font-bold text-base text-white block truncate">{printer.name}</span>
+            <span className={`text-xs font-semibold ${
               printer.isAvailable
-                ? printer.status === 'ready' ? 'bg-emerald-500/20 ring-1 ring-emerald-500/40' : 'bg-amber-500/20 ring-1 ring-amber-500/40'
-                : 'bg-slate-700'
+                ? printer.status === 'ready' ? 'text-emerald-400' : 'text-amber-400'
+                : 'text-slate-500'
             }`}>
-              <PrinterIcon className={`w-4.5 h-4.5 ${
-                printer.isAvailable
-                  ? printer.status === 'ready' ? 'text-emerald-400' : 'text-amber-400'
-                  : 'text-slate-500'
-              }`} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="font-semibold text-sm text-white block truncate">{printer.name}</span>
-              <span className={`text-[10px] font-medium ${
-                printer.isAvailable
-                  ? printer.status === 'ready' ? 'text-emerald-400' : 'text-amber-400'
-                  : 'text-slate-500'
-              }`}>
-                {printer.isAvailable ? (printer.status === 'ready' ? 'Ready' : 'Not Ready') : 'Offline'}
+              {printer.isAvailable ? (printer.status === 'ready' ? 'Ready' : 'Not Ready') : 'Offline'}
+            </span>
+          </div>
+          {printer.currentMessage && (
+            <span className="text-xs text-slate-400 font-mono truncate max-w-[100px]">
+              {printer.currentMessage}
+            </span>
+          )}
+        </div>
+
+        {/* Ink & Makeup gauges — side by side panels */}
+        <div className="grid grid-cols-2 gap-px bg-slate-700">
+          {/* Ink panel */}
+          <div className="bg-slate-800/60 p-3 space-y-2">
+            <div className="flex items-center gap-1.5">
+              <Droplets className={`w-4 h-4 ${inkColor.text}`} />
+              <span className={`text-sm font-bold uppercase tracking-wide ${inkColor.text}`}>
+                {printer.inkLevel || 'UNKNOWN'}
               </span>
             </div>
-            {printer.currentMessage && (
-              <span className="text-[10px] text-slate-400 truncate max-w-[80px]">
-                {printer.currentMessage}
-              </span>
+            {/* Gauge bar */}
+            <div className="h-3 bg-slate-700 rounded overflow-hidden">
+              <div
+                className={`h-full rounded transition-all duration-500 ${inkColor.bg}`}
+                style={{ width: inkColor.fill }}
+              />
+            </div>
+            {/* Assignment dropdown */}
+            <Select
+              value={assignment?.inkConsumableId ?? 'none'}
+              onValueChange={(v) => onAssignConsumable(printer.id, 'ink', v === 'none' ? undefined : v)}
+            >
+              <SelectTrigger className="h-7 text-xs border-dashed border-slate-600 bg-slate-900/50 text-slate-300 px-2">
+                <SelectValue placeholder="Assign ink..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {inkConsumables.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.partNumber}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {inkConsumable && (
+              <p className="text-[10px] text-slate-500 truncate">{inkConsumable.description}</p>
             )}
           </div>
 
-          {/* Ink & Makeup live gauges side by side */}
-          <div className="grid grid-cols-2 divide-x divide-border">
-            {/* Ink */}
-            <div className="p-3 space-y-2">
-              <div className="flex items-center gap-1.5">
-                <Droplets className={`w-4 h-4 ${inkColor.text}`} />
-                <span className={`text-xs font-bold ${inkColor.text}`}>
-                  {printer.inkLevel || '—'}
-                </span>
-              </div>
-              {/* Visual bar */}
-              <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all ${inkColor.bg} ${inkColor.fill}`} />
-              </div>
-              {/* Assigned consumable */}
-              <div>
-                <Select
-                  value={assignment?.inkConsumableId ?? 'none'}
-                  onValueChange={(v) => onAssignConsumable(printer.id, 'ink', v === 'none' ? undefined : v)}
-                >
-                  <SelectTrigger className="h-6 text-[10px] border-dashed border-slate-600 bg-transparent text-slate-300 px-1.5">
-                    <SelectValue placeholder="Assign ink..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {inkConsumables.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.partNumber}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {inkConsumable && (
-                  <p className="text-[9px] text-slate-500 mt-0.5 truncate">{inkConsumable.description}</p>
-                )}
-              </div>
+          {/* Makeup panel */}
+          <div className="bg-slate-800/60 p-3 space-y-2">
+            <div className="flex items-center gap-1.5">
+              <Package className={`w-4 h-4 ${makeupColor.text}`} />
+              <span className={`text-sm font-bold uppercase tracking-wide ${makeupColor.text}`}>
+                {printer.makeupLevel || 'UNKNOWN'}
+              </span>
             </div>
-
-            {/* Makeup */}
-            <div className="p-3 space-y-2">
-              <div className="flex items-center gap-1.5">
-                <Package className={`w-4 h-4 ${makeupColor.text}`} />
-                <span className={`text-xs font-bold ${makeupColor.text}`}>
-                  {printer.makeupLevel || '—'}
-                </span>
-              </div>
-              {/* Visual bar */}
-              <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all ${makeupColor.bg} ${makeupColor.fill}`} />
-              </div>
-              {/* Assigned consumable */}
-              <div>
-                <Select
-                  value={assignment?.makeupConsumableId ?? 'none'}
-                  onValueChange={(v) => onAssignConsumable(printer.id, 'makeup', v === 'none' ? undefined : v)}
-                >
-                  <SelectTrigger className="h-6 text-[10px] border-dashed border-slate-600 bg-transparent text-slate-300 px-1.5">
-                    <SelectValue placeholder="Assign makeup..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {makeupConsumables.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.partNumber}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {makeupConsumable && (
-                  <p className="text-[9px] text-slate-500 mt-0.5 truncate">{makeupConsumable.description}</p>
-                )}
-              </div>
+            {/* Gauge bar */}
+            <div className="h-3 bg-slate-700 rounded overflow-hidden">
+              <div
+                className={`h-full rounded transition-all duration-500 ${makeupColor.bg}`}
+                style={{ width: makeupColor.fill }}
+              />
             </div>
+            {/* Assignment dropdown */}
+            <Select
+              value={assignment?.makeupConsumableId ?? 'none'}
+              onValueChange={(v) => onAssignConsumable(printer.id, 'makeup', v === 'none' ? undefined : v)}
+            >
+              <SelectTrigger className="h-7 text-xs border-dashed border-slate-600 bg-slate-900/50 text-slate-300 px-2">
+                <SelectValue placeholder="Assign makeup..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {makeupConsumables.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.partNumber}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {makeupConsumable && (
+              <p className="text-[10px] text-slate-500 truncate">{makeupConsumable.description}</p>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   };
 
@@ -381,8 +375,8 @@ export function ConsumablesScreen({
       <div className="flex-1 flex overflow-hidden">
         {/* LEFT: Printer config cards */}
         <div className="w-1/2 border-r flex flex-col">
-          <div className="px-3 py-2 border-b bg-muted/20">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <div className="px-3 py-2 border-b bg-slate-900/40">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <PrinterIcon className="w-3.5 h-3.5" />
               Printer Configuration
             </h3>
