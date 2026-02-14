@@ -175,6 +175,30 @@ class PrinterEmulatorInstance {
   constructor(config: EmulatedPrinterConfig) {
     this.config = config;
     this.state = createDefaultState(config.initialState);
+    // Restore persisted messages for this instance
+    this.loadPersistedMessages();
+  }
+
+  private get storageKey(): string {
+    return `emulator-messages-${this.config.ipAddress}`;
+  }
+
+  private loadPersistedMessages() {
+    try {
+      const saved = localStorage.getItem(this.storageKey);
+      if (saved) {
+        const msgs = JSON.parse(saved) as string[];
+        if (Array.isArray(msgs) && msgs.length > 0) {
+          this.state.messages = msgs;
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  private persistMessages() {
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(this.state.messages));
+    } catch { /* ignore */ }
   }
 
   getState(): EmulatorState {
@@ -547,6 +571,7 @@ class PrinterEmulatorInstance {
         return this.formatError(4, 'MsgNotFnd', 'Message not found');
       }
       this.state.messages.splice(idx, 1);
+      this.persistMessages();
       return this.state.echoOn ? 'Command Successful!' : 'OK';
     }
     return this.formatError(2, 'CmdFormat', 'Invalid command format');
@@ -573,6 +598,7 @@ class PrinterEmulatorInstance {
     if (!this.state.messages.includes(msgName)) {
       this.state.messages.push(msgName);
     }
+    this.persistMessages();
     return this.state.echoOn ? `Command Successful!\r\nMessage created: ${msgName}` : 'OK';
   }
   private formatError(code: number, type: string, message: string): string {
