@@ -414,6 +414,32 @@ export function MessageCanvas({
         ctx.fillStyle = '#1a1a1a';
         renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE);
       }
+
+      // Draw field number badge (e.g., "F1", "F2") in the top-left corner
+      {
+        const fieldIndex = fields.indexOf(field) + 1;
+        const badgeText = `F${fieldIndex}`;
+        const badgePadX = 2;
+        const badgePadY = 1;
+        ctx.font = 'bold 9px sans-serif';
+        const textMetrics = ctx.measureText(badgeText);
+        const badgeW = textMetrics.width + badgePadX * 2;
+        const badgeH = 11;
+        const badgeX = fieldX;
+        const badgeY = fieldY - badgeH - 1;
+
+        // Background
+        ctx.fillStyle = isSelected ? '#ff6600' : '#3b82f6';
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+
+        // Text
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(badgeText, badgeX + badgePadX, badgeY + badgeH - badgePadY - 1);
+      }
       
       ctx.globalAlpha = 1.0; // Reset alpha
 

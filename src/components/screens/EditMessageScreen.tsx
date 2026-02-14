@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal } from 'lucide-react';
+import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +18,7 @@ import { estimateBarcodeWidthDots } from '@/lib/barcodeRenderer';
 import { GraphicFieldDialog, GraphicFieldConfig } from '@/components/messages/GraphicFieldDialog';
 import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
 import { AdvancedSettingsDialog, AdvancedSettings, defaultAdvancedSettings } from '@/components/messages/AdvancedSettingsDialog';
+import { DataLinkDialog } from '@/components/messages/DataLinkDialog';
 import { FieldSettingsPanel, FieldSettings, defaultFieldSettings } from '@/components/messages/FieldSettingsPanel';
 import {
   Dialog,
@@ -112,6 +113,8 @@ interface EditMessageScreenProps {
   onGetMessageDetails?: (name: string) => Promise<MessageDetails | null>;
   printerTime?: Date | null;
   customCounters?: number[];
+  connectedPrinterId?: number | null;
+  isConnected?: boolean;
 }
 
 export function EditMessageScreen({
@@ -121,6 +124,8 @@ export function EditMessageScreen({
   onGetMessageDetails,
   printerTime,
   customCounters,
+  connectedPrinterId,
+  isConnected = false,
 }: EditMessageScreenProps) {
   const [message, setMessage] = useState<MessageDetails>({
     name: messageName,
@@ -150,6 +155,7 @@ export function EditMessageScreen({
   const [counterDialogOpen, setCounterDialogOpen] = useState(false);
   const [userDefineDialogOpen, setUserDefineDialogOpen] = useState(false);
   const [graphicDialogOpen, setGraphicDialogOpen] = useState(false);
+  const [dataLinkDialogOpen, setDataLinkDialogOpen] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   // Mobile: lock the parent horizontal scroller while long-press dragging fields
@@ -1023,6 +1029,14 @@ export function EditMessageScreen({
                 </button>
 
                 <button
+                  onClick={() => setDataLinkDialogOpen(true)}
+                  className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
+                >
+                  <Database className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                  <span className="text-[9px] md:text-xs font-medium">Data</span>
+                </button>
+
+                <button
                   onClick={() => onSave(message, false)}
                   className="industrial-button-success text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
                 >
@@ -1189,6 +1203,16 @@ export function EditMessageScreen({
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* Data Link Dialog */}
+          <DataLinkDialog
+            open={dataLinkDialogOpen}
+            onOpenChange={setDataLinkDialogOpen}
+            messageName={messageName}
+            fieldCount={message.fields.length}
+            printerId={connectedPrinterId ?? null}
+            isConnected={isConnected}
+          />
         </>
       )}
     </div>
