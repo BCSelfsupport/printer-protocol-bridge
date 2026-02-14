@@ -204,13 +204,13 @@ function DashGauge({ value, label, gradientId, size = 140 }: {
     return `M ${x1} ${y1} A ${bandR} ${bandR} 0 ${largeArc} 1 ${x2} ${y2}`;
   };
 
-  // Segments: green (right, 0%) → lime → yellow → orange → red (left, 100%)
+  // Segments: red (right/low) → orange → yellow → lime → green (left/high)
   const segments = [
-    { from: 0, to: 0.20, color: '#22c55e' },    // green
-    { from: 0.20, to: 0.40, color: '#84cc16' },  // lime
+    { from: 0, to: 0.20, color: '#dc2626' },    // red
+    { from: 0.20, to: 0.40, color: '#f97316' },  // orange
     { from: 0.40, to: 0.60, color: '#eab308' },  // yellow
-    { from: 0.60, to: 0.80, color: '#f97316' },  // orange
-    { from: 0.80, to: 1.0, color: '#dc2626' },   // red
+    { from: 0.60, to: 0.80, color: '#84cc16' },  // lime
+    { from: 0.80, to: 1.0, color: '#22c55e' },   // green
   ];
 
   // Tick marks
