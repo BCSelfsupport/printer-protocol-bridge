@@ -110,7 +110,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify({ productKey, tier: result.tier }));
+      localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify({ productKey, tier: result.tier, activatedAt: new Date().toISOString() }));
       setState({
         tier: result.tier,
         isActivated: true,
