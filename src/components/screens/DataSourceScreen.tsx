@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Database, Plus, Upload, Trash2, Eye, Play, Square, Pause, Link } from 'lucide-react';
+import { Database, Plus, Upload, Trash2, Eye, Play, Square, Pause, Link, FileDown } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -255,6 +255,30 @@ export function DataSourceScreen({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Load built-in sample CSV
+  const handleLoadSample = async () => {
+    try {
+      // Create the data source
+      const { data: source, error: createErr } = await supabase
+        .from('data_sources')
+        .insert({ name: 'Food Products Sample', columns: [] })
+        .select()
+        .single();
+      if (createErr || !source) throw createErr || new Error('Failed to create');
+
+      // Fetch the CSV from public folder
+      const res = await fetch('/sample-data/food-products-sample.csv');
+      if (!res.ok) throw new Error('Could not load sample file');
+      const csvText = await res.text();
+
+      // Import it
+      await importMutation.mutateAsync({ sourceId: source.id, csvText });
+      toast.success('Sample data loaded — 40 food products');
+    } catch (err: any) {
+      toast.error(`Failed to load sample: ${err.message}`);
+    }
+  };
+
   // Open print job creation dialog
   const handleCreateJob = () => {
     if (!selectedSource || selectedSource.columns.length === 0) {
@@ -466,6 +490,13 @@ export function DataSourceScreen({
                 <Database className="w-12 h-12 mx-auto mb-3 opacity-40" />
                 <p className="text-lg font-medium">No Data Sources</p>
                 <p className="text-sm mt-1">Create a data source and import CSV data for variable printing</p>
+                <button
+                  onClick={handleLoadSample}
+                  className="mt-4 industrial-button-success text-white px-6 py-3 rounded-lg inline-flex items-center gap-2"
+                >
+                  <FileDown className="w-5 h-5" />
+                  <span className="font-medium">Load Sample Data</span>
+                </button>
               </div>
             ) : (
               <div className="space-y-2">
