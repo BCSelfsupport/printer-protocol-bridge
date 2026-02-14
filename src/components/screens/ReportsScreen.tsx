@@ -176,124 +176,122 @@ function DashGauge({ value, label, gradientId, size = 140 }: {
     return () => clearTimeout(t);
   }, [value]);
 
+  // Full round dial — center is at (size/2, size/2)
   const cx = size / 2;
-  const cy = size * 0.52;
-  const r = size * 0.38;
-  const strokeW = size * 0.10;
-
-  // Arc spans from 220° (bottom-left) to -40° (bottom-right) = 260° total
-  const startDeg = 220;
-  const totalDeg = 260;
+  const cy = size / 2;
+  const outerR = size * 0.44;
+  const bandWidth = size * 0.06;
+  const bandR = outerR - bandWidth / 2;
   const toRad = (d: number) => (d * Math.PI) / 180;
 
-  // Colored segments: green → lime → yellow → orange → red (like the reference image)
+  // Arc: 240° sweep from 150° to -90° (bottom gap)
+  const startDeg = 150; // lower-left
+  const totalDeg = 240;
+
+  const makeArc = (fromPct: number, toPct: number) => {
+    const a1 = toRad(startDeg - fromPct * totalDeg);
+    const a2 = toRad(startDeg - toPct * totalDeg);
+    const x1 = cx + bandR * Math.cos(a1);
+    const y1 = cy - bandR * Math.sin(a1);
+    const x2 = cx + bandR * Math.cos(a2);
+    const y2 = cy - bandR * Math.sin(a2);
+    const sweep = (toPct - fromPct) * totalDeg;
+    const large = sweep > 180 ? 1 : 0;
+    return `M ${x1} ${y1} A ${bandR} ${bandR} 0 ${large} 0 ${x2} ${y2}`;
+  };
+
+  // Colored band segments (green=high, red=low — reversed so green is on the right for high values)
   const segments = [
-    { from: 0, to: 0.20, color: '#22c55e' },   // green
-    { from: 0.20, to: 0.40, color: '#84cc16' }, // lime
-    { from: 0.40, to: 0.60, color: '#eab308' }, // yellow
-    { from: 0.60, to: 0.80, color: '#f97316' }, // orange
-    { from: 0.80, to: 1.0, color: '#dc2626' },  // red
+    { from: 0, to: 0.20, color: '#dc2626' },    // red (low end)
+    { from: 0.20, to: 0.40, color: '#f97316' },  // orange
+    { from: 0.40, to: 0.60, color: '#eab308' },  // yellow
+    { from: 0.60, to: 0.80, color: '#84cc16' },  // lime
+    { from: 0.80, to: 1.0, color: '#22c55e' },   // green (high end)
   ];
 
-  // Build segment arcs
-  const segmentArcs = segments.map((seg) => {
-    const a1 = toRad(startDeg - seg.from * totalDeg);
-    const a2 = toRad(startDeg - seg.to * totalDeg);
-    const x1 = cx + r * Math.cos(a1);
-    const y1 = cy - r * Math.sin(a1);
-    const x2 = cx + r * Math.cos(a2);
-    const y2 = cy - r * Math.sin(a2);
-    const sweep = (seg.to - seg.from) * totalDeg;
-    const largeArc = sweep > 180 ? 1 : 0;
-    return { ...seg, path: `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 0 ${x2} ${y2}` };
-  });
-
-  // Tick marks (major every 20%, minor every 10%)
+  // Tick marks
   const ticks: { angle: number; major: boolean }[] = [];
   for (let i = 0; i <= 10; i++) {
     ticks.push({ angle: startDeg - (i / 10) * totalDeg, major: i % 2 === 0 });
   }
 
-  // Needle
+  // Needle — points toward the value on the arc
   const pct = Math.min(100, Math.max(0, animVal)) / 100;
-  // Value maps to position on arc: 100% = green (start), 0% = red (end)
-  // Actually for OEE: high value = good (green end), low = bad (red end)
-  // Green is at start (220°), red at end (-40°). We want high value to point to green.
-  // So needle at pct=1 → green (start), pct=0 → red (end)
-  const needleAngleDeg = startDeg - (1 - pct) * totalDeg;
+  const needleAngleDeg = startDeg - pct * totalDeg;
   const needleAngle = toRad(needleAngleDeg);
-  const needleLen = r * 0.82;
-  const needleTailLen = r * 0.18;
+  const needleLen = outerR * 0.72;
+  const needleTail = outerR * 0.15;
   const nx = cx + needleLen * Math.cos(needleAngle);
   const ny = cy - needleLen * Math.sin(needleAngle);
-  const ntx = cx - needleTailLen * Math.cos(needleAngle);
-  const nty = cy + needleTailLen * Math.sin(needleAngle);
-
-  // Needle base width for triangular shape
-  const perpAngle = needleAngle + Math.PI / 2;
-  const baseW = size * 0.025;
-  const bx1 = cx + baseW * Math.cos(perpAngle);
-  const by1 = cy - baseW * Math.sin(perpAngle);
-  const bx2 = cx - baseW * Math.cos(perpAngle);
-  const by2 = cy + baseW * Math.sin(perpAngle);
+  const ntx = cx - needleTail * Math.cos(needleAngle);
+  const nty = cy + needleTail * Math.sin(needleAngle);
+  const perpA = needleAngle + Math.PI / 2;
+  const bw = size * 0.02;
+  const bx1 = cx + bw * Math.cos(perpA);
+  const by1 = cy - bw * Math.sin(perpA);
+  const bx2 = cx - bw * Math.cos(perpA);
+  const by2 = cy + bw * Math.sin(perpA);
 
   return (
     <div className="flex flex-col items-center">
-      <svg width={size} height={size * 0.7} className="overflow-visible">
-        <defs>
-          <filter id={`${gradientId}-shadow`}>
-            <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.3" />
-          </filter>
-        </defs>
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <defs>
+            <filter id={`${gradientId}-ns`}>
+              <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#000" floodOpacity="0.4" />
+            </filter>
+            <radialGradient id={`${gradientId}-face`} cx="40%" cy="35%">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.08)" />
+              <stop offset="100%" stopColor="rgba(0,0,0,0.15)" />
+            </radialGradient>
+          </defs>
 
-        {/* Background track */}
-        {(() => {
-          const a1 = toRad(startDeg);
-          const a2 = toRad(startDeg - totalDeg);
-          const x1 = cx + r * Math.cos(a1);
-          const y1 = cy - r * Math.sin(a1);
-          const x2 = cx + r * Math.cos(a2);
-          const y2 = cy - r * Math.sin(a2);
-          return <path d={`M ${x1} ${y1} A ${r} ${r} 0 1 0 ${x2} ${y2}`} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeW + 4} strokeLinecap="butt" />;
-        })()}
+          {/* Dial face background */}
+          <circle cx={cx} cy={cy} r={outerR + 2} fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)" strokeWidth={1.5} />
+          <circle cx={cx} cy={cy} r={outerR + 2} fill={`url(#${gradientId}-face)`} />
 
-        {/* Colored segments */}
-        {segmentArcs.map((seg, i) => (
-          <path key={i} d={seg.path} fill="none" stroke={seg.color} strokeWidth={strokeW} strokeLinecap="butt" opacity={0.85} />
-        ))}
+          {/* Background track */}
+          <path d={makeArc(0, 1)} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={bandWidth + 2} strokeLinecap="butt" />
 
-        {/* Tick marks */}
-        {ticks.map((tick, i) => {
-          const a = toRad(tick.angle);
-          const outerR = r + strokeW / 2 + 1;
-          const innerR = r - strokeW / 2 - (tick.major ? 4 : 1);
-          const ox = cx + outerR * Math.cos(a);
-          const oy = cy - outerR * Math.sin(a);
-          const ix = cx + innerR * Math.cos(a);
-          const iy = cy - innerR * Math.sin(a);
-          return (
-            <line key={i} x1={ox} y1={oy} x2={ix} y2={iy}
-              stroke="rgba(255,255,255,0.5)" strokeWidth={tick.major ? 2 : 1} />
-          );
-        })}
+          {/* Colored segments */}
+          {segments.map((seg, i) => (
+            <path key={i} d={makeArc(seg.from, seg.to)} fill="none" stroke={seg.color} strokeWidth={bandWidth} strokeLinecap="butt" opacity={0.9} />
+          ))}
 
-        {/* Needle - triangular */}
-        <polygon
-          points={`${nx},${ny} ${bx1},${by1} ${ntx},${nty} ${bx2},${by2}`}
-          fill="#dc2626"
-          filter={`url(#${gradientId}-shadow)`}
-          className="transition-all duration-1000 ease-out"
-        />
+          {/* Tick marks */}
+          {ticks.map((tick, i) => {
+            const a = toRad(tick.angle);
+            const oR = outerR + 1;
+            const iR = outerR - bandWidth - (tick.major ? 5 : 2);
+            return (
+              <line key={i}
+                x1={cx + oR * Math.cos(a)} y1={cy - oR * Math.sin(a)}
+                x2={cx + iR * Math.cos(a)} y2={cy - iR * Math.sin(a)}
+                stroke="rgba(255,255,255,0.4)" strokeWidth={tick.major ? 1.5 : 0.75}
+              />
+            );
+          })}
 
-        {/* Center hub */}
-        <circle cx={cx} cy={cy} r={size * 0.04} fill="#374151" stroke="#9ca3af" strokeWidth={1.5} />
-        <circle cx={cx} cy={cy} r={size * 0.015} fill="white" opacity={0.8} />
-      </svg>
-      <div className="flex flex-col items-center -mt-2">
-        <span className="text-xl sm:text-2xl md:text-3xl font-black tabular-nums text-white tracking-tight">
-          {animVal.toFixed(0)}%
-        </span>
-        <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mt-0.5 text-center leading-tight">{label}</span>
+          {/* Needle */}
+          <polygon
+            points={`${nx},${ny} ${bx1},${by1} ${ntx},${nty} ${bx2},${by2}`}
+            fill="#dc2626"
+            filter={`url(#${gradientId}-ns)`}
+            className="transition-all duration-1000 ease-out"
+          />
+
+          {/* Center hub */}
+          <circle cx={cx} cy={cy} r={size * 0.045} fill="#374151" stroke="#6b7280" strokeWidth={1} />
+          <circle cx={cx} cy={cy} r={size * 0.018} fill="white" opacity={0.7} />
+        </svg>
+
+        {/* Value + label overlay in bottom center of dial */}
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-[18%] pointer-events-none">
+          <span className="text-lg sm:text-xl md:text-2xl font-black tabular-nums text-white tracking-tight leading-none">
+            {animVal.toFixed(0)}%
+          </span>
+          <span className="text-[7px] sm:text-[8px] font-bold uppercase tracking-[0.1em] text-slate-400 mt-0.5 text-center leading-tight max-w-[80%]">{label}</span>
+        </div>
       </div>
     </div>
   );
