@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { UpdateNotification } from "./components/UpdateNotification";
 import { SplashScreen } from "./components/SplashScreen";
+import { LicenseProvider } from "./contexts/LicenseContext";
 
 const queryClient = new QueryClient();
 
@@ -19,18 +20,20 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <UpdateNotification />
-          {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
-          <HashRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </HashRouter>
-        </TooltipProvider>
+        <LicenseProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <UpdateNotification />
+            {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
+            <HashRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </HashRouter>
+          </TooltipProvider>
+        </LicenseProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

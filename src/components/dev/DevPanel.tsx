@@ -28,7 +28,8 @@ import {
   XCircle,
   Clock,
   ExternalLink,
-  Network
+  Network,
+  Shield
 } from 'lucide-react';
 import { CommandTerminal } from '@/components/terminal/CommandTerminal';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -38,7 +39,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-
+import { LicenseAssignmentPanel } from '@/components/dev/LicenseAssignmentPanel';
 function getTimeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
@@ -327,12 +328,16 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <TabsList className="mx-4 mt-2 grid grid-cols-5">
+            <TabsList className="mx-4 mt-2 grid grid-cols-6">
               <TabsTrigger value="status" className="text-xs">Status</TabsTrigger>
-              <TabsTrigger value="protocol" className="text-xs">Protocol</TabsTrigger>
+              <TabsTrigger value="protocol" className="text-xs">Proto</TabsTrigger>
               <TabsTrigger value="commands" className="text-xs">Log</TabsTrigger>
               <TabsTrigger value="manual" className="text-xs">Manual</TabsTrigger>
-              <TabsTrigger value="network" className="text-xs">Network</TabsTrigger>
+              <TabsTrigger value="network" className="text-xs">Net</TabsTrigger>
+              <TabsTrigger value="licenses" className="text-xs flex items-center gap-1">
+                <Shield className="w-3 h-3" />
+                Lic
+              </TabsTrigger>
             </TabsList>
 
             {/* Status Tab */}
@@ -832,6 +837,11 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   />
                 </div>
               </ScrollArea>
+            </TabsContent>
+
+            {/* Licenses Tab */}
+            <TabsContent value="licenses" className="flex-1 overflow-hidden m-0">
+              <LicenseAssignmentPanel />
             </TabsContent>
           </Tabs>
 
