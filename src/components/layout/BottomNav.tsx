@@ -1,5 +1,6 @@
-import { Power, FileText, Database, SlidersHorizontal, Brush, Settings, Wrench, ChevronUp, ChevronDown, Wifi } from 'lucide-react';
+import { Power, FileText, Database, SlidersHorizontal, Brush, Settings, Wrench, ChevronUp, ChevronDown, Wifi, Lock } from 'lucide-react';
 import { useState } from 'react';
+import { useLicense } from '@/contexts/LicenseContext';
 
 export type NavItem = 'home' | 'messages' | 'datasource' | 'adjust' | 'clean' | 'setup' | 'service';
 
@@ -11,17 +12,23 @@ interface BottomNavProps {
   onHome?: () => void;
 }
 
-const navItems: { id: NavItem; label: string; icon: React.ReactNode; disabled?: boolean }[] = [
-  { id: 'messages', label: 'Messages', icon: <FileText className="w-6 h-6" /> },
-  { id: 'datasource', label: 'Data', icon: <Database className="w-6 h-6" /> },
-  { id: 'adjust', label: 'Adjust', icon: <SlidersHorizontal className="w-6 h-6" /> },
-  { id: 'clean', label: 'Clean', icon: <Brush className="w-6 h-6" />, disabled: true },
-  { id: 'setup', label: 'Setup', icon: <Settings className="w-6 h-6" />, disabled: true },
-  { id: 'service', label: 'Service', icon: <Wrench className="w-6 h-6" /> },
-];
+function useNavItems() {
+  const { canDatabase } = useLicense();
+  
+  const items: { id: NavItem; label: string; icon: React.ReactNode; disabled?: boolean; locked?: boolean }[] = [
+    { id: 'messages', label: 'Messages', icon: <FileText className="w-6 h-6" /> },
+    { id: 'datasource', label: 'Data', icon: canDatabase ? <Database className="w-6 h-6" /> : <Lock className="w-6 h-6" />, disabled: !canDatabase, locked: !canDatabase },
+    { id: 'adjust', label: 'Adjust', icon: <SlidersHorizontal className="w-6 h-6" /> },
+    { id: 'clean', label: 'Clean', icon: <Brush className="w-6 h-6" />, disabled: true },
+    { id: 'setup', label: 'Setup', icon: <Settings className="w-6 h-6" />, disabled: true },
+    { id: 'service', label: 'Service', icon: <Wrench className="w-6 h-6" /> },
+  ];
+  return items;
+}
 
 export function BottomNav({ activeItem, onNavigate, onTurnOff, showPrinterControls = true, onHome }: BottomNavProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const navItems = useNavItems();
 
   if (!showPrinterControls) {
     return null;

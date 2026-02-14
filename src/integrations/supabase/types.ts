@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      customers: {
+        Row: {
+          company: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          notes: string | null
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          notes?: string | null
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
       data_source_rows: {
         Row: {
           created_at: string
@@ -70,6 +97,79 @@ export type Database = {
         }
         Relationships: []
       }
+      license_activations: {
+        Row: {
+          activated_at: string
+          id: string
+          is_current: boolean
+          last_seen: string
+          license_id: string
+          machine_id: string
+        }
+        Insert: {
+          activated_at?: string
+          id?: string
+          is_current?: boolean
+          last_seen?: string
+          license_id: string
+          machine_id: string
+        }
+        Update: {
+          activated_at?: string
+          id?: string
+          is_current?: boolean
+          last_seen?: string
+          license_id?: string
+          machine_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "license_activations_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      licenses: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          product_key: string
+          tier: Database["public"]["Enums"]["license_tier"]
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          product_key: string
+          tier?: Database["public"]["Enums"]["license_tier"]
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          product_key?: string
+          tier?: Database["public"]["Enums"]["license_tier"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "licenses_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       print_jobs: {
         Row: {
           created_at: string
@@ -125,7 +225,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      license_tier: "lite" | "full" | "database"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -252,6 +352,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      license_tier: ["lite", "full", "database"],
+    },
   },
 } as const

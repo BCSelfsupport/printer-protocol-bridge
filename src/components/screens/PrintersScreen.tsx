@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Server, GripVertical, Package, BarChart3 } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Server, GripVertical, Package, BarChart3, Lock } from 'lucide-react';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 import { useState, useEffect, useMemo } from 'react';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
@@ -10,6 +10,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Dashboard } from '@/components/screens/Dashboard';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useLicense } from '@/contexts/LicenseContext';
 import {
   DndContext,
   closestCenter,
@@ -80,6 +81,8 @@ interface PrintersScreenProps {
   lowStockCount?: number;
   /** Metrics for the connected printer (for filter gauge) */
   connectedMetrics?: PrinterMetrics | null;
+  /** Open license activation dialog */
+  onLicense?: () => void;
 }
 
 // Sortable wrapper for PrinterListItem
@@ -214,6 +217,7 @@ export function PrintersScreen({
   onReports,
   lowStockCount = 0,
   connectedMetrics,
+  onLicense,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -222,6 +226,7 @@ export function PrintersScreen({
   const [servicePopupOpen, setServicePopupOpen] = useState(false);
   const [servicePrinter, setServicePrinter] = useState<Printer | null>(null);
   const isMobile = useIsMobile();
+  const { canNetwork, canDatabase, tier } = useLicense();
 
   // Compute sync group color index for each printer
   // Each master gets a unique index; its slaves share the same index
@@ -390,11 +395,13 @@ export function PrintersScreen({
           {/* Action buttons */}
           <div className="flex gap-2">
             <Button
-              onClick={() => setAddDialogOpen(true)}
+              onClick={() => canNetwork ? setAddDialogOpen(true) : null}
               size="sm"
               className="flex-1 bg-primary hover:bg-primary/90 h-8 text-xs"
+              disabled={!canNetwork}
+              title={!canNetwork ? 'Network access requires FULL or DATABASE license' : undefined}
             >
-              <Plus className="w-3 h-3 mr-1" />
+              {!canNetwork ? <Lock className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
               Add
             </Button>
             {selectedPrinter && (
@@ -466,6 +473,16 @@ export function PrintersScreen({
               <span>Auto 5s</span>
             </div>
             <div className="flex items-center gap-2">
+              {/* License tier badge */}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 text-[10px] px-2 border-slate-600 text-slate-400 hover:bg-slate-800"
+                onClick={onLicense}
+              >
+                <Key className="w-2.5 h-2.5 mr-1" />
+                {tier === 'dev' ? 'DEV' : tier.toUpperCase()}
+              </Button>
               <span className="text-[10px] text-slate-500">
                 {printers.filter(p => p.isAvailable).length}/{printers.length}
               </span>

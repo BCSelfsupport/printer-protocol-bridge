@@ -20,6 +20,7 @@ import { ConsumablesScreen } from '@/components/screens/ConsumablesScreen';
 import { ReportsScreen } from '@/components/screens/ReportsScreen';
 import { DataSourceScreen } from '@/components/screens/DataSourceScreen';
 import { LowStockAlert, LowStockAlertData } from '@/components/consumables/LowStockAlert';
+import { LicenseActivationDialog } from '@/components/license/LicenseActivationDialog';
 
 import { SignInDialog } from '@/components/printers/SignInDialog';
 import { HelpDialog } from '@/components/help/HelpDialog';
@@ -28,6 +29,7 @@ import { useJetCountdown } from '@/hooks/useJetCountdown';
 import { useMessageStorage, isReadOnlyMessage } from '@/hooks/useMessageStorage';
 import { useConsumableStorage } from '@/hooks/useConsumableStorage';
 import { DevPanel } from '@/components/dev/DevPanel';
+import { useLicense } from '@/contexts/LicenseContext';
 import { PrintMessage } from '@/types/printer';
 import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
 import { useProductionStorage } from '@/hooks/useProductionStorage';
@@ -54,6 +56,7 @@ const Index = () => {
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [helpDialogOpen, setHelpDialogOpen] = useState(false);
   const [relayDialogOpen, setRelayDialogOpen] = useState(false);
+  const [licenseDialogOpen, setLicenseDialogOpen] = useState(false);
   
   // Local message storage (persists to localStorage)
   const { saveMessage, getMessage, deleteMessage: deleteStoredMessage } = useMessageStorage();
@@ -668,6 +671,7 @@ const Index = () => {
         onReports={() => setCurrentScreen('reports')}
         lowStockCount={consumableStorage.getLowStockConsumables().length}
         connectedMetrics={connectionState.metrics}
+        onLicense={() => setLicenseDialogOpen(true)}
       />
     );
   };
@@ -692,18 +696,20 @@ const Index = () => {
 
       {/* BottomNav and Footer now rendered inside Dashboard/PrintersScreen right panel */}
 
-      {/* Dev Panel - always rendered, toggle button only visible in dev mode */}
-      <DevPanel 
-        isOpen={devPanelOpen} 
-        onToggle={() => {
-          setDevPanelOpen(!devPanelOpen);
-          if (devPanelOpen) setDevPanelTab(undefined);
-        }}
-        connectedPrinterIp={connectionState.connectedPrinter?.ipAddress}
-        connectedPrinterPort={connectionState.connectedPrinter?.port}
-        defaultTab={devPanelTab}
-        showToggleButton={import.meta.env.DEV || isDevSignedIn}
-      />
+      {/* Dev Panel - only rendered in dev builds or when dev-signed-in */}
+      {import.meta.env.DEV || isDevSignedIn ? (
+        <DevPanel 
+          isOpen={devPanelOpen} 
+          onToggle={() => {
+            setDevPanelOpen(!devPanelOpen);
+            if (devPanelOpen) setDevPanelTab(undefined);
+          }}
+          connectedPrinterIp={connectionState.connectedPrinter?.ipAddress}
+          connectedPrinterPort={connectionState.connectedPrinter?.port}
+          defaultTab={devPanelTab}
+          showToggleButton={import.meta.env.DEV || isDevSignedIn}
+        />
+      ) : null}
       
       {/* Printer Sign In Dialog */}
       <SignInDialog
@@ -784,6 +790,12 @@ const Index = () => {
           setLowStockAlertQueue(prev => prev.slice(1));
           setCurrentScreen('consumables');
         }}
+      />
+
+      {/* License Activation Dialog */}
+      <LicenseActivationDialog
+        open={licenseDialogOpen}
+        onOpenChange={setLicenseDialogOpen}
       />
     </div>
   );
