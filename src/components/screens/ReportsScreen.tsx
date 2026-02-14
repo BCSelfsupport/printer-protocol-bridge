@@ -165,9 +165,9 @@ function MiniGauge({ value, size = 40, strokeWidth = 3 }: { value: number; size?
   );
 }
 
-function DashGauge({ value, label, gradientId, colorStops, size = 140 }: {
+function DashGauge({ value, label, gradientId, size = 140 }: {
   value: number; label: string; gradientId: string;
-  colorStops: { offset: string; color: string }[];
+  colorStops?: { offset: string; color: string }[];
   size?: number;
 }) {
   const [animVal, setAnimVal] = useState(0);
@@ -176,77 +176,124 @@ function DashGauge({ value, label, gradientId, colorStops, size = 140 }: {
     return () => clearTimeout(t);
   }, [value]);
 
-  const strokeW = size * 0.12;
   const cx = size / 2;
-  const cy = size * 0.55;
+  const cy = size * 0.52;
   const r = size * 0.38;
-  // Horseshoe arc: ~220° from bottom-left to bottom-right
-  const startDeg = 220; // degrees from 3-o'clock, going clockwise from bottom-left
-  const endDeg = -40;
+  const strokeW = size * 0.10;
+
+  // Arc spans from 220° (bottom-left) to -40° (bottom-right) = 260° total
+  const startDeg = 220;
   const totalDeg = 260;
   const toRad = (d: number) => (d * Math.PI) / 180;
-  const arcStartAngle = toRad(startDeg);
-  const arcEndAngle = toRad(endDeg);
 
-  const arcPath = () => {
-    const x1 = cx + r * Math.cos(arcStartAngle);
-    const y1 = cy - r * Math.sin(arcStartAngle);
-    const x2 = cx + r * Math.cos(arcEndAngle);
-    const y2 = cy - r * Math.sin(arcEndAngle);
-    return `M ${x1} ${y1} A ${r} ${r} 0 1 1 ${x2} ${y2}`;
-  };
+  // Colored segments: green → lime → yellow → orange → red (like the reference image)
+  const segments = [
+    { from: 0, to: 0.20, color: '#22c55e' },   // green
+    { from: 0.20, to: 0.40, color: '#84cc16' }, // lime
+    { from: 0.40, to: 0.60, color: '#eab308' }, // yellow
+    { from: 0.60, to: 0.80, color: '#f97316' }, // orange
+    { from: 0.80, to: 1.0, color: '#dc2626' },  // red
+  ];
 
-  const arcLen = (totalDeg / 360) * 2 * Math.PI * r;
+  // Build segment arcs
+  const segmentArcs = segments.map((seg) => {
+    const a1 = toRad(startDeg - seg.from * totalDeg);
+    const a2 = toRad(startDeg - seg.to * totalDeg);
+    const x1 = cx + r * Math.cos(a1);
+    const y1 = cy - r * Math.sin(a1);
+    const x2 = cx + r * Math.cos(a2);
+    const y2 = cy - r * Math.sin(a2);
+    const sweep = (seg.to - seg.from) * totalDeg;
+    const largeArc = sweep > 180 ? 1 : 0;
+    return { ...seg, path: `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 0 ${x2} ${y2}` };
+  });
+
+  // Tick marks (major every 20%, minor every 10%)
+  const ticks: { angle: number; major: boolean }[] = [];
+  for (let i = 0; i <= 10; i++) {
+    ticks.push({ angle: startDeg - (i / 10) * totalDeg, major: i % 2 === 0 });
+  }
+
+  // Needle
   const pct = Math.min(100, Math.max(0, animVal)) / 100;
-  const arcOffset = arcLen * (1 - pct);
-
-  // Needle position
-  const needleAngleDeg = startDeg - pct * totalDeg;
+  // Value maps to position on arc: 100% = green (start), 0% = red (end)
+  // Actually for OEE: high value = good (green end), low = bad (red end)
+  // Green is at start (220°), red at end (-40°). We want high value to point to green.
+  // So needle at pct=1 → green (start), pct=0 → red (end)
+  const needleAngleDeg = startDeg - (1 - pct) * totalDeg;
   const needleAngle = toRad(needleAngleDeg);
-  const needleLen = r * 0.75;
+  const needleLen = r * 0.82;
+  const needleTailLen = r * 0.18;
   const nx = cx + needleLen * Math.cos(needleAngle);
   const ny = cy - needleLen * Math.sin(needleAngle);
+  const ntx = cx - needleTailLen * Math.cos(needleAngle);
+  const nty = cy + needleTailLen * Math.sin(needleAngle);
+
+  // Needle base width for triangular shape
+  const perpAngle = needleAngle + Math.PI / 2;
+  const baseW = size * 0.025;
+  const bx1 = cx + baseW * Math.cos(perpAngle);
+  const by1 = cy - baseW * Math.sin(perpAngle);
+  const bx2 = cx - baseW * Math.cos(perpAngle);
+  const by2 = cy + baseW * Math.sin(perpAngle);
 
   return (
     <div className="flex flex-col items-center">
-      <svg width={size} height={size * 0.65} className="overflow-visible">
+      <svg width={size} height={size * 0.7} className="overflow-visible">
         <defs>
-          <linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%">
-            {colorStops.map((s, i) => (
-              <stop key={i} offset={s.offset} stopColor={s.color} />
-            ))}
-          </linearGradient>
-          <filter id={`${gradientId}-glow`}>
-            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor={colorStops[colorStops.length - 1].color} floodOpacity="0.3" />
+          <filter id={`${gradientId}-shadow`}>
+            <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.3" />
           </filter>
         </defs>
 
-        {/* Dark track */}
-        <path d={arcPath()} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeW} strokeLinecap="round" />
+        {/* Background track */}
+        {(() => {
+          const a1 = toRad(startDeg);
+          const a2 = toRad(startDeg - totalDeg);
+          const x1 = cx + r * Math.cos(a1);
+          const y1 = cy - r * Math.sin(a1);
+          const x2 = cx + r * Math.cos(a2);
+          const y2 = cy - r * Math.sin(a2);
+          return <path d={`M ${x1} ${y1} A ${r} ${r} 0 1 0 ${x2} ${y2}`} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeW + 4} strokeLinecap="butt" />;
+        })()}
 
-        {/* Gradient arc */}
-        <path
-          d={arcPath()} fill="none" stroke={`url(#${gradientId})`} strokeWidth={strokeW} strokeLinecap="round"
-          strokeDasharray={arcLen} strokeDashoffset={arcOffset}
-          filter={`url(#${gradientId}-glow)`}
+        {/* Colored segments */}
+        {segmentArcs.map((seg, i) => (
+          <path key={i} d={seg.path} fill="none" stroke={seg.color} strokeWidth={strokeW} strokeLinecap="butt" opacity={0.85} />
+        ))}
+
+        {/* Tick marks */}
+        {ticks.map((tick, i) => {
+          const a = toRad(tick.angle);
+          const outerR = r + strokeW / 2 + 1;
+          const innerR = r - strokeW / 2 - (tick.major ? 4 : 1);
+          const ox = cx + outerR * Math.cos(a);
+          const oy = cy - outerR * Math.sin(a);
+          const ix = cx + innerR * Math.cos(a);
+          const iy = cy - innerR * Math.sin(a);
+          return (
+            <line key={i} x1={ox} y1={oy} x2={ix} y2={iy}
+              stroke="rgba(255,255,255,0.5)" strokeWidth={tick.major ? 2 : 1} />
+          );
+        })}
+
+        {/* Needle - triangular */}
+        <polygon
+          points={`${nx},${ny} ${bx1},${by1} ${ntx},${nty} ${bx2},${by2}`}
+          fill="#dc2626"
+          filter={`url(#${gradientId}-shadow)`}
           className="transition-all duration-1000 ease-out"
         />
 
-        {/* Needle */}
-        <line
-          x1={cx} y1={cy} x2={nx} y2={ny}
-          stroke="white" strokeWidth={2.5} strokeLinecap="round"
-          className="transition-all duration-1000 ease-out"
-          style={{ filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.5))' }}
-        />
-        <circle cx={cx} cy={cy} r={4} fill="white" />
-        <circle cx={cx} cy={cy} r={1.5} fill="#1e293b" />
+        {/* Center hub */}
+        <circle cx={cx} cy={cy} r={size * 0.04} fill="#374151" stroke="#9ca3af" strokeWidth={1.5} />
+        <circle cx={cx} cy={cy} r={size * 0.015} fill="white" opacity={0.8} />
       </svg>
-      <div className="flex flex-col items-center -mt-1">
-        <span className="text-2xl md:text-3xl font-black tabular-nums text-white tracking-tight">
+      <div className="flex flex-col items-center -mt-2">
+        <span className="text-xl sm:text-2xl md:text-3xl font-black tabular-nums text-white tracking-tight">
           {animVal.toFixed(0)}%
         </span>
-        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mt-0.5">{label}</span>
+        <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mt-0.5 text-center leading-tight">{label}</span>
       </div>
     </div>
   );
@@ -527,7 +574,7 @@ export function ReportsScreen({
 
             {/* Dark dashboard gauges panel */}
             <div className="rounded-lg overflow-hidden" style={{ background: '#1e293b' }}>
-              <div className="grid grid-cols-4 gap-2 px-4 py-6 md:px-6 md:py-8">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-4 py-6 md:px-6 md:py-8">
                 <DashGauge
                   value={selectedOEE.availability} label="Availability" gradientId="avail-grad"
                   colorStops={[
@@ -815,7 +862,7 @@ function PrinterReportDetail({
           <div className="rounded-2xl border border-border/30 overflow-hidden shadow-lg">
             {/* Dark gauges panel */}
             <div className="rounded-t-lg overflow-hidden" style={{ background: '#1e293b' }}>
-              <div className="grid grid-cols-4 gap-2 px-4 py-6 md:px-6 md:py-8">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-4 py-6 md:px-6 md:py-8">
                 <DashGauge
                   value={printerOEE.availability} label="Availability" gradientId="detail-avail"
                   colorStops={[
