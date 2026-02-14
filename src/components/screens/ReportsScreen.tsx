@@ -1141,9 +1141,6 @@ function ActiveRunCard({
         <div className="flex-1">
           <Input type="number" value={endCount} onChange={e => { setEndCount(e.target.value); onUpdateCount(e.target.value); }} className="h-8 text-sm" placeholder="Current count" />
         </div>
-        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={onLogDowntime} disabled={hasActiveDowntime}>
-          <ArrowDownCircle className="w-3.5 h-3.5 mr-1" /> Downtime
-        </Button>
         <Button size="sm" className="h-8 text-xs industrial-button-danger text-white border-0" onClick={() => onEnd(endCount)}>End Run</Button>
       </div>
     </div>
