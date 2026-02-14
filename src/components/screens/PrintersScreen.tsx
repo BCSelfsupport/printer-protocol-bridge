@@ -486,7 +486,7 @@ export function PrintersScreen({
               <span className="text-[10px] text-slate-500">
                 {printers.filter(p => p.isAvailable).length}/{printers.length}
               </span>
-              {import.meta.env.DEV && (
+              {(import.meta.env.DEV || tier === 'dev') && (
                 <Button
                   size="sm"
                   variant={isDevSignedIn ? "default" : "outline"}
