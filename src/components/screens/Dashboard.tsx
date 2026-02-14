@@ -370,7 +370,7 @@ export function Dashboard({
             {onHome && (
               <button
                 onClick={onHome}
-                className="flex flex-col items-center justify-center gap-1 px-4 md:px-5 py-2 md:py-2.5 rounded transition-all industrial-button-gray text-white"
+                className="flex flex-col items-center justify-center gap-1 px-4 md:px-5 py-2 md:py-2.5 rounded transition-all industrial-button text-white"
               >
                 <Wifi className="w-5 h-5 md:w-6 md:h-6" />
                 <span className="text-[10px] md:text-xs font-medium">Network</span>
