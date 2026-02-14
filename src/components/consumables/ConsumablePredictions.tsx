@@ -270,6 +270,19 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
               Update / Reset
             </Button>
           </div>
+        ) : config ? (
+          <div className="flex items-center justify-center gap-1.5 py-1.5 text-success">
+            <Filter className="w-3 h-3" />
+            <span className="text-xs font-medium">Filter Tracking Active</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-5 text-[10px] px-1.5 text-primary"
+              onClick={handleOpenDialog}
+            >
+              Edit
+            </Button>
+          </div>
         ) : (
           <Button
             size="sm"
