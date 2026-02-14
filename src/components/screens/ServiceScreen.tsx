@@ -22,9 +22,10 @@ interface ServiceDialogProps {
   onMount?: () => void;
   onUnmount?: () => void;
   onSendCommand?: (command: string) => Promise<any>;
+  onForcePrint?: () => Promise<void>;
 }
 
-export function ServiceScreen({ open, onOpenChange, metrics, onMount, onUnmount, onSendCommand }: ServiceDialogProps) {
+export function ServiceScreen({ open, onOpenChange, metrics, onMount, onUnmount, onSendCommand, onForcePrint }: ServiceDialogProps) {
   // Notify parent when dialog is open/closed (for polling control)
   useEffect(() => {
     if (open) {
@@ -34,14 +35,17 @@ export function ServiceScreen({ open, onOpenChange, metrics, onMount, onUnmount,
   }, [open, onMount, onUnmount]);
 
   const handleForcePrint = useCallback(async () => {
-    if (!onSendCommand) return;
-    try {
-      await onSendCommand('^PT');
-      toast.success('Force Print triggered');
-    } catch (e) {
-      toast.error('Force Print failed');
+    if (onForcePrint) {
+      await onForcePrint();
+    } else if (onSendCommand) {
+      try {
+        await onSendCommand('^PT');
+        toast.success('Force Print triggered');
+      } catch (e) {
+        toast.error('Force Print failed');
+      }
     }
-  }, [onSendCommand]);
+  }, [onSendCommand, onForcePrint]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

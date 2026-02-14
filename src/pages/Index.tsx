@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import type { CountdownType } from '@/hooks/useJetCountdown';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -278,7 +280,74 @@ const Index = () => {
     if (connectedPrinterId) startCountdown(connectedPrinterId, 'stopping');
   }, [jetStop, startCountdown, connectedPrinterId]);
 
-  // Build right panel content for desktop split-view (messages/editMessage screens)
+  // Force Print handler: sends ^PT then advances the data source row for VDP messages
+  const handleForcePrint = useCallback(async () => {
+    try {
+      const result = await sendCommand('^PT');
+      if (!result.success) {
+        toast.error('Force Print failed: ' + (result.response || 'Unknown error'));
+        return;
+      }
+      toast.success('Force Print triggered');
+
+      // Check if current message has a linked data source
+      const currentMsg = connectionState.status?.currentMessage;
+      if (!currentMsg) return;
+
+      const { data: job } = await supabase
+        .from('print_jobs')
+        .select('*')
+        .eq('message_name', currentMsg)
+        .limit(1)
+        .maybeSingle();
+
+      if (!job) return; // No data link, nothing to advance
+
+      // Advance to next row (wrap around)
+      const nextIndex = (job.current_row_index + 1) % (job.total_rows || 1);
+
+      // Update the row index in the database
+      await supabase
+        .from('print_jobs')
+        .update({ current_row_index: nextIndex })
+        .eq('id', job.id);
+
+      // Fetch the next row's data
+      const { data: nextRow } = await supabase
+        .from('data_source_rows')
+        .select('values')
+        .eq('data_source_id', job.data_source_id)
+        .eq('row_index', nextIndex)
+        .maybeSingle();
+
+      if (!nextRow?.values) return;
+
+      // Update the message preview with the new row's data
+      const storedMessage = getMessage(currentMsg);
+      if (!storedMessage) return;
+
+      const fieldMappings = job.field_mappings as Record<string, string>;
+      const rowValues = nextRow.values as Record<string, string>;
+
+      const updatedFields = storedMessage.fields.map((f, idx) => {
+        const fieldNum = idx + 1;
+        const mappedCol = Object.entries(fieldMappings).find(
+          ([, fIdx]) => parseInt(fIdx as string) === fieldNum
+        );
+        if (mappedCol) {
+          return { ...f, data: String(rowValues[mappedCol[0]] ?? f.data) };
+        }
+        return f;
+      });
+
+      saveMessage({ ...storedMessage, fields: updatedFields });
+    } catch (e) {
+      toast.error('Force Print failed');
+      console.error('[handleForcePrint]', e);
+    }
+  }, [sendCommand, connectionState.status?.currentMessage, getMessage, saveMessage]);
+
+
   const getRightPanelContent = (): React.ReactNode | undefined => {
     if (isMobile) return undefined;
     
@@ -697,6 +766,7 @@ const Index = () => {
         onMount={() => setServiceScreenOpen(true)}
         onUnmount={() => setServiceScreenOpen(false)}
         onSendCommand={sendCommand}
+        onForcePrint={handleForcePrint}
       />
 
       {/* Relay Connect Dialog (mobile PWA) */}
