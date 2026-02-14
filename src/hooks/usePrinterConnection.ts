@@ -1332,12 +1332,36 @@ export function usePrinterConnection() {
     }
   };
 
-  // Create a new message locally (no protocol command sent yet - fields are needed for ^NM)
+  // Create a new message on the printer immediately with a minimal ^NM command.
+  // This ensures the message exists on the printer hardware so it survives ^LM re-queries.
   const createMessageOnPrinter = useCallback(async (name: string): Promise<boolean> => {
-    console.log('[createMessageOnPrinter] Adding message locally:', name);
+    console.log('[createMessageOnPrinter] Creating message on printer:', name);
     addMessage(name);
+
+    // Send a minimal ^NM to register the message on the printer
+    // Template 0 (default), one empty text field so the command is valid
+    const minimalNM = `^NM 0;0;0;0;${name}^AT1;0;0;7; `;
+
+    if (shouldUseEmulator()) {
+      const printer = connectionState.connectedPrinter;
+      if (printer) {
+        const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
+        emulator.processCommand(minimalNM);
+      }
+      return true;
+    } else if ((isElectron || isRelayMode()) && connectionState.connectedPrinter) {
+      try {
+        const result = await printerTransport.sendCommand(connectionState.connectedPrinter.id, minimalNM);
+        console.log('[createMessageOnPrinter] ^NM result:', result);
+        return true;
+      } catch (e) {
+        console.error('[createMessageOnPrinter] Failed to send ^NM:', e);
+        // Still keep it local even if printer command fails
+        return true;
+      }
+    }
     return true;
-  }, [addMessage]);
+  }, [addMessage, connectionState.connectedPrinter]);
 
   // Save message content to the printer using proper ^NM command with field subcommands
   // Per BestCode v2.6 protocol: ^NM t;s;o;p;name^AT1;x;y;s;data^AT2;x;y;s;data...
