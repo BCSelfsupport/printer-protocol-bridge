@@ -165,6 +165,108 @@ function MiniGauge({ value, size = 40, strokeWidth = 3 }: { value: number; size?
   );
 }
 
+function SpeedometerGauge({ value, label = 'OEE', width = 220 }: { value: number; label?: string; width?: number }) {
+  const [animVal, setAnimVal] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setAnimVal(value), 120);
+    return () => clearTimeout(t);
+  }, [value]);
+
+  const height = width * 0.6;
+  const cx = width / 2;
+  const cy = height * 0.85;
+  const r = width * 0.4;
+  const strokeW = width * 0.07;
+  // Arc from 180° to 0° (left to right, half circle)
+  const startAngle = Math.PI;
+  const endAngle = 0;
+  const arcPath = (radius: number) => {
+    const x1 = cx + radius * Math.cos(startAngle);
+    const y1 = cy + radius * Math.sin(startAngle);
+    const x2 = cx + radius * Math.cos(endAngle);
+    const y2 = cy + radius * Math.sin(endAngle);
+    return `M ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2}`;
+  };
+  const pct = Math.min(100, Math.max(0, animVal)) / 100;
+  const needleAngle = Math.PI - pct * Math.PI; // from left (0%) to right (100%)
+  const needleLen = r * 0.85;
+  const nx = cx + needleLen * Math.cos(needleAngle);
+  const ny = cy + needleLen * Math.sin(needleAngle);
+  const color = getOEEColor(animVal);
+
+  // Colored arc length
+  const arcLen = Math.PI * r;
+  const arcOffset = arcLen * (1 - pct);
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg width={width} height={height} className="overflow-visible">
+        <defs>
+          <linearGradient id="speedo-grad" x1="0%" y1="50%" x2="100%" y2="50%">
+            <stop offset="0%" stopColor="hsl(var(--destructive))" />
+            <stop offset="50%" stopColor="hsl(var(--warning))" />
+            <stop offset="100%" stopColor="hsl(var(--success))" />
+          </linearGradient>
+          <filter id="speedo-needle-shadow">
+            <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor={color} floodOpacity="0.4" />
+          </filter>
+        </defs>
+
+        {/* Track */}
+        <path d={arcPath(r)} fill="none" stroke="hsl(var(--muted))" strokeWidth={strokeW} strokeLinecap="round" opacity={0.3} />
+
+        {/* Colored arc */}
+        <path
+          d={arcPath(r)} fill="none" stroke="url(#speedo-grad)" strokeWidth={strokeW} strokeLinecap="round"
+          strokeDasharray={arcLen} strokeDashoffset={arcOffset}
+          className="transition-all duration-1000 ease-out"
+        />
+
+        {/* Tick marks */}
+        {[0, 25, 50, 75, 100].map(tick => {
+          const a = Math.PI - (tick / 100) * Math.PI;
+          const inner = r + strokeW / 2 + 3;
+          const outer = inner + 6;
+          return (
+            <g key={tick}>
+              <line
+                x1={cx + inner * Math.cos(a)} y1={cy + inner * Math.sin(a)}
+                x2={cx + outer * Math.cos(a)} y2={cy + outer * Math.sin(a)}
+                stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} opacity={0.4}
+              />
+              <text
+                x={cx + (outer + 10) * Math.cos(a)} y={cy + (outer + 10) * Math.sin(a)}
+                textAnchor="middle" dominantBaseline="middle"
+                className="fill-muted-foreground" fontSize={width * 0.045} fontWeight={600}
+              >
+                {tick}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Needle */}
+        <line
+          x1={cx} y1={cy} x2={nx} y2={ny}
+          stroke={color} strokeWidth={2.5} strokeLinecap="round"
+          filter="url(#speedo-needle-shadow)"
+          className="transition-all duration-1000 ease-out"
+        />
+
+        {/* Center dot */}
+        <circle cx={cx} cy={cy} r={strokeW * 0.5} fill={color} />
+        <circle cx={cx} cy={cy} r={strokeW * 0.25} fill="hsl(var(--card))" />
+      </svg>
+      <div className="flex flex-col items-center -mt-2">
+        <span className="text-3xl md:text-4xl font-black tabular-nums tracking-tight" style={{ color }}>
+          {animVal.toFixed(1)} %
+        </span>
+        <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mt-0.5">{label}</span>
+      </div>
+    </div>
+  );
+}
+
 function getOEEColor(value: number): string {
   if (value >= 85) return 'hsl(var(--success))';
   if (value >= 60) return 'hsl(var(--warning))';
@@ -481,6 +583,18 @@ export function ReportsScreen({
               >
                 <BarChart3 className="w-4 h-4 mr-2" /> View Full Report
               </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ===== Overall OEE Speedometer ===== */}
+        {overallOEE && (
+          <div className="rounded-2xl border border-primary/20 bg-card overflow-hidden shadow-md">
+            <div className="bg-primary px-4 py-2">
+              <span className="text-sm font-black uppercase tracking-widest text-primary-foreground">OEE</span>
+            </div>
+            <div className="flex justify-center py-4 md:py-6 bg-secondary/20">
+              <SpeedometerGauge value={overallOEE.oee} label="Overall OEE" width={240} />
             </div>
           </div>
         )}
