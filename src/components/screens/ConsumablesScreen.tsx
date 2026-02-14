@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, Package, Droplets, Palette, AlertTriangle, Minus, ArrowLeft, Settings, ShoppingCart, Printer as PrinterIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Droplets, Palette, AlertTriangle, Minus, ArrowLeft, Settings, ShoppingCart, Printer as PrinterIcon, Filter, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ import {
   PrinterFilterStatus,
   parseStreamHoursToNumber,
 } from '@/components/consumables/ConsumablePredictions';
+import { getFilterConfig, getFilterStatus } from '@/lib/filterTracker';
 
 interface ConsumablesScreenProps {
   consumables: Consumable[];
@@ -235,6 +236,38 @@ export function ConsumablesScreen({
               })}
             </div>
           </div>
+
+          {/* Filter indicator */}
+          {(() => {
+            const pumpHours = metricsMap[printer.id] ? parseStreamHoursToNumber(metricsMap[printer.id].streamHours) : null;
+            const fStatus = pumpHours != null ? getFilterStatus(printer.id, pumpHours) : null;
+            const fConfig = getFilterConfig(printer.id);
+            const filterBg = fStatus
+              ? (fStatus.hoursRemaining <= 200
+                ? (fStatus.status === 'critical' ? 'bg-destructive' : 'bg-warning')
+                : 'bg-primary')
+              : (fConfig ? 'bg-primary' : 'bg-muted-foreground/30');
+            const pct = fStatus ? (100 - fStatus.percentUsed) : (fConfig ? 100 : 0);
+            const filledSegs = pct >= 75 ? 4 : pct >= 50 ? 3 : pct >= 25 ? 2 : pct > 0 ? 1 : 0;
+            return (
+              <div className={`flex-1 h-[70px] rounded-lg flex items-center justify-between px-3 ${filterBg}`}>
+                <div className="flex flex-col items-center">
+                  <Filter className="w-6 h-6 text-white" />
+                  <span className="text-[10px] text-white font-medium mt-0.5">Filter</span>
+                </div>
+                <div className="flex flex-col-reverse gap-0.5 h-12 w-4 bg-black/20 rounded p-0.5">
+                  {[0, 1, 2, 3].map((seg) => (
+                    <div
+                      key={seg}
+                      className={`flex-1 rounded-sm transition-colors ${
+                        seg < filledSegs ? 'bg-white' : 'bg-white/20'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Assignment dropdowns — Makeup first, Ink second (matching indicators above) */}
