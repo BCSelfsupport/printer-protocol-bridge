@@ -481,7 +481,7 @@ export function PrintersScreen({
                 onClick={onLicense}
               >
                 <Shield className="w-2.5 h-2.5 mr-1" />
-                {isActivated ? (tier === 'dev' ? 'DEV' : tier.toUpperCase()) : 'Activate'}
+                {isActivated && tier !== 'dev' ? tier.toUpperCase() : 'Activate'}
               </Button>
               <span className="text-[10px] text-slate-500">
                 {printers.filter(p => p.isAvailable).length}/{printers.length}
