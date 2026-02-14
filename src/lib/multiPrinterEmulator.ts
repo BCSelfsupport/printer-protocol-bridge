@@ -280,6 +280,12 @@ class PrinterEmulatorInstance {
         response = this.cmdDeleteMessage(trimmedCommand);
       } else if (trimmedCommand.startsWith('^NM')) {
         response = this.cmdNewMessage(trimmedCommand);
+      } else if (trimmedCommand.startsWith('^PT')) {
+        response = this.cmdForcePrint();
+      } else if (trimmedCommand.startsWith('^FE')) {
+        response = this.cmdForcePhotoEye(true);
+      } else if (trimmedCommand.startsWith('^FF')) {
+        response = this.cmdForcePhotoEye(false);
       } else {
         response = this.formatError(3, 'CmdNotRec', 'Command not recognized');
         success = false;
@@ -373,6 +379,20 @@ class PrinterEmulatorInstance {
       }
     }
     return this.formatError(2, 'CmdFormat', 'Usage: ^PR 0 or ^PR 1');
+  }
+
+  private cmdForcePrint(): string {
+    if (!this.state.hvOn) {
+      return this.formatError(59, 'CantPrint', 'Cannot print - HV deflection not enabled');
+    }
+    this.state.printCount++;
+    return this.state.echoOn ? 'Command Successful!\r\nPrint triggered' : 'OK';
+  }
+
+  private cmdForcePhotoEye(enable: boolean): string {
+    return this.state.echoOn
+      ? `Command Successful!\r\nPhoto Eye ${enable ? 'Enabled' : 'Disabled'}`
+      : enable ? 'FE ON' : 'FE OFF';
   }
 
   private cmdSelectMessage(cmd: string): string {
