@@ -10,12 +10,14 @@ const FILTER_CONFIG_KEY = 'codesync-filter-config';
 
 export interface FilterConfig {
   printerId: number;
-  /** Total filter life in pump hours */
+  /** Total filter life in pump hours (2000, 5000, or 10000) */
   filterLifeHours: number;
-  /** Pump hours reading when filter was last replaced */
-  lastReplacedAtPumpHours: number;
-  /** ISO timestamp of the last replacement */
-  lastReplacedDate: string;
+  /** Pump hours reading at the time filter info was entered */
+  pumpHoursAtEntry: number;
+  /** Remaining filter life (hours) as read from the printer display */
+  remainingHoursAtEntry: number;
+  /** ISO timestamp when filter info was entered */
+  entryDate: string;
 }
 
 function loadConfigs(): FilterConfig[] {
@@ -57,13 +59,14 @@ export function setFilterConfig(config: FilterConfig) {
   saveConfigs(configs);
 }
 
-/** Record a filter replacement at the current pump hours. */
-export function recordFilterReplacement(printerId: number, currentPumpHours: number, filterLifeHours: number) {
+/** Record filter info: current pump hours + remaining hours from printer display. */
+export function recordFilterInfo(printerId: number, pumpHoursAtEntry: number, remainingHoursAtEntry: number, filterLifeHours: number) {
   setFilterConfig({
     printerId,
     filterLifeHours,
-    lastReplacedAtPumpHours: currentPumpHours,
-    lastReplacedDate: new Date().toISOString(),
+    pumpHoursAtEntry,
+    remainingHoursAtEntry,
+    entryDate: new Date().toISOString(),
   });
 }
 
@@ -104,24 +107,27 @@ export function getFilterStatus(
   const config = getFilterConfig(printerId);
   if (!config) return null;
 
-  const hoursUsed = Math.max(0, currentPumpHours - config.lastReplacedAtPumpHours);
-  const hoursRemaining = Math.max(0, config.filterLifeHours - hoursUsed);
+  // Calculate remaining hours: at entry time, remaining was X.
+  // Pump hours have advanced by (current - entry), so remaining decreases by same.
+  const pumpHoursDelta = Math.max(0, currentPumpHours - config.pumpHoursAtEntry);
+  const hoursRemaining = Math.max(0, config.remainingHoursAtEntry - pumpHoursDelta);
+  const hoursUsed = config.filterLifeHours - hoursRemaining;
   const percentUsed = config.filterLifeHours > 0
     ? Math.min(100, Math.round((hoursUsed / config.filterLifeHours) * 100))
     : 100;
 
-  // Estimate days remaining if we know the accumulation rate
+  // Estimate days remaining
   let estimatedDaysRemaining: number | null = null;
   if (pumpHoursPerDay && pumpHoursPerDay > 0) {
     estimatedDaysRemaining = Math.round(hoursRemaining / pumpHoursPerDay);
   } else {
-    // Fallback: estimate from time elapsed since replacement
-    const daysSinceReplacement = Math.max(
+    // Fallback: estimate from time elapsed since entry
+    const daysSinceEntry = Math.max(
       1,
-      (Date.now() - new Date(config.lastReplacedDate).getTime()) / (1000 * 60 * 60 * 24)
+      (Date.now() - new Date(config.entryDate).getTime()) / (1000 * 60 * 60 * 24)
     );
-    if (hoursUsed > 0) {
-      const ratePerDay = hoursUsed / daysSinceReplacement;
+    if (pumpHoursDelta > 0) {
+      const ratePerDay = pumpHoursDelta / daysSinceEntry;
       estimatedDaysRemaining = ratePerDay > 0 ? Math.round(hoursRemaining / ratePerDay) : null;
     }
   }
