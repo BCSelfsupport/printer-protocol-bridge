@@ -165,103 +165,88 @@ function MiniGauge({ value, size = 40, strokeWidth = 3 }: { value: number; size?
   );
 }
 
-function SpeedometerGauge({ value, label = 'OEE', width = 220 }: { value: number; label?: string; width?: number }) {
+function DashGauge({ value, label, gradientId, colorStops, size = 140 }: {
+  value: number; label: string; gradientId: string;
+  colorStops: { offset: string; color: string }[];
+  size?: number;
+}) {
   const [animVal, setAnimVal] = useState(0);
   useEffect(() => {
     const t = setTimeout(() => setAnimVal(value), 120);
     return () => clearTimeout(t);
   }, [value]);
 
-  const height = width * 0.6;
-  const cx = width / 2;
-  const cy = height * 0.85;
-  const r = width * 0.4;
-  const strokeW = width * 0.07;
-  // Arc from 180° to 0° (left to right, half circle)
-  const startAngle = Math.PI;
-  const endAngle = 0;
-  const arcPath = (radius: number) => {
-    const x1 = cx + radius * Math.cos(startAngle);
-    const y1 = cy + radius * Math.sin(startAngle);
-    const x2 = cx + radius * Math.cos(endAngle);
-    const y2 = cy + radius * Math.sin(endAngle);
-    return `M ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2}`;
-  };
-  const pct = Math.min(100, Math.max(0, animVal)) / 100;
-  const needleAngle = Math.PI - pct * Math.PI; // from left (0%) to right (100%)
-  const needleLen = r * 0.85;
-  const nx = cx + needleLen * Math.cos(needleAngle);
-  const ny = cy + needleLen * Math.sin(needleAngle);
-  const color = getOEEColor(animVal);
+  const strokeW = size * 0.12;
+  const cx = size / 2;
+  const cy = size * 0.55;
+  const r = size * 0.38;
+  // Horseshoe arc: ~220° from bottom-left to bottom-right
+  const startDeg = 220; // degrees from 3-o'clock, going clockwise from bottom-left
+  const endDeg = -40;
+  const totalDeg = 260;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const arcStartAngle = toRad(startDeg);
+  const arcEndAngle = toRad(endDeg);
 
-  // Colored arc length
-  const arcLen = Math.PI * r;
+  const arcPath = () => {
+    const x1 = cx + r * Math.cos(arcStartAngle);
+    const y1 = cy - r * Math.sin(arcStartAngle);
+    const x2 = cx + r * Math.cos(arcEndAngle);
+    const y2 = cy - r * Math.sin(arcEndAngle);
+    return `M ${x1} ${y1} A ${r} ${r} 0 1 1 ${x2} ${y2}`;
+  };
+
+  const arcLen = (totalDeg / 360) * 2 * Math.PI * r;
+  const pct = Math.min(100, Math.max(0, animVal)) / 100;
   const arcOffset = arcLen * (1 - pct);
+
+  // Needle position
+  const needleAngleDeg = startDeg - pct * totalDeg;
+  const needleAngle = toRad(needleAngleDeg);
+  const needleLen = r * 0.75;
+  const nx = cx + needleLen * Math.cos(needleAngle);
+  const ny = cy - needleLen * Math.sin(needleAngle);
 
   return (
     <div className="flex flex-col items-center">
-      <svg width={width} height={height} className="overflow-visible">
+      <svg width={size} height={size * 0.65} className="overflow-visible">
         <defs>
-          <linearGradient id="speedo-grad" x1="0%" y1="50%" x2="100%" y2="50%">
-            <stop offset="0%" stopColor="hsl(var(--destructive))" />
-            <stop offset="50%" stopColor="hsl(var(--warning))" />
-            <stop offset="100%" stopColor="hsl(var(--success))" />
+          <linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%">
+            {colorStops.map((s, i) => (
+              <stop key={i} offset={s.offset} stopColor={s.color} />
+            ))}
           </linearGradient>
-          <filter id="speedo-needle-shadow">
-            <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor={color} floodOpacity="0.4" />
+          <filter id={`${gradientId}-glow`}>
+            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor={colorStops[colorStops.length - 1].color} floodOpacity="0.3" />
           </filter>
         </defs>
 
-        {/* Track */}
-        <path d={arcPath(r)} fill="none" stroke="hsl(var(--muted))" strokeWidth={strokeW} strokeLinecap="round" opacity={0.3} />
+        {/* Dark track */}
+        <path d={arcPath()} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeW} strokeLinecap="round" />
 
-        {/* Colored arc */}
+        {/* Gradient arc */}
         <path
-          d={arcPath(r)} fill="none" stroke="url(#speedo-grad)" strokeWidth={strokeW} strokeLinecap="round"
+          d={arcPath()} fill="none" stroke={`url(#${gradientId})`} strokeWidth={strokeW} strokeLinecap="round"
           strokeDasharray={arcLen} strokeDashoffset={arcOffset}
+          filter={`url(#${gradientId}-glow)`}
           className="transition-all duration-1000 ease-out"
         />
-
-        {/* Tick marks */}
-        {[0, 25, 50, 75, 100].map(tick => {
-          const a = Math.PI - (tick / 100) * Math.PI;
-          const inner = r + strokeW / 2 + 3;
-          const outer = inner + 6;
-          return (
-            <g key={tick}>
-              <line
-                x1={cx + inner * Math.cos(a)} y1={cy + inner * Math.sin(a)}
-                x2={cx + outer * Math.cos(a)} y2={cy + outer * Math.sin(a)}
-                stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} opacity={0.4}
-              />
-              <text
-                x={cx + (outer + 10) * Math.cos(a)} y={cy + (outer + 10) * Math.sin(a)}
-                textAnchor="middle" dominantBaseline="middle"
-                className="fill-muted-foreground" fontSize={width * 0.045} fontWeight={600}
-              >
-                {tick}
-              </text>
-            </g>
-          );
-        })}
 
         {/* Needle */}
         <line
           x1={cx} y1={cy} x2={nx} y2={ny}
-          stroke={color} strokeWidth={2.5} strokeLinecap="round"
-          filter="url(#speedo-needle-shadow)"
+          stroke="white" strokeWidth={2.5} strokeLinecap="round"
           className="transition-all duration-1000 ease-out"
+          style={{ filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.5))' }}
         />
-
-        {/* Center dot */}
-        <circle cx={cx} cy={cy} r={strokeW * 0.5} fill={color} />
-        <circle cx={cx} cy={cy} r={strokeW * 0.25} fill="hsl(var(--card))" />
+        <circle cx={cx} cy={cy} r={4} fill="white" />
+        <circle cx={cx} cy={cy} r={1.5} fill="#1e293b" />
       </svg>
-      <div className="flex flex-col items-center -mt-2">
-        <span className="text-3xl md:text-4xl font-black tabular-nums tracking-tight" style={{ color }}>
-          {animVal.toFixed(1)} %
+      <div className="flex flex-col items-center -mt-1">
+        <span className="text-2xl md:text-3xl font-black tabular-nums text-white tracking-tight">
+          {animVal.toFixed(0)}%
         </span>
-        <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mt-0.5">{label}</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mt-0.5">{label}</span>
       </div>
     </div>
   );
@@ -547,65 +532,39 @@ export function ReportsScreen({
               </span>
             </div>
 
-            {/* Full-width graphical OEE panel */}
-            <div className="relative bg-gradient-to-b from-secondary/50 to-secondary/20 overflow-hidden">
-              {/* Background grid pattern */}
-              <div className="absolute inset-0 opacity-[0.03]" style={{
-                backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
-                backgroundSize: '20px 20px'
-              }} />
-
-              <div className="relative z-10 px-4 py-5 md:px-6 md:py-6">
-                {/* Main layout: A bar | Speedometer | P bar */}
-                <div className="flex items-center gap-3 md:gap-5">
-
-                  {/* Availability — vertical bar gauge */}
-                  <div className="flex-1 flex flex-col items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Availability</span>
-                    <div className="w-full h-4 rounded-full bg-muted/30 overflow-hidden relative">
-                      <div
-                        className="h-full rounded-full transition-all duration-1000 ease-out"
-                        style={{
-                          width: `${Math.min(100, selectedOEE.availability)}%`,
-                          background: `linear-gradient(90deg, ${getOEEColor(selectedOEE.availability)}cc, ${getOEEColor(selectedOEE.availability)})`,
-                          boxShadow: `0 0 12px ${getOEEColor(selectedOEE.availability)}40`
-                        }}
-                      />
-                    </div>
-                    <span className="text-2xl md:text-3xl font-black tabular-nums" style={{ color: getOEEColor(selectedOEE.availability) }}>
-                      {selectedOEE.availability.toFixed(1)}%
-                    </span>
-                  </div>
-
-                  {/* × symbol */}
-                  <span className="text-lg text-muted-foreground/40 font-light pt-4">×</span>
-
-                  {/* Performance — vertical bar gauge */}
-                  <div className="flex-1 flex flex-col items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Performance</span>
-                    <div className="w-full h-4 rounded-full bg-muted/30 overflow-hidden relative">
-                      <div
-                        className="h-full rounded-full transition-all duration-1000 ease-out"
-                        style={{
-                          width: `${Math.min(100, selectedOEE.performance)}%`,
-                          background: `linear-gradient(90deg, ${getOEEColor(selectedOEE.performance)}cc, ${getOEEColor(selectedOEE.performance)})`,
-                          boxShadow: `0 0 12px ${getOEEColor(selectedOEE.performance)}40`
-                        }}
-                      />
-                    </div>
-                    <span className="text-2xl md:text-3xl font-black tabular-nums" style={{ color: getOEEColor(selectedOEE.performance) }}>
-                      {selectedOEE.performance.toFixed(1)}%
-                    </span>
-                  </div>
-
-                  {/* = symbol */}
-                  <span className="text-lg text-muted-foreground/40 font-light pt-4">=</span>
-
-                  {/* OEE Speedometer — takes most space */}
-                  <div className="flex-[1.6]">
-                    <SpeedometerGauge value={selectedOEE.oee} label="OEE" width={280} />
-                  </div>
-                </div>
+            {/* Dark dashboard gauges panel */}
+            <div className="rounded-lg overflow-hidden" style={{ background: '#1e293b' }}>
+              <div className="grid grid-cols-4 gap-2 px-4 py-6 md:px-6 md:py-8">
+                <DashGauge
+                  value={selectedOEE.availability} label="Availability" gradientId="avail-grad"
+                  colorStops={[
+                    { offset: '0%', color: '#dc2626' },
+                    { offset: '40%', color: '#eab308' },
+                    { offset: '100%', color: '#22c55e' },
+                  ]}
+                />
+                <DashGauge
+                  value={selectedOEE.performance} label="Performance" gradientId="perf-grad"
+                  colorStops={[
+                    { offset: '0%', color: '#dc2626' },
+                    { offset: '50%', color: '#f97316' },
+                    { offset: '100%', color: '#f97316' },
+                  ]}
+                />
+                <DashGauge
+                  value={100} label="Quality" gradientId="qual-grad"
+                  colorStops={[
+                    { offset: '0%', color: '#0284c7' },
+                    { offset: '100%', color: '#3b82f6' },
+                  ]}
+                />
+                <DashGauge
+                  value={selectedOEE.oee} label="Overall OEE" gradientId="oee-grad"
+                  colorStops={[
+                    { offset: '0%', color: '#0d9488' },
+                    { offset: '100%', color: '#06b6d4' },
+                  ]}
+                />
               </div>
             </div>
 
