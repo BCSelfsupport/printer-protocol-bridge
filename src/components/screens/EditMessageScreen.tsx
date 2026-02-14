@@ -936,7 +936,7 @@ export function EditMessageScreen({
             {/* Message Canvas - component handles its own horizontal scrolling */}
             <div
               ref={canvasScrollerRef}
-              className={`mb-2 md:mb-4 -mx-2 px-2 md:mx-0 md:px-0 pb-2 touch-pan-y`}
+              className={`mb-2 md:mb-4 -mx-2 px-2 md:mx-0 md:px-0 pb-2 touch-pan-y overflow-x-auto scrollbar-thin`}
             >
               <MessageCanvas
                 templateHeight={message.height}
