@@ -1103,10 +1103,6 @@ function ActiveRunCard({
           </div>
           <div className="text-sm text-muted-foreground">{run.printerName} • Started {elapsed} ago</div>
         </div>
-        <div className="flex-shrink-0">
-          <MiniGauge value={oee.performance} size={56} strokeWidth={4} />
-          <div className="text-center text-[8px] text-muted-foreground mt-0.5">Perf</div>
-        </div>
       </div>
 
       <div className="mt-3 mb-3 relative z-10">
