@@ -91,7 +91,7 @@ export function MessageCanvas({
   const [editingText, setEditingText] = useState(''); // Current text being edited (for hidden input sync)
 
   // Inform parent when we need to lock its horizontal scroll (mobile drag)
-  const scrollLock = isLongPressPending || (isLongPressActive && isDragging);
+  const scrollLock = isLongPressActive && isDragging;
   useEffect(() => {
     onScrollLockChange?.(scrollLock);
   }, [scrollLock, onScrollLockChange]);
@@ -848,6 +848,16 @@ export function MessageCanvas({
   const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
     const touch = e.touches[0];
     if (!touch) return;
+
+    // If long press hasn't fired yet, check if finger moved too far → cancel and allow scroll
+    if (isLongPressPending && !isLongPressActive && touchStartPosRef.current) {
+      const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
+      const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
+      if (dx > TOUCH_MOVE_THRESHOLD || dy > TOUCH_MOVE_THRESHOLD) {
+        clearLongPressTimer();
+        return;
+      }
+    }
 
     // If we're in active drag mode, handle the drag
     if (isDragging && dragFieldId !== null && isLongPressActive) {
