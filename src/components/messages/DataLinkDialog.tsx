@@ -33,6 +33,8 @@ interface DataLinkDialogProps {
   fieldCount: number;
   printerId: number | null;
   isConnected: boolean;
+  /** Called after linking with field→value pairs from the first data row */
+  onLink?: (fieldValues: Record<number, string>) => void;
 }
 
 export function DataLinkDialog({
@@ -42,6 +44,7 @@ export function DataLinkDialog({
   fieldCount,
   printerId,
   isConnected,
+  onLink,
 }: DataLinkDialogProps) {
   const queryClient = useQueryClient();
   const [selectedSourceId, setSelectedSourceId] = useState<string>('');
@@ -144,9 +147,37 @@ export function DataLinkDialog({
         if (error) throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['print-jobs'] });
       queryClient.invalidateQueries({ queryKey: ['print-job-for-message'] });
+
+      // Fetch first row and pass mapped values back to the editor
+      if (onLink && selectedSourceId) {
+        try {
+          const { data: firstRow } = await supabase
+            .from('data_source_rows')
+            .select('values')
+            .eq('data_source_id', selectedSourceId)
+            .order('row_index', { ascending: true })
+            .limit(1)
+            .single();
+
+          if (firstRow) {
+            const rowValues = firstRow.values as Record<string, string>;
+            const fieldValues: Record<number, string> = {};
+            Object.entries(mappings).forEach(([colName, fieldIdx]) => {
+              const idx = parseInt(fieldIdx);
+              if (!isNaN(idx) && rowValues[colName] != null) {
+                fieldValues[idx] = String(rowValues[colName]);
+              }
+            });
+            onLink(fieldValues);
+          }
+        } catch (e) {
+          console.warn('Could not fetch first row for preview:', e);
+        }
+      }
+
       toast.success('Data source linked to message');
       onOpenChange(false);
     },

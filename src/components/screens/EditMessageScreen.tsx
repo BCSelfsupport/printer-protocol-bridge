@@ -19,6 +19,7 @@ import { GraphicFieldDialog, GraphicFieldConfig } from '@/components/messages/Gr
 import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
 import { AdvancedSettingsDialog, AdvancedSettings, defaultAdvancedSettings } from '@/components/messages/AdvancedSettingsDialog';
 import { DataLinkDialog } from '@/components/messages/DataLinkDialog';
+import { supabase } from '@/integrations/supabase/client';
 import { FieldSettingsPanel, FieldSettings, defaultFieldSettings } from '@/components/messages/FieldSettingsPanel';
 import {
   Dialog,
@@ -181,6 +182,50 @@ export function EditMessageScreen({
         });
     }
   }, [messageName, onGetMessageDetails, initialLoadDone]);
+
+  // Auto-load linked data source values (first row) when editor opens
+  useEffect(() => {
+    if (!initialLoadDone) return;
+    const loadLinkedData = async () => {
+      try {
+        const { data: job } = await supabase
+          .from('print_jobs')
+          .select('data_source_id, field_mappings')
+          .eq('message_name', messageName)
+          .limit(1)
+          .maybeSingle();
+        if (!job) return;
+
+        const { data: firstRow } = await supabase
+          .from('data_source_rows')
+          .select('values')
+          .eq('data_source_id', job.data_source_id)
+          .order('row_index', { ascending: true })
+          .limit(1)
+          .single();
+        if (!firstRow) return;
+
+        const rowValues = firstRow.values as Record<string, string>;
+        const fieldMappings = job.field_mappings as Record<string, string>;
+
+        setMessage((prev) => {
+          const updatedFields = prev.fields.map((f, idx) => {
+            const fieldNum = idx + 1;
+            // Find which column maps to this field
+            const mappedCol = Object.entries(fieldMappings).find(([, fIdx]) => parseInt(fIdx) === fieldNum);
+            if (mappedCol && rowValues[mappedCol[0]] != null) {
+              return { ...f, data: String(rowValues[mappedCol[0]]) };
+            }
+            return f;
+          });
+          return { ...prev, fields: updatedFields, width: autoResizeWidth(updatedFields) };
+        });
+      } catch {
+        // No linked data, that's fine
+      }
+    };
+    loadLinkedData();
+  }, [messageName, initialLoadDone]);
 
   // Prevent the overflow-x container from taking over horizontal swipes while dragging
   useEffect(() => {
@@ -1212,6 +1257,26 @@ export function EditMessageScreen({
             fieldCount={message.fields.length}
             printerId={connectedPrinterId ?? null}
             isConnected={isConnected}
+            onLink={(fieldValues) => {
+              // Update field data with values from the first data row
+              setMessage((prev) => ({
+                ...prev,
+                fields: prev.fields.map((f, idx) => {
+                  const fieldNum = idx + 1;
+                  if (fieldValues[fieldNum] != null) {
+                    return { ...f, data: fieldValues[fieldNum] };
+                  }
+                  return f;
+                }),
+                width: autoResizeWidth(prev.fields.map((f, idx) => {
+                  const fieldNum = idx + 1;
+                  if (fieldValues[fieldNum] != null) {
+                    return { ...f, data: fieldValues[fieldNum] };
+                  }
+                  return f;
+                })),
+              }));
+            }}
           />
         </>
       )}
