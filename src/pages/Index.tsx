@@ -28,6 +28,7 @@ import { DevPanel } from '@/components/dev/DevPanel';
 import { PrintMessage } from '@/types/printer';
 import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
 import { useProductionStorage } from '@/hooks/useProductionStorage';
+import { logConsumption } from '@/lib/consumptionTracker';
 
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
@@ -144,6 +145,13 @@ const Index = () => {
         if (consumable.currentStock > 0) {
           consumableStorage.adjustStock(consumable.id, -1);
           deducted = true;
+          // Log consumption event for burn-rate predictions
+          logConsumption({
+            consumableId: consumable.id,
+            printerId: printer.id,
+            type: label === 'Ink' ? 'ink' : 'makeup',
+            qty: 1,
+          });
         }
         
         // Queue a popup alert with updated stock info
@@ -482,6 +490,10 @@ const Index = () => {
             consumables={consumableStorage.consumables}
             assignments={consumableStorage.assignments}
             printers={printers}
+            metricsMap={connectionState.connectedPrinter && connectionState.metrics
+              ? { [connectionState.connectedPrinter.id]: connectionState.metrics }
+              : {}
+            }
             onAddConsumable={consumableStorage.addConsumable}
             onUpdateConsumable={consumableStorage.updateConsumable}
             onRemoveConsumable={consumableStorage.removeConsumable}
