@@ -817,19 +817,49 @@ function PrinterReportDetail({
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 md:px-4 pb-4 space-y-4">
-        {/* OEE Summary for this printer */}
+        {/* OEE Summary — dark dashboard gauges */}
         {printerOEE ? (
-          <div className="rounded-xl border bg-gradient-to-br from-card via-card to-secondary/50 p-5 shadow-lg relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl" />
-            <div className="flex justify-around items-end flex-wrap gap-4 md:gap-6 relative z-10 mb-4">
-              <OEEGauge value={printerOEE.oee} label="OEE" size={120} isPrimary />
-              <OEEGauge value={printerOEE.availability} label="Availability" size={90} />
-              <OEEGauge value={printerOEE.performance} label="Performance" size={90} />
+          <div className="rounded-2xl border border-border/30 overflow-hidden shadow-lg">
+            {/* Dark gauges panel */}
+            <div className="rounded-t-lg overflow-hidden" style={{ background: '#1e293b' }}>
+              <div className="grid grid-cols-4 gap-2 px-4 py-6 md:px-6 md:py-8">
+                <DashGauge
+                  value={printerOEE.availability} label="Availability" gradientId="detail-avail"
+                  colorStops={[
+                    { offset: '0%', color: '#dc2626' },
+                    { offset: '40%', color: '#eab308' },
+                    { offset: '100%', color: '#22c55e' },
+                  ]}
+                />
+                <DashGauge
+                  value={printerOEE.performance} label="Performance" gradientId="detail-perf"
+                  colorStops={[
+                    { offset: '0%', color: '#dc2626' },
+                    { offset: '50%', color: '#f97316' },
+                    { offset: '100%', color: '#f97316' },
+                  ]}
+                />
+                <DashGauge
+                  value={100} label="Quality" gradientId="detail-qual"
+                  colorStops={[
+                    { offset: '0%', color: '#0284c7' },
+                    { offset: '100%', color: '#3b82f6' },
+                  ]}
+                />
+                <DashGauge
+                  value={printerOEE.oee} label="Overall OEE" gradientId="detail-oee"
+                  colorStops={[
+                    { offset: '0%', color: '#0d9488' },
+                    { offset: '100%', color: '#06b6d4' },
+                  ]}
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative z-10">
+            {/* Stat cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 md:p-5 bg-card">
               <StatCard icon={Target} label="Target" value={printerOEE.targetCount.toLocaleString()} accent="primary" />
               <StatCard icon={CheckCircle2} label="Actual" value={printerOEE.actualCount.toLocaleString()} accent="success" />
-              <StatCard icon={Timer} label="Run Time" value={formatDuration(printerOEE.runTime)} accent="primary" />
+              <StatCard icon={Timer} label="Run Time" value={formatDuration(printerOEE.runTime)} accent="warning" />
               <StatCard icon={AlertTriangle} label="Downtime" value={formatDuration(printerOEE.totalDowntime)} accent="destructive" />
             </div>
           </div>
