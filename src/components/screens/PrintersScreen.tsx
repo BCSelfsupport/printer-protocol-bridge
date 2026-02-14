@@ -226,7 +226,7 @@ export function PrintersScreen({
   const [servicePopupOpen, setServicePopupOpen] = useState(false);
   const [servicePrinter, setServicePrinter] = useState<Printer | null>(null);
   const isMobile = useIsMobile();
-  const { canNetwork, canDatabase, tier } = useLicense();
+  const { canNetwork, canDatabase, tier, isActivated } = useLicense();
 
   // Compute sync group color index for each printer
   // Each master gets a unique index; its slaves share the same index
@@ -486,18 +486,20 @@ export function PrintersScreen({
               <span className="text-[10px] text-slate-500">
                 {printers.filter(p => p.isAvailable).length}/{printers.length}
               </span>
-              <Button
-                size="sm"
-                variant={isDevSignedIn ? "default" : "outline"}
-                className={`h-6 text-[10px] px-2 ${isDevSignedIn 
-                  ? "bg-green-600 hover:bg-green-700 text-white" 
-                  : "border-slate-600 text-slate-400 hover:bg-slate-800"
-                }`}
-                onClick={isDevSignedIn ? onDevSignOut : onDevSignIn}
-              >
-                <Key className="w-2.5 h-2.5 mr-1" />
-                {isDevSignedIn ? "Out" : "Dev"}
-              </Button>
+              {(!isActivated || import.meta.env.DEV) && (
+                <Button
+                  size="sm"
+                  variant={isDevSignedIn ? "default" : "outline"}
+                  className={`h-6 text-[10px] px-2 ${isDevSignedIn 
+                    ? "bg-green-600 hover:bg-green-700 text-white" 
+                    : "border-slate-600 text-slate-400 hover:bg-slate-800"
+                  }`}
+                  onClick={isDevSignedIn ? onDevSignOut : onDevSignIn}
+                >
+                  <Key className="w-2.5 h-2.5 mr-1" />
+                  {isDevSignedIn ? "Out" : "Dev"}
+                </Button>
+              )}
             </div>
           </div>
         </div>
