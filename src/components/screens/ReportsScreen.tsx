@@ -562,7 +562,7 @@ export function ReportsScreen({
                   <span className="text-2xl font-light text-muted-foreground/40">=</span>
                 </div>
 
-                <OEEGauge value={selectedOEE.oee} label="OEE" size={160} isPrimary />
+                <SpeedometerGauge value={selectedOEE.oee} label="OEE" width={200} />
               </div>
             </div>
 
@@ -587,17 +587,6 @@ export function ReportsScreen({
           </div>
         )}
 
-        {/* ===== Overall OEE Speedometer ===== */}
-        {overallOEE && (
-          <div className="rounded-2xl border border-primary/20 bg-card overflow-hidden shadow-md">
-            <div className="bg-primary px-4 py-2">
-              <span className="text-sm font-black uppercase tracking-widest text-primary-foreground">OEE</span>
-            </div>
-            <div className="flex justify-center py-4 md:py-6 bg-secondary/20">
-              <SpeedometerGauge value={overallOEE.oee} label="Overall OEE" width={240} />
-            </div>
-          </div>
-        )}
 
         {/* ===== Printer Cards Grid ===== */}
         <div className="flex items-center gap-2 mb-1">
