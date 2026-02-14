@@ -200,8 +200,8 @@ function DashGauge({ value, label, gradientId, size = 140 }: {
     const x2 = px(a2, bandR), y2 = py(a2, bandR);
     const sweep = (f2 - f1) * 270;
     const largeArc = sweep > 180 ? 1 : 0;
-    // CW on screen = sweep-flag 1
-    return `M ${x1} ${y1} A ${bandR} ${bandR} 0 ${largeArc} 1 ${x2} ${y2}`;
+    // CCW in SVG (sweep-flag 0) to go through the top of the circle
+    return `M ${x1} ${y1} A ${bandR} ${bandR} 0 ${largeArc} 0 ${x2} ${y2}`;
   };
 
   // Segments: red (right/low) → orange → yellow → lime → green (left/high)
