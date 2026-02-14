@@ -635,78 +635,66 @@ export function ReportsScreen({
               const last5 = printerMetrics.slice(-5);
               const maxOee = Math.max(...last5.map(m => m.oee.oee), 1);
 
-              return (
+                return (
                 <button
                   key={printer.id}
                   onClick={() => setSelectedPrinterId(isSelected ? null : printer.id)}
-                  className={`group rounded-xl overflow-hidden text-left transition-all shadow-md hover:shadow-xl ${
-                    isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-[1.02]' : 'hover:scale-[1.01]'
+                  className={`group rounded-2xl bg-card border overflow-hidden text-left transition-all duration-200 shadow-sm hover:shadow-lg ${
+                    isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'border-border/40 hover:border-primary/30'
                   }`}
                 >
-                  {/* Header band */}
-                  <div className={`${headerBg} px-3 py-2.5 ${headerText}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0">
-                        <div className="text-sm font-black uppercase tracking-wide truncate">{printer.name}</div>
-                        <div className={`text-[10px] ${avgOee === null ? 'text-muted-foreground' : 'text-white/70'}`}>
-                          {statusLabel} · {printer.ipAddress}
-                        </div>
-                      </div>
-                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                        printer.isAvailable ? 'bg-white/80 shadow-[0_0_6px_rgba(255,255,255,0.5)]' : 'bg-white/30'
-                      }`} />
-                    </div>
-                  </div>
-
-                  {/* Body */}
-                  <div className={`${bodyBg} border-x border-b border-border/30 px-3 py-3`}>
-                    {/* Gauge */}
-                    <div className="flex justify-center mb-2">
-                      {avgOee !== null ? (
-                        <MiniGauge value={avgOee} size={64} strokeWidth={5} />
-                      ) : (
-                        <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center">
-                          <PrinterIcon className="w-6 h-6 text-muted-foreground/50" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Stats row */}
-                    <div className="grid grid-cols-2 gap-1.5 mb-2">
-                      <div className="bg-background/60 rounded-lg px-2 py-1.5 text-center">
-                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Target</div>
-                        <div className="text-sm font-black text-foreground tabular-nums">{totalTarget.toLocaleString()}</div>
-                      </div>
-                      <div className="bg-background/60 rounded-lg px-2 py-1.5 text-center">
-                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Actual</div>
-                        <div className="text-sm font-black text-foreground tabular-nums">{totalProduced.toLocaleString()}</div>
+                  <div className="p-4">
+                    {/* Header: name + status */}
+                    <div className="mb-3">
+                      <div className="text-sm font-black uppercase tracking-wide text-foreground truncate">{printer.name}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {statusLabel} · {printer.ipAddress}
                       </div>
                     </div>
 
-                    {/* Status bar */}
-                    {totalTarget > 0 && (
-                      <div className="mb-2">
-                        <div className="h-1.5 bg-muted/40 rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-700"
-                            style={{
-                              width: `${Math.min(100, (totalProduced / totalTarget) * 100)}%`,
-                              background: isGood ? 'hsl(var(--success))' : isCritical ? 'hsl(var(--destructive))' : 'hsl(var(--primary))',
-                            }}
-                          />
-                        </div>
+                    {/* Printer icon centered */}
+                    <div className="flex justify-center mb-3">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        avgOee === null ? 'bg-secondary' : isGood ? 'bg-success/15' : 'bg-destructive/15'
+                      }`}>
+                        <PrinterIcon className={`w-6 h-6 ${
+                          avgOee === null ? 'text-muted-foreground' : isGood ? 'text-success' : 'text-destructive'
+                        }`} />
                       </div>
-                    )}
+                    </div>
 
-                    {/* Mini bar chart from last runs */}
+                    {/* Target / Actual row */}
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div className="text-center">
+                        <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold mb-0.5">Target</div>
+                        <div className="text-lg font-black text-foreground tabular-nums">{totalTarget.toLocaleString()}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold mb-0.5">Actual</div>
+                        <div className="text-lg font-black text-foreground tabular-nums">{totalProduced.toLocaleString()}</div>
+                      </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden mb-3">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{
+                          width: totalTarget > 0 ? `${Math.min(100, (totalProduced / totalTarget) * 100)}%` : '0%',
+                          backgroundColor: avgOee !== null ? (isGood ? 'hsl(var(--primary))' : 'hsl(var(--destructive))') : 'hsl(var(--muted))',
+                        }}
+                      />
+                    </div>
+
+                    {/* Mini bar chart */}
                     {last5.length > 0 && (
-                      <div className="flex items-end gap-0.5 h-6 justify-center">
+                      <div className="flex items-end gap-1 h-8 justify-center mb-2">
                         {last5.map((m, i) => (
                           <div
                             key={i}
-                            className="w-3 rounded-t-sm transition-all duration-500"
+                            className="w-4 rounded-t-sm transition-all duration-500"
                             style={{
-                              height: `${Math.max(10, (m.oee.oee / maxOee) * 100)}%`,
+                              height: `${Math.max(12, (m.oee.oee / maxOee) * 100)}%`,
                               backgroundColor: getOEEColor(m.oee.oee),
                               opacity: 0.5 + (i / last5.length) * 0.5,
                             }}
@@ -715,8 +703,8 @@ export function ReportsScreen({
                       </div>
                     )}
 
-                    {/* Footer info */}
-                    <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-border/30">
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-2 border-t border-border/30">
                       <span className="text-[10px] text-muted-foreground">
                         <span className="font-bold text-foreground">{completedRuns.length}</span> runs
                       </span>
