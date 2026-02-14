@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
 
     // ── ADMIN: create license (dev panel) ──
     if (action === "create") {
-      const { tier, customer_name, customer_email, customer_company } = await req.json();
+      const { tier, customer_name, customer_email, customer_company, expires_in_days } = await req.json();
 
       // Create or find customer
       let customerId: string | null = null;
@@ -170,12 +170,16 @@ Deno.serve(async (req) => {
       }
 
       const product_key = generateKey();
+      const expiresAt = expires_in_days
+        ? new Date(Date.now() + expires_in_days * 86400000).toISOString()
+        : null;
       const { data: license, error } = await supabaseAdmin
         .from("licenses")
         .insert({
           product_key,
           tier: tier || "lite",
           customer_id: customerId,
+          expires_at: expiresAt,
         })
         .select("*")
         .single();

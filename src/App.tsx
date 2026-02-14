@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import { UpdateNotification } from "./components/UpdateNotification";
 import { SplashScreen } from "./components/SplashScreen";
 import { LicenseProvider } from "./contexts/LicenseContext";
+import { DemoWatermark } from "./components/license/DemoWatermark";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <UpdateNotification />
+            <DemoWatermark />
             {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
             <HashRouter>
               <Routes>

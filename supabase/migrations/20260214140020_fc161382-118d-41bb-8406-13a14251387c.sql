@@ -1,0 +1,1 @@
+ALTER TYPE public.license_tier ADD VALUE IF NOT EXISTS 'demo';
