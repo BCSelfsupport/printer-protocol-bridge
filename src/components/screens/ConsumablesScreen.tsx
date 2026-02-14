@@ -255,15 +255,22 @@ export function ConsumablesScreen({
                   <Filter className="w-6 h-6 text-white" />
                   <span className="text-[10px] text-white font-medium mt-0.5">Filter</span>
                 </div>
-                <div className="flex flex-col-reverse gap-0.5 h-12 w-4 bg-black/20 rounded p-0.5">
-                  {[0, 1, 2, 3].map((seg) => (
-                    <div
-                      key={seg}
-                      className={`flex-1 rounded-sm transition-colors ${
-                        seg < filledSegs ? 'bg-white' : 'bg-white/20'
-                      }`}
-                    />
-                  ))}
+                <div className="flex items-center gap-1.5">
+                  {fStatus && (
+                    <span className="text-[10px] text-white font-bold font-mono">
+                      {fStatus.hoursRemaining.toFixed(0)}h
+                    </span>
+                  )}
+                  <div className="flex flex-col-reverse gap-0.5 h-12 w-4 bg-black/20 rounded p-0.5">
+                    {[0, 1, 2, 3].map((seg) => (
+                      <div
+                        key={seg}
+                        className={`flex-1 rounded-sm transition-colors ${
+                          seg < filledSegs ? 'bg-white' : 'bg-white/20'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             );

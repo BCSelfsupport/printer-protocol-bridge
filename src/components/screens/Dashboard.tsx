@@ -247,24 +247,26 @@ export function Dashboard({
                       <Filter className="w-5 h-5 md:w-8 md:h-8 text-white" />
                       <span className="text-[8px] md:text-xs text-white font-medium mt-1">Filter</span>
                     </div>
-                    <div className="flex flex-col-reverse gap-0.5 h-10 md:h-16 w-3 md:w-5 bg-black/20 rounded p-0.5">
-                      {[0, 1, 2, 3].map((seg) => {
-                        const pct = 100 - filterStatus.percentUsed;
-                        const filledSegments = pct >= 75 ? 4 : pct >= 50 ? 3 : pct >= 25 ? 2 : pct > 0 ? 1 : 0;
-                        const isFilled = seg < filledSegments;
-                        return (
-                          <div
-                            key={seg}
-                            className={`flex-1 rounded-sm transition-colors ${
-                              isFilled ? 'bg-white' : 'bg-white/20'
-                            }`}
-                          />
-                        );
-                      })}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] md:text-sm text-white font-bold font-mono">
+                        {filterStatus.hoursRemaining.toFixed(0)}h
+                      </span>
+                      <div className="flex flex-col-reverse gap-0.5 h-10 md:h-16 w-3 md:w-5 bg-black/20 rounded p-0.5">
+                        {[0, 1, 2, 3].map((seg) => {
+                          const pct = 100 - filterStatus.percentUsed;
+                          const filledSegments = pct >= 75 ? 4 : pct >= 50 ? 3 : pct >= 25 ? 2 : pct > 0 ? 1 : 0;
+                          const isFilled = seg < filledSegments;
+                          return (
+                            <div
+                              key={seg}
+                              className={`flex-1 rounded-sm transition-colors ${
+                                isFilled ? 'bg-white' : 'bg-white/20'
+                              }`}
+                            />
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-center text-[10px] md:text-xs text-muted-foreground font-mono">
-                    {filterStatus.hoursRemaining.toFixed(0)}h
                   </div>
                 </div>
               )}
