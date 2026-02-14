@@ -11,13 +11,22 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Consumable, PrinterConsumableAssignment, ReorderConfig, ReorderAction } from '@/types/consumable';
-import { Printer } from '@/types/printer';
+import { Printer, PrinterMetrics } from '@/types/printer';
+import {
+  ForecastBanner,
+  PredictionBadge,
+  SmartReorderSuggestion,
+  PrinterFilterStatus,
+  parseStreamHoursToNumber,
+} from '@/components/consumables/ConsumablePredictions';
 
 interface ConsumablesScreenProps {
   consumables: Consumable[];
   assignments: PrinterConsumableAssignment[];
   printers: Printer[];
   reorderConfig: ReorderConfig;
+  /** Metrics per printer for filter tracking (keyed by printer id) */
+  metricsMap?: Record<number, PrinterMetrics>;
   onUpdateReorderConfig: (updates: Partial<ReorderConfig>) => void;
   onAddConsumable: (consumable: Omit<Consumable, 'id'>) => Consumable;
   onUpdateConsumable: (id: string, updates: Partial<Omit<Consumable, 'id'>>) => void;
@@ -55,6 +64,7 @@ export function ConsumablesScreen({
   assignments,
   printers,
   reorderConfig,
+  metricsMap = {},
   onUpdateReorderConfig,
   onAddConsumable,
   onUpdateConsumable,
@@ -264,6 +274,12 @@ export function ConsumablesScreen({
             </Select>
           </div>
         </div>
+
+        {/* Filter tracking */}
+        <PrinterFilterStatus
+          printer={printer}
+          pumpHours={metricsMap[printer.id] ? parseStreamHoursToNumber(metricsMap[printer.id].streamHours) ?? undefined : undefined}
+        />
       </div>
     );
   };
@@ -338,6 +354,9 @@ export function ConsumablesScreen({
                   1 {c.reorderUnit.replace(/s$/, '')} = {c.bottlesPerReorderUnit} {c.unit}
                 </p>
               )}
+              {/* Burn-rate prediction */}
+              <PredictionBadge consumable={c} />
+              <SmartReorderSuggestion consumable={c} />
             </div>
 
             {/* Actions */}
@@ -436,6 +455,9 @@ export function ConsumablesScreen({
                 </div>
               ) : (
                 <>
+                  {/* Aggregate stock forecast */}
+                  <ForecastBanner consumables={consumables} />
+
                   {/* Ink section */}
                   {inkConsumables.length > 0 && (
                     <div>
