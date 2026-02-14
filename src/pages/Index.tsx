@@ -526,7 +526,13 @@ const Index = () => {
         );
       case 'datasource':
         return (
-          <DataSourceScreen onHome={handleHome} />
+          <DataSourceScreen
+            onHome={handleHome}
+            messages={connectionState.messages}
+            isConnected={connectionState.isConnected}
+            connectedPrinterId={connectionState.connectedPrinter?.id ?? null}
+            onSendCommand={sendCommand}
+          />
         );
     }
     
