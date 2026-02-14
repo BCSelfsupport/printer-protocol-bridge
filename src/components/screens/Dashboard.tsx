@@ -336,7 +336,7 @@ export function Dashboard({
       </div>
 
       {/* Message preview area - horizontal scroll, no vertical overflow */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden -mx-2 px-2 md:mx-0 md:px-0 min-h-0">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden -mx-2 px-2 md:mx-0 md:px-0 min-h-0 scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-muted/20" style={{ scrollbarWidth: 'thin' }}>
         <MessagePreviewCanvas 
           message={status?.currentMessage}
           printerTime={status?.printerTime}
