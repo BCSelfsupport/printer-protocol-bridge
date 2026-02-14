@@ -1,7 +1,7 @@
-import { Power, FileText, SlidersHorizontal, Brush, Settings, Wrench, ChevronUp, ChevronDown, Wifi } from 'lucide-react';
+import { Power, FileText, Database, SlidersHorizontal, Brush, Settings, Wrench, ChevronUp, ChevronDown, Wifi } from 'lucide-react';
 import { useState } from 'react';
 
-export type NavItem = 'home' | 'messages' | 'adjust' | 'clean' | 'setup' | 'service';
+export type NavItem = 'home' | 'messages' | 'datasource' | 'adjust' | 'clean' | 'setup' | 'service';
 
 interface BottomNavProps {
   activeItem: NavItem;
@@ -13,6 +13,7 @@ interface BottomNavProps {
 
 const navItems: { id: NavItem; label: string; icon: React.ReactNode; disabled?: boolean }[] = [
   { id: 'messages', label: 'Messages', icon: <FileText className="w-6 h-6" /> },
+  { id: 'datasource', label: 'Data', icon: <Database className="w-6 h-6" /> },
   { id: 'adjust', label: 'Adjust', icon: <SlidersHorizontal className="w-6 h-6" /> },
   { id: 'clean', label: 'Clean', icon: <Brush className="w-6 h-6" />, disabled: true },
   { id: 'setup', label: 'Setup', icon: <Settings className="w-6 h-6" />, disabled: true },
