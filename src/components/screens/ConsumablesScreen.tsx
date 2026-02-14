@@ -247,31 +247,39 @@ export function ConsumablesScreen({
                 ? (fStatus.status === 'critical' ? 'bg-destructive' : 'bg-warning')
                 : 'bg-primary')
               : (fConfig ? 'bg-primary' : 'bg-muted-foreground/30');
-            const pct = fStatus ? (100 - fStatus.percentUsed) : (fConfig ? 100 : 0);
-            const filledSegs = pct >= 75 ? 4 : pct >= 50 ? 3 : pct >= 25 ? 2 : pct > 0 ? 1 : 0;
+            const quarterHours = fStatus ? fStatus.config.filterLifeHours / 4 : (fConfig ? fConfig.filterLifeHours / 4 : 0);
+            const remaining = fStatus ? fStatus.hoursRemaining : (fConfig ? fConfig.remainingHoursAtEntry : 0);
+            const rawSegs = quarterHours > 0 ? Math.min(4, Math.floor(remaining / quarterHours)) : 0;
+            const filledSegs = remaining > 0 && rawSegs === 0 ? 1 : rawSegs;
             return (
-              <div className={`flex-1 h-[70px] rounded-lg flex items-center justify-between px-3 ${filterBg}`}>
-                <div className="flex flex-col items-center">
-                  <Filter className="w-6 h-6 text-white" />
-                  <span className="text-[10px] text-white font-medium mt-0.5">Filter</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {fStatus && (
-                    <span className="text-[10px] text-white font-bold font-mono">
-                      {fStatus.hoursRemaining.toFixed(0)}h
-                    </span>
-                  )}
+              <div className={`flex-1 h-[70px] rounded-lg flex flex-col items-center justify-center px-3 ${filterBg}`}>
+                <div className="flex items-center justify-between w-full flex-1">
+                  <div className="flex flex-col items-center">
+                    <Filter className="w-6 h-6 text-white" />
+                    <span className="text-[10px] text-white font-medium mt-0.5">Filter</span>
+                  </div>
                   <div className="flex flex-col-reverse gap-0.5 h-12 w-4 bg-black/20 rounded p-0.5">
-                    {[0, 1, 2, 3].map((seg) => (
-                      <div
-                        key={seg}
-                        className={`flex-1 rounded-sm transition-colors ${
-                          seg < filledSegs ? 'bg-white' : 'bg-white/20'
-                        }`}
-                      />
-                    ))}
+                    {[0, 1, 2, 3].map((seg) => {
+                      const isFilled = seg < filledSegs;
+                      const isLastBlock = isFilled && seg === filledSegs - 1 && filledSegs === 1;
+                      return (
+                        <div
+                          key={seg}
+                          className={`flex-1 rounded-sm transition-colors ${
+                            isFilled
+                              ? isLastBlock ? 'bg-amber-400' : 'bg-white'
+                              : 'bg-white/20'
+                          }`}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
+                {fStatus && (
+                  <span className="text-[10px] text-white font-bold font-mono mb-0.5">
+                    {fStatus.hoursRemaining.toFixed(0)}h
+                  </span>
+                )}
               </div>
             );
           })()}
