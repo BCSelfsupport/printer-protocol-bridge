@@ -547,22 +547,65 @@ export function ReportsScreen({
               </span>
             </div>
 
-            {/* Gauges panel — light neutral background */}
-            <div className="bg-secondary/30 px-5 py-6 md:px-8 md:py-8">
-              <div className="flex justify-center items-end gap-2 md:gap-4 flex-wrap">
-                <OEEGauge value={selectedOEE.availability} label="Availability" size={130} />
+            {/* Full-width graphical OEE panel */}
+            <div className="relative bg-gradient-to-b from-secondary/50 to-secondary/20 overflow-hidden">
+              {/* Background grid pattern */}
+              <div className="absolute inset-0 opacity-[0.03]" style={{
+                backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
+                backgroundSize: '20px 20px'
+              }} />
 
-                <div className="flex items-center pb-10">
-                  <span className="text-2xl font-light text-muted-foreground/40">×</span>
+              <div className="relative z-10 px-4 py-5 md:px-6 md:py-6">
+                {/* Main layout: A bar | Speedometer | P bar */}
+                <div className="flex items-center gap-3 md:gap-5">
+
+                  {/* Availability — vertical bar gauge */}
+                  <div className="flex-1 flex flex-col items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Availability</span>
+                    <div className="w-full h-4 rounded-full bg-muted/30 overflow-hidden relative">
+                      <div
+                        className="h-full rounded-full transition-all duration-1000 ease-out"
+                        style={{
+                          width: `${Math.min(100, selectedOEE.availability)}%`,
+                          background: `linear-gradient(90deg, ${getOEEColor(selectedOEE.availability)}cc, ${getOEEColor(selectedOEE.availability)})`,
+                          boxShadow: `0 0 12px ${getOEEColor(selectedOEE.availability)}40`
+                        }}
+                      />
+                    </div>
+                    <span className="text-2xl md:text-3xl font-black tabular-nums" style={{ color: getOEEColor(selectedOEE.availability) }}>
+                      {selectedOEE.availability.toFixed(1)}%
+                    </span>
+                  </div>
+
+                  {/* × symbol */}
+                  <span className="text-lg text-muted-foreground/40 font-light pt-4">×</span>
+
+                  {/* Performance — vertical bar gauge */}
+                  <div className="flex-1 flex flex-col items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Performance</span>
+                    <div className="w-full h-4 rounded-full bg-muted/30 overflow-hidden relative">
+                      <div
+                        className="h-full rounded-full transition-all duration-1000 ease-out"
+                        style={{
+                          width: `${Math.min(100, selectedOEE.performance)}%`,
+                          background: `linear-gradient(90deg, ${getOEEColor(selectedOEE.performance)}cc, ${getOEEColor(selectedOEE.performance)})`,
+                          boxShadow: `0 0 12px ${getOEEColor(selectedOEE.performance)}40`
+                        }}
+                      />
+                    </div>
+                    <span className="text-2xl md:text-3xl font-black tabular-nums" style={{ color: getOEEColor(selectedOEE.performance) }}>
+                      {selectedOEE.performance.toFixed(1)}%
+                    </span>
+                  </div>
+
+                  {/* = symbol */}
+                  <span className="text-lg text-muted-foreground/40 font-light pt-4">=</span>
+
+                  {/* OEE Speedometer — takes most space */}
+                  <div className="flex-[1.6]">
+                    <SpeedometerGauge value={selectedOEE.oee} label="OEE" width={280} />
+                  </div>
                 </div>
-
-                <OEEGauge value={selectedOEE.performance} label="Performance" size={130} />
-
-                <div className="flex items-center pb-10">
-                  <span className="text-2xl font-light text-muted-foreground/40">=</span>
-                </div>
-
-                <SpeedometerGauge value={selectedOEE.oee} label="OEE" width={200} />
               </div>
             </div>
 
