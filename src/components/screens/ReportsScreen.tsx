@@ -204,13 +204,14 @@ function DashGauge({ value, label, gradientId, size = 140 }: {
     return `M ${x1} ${y1} A ${bandR} ${bandR} 0 ${largeArc} 0 ${x2} ${y2}`;
   };
 
-  // Segments: red (right/low) → orange → yellow → lime → green (left/high)
+  // Segments: green (right/high) → lime → yellow → orange → red (left/low)
+  // fraction 0 = bottom-right, fraction 1 = bottom-left
   const segments = [
-    { from: 0, to: 0.20, color: '#dc2626' },    // red
-    { from: 0.20, to: 0.40, color: '#f97316' },  // orange
+    { from: 0, to: 0.20, color: '#22c55e' },    // green (high)
+    { from: 0.20, to: 0.40, color: '#84cc16' },  // lime
     { from: 0.40, to: 0.60, color: '#eab308' },  // yellow
-    { from: 0.60, to: 0.80, color: '#84cc16' },  // lime
-    { from: 0.80, to: 1.0, color: '#22c55e' },   // green
+    { from: 0.60, to: 0.80, color: '#f97316' },  // orange
+    { from: 0.80, to: 1.0, color: '#dc2626' },   // red (low)
   ];
 
   // Tick marks
@@ -219,9 +220,9 @@ function DashGauge({ value, label, gradientId, size = 140 }: {
     ticks.push({ angle: angleAt(i / 10), major: i % 2 === 0 });
   }
 
-  // Needle: OEE value → fraction on arc (100% = green/left, 0% = red/right)
+  // Needle: 100% → fraction 0 (green/right), 0% → fraction 1 (red/left)
   const pct = Math.min(100, Math.max(0, animVal)) / 100;
-  const needleAngle = toRad(angleAt(pct));
+  const needleAngle = toRad(angleAt(1 - pct));
   const needleLen = outerR * 0.72;
   const needleTail = outerR * 0.15;
   const nx = cx + needleLen * Math.cos(needleAngle);
