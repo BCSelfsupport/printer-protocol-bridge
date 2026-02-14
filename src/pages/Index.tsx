@@ -16,6 +16,7 @@ import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
 import { RelayConnectDialog } from '@/components/relay/RelayConnectDialog';
 import { ConsumablesScreen } from '@/components/screens/ConsumablesScreen';
 import { ReportsScreen } from '@/components/screens/ReportsScreen';
+import { DataSourceScreen } from '@/components/screens/DataSourceScreen';
 import { LowStockAlert, LowStockAlertData } from '@/components/consumables/LowStockAlert';
 
 import { SignInDialog } from '@/components/printers/SignInDialog';
@@ -33,7 +34,7 @@ import { logConsumption } from '@/lib/consumptionTracker';
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
 
-type ScreenType = NavItem | 'network' | 'control' | 'editMessage' | 'consumables' | 'reports';
+type ScreenType = NavItem | 'network' | 'control' | 'editMessage' | 'consumables' | 'reports' | 'datasource';
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
@@ -234,6 +235,10 @@ const Index = () => {
     }
     if (item === 'service') {
       setServiceDialogOpen(true);
+      return;
+    }
+    if (item === 'datasource') {
+      setCurrentScreen('datasource');
       return;
     }
     setCurrentScreen(item);
@@ -519,7 +524,10 @@ const Index = () => {
             onHome={handleHome}
           />
         );
-        break;
+      case 'datasource':
+        return (
+          <DataSourceScreen onHome={handleHome} />
+        );
     }
     
     // Default / home / desktop messages+editMessage: render PrintersScreen

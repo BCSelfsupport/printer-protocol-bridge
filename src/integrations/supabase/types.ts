@@ -14,7 +14,109 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      data_source_rows: {
+        Row: {
+          created_at: string
+          data_source_id: string
+          id: string
+          row_index: number
+          values: Json
+        }
+        Insert: {
+          created_at?: string
+          data_source_id: string
+          id?: string
+          row_index: number
+          values?: Json
+        }
+        Update: {
+          created_at?: string
+          data_source_id?: string
+          id?: string
+          row_index?: number
+          values?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_source_rows_data_source_id_fkey"
+            columns: ["data_source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_sources: {
+        Row: {
+          columns: string[]
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          columns?: string[]
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          columns?: string[]
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      print_jobs: {
+        Row: {
+          created_at: string
+          current_row_index: number
+          data_source_id: string
+          field_mappings: Json
+          id: string
+          message_name: string
+          printer_id: number
+          status: string
+          total_rows: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_row_index?: number
+          data_source_id: string
+          field_mappings?: Json
+          id?: string
+          message_name: string
+          printer_id: number
+          status?: string
+          total_rows?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_row_index?: number
+          data_source_id?: string
+          field_mappings?: Json
+          id?: string
+          message_name?: string
+          printer_id?: number
+          status?: string
+          total_rows?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_jobs_data_source_id_fkey"
+            columns: ["data_source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
