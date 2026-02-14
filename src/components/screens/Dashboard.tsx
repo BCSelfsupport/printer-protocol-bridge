@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil, RotateCcw, Power, FileText, SlidersHorizontal, Brush, Settings, Wrench } from 'lucide-react';
+import { useEffect, useRef, useState, useMemo } from 'react';
+import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil, RotateCcw, Power, FileText, SlidersHorizontal, Brush, Settings, Wrench, Filter } from 'lucide-react';
 import { Wifi } from 'lucide-react';
+import { getFilterStatus } from '@/lib/filterTracker';
+import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { PrinterStatus } from '@/types/printer';
 import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
 import { MessageDetails, MessageField } from '@/components/screens/EditMessageScreen';
@@ -35,6 +37,9 @@ interface DashboardProps {
   onNavigate?: (item: NavItem) => void;
   onTurnOff?: () => void;
   onHome?: () => void;
+  // Filter gauge props
+  selectedPrinterId?: number;
+  streamHours?: string;
 }
 
 export function Dashboard({
@@ -61,8 +66,18 @@ export function Dashboard({
   onNavigate,
   onTurnOff,
   onHome,
+  selectedPrinterId,
+  streamHours,
 }: DashboardProps) {
   const [countersDialogOpen, setCountersDialogOpen] = useState(false);
+
+  // Filter status for the gauge
+  const filterStatus = useMemo(() => {
+    if (selectedPrinterId == null || !streamHours) return null;
+    const pumpHours = parseStreamHoursToNumber(streamHours);
+    if (pumpHours == null) return null;
+    return getFilterStatus(selectedPrinterId, pumpHours);
+  }, [selectedPrinterId, streamHours]);
 
   // Notify parent when this screen mounts/unmounts for polling control
   useEffect(() => {
@@ -220,6 +235,39 @@ export function Dashboard({
                   <span className="text-sm md:text-base font-medium">Edit</span>
                 </button>
               </div>
+
+              {/* Filter column */}
+              {filterStatus && (
+                <div className="flex flex-col gap-4">
+                  <div className={`w-[80px] md:w-[120px] h-[70px] md:h-[100px] rounded-lg flex items-center justify-between px-2 md:px-3 ${
+                    filterStatus.hoursRemaining <= 200 ? (filterStatus.status === 'critical' ? 'bg-destructive' : 'bg-warning') :
+                    'industrial-button'
+                  }`}>
+                    <div className="flex flex-col items-center">
+                      <Filter className="w-5 h-5 md:w-8 md:h-8 text-white" />
+                      <span className="text-[8px] md:text-xs text-white font-medium mt-1">Filter</span>
+                    </div>
+                    <div className="flex flex-col-reverse gap-0.5 h-10 md:h-16 w-3 md:w-5 bg-black/20 rounded p-0.5">
+                      {[0, 1, 2, 3].map((seg) => {
+                        const pct = 100 - filterStatus.percentUsed;
+                        const filledSegments = pct >= 75 ? 4 : pct >= 50 ? 3 : pct >= 25 ? 2 : pct > 0 ? 1 : 0;
+                        const isFilled = seg < filledSegments;
+                        return (
+                          <div
+                            key={seg}
+                            className={`flex-1 rounded-sm transition-colors ${
+                              isFilled ? 'bg-white' : 'bg-white/20'
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="text-center text-[10px] md:text-xs text-muted-foreground font-mono">
+                    {filterStatus.hoursRemaining.toFixed(0)}h
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Start/Stop buttons with Count panel */}

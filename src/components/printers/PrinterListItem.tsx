@@ -1,4 +1,6 @@
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, RefreshCcw } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, RefreshCcw, Filter } from 'lucide-react';
+import { getFilterStatus } from '@/lib/filterTracker';
+import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -31,6 +33,8 @@ interface PrinterListItemProps {
   slaveCount?: number;
   /** Callback to trigger sync for this master */
   onSync?: () => void;
+  /** Stream hours string from metrics for filter gauge */
+  streamHours?: string;
 }
 
 // Helper to get color for fluid levels
@@ -63,7 +67,18 @@ export function PrinterListItem({
   syncGroupIndex,
   slaveCount = 0,
   onSync,
+  streamHours,
 }: PrinterListItemProps) {
+  
+  // Filter status for this printer
+  const pumpHours = streamHours ? parseStreamHoursToNumber(streamHours) : null;
+  const filterSt = pumpHours != null ? getFilterStatus(printer.id, pumpHours) : null;
+  const getFilterColor = () => {
+    if (!filterSt) return 'text-muted-foreground';
+    if (filterSt.hoursRemaining <= 200) return filterSt.status === 'critical' ? 'text-destructive' : 'text-warning';
+    return 'text-success';
+  };
+  const filterLabel = filterSt ? `${filterSt.hoursRemaining.toFixed(0)}h` : '?';
   
   const groupColor = syncGroupIndex !== undefined && syncGroupIndex >= 0
     ? SYNC_GROUP_COLORS[syncGroupIndex % SYNC_GROUP_COLORS.length]
@@ -196,6 +211,14 @@ export function PrinterListItem({
                     {printer.makeupLevel || '?'}
                   </span>
                 </div>
+                {filterSt && (
+                  <div className="flex items-center gap-1.5" title={`Filter: ${filterLabel}`}>
+                    <Filter className={`w-4 h-4 ${getFilterColor()}`} />
+                    <span className={`text-xs font-semibold ${getFilterColor()}`}>
+                      {filterLabel}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -343,6 +366,14 @@ export function PrinterListItem({
                   {printer.makeupLevel || '?'}
                 </span>
               </div>
+              {filterSt && (
+                <div className="flex items-center gap-1" title={`Filter: ${filterLabel}`}>
+                  <Filter className={`w-3 h-3 ${getFilterColor()}`} />
+                  <span className={`text-[10px] font-semibold ${getFilterColor()}`}>
+                    {filterLabel}
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>

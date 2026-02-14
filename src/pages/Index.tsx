@@ -396,6 +396,8 @@ const Index = () => {
             onNavigate={handleNavigate}
             onTurnOff={handleTurnOff}
             onHome={handleHome}
+            selectedPrinterId={connectionState.connectedPrinter?.id}
+            streamHours={connectionState.metrics?.streamHours}
           />
         );
       case 'editMessage':
@@ -578,6 +580,7 @@ const Index = () => {
         onConsumables={() => setCurrentScreen('consumables')}
         onReports={() => setCurrentScreen('reports')}
         lowStockCount={consumableStorage.getLowStockConsumables().length}
+        connectedMetrics={connectionState.metrics}
       />
     );
   };
