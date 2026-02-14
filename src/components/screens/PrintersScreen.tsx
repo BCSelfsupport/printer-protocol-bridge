@@ -78,6 +78,8 @@ interface PrintersScreenProps {
   onConsumables?: () => void;
   onReports?: () => void;
   lowStockCount?: number;
+  /** Metrics for the connected printer (for filter gauge) */
+  connectedMetrics?: PrinterMetrics | null;
 }
 
 // Sortable wrapper for PrinterListItem
@@ -97,6 +99,7 @@ function SortablePrinterItem({
   syncGroupIndex,
   slaveCount,
   onSync,
+  streamHours,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -113,6 +116,7 @@ function SortablePrinterItem({
   syncGroupIndex?: number;
   slaveCount?: number;
   onSync?: () => void;
+  streamHours?: string;
 }) {
   const {
     attributes,
@@ -161,6 +165,7 @@ function SortablePrinterItem({
         syncGroupIndex={syncGroupIndex}
         slaveCount={slaveCount}
         onSync={onSync}
+        streamHours={streamHours}
       />
     </div>
   );
@@ -208,6 +213,7 @@ export function PrintersScreen({
   onConsumables,
   onReports,
   lowStockCount = 0,
+  connectedMetrics,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -443,6 +449,7 @@ export function PrintersScreen({
                       syncGroupIndex={syncGroupMap.get(printer.id)}
                       slaveCount={printer.role === 'master' ? slaveCountMap.get(printer.id) ?? 0 : undefined}
                       onSync={printer.role === 'master' && onSyncMaster ? () => onSyncMaster(printer.id) : undefined}
+                      streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
                     />
                   ))}
                 </SortableContext>
@@ -510,6 +517,8 @@ export function PrintersScreen({
               onUnmount={onControlUnmount}
               onNavigate={onNavigate}
               onTurnOff={onTurnOff}
+              selectedPrinterId={connectedPrinter?.id}
+              streamHours={connectedMetrics?.streamHours}
             />
           </div>
         ) : (
