@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil, RotateCcw, Power, FileText, SlidersHorizontal, Brush, Settings, Wrench, Filter } from 'lucide-react';
+import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil, RotateCcw, Power, FileText, Database, SlidersHorizontal, Brush, Settings, Wrench, Filter } from 'lucide-react';
 import { Wifi } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
@@ -379,6 +379,7 @@ export function Dashboard({
 
             {[
               { id: 'messages' as const, label: 'Messages', icon: <FileText className="w-5 h-5 md:w-6 md:h-6" /> },
+              { id: 'datasource' as const, label: 'Data', icon: <Database className="w-5 h-5 md:w-6 md:h-6" /> },
               { id: 'adjust' as const, label: 'Adjust', icon: <SlidersHorizontal className="w-5 h-5 md:w-6 md:h-6" /> },
               { id: 'clean' as const, label: 'Clean', icon: <Brush className="w-5 h-5 md:w-6 md:h-6" />, disabled: true },
               { id: 'setup' as const, label: 'Setup', icon: <Settings className="w-5 h-5 md:w-6 md:h-6" /> },
