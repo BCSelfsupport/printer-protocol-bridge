@@ -523,13 +523,6 @@ export function ReportsScreen({
                 <h2 className="text-lg font-black text-foreground truncate tracking-tight">{selectedPrinter.name}</h2>
                 <p className="text-[10px] text-muted-foreground font-mono">{selectedPrinter.ipAddress}:{selectedPrinter.port}</p>
               </div>
-              <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                selectedOEE.oee >= 85 ? 'bg-success text-success-foreground' :
-                selectedOEE.oee >= 60 ? 'bg-warning text-warning-foreground' :
-                'bg-destructive text-destructive-foreground'
-              }`}>
-                {getOEELabel(selectedOEE.oee)}
-              </span>
             </div>
 
             {/* Dark dashboard gauges panel */}
