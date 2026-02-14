@@ -966,8 +966,8 @@ export function MessageCanvas({
       />
 
       {/* Canvas area - native horizontal swipe (same as the button bars) */}
-      <div ref={containerRef} className="border-2 border-muted rounded-lg overflow-hidden w-full relative">
-        <div ref={scrollerRef} className="overflow-x-auto overflow-y-hidden scrollbar-thin">
+      <div ref={containerRef} className="border-2 border-muted rounded-lg w-full relative">
+        <div ref={scrollerRef} className="overflow-x-auto overflow-y-hidden scrollbar-thin rounded-lg">
           <canvas
             ref={canvasRef}
             width={canvasPixelWidth}
