@@ -176,7 +176,6 @@ function DashGauge({ value, label, gradientId, size = 140 }: {
     return () => clearTimeout(t);
   }, [value]);
 
-  // Full round dial — center is at (size/2, size/2)
   const cx = size / 2;
   const cy = size / 2;
   const outerR = size * 0.44;
@@ -184,41 +183,45 @@ function DashGauge({ value, label, gradientId, size = 140 }: {
   const bandR = outerR - bandWidth / 2;
   const toRad = (d: number) => (d * Math.PI) / 180;
 
-  // Arc: 240° sweep from 150° to -90° (bottom gap)
-  const startDeg = 150; // lower-left
-  const totalDeg = 240;
+  // Math-coords point helper (CCW from right, y-up → converted to SVG y-down)
+  const px = (deg: number, r: number) => cx + r * Math.cos(toRad(deg));
+  const py = (deg: number, r: number) => cy - r * Math.sin(toRad(deg));
 
-  const makeArc = (fromPct: number, toPct: number) => {
-    const a1 = toRad(startDeg - fromPct * totalDeg);
-    const a2 = toRad(startDeg - toPct * totalDeg);
-    const x1 = cx + bandR * Math.cos(a1);
-    const y1 = cy - bandR * Math.sin(a1);
-    const x2 = cx + bandR * Math.cos(a2);
-    const y2 = cy - bandR * Math.sin(a2);
-    const sweep = (toPct - fromPct) * totalDeg;
-    const large = sweep > 180 ? 1 : 0;
-    return `M ${x1} ${y1} A ${bandR} ${bandR} 0 ${large} 0 ${x2} ${y2}`;
+  // 270° arc, gap at bottom center
+  // Starts bottom-right (315° math), sweeps CCW in math (= CW on screen)
+  // to bottom-left (225° math)
+  // fraction 0 = 315° (red), fraction 1 = 225° (green)
+  const angleAt = (f: number) => 315 + f * 270; // math degrees, wraps past 360
+
+  const makeArc = (f1: number, f2: number) => {
+    const a1 = angleAt(f1);
+    const a2 = angleAt(f2);
+    const x1 = px(a1, bandR), y1 = py(a1, bandR);
+    const x2 = px(a2, bandR), y2 = py(a2, bandR);
+    const sweep = (f2 - f1) * 270;
+    const largeArc = sweep > 180 ? 1 : 0;
+    // CW on screen = sweep-flag 1
+    return `M ${x1} ${y1} A ${bandR} ${bandR} 0 ${largeArc} 1 ${x2} ${y2}`;
   };
 
-  // Colored band segments (green=high, red=low — reversed so green is on the right for high values)
+  // Segments: red (right, 0%) → orange → yellow → lime → green (left, 100%)
   const segments = [
-    { from: 0, to: 0.20, color: '#22c55e' },    // green (low end = good)
-    { from: 0.20, to: 0.40, color: '#84cc16' },  // lime
+    { from: 0, to: 0.20, color: '#dc2626' },    // red
+    { from: 0.20, to: 0.40, color: '#f97316' },  // orange
     { from: 0.40, to: 0.60, color: '#eab308' },  // yellow
-    { from: 0.60, to: 0.80, color: '#f97316' },  // orange
-    { from: 0.80, to: 1.0, color: '#dc2626' },   // red (high end = bad)
+    { from: 0.60, to: 0.80, color: '#84cc16' },  // lime
+    { from: 0.80, to: 1.0, color: '#22c55e' },   // green
   ];
 
   // Tick marks
   const ticks: { angle: number; major: boolean }[] = [];
   for (let i = 0; i <= 10; i++) {
-    ticks.push({ angle: startDeg - (i / 10) * totalDeg, major: i % 2 === 0 });
+    ticks.push({ angle: angleAt(i / 10), major: i % 2 === 0 });
   }
 
-  // Needle — points toward the value on the arc
+  // Needle: OEE value → fraction on arc (100% = green/left, 0% = red/right)
   const pct = Math.min(100, Math.max(0, animVal)) / 100;
-  const needleAngleDeg = startDeg - pct * totalDeg;
-  const needleAngle = toRad(needleAngleDeg);
+  const needleAngle = toRad(angleAt(pct));
   const needleLen = outerR * 0.72;
   const needleTail = outerR * 0.15;
   const nx = cx + needleLen * Math.cos(needleAngle);
@@ -286,7 +289,7 @@ function DashGauge({ value, label, gradientId, size = 140 }: {
         </svg>
 
         {/* Value + label overlay in bottom center of dial */}
-        <div className="absolute inset-0 flex flex-col items-center justify-end pb-[18%] pointer-events-none">
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-[15%] pointer-events-none">
           <span className="text-lg sm:text-xl md:text-2xl font-black tabular-nums text-white tracking-tight leading-none">
             {animVal.toFixed(0)}%
           </span>
