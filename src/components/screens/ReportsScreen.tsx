@@ -686,22 +686,6 @@ export function ReportsScreen({
                       />
                     </div>
 
-                    {/* Mini bar chart */}
-                    {last5.length > 0 && (
-                      <div className="flex items-end gap-1 h-8 justify-center mb-2">
-                        {last5.map((m, i) => (
-                          <div
-                            key={i}
-                            className="w-4 rounded-t-sm transition-all duration-500"
-                            style={{
-                              height: `${Math.max(12, (m.oee.oee / maxOee) * 100)}%`,
-                              backgroundColor: getOEEColor(m.oee.oee),
-                              opacity: 0.5 + (i / last5.length) * 0.5,
-                            }}
-                          />
-                        ))}
-                      </div>
-                    )}
 
                     {/* Footer */}
                     <div className="flex items-center justify-between pt-2 border-t border-border/30">
