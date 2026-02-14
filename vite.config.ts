@@ -37,10 +37,8 @@ export default defineConfig(({ mode }) => ({
         background_color: '#0a0a0a',
         theme_color: '#0a0a0a',
         icons: [
-          { src: '/codesync-icon.png?v=3', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: '/codesync-icon.png?v=3', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-          { src: '/codesync-icon.png?v=3', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: '/codesync-icon.png?v=3', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/codesync-icon.png?v=4', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/codesync-icon.png?v=4', sizes: '512x512', type: 'image/png', purpose: 'any' },
         ],
       },
     }),
