@@ -426,83 +426,58 @@ export function ReportsScreen({
 
         {/* ===== Selected Printer OEE Detail (at top) ===== */}
         {selectedPrinter && selectedOEE && (
-          <div className="rounded-2xl border border-primary/15 p-6 md:p-8 shadow-xl relative overflow-hidden animate-fade-in"
-               style={{
-                 background: 'linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--secondary) / 0.5) 50%, hsl(var(--card)) 100%)',
-               }}>
-            {/* Ambient light effects */}
-            <div className="absolute top-0 right-0 w-72 h-72 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl pointer-events-none"
-                 style={{ background: `radial-gradient(circle, ${getOEEColor(selectedOEE.oee)}15 0%, transparent 70%)` }} />
-            <div className="absolute bottom-0 left-0 w-56 h-56 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl pointer-events-none"
-                 style={{ background: `radial-gradient(circle, hsl(var(--primary) / 0.08) 0%, transparent 70%)` }} />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl pointer-events-none"
-                 style={{ background: `radial-gradient(circle, hsl(var(--success) / 0.04) 0%, transparent 60%)` }} />
-
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-6 relative z-10">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20 shadow-sm">
-                <PrinterIcon className="w-5 h-5 text-primary" />
+          <div className="rounded-2xl border border-border/30 overflow-hidden shadow-lg animate-fade-in">
+            {/* Header bar */}
+            <div className="flex items-center gap-3 px-5 py-3 bg-secondary/50 border-b border-border/30">
+              <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
+                <PrinterIcon className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-xl md:text-2xl font-black text-foreground truncate tracking-tight">{selectedPrinter.name}</h2>
-                <p className="text-[11px] text-muted-foreground font-mono tracking-wider">{selectedPrinter.ipAddress}:{selectedPrinter.port}</p>
+                <h2 className="text-lg font-black text-foreground truncate tracking-tight">{selectedPrinter.name}</h2>
+                <p className="text-[10px] text-muted-foreground font-mono">{selectedPrinter.ipAddress}:{selectedPrinter.port}</p>
               </div>
-              <span className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-lg ${
+              <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
                 selectedOEE.oee >= 85 ? 'bg-success text-success-foreground' :
                 selectedOEE.oee >= 60 ? 'bg-warning text-warning-foreground' :
                 'bg-destructive text-destructive-foreground'
-              }`}
-                    style={{
-                      boxShadow: `0 4px 15px ${
-                        selectedOEE.oee >= 85 ? 'hsl(var(--success) / 0.3)' :
-                        selectedOEE.oee >= 60 ? 'hsl(var(--warning) / 0.3)' :
-                        'hsl(var(--destructive) / 0.3)'
-                      }`
-                    }}>
+              }`}>
                 {getOEELabel(selectedOEE.oee)}
               </span>
             </div>
 
-            {/* Separator line */}
-            <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mb-6 relative z-10" />
+            {/* Gauges panel — light neutral background */}
+            <div className="bg-secondary/30 px-5 py-6 md:px-8 md:py-8">
+              <div className="flex justify-center items-end gap-2 md:gap-4 flex-wrap">
+                <OEEGauge value={selectedOEE.availability} label="Availability" size={130} />
 
-            {/* Gauges row — 3 independent gauges with formula */}
-            <div className="relative z-10 mb-6">
-              <div className="rounded-xl bg-gradient-to-b from-secondary/60 to-secondary/20 border border-border/50 p-5 md:p-6">
-                <div className="flex justify-around items-end flex-wrap gap-4 md:gap-6">
-                  <OEEGauge value={selectedOEE.availability} label="Availability" size={120} />
-
-                  {/* × connector */}
-                  <div className="flex flex-col items-center gap-1 pb-8">
-                    <span className="text-xl font-light text-muted-foreground/50">×</span>
-                  </div>
-
-                  <OEEGauge value={selectedOEE.performance} label="Performance" size={120} />
-
-                  {/* = connector */}
-                  <div className="flex flex-col items-center gap-1 pb-8">
-                    <span className="text-xl font-light text-muted-foreground/50">=</span>
-                  </div>
-
-                  <OEEGauge value={selectedOEE.oee} label="OEE" size={150} isPrimary />
+                <div className="flex items-center pb-10">
+                  <span className="text-2xl font-light text-muted-foreground/40">×</span>
                 </div>
+
+                <OEEGauge value={selectedOEE.performance} label="Performance" size={130} />
+
+                <div className="flex items-center pb-10">
+                  <span className="text-2xl font-light text-muted-foreground/40">=</span>
+                </div>
+
+                <OEEGauge value={selectedOEE.oee} label="OEE" size={160} isPrimary />
               </div>
             </div>
 
-            {/* Stat cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 relative z-10 mb-6">
+            {/* Stat cards row — pastel colored backgrounds */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 md:p-5 bg-card">
               <StatCard icon={Target} label="Target" value={selectedOEE.targetCount.toLocaleString()} accent="primary" />
               <StatCard icon={CheckCircle2} label="Actual" value={selectedOEE.actualCount.toLocaleString()} accent="success" />
               <StatCard icon={Timer} label="Run Time" value={formatDuration(selectedOEE.runTime)} accent="warning" />
               <StatCard icon={AlertTriangle} label="Downtime" value={formatDuration(selectedOEE.totalDowntime)} accent="destructive" />
             </div>
 
-            {/* View full report button */}
-            <div className="flex justify-center relative z-10">
+            {/* View full report */}
+            <div className="flex justify-center py-3 bg-card border-t border-border/20">
               <Button
                 size="sm"
                 onClick={() => setDetailPrinterId(selectedPrinterId)}
-                className="industrial-button text-white border-0 px-6 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-shadow"
+                className="industrial-button text-white border-0 px-6 py-2 rounded-xl"
               >
                 <BarChart3 className="w-4 h-4 mr-2" /> View Full Report
               </Button>
