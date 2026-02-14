@@ -202,11 +202,11 @@ function DashGauge({ value, label, gradientId, size = 140 }: {
 
   // Colored band segments (green=high, red=low — reversed so green is on the right for high values)
   const segments = [
-    { from: 0, to: 0.20, color: '#dc2626' },    // red (low end)
-    { from: 0.20, to: 0.40, color: '#f97316' },  // orange
+    { from: 0, to: 0.20, color: '#22c55e' },    // green (low end = good)
+    { from: 0.20, to: 0.40, color: '#84cc16' },  // lime
     { from: 0.40, to: 0.60, color: '#eab308' },  // yellow
-    { from: 0.60, to: 0.80, color: '#84cc16' },  // lime
-    { from: 0.80, to: 1.0, color: '#22c55e' },   // green (high end)
+    { from: 0.60, to: 0.80, color: '#f97316' },  // orange
+    { from: 0.80, to: 1.0, color: '#dc2626' },   // red (high end = bad)
   ];
 
   // Tick marks
