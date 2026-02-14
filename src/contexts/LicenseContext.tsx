@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 
-export type LicenseTier = 'lite' | 'full' | 'database' | 'dev';
+export type LicenseTier = 'lite' | 'full' | 'database' | 'demo' | 'dev';
 
 interface LicenseState {
   tier: LicenseTier;
@@ -16,6 +16,7 @@ interface LicenseContextValue extends LicenseState {
   /** Feature gating helpers */
   canNetwork: boolean;
   canDatabase: boolean;
+  isDemo: boolean;
 }
 
 const LicenseContext = createContext<LicenseContextValue | null>(null);
@@ -130,10 +131,11 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   };
 
   const canNetwork = state.tier !== 'lite';
-  const canDatabase = state.tier === 'database' || state.tier === 'dev';
+  const canDatabase = state.tier === 'database' || state.tier === 'demo' || state.tier === 'dev';
+  const isDemo = state.tier === 'demo';
 
   return (
-    <LicenseContext.Provider value={{ ...state, activate, deactivate, canNetwork, canDatabase }}>
+    <LicenseContext.Provider value={{ ...state, activate, deactivate, canNetwork, canDatabase, isDemo }}>
       {children}
     </LicenseContext.Provider>
   );

@@ -68,6 +68,7 @@ export function LicenseAssignmentPanel() {
         customer_name: name,
         customer_email: email,
         customer_company: company,
+        expires_in_days: tier === 'demo' ? 30 : undefined,
       });
       if (result.error) {
         toast.error(result.error);
@@ -100,6 +101,7 @@ export function LicenseAssignmentPanel() {
     lite: 'bg-slate-100 text-slate-700 border-slate-300',
     full: 'bg-blue-100 text-blue-700 border-blue-300',
     database: 'bg-purple-100 text-purple-700 border-purple-300',
+    demo: 'bg-amber-100 text-amber-700 border-amber-300',
   };
 
   return (
@@ -124,6 +126,7 @@ export function LicenseAssignmentPanel() {
                 <SelectItem value="lite">LITE — No Network</SelectItem>
                 <SelectItem value="full">FULL — Network Access</SelectItem>
                 <SelectItem value="database">DATABASE — Full + Database</SelectItem>
+                <SelectItem value="demo">DEMO — Full Access, 30-day Trial</SelectItem>
               </SelectContent>
             </Select>
           </div>
