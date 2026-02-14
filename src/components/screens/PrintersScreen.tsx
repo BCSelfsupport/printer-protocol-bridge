@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Server, GripVertical, Package, BarChart3, Lock } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Shield, Server, GripVertical, Package, BarChart3, Lock } from 'lucide-react';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 import { useState, useEffect, useMemo } from 'react';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
@@ -480,7 +480,7 @@ export function PrintersScreen({
                 className="h-6 text-[10px] px-2 border-slate-600 text-slate-400 hover:bg-slate-800"
                 onClick={onLicense}
               >
-                <Key className="w-2.5 h-2.5 mr-1" />
+                <Shield className="w-2.5 h-2.5 mr-1" />
                 {tier === 'dev' ? 'DEV' : tier.toUpperCase()}
               </Button>
               <span className="text-[10px] text-slate-500">
