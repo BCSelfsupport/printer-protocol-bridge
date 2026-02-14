@@ -186,22 +186,38 @@
   }
 }
 
-/* Always-visible thin scrollbar for message preview */
+/* Always-visible scrollbar for message preview - large enough for touch on mobile */
 .scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: hsl(var(--muted-foreground) / 0.4) hsl(var(--muted) / 0.2);
+  scrollbar-width: auto;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.5) hsl(var(--muted) / 0.3);
 }
 .scrollbar-thin::-webkit-scrollbar {
-  height: 8px;
+  height: 14px;
 }
 .scrollbar-thin::-webkit-scrollbar-track {
-  background: hsl(var(--muted) / 0.2);
-  border-radius: 4px;
+  background: hsl(var(--muted) / 0.3);
+  border-radius: 7px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.4);
-  border-radius: 4px;
+  background: hsl(var(--muted-foreground) / 0.5);
+  border-radius: 7px;
+  min-width: 40px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.6);
+  background: hsl(var(--muted-foreground) / 0.7);
+}
+
+@media (min-width: 768px) {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    border-radius: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+  }
 }
