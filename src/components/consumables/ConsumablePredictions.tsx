@@ -18,7 +18,7 @@ import {
 import {
   getFilterStatus,
   getFilterConfig,
-  recordFilterReplacement,
+  recordFilterInfo,
   FilterStatus,
 } from '@/lib/filterTracker';
 
@@ -183,20 +183,39 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
   const [configOpen, setConfigOpen] = useState(false);
   const config = getFilterConfig(printer.id);
   const [filterLife, setFilterLife] = useState(config?.filterLifeHours?.toString() || '2000');
+  const [entryPumpHours, setEntryPumpHours] = useState(pumpHours?.toFixed(1) || '0');
+  const [remainingHours, setRemainingHours] = useState(config?.remainingHoursAtEntry?.toString() || '2000');
   const [, forceUpdate] = useState(0);
+
+  const FILTER_PRESETS = [2000, 5000, 10000];
 
   const status = useMemo(() => {
     if (pumpHours === undefined || pumpHours === null) return null;
     return getFilterStatus(printer.id, pumpHours);
   }, [printer.id, pumpHours]);
 
-  const handleSaveFilter = useCallback(() => {
-    const hours = parseFloat(filterLife) || 2000;
-    const currentPump = pumpHours ?? 0;
-    recordFilterReplacement(printer.id, currentPump, hours);
+  const handleOpenDialog = useCallback(() => {
+    // Pre-fill with current pump hours if available
+    setEntryPumpHours(pumpHours?.toFixed(1) || '0');
+    setFilterLife(config?.filterLifeHours?.toString() || '2000');
+    setRemainingHours(config?.remainingHoursAtEntry?.toString() || '2000');
+    setConfigOpen(true);
+  }, [pumpHours, config]);
+
+  const handleSelectPreset = useCallback((hours: number) => {
+    setFilterLife(hours.toString());
+    // If remaining hasn't been customized yet, default it to the full life
+    setRemainingHours(hours.toString());
+  }, []);
+
+  const handleSave = useCallback(() => {
+    const life = parseFloat(filterLife) || 2000;
+    const pump = parseFloat(entryPumpHours) || 0;
+    const remaining = parseFloat(remainingHours) || life;
+    recordFilterInfo(printer.id, pump, remaining, life);
     setConfigOpen(false);
     forceUpdate(n => n + 1);
-  }, [printer.id, filterLife, pumpHours]);
+  }, [printer.id, filterLife, entryPumpHours, remainingHours]);
 
   return (
     <>
@@ -246,9 +265,9 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
               size="sm"
               variant="ghost"
               className="h-5 text-[10px] px-1.5 mt-1 text-primary"
-              onClick={() => setConfigOpen(true)}
+              onClick={handleOpenDialog}
             >
-              Reset / Configure
+              Update / Reset
             </Button>
           </div>
         ) : (
@@ -256,7 +275,7 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
             size="sm"
             variant="outline"
             className="h-7 text-xs w-full"
-            onClick={() => setConfigOpen(true)}
+            onClick={handleOpenDialog}
           >
             <Filter className="w-3 h-3 mr-1" />
             Set Up Filter Tracking
@@ -265,34 +284,65 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
       </div>
 
       <Dialog open={configOpen} onOpenChange={setConfigOpen}>
-        <DialogContent className="sm:max-w-xs">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Filter Tracking — {printer.name}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {/* Filter size presets */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Filter Life (pump hours)</Label>
+              <Label className="text-xs">Filter Size</Label>
+              <div className="flex gap-2">
+                {FILTER_PRESETS.map(hours => (
+                  <Button
+                    key={hours}
+                    size="sm"
+                    variant={filterLife === hours.toString() ? 'default' : 'outline'}
+                    className="flex-1 h-8 text-xs"
+                    onClick={() => handleSelectPreset(hours)}
+                  >
+                    {hours.toLocaleString()}h
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Current pump hours */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Current Pump Hours</Label>
               <Input
                 type="number"
-                min={1}
-                value={filterLife}
-                onChange={e => setFilterLife(e.target.value)}
-                placeholder="2000"
+                min={0}
+                step={0.1}
+                value={entryPumpHours}
+                onChange={e => setEntryPumpHours(e.target.value)}
               />
               <p className="text-[10px] text-muted-foreground">
-                Hours of pump operation before filter replacement is needed.
+                Read from the printer display or ^TM command.
+                {pumpHours !== undefined && (
+                  <> Live reading: <span className="font-mono font-bold">{pumpHours.toFixed(1)}</span>h</>
+                )}
               </p>
             </div>
-            {pumpHours !== undefined && (
-              <p className="text-xs text-muted-foreground">
-                Current pump hours: <span className="font-mono font-bold">{pumpHours.toFixed(1)}</span>
+
+            {/* Remaining filter life */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Filter Life Remaining (hours)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={remainingHours}
+                onChange={e => setRemainingHours(e.target.value)}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                As shown on the printer's filter life display.
               </p>
-            )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfigOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveFilter}>
-              {config ? 'Reset Filter' : 'Start Tracking'}
+            <Button onClick={handleSave}>
+              {config ? 'Update' : 'Start Tracking'}
             </Button>
           </DialogFooter>
         </DialogContent>
