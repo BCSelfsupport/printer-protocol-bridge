@@ -87,6 +87,9 @@ export function usePrinterConnection() {
   const [availabilityPollingEnabled, setAvailabilityPollingEnabled] = useState(true);
   // Hysteresis: track consecutive offline counts per printer to prevent flapping
   const offlineCountsRef = useRef<Record<number, number>>({});
+  // Ref to avoid re-creating checkPrinterStatus when printers array changes
+  const printersRef = useRef(printers);
+  printersRef.current = printers;
   const disconnectRef = useRef<() => void>(() => {});
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     isConnected: false,
@@ -98,9 +101,10 @@ export function usePrinterConnection() {
   });
 
   // Check printer availability - uses Electron TCP if available, otherwise cloud function
+  const isCheckingRef = useRef(false);
   const checkPrinterStatus = useCallback(async () => {
     if (!availabilityPollingEnabled) return;
-    if (isChecking || printers.length === 0) return;
+    if (isCheckingRef.current || printersRef.current.length === 0) return;
 
     // Emulator: keep emulated printers stable "online" and reflect consumable/error state.
     if (shouldUseEmulator()) {
@@ -109,7 +113,7 @@ export function usePrinterConnection() {
         const hasErrors = (inkLevel?: string, makeupLevel?: string) =>
           inkLevel === 'EMPTY' || makeupLevel === 'EMPTY';
 
-        printers.forEach((p) => {
+        printersRef.current.forEach((p) => {
           const instance = multiPrinterEmulator.getInstanceByIp(p.ipAddress, p.port);
           if (!instance) return;
 
@@ -147,13 +151,14 @@ export function usePrinterConnection() {
       return;
     }
     
+    isCheckingRef.current = true;
     setIsChecking(true);
     try {
       // Exclude the connected printer from availability polling to prevent status
       // oscillation when the cloud function can't reach local-network printers.
       // The connected printer's status is already maintained by ^SU polling.
       const connectedId = connectionState.connectedPrinter?.id;
-      const printerData = printers
+      const printerData = printersRef.current
         .filter((p) => p.id !== connectedId)
         .map((p) => ({
           id: p.id,
@@ -231,19 +236,20 @@ export function usePrinterConnection() {
     } catch (err) {
       console.error('Failed to check printer status:', err);
     } finally {
+      isCheckingRef.current = false;
       setIsChecking(false);
     }
-  }, [availabilityPollingEnabled, printers, isChecking, updatePrinterStatus, connectionState.isConnected, connectionState.connectedPrinter]);
+  }, [availabilityPollingEnabled, updatePrinterStatus, connectionState.isConnected, connectionState.connectedPrinter]);
 
   // Poll printer status every 5 seconds
   useEffect(() => {
     if (!availabilityPollingEnabled) return;
-    if (printers.length === 0) return;
+    if (printersRef.current.length === 0) return;
     
     checkPrinterStatus();
     const interval = setInterval(checkPrinterStatus, 5000);
     return () => clearInterval(interval);
-  }, [availabilityPollingEnabled, printers.length, checkPrinterStatus]);
+  }, [availabilityPollingEnabled, checkPrinterStatus]);
 
   const markAllNotReady = useCallback(() => {
     // Also pause polling so the status sticks
