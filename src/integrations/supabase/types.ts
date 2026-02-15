@@ -97,6 +97,284 @@ export type Database = {
         }
         Relationships: []
       }
+      fleet_events: {
+        Row: {
+          event_type: string
+          id: string
+          message: string
+          metadata: Json | null
+          occurred_at: string
+          printer_id: string
+          severity: string
+        }
+        Insert: {
+          event_type: string
+          id?: string
+          message: string
+          metadata?: Json | null
+          occurred_at?: string
+          printer_id: string
+          severity?: string
+        }
+        Update: {
+          event_type?: string
+          id?: string
+          message?: string
+          metadata?: Json | null
+          occurred_at?: string
+          printer_id?: string
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_events_printer_id_fkey"
+            columns: ["printer_id"]
+            isOneToOne: false
+            referencedRelation: "fleet_printers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fleet_firmware: {
+        Row: {
+          created_at: string
+          file_size: number | null
+          id: string
+          is_latest: boolean | null
+          release_notes: string | null
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          file_size?: number | null
+          id?: string
+          is_latest?: boolean | null
+          release_notes?: string | null
+          version: string
+        }
+        Update: {
+          created_at?: string
+          file_size?: number | null
+          id?: string
+          is_latest?: boolean | null
+          release_notes?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
+      fleet_firmware_updates: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          firmware_id: string
+          id: string
+          printer_id: string
+          progress: number | null
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          firmware_id: string
+          id?: string
+          printer_id: string
+          progress?: number | null
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          firmware_id?: string
+          id?: string
+          printer_id?: string
+          progress?: number | null
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_firmware_updates_firmware_id_fkey"
+            columns: ["firmware_id"]
+            isOneToOne: false
+            referencedRelation: "fleet_firmware"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_firmware_updates_printer_id_fkey"
+            columns: ["printer_id"]
+            isOneToOne: false
+            referencedRelation: "fleet_printers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fleet_printers: {
+        Row: {
+          created_at: string
+          firmware_version: string | null
+          id: string
+          ip_address: string
+          last_seen: string | null
+          name: string
+          port: number
+          serial_number: string | null
+          site_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          firmware_version?: string | null
+          id?: string
+          ip_address: string
+          last_seen?: string | null
+          name: string
+          port?: number
+          serial_number?: string | null
+          site_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          firmware_version?: string | null
+          id?: string
+          ip_address?: string
+          last_seen?: string | null
+          name?: string
+          port?: number
+          serial_number?: string | null
+          site_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_printers_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "fleet_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fleet_sites: {
+        Row: {
+          company: string | null
+          contact_email: string | null
+          created_at: string
+          id: string
+          license_id: string | null
+          location: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          company?: string | null
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          license_id?: string | null
+          location?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          company?: string | null
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          license_id?: string | null
+          location?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_sites_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fleet_telemetry: {
+        Row: {
+          charge: number | null
+          current_message: string | null
+          electronics_temp: number | null
+          hv_on: boolean | null
+          id: string
+          ink_level: string | null
+          jet_running: boolean | null
+          makeup_level: string | null
+          modulation: number | null
+          phase_qual: number | null
+          power_hours: string | null
+          pressure: number | null
+          print_count: number | null
+          printer_id: string
+          printhead_temp: number | null
+          recorded_at: string
+          rps: number | null
+          stream_hours: string | null
+          viscosity: number | null
+        }
+        Insert: {
+          charge?: number | null
+          current_message?: string | null
+          electronics_temp?: number | null
+          hv_on?: boolean | null
+          id?: string
+          ink_level?: string | null
+          jet_running?: boolean | null
+          makeup_level?: string | null
+          modulation?: number | null
+          phase_qual?: number | null
+          power_hours?: string | null
+          pressure?: number | null
+          print_count?: number | null
+          printer_id: string
+          printhead_temp?: number | null
+          recorded_at?: string
+          rps?: number | null
+          stream_hours?: string | null
+          viscosity?: number | null
+        }
+        Update: {
+          charge?: number | null
+          current_message?: string | null
+          electronics_temp?: number | null
+          hv_on?: boolean | null
+          id?: string
+          ink_level?: string | null
+          jet_running?: boolean | null
+          makeup_level?: string | null
+          modulation?: number | null
+          phase_qual?: number | null
+          power_hours?: string | null
+          pressure?: number | null
+          print_count?: number | null
+          printer_id?: string
+          printhead_temp?: number | null
+          recorded_at?: string
+          rps?: number | null
+          stream_hours?: string | null
+          viscosity?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_telemetry_printer_id_fkey"
+            columns: ["printer_id"]
+            isOneToOne: false
+            referencedRelation: "fleet_printers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       license_activations: {
         Row: {
           activated_at: string
