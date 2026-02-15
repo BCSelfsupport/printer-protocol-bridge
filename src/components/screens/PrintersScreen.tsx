@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Key, Shield, Server, GripVertical, Package, BarChart3, Lock } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock } from 'lucide-react';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 import { useState, useEffect, useMemo } from 'react';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
@@ -225,6 +225,7 @@ export function PrintersScreen({
   const [printerToEdit, setPrinterToEdit] = useState<Printer | null>(null);
   const [servicePopupOpen, setServicePopupOpen] = useState(false);
   const [servicePrinter, setServicePrinter] = useState<Printer | null>(null);
+  const [devTaps, setDevTaps] = useState<number[]>([]);
   const isMobile = useIsMobile();
   const { canNetwork, canDatabase, tier, isActivated } = useLicense();
 
@@ -473,12 +474,29 @@ export function PrintersScreen({
               <span>Auto 5s</span>
             </div>
             <div className="flex items-center gap-2">
-              {/* License tier badge */}
+              {/* License tier badge - tap 5 times for hidden dev access */}
               <Button
                 size="sm"
-                variant="outline"
-                className="h-6 text-[10px] px-2 border-slate-600 text-slate-400 hover:bg-slate-800"
-                onClick={onLicense}
+                variant={isDevSignedIn ? "default" : "outline"}
+                className={`h-6 text-[10px] px-2 ${isDevSignedIn 
+                  ? "bg-green-600 hover:bg-green-700 text-white border-green-600" 
+                  : "border-slate-600 text-slate-400 hover:bg-slate-800"
+                }`}
+                onClick={() => {
+                  const now = Date.now();
+                  const newTaps = [...devTaps, now].filter(t => now - t < 2000);
+                  setDevTaps(newTaps);
+                  if (newTaps.length >= 5) {
+                    setDevTaps([]);
+                    if (isDevSignedIn) {
+                      onDevSignOut();
+                    } else {
+                      onDevSignIn();
+                    }
+                  } else {
+                    onLicense();
+                  }
+                }}
               >
                 <Shield className="w-2.5 h-2.5 mr-1" />
                 {isActivated && tier !== 'dev' ? tier.toUpperCase() : 'Activate'}
@@ -486,20 +504,6 @@ export function PrintersScreen({
               <span className="text-[10px] text-slate-500">
                 {printers.filter(p => p.isAvailable).length}/{printers.length}
               </span>
-              {(import.meta.env.DEV || tier === 'dev') && (
-                <Button
-                  size="sm"
-                  variant={isDevSignedIn ? "default" : "outline"}
-                  className={`h-6 text-[10px] px-2 ${isDevSignedIn 
-                    ? "bg-green-600 hover:bg-green-700 text-white" 
-                    : "border-slate-600 text-slate-400 hover:bg-slate-800"
-                  }`}
-                  onClick={isDevSignedIn ? onDevSignOut : onDevSignIn}
-                >
-                  <Key className="w-2.5 h-2.5 mr-1" />
-                  {isDevSignedIn ? "Out" : "Dev"}
-                </Button>
-              )}
             </div>
           </div>
         </div>
