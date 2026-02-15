@@ -49,7 +49,11 @@ export function LicenseActivationDialog({ open, onOpenChange }: LicenseActivatio
           {/* Current status */}
           <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
             <span className="text-sm font-medium">Current Tier</span>
-            <Badge className={current.color}>{current.label}</Badge>
+            {isActivated && productKey ? (
+              <Badge className={current.color}>{current.label}</Badge>
+            ) : (
+              <Badge variant="outline" className="text-muted-foreground">NOT ACTIVATED</Badge>
+            )}
           </div>
 
           {isActivated && productKey && (
