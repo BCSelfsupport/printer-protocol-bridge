@@ -187,17 +187,17 @@ Deno.serve(async (req) => {
 async function seedPrintersAndData(supabase: any, siteIds: string[], sites: any[]) {
   const printerConfigs = [
     // Site 0: Dairy Fresh - 3 printers
-    { site_id: siteIds[0], name: "Line 1 - Milk Cartons", ip_address: "192.168.1.55", port: 23, firmware_version: "V2.6.1", serial_number: "BC-2024-0112", status: "online" },
-    { site_id: siteIds[0], name: "Line 2 - Yogurt Pots", ip_address: "192.168.1.56", port: 23, firmware_version: "V2.5.3", serial_number: "BC-2024-0089", status: "online" },
-    { site_id: siteIds[0], name: "Line 3 - Cheese Blocks", ip_address: "192.168.1.57", port: 23, firmware_version: "V2.4.0", serial_number: "BC-2023-0211", status: "offline" },
+    { site_id: siteIds[0], name: "Line 1 - Milk Cartons", ip_address: "192.168.1.55", port: 23, firmware_version: "01-09-00-20", serial_number: "24-08-12-002", status: "online" },
+    { site_id: siteIds[0], name: "Line 2 - Yogurt Pots", ip_address: "192.168.1.56", port: 23, firmware_version: "01-09-00-14", serial_number: "24-06-03-001", status: "online" },
+    { site_id: siteIds[0], name: "Line 3 - Cheese Blocks", ip_address: "192.168.1.57", port: 23, firmware_version: "01-09-00-14", serial_number: "23-11-15-003", status: "offline" },
     // Site 1: PackRight - 2 printers
-    { site_id: siteIds[1], name: "Primary Coder", ip_address: "10.0.1.20", port: 23, firmware_version: "V2.6.1", serial_number: "BC-2024-0156", status: "online" },
-    { site_id: siteIds[1], name: "Secondary Coder", ip_address: "10.0.1.21", port: 23, firmware_version: "V2.6.0", serial_number: "BC-2024-0157", status: "online" },
+    { site_id: siteIds[1], name: "Primary Coder", ip_address: "10.0.1.20", port: 23, firmware_version: "01-09-00-20", serial_number: "24-09-22-001", status: "online" },
+    { site_id: siteIds[1], name: "Secondary Coder", ip_address: "10.0.1.21", port: 23, firmware_version: "01-09-00-14", serial_number: "24-09-22-002", status: "online" },
     // Site 2: Atlantic Beverages - 4 printers
-    { site_id: siteIds[2], name: "Bottling Line A", ip_address: "172.16.0.10", port: 23, firmware_version: "V2.6.1", serial_number: "BC-2024-0200", status: "online" },
-    { site_id: siteIds[2], name: "Bottling Line B", ip_address: "172.16.0.11", port: 23, firmware_version: "V2.5.3", serial_number: "BC-2024-0201", status: "online" },
-    { site_id: siteIds[2], name: "Can Line 1", ip_address: "172.16.0.12", port: 23, firmware_version: "V2.3.1", serial_number: "BC-2023-0150", status: "error" },
-    { site_id: siteIds[2], name: "Can Line 2", ip_address: "172.16.0.13", port: 23, firmware_version: "V2.6.1", serial_number: "BC-2024-0202", status: "online" },
+    { site_id: siteIds[2], name: "Bottling Line A", ip_address: "172.16.0.10", port: 23, firmware_version: "01-09-00-20", serial_number: "24-10-05-001", status: "online" },
+    { site_id: siteIds[2], name: "Bottling Line B", ip_address: "172.16.0.11", port: 23, firmware_version: "01-09-00-14", serial_number: "24-10-05-002", status: "online" },
+    { site_id: siteIds[2], name: "Can Line 1", ip_address: "172.16.0.12", port: 23, firmware_version: "01-09-00-14", serial_number: "23-07-18-001", status: "error" },
+    { site_id: siteIds[2], name: "Can Line 2", ip_address: "172.16.0.13", port: 23, firmware_version: "01-09-00-20", serial_number: "24-10-05-003", status: "online" },
   ];
 
   const { data: printers, error: pErr } = await supabase
@@ -261,11 +261,8 @@ async function seedPrintersAndData(supabase: any, siteIds: string[], sites: any[
 
   // Seed firmware versions
   const firmwareVersions = [
-    { version: "V2.6.1", release_notes: "Latest stable - improved gutter detection, new Auto Encoder Reverse mode", file_size: 2048576, is_latest: true },
-    { version: "V2.6.0", release_notes: "Added AllowErrors support, expanded ^SU fields", file_size: 2031616, is_latest: false },
-    { version: "V2.5.3", release_notes: "Bug fix release - viscosity calculation improvements", file_size: 1998848, is_latest: false },
-    { version: "V2.4.0", release_notes: "Added temperature monitoring via ^TP command", file_size: 1966080, is_latest: false },
-    { version: "V2.3.1", release_notes: "Legacy release - basic remote communication", file_size: 1933312, is_latest: false },
+    { version: "01-09-00-20", release_notes: "Latest stable - improved gutter detection, new Auto Encoder Reverse mode, expanded ^SU fields", file_size: 2048576, is_latest: true },
+    { version: "01-09-00-14", release_notes: "Previous release - basic remote communication, viscosity calculation, temperature monitoring via ^TP command", file_size: 1966080, is_latest: false },
   ];
   await supabase.from("fleet_firmware").insert(firmwareVersions);
 }
