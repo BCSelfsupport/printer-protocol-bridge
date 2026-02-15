@@ -440,13 +440,25 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
   const fetchPrinterDetail = useCallback(async (printer: FleetPrinter) => {
     setDetailLoading(true);
     try {
-      const [detail, fw] = await Promise.all([
+      const [detail, fw, sitesJson] = await Promise.all([
         fleetCall('printer-detail', { printerId: printer.id }),
         fleetCall('firmware-list'),
+        fleetCall('sites'),
       ]);
       setTelemetry(detail.telemetry || null);
       setEvents(detail.events || []);
       setFirmware(fw.firmware || []);
+      // Update sites and refresh selectedPrinter/selectedSite from fresh data
+      const freshSites = sitesJson.sites || [];
+      setSites(freshSites);
+      for (const site of freshSites) {
+        const freshPrinter = site.fleet_printers?.find((p: FleetPrinter) => p.id === printer.id);
+        if (freshPrinter) {
+          setSelectedPrinter(freshPrinter);
+          setSelectedSite(site);
+          break;
+        }
+      }
     } catch (err) {
       console.error('Printer detail fetch error:', err);
     } finally {
