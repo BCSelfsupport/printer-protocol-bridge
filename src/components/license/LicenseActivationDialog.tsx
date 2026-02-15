@@ -68,7 +68,20 @@ export function LicenseActivationDialog({ open, onOpenChange }: LicenseActivatio
             </div>
           )}
 
-          {!isActivated && (
+          {isActivated && !productKey && tier === 'dev' && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-amber-600">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Auto-assigned (dev build)</span>
+              </div>
+              <Button variant="outline" size="sm" onClick={deactivate} className="w-full">
+                <LogOut className="w-3 h-3 mr-1" />
+                Switch to LITE (test mode)
+              </Button>
+            </div>
+          )}
+
+          {(!isActivated || (tier === 'dev' && !productKey)) && (
             <div className="space-y-3">
               <div className="space-y-1">
                 <Label className="text-sm">Product Key</Label>
