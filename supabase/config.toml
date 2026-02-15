@@ -1,1 +1,19 @@
 project_id = "lpqatjynvfyhrizaioxi"
+
+[functions.fleet-monitoring]
+verify_jwt = false
+
+[functions.check-printer-status]
+verify_jwt = false
+
+[functions.license]
+verify_jwt = false
+
+[functions.trigger-build]
+verify_jwt = false
+
+[functions.github-build-status]
+verify_jwt = false
+
+[functions.verify-dev-access]
+verify_jwt = false
