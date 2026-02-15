@@ -147,6 +147,9 @@ Deno.serve(async (req) => {
           { name: "Dairy Fresh Co.", company: "Dairy Fresh", location: "Dublin, Ireland", contact_email: "ops@dairyfresh.ie" },
           { name: "PackRight Industries", company: "PackRight", location: "Cork, Ireland", contact_email: "service@packright.ie" },
           { name: "Atlantic Beverages", company: "Atlantic Bev", location: "Galway, Ireland", contact_email: "maint@atlanticbev.ie" },
+          { name: "MedPharma Solutions", company: "MedPharma", location: "Limerick, Ireland", contact_email: "production@medpharma.ie" },
+          { name: "EuroSnacks GmbH", company: "EuroSnacks", location: "Munich, Germany", contact_email: "technik@eurosnacks.de" },
+          { name: "Nordic Aquaculture AS", company: "Nordic Aqua", location: "Bergen, Norway", contact_email: "drift@nordicaqua.no" },
         ];
 
         const { data: siteData, error: siteErr } = await supabase
@@ -204,6 +207,36 @@ async function seedPrintersAndData(supabase: any, siteIds: string[], sites: any[
     { site_id: siteIds[2], name: "Bottling Line B", ip_address: "172.16.0.11", port: 23, firmware_version: "01-09-00-14", serial_number: "24-10-05-002", status: "online" },
     { site_id: siteIds[2], name: "Can Line 1", ip_address: "172.16.0.12", port: 23, firmware_version: "01-09-00-14", serial_number: "23-07-18-001", status: "error" },
     { site_id: siteIds[2], name: "Can Line 2", ip_address: "172.16.0.13", port: 23, firmware_version: "01-09-00-20", serial_number: "24-10-05-003", status: "online" },
+    // Site 3: MedPharma Solutions - 12 printers (large pharma plant)
+    { site_id: siteIds[3], name: "Blister Pack Line 1", ip_address: "10.10.1.10", port: 23, firmware_version: "01-09-00-20", serial_number: "25-01-08-001", status: "online" },
+    { site_id: siteIds[3], name: "Blister Pack Line 2", ip_address: "10.10.1.11", port: 23, firmware_version: "01-09-00-20", serial_number: "25-01-08-002", status: "online" },
+    { site_id: siteIds[3], name: "Blister Pack Line 3", ip_address: "10.10.1.12", port: 23, firmware_version: "01-09-00-14", serial_number: "24-11-20-001", status: "online" },
+    { site_id: siteIds[3], name: "Vial Labeller A", ip_address: "10.10.1.20", port: 23, firmware_version: "01-09-00-20", serial_number: "25-01-08-003", status: "online" },
+    { site_id: siteIds[3], name: "Vial Labeller B", ip_address: "10.10.1.21", port: 23, firmware_version: "01-09-00-14", serial_number: "24-07-15-002", status: "online" },
+    { site_id: siteIds[3], name: "Carton Coder 1", ip_address: "10.10.2.10", port: 23, firmware_version: "01-09-00-20", serial_number: "25-02-01-001", status: "online" },
+    { site_id: siteIds[3], name: "Carton Coder 2", ip_address: "10.10.2.11", port: 23, firmware_version: "01-09-00-20", serial_number: "25-02-01-002", status: "online" },
+    { site_id: siteIds[3], name: "Carton Coder 3", ip_address: "10.10.2.12", port: 23, firmware_version: "01-09-00-14", serial_number: "24-05-10-001", status: "error" },
+    { site_id: siteIds[3], name: "Serialisation Line", ip_address: "10.10.3.10", port: 23, firmware_version: "01-09-00-20", serial_number: "25-01-22-001", status: "online" },
+    { site_id: siteIds[3], name: "Tamper Evidence Coder", ip_address: "10.10.3.11", port: 23, firmware_version: "01-09-00-20", serial_number: "25-01-22-002", status: "online" },
+    { site_id: siteIds[3], name: "Batch Printer - Warehouse", ip_address: "10.10.4.10", port: 23, firmware_version: "01-09-00-14", serial_number: "23-09-30-001", status: "offline" },
+    { site_id: siteIds[3], name: "QC Label Printer", ip_address: "10.10.4.11", port: 23, firmware_version: "01-09-00-20", serial_number: "25-02-01-003", status: "online" },
+    // Site 4: EuroSnacks GmbH - 10 printers
+    { site_id: siteIds[4], name: "Crisps Line 1", ip_address: "192.168.10.50", port: 23, firmware_version: "01-09-00-20", serial_number: "24-12-01-001", status: "online" },
+    { site_id: siteIds[4], name: "Crisps Line 2", ip_address: "192.168.10.51", port: 23, firmware_version: "01-09-00-20", serial_number: "24-12-01-002", status: "online" },
+    { site_id: siteIds[4], name: "Crisps Line 3", ip_address: "192.168.10.52", port: 23, firmware_version: "01-09-00-14", serial_number: "24-03-18-001", status: "online" },
+    { site_id: siteIds[4], name: "Nuts Packing A", ip_address: "192.168.10.60", port: 23, firmware_version: "01-09-00-20", serial_number: "24-12-01-003", status: "online" },
+    { site_id: siteIds[4], name: "Nuts Packing B", ip_address: "192.168.10.61", port: 23, firmware_version: "01-09-00-14", serial_number: "24-06-22-001", status: "error" },
+    { site_id: siteIds[4], name: "Chocolate Bar Line", ip_address: "192.168.10.70", port: 23, firmware_version: "01-09-00-20", serial_number: "25-01-15-001", status: "online" },
+    { site_id: siteIds[4], name: "Multipack Overwrap", ip_address: "192.168.10.71", port: 23, firmware_version: "01-09-00-20", serial_number: "25-01-15-002", status: "online" },
+    { site_id: siteIds[4], name: "Case Coder - Dispatch", ip_address: "192.168.10.80", port: 23, firmware_version: "01-09-00-14", serial_number: "23-10-05-001", status: "online" },
+    { site_id: siteIds[4], name: "Pallet Label Printer", ip_address: "192.168.10.81", port: 23, firmware_version: "01-09-00-20", serial_number: "25-01-15-003", status: "online" },
+    { site_id: siteIds[4], name: "R&D Lab Coder", ip_address: "192.168.10.90", port: 23, firmware_version: "01-09-00-14", serial_number: "24-04-12-001", status: "offline" },
+    // Site 5: Nordic Aquaculture AS - 5 printers
+    { site_id: siteIds[5], name: "Salmon Tray Coder", ip_address: "10.20.1.10", port: 23, firmware_version: "01-09-00-20", serial_number: "25-01-28-001", status: "online" },
+    { site_id: siteIds[5], name: "Fillet Pack Line", ip_address: "10.20.1.11", port: 23, firmware_version: "01-09-00-20", serial_number: "25-01-28-002", status: "online" },
+    { site_id: siteIds[5], name: "Smoked Products Coder", ip_address: "10.20.1.12", port: 23, firmware_version: "01-09-00-14", serial_number: "24-08-20-001", status: "online" },
+    { site_id: siteIds[5], name: "Cold Store Labeller", ip_address: "10.20.2.10", port: 23, firmware_version: "01-09-00-14", serial_number: "24-02-14-001", status: "error" },
+    { site_id: siteIds[5], name: "Export Pallet Coder", ip_address: "10.20.2.11", port: 23, firmware_version: "01-09-00-20", serial_number: "25-01-28-003", status: "online" },
   ];
 
   const { data: printers, error: pErr } = await supabase
