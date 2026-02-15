@@ -16,6 +16,13 @@ function logToFile(msg) {
 
 let mainWindow;
 
+// Handler for Escape key to exit fullscreen
+function handleFullscreenEscape(event, input) {
+  if (input.key === 'Escape' && mainWindow && mainWindow.isFullScreen()) {
+    mainWindow.setFullScreen(false);
+  }
+}
+
 // Dev/prod detection
 // - When running locally via `npx electron ...`, NODE_ENV is often undefined.
 // - `app.isPackaged` is the most reliable signal.
@@ -43,12 +50,21 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
+    fullscreen: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
     },
     icon: path.join(__dirname, '../public/codesync-icon.png'),
+  });
+
+  // Allow Escape to exit fullscreen back to normal windowed mode
+  mainWindow.on('enter-full-screen', () => {
+    mainWindow.webContents.on('before-input-event', handleFullscreenEscape);
+  });
+  mainWindow.on('leave-full-screen', () => {
+    mainWindow.webContents.removeListener('before-input-event', handleFullscreenEscape);
   });
 
   // In development, load from Vite dev server
@@ -414,6 +430,17 @@ ipcMain.handle('app:install-update', () => {
 
 ipcMain.handle('app:get-version', () => {
   return app.getVersion();
+});
+
+ipcMain.handle('app:toggle-fullscreen', () => {
+  if (mainWindow) {
+    mainWindow.setFullScreen(!mainWindow.isFullScreen());
+  }
+  return { fullscreen: mainWindow?.isFullScreen() ?? false };
+});
+
+ipcMain.handle('app:is-fullscreen', () => {
+  return mainWindow?.isFullScreen() ?? false;
 });
 
 // --- Mobile Relay HTTP Server ---
