@@ -847,7 +847,25 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
 
             {/* Fleet Monitoring Tab */}
             <TabsContent value="fleet" className="flex-1 overflow-hidden m-0">
-              <FleetMonitoringPanel />
+              <div className="flex flex-col items-center justify-center h-full gap-4 p-6">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[hsl(207,90%,45%)] to-[hsl(160,60%,40%)] flex items-center justify-center">
+                  <Globe className="w-7 h-7 text-white" />
+                </div>
+                <div className="text-center">
+                  <h3 className="text-sm font-bold text-gray-800">Telemetry™</h3>
+                  <p className="text-[10px] text-gray-500 mt-1">Remote Fleet Monitoring & OTA Updates</p>
+                </div>
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    window.location.hash = '#/telemetry';
+                  }}
+                >
+                  <Globe className="w-4 h-4 mr-2" />
+                  Open Telemetry Dashboard
+                </Button>
+              </div>
             </TabsContent>
 
             {/* Licenses Tab */}
