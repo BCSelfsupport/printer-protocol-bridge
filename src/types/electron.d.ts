@@ -21,6 +21,8 @@ interface AppAPI {
   getVersion: () => Promise<string>;
   checkForUpdates: () => void;
   installUpdate: () => void;
+  toggleFullscreen: () => Promise<{ fullscreen: boolean }>;
+  isFullscreen: () => Promise<boolean>;
 }
 
 interface ElectronAPI {
