@@ -280,7 +280,7 @@ async function seedPrintersAndData(supabase: any, siteIds: string[], sites: any[
     { event_type: "fault", severity: "error", message: "Gutter fault detected - auto-recovered" },
     { event_type: "startup", severity: "info", message: "Printer powered on" },
     { event_type: "jet_start", severity: "info", message: "Ink jet started successfully" },
-    { event_type: "firmware_update", severity: "info", message: "Firmware updated to V2.6.1" },
+    { event_type: "firmware_update", severity: "info", message: "Firmware updated to 01-09-00-20" },
     { event_type: "low_ink", severity: "warning", message: "Ink level LOW - replacement recommended" },
     { event_type: "pressure_warning", severity: "warning", message: "Pressure outside optimal range (36 PSI)" },
   ];
