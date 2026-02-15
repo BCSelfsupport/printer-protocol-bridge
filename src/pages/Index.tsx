@@ -696,8 +696,8 @@ const Index = () => {
 
       {/* BottomNav and Footer now rendered inside Dashboard/PrintersScreen right panel */}
 
-      {/* Dev Panel - only rendered in dev builds or when dev-signed-in */}
-      {import.meta.env.DEV || isDevSignedIn ? (
+      {/* Dev Panel - only rendered when authenticated via CITEC */}
+      {isDevSignedIn ? (
         <DevPanel 
           isOpen={devPanelOpen} 
           onToggle={() => {
@@ -707,7 +707,7 @@ const Index = () => {
           connectedPrinterIp={connectionState.connectedPrinter?.ipAddress}
           connectedPrinterPort={connectionState.connectedPrinter?.port}
           defaultTab={devPanelTab}
-          showToggleButton={import.meta.env.DEV || isDevSignedIn}
+          showToggleButton={isDevSignedIn}
         />
       ) : null}
       
