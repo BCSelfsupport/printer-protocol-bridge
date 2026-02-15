@@ -55,6 +55,7 @@ interface FleetTelemetry {
   print_count: number;
   current_message: string;
   recorded_at: string;
+  filter_hours_remaining: number | null;
 }
 
 interface FleetEvent {
@@ -635,6 +636,20 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                             )}>{c.level}</Badge>
                           </div>
                         ))}
+                        {/* Filter Life */}
+                        <div className="flex items-center justify-between py-2 border-t border-border/40 mt-1">
+                          <span className="text-sm text-muted-foreground">Filter Life</span>
+                          {telemetry.filter_hours_remaining != null ? (
+                            <Badge className={cn(
+                              "text-xs font-mono font-bold",
+                              telemetry.filter_hours_remaining > 500 ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' :
+                              telemetry.filter_hours_remaining > 200 ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' :
+                              'bg-red-500/10 text-red-500 border-red-500/30'
+                            )}>{telemetry.filter_hours_remaining.toLocaleString()}h</Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground font-mono">N/A</span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Runtime */}

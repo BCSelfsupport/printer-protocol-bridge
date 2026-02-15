@@ -306,6 +306,7 @@ export type Database = {
           charge: number | null
           current_message: string | null
           electronics_temp: number | null
+          filter_hours_remaining: number | null
           hv_on: boolean | null
           id: string
           ink_level: string | null
@@ -327,6 +328,7 @@ export type Database = {
           charge?: number | null
           current_message?: string | null
           electronics_temp?: number | null
+          filter_hours_remaining?: number | null
           hv_on?: boolean | null
           id?: string
           ink_level?: string | null
@@ -348,6 +350,7 @@ export type Database = {
           charge?: number | null
           current_message?: string | null
           electronics_temp?: number | null
+          filter_hours_remaining?: number | null
           hv_on?: boolean | null
           id?: string
           ink_level?: string | null
