@@ -51,6 +51,8 @@ function createWindow() {
     width: 1280,
     height: 800,
     fullscreen: true,
+    frame: false,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -59,12 +61,35 @@ function createWindow() {
     icon: path.join(__dirname, '../public/codesync-icon.png'),
   });
 
-  // Allow Escape to exit fullscreen back to normal windowed mode
-  mainWindow.on('enter-full-screen', () => {
-    mainWindow.webContents.on('before-input-event', handleFullscreenEscape);
-  });
-  mainWindow.on('leave-full-screen', () => {
-    mainWindow.webContents.removeListener('before-input-event', handleFullscreenEscape);
+  // Escape exits kiosk-style fullscreen → normal windowed mode with frame
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'Escape' && mainWindow.isFullScreen()) {
+      mainWindow.setFullScreen(false);
+      // Re-create window with frame to restore title bar & taskbar
+      const bounds = mainWindow.getBounds();
+      const newWin = new BrowserWindow({
+        ...bounds,
+        frame: true,
+        autoHideMenuBar: false,
+        fullscreen: false,
+        webPreferences: {
+          preload: path.join(__dirname, 'preload.cjs'),
+          contextIsolation: true,
+          nodeIntegration: false,
+        },
+        icon: path.join(__dirname, '../public/codesync-icon.png'),
+      });
+      newWin.loadURL(mainWindow.webContents.getURL());
+      mainWindow.destroy();
+      mainWindow = newWin;
+
+      // Re-register DevTools shortcut on new window
+      mainWindow.webContents.on('before-input-event', (event, input) => {
+        if (input.control && input.shift && input.key === 'I') {
+          mainWindow.webContents.toggleDevTools();
+        }
+      });
+    }
   });
 
   // In development, load from Vite dev server
