@@ -13,7 +13,8 @@ serve(async (req) => {
   try {
     const githubPat = Deno.env.get('GITHUB_PAT');
     if (!githubPat) {
-      return new Response(JSON.stringify({ error: 'GITHUB_PAT not configured' }), {
+      console.error('GITHUB_PAT not configured');
+      return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -35,8 +36,9 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      return new Response(JSON.stringify({ error: `GitHub API error: ${response.status}`, details: errorText }), {
-        status: response.status,
+      console.error('GitHub API error:', response.status, errorText);
+      return new Response(JSON.stringify({ error: 'Failed to fetch build status' }), {
+        status: 502,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -59,7 +61,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Build status error:', error);
+    return new Response(JSON.stringify({ error: 'An internal error occurred' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

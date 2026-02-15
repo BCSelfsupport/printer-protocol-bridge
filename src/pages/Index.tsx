@@ -729,11 +729,24 @@ const Index = () => {
         open={devSignInDialogOpen}
         onOpenChange={setDevSignInDialogOpen}
         onSignIn={async (password) => {
-          if (password === 'CITEC') {
-            setIsDevSignedIn(true);
-            return true;
+          try {
+            const res = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-dev-access`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+                body: JSON.stringify({ password }),
+              }
+            );
+            const data = await res.json();
+            if (data.valid) {
+              setIsDevSignedIn(true);
+              return true;
+            }
+            return false;
+          } catch {
+            return false;
           }
-          return false;
         }}
         title="Dev Portal Sign In"
         description="Enter the developer password to access the Dev Portal"
