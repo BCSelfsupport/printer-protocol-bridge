@@ -30,7 +30,8 @@ import {
   ExternalLink,
   Network,
   Shield,
-  Globe
+  Globe,
+  Signal
 } from 'lucide-react';
 import { CommandTerminal } from '@/components/terminal/CommandTerminal';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -848,13 +849,19 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
 
             {/* Fleet Monitoring Tab */}
             <TabsContent value="fleet" className="flex-1 overflow-hidden m-0">
-              <div className="flex flex-col items-center justify-center h-full gap-4 p-6">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[hsl(207,90%,45%)] to-[hsl(160,60%,40%)] flex items-center justify-center">
-                  <Globe className="w-7 h-7 text-white" />
+              <div className="flex flex-col items-center justify-center h-full gap-5 p-6">
+                <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-500 to-emerald-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                  <Signal className="w-8 h-8 text-white relative z-10" />
                 </div>
                 <div className="text-center">
-                  <h3 className="text-sm font-bold text-gray-800">Telemetry™</h3>
-                  <p className="text-[10px] text-gray-500 mt-1">Remote Fleet Monitoring & OTA Updates</p>
+                  <div className="flex items-start justify-center">
+                    <span className="text-lg font-bold italic text-blue-600">Fleet</span>
+                    <span className="text-lg font-bold italic text-emerald-500">Telemetry</span>
+                    <span className="text-[8px] text-muted-foreground ml-0.5 mt-0.5">™</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1 tracking-wider uppercase">Remote Fleet Monitoring & OTA Updates</p>
                 </div>
                 <Button
                   size="sm"
@@ -863,8 +870,8 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                     window.location.hash = '#/telemetry';
                   }}
                 >
-                  <Globe className="w-4 h-4 mr-2" />
-                  Open Telemetry Dashboard
+                  <Signal className="w-4 h-4 mr-2" />
+                  Open Fleet Telemetry
                 </Button>
               </div>
             </TabsContent>
