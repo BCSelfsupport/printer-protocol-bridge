@@ -182,8 +182,8 @@ export function LicenseAssignmentPanel() {
                     <Copy className="w-3 h-3 text-gray-400" />
                   </button>
                   {lic.is_active && (
-                    <button onClick={() => handleDeactivate(lic.id)} className="p-0.5 rounded hover:bg-red-100" title="Deactivate">
-                      <XCircle className="w-3 h-3 text-red-400" />
+                    <button onClick={(e) => { e.stopPropagation(); handleDeactivate(lic.id); }} className="p-1.5 rounded hover:bg-red-100" title="Deactivate">
+                      <XCircle className="w-4 h-4 text-red-400" />
                     </button>
                   )}
                 </div>
