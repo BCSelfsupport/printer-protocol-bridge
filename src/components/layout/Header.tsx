@@ -110,65 +110,65 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
           )}
         </div>
 
-        <div className="flex items-center gap-2 md:gap-4 flex-shrink-0 ml-4">
+        <div className="flex items-center gap-1 md:gap-4 flex-shrink-0 ml-2 md:ml-4">
           {/* Relay mode indicator for mobile PWA */}
           {!window.electronAPI && onRelayConnect && (
             <button
               onClick={onRelayConnect}
-              className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
+              className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
                 getRelayConfig() 
                   ? 'bg-green-600 hover:bg-green-700' 
                   : 'bg-muted-foreground/50 hover:bg-muted-foreground/70'
               }`}
               title={getRelayConfig() ? `Relay: ${getRelayConfig()?.pcIp}` : 'Connect via PC'}
             >
-              <Smartphone className={`w-4 h-4 md:w-5 md:h-5 ${getRelayConfig() ? 'text-white' : 'text-card'}`} />
+              <Smartphone className={`w-3.5 h-3.5 md:w-5 md:h-5 ${getRelayConfig() ? 'text-white' : 'text-card'}`} />
             </button>
           )}
 
           {isConnected && (
-            <div className="px-2 md:px-4 py-1 md:py-2 rounded bg-success text-white text-xs md:text-sm font-medium flex-shrink-0">
-              <div className="text-[10px] md:text-xs">Connected</div>
-              <div className="text-xs md:text-sm">{connectedIp}</div>
+            <div className="px-1.5 md:px-4 py-1 md:py-2 rounded bg-success text-white text-[9px] md:text-sm font-medium flex-shrink-0">
+              <div className="text-[8px] md:text-xs">Connected</div>
+              <div className="text-[9px] md:text-sm">{connectedIp}</div>
             </div>
           )}
 
           {mounted && (
             <button 
               onClick={toggleTheme}
-              className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+              className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
             >
               {theme === 'dark' ? (
-                <Sun className="w-4 h-4 md:w-5 md:h-5 text-card" />
+                <Sun className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
               ) : (
-                <Moon className="w-4 h-4 md:w-5 md:h-5 text-card" />
+                <Moon className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
               )}
             </button>
           )}
 
           <button 
             onClick={toggleFullscreen}
-            className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+            className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
             title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
           >
             {isFullscreen ? (
-              <Minimize className="w-4 h-4 md:w-5 md:h-5 text-card" />
+              <Minimize className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
             ) : (
-              <Maximize className="w-4 h-4 md:w-5 md:h-5 text-card" />
+              <Maximize className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
             )}
           </button>
 
           {onHome && (
             <button 
               onClick={onHome}
-              className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 transition-colors flex-shrink-0"
+              className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 transition-colors flex-shrink-0"
             >
-              <Home className="w-5 h-5 md:w-6 md:h-6 text-primary-foreground" />
+              <Home className="w-4 h-4 md:w-6 md:h-6 text-primary-foreground" />
             </button>
           )}
 
 
-          <div className="text-right text-foreground min-w-[80px] md:min-w-[120px] flex-shrink-0">
+          <div className="text-right text-foreground min-w-[70px] md:min-w-[120px] flex-shrink-0">
             <div className="text-sm md:text-lg font-medium tabular-nums">
               {displayTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </div>
