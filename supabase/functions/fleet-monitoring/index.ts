@@ -145,10 +145,10 @@ Deno.serve(async (req) => {
         // Create demo sites
         const sites = [
           { name: "Dairy Fresh Co.", company: "Dairy Fresh", location: "Dublin, Ireland", contact_email: "ops@dairyfresh.ie" },
-          { name: "PackRight Industries", company: "PackRight", location: "Cork, Ireland", contact_email: "service@packright.ie" },
-          { name: "Atlantic Beverages", company: "Atlantic Bev", location: "Galway, Ireland", contact_email: "maint@atlanticbev.ie" },
-          { name: "MedPharma Solutions", company: "MedPharma", location: "Limerick, Ireland", contact_email: "production@medpharma.ie" },
-          { name: "EuroSnacks GmbH", company: "EuroSnacks", location: "Munich, Germany", contact_email: "technik@eurosnacks.de" },
+          { name: "PackRight Industries", company: "PackRight", location: "Houston, TX", contact_email: "service@packright.com" },
+          { name: "Atlantic Beverages", company: "Atlantic Bev", location: "Atlanta, GA", contact_email: "maint@atlanticbev.com" },
+          { name: "MedPharma Solutions", company: "MedPharma", location: "Boston, MA", contact_email: "production@medpharma.com" },
+          { name: "EuroSnacks Inc.", company: "EuroSnacks", location: "Chicago, IL", contact_email: "ops@eurosnacks.com" },
           { name: "Nordic Aquaculture AS", company: "Nordic Aqua", location: "Bergen, Norway", contact_email: "drift@nordicaqua.no" },
         ];
 
