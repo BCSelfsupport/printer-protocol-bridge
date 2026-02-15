@@ -1,6 +1,6 @@
 import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock } from 'lucide-react';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
 import { AddPrinterDialog } from '@/components/printers/AddPrinterDialog';
 import { EditPrinterDialog } from '@/components/printers/EditPrinterDialog';
@@ -226,6 +226,7 @@ export function PrintersScreen({
   const [servicePopupOpen, setServicePopupOpen] = useState(false);
   const [servicePrinter, setServicePrinter] = useState<Printer | null>(null);
   const [devTaps, setDevTaps] = useState<number[]>([]);
+  const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
   const { canNetwork, canDatabase, tier, isActivated } = useLicense();
 
@@ -486,6 +487,7 @@ export function PrintersScreen({
                   const now = Date.now();
                   const newTaps = [...devTaps, now].filter(t => now - t < 2000);
                   setDevTaps(newTaps);
+                  if (devTapTimer.current) clearTimeout(devTapTimer.current);
                   if (newTaps.length >= 5) {
                     setDevTaps([]);
                     if (isDevSignedIn) {
@@ -494,7 +496,10 @@ export function PrintersScreen({
                       onDevSignIn();
                     }
                   } else {
-                    onLicense();
+                    devTapTimer.current = setTimeout(() => {
+                      setDevTaps([]);
+                      onLicense();
+                    }, 500);
                   }
                 }}
               >
