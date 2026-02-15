@@ -628,7 +628,7 @@ const Index = () => {
         onQueryPrinterMetrics={queryPrinterMetrics}
         isDevSignedIn={isDevSignedIn}
         onDevSignIn={() => setDevSignInDialogOpen(true)}
-        onDevSignOut={() => setIsDevSignedIn(false)}
+        onDevSignOut={() => { setIsDevSignedIn(false); setDevPanelOpen(false); setDevPanelTab(undefined); }}
         isConnected={connectionState.isConnected}
         connectedPrinter={connectionState.connectedPrinter}
         status={connectionState.status}
