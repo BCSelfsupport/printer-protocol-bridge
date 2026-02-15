@@ -6,8 +6,9 @@ import {
   CheckCircle2, XCircle, Loader2, Database,
   ArrowUpCircle, History, Wifi, WifiOff, MapPin,
   Mail, Server, Cpu, BarChart3, Signal,
-  Home, ArrowLeft, Radio
+  Home, ArrowLeft, Radio, Sun, Moon
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -130,6 +131,22 @@ function FleetTelemetryLogo({ size = 'lg' }: { size?: 'sm' | 'md' | 'lg' }) {
 }
 
 // ════════════════════════════════════ Sub-components ════════════════════════════════════
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  return (
+    <button
+      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      className="w-9 h-9 rounded-full bg-muted flex items-center justify-center hover:bg-muted-foreground/20 transition-colors"
+      title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      {theme === 'dark' ? <Sun className="w-4 h-4 text-foreground" /> : <Moon className="w-4 h-4 text-foreground" />}
+    </button>
+  );
+}
 
 function StatusDot({ status }: { status: string }) {
   return (
@@ -518,6 +535,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                 <RefreshCw className={cn("w-4 h-4 mr-1.5", detailLoading && "animate-spin")} />
                 Refresh
               </Button>
+              <ThemeToggle />
               <FleetTelemetryLogo size="sm" />
             </div>
           </div>
@@ -719,6 +737,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                 <RefreshCw className={cn("w-4 h-4 mr-1.5", loading && "animate-spin")} />
                 Refresh
               </Button>
+              <ThemeToggle />
               <FleetTelemetryLogo size="sm" />
             </div>
           </div>
@@ -823,6 +842,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
               <RefreshCw className={cn("w-4 h-4 mr-1.5", loading && "animate-spin")} />
               Refresh
             </Button>
+            <ThemeToggle />
           </div>
         </div>
       </div>
