@@ -90,12 +90,13 @@ async function checkPrinter(printer: { id: number; ipAddress: string; port: numb
     }
 
   } catch (error) {
+    console.error('Printer check error:', printer.id, error);
     // Connection failed - printer offline or unreachable
     return {
       id: printer.id,
       isAvailable: false,
       status: 'offline',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: 'Connection failed',
     };
   }
 }
