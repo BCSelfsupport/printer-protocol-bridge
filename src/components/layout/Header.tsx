@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Sun, Moon, Home, Smartphone } from 'lucide-react';
+import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { getRelayConfig } from '@/lib/printerTransport';
 
@@ -67,6 +67,28 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    // Try Electron API first
+    if (window.electronAPI?.app?.toggleFullscreen) {
+      window.electronAPI.app.toggleFullscreen();
+      return;
+    }
+    // Browser fullscreen API fallback
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    } else {
+      await document.exitFullscreen();
+    }
+  };
+
   return (
     <header className="bg-muted overflow-hidden">
       <div className="flex items-center justify-between px-2 md:px-4 py-2">
@@ -123,6 +145,18 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
               )}
             </button>
           )}
+
+          <button 
+            onClick={toggleFullscreen}
+            className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          >
+            {isFullscreen ? (
+              <Minimize className="w-4 h-4 md:w-5 md:h-5 text-card" />
+            ) : (
+              <Maximize className="w-4 h-4 md:w-5 md:h-5 text-card" />
+            )}
+          </button>
 
           {onHome && (
             <button 
