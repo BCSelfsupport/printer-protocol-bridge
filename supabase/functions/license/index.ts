@@ -223,6 +223,27 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ── ADMIN: delete license ──
+    if (action === "delete") {
+      const { license_id } = await req.json();
+
+      // Delete activations first (FK constraint)
+      await supabaseAdmin
+        .from("license_activations")
+        .delete()
+        .eq("license_id", license_id);
+
+      await supabaseAdmin
+        .from("licenses")
+        .delete()
+        .eq("id", license_id);
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Unknown action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

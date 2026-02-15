@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { Key, Plus, Copy, Loader2, XCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Key, Plus, Copy, Loader2, XCircle, CheckCircle2, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface License {
@@ -89,6 +89,12 @@ export function LicenseAssignmentPanel() {
   const handleDeactivate = async (licenseId: string) => {
     await licenseApi('deactivate', { license_id: licenseId });
     toast.success('License deactivated');
+    fetchLicenses();
+  };
+
+  const handleDelete = async (licenseId: string) => {
+    await licenseApi('delete', { license_id: licenseId });
+    toast.success('License deleted');
     fetchLicenses();
   };
 
@@ -184,6 +190,11 @@ export function LicenseAssignmentPanel() {
                   {lic.is_active && (
                     <button onClick={(e) => { e.stopPropagation(); handleDeactivate(lic.id); }} className="p-1.5 rounded hover:bg-red-100" title="Deactivate">
                       <XCircle className="w-4 h-4 text-red-400" />
+                    </button>
+                  )}
+                  {!lic.is_active && (
+                    <button onClick={(e) => { e.stopPropagation(); handleDelete(lic.id); }} className="p-1.5 rounded hover:bg-red-100" title="Delete">
+                      <Trash2 className="w-4 h-4 text-red-400" />
                     </button>
                   )}
                 </div>
