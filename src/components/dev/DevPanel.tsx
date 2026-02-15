@@ -269,7 +269,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             "bg-sidebar border border-border border-r-0 rounded-l-md",
             "p-2 shadow-lg transition-all",
             "hover:bg-muted",
-            isOpen ? "right-80" : "right-0"
+            isOpen ? (isMobile ? "right-[100%]" : "right-[600px]") : "right-0"
           )}
         >
           {isOpen ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -290,7 +290,8 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
           {/* Drawer */}
           <div
             className={cn(
-              "absolute right-0 top-0 w-80",
+              "absolute right-0 top-0",
+              isMobile ? "w-full" : "w-[600px]",
               "bg-white border-l-2 border-border shadow-xl",
               "h-[100dvh] pb-[env(safe-area-inset-bottom)]"
             )}
@@ -330,19 +331,19 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <TabsList className="mx-4 mt-2 grid grid-cols-7">
-              <TabsTrigger value="status" className="text-xs">Status</TabsTrigger>
-              <TabsTrigger value="protocol" className="text-xs">Proto</TabsTrigger>
-              <TabsTrigger value="commands" className="text-xs">Log</TabsTrigger>
-              <TabsTrigger value="manual" className="text-xs">Manual</TabsTrigger>
-              <TabsTrigger value="network" className="text-xs">Net</TabsTrigger>
-              <TabsTrigger value="fleet" className="text-xs flex items-center gap-1">
-                <Globe className="w-3 h-3" />
+            <TabsList className="mx-4 mt-2 grid grid-cols-7 h-10">
+              <TabsTrigger value="status" className="text-xs gap-1"><Gauge className="w-3.5 h-3.5" />Status</TabsTrigger>
+              <TabsTrigger value="protocol" className="text-xs gap-1"><BookOpen className="w-3.5 h-3.5" />Protocol</TabsTrigger>
+              <TabsTrigger value="commands" className="text-xs gap-1"><Terminal className="w-3.5 h-3.5" />Log</TabsTrigger>
+              <TabsTrigger value="manual" className="text-xs gap-1"><Send className="w-3.5 h-3.5" />Manual</TabsTrigger>
+              <TabsTrigger value="network" className="text-xs gap-1"><Network className="w-3.5 h-3.5" />Network</TabsTrigger>
+              <TabsTrigger value="fleet" className="text-xs gap-1">
+                <Globe className="w-3.5 h-3.5" />
                 Fleet
               </TabsTrigger>
-              <TabsTrigger value="licenses" className="text-xs flex items-center gap-1">
-                <Shield className="w-3 h-3" />
-                Lic
+              <TabsTrigger value="licenses" className="text-xs gap-1">
+                <Shield className="w-3.5 h-3.5" />
+                Licenses
               </TabsTrigger>
             </TabsList>
 
