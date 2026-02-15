@@ -233,6 +233,7 @@ async function seedPrintersAndData(supabase: any, siteIds: string[], sites: any[
       jet_running: p.status === "online",
       print_count: Math.floor(Math.random() * 500000),
       current_message: "BESTBEFORE",
+      filter_hours_remaining: 200 + Math.floor(Math.random() * 4800),
     }));
 
   if (telemetryRows.length > 0) {

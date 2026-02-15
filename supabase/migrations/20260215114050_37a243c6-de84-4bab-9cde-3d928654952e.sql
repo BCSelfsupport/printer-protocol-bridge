@@ -1,0 +1,1 @@
+ALTER TABLE public.fleet_telemetry ADD COLUMN filter_hours_remaining numeric NULL;
