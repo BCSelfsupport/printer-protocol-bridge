@@ -500,7 +500,13 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                 <Badge variant="outline" className="text-[10px] font-mono capitalize">{selectedPrinter.status}</Badge>
               </div>
             </div>
-            <FleetTelemetryLogo size="sm" />
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => fetchPrinterDetail(selectedPrinter)} disabled={detailLoading}>
+                <RefreshCw className={cn("w-4 h-4 mr-1.5", detailLoading && "animate-spin")} />
+                Refresh
+              </Button>
+              <FleetTelemetryLogo size="sm" />
+            </div>
           </div>
         </div>
 
@@ -681,10 +687,15 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                 <span className="text-lg font-semibold text-foreground">{selectedSite.name}</span>
               </div>
             </div>
-            <FleetTelemetryLogo size="sm" />
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={fetchSites} disabled={loading}>
+                <RefreshCw className={cn("w-4 h-4 mr-1.5", loading && "animate-spin")} />
+                Refresh
+              </Button>
+              <FleetTelemetryLogo size="sm" />
+            </div>
           </div>
         </div>
-
         <ScrollArea className="flex-1">
           <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
             {/* Site info banner */}
