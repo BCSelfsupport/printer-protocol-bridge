@@ -147,9 +147,6 @@ function SortablePrinterItem({
       <div
         {...attributes}
         {...listeners}
-        onPointerDown={(e) => {
-          e.preventDefault();
-        }}
         className={
           "absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-10 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded touch-none select-none " +
           (isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100")
