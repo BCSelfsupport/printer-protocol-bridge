@@ -970,11 +970,11 @@ export function usePrinterConnection() {
             console.error('[connect] Failed to query ^SD:', e);
           }
 
-          // Close the temporary socket — lazy-connect will reopen when a polling screen opens
-          if (!serviceScreenOpen && !controlScreenOpen) {
-            console.log('[connect] Initial queries done, closing temporary socket');
-            await printerTransport.disconnect(printer.id);
-          }
+          // NOTE: Do NOT close the socket here. The lazy-connect effect (below)
+          // manages the socket lifecycle based on controlScreenOpen / serviceScreenOpen.
+          // Previously this used stale closure values (always false) and would kill the
+          // socket that lazy-connect had already opened, breaking all polling.
+          console.log('[connect] Initial queries done, socket left open for polling');
         } catch (e) {
           console.error('[connect] Initial query burst failed:', e);
         }
