@@ -100,6 +100,8 @@ const Index = () => {
     queryPrintSettings,
     sendCommand,
     queryPrinterMetrics,
+    checkPrinterStatus,
+    isChecking,
   } = usePrinterConnection();
   
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
@@ -672,6 +674,8 @@ const Index = () => {
         lowStockCount={consumableStorage.getLowStockConsumables().length}
         connectedMetrics={connectionState.metrics}
         onLicense={() => setLicenseDialogOpen(true)}
+        onRefreshNetwork={checkPrinterStatus}
+        isCheckingNetwork={isChecking}
       />
     );
   };

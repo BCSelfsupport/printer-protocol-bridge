@@ -83,6 +83,10 @@ interface PrintersScreenProps {
   connectedMetrics?: PrinterMetrics | null;
   /** Open license activation dialog */
   onLicense?: () => void;
+  /** Trigger a manual network refresh */
+  onRefreshNetwork?: () => void;
+  /** Whether a network check is in progress */
+  isCheckingNetwork?: boolean;
 }
 
 // Sortable wrapper for PrinterListItem
@@ -218,6 +222,8 @@ export function PrintersScreen({
   lowStockCount = 0,
   connectedMetrics,
   onLicense,
+  onRefreshNetwork,
+  isCheckingNetwork = false,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -406,6 +412,18 @@ export function PrintersScreen({
               {!canNetwork ? <Lock className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
               Add
             </Button>
+            {onRefreshNetwork && (
+              <Button
+                onClick={onRefreshNetwork}
+                size="sm"
+                variant="outline"
+                className="border-slate-500 text-white bg-slate-700/50 hover:bg-slate-600 hover:text-white h-8"
+                disabled={isCheckingNetwork}
+                title="Refresh network status"
+              >
+                <RefreshCw className={`w-3 h-3 ${isCheckingNetwork ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
             {selectedPrinter && (
               <Button
                 onClick={handleRemoveSelected}
