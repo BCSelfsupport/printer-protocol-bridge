@@ -956,7 +956,7 @@ export function usePrinterConnection() {
                   c3 ? parseInt(c3[1], 10) : 0, c4 ? parseInt(c4[1], 10) : 0,
                 ];
               } else {
-                parts = response.split(',').map((s: string) => parseInt(s.trim(), 10));
+                parts = response.split(',').map((s: string) => { const n = parseInt(s.trim(), 10); return isNaN(n) ? 0 : n; });
               }
               if (parts.length >= 2) {
                 setConnectionState(prev => ({
@@ -1759,7 +1759,7 @@ export function usePrinterConnection() {
                   custom4Match ? parseInt(custom4Match[1], 10) : 0,
                 ];
               } else {
-                parts = response.split(',').map((s: string) => parseInt(s.trim(), 10));
+                parts = response.split(',').map((s: string) => { const n = parseInt(s.trim(), 10); return isNaN(n) ? 0 : n; });
               }
               if (parts.length >= 6) {
                 setConnectionState(prev => ({
@@ -1857,7 +1857,7 @@ export function usePrinterConnection() {
           ];
         } else {
           // Comma-separated fallback
-          parts = response.split(',').map((s: string) => parseInt(s.trim(), 10));
+          parts = response.split(',').map((s: string) => { const n = parseInt(s.trim(), 10); return isNaN(n) ? 0 : n; });
         }
         
         if (parts.length >= 6) {
@@ -1902,7 +1902,7 @@ export function usePrinterConnection() {
             ];
           } else {
             // Terse format: "308,7,10,21,34,45"
-            parts = response.split(',').map((s: string) => parseInt(s.trim(), 10));
+            parts = response.split(',').map((s: string) => { const n = parseInt(s.trim(), 10); return isNaN(n) ? 0 : n; });
           }
           
           if (parts.length >= 6) {
