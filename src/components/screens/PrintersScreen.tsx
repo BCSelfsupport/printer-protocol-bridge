@@ -352,7 +352,7 @@ export function PrintersScreen({
   return (
     <div className="flex-1 flex flex-col md:flex-row bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-3 md:p-4 gap-3 md:gap-4 overflow-y-auto md:overflow-hidden">
       {/* Left Panel - Printer List (narrower on desktop when showing Dashboard) */}
-      <div className={`w-full md:w-[25%] md:max-w-[360px] md:min-w-[260px] flex-shrink-0 flex flex-col bg-slate-900/50 rounded-xl border border-slate-800 overflow-visible md:overflow-hidden`}>
+      <div className={`w-full md:w-[22%] md:max-w-[320px] md:min-w-[240px] flex-shrink-0 flex flex-col bg-slate-900/50 rounded-xl border border-slate-800 overflow-visible md:overflow-hidden`}>
         {/* Header */}
         <div className="p-3 border-b border-slate-800 bg-slate-900/80">
           <div className="flex items-center justify-between mb-3">
@@ -421,7 +421,7 @@ export function PrintersScreen({
 
         {/* Printer List with ScrollArea */}
         <ScrollArea className="flex-1">
-          <div className="p-3 pr-5 space-y-2">
+          <div className="p-2 pr-3 space-y-2">
             {printers.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-slate-500 py-8">
                 <PrinterIcon className="w-10 h-10 mb-3 opacity-50" />
