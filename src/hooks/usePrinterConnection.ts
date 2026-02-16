@@ -3,7 +3,7 @@ import { Printer, PrinterStatus, PrinterMetrics, PrintMessage, PrintSettings, Co
 import { usePrinterStorage } from '@/hooks/usePrinterStorage';
 import { supabase } from '@/integrations/supabase/client';
 import '@/types/electron.d.ts';
-import { parseStatusResponse, parseTemperatureResponse } from '@/lib/printerProtocol';
+import { parseStatusResponse, parseTemperatureResponse, parseVersionResponse } from '@/lib/printerProtocol';
 import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
@@ -33,7 +33,7 @@ const mockStatus: PrinterStatus = {
   customCounters: [0, 0, 0, 0], // Custom counters 1-4
   currentMessage: null,
   errorMessage: null,
-  printerVersion: 'v01.09.00.14',
+  printerVersion: null,
   printerTime: new Date(),
   inkLevel: 'UNKNOWN',
   makeupLevel: 'UNKNOWN',
@@ -851,6 +851,23 @@ export function usePrinterConnection() {
             }
           } catch (e) {
             console.error('[connect] Failed to query ^CN:', e);
+          }
+          // Query firmware version via ^VV
+          try {
+            const vvResult = await printerTransport.sendCommand(printer.id, '^VV');
+            console.log('[connect] ^VV response:', vvResult);
+            if (vvResult?.success && vvResult.response) {
+              const version = parseVersionResponse(vvResult.response);
+              if (version) {
+                console.log('[connect] Firmware version:', version);
+                setConnectionState(prev => ({
+                  ...prev,
+                  status: prev.status ? { ...prev.status, printerVersion: version } : null,
+                }));
+              }
+            }
+          } catch (e) {
+            console.error('[connect] Failed to query ^VV:', e);
           }
         }, 300);
       }, 500);
