@@ -177,16 +177,10 @@ export function usePrinterConnection() {
         // Use relay server on PC for ICMP ping
         results = await printerTransport.checkStatus(printerData);
       } else {
-        // Fallback to cloud function (won't work for local network, but keeps the code path)
-        const { data, error } = await supabase.functions.invoke('check-printer-status', {
-          body: { printers: printerData },
-        });
-
-        if (error) {
-          console.error('Error checking printer status:', error);
-          return;
-        }
-        results = data?.printers;
+        // No Electron or relay available — cloud functions cannot reach local-network
+        // printers (192.168.x.x), so skip polling entirely to avoid false-offline flapping.
+        console.debug('[availability] No local transport available, skipping cloud poll');
+        return;
       }
 
       if (results) {
