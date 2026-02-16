@@ -792,22 +792,82 @@ export function usePrinterConnection() {
       messages: mockMessages,
     });
 
-    // Query initial status, counters, message list, and current message from printer
+    // Query initial status, counters, message list, and current message from printer.
+    // Open a temporary socket, run all queries sequentially, then close it.
     if (isElectron || isRelayMode()) {
-      // Small delay to let state update, then query
       setTimeout(async () => {
-        queryPrinterStatus(printer);
-        // Fetch real counters, message list, and current message after short additional delay
-        setTimeout(async () => {
-          queryMessageList(printer);
-          // Query current selected message via ^SM (no argument returns current)
+        try {
+          // Open socket for the initial burst of queries
+          await printerTransport.connect({
+            id: printer.id,
+            ipAddress: printer.ipAddress,
+            port: printer.port,
+          });
+
+          // 1. Query ^SU for HV state, ink/makeup levels, and ready status
+          try {
+            const suResult = await printerTransport.sendCommand(printer.id, '^SU');
+            console.log('[connect] ^SU response:', suResult);
+            if (suResult.success && suResult.response) {
+              const parsed = parseStatusResponse(suResult.response);
+              if (parsed) {
+                const hvOn = parsed.printStatus === 'Ready';
+                const jetActive = parsed.subsystems?.vltOn || hvOn;
+                const inkLevel = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+                const makeupLevel = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+                const parsedMessage = parsed.currentMessage && parsed.currentMessage !== 'NONE' ? parsed.currentMessage.toUpperCase() : undefined;
+
+                // Update the printer card in the network list
+                updatePrinterStatus(printer.id, {
+                  isAvailable: true,
+                  status: hvOn ? 'ready' : 'not_ready',
+                  hasActiveErrors: parsed.errorActive ?? false,
+                  inkLevel: inkLevel as Printer['inkLevel'],
+                  makeupLevel: makeupLevel as Printer['makeupLevel'],
+                  currentMessage: parsedMessage,
+                });
+
+                setConnectionState((prev) => ({
+                  ...prev,
+                  status: prev.status
+                    ? { ...prev.status, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel, ...(parsedMessage ? { currentMessage: parsedMessage } : {}) }
+                    : { ...mockStatus, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel, currentMessage: parsedMessage ?? null },
+                  metrics: prev.metrics ? {
+                    ...prev.metrics,
+                    modulation: parsed.modulation ?? prev.metrics.modulation,
+                    charge: parsed.charge ?? prev.metrics.charge,
+                    pressure: parsed.pressure ?? prev.metrics.pressure,
+                    rps: parsed.rps ?? prev.metrics.rps,
+                    phaseQual: parsed.phaseQual ?? prev.metrics.phaseQual,
+                    hvDeflection: parsed.hvDeflection ?? prev.metrics.hvDeflection,
+                    viscosity: parsed.viscosity ?? prev.metrics.viscosity,
+                    inkLevel: parsed.inkLevel ?? prev.metrics.inkLevel,
+                    makeupLevel: parsed.makeupLevel ?? prev.metrics.makeupLevel,
+                    printStatus: parsed.printStatus ?? prev.metrics.printStatus,
+                    allowErrors: parsed.allowErrors ?? prev.metrics.allowErrors,
+                    errorActive: parsed.errorActive ?? prev.metrics.errorActive,
+                    subsystems: parsed.subsystems ?? prev.metrics.subsystems,
+                  } : null,
+                }));
+              }
+            }
+          } catch (e) {
+            console.error('[connect] Failed to query ^SU:', e);
+          }
+
+          // 2. Query message list via ^LM
+          try {
+            await queryMessageList(printer);
+          } catch (e) {
+            console.error('[connect] Failed to query ^LM:', e);
+          }
+
+          // 3. Query current message via ^SM
           try {
             const smResult = await printerTransport.sendCommand(printer.id, '^SM');
             console.log('[connect] ^SM response:', smResult);
             if (smResult?.success && smResult.response) {
-              // Strip control chars and prompt markers
               const msgName = smResult.response.replace(/[^\x20-\x7E]/g, '').trim().toUpperCase();
-              // Filter out command echoes, status strings, and empty results
               if (msgName && !msgName.startsWith('^') && !msgName.includes('COMMAND') && msgName !== '>') {
                 console.log('[connect] Current message from printer:', msgName);
                 setConnectionState(prev => ({
@@ -820,7 +880,8 @@ export function usePrinterConnection() {
           } catch (e) {
             console.error('[connect] Failed to query ^SM:', e);
           }
-          // Query counters via ^CN
+
+          // 4. Query counters via ^CN
           try {
             const cnResult = await printerTransport.sendCommand(printer.id, '^CN');
             if (cnResult?.success && cnResult.response) {
@@ -856,7 +917,8 @@ export function usePrinterConnection() {
           } catch (e) {
             console.error('[connect] Failed to query ^CN:', e);
           }
-          // Query firmware version via ^VV
+
+          // 5. Query firmware version via ^VV
           try {
             const vvResult = await printerTransport.sendCommand(printer.id, '^VV');
             console.log('[connect] ^VV response:', vvResult);
@@ -873,7 +935,32 @@ export function usePrinterConnection() {
           } catch (e) {
             console.error('[connect] Failed to query ^VV:', e);
           }
-        }, 300);
+
+          // 6. Query printer date/time via ^SD
+          try {
+            const sdResult = await printerTransport.sendCommand(printer.id, '^SD');
+            if (sdResult?.success && sdResult.response) {
+              const raw = sdResult.response.replace(/[^\x20-\x7E]/g, '').trim();
+              const parsed_dt = new Date(raw);
+              if (!isNaN(parsed_dt.getTime())) {
+                setConnectionState(prev => ({
+                  ...prev,
+                  status: prev.status ? { ...prev.status, printerTime: parsed_dt } : null,
+                }));
+              }
+            }
+          } catch (e) {
+            console.error('[connect] Failed to query ^SD:', e);
+          }
+
+          // Close the temporary socket — lazy-connect will reopen when a polling screen opens
+          if (!serviceScreenOpen && !controlScreenOpen) {
+            console.log('[connect] Initial queries done, closing temporary socket');
+            await printerTransport.disconnect(printer.id);
+          }
+        } catch (e) {
+          console.error('[connect] Initial query burst failed:', e);
+        }
       }, 500);
     }
   }, [updatePrinter, queryPrinterStatus, queryMessageList]);
