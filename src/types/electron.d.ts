@@ -23,6 +23,7 @@ interface AppAPI {
   installUpdate: () => void;
   toggleFullscreen: () => Promise<{ fullscreen: boolean }>;
   isFullscreen: () => Promise<boolean>;
+  getUpdateState: () => Promise<{ stage: string; info: { version: string } | null; progress: { percent: number; bytesPerSecond: number } | null }>;
 }
 
 interface ElectronAPI {

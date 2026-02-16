@@ -410,6 +410,9 @@ ipcMain.handle('printer:send-command', async (event, { printerId, command }) => 
   }
 });
 
+// Cache update state so renderer can query it after mount (avoids race condition)
+let cachedUpdateState = { stage: 'idle', info: null, progress: null };
+
 if (autoUpdater) {
   autoUpdater.on('checking-for-update', () => {
     logToFile('[event] Checking for update...');
@@ -417,6 +420,7 @@ if (autoUpdater) {
 
   autoUpdater.on('update-available', (info) => {
     logToFile(`[event] Update available: ${JSON.stringify(info)}`);
+    cachedUpdateState = { stage: 'downloading', info, progress: null };
     mainWindow?.webContents.send('update-available', info);
   });
 
@@ -426,16 +430,19 @@ if (autoUpdater) {
 
   autoUpdater.on('download-progress', (progress) => {
     logToFile(`[event] Download progress: ${Math.round(progress.percent)}%`);
-    mainWindow?.webContents.send('update-download-progress', {
+    const progressData = {
       percent: progress.percent,
       bytesPerSecond: progress.bytesPerSecond,
       transferred: progress.transferred,
       total: progress.total,
-    });
+    };
+    cachedUpdateState.progress = progressData;
+    mainWindow?.webContents.send('update-download-progress', progressData);
   });
 
   autoUpdater.on('update-downloaded', (info) => {
     logToFile(`[event] Update downloaded: ${JSON.stringify(info)}`);
+    cachedUpdateState = { stage: 'ready', info, progress: null };
     mainWindow?.webContents.send('update-downloaded', info);
   });
 
@@ -443,6 +450,9 @@ if (autoUpdater) {
     logToFile(`[event] Error: ${err.message}\n${err.stack}`);
   });
 }
+
+// Let the renderer query cached update state on mount
+ipcMain.handle('app:get-update-state', () => cachedUpdateState);
 
 
 ipcMain.handle('app:check-for-updates', () => {
