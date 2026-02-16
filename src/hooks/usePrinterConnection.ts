@@ -601,6 +601,22 @@ export function usePrinterConnection() {
               || upper.startsWith('MESSAGES (')
               // Skip counter data lines that may leak from ^CN responses
               || upper.includes('PRODUCT:') || upper.includes('PRINT:') || upper.includes('CUSTOM1:')
+              // Skip ^SU status data that leaks into TCP stream
+              || /\bMOD\s*\[/i.test(trimmed)
+              || /\bINK\s*:/i.test(trimmed)
+              || /\bV300UP/i.test(trimmed)
+              || /\bVLT_ON/i.test(trimmed)
+              || /\bGUT_ON/i.test(trimmed)
+              || /\bMOD_ON/i.test(trimmed)
+              || /\bCHG\s*\[/i.test(trimmed)
+              || /\bPRS\s*\[/i.test(trimmed)
+              || /\bRPS\s*\[/i.test(trimmed)
+              || /\bHVD\s*\[/i.test(trimmed)
+              || /\bVIS\s*\[/i.test(trimmed)
+              || /\bPHQ\s*\[/i.test(trimmed)
+              || /\bERR\s*\[/i.test(trimmed)
+              || upper === 'SUCCESS'
+              || upper === 'OK'
               ) continue;
           
           // Check for "(current)" marker — indicates the currently selected message
