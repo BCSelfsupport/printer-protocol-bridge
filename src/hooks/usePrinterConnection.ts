@@ -863,19 +863,36 @@ export function usePrinterConnection() {
           }
 
           // 3. Query current message via ^SM
+          // Only needed if ^SU and ^LM didn't already set it
           try {
-            const smResult = await printerTransport.sendCommand(printer.id, '^SM');
-            console.log('[connect] ^SM response:', smResult);
-            if (smResult?.success && smResult.response) {
-              const msgName = smResult.response.replace(/[^\x20-\x7E]/g, '').trim().toUpperCase();
-              if (msgName && !msgName.startsWith('^') && !msgName.includes('COMMAND') && msgName !== '>') {
-                console.log('[connect] Current message from printer:', msgName);
-                setConnectionState(prev => ({
-                  ...prev,
-                  status: prev.status ? { ...prev.status, currentMessage: msgName } : null,
-                }));
-                updatePrinter(printer.id, { currentMessage: msgName });
+            const currentFromState = await new Promise<string | null>(resolve => {
+              setConnectionState(prev => {
+                resolve(prev.status?.currentMessage ?? null);
+                return prev; // no change
+              });
+            });
+
+            if (!currentFromState) {
+              const smResult = await printerTransport.sendCommand(printer.id, '^SM');
+              console.log('[connect] ^SM raw response:', JSON.stringify(smResult));
+              if (smResult?.success && smResult.response) {
+                // Strip control chars, command echoes, prompt markers, and status lines
+                const lines = smResult.response.split(/[\r\n]+/)
+                  .map((l: string) => l.replace(/[^\x20-\x7E]/g, '').trim())
+                  .filter((l: string) => l && l !== '>' && !l.startsWith('^') && !l.includes('COMMAND') && !l.includes('Message:'));
+                
+                const msgName = lines.length > 0 ? lines[lines.length - 1].toUpperCase() : null;
+                if (msgName) {
+                  console.log('[connect] Current message from ^SM:', msgName);
+                  setConnectionState(prev => ({
+                    ...prev,
+                    status: prev.status ? { ...prev.status, currentMessage: msgName } : null,
+                  }));
+                  updatePrinter(printer.id, { currentMessage: msgName });
+                }
               }
+            } else {
+              console.log('[connect] Current message already set from ^SU/^LM:', currentFromState);
             }
           } catch (e) {
             console.error('[connect] Failed to query ^SM:', e);
