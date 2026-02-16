@@ -71,8 +71,22 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
   );
 
   // INK:FULL MAKEUP:GOOD (allow optional spaces)
-  const inkLevel = extract(/INK\s*:\s*(\w+)/i) || 'UNKNOWN';
-  const makeupLevel = extract(/MAKEUP\s*:\s*(\w+)/i) || 'UNKNOWN';
+  // Some firmware returns numeric codes: 0=EMPTY, 1=LOW, 2=GOOD, 3=FULL
+  const mapFluidLevel = (raw: string | null): string => {
+    if (!raw) return 'UNKNOWN';
+    const upper = raw.toUpperCase();
+    if (['FULL', 'GOOD', 'LOW', 'EMPTY', 'UNKNOWN'].includes(upper)) return upper;
+    // Numeric mapping per V2.6 protocol
+    switch (raw) {
+      case '3': return 'FULL';
+      case '2': return 'GOOD';
+      case '1': return 'LOW';
+      case '0': return 'EMPTY';
+      default: return 'UNKNOWN';
+    }
+  };
+  const inkLevel = mapFluidLevel(extract(/INK\s*:\s*(\w+)/i));
+  const makeupLevel = mapFluidLevel(extract(/MAKEUP\s*:\s*(\w+)/i));
 
   // V300UP:1 VLT_ON:1 GUT_ON:1 MOD_ON:1 (or MLT_ON in some firmware)
   // Note: Per v2.0 protocol, these flags use NORMAL logic: 1 = ON, 0 = OFF.
