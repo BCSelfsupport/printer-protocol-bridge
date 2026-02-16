@@ -189,7 +189,7 @@ export function usePrinterConnection() {
 
           // Hysteresis: require 3 consecutive offline results before marking offline
           // to prevent UI flapping from intermittent ping failures.
-          const OFFLINE_THRESHOLD = 3;
+          const OFFLINE_THRESHOLD = 5;
           if (status.isAvailable) {
             // Online: reset counter immediately and mark available
             offlineCountsRef.current[status.id] = 0;
