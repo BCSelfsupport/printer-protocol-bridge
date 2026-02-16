@@ -14,6 +14,23 @@ export function UpdateNotification() {
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.electronAPI) {
+      // Query cached state to catch updates that fired before React mounted
+      (window.electronAPI.app.getUpdateState() as Promise<any>).then((state: any) => {
+        if (state?.stage === 'downloading' && state.info) {
+          setUpdateAvailable(true);
+          setVersion(state.info.version);
+          if (state.progress) {
+            setDownloadPercent(Math.round(state.progress.percent));
+            setDownloadSpeed(state.progress.bytesPerSecond);
+          }
+        } else if (state?.stage === 'ready' && state.info) {
+          setUpdateAvailable(true);
+          setUpdateReady(true);
+          setVersion(state.info.version);
+        }
+      }).catch(() => {});
+
+      // Also listen for future events
       window.electronAPI.onUpdateAvailable((info) => {
         setUpdateAvailable(true);
         setVersion(info.version);

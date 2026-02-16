@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     installUpdate: () => ipcRenderer.invoke('app:install-update'),
     toggleFullscreen: () => ipcRenderer.invoke('app:toggle-fullscreen'),
     isFullscreen: () => ipcRenderer.invoke('app:is-fullscreen'),
+    getUpdateState: () => ipcRenderer.invoke('app:get-update-state'),
   },
 
   // Update events
