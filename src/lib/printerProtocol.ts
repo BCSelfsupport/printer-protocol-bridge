@@ -35,7 +35,7 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
   // Accept both verbose and terse ^SU variants.
   // Real printers may include "STATUS:" and "HVDeflection[...]" while the emulator may return
   // "Mod[...]" / "HvD[...]" and "INK: ... MAKEUP: ...".
-  const looksLikeStatus = /status/i.test(response) || /\bmod\s*\[/i.test(response) || /\bink\s*:/i.test(response);
+  const looksLikeStatus = /status/i.test(response) || /\bmod\s*\[/i.test(response) || /\bink\s*[:[\s]/i.test(response) || /\bmakeup\s*[:[\s]/i.test(response) || /\bmodulation/i.test(response);
   if (!looksLikeStatus) {
     console.log('[parseStatusResponse] no recognizable ^SU payload');
     return null;
@@ -85,8 +85,12 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
       default: return 'UNKNOWN';
     }
   };
-  const inkLevel = mapFluidLevel(extract(/INK\s*:\s*(\w+)/i));
-  const makeupLevel = mapFluidLevel(extract(/MAKEUP\s*:\s*(\w+)/i));
+  const inkLevel = mapFluidLevel(
+    extract(/INK\s*:\s*(\w+)/i) || extract(/INK\s*\[\s*(\w+)\s*\]/i) || extract(/\bInk\s+(\w+)/i)
+  );
+  const makeupLevel = mapFluidLevel(
+    extract(/MAKEUP\s*:\s*(\w+)/i) || extract(/MAKEUP\s*\[\s*(\w+)\s*\]/i) || extract(/\bMakeup\s+(\w+)/i)
+  );
 
   // V300UP:1 VLT_ON:1 GUT_ON:1 MOD_ON:1 (or MLT_ON in some firmware)
   // Note: Per v2.0 protocol, these flags use NORMAL logic: 1 = ON, 0 = OFF.

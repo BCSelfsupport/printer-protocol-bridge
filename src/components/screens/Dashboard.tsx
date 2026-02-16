@@ -220,7 +220,7 @@ export function Dashboard({
                   <div className="flex flex-col-reverse gap-0.5 h-10 md:h-12 w-3 md:w-4 bg-black/20 rounded p-0.5">
                     {[0, 1, 2, 3].map((seg) => {
                       const level = status?.inkLevel;
-                      const filledSegments = level === 'FULL' ? 4 : level === 'LOW' ? 1 : 0;
+                      const filledSegments = level === 'FULL' ? 4 : level === 'GOOD' ? 2 : level === 'LOW' ? 1 : 0;
                       const isFilled = seg < filledSegments;
                       return (
                         <div
