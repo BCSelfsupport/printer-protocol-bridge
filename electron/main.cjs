@@ -226,7 +226,7 @@ ipcMain.handle('printer:check-status', async (event, printers) => {
   // Some Bestcode devices visibly refresh/flash their UI on *any* TCP connect.
   // Instead, we use ICMP ping (when available) to detect reachability.
 
-  const pingHost = (ipAddress, timeoutMs = 1200) => {
+  const pingHost = (ipAddress, timeoutMs = 2500) => {
     return new Promise((resolve) => {
       const start = Date.now();
 
@@ -250,7 +250,7 @@ ipcMain.handle('printer:check-status', async (event, printers) => {
     printers.map(async (printer) => {
       // Prefer ICMP ping (no port connection; avoids printer UI flashing)
       try {
-        const ping = await pingHost(printer.ipAddress, 1200);
+        const ping = await pingHost(printer.ipAddress, 2500);
         if (ping.ok) {
           return {
             id: printer.id,
@@ -535,7 +535,7 @@ function startRelayServer() {
       if (url === '/relay/check-status') {
         // Reuse the same ping logic as printer:check-status
         const printers = payload.printers || [];
-        const pingHost = (ipAddress, timeoutMs = 1200) => {
+        const pingHost = (ipAddress, timeoutMs = 2500) => {
           return new Promise((resolve) => {
             const isWin = process.platform === 'win32';
             const args = isWin
@@ -547,7 +547,7 @@ function startRelayServer() {
           });
         };
         const results = await Promise.all(printers.map(async (p) => {
-          const ping = await pingHost(p.ipAddress, 1200);
+          const ping = await pingHost(p.ipAddress, 2500);
           return { id: p.id, isAvailable: ping.ok, status: ping.ok ? 'ready' : 'offline' };
         }));
         sendJson(200, { printers: results });
