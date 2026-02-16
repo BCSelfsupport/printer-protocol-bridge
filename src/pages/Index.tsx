@@ -133,9 +133,16 @@ const Index = () => {
   });
 
   // Low-stock alerts: auto-deduct and show popup when printer signals LOW/EMPTY
+  // Delay alerts on startup so update notification can appear first
   const [lowStockAlertQueue, setLowStockAlertQueue] = useState<LowStockAlertData[]>([]);
   const alertedConsumablesRef = useRef<Set<string>>(new Set());
+  const startupReadyRef = useRef(false);
   useEffect(() => {
+    const timer = setTimeout(() => { startupReadyRef.current = true; }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    if (!startupReadyRef.current) return;
     printers.forEach(printer => {
       if (!printer.isAvailable) return;
       const linked = consumableStorage.getConsumablesForPrinter(printer.id);
