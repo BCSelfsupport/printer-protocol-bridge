@@ -352,7 +352,7 @@ export function PrintersScreen({
   return (
     <div className="flex-1 flex flex-col md:flex-row bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-3 md:p-4 gap-3 md:gap-4 overflow-y-auto md:overflow-hidden">
       {/* Left Panel - Printer List (narrower on desktop when showing Dashboard) */}
-      <div className={`w-full md:w-[40%] md:max-w-[500px] md:min-w-[320px] flex-shrink-0 flex flex-col bg-slate-900/50 rounded-xl border border-slate-800 overflow-visible md:overflow-hidden`}>
+      <div className={`w-full md:w-[30%] md:max-w-[400px] md:min-w-[280px] flex-shrink-0 flex flex-col bg-slate-900/50 rounded-xl border border-slate-800 overflow-visible md:overflow-hidden`}>
         {/* Header */}
         <div className="p-3 border-b border-slate-800 bg-slate-900/80">
           <div className="flex items-center justify-between mb-3">
