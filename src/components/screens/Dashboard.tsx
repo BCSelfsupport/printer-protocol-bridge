@@ -283,7 +283,7 @@ export function Dashboard({
 
             {/* Start/Stop buttons with Count panel */}
             <div className="flex gap-2 md:ml-auto flex-shrink-0">
-              <div className="bg-primary text-primary-foreground rounded-lg p-2 md:p-3 flex-shrink-0 min-w-[120px] md:min-w-[180px] self-start">
+              <div className="bg-primary text-primary-foreground rounded-lg p-2 md:p-2.5 flex-shrink-0 min-w-[100px] md:min-w-[140px] self-start">
                 <div className="flex justify-between items-center mb-0.5 md:mb-1 gap-3">
                   <span className="text-[10px] md:text-sm whitespace-nowrap">Product:</span>
                   <span className="font-bold text-sm md:text-xl font-mono">{(status?.productCount ?? 0).toLocaleString()}</span>
