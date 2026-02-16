@@ -211,6 +211,45 @@ export function usePrinterConnection() {
                 hasActiveErrors: false,
               });
             } else {
+              // For non-connected available printers, query ^SU to get ink/makeup/HV.
+              // Fire-and-forget so it doesn't block the availability loop.
+              const printerData = printersRef.current.find(p => p.id === status.id);
+              if (printerData) {
+                (async () => {
+                  try {
+                    await printerTransport.connect({ id: printerData.id, ipAddress: printerData.ipAddress, port: printerData.port });
+                    const suResult = await printerTransport.sendCommand(printerData.id, '^SU');
+                    await printerTransport.disconnect(printerData.id);
+                    if (suResult.success && suResult.response) {
+                      const parsed = parseStatusResponse(suResult.response);
+                      if (parsed) {
+                        const hvOn = parsed.printStatus === 'Ready';
+                        const inkLvl = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['inkLevel'];
+                        const makeupLvl = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['makeupLevel'];
+                        const msgName = parsed.currentMessage && parsed.currentMessage !== 'NONE' ? parsed.currentMessage.toUpperCase() : undefined;
+                        updatePrinterStatus(printerData.id, {
+                          isAvailable: true,
+                          status: hvOn ? 'ready' : 'not_ready',
+                          hasActiveErrors: parsed.errorActive ?? false,
+                          inkLevel: inkLvl,
+                          makeupLevel: makeupLvl,
+                          currentMessage: msgName,
+                        });
+                        return; // skip fallback update below
+                      }
+                    }
+                  } catch (e) {
+                    console.debug('[availability] ^SU query failed for printer', printerData.id, e);
+                  }
+                  // Fallback if ^SU failed
+                  updatePrinterStatus(status.id, {
+                    isAvailable: true,
+                    status: 'not_ready',
+                    hasActiveErrors: false,
+                  });
+                })();
+                return; // async handles the update
+              }
               updatePrinterStatus(status.id, {
                 isAvailable: true,
                 status: 'not_ready',

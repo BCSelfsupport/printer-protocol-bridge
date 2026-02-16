@@ -79,11 +79,17 @@ export function Dashboard({
     return getFilterStatus(selectedPrinterId, pumpHours);
   }, [selectedPrinterId, streamHours]);
 
-  // Notify parent when this screen mounts/unmounts for polling control
+  // Notify parent when this screen mounts/unmounts for polling control.
+  // Use refs to avoid re-firing the effect when callback identity changes
+  // (inline arrow functions from parent re-create on every render).
+  const onMountRef = useRef(onMount);
+  const onUnmountRef = useRef(onUnmount);
+  useEffect(() => { onMountRef.current = onMount; }, [onMount]);
+  useEffect(() => { onUnmountRef.current = onUnmount; }, [onUnmount]);
   useEffect(() => {
-    onMount?.();
-    return () => onUnmount?.();
-  }, [onMount, onUnmount]);
+    onMountRef.current?.();
+    return () => onUnmountRef.current?.();
+  }, []);
 
   // Derive HV state from status
   const isHvOn = status?.isRunning ?? false;
