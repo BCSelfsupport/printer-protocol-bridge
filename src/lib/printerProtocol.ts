@@ -118,9 +118,13 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
   const errorActive =
     (extract(/\bErr\[\s*(\d)\s*\]/i) || extract(/\bError\[\s*(\d)\s*\]/i)) === '1';
 
-  // Current message name from ^SU response (verbose: "Message: NAME", terse: "MSG: NAME")
+  // Current message name from ^SU response
+  // Verbose: "Message: NAME" or "Message[NAME]", terse: "MSG: NAME" or "Msg[NAME]"
   const currentMessage = extract(/\bMessage\s*:\s*(.+)/i)?.trim()
     || extract(/\bMSG\s*:\s*(.+)/i)?.trim()
+    || extract(/\bMessage\[\s*(.+?)\s*\]/i)?.trim()
+    || extract(/\bMsg\[\s*(.+?)\s*\]/i)?.trim()
+    || extract(/\bCurMsg\[\s*(.+?)\s*\]/i)?.trim()
     || null;
 
   console.log('[parseStatusResponse] parsed:', {
