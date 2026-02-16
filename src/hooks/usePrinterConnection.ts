@@ -91,6 +91,9 @@ export function usePrinterConnection() {
   const printersRef = useRef(printers);
   printersRef.current = printers;
   const disconnectRef = useRef<() => void>(() => {});
+  // Ref for connected printer id – used inside checkPrinterStatus to avoid
+  // recreating the callback (and resetting the interval) on every connection state change.
+  const connectedPrinterIdRef = useRef<number | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     isConnected: false,
     connectedPrinter: null,
@@ -99,6 +102,11 @@ export function usePrinterConnection() {
     settings: defaultSettings,
     messages: [],
   });
+
+  // Keep the ref in sync with the latest connected printer id
+  useEffect(() => {
+    connectedPrinterIdRef.current = connectionState.connectedPrinter?.id ?? null;
+  }, [connectionState.connectedPrinter?.id]);
 
   // Check printer availability - uses Electron TCP if available, otherwise cloud function
   const isCheckingRef = useRef(false);
@@ -157,7 +165,7 @@ export function usePrinterConnection() {
       // Exclude the connected printer from availability polling to prevent status
       // oscillation when the cloud function can't reach local-network printers.
       // The connected printer's status is already maintained by ^SU polling.
-      const connectedId = connectionState.connectedPrinter?.id;
+      const connectedId = connectedPrinterIdRef.current;
       const printerData = printersRef.current
         .filter((p) => p.id !== connectedId)
         .map((p) => ({
@@ -184,20 +192,22 @@ export function usePrinterConnection() {
       }
 
       if (results) {
+        const currentConnectedId = connectedPrinterIdRef.current;
         results.forEach((status: { id: number; isAvailable: boolean; status: string }) => {
-          const isConnectedPrinter = connectionState.isConnected && connectionState.connectedPrinter?.id === status.id;
+          const isConnectedPrinter = currentConnectedId === status.id;
 
-          // Hysteresis: require 3 consecutive offline results before marking offline
+          // Hysteresis: require 5 consecutive offline results before marking offline
           // to prevent UI flapping from intermittent ping failures.
           const OFFLINE_THRESHOLD = 5;
           if (status.isAvailable) {
             // Online: reset counter immediately and mark available
             offlineCountsRef.current[status.id] = 0;
             if (isConnectedPrinter) {
-              // Keep existing HV-derived status for connected printer
+              // Keep existing status for connected printer — only confirm availability
+              const existingPrinter = printersRef.current.find(p => p.id === status.id);
               updatePrinterStatus(status.id, {
                 isAvailable: true,
-                status: connectionState.connectedPrinter!.status,
+                status: existingPrinter?.status ?? 'not_ready',
                 hasActiveErrors: false,
               });
             } else {
@@ -233,7 +243,7 @@ export function usePrinterConnection() {
       isCheckingRef.current = false;
       setIsChecking(false);
     }
-  }, [availabilityPollingEnabled, updatePrinterStatus, connectionState.isConnected, connectionState.connectedPrinter]);
+  }, [availabilityPollingEnabled, updatePrinterStatus]);
 
   // Poll printer status every 5 seconds
   useEffect(() => {
