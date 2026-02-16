@@ -276,7 +276,7 @@ export function PrinterListItem({
     );
   }
 
-  // Full mode (more compact layout)
+  // Full mode – rebuilt to prevent right-side clipping
   return (
     <button
       onClick={onSelect}
@@ -288,19 +288,20 @@ export function PrinterListItem({
             : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600'
       }`}
     >
-      <div className="flex items-center gap-2 md:gap-3">
+      {/* Top row: icon + name/ip + status badge */}
+      <div className="flex items-center gap-2">
         {/* Status indicator - clickable for edit */}
         <button
           onClick={(e) => {
             e.stopPropagation();
             onEdit?.();
           }}
-          className={`relative w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:ring-2 hover:ring-primary/50 ${
+          className={`relative w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:ring-2 hover:ring-primary/50 ${
             printer.isAvailable ? 'bg-success/20 hover:bg-success/30' : 'bg-muted hover:bg-muted/80'
           }`}
           title="Click to edit printer"
         >
-          <PrinterIcon className={`w-6 h-6 ${
+          <PrinterIcon className={`w-5 h-5 ${
             printer.isAvailable ? 'text-success' : 'text-muted-foreground'
           }`} />
           <div className={`absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card flex items-center justify-center ${
@@ -314,77 +315,33 @@ export function PrinterListItem({
           </div>
         </button>
 
-        {/* Printer info */}
+        {/* Name + IP */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <span className={`font-bold truncate text-sm ${textColor}`}>{printer.name}</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded bg-slate-700 whitespace-nowrap flex-shrink-0 ${mutedTextColor}`}>
-              ID: {printer.id}
-            </span>
             {printer.role === 'master' && (
-              <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 whitespace-nowrap flex-shrink-0 ${groupColor?.badge ?? 'bg-amber-500/20 text-amber-400'}`}>
-                <Crown className="w-2.5 h-2.5" /> MASTER
+              <span className={`text-[9px] px-1 py-0.5 rounded font-semibold flex items-center gap-0.5 whitespace-nowrap flex-shrink-0 ${groupColor?.badge ?? 'bg-amber-500/20 text-amber-400'}`}>
+                <Crown className="w-2.5 h-2.5" />
               </span>
             )}
             {printer.role === 'slave' && (
-              <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 whitespace-nowrap flex-shrink-0 ${groupColor?.badge ?? 'bg-blue-500/20 text-blue-400'}`}>
-                <Link className="w-2.5 h-2.5" /> SLAVE
+              <span className={`text-[9px] px-1 py-0.5 rounded font-semibold flex items-center gap-0.5 whitespace-nowrap flex-shrink-0 ${groupColor?.badge ?? 'bg-blue-500/20 text-blue-400'}`}>
+                <Link className="w-2.5 h-2.5" />
               </span>
             )}
           </div>
           <div className={`text-xs font-mono ${subTextColor}`}>
             {printer.ipAddress}:{printer.port}
           </div>
-          
-          {/* Current message with print count - inline */}
-          {printer.currentMessage && (
-            <div className={`mt-1 text-[10px] ${subTextColor}`}>
-              <div className="flex items-center gap-2">
-                <FileText className="w-3 h-3 flex-shrink-0" />
-                <span className="font-medium">{printer.currentMessage}</span>
-              </div>
-              {printer.printCount !== undefined && (
-                <div className="ml-5 mt-0.5 font-semibold">
-                  #{printer.printCount.toLocaleString()}
-                </div>
-              )}
-            </div>
-          )}
-          
-          {/* Fluid levels - inline */}
-          {printer.isAvailable && (
-            <div className="flex items-center gap-3 mt-1">
-              <div className="flex items-center gap-1" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
-                <Palette className={`w-3 h-3 ${getFluidColor(printer.inkLevel)}`} />
-                <span className={`text-[10px] font-semibold ${getFluidColor(printer.inkLevel)}`}>
-                  {printer.inkLevel || '?'}
-                </span>
-              </div>
-              <div className="flex items-center gap-1" title={`Makeup: ${printer.makeupLevel || 'Unknown'}`}>
-                <Droplets className={`w-3 h-3 ${getFluidColor(printer.makeupLevel)}`} />
-                <span className={`text-[10px] font-semibold ${getFluidColor(printer.makeupLevel)}`}>
-                  {printer.makeupLevel || '?'}
-                </span>
-              </div>
-              {filterSt && (
-                <div className="flex items-center gap-1" title={`Filter: ${filterLabel}`}>
-                  <Filter className={`w-3 h-3 ${getFilterColor()}`} />
-                  <span className={`text-[10px] font-semibold ${getFilterColor()}`}>
-                    {filterLabel}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Right side: status + service + connect */}
-        <div className="flex flex-col items-end gap-1 min-w-0">
+        {/* Status badge */}
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
           {(() => {
             const badge = getStatusBadge();
             return (
               <span className={cn(
-                "text-[10px] px-2 py-0.5 rounded font-medium max-w-[110px] truncate",
+                "text-[10px] px-2 py-0.5 rounded font-medium whitespace-nowrap",
                 badge.className
               )}>
                 {badge.label}
@@ -392,12 +349,55 @@ export function PrinterListItem({
             );
           })()}
           {printer.hasActiveErrors && (
-            <span className="text-[10px] px-2 py-0.5 rounded bg-destructive text-white font-medium max-w-[110px] truncate">
+            <span className="text-[10px] px-2 py-0.5 rounded bg-destructive text-white font-medium whitespace-nowrap">
               WARNING
             </span>
           )}
-          <div className="flex items-center gap-1 mt-1 min-w-0">
-            {/* Service button */}
+        </div>
+      </div>
+
+      {/* Bottom row: fluid levels + actions */}
+      {(printer.isAvailable || printer.currentMessage) && (
+        <div className="flex items-center justify-between mt-1.5 ml-12">
+          {/* Left: fluid + message info */}
+          <div className="flex items-center gap-3 min-w-0">
+            {printer.isAvailable && (
+              <>
+                <div className="flex items-center gap-1" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
+                  <Palette className={`w-3 h-3 ${getFluidColor(printer.inkLevel)}`} />
+                  <span className={`text-[10px] font-semibold ${getFluidColor(printer.inkLevel)}`}>
+                    {printer.inkLevel || '?'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1" title={`Makeup: ${printer.makeupLevel || 'Unknown'}`}>
+                  <Droplets className={`w-3 h-3 ${getFluidColor(printer.makeupLevel)}`} />
+                  <span className={`text-[10px] font-semibold ${getFluidColor(printer.makeupLevel)}`}>
+                    {printer.makeupLevel || '?'}
+                  </span>
+                </div>
+                {filterSt && (
+                  <div className="flex items-center gap-1" title={`Filter: ${filterLabel}`}>
+                    <Filter className={`w-3 h-3 ${getFilterColor()}`} />
+                    <span className={`text-[10px] font-semibold ${getFilterColor()}`}>
+                      {filterLabel}
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+            {printer.currentMessage && (
+              <div className={`flex items-center gap-1 text-[10px] ${subTextColor}`}>
+                <FileText className="w-3 h-3 flex-shrink-0" />
+                <span className="font-medium truncate max-w-[100px]">{printer.currentMessage}</span>
+                {printer.printCount !== undefined && (
+                  <span className="font-semibold">#{printer.printCount.toLocaleString()}</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Right: action buttons */}
+          <div className="flex items-center gap-1 flex-shrink-0">
             {printer.isAvailable && onService && (
               <Button
                 onClick={(e) => {
@@ -412,7 +412,6 @@ export function PrinterListItem({
                 <Settings2 className="w-3 h-3" />
               </Button>
             )}
-            {/* Sync button for masters */}
             {printer.role === 'master' && slaveCount > 0 && onSync && (
               <Button
                 onClick={(e) => {
@@ -434,7 +433,7 @@ export function PrinterListItem({
                   onConnect();
                 }}
                 size="sm"
-                className="h-6 text-[10px] px-1.5 md:px-2 bg-gradient-to-r from-success to-success/80 hover:from-success/90 hover:to-success/70"
+                className="h-6 text-[10px] px-2 bg-gradient-to-r from-success to-success/80 hover:from-success/90 hover:to-success/70"
               >
                 <Plug className="w-2.5 h-2.5" />
                 <span className="hidden min-[420px]:inline ml-1">Connect</span>
@@ -442,7 +441,7 @@ export function PrinterListItem({
             )}
           </div>
         </div>
-      </div>
+      )}
     </button>
   );
 }
