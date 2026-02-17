@@ -6,6 +6,7 @@ import '@/types/electron.d.ts';
 import { parseStatusResponse, parseTemperatureResponse, parseVersionResponse } from '@/lib/printerProtocol';
 import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
 import { useSerializedPolling, PollingCommand } from '@/hooks/useSerializedPolling';
+import { toast } from 'sonner';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
@@ -996,16 +997,23 @@ export function usePrinterConnection() {
       setTimeout(async () => {
         try {
           // Open socket for the initial burst of queries
-          await printerTransport.connect({
+          toast.info('🔌 Opening TCP socket...');
+          const connectResult = await printerTransport.connect({
             id: printer.id,
             ipAddress: printer.ipAddress,
             port: printer.port,
           });
+          toast.info(`🔌 Socket: ${JSON.stringify(connectResult).substring(0, 100)}`);
 
           // 1. Query ^SU for HV state, ink/makeup levels, and ready status
           try {
+            toast.info('📡 Sending ^SU...');
             const suResult = await printerTransport.sendCommand(printer.id, '^SU');
             console.log('[connect] ^SU response:', suResult);
+            toast(suResult.success 
+              ? `✅ ^SU response (${suResult.response?.length ?? 0} chars): ${suResult.response?.substring(0, 150) ?? '(empty)'}` 
+              : `❌ ^SU failed: ${suResult.error}`, 
+              { duration: 15000 });
             if (suResult.success && suResult.response) {
               const parsed = parseStatusResponse(suResult.response);
               if (parsed) {
@@ -1051,6 +1059,7 @@ export function usePrinterConnection() {
             }
           } catch (e) {
             console.error('[connect] Failed to query ^SU:', e);
+            toast.error(`❌ ^SU exception: ${e instanceof Error ? e.message : String(e)}`, { duration: 15000 });
           }
 
           // 2. Query message list via ^LM
@@ -1173,8 +1182,10 @@ export function usePrinterConnection() {
           // Previously this used stale closure values (always false) and would kill the
           // socket that lazy-connect had already opened, breaking all polling.
           console.log('[connect] Initial queries done, socket left open for polling');
+          toast.success('✅ Initial query burst complete');
         } catch (e) {
           console.error('[connect] Initial query burst failed:', e);
+          toast.error(`❌ Connect burst failed: ${e instanceof Error ? e.message : String(e)}`, { duration: 15000 });
         }
       }, 500);
     }
