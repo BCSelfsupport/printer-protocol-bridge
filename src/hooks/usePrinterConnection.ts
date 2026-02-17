@@ -610,11 +610,24 @@ export function usePrinterConnection() {
 
   // This prevents the printer UI from refreshing/flashing immediately on "Connect".
   // Sets socketReady=true only after a successful TCP connect.
+  // Stable refs for printer connection details — avoids re-running the socket
+  // lifecycle effect when unrelated connectionState fields change (e.g. metrics).
+  const connectedPrinterIpRef = useRef(connectionState.connectedPrinter?.ipAddress);
+  const connectedPrinterPortRef = useRef(connectionState.connectedPrinter?.port);
+  useEffect(() => {
+    connectedPrinterIpRef.current = connectionState.connectedPrinter?.ipAddress;
+    connectedPrinterPortRef.current = connectionState.connectedPrinter?.port;
+  }, [connectionState.connectedPrinter?.ipAddress, connectionState.connectedPrinter?.port]);
+
   useEffect(() => {
     if (!isElectron && !isRelayMode()) return;
     if (!window.electronAPI && !isRelayMode()) return;
-    const printer = connectionState.connectedPrinter;
-    if (!connectionState.isConnected || !printer) return;
+    if (!connectionState.isConnected || !connectedPrinterId) return;
+
+    const printerIp = connectedPrinterIpRef.current;
+    const printerPort = connectedPrinterPortRef.current ?? 23;
+
+    if (!printerIp) return;
 
     let cancelled = false;
     const shouldConnect = serviceScreenOpen || controlScreenOpen;
@@ -627,8 +640,8 @@ export function usePrinterConnection() {
       setSocketReady(false);
       const teardownDelay = setTimeout(() => {
         if (cancelled) return;
-        console.log('[usePrinterConnection] Closing socket for printer:', printer.id);
-        printerTransport.disconnect(printer.id).catch(e => {
+        console.log('[usePrinterConnection] Closing socket for printer:', connectedPrinterId);
+        printerTransport.disconnect(connectedPrinterId).catch(e => {
           console.error('[usePrinterConnection] disconnect failed:', e);
         });
       }, 2000);
@@ -638,11 +651,11 @@ export function usePrinterConnection() {
     // Screen opened — open socket, then signal ready
     (async () => {
       try {
-        console.log('[usePrinterConnection] Opening socket for printer:', printer.id);
+        console.log('[usePrinterConnection] Opening socket for printer:', connectedPrinterId);
         const result = await printerTransport.connect({
-          id: printer.id,
-          ipAddress: printer.ipAddress,
-          port: printer.port,
+          id: connectedPrinterId,
+          ipAddress: printerIp,
+          port: printerPort,
         });
         console.log('[usePrinterConnection] Socket connect result:', result);
         if (!cancelled && result.success) {
@@ -663,7 +676,7 @@ export function usePrinterConnection() {
     return () => {
       cancelled = true;
     };
-  }, [serviceScreenOpen, controlScreenOpen, connectionState.isConnected, connectionState.connectedPrinter]);
+  }, [serviceScreenOpen, controlScreenOpen, connectionState.isConnected, connectedPrinterId]);
 
 
   // Query printer status (^SU) and update state - used on connect and after commands
