@@ -364,7 +364,7 @@ ipcMain.handle('printer:connect', async (event, printer) => {
       connections.delete(printer.id);
       if (!resolved) {
         resolved = true;
-        reject({ success: false, error: err.message });
+        resolve({ success: false, error: err.message });
       }
     });
 
@@ -375,7 +375,7 @@ ipcMain.handle('printer:connect', async (event, printer) => {
       
       if (!resolved) {
         resolved = true;
-        reject({ success: false, error: 'Connection closed by printer during handshake' });
+        resolve({ success: false, error: 'Connection closed by printer during handshake' });
       } else {
         // Notify renderer that connection was lost (only if we had successfully connected)
         mainWindow?.webContents.send('printer:connection-lost', { printerId: printer.id });
