@@ -577,9 +577,14 @@ export function usePrinterConnection() {
     { command: '^SD', onResponse: handleDateTimeResponse },
   ], [handleServiceResponse, handleMessageListResponse, handleCounterResponse, handleTemperatureResponse, handleDateTimeResponse]);
 
+  // Track whether the TCP socket is confirmed open — gates polling to avoid
+  // sending commands before the socket is ready (prevents 8s timeout storms).
+  const [socketReady, setSocketReady] = useState(false);
+
   // Single serialized polling loop — sends all commands sequentially on one socket
+  // Only enabled once the socket is confirmed open.
   useSerializedPolling({
-    enabled: shouldPollStatus,
+    enabled: shouldPollStatus && socketReady,
     printerId: connectedPrinterId,
     printerIp: connectionState.connectedPrinter?.ipAddress,
     printerPort: connectionState.connectedPrinter?.port,
@@ -590,8 +595,8 @@ export function usePrinterConnection() {
   // Also poll ^SD independently when connected but not on Dashboard/Service
   // so the header clock always updates
   const shouldPollDateTimeOnly = useMemo(() => {
-    return Boolean(connectionState.isConnected && connectedPrinterId && !shouldPollStatus);
-  }, [connectionState.isConnected, connectedPrinterId, shouldPollStatus]);
+    return Boolean(connectionState.isConnected && connectedPrinterId && !shouldPollStatus && socketReady);
+  }, [connectionState.isConnected, connectedPrinterId, shouldPollStatus, socketReady]);
 
   useServiceStatusPolling({
     enabled: shouldPollDateTimeOnly,
@@ -604,6 +609,7 @@ export function usePrinterConnection() {
   });
 
   // This prevents the printer UI from refreshing/flashing immediately on "Connect".
+  // Sets socketReady=true only after a successful TCP connect.
   useEffect(() => {
     if (!isElectron && !isRelayMode()) return;
     if (!window.electronAPI && !isRelayMode()) return;
@@ -614,22 +620,38 @@ export function usePrinterConnection() {
     const shouldConnect = serviceScreenOpen || controlScreenOpen;
     console.log('[usePrinterConnection] Lazy connect effect, shouldConnect:', shouldConnect);
 
+    if (!shouldConnect) {
+      // Screen closed — tear down socket and clear ready flag
+      setSocketReady(false);
+      console.log('[usePrinterConnection] Closing socket for printer:', printer.id);
+      printerTransport.disconnect(printer.id).catch(e => {
+        if (!cancelled) console.error('[usePrinterConnection] disconnect failed:', e);
+      });
+      return () => { cancelled = true; };
+    }
+
+    // Screen opened — open socket, then signal ready
     (async () => {
       try {
-        if (shouldConnect) {
-          console.log('[usePrinterConnection] Opening socket for printer:', printer.id);
-          const result = await printerTransport.connect({
-            id: printer.id,
-            ipAddress: printer.ipAddress,
-            port: printer.port,
-          });
-          console.log('[usePrinterConnection] Socket connect result:', result);
-        } else {
-          console.log('[usePrinterConnection] Closing socket for printer:', printer.id);
-          await printerTransport.disconnect(printer.id);
+        console.log('[usePrinterConnection] Opening socket for printer:', printer.id);
+        const result = await printerTransport.connect({
+          id: printer.id,
+          ipAddress: printer.ipAddress,
+          port: printer.port,
+        });
+        console.log('[usePrinterConnection] Socket connect result:', result);
+        if (!cancelled && result.success) {
+          console.log('[usePrinterConnection] Socket ready, enabling polling');
+          setSocketReady(true);
+        } else if (!cancelled) {
+          console.warn('[usePrinterConnection] Socket connect failed:', result.error);
+          setSocketReady(false);
         }
       } catch (e) {
-        if (!cancelled) console.error('[usePrinterConnection] service socket toggle failed:', e);
+        if (!cancelled) {
+          console.error('[usePrinterConnection] service socket toggle failed:', e);
+          setSocketReady(false);
+        }
       }
     })();
 
@@ -1210,6 +1232,7 @@ export function usePrinterConnection() {
       });
     }
 
+    setSocketReady(false);
     setConnectionState({
       isConnected: false,
       connectedPrinter: null,
