@@ -297,6 +297,10 @@ export function usePrinterConnection() {
                   const makeupLvl = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['makeupLevel'];
                   const msgName = parsed.currentMessage && parsed.currentMessage !== 'NONE' ? parsed.currentMessage.toUpperCase() : undefined;
                   console.log('[availability] ^SU parsed for', pd.id, ':', { inkLvl, makeupLvl, hvOn, msgName });
+                  // Diagnostic: if levels are UNKNOWN, dump the raw response so user can report it
+                  if (inkLvl === 'UNKNOWN' || makeupLvl === 'UNKNOWN') {
+                    console.warn('[availability] ⚠️ UNKNOWN level detected for printer', pd.id, '- RAW ^SU response:\n', suResult.response);
+                  }
                   updatePrinterStatus(pd.id, {
                     isAvailable: true,
                     status: hvOn ? 'ready' : 'not_ready',
@@ -308,7 +312,7 @@ export function usePrinterConnection() {
                   suSuccess = true;
                   break;
                 } else {
-                  console.warn('[availability] ^SU parse returned null for', pd.id, 'response:', suResult.response.substring(0, 200));
+                  console.warn('[availability] ^SU parse returned null for', pd.id, '- RAW response:\n', suResult.response.substring(0, 500));
                 }
               } else {
                 console.warn('[availability] ^SU command failed for', pd.id, ':', suResult.error);
