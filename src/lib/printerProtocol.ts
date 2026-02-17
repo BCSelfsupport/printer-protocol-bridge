@@ -77,13 +77,14 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
     const upper = raw.toUpperCase().trim();
     if (['FULL', 'GOOD', 'LOW', 'EMPTY', 'UNKNOWN'].includes(upper)) return upper;
     // Numeric mapping per V2.6 protocol
-    switch (raw.trim()) {
-      case '3': return 'FULL';
-      case '2': return 'GOOD';
-      case '1': return 'LOW';
-      case '0': return 'EMPTY';
-      default: return 'UNKNOWN';
+    const num = parseInt(raw.trim(), 10);
+    if (!isNaN(num)) {
+      if (num >= 3) return 'FULL';
+      if (num === 2) return 'GOOD';
+      if (num === 1) return 'LOW';
+      return 'EMPTY';
     }
+    return 'UNKNOWN';
   };
 
   // Try multiple patterns for ink level (broadened for firmware variation)
@@ -129,9 +130,12 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
   // as HVDeflection alone is not reliable (can be 1 even when jet is off).
   // Fall back to HVDeflection only if the printer doesn't include a Print Status line.
   const rawPrintStatus = extract(/Print\s+Status\s*:\s*([\w\s]+)/i)?.trim();
+  // PRINT:1 is a terse variant meaning "printing active"
+  const printFlag = extract(/\bPRINT\s*:\s*(\d)/i);
   const printStatus = rawPrintStatus 
     ? (/ready/i.test(rawPrintStatus) && !/not\s+ready/i.test(rawPrintStatus) ? 'Ready' : 'Not ready')
-    : (hvDeflection ? 'Ready' : 'Not ready');
+    : (printFlag !== null ? (printFlag === '1' ? 'Ready' : 'Not ready')
+    : (hvDeflection ? 'Ready' : 'Not ready'));
 
   // AllowErrors and Err flags (v2.6)
   const allowErrors =
