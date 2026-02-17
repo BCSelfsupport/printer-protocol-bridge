@@ -1005,6 +1005,10 @@ export function usePrinterConnection() {
           });
           toast.info(`🔌 Socket: ${JSON.stringify(connectResult).substring(0, 100)}`);
 
+          // Give printer extra settling time after Telnet handshake before sending commands.
+          // Model 88 needs ~1s after socket is ready before it accepts protocol commands.
+          await new Promise(r => setTimeout(r, 1000));
+
           // 1. Query ^SU for HV state, ink/makeup levels, and ready status
           try {
             toast.info('📡 Sending ^SU...');

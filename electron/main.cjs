@@ -343,14 +343,15 @@ ipcMain.handle('printer:connect', async (event, printer) => {
     socket.on('connect', () => {
       console.log(`[printer:connect] TCP connected to ${printer.ipAddress}:${printer.port}`);
       
-      // Wait briefly for Telnet negotiation before declaring success
-      // This gives the printer time to send IAC sequences
+      // Wait for Telnet negotiation before declaring success.
+      // Model 88 and similar printers need a longer handshake phase (1200ms)
+      // before they'll accept commands on the socket.
       handshakeTimer = setTimeout(() => {
         if (!telnetHandshakeComplete) {
-          console.log(`[printer:connect] No Telnet negotiation received, proceeding`);
+          console.log(`[printer:connect] No Telnet negotiation received after 1200ms, proceeding`);
         }
         finishConnect();
-      }, 300);
+      }, 1200);
     });
 
     socket.on('timeout', () => {
