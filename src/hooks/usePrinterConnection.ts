@@ -679,8 +679,9 @@ export function usePrinterConnection() {
       if (result.success && result.response) {
         const parsed = parseStatusResponse(result.response);
         if (parsed) {
-          // Per v2.0 protocol, HVDeflection is the authoritative HV indicator
-          const hvOn = parsed.hvDeflection ?? false;
+          // Use printStatus (which considers PRINT: flag, HvD[], and Print Status: line)
+          // for consistency with the main polling handler
+          const hvOn = parsed.printStatus === 'Ready';
           
           const inkLevelQ = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['inkLevel'];
           const makeupLevelQ = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['makeupLevel'];
