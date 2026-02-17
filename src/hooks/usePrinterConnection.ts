@@ -247,41 +247,100 @@ export function usePrinterConnection() {
         });
 
         // Sequentially query ^SU for non-connected available printers
-        // to avoid TCP conflicts from concurrent connections
-        for (const pd of needSuQuery) {
-          try {
-            console.log('[availability] Querying ^SU for printer', pd.id, pd.ipAddress);
-            await printerTransport.connect(pd);
-            const suResult = await printerTransport.sendCommand(pd.id, '^SU');
-            await printerTransport.disconnect(pd.id);
-            if (suResult.success && suResult.response) {
-              console.log('[availability] ^SU response for', pd.id, ':', suResult.response.substring(0, 200));
-              const parsed = parseStatusResponse(suResult.response);
-              if (parsed) {
-                const hvOn = parsed.printStatus === 'Ready';
-                const inkLvl = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['inkLevel'];
-                const makeupLvl = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['makeupLevel'];
-                const msgName = parsed.currentMessage && parsed.currentMessage !== 'NONE' ? parsed.currentMessage.toUpperCase() : undefined;
-                updatePrinterStatus(pd.id, {
-                  isAvailable: true,
-                  status: hvOn ? 'ready' : 'not_ready',
-                  hasActiveErrors: parsed.errorActive ?? false,
-                  inkLevel: inkLvl,
-                  makeupLevel: makeupLvl,
-                  currentMessage: msgName,
-                });
-                continue;
+        // to avoid TCP conflicts from concurrent connections.
+        // Uses retry + delay between printers to handle TCP socket teardown timing.
+        const SU_RETRY_COUNT = 2;
+        const INTER_PRINTER_DELAY_MS = 500; // allow TCP socket to fully close
+
+        for (let idx = 0; idx < needSuQuery.length; idx++) {
+          const pd = needSuQuery[idx];
+
+          // Small delay between printers (not before the first one)
+          if (idx > 0) {
+            await new Promise(r => setTimeout(r, INTER_PRINTER_DELAY_MS));
+          }
+
+          let suSuccess = false;
+
+          for (let attempt = 0; attempt < SU_RETRY_COUNT; attempt++) {
+            try {
+              console.log('[availability] ^SU query attempt', attempt + 1, 'for printer', pd.id, pd.ipAddress);
+              const connectResult = await printerTransport.connect(pd);
+              console.log('[availability] connect result for', pd.id, ':', JSON.stringify(connectResult));
+
+              if (!connectResult?.success) {
+                console.warn('[availability] connect failed for', pd.id, ':', connectResult?.error);
+                // Try to clean up
+                try { await printerTransport.disconnect(pd.id); } catch {}
+                if (attempt < SU_RETRY_COUNT - 1) {
+                  await new Promise(r => setTimeout(r, 300));
+                  continue;
+                }
+                break;
+              }
+
+              const suResult = await printerTransport.sendCommand(pd.id, '^SU');
+              console.log('[availability] ^SU raw result for', pd.id, ':', JSON.stringify({
+                success: suResult.success,
+                responseLen: suResult.response?.length,
+                response: suResult.response?.substring(0, 300),
+                error: suResult.error,
+              }));
+
+              await printerTransport.disconnect(pd.id);
+
+              if (suResult.success && suResult.response) {
+                const parsed = parseStatusResponse(suResult.response);
+                if (parsed) {
+                  const hvOn = parsed.printStatus === 'Ready';
+                  const inkLvl = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['inkLevel'];
+                  const makeupLvl = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['makeupLevel'];
+                  const msgName = parsed.currentMessage && parsed.currentMessage !== 'NONE' ? parsed.currentMessage.toUpperCase() : undefined;
+                  console.log('[availability] ^SU parsed for', pd.id, ':', { inkLvl, makeupLvl, hvOn, msgName });
+                  updatePrinterStatus(pd.id, {
+                    isAvailable: true,
+                    status: hvOn ? 'ready' : 'not_ready',
+                    hasActiveErrors: parsed.errorActive ?? false,
+                    inkLevel: inkLvl,
+                    makeupLevel: makeupLvl,
+                    currentMessage: msgName,
+                  });
+                  suSuccess = true;
+                  break;
+                } else {
+                  console.warn('[availability] ^SU parse returned null for', pd.id, 'response:', suResult.response.substring(0, 200));
+                }
+              } else {
+                console.warn('[availability] ^SU command failed for', pd.id, ':', suResult.error);
+              }
+
+              // Retry after short delay
+              if (attempt < SU_RETRY_COUNT - 1) {
+                await new Promise(r => setTimeout(r, 300));
+              }
+            } catch (e) {
+              console.error('[availability] ^SU query exception for printer', pd.id, 'attempt', attempt + 1, ':', e);
+              try { await printerTransport.disconnect(pd.id); } catch {}
+              if (attempt < SU_RETRY_COUNT - 1) {
+                await new Promise(r => setTimeout(r, 300));
               }
             }
-          } catch (e) {
-            console.warn('[availability] ^SU query failed for printer', pd.id, e);
           }
-          // Fallback if ^SU failed
-          updatePrinterStatus(pd.id, {
-            isAvailable: true,
-            status: 'not_ready',
-            hasActiveErrors: false,
-          });
+
+          if (!suSuccess) {
+            console.warn('[availability] All ^SU attempts failed for printer', pd.id, '- keeping available with unknown levels');
+            // Don't reset to not_ready — keep previous ink/makeup if available
+            const existing = printersRef.current.find(p => p.id === pd.id);
+            updatePrinterStatus(pd.id, {
+              isAvailable: true,
+              status: existing?.status ?? 'not_ready',
+              hasActiveErrors: existing?.hasActiveErrors ?? false,
+              // Preserve previous levels instead of resetting to UNKNOWN
+              inkLevel: existing?.inkLevel,
+              makeupLevel: existing?.makeupLevel,
+              currentMessage: existing?.currentMessage,
+            });
+          }
         }
       }
     } catch (err) {
