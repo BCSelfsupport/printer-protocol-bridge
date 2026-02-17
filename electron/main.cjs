@@ -644,8 +644,24 @@ function startRelayServer() {
   });
 }
 
-// Extract send-command logic into a reusable function for both IPC and relay
+// Per-printer command queue to prevent concurrent socket writes.
+// When two callers (e.g. connect burst + polling) send commands at the same time,
+// the onData handlers collide and responses get lost → timeouts.
+const commandQueues = new Map(); // printerId → Promise chain
+
 async function sendCommandToSocket(printerId, command) {
+  // Queue this command behind any in-flight command for the same printer
+  const prev = commandQueues.get(printerId) || Promise.resolve();
+  const current = prev.then(
+    () => _sendCommandToSocketImpl(printerId, command),
+    () => _sendCommandToSocketImpl(printerId, command), // continue even if prev failed
+  );
+  commandQueues.set(printerId, current.catch(() => {})); // swallow so chain never rejects
+  return current;
+}
+
+// Extract send-command logic into a reusable function for both IPC and relay
+async function _sendCommandToSocketImpl(printerId, command) {
   const meta = printerMeta.get(printerId);
   const existing = connections.get(printerId);
 
