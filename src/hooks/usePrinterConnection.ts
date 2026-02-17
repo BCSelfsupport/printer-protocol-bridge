@@ -431,6 +431,91 @@ export function usePrinterConnection() {
     onResponse: handleServiceResponse,
   });
 
+  // Stable callback for ^CN counter polling – keeps counters live on Dashboard
+  const handleCounterResponse = useCallback((raw: string) => {
+    let parts: number[] = [];
+
+    if (raw.includes('PC[')) {
+      // Terse format: PC[x] PrC[x] C1[x] C2[x] C3[x] C4[x]
+      const pcMatch = raw.match(/PC\[(\d+)\]/);
+      const prcMatch = raw.match(/PrC\[(\d+)\]/);
+      const c1Match = raw.match(/C1\[(\d+)\]/);
+      const c2Match = raw.match(/C2\[(\d+)\]/);
+      const c3Match = raw.match(/C3\[(\d+)\]/);
+      const c4Match = raw.match(/C4\[(\d+)\]/);
+      parts = [
+        pcMatch ? parseInt(pcMatch[1], 10) : 0,
+        prcMatch ? parseInt(prcMatch[1], 10) : 0,
+        c1Match ? parseInt(c1Match[1], 10) : 0,
+        c2Match ? parseInt(c2Match[1], 10) : 0,
+        c3Match ? parseInt(c3Match[1], 10) : 0,
+        c4Match ? parseInt(c4Match[1], 10) : 0,
+      ];
+    } else if (raw.includes('Product Count:')) {
+      const productMatch = raw.match(/Product Count:\s*(\d+)/);
+      const printMatch = raw.match(/Print Count:\s*(\d+)/);
+      const c1Match = raw.match(/Counter 1:\s*(\d+)/);
+      const c2Match = raw.match(/Counter 2:\s*(\d+)/);
+      const c3Match = raw.match(/Counter 3:\s*(\d+)/);
+      const c4Match = raw.match(/Counter 4:\s*(\d+)/);
+      parts = [
+        productMatch ? parseInt(productMatch[1], 10) : 0,
+        printMatch ? parseInt(printMatch[1], 10) : 0,
+        c1Match ? parseInt(c1Match[1], 10) : 0,
+        c2Match ? parseInt(c2Match[1], 10) : 0,
+        c3Match ? parseInt(c3Match[1], 10) : 0,
+        c4Match ? parseInt(c4Match[1], 10) : 0,
+      ];
+    } else if (raw.includes('Product:')) {
+      const productMatch = raw.match(/Product:(\d+)/);
+      const printMatch = raw.match(/Print:(\d+)/);
+      const custom1Match = raw.match(/Custom1:(\d+)/);
+      const custom2Match = raw.match(/Custom2:(\d+)/);
+      const custom3Match = raw.match(/Custom3:(\d+)/);
+      const custom4Match = raw.match(/Custom4:(\d+)/);
+      parts = [
+        productMatch ? parseInt(productMatch[1], 10) : 0,
+        printMatch ? parseInt(printMatch[1], 10) : 0,
+        custom1Match ? parseInt(custom1Match[1], 10) : 0,
+        custom2Match ? parseInt(custom2Match[1], 10) : 0,
+        custom3Match ? parseInt(custom3Match[1], 10) : 0,
+        custom4Match ? parseInt(custom4Match[1], 10) : 0,
+      ];
+    } else {
+      // Comma-separated fallback
+      parts = raw.split(',').map((s: string) => { const n = parseInt(s.trim(), 10); return isNaN(n) ? 0 : n; });
+    }
+
+    if (parts.length >= 2) {
+      setConnectionState(prev => ({
+        ...prev,
+        status: prev.status ? {
+          ...prev.status,
+          productCount: parts[0],
+          printCount: parts[1],
+          customCounters: parts.length >= 6 ? [parts[2], parts[3], parts[4], parts[5]] : prev.status.customCounters,
+        } : null,
+      }));
+
+      // Also update the printer card's printCount
+      const printerId = connectedPrinterIdRef.current;
+      if (printerId != null) {
+        updatePrinter(printerId, { printCount: parts[1] });
+      }
+    }
+  }, []);
+
+  // Poll counters via ^CN while Dashboard/Service is open
+  useServiceStatusPolling({
+    enabled: shouldPollStatus,
+    printerId: connectedPrinterId,
+    printerIp: connectionState.connectedPrinter?.ipAddress,
+    printerPort: connectionState.connectedPrinter?.port,
+    intervalMs: 5000,
+    command: '^CN',
+    onResponse: handleCounterResponse,
+  });
+
   // Poll temperature via ^TP while Service or Dashboard screen is open
   useServiceStatusPolling({
     enabled: shouldPollStatus,
