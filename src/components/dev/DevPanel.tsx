@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { printerEmulator, EmulatorState, CommandLogEntry, PROTOCOL_COMMANDS } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
@@ -54,6 +54,39 @@ function getTimeAgo(dateStr: string): string {
   if (diffHr < 24) return `${diffHr}h ago`;
   const diffDay = Math.floor(diffHr / 24);
   return `${diffDay}d ago`;
+}
+
+function UpdaterDiagnostics() {
+  const [info, setInfo] = useState<{ version: string; updateState: any } | null>(null);
+
+  useEffect(() => {
+    const api = (window as any).electronAPI;
+    if (!api) return;
+    Promise.all([
+      api.app.getVersion(),
+      api.app.getUpdateState(),
+    ]).then(([version, updateState]: [string, any]) => {
+      setInfo({ version, updateState });
+    }).catch(() => {});
+  }, []);
+
+  if (!info) return <div className="text-[10px] text-blue-600">Loading...</div>;
+
+  return (
+    <div className="text-[10px] text-blue-700 space-y-0.5 font-mono">
+      <div>Installed: v{info.version}</div>
+      <div>Update Stage: {info.updateState?.stage || 'unknown'}</div>
+      {info.updateState?.info && (
+        <div>Target: v{info.updateState.info.version}</div>
+      )}
+      {info.updateState?.progress && (
+        <div>Progress: {Math.round(info.updateState.progress.percent)}%</div>
+      )}
+      {info.updateState?.stage === 'idle' && (
+        <div className="text-orange-600 mt-1">⚠️ No update detected. Updater may not have a GitHub Release context.</div>
+      )}
+    </div>
+  );
 }
 
 interface DevPanelProps {
@@ -949,6 +982,18 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   );
                 })}
               </div>
+            </div>
+
+            {/* Updater Diagnostics */}
+            <div className="p-2 bg-blue-50 rounded border border-blue-200">
+              <div className="text-[10px] font-semibold text-blue-800 mb-1">Auto-Updater Diagnostics</div>
+              {(window as any).electronAPI ? (
+                <UpdaterDiagnostics />
+              ) : (
+                <div className="text-[10px] text-blue-600">
+                  ❌ Not running in Electron. Auto-updater only works in the installed desktop app.
+                </div>
+              )}
             </div>
 
             <Button
