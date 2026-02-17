@@ -454,6 +454,18 @@ if (autoUpdater) {
 // Let the renderer query cached update state on mount
 ipcMain.handle('app:get-update-state', () => cachedUpdateState);
 
+// Expose updater log file to renderer for diagnostics
+ipcMain.handle('app:get-updater-log', () => {
+  try {
+    const content = fs.readFileSync(logFile, 'utf8');
+    // Return last 100 lines
+    const lines = content.split('\n');
+    return lines.slice(-100).join('\n');
+  } catch (_) {
+    return '(no log file found)';
+  }
+});
+
 
 ipcMain.handle('app:check-for-updates', () => {
   autoUpdater?.checkForUpdatesAndNotify?.();

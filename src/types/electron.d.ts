@@ -24,6 +24,7 @@ interface AppAPI {
   toggleFullscreen: () => Promise<{ fullscreen: boolean }>;
   isFullscreen: () => Promise<boolean>;
   getUpdateState: () => Promise<{ stage: string; info: { version: string } | null; progress: { percent: number; bytesPerSecond: number } | null }>;
+  getUpdaterLog: () => Promise<string>;
 }
 
 interface ElectronAPI {

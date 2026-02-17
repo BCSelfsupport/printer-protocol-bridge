@@ -58,8 +58,10 @@ function getTimeAgo(dateStr: string): string {
 
 function UpdaterDiagnostics() {
   const [info, setInfo] = useState<{ version: string; updateState: any } | null>(null);
+  const [log, setLog] = useState<string | null>(null);
+  const [showLog, setShowLog] = useState(false);
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     const api = (window as any).electronAPI;
     if (!api) return;
     Promise.all([
@@ -69,6 +71,17 @@ function UpdaterDiagnostics() {
       setInfo({ version, updateState });
     }).catch(() => {});
   }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const loadLog = () => {
+    const api = (window as any).electronAPI;
+    if (!api?.app?.getUpdaterLog) return;
+    api.app.getUpdaterLog().then((content: string) => {
+      setLog(content);
+      setShowLog(true);
+    });
+  };
 
   if (!info) return <div className="text-[10px] text-blue-600">Loading...</div>;
 
@@ -83,7 +96,17 @@ function UpdaterDiagnostics() {
         <div>Progress: {Math.round(info.updateState.progress.percent)}%</div>
       )}
       {info.updateState?.stage === 'idle' && (
-        <div className="text-orange-600 mt-1">⚠️ No update detected. Updater may not have a GitHub Release context.</div>
+        <div className="text-orange-600 mt-1">⚠️ No update detected.</div>
+      )}
+      <div className="flex gap-1 mt-1">
+        <button onClick={refresh} className="text-blue-500 underline text-[10px]">Refresh</button>
+        <button onClick={loadLog} className="text-blue-500 underline text-[10px]">View Log</button>
+      </div>
+      {showLog && log && (
+        <div className="mt-1 max-h-40 overflow-auto bg-black/80 text-green-400 p-1 rounded text-[9px] whitespace-pre-wrap">
+          {log}
+          <button onClick={() => setShowLog(false)} className="block text-red-400 mt-1 underline">Close</button>
+        </div>
       )}
     </div>
   );
