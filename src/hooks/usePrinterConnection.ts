@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import '@/types/electron.d.ts';
 import { parseStatusResponse, parseTemperatureResponse, parseVersionResponse } from '@/lib/printerProtocol';
 import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
+import { useSerializedPolling, PollingCommand } from '@/hooks/useSerializedPolling';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
@@ -451,22 +452,11 @@ export function usePrinterConnection() {
     }));
   }, []);
 
-  useServiceStatusPolling({
-    enabled: shouldPollStatus,
-    printerId: connectedPrinterId,
-    printerIp: connectionState.connectedPrinter?.ipAddress,
-    printerPort: connectionState.connectedPrinter?.port,
-    intervalMs: 3000,
-    command: '^SU',
-    onResponse: handleServiceResponse,
-  });
-
   // Stable callback for ^CN counter polling – keeps counters live on Dashboard
   const handleCounterResponse = useCallback((raw: string) => {
     let parts: number[] = [];
 
     if (raw.includes('PC[')) {
-      // Terse format: PC[x] PrC[x] C1[x] C2[x] C3[x] C4[x]
       const pcMatch = raw.match(/PC\[(\d+)\]/);
       const prcMatch = raw.match(/PrC\[(\d+)\]/);
       const c1Match = raw.match(/C1\[(\d+)\]/);
@@ -512,7 +502,6 @@ export function usePrinterConnection() {
         custom4Match ? parseInt(custom4Match[1], 10) : 0,
       ];
     } else {
-      // Comma-separated fallback
       parts = raw.split(',').map((s: string) => { const n = parseInt(s.trim(), 10); return isNaN(n) ? 0 : n; });
     }
 
@@ -527,7 +516,6 @@ export function usePrinterConnection() {
         } : null,
       }));
 
-      // Also update the printer card's printCount
       const printerId = connectedPrinterIdRef.current;
       if (printerId != null) {
         updatePrinter(printerId, { printCount: parts[1] });
@@ -535,36 +523,32 @@ export function usePrinterConnection() {
     }
   }, []);
 
-  // Poll counters via ^CN while Dashboard/Service is open
-  useServiceStatusPolling({
+  // Build serialized command list: ^SU, ^CN, ^TP, ^SD sent sequentially to prevent TCP collisions
+  const pollingCommands = useMemo<PollingCommand[]>(() => [
+    { command: '^SU', onResponse: handleServiceResponse },
+    { command: '^CN', onResponse: handleCounterResponse },
+    { command: '^TP', onResponse: handleTemperatureResponse },
+    { command: '^SD', onResponse: handleDateTimeResponse },
+  ], [handleServiceResponse, handleCounterResponse, handleTemperatureResponse, handleDateTimeResponse]);
+
+  // Single serialized polling loop — sends all commands sequentially on one socket
+  useSerializedPolling({
     enabled: shouldPollStatus,
     printerId: connectedPrinterId,
     printerIp: connectionState.connectedPrinter?.ipAddress,
     printerPort: connectionState.connectedPrinter?.port,
-    intervalMs: 5000,
-    command: '^CN',
-    onResponse: handleCounterResponse,
+    intervalMs: 3000,
+    commands: pollingCommands,
   });
 
-  // Poll temperature via ^TP while Service or Dashboard screen is open
-  useServiceStatusPolling({
-    enabled: shouldPollStatus,
-    printerId: connectedPrinterId,
-    printerIp: connectionState.connectedPrinter?.ipAddress,
-    printerPort: connectionState.connectedPrinter?.port,
-    intervalMs: 5000,
-    command: '^TP',
-    onResponse: handleTemperatureResponse,
-  });
-
-  // Poll printer date/time via ^SD whenever connected (not just on Service/Dashboard)
-  // so the header clock always shows the printer's time.
-  const shouldPollDateTime = useMemo(() => {
-    return Boolean(connectionState.isConnected && connectedPrinterId);
-  }, [connectionState.isConnected, connectedPrinterId]);
+  // Also poll ^SD independently when connected but not on Dashboard/Service
+  // so the header clock always updates
+  const shouldPollDateTimeOnly = useMemo(() => {
+    return Boolean(connectionState.isConnected && connectedPrinterId && !shouldPollStatus);
+  }, [connectionState.isConnected, connectedPrinterId, shouldPollStatus]);
 
   useServiceStatusPolling({
-    enabled: shouldPollDateTime,
+    enabled: shouldPollDateTimeOnly,
     printerId: connectedPrinterId,
     printerIp: connectionState.connectedPrinter?.ipAddress,
     printerPort: connectionState.connectedPrinter?.port,
@@ -573,7 +557,6 @@ export function usePrinterConnection() {
     onResponse: handleDateTimeResponse,
   });
 
-  // Lazy TCP connect: only open the Electron socket while a polling screen is open.
   // This prevents the printer UI from refreshing/flashing immediately on "Connect".
   useEffect(() => {
     if (!isElectron && !isRelayMode()) return;
