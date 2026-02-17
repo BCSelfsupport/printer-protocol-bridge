@@ -280,7 +280,7 @@ export function usePrinterConnection() {
                 updatePrinterStatus(pd.id, {
                   isAvailable: true,
                   status: hvOn ? 'ready' : 'not_ready',
-                hasActiveErrors: (parsed.errorActive && !parsed.allowErrors) ?? false,
+                hasActiveErrors: parsed.errorActive ?? false,
                 inkLevel: inkLvl,
                 makeupLevel: makeupLvl,
                   currentMessage: msgName,
@@ -383,7 +383,7 @@ export function usePrinterConnection() {
       updatePrinterStatus(connectedPrinterId, {
         isAvailable: true,
         status: hvOn ? 'ready' : 'not_ready',
-        hasActiveErrors: (parsed.errorActive && !parsed.allowErrors) ?? false,
+        hasActiveErrors: parsed.errorActive ?? false,
         inkLevel: inkLevelCard,
         makeupLevel: makeupLevelCard,
         currentMessage: parsedMessage,
@@ -721,7 +721,7 @@ export function usePrinterConnection() {
           updatePrinterStatus(printer.id, {
             isAvailable: true,
             status: hvOn ? 'ready' : 'not_ready',
-            hasActiveErrors: (parsed.errorActive && !parsed.allowErrors) ?? false,
+            hasActiveErrors: parsed.errorActive ?? false,
             inkLevel: inkLevelQ,
             makeupLevel: makeupLevelQ,
           });
@@ -1102,7 +1102,7 @@ export function usePrinterConnection() {
                 updatePrinterStatus(printer.id, {
                   isAvailable: true,
                   status: hvOn ? 'ready' : 'not_ready',
-                  hasActiveErrors: (parsed.errorActive && !parsed.allowErrors) ?? false,
+                  hasActiveErrors: parsed.errorActive ?? false,
                   inkLevel: inkLevel as Printer['inkLevel'],
                   makeupLevel: makeupLevel as Printer['makeupLevel'],
                   currentMessage: parsedMessage,
