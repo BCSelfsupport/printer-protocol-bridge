@@ -194,15 +194,16 @@ export function usePrinterConnection() {
       if (results) {
         const currentConnectedId = connectedPrinterIdRef.current;
 
+        // Collect printers that need ^SU queries (non-connected, available)
+        const needSuQuery: { id: number; ipAddress: string; port: number }[] = [];
+
         results.forEach((status: { id: number; isAvailable: boolean; status: string }) => {
           const isConnectedPrinter = currentConnectedId === status.id;
 
-          // Hysteresis: require 5 consecutive offline results before marking offline
           const OFFLINE_THRESHOLD = 5;
           if (status.isAvailable) {
             offlineCountsRef.current[status.id] = 0;
             if (isConnectedPrinter) {
-              // Keep existing status for connected printer — only confirm availability
               const existingPrinter = printersRef.current.find(p => p.id === status.id);
               updatePrinterStatus(status.id, {
                 isAvailable: true,
@@ -210,16 +211,16 @@ export function usePrinterConnection() {
                 hasActiveErrors: existingPrinter?.hasActiveErrors ?? false,
               });
             } else {
-              // NON-CONNECTED printers: mark available but NOT ready.
-              // We intentionally do NOT open TCP sockets here to avoid conflicts
-              // with user-initiated connections. Ink/makeup/status will populate
-              // once the user connects and ^SU polling starts on the dashboard.
-              console.log('[availability] Printer', status.id, 'is reachable (ping OK), marking available/not_ready');
-              updatePrinterStatus(status.id, {
-                isAvailable: true,
-                status: 'not_ready',
-                hasActiveErrors: false,
-              });
+              const pd = printersRef.current.find(p => p.id === status.id);
+              if (pd) {
+                needSuQuery.push({ id: pd.id, ipAddress: pd.ipAddress, port: pd.port });
+              } else {
+                updatePrinterStatus(status.id, {
+                  isAvailable: true,
+                  status: 'not_ready',
+                  hasActiveErrors: false,
+                });
+              }
             }
           } else {
             const count = (offlineCountsRef.current[status.id] || 0) + 1;
@@ -237,6 +238,73 @@ export function usePrinterConnection() {
             }
           }
         });
+
+        // Sequentially query ^SU for non-connected available printers.
+        // Uses setMeta so sendCommand creates ephemeral sockets (no persistent connect needed).
+        const INTER_PRINTER_DELAY_MS = 800;
+
+        for (let idx = 0; idx < needSuQuery.length; idx++) {
+          const pd = needSuQuery[idx];
+
+          if (idx > 0) {
+            await new Promise(r => setTimeout(r, INTER_PRINTER_DELAY_MS));
+          }
+
+          try {
+            console.log('[availability] ^SU query for printer', pd.id, pd.ipAddress);
+            
+            // Register meta so sendCommand can open an ephemeral socket on its own
+            await printerTransport.setMeta(pd);
+            
+            const suResult = await printerTransport.sendCommand(pd.id, '^SU');
+            console.log('[availability] ^SU result for', pd.id, ':', JSON.stringify({
+              success: suResult.success,
+              responseLen: suResult.response?.length,
+              response: suResult.response?.substring(0, 400),
+              error: suResult.error,
+            }));
+
+            if (suResult.success && suResult.response) {
+              const parsed = parseStatusResponse(suResult.response);
+              if (parsed) {
+                const hvOn = parsed.printStatus === 'Ready';
+                const inkLvl = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['inkLevel'];
+                const makeupLvl = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['makeupLevel'];
+                const msgName = parsed.currentMessage && parsed.currentMessage !== 'NONE' ? parsed.currentMessage.toUpperCase() : undefined;
+                console.log('[availability] ^SU parsed for', pd.id, ':', { inkLvl, makeupLvl, hvOn, msgName });
+                if (inkLvl === 'UNKNOWN' || makeupLvl === 'UNKNOWN') {
+                  console.warn('[availability] ⚠️ UNKNOWN level for printer', pd.id, '- RAW:\n', suResult.response);
+                }
+                updatePrinterStatus(pd.id, {
+                  isAvailable: true,
+                  status: hvOn ? 'ready' : 'not_ready',
+                  hasActiveErrors: parsed.errorActive ?? false,
+                  inkLevel: inkLvl,
+                  makeupLevel: makeupLvl,
+                  currentMessage: msgName,
+                });
+                continue;
+              } else {
+                console.warn('[availability] ^SU parse null for', pd.id, '- RAW:\n', suResult.response?.substring(0, 500));
+              }
+            } else {
+              console.warn('[availability] ^SU failed for', pd.id, ':', suResult.error);
+            }
+          } catch (e) {
+            console.error('[availability] ^SU exception for printer', pd.id, ':', e);
+          }
+
+          // ^SU failed — default to not_ready (never false READY), preserve known levels
+          const existing = printersRef.current.find(p => p.id === pd.id);
+          updatePrinterStatus(pd.id, {
+            isAvailable: true,
+            status: 'not_ready',
+            hasActiveErrors: false,
+            inkLevel: existing?.inkLevel,
+            makeupLevel: existing?.makeupLevel,
+            currentMessage: existing?.currentMessage,
+          });
+        }
       }
     } catch (err) {
       console.error('Failed to check printer status:', err);
