@@ -70,14 +70,14 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
     extract(/Viscosity\[\s*([\d.]+)\s*\]/i) || extract(/\bVis\[\s*([\d.]+)\s*\]/i) || '0'
   );
 
-  // INK:FULL MAKEUP:GOOD (allow optional spaces)
+  // INK:FULL MAKEUP:GOOD (allow optional spaces, colons, brackets, "Level" suffix, etc.)
   // Some firmware returns numeric codes: 0=EMPTY, 1=LOW, 2=GOOD, 3=FULL
   const mapFluidLevel = (raw: string | null): string => {
     if (!raw) return 'UNKNOWN';
-    const upper = raw.toUpperCase();
+    const upper = raw.toUpperCase().trim();
     if (['FULL', 'GOOD', 'LOW', 'EMPTY', 'UNKNOWN'].includes(upper)) return upper;
     // Numeric mapping per V2.6 protocol
-    switch (raw) {
+    switch (raw.trim()) {
       case '3': return 'FULL';
       case '2': return 'GOOD';
       case '1': return 'LOW';
@@ -85,12 +85,29 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
       default: return 'UNKNOWN';
     }
   };
-  const inkLevel = mapFluidLevel(
-    extract(/INK\s*:\s*(\w+)/i) || extract(/INK\s*\[\s*(\w+)\s*\]/i) || extract(/\bInk\s+(\w+)/i)
-  );
-  const makeupLevel = mapFluidLevel(
-    extract(/MAKEUP\s*:\s*(\w+)/i) || extract(/MAKEUP\s*\[\s*(\w+)\s*\]/i) || extract(/\bMakeup\s+(\w+)/i)
-  );
+
+  // Try multiple patterns for ink level (broadened for firmware variation)
+  const inkRaw = extract(/INK\s*:\s*(\w+)/i)
+    || extract(/INK\s*\[\s*(\w+)\s*\]/i)
+    || extract(/\bInk\s+(\w+)/i)
+    || extract(/INK\s+LEVEL\s*:\s*(\w+)/i)
+    || extract(/\bInk\s*Level\s*:\s*(\w+)/i)
+    || extract(/\bInk\s*=\s*(\w+)/i)
+    || extract(/\bI\s*:\s*(\w+)/i);  // ultra-terse: "I:FULL"
+  
+  const makeupRaw = extract(/MAKEUP\s*:\s*(\w+)/i)
+    || extract(/MAKEUP\s*\[\s*(\w+)\s*\]/i)
+    || extract(/\bMakeup\s+(\w+)/i)
+    || extract(/MAKEUP\s+LEVEL\s*:\s*(\w+)/i)
+    || extract(/\bMakeup\s*Level\s*:\s*(\w+)/i)
+    || extract(/\bMakeup\s*=\s*(\w+)/i)
+    || extract(/\bMKP\s*:\s*(\w+)/i)   // abbreviation
+    || extract(/\bM\s*:\s*(\w+)/i);    // ultra-terse: "M:GOOD"
+
+  console.log('[parseStatusResponse] ink raw match:', inkRaw, '| makeup raw match:', makeupRaw);
+
+  const inkLevel = mapFluidLevel(inkRaw);
+  const makeupLevel = mapFluidLevel(makeupRaw);
 
   // V300UP:1 VLT_ON:1 GUT_ON:1 MOD_ON:1 (or MLT_ON in some firmware)
   // Note: Per v2.0 protocol, these flags use NORMAL logic: 1 = ON, 0 = OFF.
