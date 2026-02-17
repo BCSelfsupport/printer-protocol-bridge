@@ -621,13 +621,18 @@ export function usePrinterConnection() {
     console.log('[usePrinterConnection] Lazy connect effect, shouldConnect:', shouldConnect);
 
     if (!shouldConnect) {
-      // Screen closed — tear down socket and clear ready flag
+      // Screen closed — tear down socket and clear ready flag.
+      // Delay the disconnect slightly so any in-flight serialized polling commands
+      // can finish before the socket is yanked (prevents 8s timeout errors).
       setSocketReady(false);
-      console.log('[usePrinterConnection] Closing socket for printer:', printer.id);
-      printerTransport.disconnect(printer.id).catch(e => {
-        if (!cancelled) console.error('[usePrinterConnection] disconnect failed:', e);
-      });
-      return () => { cancelled = true; };
+      const teardownDelay = setTimeout(() => {
+        if (cancelled) return;
+        console.log('[usePrinterConnection] Closing socket for printer:', printer.id);
+        printerTransport.disconnect(printer.id).catch(e => {
+          console.error('[usePrinterConnection] disconnect failed:', e);
+        });
+      }, 2000);
+      return () => { cancelled = true; clearTimeout(teardownDelay); };
     }
 
     // Screen opened — open socket, then signal ready
