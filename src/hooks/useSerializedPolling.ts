@@ -48,6 +48,17 @@ export function useSerializedPolling(options: {
     console.log('[useSerializedPolling] Starting for printer', printerId, 'commands:', commands.map(c => c.command));
     let cancelled = false;
 
+    // Wrap a promise with a timeout to prevent hung TCP responses from killing polling
+    const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+      return new Promise<T>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`[${label}] timed out after ${ms}ms`)), ms);
+        promise.then(
+          (v) => { clearTimeout(timer); resolve(v); },
+          (e) => { clearTimeout(timer); reject(e); },
+        );
+      });
+    };
+
     const tick = async () => {
       if (cancelled || inFlightRef.current) return;
       inFlightRef.current = true;
@@ -77,7 +88,13 @@ export function useSerializedPolling(options: {
               const emulatorResult = emulator.processCommand(cmd.command);
               result = { success: emulatorResult.success, response: emulatorResult.response };
             } else {
-              result = await printerTransport.sendCommand(printerId, cmd.command);
+              // 8-second timeout per command — if TCP hangs, skip this command
+              // and continue with the rest instead of killing all polling forever
+              result = await withTimeout(
+                printerTransport.sendCommand(printerId, cmd.command),
+                8000,
+                cmd.command,
+              );
             }
 
             if (cancelled) break;
@@ -86,6 +103,7 @@ export function useSerializedPolling(options: {
             }
           } catch (e) {
             console.error('[useSerializedPolling] Error on', cmd.command, ':', e);
+            // Continue to next command — don't let one failure kill the loop
           }
 
           // Longer gap between commands to let the printer fully process & respond
