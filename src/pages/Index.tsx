@@ -109,7 +109,6 @@ const Index = () => {
     console.log('[handleCountdownComplete] printerId:', printerId, 'type:', type);
     if (type === 'starting') {
       // The real printer firmware auto-enables HV after jet startup.
-      // The PC HMI does NOT send ^PR 1 — it relies on ^SU polling to detect the change.
       // For the emulator, simulate this firmware behavior by enabling HV directly.
       const printer = printers.find(p => p.id === printerId);
       if (printer && multiPrinterEmulator.enabled) {
@@ -119,8 +118,26 @@ const Index = () => {
           instance.processCommand('^PR 1');
         }
       }
+    } else if (type === 'stopping') {
+      // After the stop countdown finishes, the printer should have fully shut down.
+      // Immediately set the UI state to not-ready/jet-off as a safety net.
+      // The next ^SU poll (every 3s) will confirm or correct this.
+      console.log('[handleCountdownComplete] Stop countdown complete for', printerId, '- setting not_ready');
+      
+      // Update the printer list card to show not_ready immediately
+      updatePrinter(printerId, {
+        status: 'not_ready',
+        hasActiveErrors: false,
+      });
+      
+      // Fire a manual ^SU to log what the printer actually reports post-shutdown
+      if (connectedPrinterId === printerId) {
+        sendCommand('^SU').then(result => {
+          console.log('[handleCountdownComplete] Post-stop ^SU check:', result?.success, result?.response?.substring(0, 300));
+        }).catch(() => {});
+      }
     }
-  }, [printers]);
+  }, [printers, sendCommand, updatePrinter, connectedPrinterId]);
 
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown, getCountdown } = useJetCountdown(connectedPrinterId, handleCountdownComplete);
 
