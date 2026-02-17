@@ -647,18 +647,75 @@ function startRelayServer() {
 async function sendCommandToSocket(printerId, command) {
   const meta = printerMeta.get(printerId);
   const existing = connections.get(printerId);
-  const canUseExisting = !!(existing && !existing.destroyed && existing.writable);
+
+  // More aggressive liveness check: also verify the socket hasn't errored
+  const canUseExisting = !!(existing && !existing.destroyed && existing.writable && !existing.pending);
+
+  console.log(`[sendCommand] printer=${printerId} cmd="${command}" hasExisting=${!!existing} canReuse=${canUseExisting} hasMeta=${!!meta}`);
 
   const getSocket = async () => {
-    if (canUseExisting) return { socket: existing, ephemeral: false };
-    if (!meta) throw new Error('Printer not connected');
+    if (canUseExisting) {
+      console.log(`[sendCommand] Reusing persistent socket for printer ${printerId}`);
+      return { socket: existing, ephemeral: false };
+    }
+
+    // Clean up dead socket
+    if (existing) {
+      console.log(`[sendCommand] Destroying dead socket for printer ${printerId}`);
+      try { existing.destroy(); } catch (_) {}
+      connections.delete(printerId);
+    }
+
+    if (!meta) throw new Error('Printer not connected (no meta)');
+
+    console.log(`[sendCommand] Creating ephemeral socket to ${meta.ipAddress}:${meta.port}`);
+
     return await new Promise((resolve, reject) => {
       const socket = new net.Socket();
-      socket.setTimeout(5000);
+      socket.setTimeout(8000);
       socket.setKeepAlive(true, 5000);
-      socket.once('connect', () => { connections.set(printerId, socket); resolve({ socket, ephemeral: true }); });
-      socket.once('timeout', () => { socket.destroy(); connections.delete(printerId); reject(new Error('Connection timeout')); });
-      socket.once('error', (err) => { socket.destroy(); connections.delete(printerId); reject(err); });
+
+      socket.once('connect', () => {
+        console.log(`[sendCommand] Ephemeral TCP connected to ${meta.ipAddress}:${meta.port}, waiting for Telnet handshake...`);
+
+        // Wait for Telnet negotiation to complete BEFORE resolving.
+        // Model 88 and other older printers need this handshake phase.
+        let handshakeData = false;
+        const onHandshakeData = (data) => {
+          const hadTelnet = handleTelnetNegotiation(socket, data);
+          if (hadTelnet) {
+            handshakeData = true;
+            console.log(`[sendCommand] Telnet negotiation handled on ephemeral socket`);
+          }
+          // Also log any text payload received during handshake
+          const stripped = stripTelnetBytes(data);
+          if (stripped && stripped.length > 0) {
+            console.log(`[sendCommand] Handshake text: "${stripped.toString().substring(0, 200)}"`);
+          }
+        };
+        socket.on('data', onHandshakeData);
+
+        // Give printer up to 800ms to send Telnet negotiation
+        setTimeout(() => {
+          socket.off('data', onHandshakeData);
+          connections.set(printerId, socket);
+          console.log(`[sendCommand] Handshake phase done (gotTelnet=${handshakeData}), ready to send command`);
+          resolve({ socket, ephemeral: true });
+        }, 800);
+      });
+
+      socket.once('timeout', () => {
+        console.log(`[sendCommand] Ephemeral socket timeout for printer ${printerId}`);
+        socket.destroy();
+        connections.delete(printerId);
+        reject(new Error('Connection timeout'));
+      });
+      socket.once('error', (err) => {
+        console.error(`[sendCommand] Ephemeral socket error for printer ${printerId}:`, err.message);
+        socket.destroy();
+        connections.delete(printerId);
+        reject(err);
+      });
       socket.once('close', () => { connections.delete(printerId); });
       socket.connect(meta.port, meta.ipAddress);
     });
@@ -668,8 +725,8 @@ async function sendCommandToSocket(printerId, command) {
 
   return await new Promise((resolve, reject) => {
     let response = '';
-    const MAX_WAIT_MS = 4000;
-    const IDLE_AFTER_DATA_MS = 400;
+    const MAX_WAIT_MS = 6000;    // 6 seconds max wait
+    const IDLE_AFTER_DATA_MS = 500; // 500ms idle = response complete
     let maxTimer = null;
     let idleTimer = null;
     let gotAnyData = false;
@@ -681,33 +738,60 @@ async function sendCommandToSocket(printerId, command) {
       socket.setTimeout(0);
       if (maxTimer) clearTimeout(maxTimer);
       if (idleTimer) clearTimeout(idleTimer);
-      if (ephemeral && !socket.destroyed) socket.destroy();
+      // For ephemeral sockets, destroy after use
+      if (ephemeral && !socket.destroyed) {
+        console.log(`[sendCommand] Destroying ephemeral socket after command "${command}"`);
+        socket.destroy();
+      }
     };
 
-    const finish = () => { cleanup(); resolve({ success: true, response }); };
+    const finish = () => {
+      console.log(`[sendCommand] cmd="${command}" DONE, responseLen=${response.length}, response="${response.substring(0, 300)}"`);
+      cleanup();
+      resolve({ success: true, response });
+    };
 
     const scheduleFinishWhenIdle = () => {
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = setTimeout(() => finish(), IDLE_AFTER_DATA_MS);
     };
 
-    const onError = (err) => { cleanup(); reject(new Error(err.message)); };
+    const onError = (err) => {
+      console.error(`[sendCommand] Socket error during cmd="${command}":`, err.message);
+      cleanup();
+      // If persistent socket errored, remove it so next call creates fresh one
+      if (!ephemeral) connections.delete(printerId);
+      reject(new Error(err.message));
+    };
+
     const onClose = () => {
+      console.log(`[sendCommand] Socket closed during cmd="${command}", responseLen=${response.length}`);
+      if (!ephemeral) connections.delete(printerId);
       if (response.length > 0) finish();
       else { cleanup(); reject(new Error('Connection closed by printer')); }
     };
 
     const onData = (chunk) => {
+      // Log raw hex for debugging Model 88
+      console.log(`[sendCommand] cmd="${command}" DATA chunk (${chunk.length} bytes): hex=${chunk.toString('hex').substring(0, 120)}`);
+
       const hadTelnet = handleTelnetNegotiation(socket, chunk);
       if (hadTelnet) {
         const stripped = stripTelnetBytes(chunk);
-        if (stripped && stripped.length > 0) { response += stripped.toString(); gotAnyData = true; }
+        if (stripped && stripped.length > 0) {
+          const text = stripped.toString();
+          response += text;
+          gotAnyData = true;
+          console.log(`[sendCommand] cmd="${command}" stripped text: "${text.substring(0, 200)}"`);
+        }
         if (response.includes('>')) finish();
         else scheduleFinishWhenIdle();
         return;
       }
-      response += chunk.toString();
+      const text = chunk.toString();
+      response += text;
       gotAnyData = true;
+      console.log(`[sendCommand] cmd="${command}" text: "${text.substring(0, 200)}"`);
       if (response.includes('>')) { finish(); return; }
       scheduleFinishWhenIdle();
     };
@@ -717,11 +801,28 @@ async function sendCommandToSocket(printerId, command) {
     socket.once('close', onClose);
 
     maxTimer = setTimeout(() => {
+      console.log(`[sendCommand] cmd="${command}" MAX_WAIT timeout (${MAX_WAIT_MS}ms), gotData=${gotAnyData}, responseLen=${response.length}`);
       if (gotAnyData) finish();
-      else { cleanup(); reject(new Error('No response from printer (timeout)')); }
+      else {
+        // Persistent socket might be dead - destroy it
+        if (!ephemeral) {
+          console.log(`[sendCommand] Destroying dead persistent socket for printer ${printerId}`);
+          try { socket.destroy(); } catch (_) {}
+          connections.delete(printerId);
+        }
+        cleanup();
+        reject(new Error('No response from printer (timeout)'));
+      }
     }, MAX_WAIT_MS);
 
-    socket.write(command + '\r\n', (err) => { if (err) return onError(err); });
+    console.log(`[sendCommand] Writing "${command}\\r\\n" to socket...`);
+    socket.write(command + '\r\n', (err) => {
+      if (err) {
+        console.error(`[sendCommand] Write error for cmd="${command}":`, err.message);
+        return onError(err);
+      }
+      console.log(`[sendCommand] Write OK for cmd="${command}"`);
+    });
   });
 }
 
