@@ -311,10 +311,30 @@ ipcMain.handle('printer:connect', async (event, printer) => {
     let telnetHandshakeComplete = false;
     let handshakeTimer = null;
 
+    // Telnet negotiation listener — only active during handshake phase.
+    // Once handshake is done this listener is removed so it doesn't interfere
+    // with sendCommandToSocket's own data handler (which also handles telnet).
+    const onConnectData = (data) => {
+      const hadTelnet = handleTelnetNegotiation(socket, data);
+      if (hadTelnet) {
+        telnetHandshakeComplete = true;
+        console.log(`[printer:connect] Telnet negotiation handled for ${printer.id}`);
+      }
+      // Log any non-telnet text for debugging
+      const stripped = stripTelnetBytes(data);
+      if (stripped && stripped.length > 0) {
+        console.log(`[printer:data] ${printer.id}:`, stripped.toString());
+      }
+    };
+    socket.on('data', onConnectData);
+
     const finishConnect = () => {
       if (resolved) return;
       resolved = true;
       clearTimeout(handshakeTimer);
+      // Remove the connect-phase data listener so it doesn't double-handle
+      // telnet bytes during subsequent sendCommand calls.
+      socket.off('data', onConnectData);
       connections.set(printer.id, socket);
       console.log(`[printer:connect] Connection ready for ${printer.ipAddress}:${printer.port}`);
       resolve({ success: true });
@@ -360,25 +380,6 @@ ipcMain.handle('printer:connect', async (event, printer) => {
         // Notify renderer that connection was lost (only if we had successfully connected)
         mainWindow?.webContents.send('printer:connection-lost', { printerId: printer.id });
       }
-    });
-
-    socket.on('data', (data) => {
-      // Telnet negotiation (respond before logging so logs stay readable)
-      const hadTelnet = handleTelnetNegotiation(socket, data);
-      if (hadTelnet) {
-        telnetHandshakeComplete = true;
-        console.log(`[printer:connect] Telnet negotiation handled for ${printer.id}`);
-        // Don't return early - printer may send text after IAC sequences
-        
-        // Strip IAC bytes to see if there's remaining text
-        const stripped = stripTelnetBytes(data);
-        if (stripped.length > 0) {
-          console.log(`[printer:data] ${printer.id}:`, stripped.toString());
-        }
-        return;
-      }
-      // Log incoming data for debugging
-      console.log(`[printer:data] ${printer.id}:`, data.toString());
     });
 
     socket.connect(printer.port, printer.ipAddress);
@@ -667,8 +668,8 @@ async function sendCommandToSocket(printerId, command) {
 
   return await new Promise((resolve, reject) => {
     let response = '';
-    const MAX_WAIT_MS = 2200;
-    const IDLE_AFTER_DATA_MS = 220;
+    const MAX_WAIT_MS = 4000;
+    const IDLE_AFTER_DATA_MS = 400;
     let maxTimer = null;
     let idleTimer = null;
     let gotAnyData = false;
