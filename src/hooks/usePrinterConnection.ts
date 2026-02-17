@@ -280,9 +280,9 @@ export function usePrinterConnection() {
                 updatePrinterStatus(pd.id, {
                   isAvailable: true,
                   status: hvOn ? 'ready' : 'not_ready',
-                  hasActiveErrors: parsed.errorActive ?? false,
-                  inkLevel: inkLvl,
-                  makeupLevel: makeupLvl,
+                hasActiveErrors: (parsed.errorActive && !parsed.allowErrors) ?? false,
+                inkLevel: inkLvl,
+                makeupLevel: makeupLvl,
                   currentMessage: msgName,
                 });
                 continue;
@@ -383,7 +383,7 @@ export function usePrinterConnection() {
       updatePrinterStatus(connectedPrinterId, {
         isAvailable: true,
         status: hvOn ? 'ready' : 'not_ready',
-        hasActiveErrors: parsed.errorActive ?? false,
+        hasActiveErrors: (parsed.errorActive && !parsed.allowErrors) ?? false,
         inkLevel: inkLevelCard,
         makeupLevel: makeupLevelCard,
         currentMessage: parsedMessage,
@@ -581,6 +581,20 @@ export function usePrinterConnection() {
   // sending commands before the socket is ready (prevents 8s timeout storms).
   const [socketReady, setSocketReady] = useState(false);
 
+  // Reset socketReady immediately when the connected printer changes.
+  // This prevents stale polling from firing commands at the old printer's socket
+  // before the new socket is established.
+  const prevConnectedPrinterIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (connectedPrinterId !== prevConnectedPrinterIdRef.current) {
+      if (prevConnectedPrinterIdRef.current !== null) {
+        console.log('[usePrinterConnection] Printer switched from', prevConnectedPrinterIdRef.current, 'to', connectedPrinterId, '— resetting socketReady');
+        setSocketReady(false);
+      }
+      prevConnectedPrinterIdRef.current = connectedPrinterId;
+    }
+  }, [connectedPrinterId]);
+
   // Single serialized polling loop — sends all commands sequentially on one socket
   // Only enabled once the socket is confirmed open.
   useSerializedPolling({
@@ -707,7 +721,7 @@ export function usePrinterConnection() {
           updatePrinterStatus(printer.id, {
             isAvailable: true,
             status: hvOn ? 'ready' : 'not_ready',
-            hasActiveErrors: parsed.errorActive ?? false,
+            hasActiveErrors: (parsed.errorActive && !parsed.allowErrors) ?? false,
             inkLevel: inkLevelQ,
             makeupLevel: makeupLevelQ,
           });
@@ -984,6 +998,22 @@ export function usePrinterConnection() {
       return;
     }
 
+    // Disconnect old printer socket before connecting to new one
+    const oldPrinterId = connectionState.connectedPrinter?.id;
+    if (oldPrinterId && oldPrinterId !== printer.id) {
+      console.log('[connect] Disconnecting old printer socket:', oldPrinterId);
+      setSocketReady(false);
+      try {
+        await printerTransport.disconnect(oldPrinterId);
+      } catch (e) {
+        console.error('[connect] Old printer disconnect failed:', e);
+      }
+      // Mark old printer as disconnected
+      updatePrinter(oldPrinterId, { isConnected: false });
+      // Small settling delay after closing old socket
+      await new Promise(r => setTimeout(r, 500));
+    }
+
     // NOTE: Lazy-connect.
     // Do not open a TCP/Telnet session here; many printers flash/refresh their UI on connect.
     // We only open the socket when the Service screen is active.
@@ -1072,7 +1102,7 @@ export function usePrinterConnection() {
                 updatePrinterStatus(printer.id, {
                   isAvailable: true,
                   status: hvOn ? 'ready' : 'not_ready',
-                  hasActiveErrors: parsed.errorActive ?? false,
+                  hasActiveErrors: (parsed.errorActive && !parsed.allowErrors) ?? false,
                   inkLevel: inkLevel as Printer['inkLevel'],
                   makeupLevel: makeupLevel as Printer['makeupLevel'],
                   currentMessage: parsedMessage,
