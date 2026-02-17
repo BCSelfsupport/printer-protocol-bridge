@@ -523,13 +523,58 @@ export function usePrinterConnection() {
     }
   }, []);
 
-  // Build serialized command list: ^SU, ^CN, ^TP, ^SD sent sequentially to prevent TCP collisions
+  // Stable callback for ^LM (List Messages) polling
+  const handleMessageListResponse = useCallback((raw: string) => {
+    const lines = raw.split(/[\r\n]+/).filter(Boolean);
+    const messageNames: string[] = [];
+    let detectedCurrentMessage: string | null = null;
+    for (const line of lines) {
+      const trimmed = line.replace(/[^\x20-\x7E]/g, '').trim();
+      const upper = trimmed.toUpperCase();
+      if (!trimmed || trimmed === '//EOL' || trimmed === '>' || trimmed.startsWith('^')
+          || upper.includes('COMMAND SUCCESSFUL') || upper.includes('COMMAND FAILED')
+          || upper.startsWith('MESSAGES (')
+          || upper.includes('PRODUCT:') || upper.includes('PRINT:') || upper.includes('CUSTOM1:')
+          || /\bMOD\s*\[/i.test(trimmed) || /\bINK\s*:/i.test(trimmed)
+          || /\bV300UP/i.test(trimmed) || /\bVLT_ON/i.test(trimmed)
+          || /\bGUT_ON/i.test(trimmed) || /\bMOD_ON/i.test(trimmed)
+          || /\bCHG\s*\[/i.test(trimmed) || /\bPRS\s*\[/i.test(trimmed)
+          || /\bRPS\s*\[/i.test(trimmed) || /\bHVD\s*\[/i.test(trimmed)
+          || /\bVIS\s*\[/i.test(trimmed) || /\bPHQ\s*\[/i.test(trimmed)
+          || /\bERR\s*\[/i.test(trimmed)
+          || upper === 'SUCCESS' || upper === 'OK'
+          ) continue;
+      const isCurrent = /\(current\)/i.test(trimmed);
+      let cleanName = trimmed.replace(/\s*\(current\)\s*/gi, '').replace(/^\d+\.\s*/, '').trim().toUpperCase();
+      if (cleanName) {
+        messageNames.push(cleanName);
+        if (isCurrent) detectedCurrentMessage = cleanName;
+      }
+    }
+    if (messageNames.length > 0) {
+      const printerMessages: PrintMessage[] = messageNames.map((name, idx) => ({ id: idx + 1, name }));
+      console.log('[handleMessageListResponse] Parsed messages:', printerMessages.length, 'current:', detectedCurrentMessage);
+      setConnectionState((prev) => ({
+        ...prev,
+        messages: printerMessages,
+        status: detectedCurrentMessage && prev.status
+          ? { ...prev.status, currentMessage: detectedCurrentMessage }
+          : prev.status,
+      }));
+      if (detectedCurrentMessage && connectedPrinterIdRef.current) {
+        updatePrinter(connectedPrinterIdRef.current, { currentMessage: detectedCurrentMessage });
+      }
+    }
+  }, [updatePrinter]);
+
+  // Build serialized command list: ^SU, ^LM, ^CN, ^TP, ^SD sent sequentially to prevent TCP collisions
   const pollingCommands = useMemo<PollingCommand[]>(() => [
     { command: '^SU', onResponse: handleServiceResponse },
+    { command: '^LM', onResponse: handleMessageListResponse },
     { command: '^CN', onResponse: handleCounterResponse },
     { command: '^TP', onResponse: handleTemperatureResponse },
     { command: '^SD', onResponse: handleDateTimeResponse },
-  ], [handleServiceResponse, handleCounterResponse, handleTemperatureResponse, handleDateTimeResponse]);
+  ], [handleServiceResponse, handleMessageListResponse, handleCounterResponse, handleTemperatureResponse, handleDateTimeResponse]);
 
   // Single serialized polling loop — sends all commands sequentially on one socket
   useSerializedPolling({
