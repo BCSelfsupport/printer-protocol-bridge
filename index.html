@@ -23,6 +23,33 @@
 
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="padding:40px;font-family:sans-serif;color:#fff;background:#111;min-height:100vh">
+        <h1>CodeSync™</h1>
+        <p>JavaScript must be enabled to run this application.</p>
+      </div>
+    </noscript>
+    <script>
+      // HTML-level crash catcher – if React fails to mount within 8s, show diagnostics
+      window.__CS_MOUNTED = false;
+      setTimeout(function() {
+        if (!window.__CS_MOUNTED) {
+          var root = document.getElementById('root');
+          if (root && root.children.length === 0) {
+            root.innerHTML = '<div style="padding:40px;font-family:monospace;color:#ff6b6b;background:#111;min-height:100vh">' +
+              '<h1 style="color:#fff">CodeSync™ – Startup Error</h1>' +
+              '<p>The application failed to start. Open DevTools (Ctrl+Shift+I) to see errors.</p>' +
+              '<p>Check the Console tab for details.</p>' +
+              '<pre id="cs-error" style="background:#222;padding:16px;border-radius:8px;overflow:auto;max-height:400px"></pre></div>';
+          }
+        }
+      }, 8000);
+      window.addEventListener('error', function(e) {
+        console.error('[global-error]', e.message, e.filename, e.lineno);
+        var el = document.getElementById('cs-error');
+        if (el) el.textContent += e.message + ' at ' + e.filename + ':' + e.lineno + '\n';
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
