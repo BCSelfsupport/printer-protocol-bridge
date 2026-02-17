@@ -88,9 +88,9 @@ export function useSerializedPolling(options: {
             console.error('[useSerializedPolling] Error on', cmd.command, ':', e);
           }
 
-          // Small gap between commands to let the printer process
+          // Longer gap between commands to let the printer fully process & respond
           if (!isEmulatorEnabled && !cancelled) {
-            await new Promise(r => setTimeout(r, 150));
+            await new Promise(r => setTimeout(r, 300));
           }
         }
       } catch (e) {
@@ -100,10 +100,10 @@ export function useSerializedPolling(options: {
       }
     };
 
-    // Initial tick after short delay
+    // Initial tick after delay to ensure the socket is fully open
     const initialDelay = setTimeout(() => {
       if (!cancelled) tick();
-    }, 500);
+    }, 1500);
 
     const id = window.setInterval(tick, intervalMs);
 
