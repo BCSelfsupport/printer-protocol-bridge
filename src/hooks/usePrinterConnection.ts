@@ -533,15 +533,13 @@ export function usePrinterConnection() {
     commands: pollingCommands,
   });
 
-  // Guard: only one reconnect attempt at a time
-  const watchdogReconnecting = useRef(false);
-  const socketReadyRef = useRef(socketReady);
-  useEffect(() => { socketReadyRef.current = socketReady; }, [socketReady]);
+  // Track whether this connection has ever succeeded (used to decide delay on reconnect)
+  const hasEverConnected = useRef(false);
+  // Guard: only one connect attempt at a time
+  const connectingRef = useRef(false);
 
   // Listen for printer:connection-lost from Electron — clear socketReady immediately.
-  // IMPORTANT: only register this listener once (use a ref guard) — Electron's IPC
-  // listener accumulates without cleanup, so re-registering on every render causes
-  // multiple firings per event which floods the reconnect loop.
+  // Registered once only via ref guard — IPC listeners accumulate without cleanup.
   const connectionLostListenerRegistered = useRef(false);
   useEffect(() => {
     if (!window.electronAPI?.onPrinterConnectionLost) return;
@@ -555,92 +553,62 @@ export function usePrinterConnection() {
     });
   }, []);
 
-  // Socket lifecycle: open socket when connected, keep it open until disconnected.
-  // IMPORTANT: We no longer close the socket when navigating between screens.
-  // Opening/closing per-screen was the primary cause of ETIMEDOUT on Model 88
-  // because it kept competing with the previous socket that hadn't fully closed yet.
+  // SINGLE unified socket lifecycle + reconnect effect.
+  // - First attempt: fires immediately (no delay).
+  // - Reconnect after drop: waits 15s to let Model 88 release its single Telnet session.
+  // - Only ONE effect, ONE connect path — no racing between lifecycle and watchdog.
   useEffect(() => {
     if (!isElectron && !isRelayMode()) return;
     if (!connectionState.isConnected || !connectedPrinterId) return;
-
-    const printerIp = connectedPrinterIpRef.current;
-    const printerPort = connectedPrinterPortRef.current ?? 23;
-    if (!printerIp) return;
-
-    // If socket is already ready, nothing to do
-    if (socketReadyRef.current) return;
-
-    let cancelled = false;
-    console.log('[usePrinterConnection] Opening persistent socket for printer:', connectedPrinterId);
-
-    (async () => {
-      try {
-        const result = await printerTransport.connect({
-          id: connectedPrinterId,
-          ipAddress: printerIp,
-          port: printerPort,
-        });
-        console.log('[usePrinterConnection] Socket connect result:', result);
-        if (!cancelled) {
-          if (result.success) {
-            console.log('[usePrinterConnection] Socket ready');
-            setSocketReady(true);
-          } else {
-            console.warn('[usePrinterConnection] Socket connect failed:', result.error);
-            setSocketReady(false);
-          }
-        }
-      } catch (e) {
-        if (!cancelled) {
-          console.error('[usePrinterConnection] socket open failed:', e);
-          setSocketReady(false);
-        }
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [connectionState.isConnected, connectedPrinterId, socketReady]);
-
-  // Watchdog: if socket drops (socketReady=false) while connected, attempt reconnect.
-  // Simple 15-second timer — give the Model 88 enough time to fully release its session
-  // before we knock again. No backoff complexity needed; if it fails we'll try again in 15s.
-  useEffect(() => {
-    if (!isElectron && !isRelayMode()) return;
-    if (!connectionState.isConnected || !connectedPrinterId) return;
-    if (socketReady) return;
-
-    if (watchdogReconnecting.current) {
-      console.log('[usePrinterConnection] Watchdog: reconnect already in-flight, skipping');
+    if (socketReady) {
+      // Socket is healthy — reset flag so next disconnect triggers immediate first-try logic
+      // (hasEverConnected stays true; connectingRef is already false)
+      return;
+    }
+    if (connectingRef.current) {
+      console.log('[socket] Connect already in-flight, skipping');
       return;
     }
 
-    watchdogReconnecting.current = true;
-    console.log('[usePrinterConnection] Watchdog: socket lost — reconnecting in 15s');
+    connectingRef.current = true;
 
+    // First-ever connect: try immediately. Subsequent reconnects: wait 15s so the printer
+    // has time to release its session before we knock again.
+    const delay = hasEverConnected.current ? 15000 : 0;
+    console.log(`[socket] ${hasEverConnected.current ? 'Reconnect' : 'Initial connect'} in ${delay / 1000}s for printer ${connectedPrinterId}`);
+
+    let cancelled = false;
     const timer = setTimeout(async () => {
+      if (cancelled) { connectingRef.current = false; return; }
       const printerIp = connectedPrinterIpRef.current;
       const printerPort = connectedPrinterPortRef.current ?? 23;
-      if (!printerIp) { watchdogReconnecting.current = false; return; }
+      if (!printerIp) { connectingRef.current = false; return; }
+
       try {
-        console.log('[usePrinterConnection] Watchdog: attempting reconnect to', printerIp);
+        console.log(`[socket] Connecting to ${printerIp}:${printerPort}`);
         const result = await printerTransport.connect({ id: connectedPrinterId, ipAddress: printerIp, port: printerPort });
-        if (result.success) {
-          console.log('[usePrinterConnection] Watchdog reconnect OK');
-          setSocketReady(true);
-        } else {
-          console.warn('[usePrinterConnection] Watchdog reconnect failed:', result.error);
-          // socketReady stays false → effect re-fires → try again in 15s
+        console.log('[socket] Connect result:', result);
+        if (!cancelled) {
+          if (result.success) {
+            hasEverConnected.current = true;
+            setSocketReady(true);
+            console.log('[socket] Ready — polling will start');
+          } else {
+            console.warn('[socket] Connect failed:', result.error, '— will retry in 15s');
+            // socketReady stays false → this effect re-fires → 15s delay next time
+          }
         }
       } catch (e) {
-        console.error('[usePrinterConnection] Watchdog reconnect error:', e);
+        if (!cancelled) console.error('[socket] Connect error:', e);
       } finally {
-        watchdogReconnecting.current = false;
+        if (!cancelled) connectingRef.current = false;
       }
-    }, 15000);
+    }, delay);
 
     return () => {
+      cancelled = true;
       clearTimeout(timer);
-      watchdogReconnecting.current = false;
+      connectingRef.current = false;
     };
   }, [connectionState.isConnected, connectedPrinterId, socketReady]);
 
@@ -2486,7 +2454,7 @@ export function usePrinterConnection() {
     const printerIp = connectedPrinterIpRef.current;
     const printerPort = connectedPrinterPortRef.current ?? 23;
     if (!printerIp) return;
-    if (socketReadyRef.current) return; // Already ready, nothing to do
+    if (socketReady) return; // Already ready, nothing to do
     console.log('[usePrinterConnection] refreshPolling: attempting socket reconnect');
     printerTransport.connect({ id: connectedPrinterIdRef.current, ipAddress: printerIp, port: printerPort })
       .then(result => {
