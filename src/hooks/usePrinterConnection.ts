@@ -1041,6 +1041,9 @@ export function usePrinterConnection() {
     if (oldPrinterId && oldPrinterId !== printer.id) {
       console.log('[connect] Disconnecting old printer socket:', oldPrinterId);
       setSocketReady(false);
+      // Clear messages immediately (synchronously) so MessagesScreen doesn't show
+      // the previous printer's message list while the new connection initialises.
+      setConnectionState(prev => ({ ...prev, messages: [], status: null }));
       try {
         await printerTransport.disconnect(oldPrinterId);
       } catch (e) {

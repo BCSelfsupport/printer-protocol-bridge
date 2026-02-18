@@ -100,28 +100,35 @@ export function MessagesScreen({
       />
 
       {/* Message list */}
-      <div className="flex-1 bg-card rounded-lg p-4 mb-4">
-        <div className="flex-1">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              onClick={() => handleMessageClick(message)}
-              className={`flex items-center py-3 border-b cursor-pointer transition-colors ${
-                selectedMessage?.id === message.id 
-                  ? 'bg-primary/20 border-primary/30' 
-                  : 'hover:bg-muted/50'
-              }`}
-            >
-              <div className="w-10 flex justify-center">
-                {currentMessageName === message.name ? (
-                  <PrinterIcon className="w-5 h-5 text-primary" />
-                ) : null}
+      <div className="flex-1 bg-card rounded-lg p-4 mb-4 flex flex-col">
+        {messages.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
+            <PrinterIcon className="w-10 h-10 opacity-30 animate-pulse" />
+            <p className="text-sm">Loading messages from printer…</p>
+          </div>
+        ) : (
+          <div className="flex-1">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                onClick={() => handleMessageClick(message)}
+                className={`flex items-center py-3 border-b cursor-pointer transition-colors ${
+                  selectedMessage?.id === message.id 
+                    ? 'bg-primary/20 border-primary/30' 
+                    : 'hover:bg-muted/50'
+                }`}
+              >
+                <div className="w-10 flex justify-center">
+                  {currentMessageName === message.name ? (
+                    <PrinterIcon className="w-5 h-5 text-primary" />
+                  ) : null}
+                </div>
+                <span className="w-12 text-primary font-medium">{message.id}</span>
+                <span className="flex-1 text-center text-lg">{message.name}</span>
               </div>
-              <span className="w-12 text-primary font-medium">{message.id}</span>
-              <span className="flex-1 text-center text-lg">{message.name}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Action buttons - horizontal scroll on mobile */}
