@@ -537,6 +537,8 @@ export function usePrinterConnection() {
   const hasEverConnected = useRef(false);
   // Guard: only one connect attempt at a time
   const connectingRef = useRef(false);
+  // Retry ticker — incremented after a failed connect to re-trigger the effect after delay
+  const [retryTick, setRetryTick] = useState(0);
 
   // Listen for printer:connection-lost from Electron — clear socketReady immediately.
   // Registered once only via ref guard — IPC listeners accumulate without cleanup.
@@ -549,22 +551,21 @@ export function usePrinterConnection() {
       if (lostId === connectedPrinterIdRef.current) {
         console.log('[usePrinterConnection] printer:connection-lost — clearing socketReady');
         setSocketReady(false);
+        // Bump retryTick after 15s so the reconnect effect fires once the printer has
+        // had time to release its single Telnet session.
+        setTimeout(() => setRetryTick(t => t + 1), 15000);
       }
     });
   }, []);
 
   // SINGLE unified socket lifecycle + reconnect effect.
   // - First attempt: fires immediately (no delay).
-  // - Reconnect after drop: waits 15s to let Model 88 release its single Telnet session.
+  // - Reconnect after drop: triggered by retryTick (set 15s after connection-lost event).
   // - Only ONE effect, ONE connect path — no racing between lifecycle and watchdog.
   useEffect(() => {
     if (!isElectron && !isRelayMode()) return;
     if (!connectionState.isConnected || !connectedPrinterId) return;
-    if (socketReady) {
-      // Socket is healthy — reset flag so next disconnect triggers immediate first-try logic
-      // (hasEverConnected stays true; connectingRef is already false)
-      return;
-    }
+    if (socketReady) return; // Already healthy — nothing to do
     if (connectingRef.current) {
       console.log('[socket] Connect already in-flight, skipping');
       return;
@@ -572,10 +573,11 @@ export function usePrinterConnection() {
 
     connectingRef.current = true;
 
-    // First-ever connect: try immediately. Subsequent reconnects: wait 15s so the printer
-    // has time to release its session before we knock again.
-    const delay = hasEverConnected.current ? 15000 : 0;
-    console.log(`[socket] ${hasEverConnected.current ? 'Reconnect' : 'Initial connect'} in ${delay / 1000}s for printer ${connectedPrinterId}`);
+    // First-ever connect: try immediately (delay=0).
+    // After a drop: retryTick is bumped 15s post-connection-lost, so by the time this
+    // effect fires the printer will have released its session.
+    const delay = hasEverConnected.current ? 0 : 0;
+    console.log(`[socket] ${hasEverConnected.current ? 'Reconnect' : 'Initial connect'} in ${delay / 1000}s for printer ${connectedPrinterId} (retryTick=${retryTick})`);
 
     let cancelled = false;
     const timer = setTimeout(async () => {
@@ -595,11 +597,15 @@ export function usePrinterConnection() {
             console.log('[socket] Ready — polling will start');
           } else {
             console.warn('[socket] Connect failed:', result.error, '— will retry in 15s');
-            // socketReady stays false → this effect re-fires → 15s delay next time
+            // Schedule a retry via retryTick — gives the printer time to release its session
+            setTimeout(() => { if (!cancelled) setRetryTick(t => t + 1); }, 15000);
           }
         }
       } catch (e) {
-        if (!cancelled) console.error('[socket] Connect error:', e);
+        if (!cancelled) {
+          console.error('[socket] Connect error:', e);
+          setTimeout(() => setRetryTick(t => t + 1), 15000);
+        }
       } finally {
         if (!cancelled) connectingRef.current = false;
       }
@@ -610,7 +616,7 @@ export function usePrinterConnection() {
       clearTimeout(timer);
       connectingRef.current = false;
     };
-  }, [connectionState.isConnected, connectedPrinterId, socketReady]);
+  }, [connectionState.isConnected, connectedPrinterId, socketReady, retryTick]);
 
 
   // Query printer status (^SU) and update state - used on connect and after commands
