@@ -535,13 +535,19 @@ export function usePrinterConnection() {
 
   // Guard: only one reconnect attempt at a time
   const watchdogReconnecting = useRef(false);
+  const watchdogBackoffMs = useRef(10000); // starts at 10s, doubles up to 60s
   const socketReadyRef = useRef(socketReady);
   useEffect(() => { socketReadyRef.current = socketReady; }, [socketReady]);
 
-  // Listen for printer:connection-lost from Electron — clear socketReady immediately
-  // so the watchdog can trigger a reconnect without waiting for polling timeouts.
+  // Listen for printer:connection-lost from Electron — clear socketReady immediately.
+  // IMPORTANT: only register this listener once (use a ref guard) — Electron's IPC
+  // listener accumulates without cleanup, so re-registering on every render causes
+  // multiple firings per event which floods the reconnect loop.
+  const connectionLostListenerRegistered = useRef(false);
   useEffect(() => {
     if (!window.electronAPI?.onPrinterConnectionLost) return;
+    if (connectionLostListenerRegistered.current) return;
+    connectionLostListenerRegistered.current = true;
     window.electronAPI.onPrinterConnectionLost(({ printerId: lostId }: { printerId: number }) => {
       if (lostId === connectedPrinterIdRef.current) {
         console.log('[usePrinterConnection] printer:connection-lost — clearing socketReady');
@@ -596,22 +602,28 @@ export function usePrinterConnection() {
     return () => { cancelled = true; };
   }, [connectionState.isConnected, connectedPrinterId, socketReady]);
 
-  // Watchdog: if socket drops (socketReady=false) while connected, attempt ONE reconnect
-  // after a delay. Uses a ref guard so only ONE attempt is ever in-flight.
+  // Watchdog: if socket drops (socketReady=false) while connected, attempt reconnect
+  // with EXPONENTIAL BACKOFF so we don't spam the printer (Model 88 only allows 1 session
+  // and needs time to fully release it before accepting a new connection).
+  // Backoff: 10s → 20s → 40s → 60s max. Resets to 10s on successful reconnect.
   useEffect(() => {
     if (!isElectron && !isRelayMode()) return;
     if (!connectionState.isConnected || !connectedPrinterId) return;
-    if (socketReady) return; // Already connected, nothing to do
+    if (socketReady) {
+      // Reset backoff on successful connection
+      watchdogBackoffMs.current = 10000;
+      return;
+    }
 
     if (watchdogReconnecting.current) {
       console.log('[usePrinterConnection] Watchdog: reconnect already in-flight, skipping');
       return;
     }
 
-    // Wait 5 seconds before attempting reconnect — gives the printer time to
-    // release its previous Telnet session before we try again.
+    const backoff = watchdogBackoffMs.current;
     watchdogReconnecting.current = true;
-    console.log('[usePrinterConnection] Watchdog: socket not ready — scheduling reconnect in 5s');
+    console.log(`[usePrinterConnection] Watchdog: socket not ready — scheduling reconnect in ${backoff / 1000}s`);
+
     const timer = setTimeout(async () => {
       const printerIp = connectedPrinterIpRef.current;
       const printerPort = connectedPrinterPortRef.current ?? 23;
@@ -621,16 +633,20 @@ export function usePrinterConnection() {
         const result = await printerTransport.connect({ id: connectedPrinterId, ipAddress: printerIp, port: printerPort });
         if (result.success) {
           console.log('[usePrinterConnection] Watchdog reconnect OK');
+          watchdogBackoffMs.current = 10000; // reset backoff
           setSocketReady(true);
         } else {
           console.warn('[usePrinterConnection] Watchdog reconnect failed:', result.error);
+          // Increase backoff for next attempt (max 60s)
+          watchdogBackoffMs.current = Math.min(watchdogBackoffMs.current * 2, 60000);
         }
       } catch (e) {
         console.error('[usePrinterConnection] Watchdog reconnect error:', e);
+        watchdogBackoffMs.current = Math.min(watchdogBackoffMs.current * 2, 60000);
       } finally {
         watchdogReconnecting.current = false;
       }
-    }, 5000);
+    }, backoff);
 
     return () => {
       clearTimeout(timer);
