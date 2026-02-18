@@ -176,19 +176,19 @@ export function usePrinterConnection() {
           port: p.port,
         }));
 
-      if (printerData.length === 0) return;
+        if (printerData.length === 0) return;
 
       let results;
 
       if (isElectron && window.electronAPI) {
-        // Use Electron's native ICMP ping
+        // Use Electron's native ICMP ping — NEVER open TCP to port 23 in background.
+        // Model 88 and similar printers only support 1 Telnet session; any ephemeral
+        // TCP connection to port 23 will steal the slot and cause ETIMEDOUT on the
+        // main persistent connection.
         results = await window.electronAPI.printer.checkStatus(printerData);
       } else if (isRelayMode()) {
-        // Use relay server on PC for ICMP ping
         results = await printerTransport.checkStatus(printerData);
       } else {
-        // No Electron or relay available — cloud functions cannot reach local-network
-        // printers (192.168.x.x), so skip polling entirely to avoid false-offline flapping.
         console.debug('[availability] No local transport available, skipping cloud poll');
         return;
       }
@@ -196,34 +196,22 @@ export function usePrinterConnection() {
       if (results) {
         const currentConnectedId = connectedPrinterIdRef.current;
 
-        // Collect printers that need ^SU queries (non-connected, available)
-        const needSuQuery: { id: number; ipAddress: string; port: number }[] = [];
-
         results.forEach((status: { id: number; isAvailable: boolean; status: string }) => {
           const isConnectedPrinter = currentConnectedId === status.id;
 
-          const OFFLINE_THRESHOLD = 5;
+          const OFFLINE_THRESHOLD = 3;
           if (status.isAvailable) {
             offlineCountsRef.current[status.id] = 0;
-            if (isConnectedPrinter) {
-              const existingPrinter = printersRef.current.find(p => p.id === status.id);
-              updatePrinterStatus(status.id, {
-                isAvailable: true,
-                status: existingPrinter?.status ?? 'not_ready',
-                hasActiveErrors: existingPrinter?.hasActiveErrors ?? false,
-              });
-            } else {
-              const pd = printersRef.current.find(p => p.id === status.id);
-              if (pd) {
-                needSuQuery.push({ id: pd.id, ipAddress: pd.ipAddress, port: pd.port });
-              } else {
-                updatePrinterStatus(status.id, {
-                  isAvailable: true,
-                  status: 'not_ready',
-                  hasActiveErrors: false,
-                });
-              }
-            }
+            // For ping results, just mark available — real status comes from ^SU polling
+            const existingPrinter = printersRef.current.find(p => p.id === status.id);
+            updatePrinterStatus(status.id, {
+              isAvailable: true,
+              status: existingPrinter?.status ?? 'not_ready',
+              hasActiveErrors: existingPrinter?.hasActiveErrors ?? false,
+              inkLevel: existingPrinter?.inkLevel,
+              makeupLevel: existingPrinter?.makeupLevel,
+              currentMessage: existingPrinter?.currentMessage,
+            });
           } else {
             const count = (offlineCountsRef.current[status.id] || 0) + 1;
             offlineCountsRef.current[status.id] = count;
@@ -240,73 +228,9 @@ export function usePrinterConnection() {
             }
           }
         });
-
-        // Sequentially query ^SU for non-connected available printers.
-        // Uses setMeta so sendCommand creates ephemeral sockets (no persistent connect needed).
-        const INTER_PRINTER_DELAY_MS = 800;
-
-        for (let idx = 0; idx < needSuQuery.length; idx++) {
-          const pd = needSuQuery[idx];
-
-          if (idx > 0) {
-            await new Promise(r => setTimeout(r, INTER_PRINTER_DELAY_MS));
-          }
-
-          try {
-            console.log('[availability] ^SU query for printer', pd.id, pd.ipAddress);
-            
-            // Register meta so sendCommand can open an ephemeral socket on its own
-            await printerTransport.setMeta(pd);
-            
-            const suResult = await printerTransport.sendCommand(pd.id, '^SU');
-            console.log('[availability] ^SU result for', pd.id, ':', JSON.stringify({
-              success: suResult.success,
-              responseLen: suResult.response?.length,
-              response: suResult.response?.substring(0, 400),
-              error: suResult.error,
-            }));
-
-            if (suResult.success && suResult.response) {
-              const parsed = parseStatusResponse(suResult.response);
-              if (parsed) {
-                const hvOn = parsed.printStatus === 'Ready';
-                const inkLvl = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['inkLevel'];
-                const makeupLvl = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['makeupLevel'];
-                const msgName = parsed.currentMessage && parsed.currentMessage !== 'NONE' ? parsed.currentMessage.toUpperCase() : undefined;
-                console.log('[availability] ^SU parsed for', pd.id, ':', { inkLvl, makeupLvl, hvOn, msgName });
-                if (inkLvl === 'UNKNOWN' || makeupLvl === 'UNKNOWN') {
-                  console.warn('[availability] ⚠️ UNKNOWN level for printer', pd.id, '- RAW:\n', suResult.response);
-                }
-                updatePrinterStatus(pd.id, {
-                  isAvailable: true,
-                  status: hvOn ? 'ready' : 'not_ready',
-                hasActiveErrors: parsed.errorActive ?? false,
-                inkLevel: inkLvl,
-                makeupLevel: makeupLvl,
-                  currentMessage: msgName,
-                });
-                continue;
-              } else {
-                console.warn('[availability] ^SU parse null for', pd.id, '- RAW:\n', suResult.response?.substring(0, 500));
-              }
-            } else {
-              console.warn('[availability] ^SU failed for', pd.id, ':', suResult.error);
-            }
-          } catch (e) {
-            console.error('[availability] ^SU exception for printer', pd.id, ':', e);
-          }
-
-          // ^SU failed — default to not_ready (never false READY), preserve known levels
-          const existing = printersRef.current.find(p => p.id === pd.id);
-          updatePrinterStatus(pd.id, {
-            isAvailable: true,
-            status: 'not_ready',
-            hasActiveErrors: false,
-            inkLevel: existing?.inkLevel,
-            makeupLevel: existing?.makeupLevel,
-            currentMessage: existing?.currentMessage,
-          });
-        }
+        // NOTE: No ephemeral ^SU queries here. Status details (ink, makeup, messages)
+        // are populated only by the persistent-socket polling loop when connected.
+        // This prevents ANY background TCP connection from competing with the main socket.
       }
     } catch (err) {
       console.error('Failed to check printer status:', err);
@@ -316,13 +240,15 @@ export function usePrinterConnection() {
     }
   }, [availabilityPollingEnabled, updatePrinterStatus]);
 
-  // Poll printer status every 5 seconds
+  // Poll printer availability (ICMP ping only) every 8 seconds.
+  // Slower than before because we're only checking reachability now —
+  // no ^SU queries, so no risk of stealing the printer's Telnet session.
   useEffect(() => {
     if (!availabilityPollingEnabled) return;
     if (printersRef.current.length === 0) return;
     
     checkPrinterStatus();
-    const interval = setInterval(checkPrinterStatus, 5000);
+    const interval = setInterval(checkPrinterStatus, 8000);
     return () => clearInterval(interval);
   }, [availabilityPollingEnabled, checkPrinterStatus]);
 
@@ -338,24 +264,12 @@ export function usePrinterConnection() {
     });
   }, [printers, updatePrinterStatus]);
 
-  // Live Service metrics: poll ^SU while connected AND service screen is open (Electron only)
+  // Polling is now always-on when connected — not gated by screen visibility.
+  // setServiceScreenOpen / setControlScreenOpen kept as no-ops for API compatibility.
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
-  const [serviceScreenOpen, setServiceScreenOpen] = useState(false);
-  const [controlScreenOpen, setControlScreenOpen] = useState(false);
+  const setServiceScreenOpen = (_: boolean) => {};
+  const setControlScreenOpen = (_: boolean) => {};
 
-  // Poll status when either Service OR Control (Dashboard) screen is open.
-  // The actual transport is decided inside useServiceStatusPolling (Electron vs emulator).
-  const shouldPollStatus = useMemo(() => {
-    const result = Boolean(connectionState.isConnected && connectedPrinterId && (serviceScreenOpen || controlScreenOpen));
-    console.log('[usePrinterConnection] shouldPollStatus:', result, {
-      isElectron,
-      isConnected: connectionState.isConnected,
-      connectedPrinterId,
-      serviceScreenOpen,
-      controlScreenOpen,
-    });
-    return result;
-  }, [connectionState.isConnected, connectedPrinterId, serviceScreenOpen, controlScreenOpen]);
 
   // Stable callback for service polling – avoids effect churn
   const handleServiceResponse = useCallback((raw: string) => {
@@ -599,37 +513,7 @@ export function usePrinterConnection() {
     }
   }, [connectedPrinterId]);
 
-  // Single serialized polling loop — sends all commands sequentially on one socket
-  // Only enabled once the socket is confirmed open.
-  useSerializedPolling({
-    enabled: shouldPollStatus && socketReady,
-    printerId: connectedPrinterId,
-    printerIp: connectionState.connectedPrinter?.ipAddress,
-    printerPort: connectionState.connectedPrinter?.port,
-    intervalMs: 3000,
-    commands: pollingCommands,
-  });
-
-  // Also poll ^SD independently when connected but not on Dashboard/Service
-  // so the header clock always updates
-  const shouldPollDateTimeOnly = useMemo(() => {
-    return Boolean(connectionState.isConnected && connectedPrinterId && !shouldPollStatus && socketReady);
-  }, [connectionState.isConnected, connectedPrinterId, shouldPollStatus, socketReady]);
-
-  useServiceStatusPolling({
-    enabled: shouldPollDateTimeOnly,
-    printerId: connectedPrinterId,
-    printerIp: connectionState.connectedPrinter?.ipAddress,
-    printerPort: connectionState.connectedPrinter?.port,
-    intervalMs: 5000,
-    command: '^SD',
-    onResponse: handleDateTimeResponse,
-  });
-
-  // This prevents the printer UI from refreshing/flashing immediately on "Connect".
-  // Sets socketReady=true only after a successful TCP connect.
-  // Stable refs for printer connection details — avoids re-running the socket
-  // lifecycle effect when unrelated connectionState fields change (e.g. metrics).
+  // Stable refs for printer connection details
   const connectedPrinterIpRef = useRef(connectionState.connectedPrinter?.ipAddress);
   const connectedPrinterPortRef = useRef(connectionState.connectedPrinter?.port);
   useEffect(() => {
@@ -637,57 +521,106 @@ export function usePrinterConnection() {
     connectedPrinterPortRef.current = connectionState.connectedPrinter?.port;
   }, [connectionState.connectedPrinter?.ipAddress, connectionState.connectedPrinter?.port]);
 
-  // Socket health watchdog: if polling should be active but socket is not ready,
-  // attempt to re-open the socket. This recovers from cases where the socket was
-  // silently dropped (e.g. network blip, printer closed idle Telnet session, etc.).
-  //
-  // CRITICAL: use a ref-based guard (watchdogReconnecting) so that only ONE reconnect
-  // attempt is in-flight at a time. Without this, the 5s interval fires again before
-  // the previous 10s-timeout attempt completes, creating a storm of concurrent TCP
-  // connections that overwhelms the printer port and causes every attempt to ETIMEDOUT.
+  // Single serialized polling loop — sends all commands sequentially on one socket.
+  // Active whenever connected AND socketReady (regardless of which screen is open).
+  // The pollingCommands include ^SU, ^LM, ^CN, ^TP, ^SD — all the data we need.
+  useSerializedPolling({
+    enabled: connectionState.isConnected && !!connectedPrinterId && socketReady,
+    printerId: connectedPrinterId,
+    printerIp: connectionState.connectedPrinter?.ipAddress,
+    printerPort: connectionState.connectedPrinter?.port,
+    intervalMs: 3000,
+    commands: pollingCommands,
+  });
+
+  // Guard: only one reconnect attempt at a time
+  const watchdogReconnecting = useRef(false);
   const socketReadyRef = useRef(socketReady);
   useEffect(() => { socketReadyRef.current = socketReady; }, [socketReady]);
-  const shouldPollStatusRef = useRef(shouldPollStatus);
-  useEffect(() => { shouldPollStatusRef.current = shouldPollStatus; }, [shouldPollStatus]);
-  const watchdogReconnecting = useRef(false);
 
-  // Listen for printer:connection-lost from Electron main process so we can
-  // clear socketReady immediately when the printer closes the Telnet session.
-  // Without this, the React layer stays socketReady=true while the socket is dead,
-  // causing silent polling failures until the watchdog eventually notices.
+  // Listen for printer:connection-lost from Electron — clear socketReady immediately
+  // so the watchdog can trigger a reconnect without waiting for polling timeouts.
   useEffect(() => {
     if (!window.electronAPI?.onPrinterConnectionLost) return;
     window.electronAPI.onPrinterConnectionLost(({ printerId: lostId }: { printerId: number }) => {
       if (lostId === connectedPrinterIdRef.current) {
-        console.log('[usePrinterConnection] printer:connection-lost for connected printer — clearing socketReady');
+        console.log('[usePrinterConnection] printer:connection-lost — clearing socketReady');
         setSocketReady(false);
       }
     });
-    // onPrinterConnectionLost uses ipcRenderer.on which doesn't expose a cleanup handle —
-    // the listener is process-scoped and persists for the app lifetime (acceptable for Electron).
   }, []);
 
+  // Socket lifecycle: open socket when connected, keep it open until disconnected.
+  // IMPORTANT: We no longer close the socket when navigating between screens.
+  // Opening/closing per-screen was the primary cause of ETIMEDOUT on Model 88
+  // because it kept competing with the previous socket that hadn't fully closed yet.
   useEffect(() => {
     if (!isElectron && !isRelayMode()) return;
     if (!connectionState.isConnected || !connectedPrinterId) return;
 
-    const watchdog = setInterval(async () => {
-      if (!shouldPollStatusRef.current || socketReadyRef.current) return;
-      if (watchdogReconnecting.current) {
-        console.log('[usePrinterConnection] Watchdog: reconnect already in-flight, skipping');
-        return;
-      }
+    const printerIp = connectedPrinterIpRef.current;
+    const printerPort = connectedPrinterPortRef.current ?? 23;
+    if (!printerIp) return;
 
-      watchdogReconnecting.current = true;
-      console.log('[usePrinterConnection] Watchdog: shouldPollStatus=true but socketReady=false — triggering socket reconnect');
+    // If socket is already ready, nothing to do
+    if (socketReadyRef.current) return;
+
+    let cancelled = false;
+    console.log('[usePrinterConnection] Opening persistent socket for printer:', connectedPrinterId);
+
+    (async () => {
+      try {
+        const result = await printerTransport.connect({
+          id: connectedPrinterId,
+          ipAddress: printerIp,
+          port: printerPort,
+        });
+        console.log('[usePrinterConnection] Socket connect result:', result);
+        if (!cancelled) {
+          if (result.success) {
+            console.log('[usePrinterConnection] Socket ready');
+            setSocketReady(true);
+          } else {
+            console.warn('[usePrinterConnection] Socket connect failed:', result.error);
+            setSocketReady(false);
+          }
+        }
+      } catch (e) {
+        if (!cancelled) {
+          console.error('[usePrinterConnection] socket open failed:', e);
+          setSocketReady(false);
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [connectionState.isConnected, connectedPrinterId, socketReady]);
+
+  // Watchdog: if socket drops (socketReady=false) while connected, attempt ONE reconnect
+  // after a delay. Uses a ref guard so only ONE attempt is ever in-flight.
+  useEffect(() => {
+    if (!isElectron && !isRelayMode()) return;
+    if (!connectionState.isConnected || !connectedPrinterId) return;
+    if (socketReady) return; // Already connected, nothing to do
+
+    if (watchdogReconnecting.current) {
+      console.log('[usePrinterConnection] Watchdog: reconnect already in-flight, skipping');
+      return;
+    }
+
+    // Wait 5 seconds before attempting reconnect — gives the printer time to
+    // release its previous Telnet session before we try again.
+    watchdogReconnecting.current = true;
+    console.log('[usePrinterConnection] Watchdog: socket not ready — scheduling reconnect in 5s');
+    const timer = setTimeout(async () => {
       const printerIp = connectedPrinterIpRef.current;
       const printerPort = connectedPrinterPortRef.current ?? 23;
       if (!printerIp) { watchdogReconnecting.current = false; return; }
-
       try {
+        console.log('[usePrinterConnection] Watchdog: attempting reconnect to', printerIp);
         const result = await printerTransport.connect({ id: connectedPrinterId, ipAddress: printerIp, port: printerPort });
         if (result.success) {
-          console.log('[usePrinterConnection] Watchdog reconnect successful');
+          console.log('[usePrinterConnection] Watchdog reconnect OK');
           setSocketReady(true);
         } else {
           console.warn('[usePrinterConnection] Watchdog reconnect failed:', result.error);
@@ -697,69 +630,13 @@ export function usePrinterConnection() {
       } finally {
         watchdogReconnecting.current = false;
       }
-    }, 8000); // Check every 8s — longer than the 10s connect timeout to prevent overlap
-
-    return () => clearInterval(watchdog);
-  }, [connectionState.isConnected, connectedPrinterId]);
-
-  useEffect(() => {
-    if (!isElectron && !isRelayMode()) return;
-    if (!window.electronAPI && !isRelayMode()) return;
-    if (!connectionState.isConnected || !connectedPrinterId) return;
-
-    const printerIp = connectedPrinterIpRef.current;
-    const printerPort = connectedPrinterPortRef.current ?? 23;
-
-    if (!printerIp) return;
-
-    let cancelled = false;
-    const shouldConnect = serviceScreenOpen || controlScreenOpen;
-    console.log('[usePrinterConnection] Lazy connect effect, shouldConnect:', shouldConnect);
-
-    if (!shouldConnect) {
-      // Screen closed — tear down socket and clear ready flag.
-      // Delay the disconnect slightly so any in-flight serialized polling commands
-      // can finish before the socket is yanked (prevents 8s timeout errors).
-      setSocketReady(false);
-      const teardownDelay = setTimeout(() => {
-        if (cancelled) return;
-        console.log('[usePrinterConnection] Closing socket for printer:', connectedPrinterId);
-        printerTransport.disconnect(connectedPrinterId).catch(e => {
-          console.error('[usePrinterConnection] disconnect failed:', e);
-        });
-      }, 2000);
-      return () => { cancelled = true; clearTimeout(teardownDelay); };
-    }
-
-    // Screen opened — open socket, then signal ready
-    (async () => {
-      try {
-        console.log('[usePrinterConnection] Opening socket for printer:', connectedPrinterId);
-        const result = await printerTransport.connect({
-          id: connectedPrinterId,
-          ipAddress: printerIp,
-          port: printerPort,
-        });
-        console.log('[usePrinterConnection] Socket connect result:', result);
-        if (!cancelled && result.success) {
-          console.log('[usePrinterConnection] Socket ready, enabling polling');
-          setSocketReady(true);
-        } else if (!cancelled) {
-          console.warn('[usePrinterConnection] Socket connect failed:', result.error);
-          setSocketReady(false);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          console.error('[usePrinterConnection] service socket toggle failed:', e);
-          setSocketReady(false);
-        }
-      }
-    })();
+    }, 5000);
 
     return () => {
-      cancelled = true;
+      clearTimeout(timer);
+      watchdogReconnecting.current = false;
     };
-  }, [serviceScreenOpen, controlScreenOpen, connectionState.isConnected, connectedPrinterId]);
+  }, [connectionState.isConnected, connectedPrinterId, socketReady]);
 
 
   // Query printer status (^SU) and update state - used on connect and after commands
@@ -926,21 +803,21 @@ export function usePrinterConnection() {
 
   // Re-query message list when a polling screen opens (socket is now ready).
   // This ensures messages are fetched even if the initial connect-time query missed.
-  const prevShouldPollRef = useRef(false);
+  // Re-query message list when socket becomes ready (after connect or reconnect)
+  const prevSocketReadyRef = useRef(false);
   useEffect(() => {
-    if (shouldPollStatus && !prevShouldPollRef.current && connectionState.connectedPrinter) {
-      console.log('[usePrinterConnection] Polling screen opened, re-querying message list');
-      // Small delay to let socket fully open
+    if (socketReady && !prevSocketReadyRef.current && connectionState.connectedPrinter) {
+      console.log('[usePrinterConnection] Socket became ready, re-querying message list');
       const timer = setTimeout(() => {
         if (connectionState.connectedPrinter) {
           queryMessageList(connectionState.connectedPrinter);
         }
       }, 800);
-      prevShouldPollRef.current = shouldPollStatus;
+      prevSocketReadyRef.current = socketReady;
       return () => clearTimeout(timer);
     }
-    prevShouldPollRef.current = shouldPollStatus;
-  }, [shouldPollStatus, connectionState.connectedPrinter, queryMessageList]);
+    prevSocketReadyRef.current = socketReady;
+  }, [socketReady, connectionState.connectedPrinter, queryMessageList]);
 
   const connect = useCallback(async (printer: Printer) => {
     // If using emulator, simulate connection
@@ -1086,9 +963,8 @@ export function usePrinterConnection() {
       await new Promise(r => setTimeout(r, 500));
     }
 
-    // NOTE: Lazy-connect.
-    // Do not open a TCP/Telnet session here; many printers flash/refresh their UI on connect.
-    // We only open the socket when the Service screen is active.
+    // NOTE: The persistent socket is managed by the socket lifecycle effect.
+    // We only store metadata here; the effect opens the TCP socket once connected.
     if (!isElectron && !isRelayMode()) {
       // Web preview: keep simulated delay (cannot reach local network printers without relay)
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -1324,11 +1200,10 @@ export function usePrinterConnection() {
             console.error('[connect] Failed to query ^SD:', e);
           }
 
-          // NOTE: Do NOT close the socket here. The lazy-connect effect (below)
-          // manages the socket lifecycle based on controlScreenOpen / serviceScreenOpen.
-          // Previously this used stale closure values (always false) and would kill the
-          // socket that lazy-connect had already opened, breaking all polling.
-          console.log('[connect] Initial queries done, socket left open for polling');
+          // NOTE: The persistent socket is managed by the socket lifecycle effect.
+          // This connect function does NOT open a new socket; the effect opens it
+          // once (and only once) after connectionState.isConnected becomes true.
+          console.log('[connect] Initial queries done, socket will be opened by lifecycle effect');
           toast.success('✅ Initial query burst complete');
         } catch (e) {
           console.error('[connect] Initial query burst failed:', e);

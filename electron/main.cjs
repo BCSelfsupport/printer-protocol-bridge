@@ -742,6 +742,18 @@ async function _sendCommandToSocketImpl(printerId, command) {
 
   const { socket, ephemeral } = await getSocket();
 
+  // Drain any stale buffered bytes that may still be in the socket's readable
+  // stream from a previous command (e.g. a leftover '>' prompt). Without this,
+  // the onData handler below can see an immediate '>' and call finish() before
+  // the actual response to our command has even arrived.
+  await new Promise(r => {
+    const stale = socket.read();
+    if (stale && stale.length > 0) {
+      console.log(`[sendCommand] Drained ${stale.length} stale bytes before cmd="${command}"`);
+    }
+    setImmediate(r); // yield to the event loop so the stream is fully flushed
+  });
+
   return await new Promise((resolve, reject) => {
     let response = '';
     const MAX_WAIT_MS = 8000;
