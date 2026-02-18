@@ -130,8 +130,8 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     setState({ tier: 'lite', isActivated: false, productKey: null, error: null, isLoading: false });
   };
 
-  const canNetwork = state.tier !== 'lite';
-  const canDatabase = state.tier === 'database' || state.tier === 'demo' || state.tier === 'dev';
+  const canNetwork = true; // All tiers have full network access
+  const canDatabase = true; // All tiers have full database access
   const isDemo = state.tier === 'demo';
 
   return (
