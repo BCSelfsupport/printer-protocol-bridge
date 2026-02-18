@@ -744,11 +744,15 @@ async function _sendCommandToSocketImpl(printerId, command) {
 
   return await new Promise((resolve, reject) => {
     let response = '';
-    const MAX_WAIT_MS = 6000;    // 6 seconds max wait
-    const IDLE_AFTER_DATA_MS = 500; // 500ms idle = response complete
+    const MAX_WAIT_MS = 8000;    // 8 seconds max wait (older firmware can be slow)
+    const IDLE_AFTER_DATA_MS = 800; // 800ms idle = response complete (Model 88 sends in bursts)
     let maxTimer = null;
     let idleTimer = null;
     let gotAnyData = false;
+    // Only accept response data AFTER we've sent the command.
+    // Some printers (Model 88) send a '>' prompt or welcome text on connect that arrives
+    // in the first onData event — before our command write callback fires — causing false data.
+    let commandSent = false;
 
     const cleanup = () => {
       socket.off('data', onData);
@@ -792,7 +796,15 @@ async function _sendCommandToSocketImpl(printerId, command) {
 
     const onData = (chunk) => {
       // Log raw hex for debugging Model 88
-      console.log(`[sendCommand] cmd="${command}" DATA chunk (${chunk.length} bytes): hex=${chunk.toString('hex').substring(0, 120)}`);
+      console.log(`[sendCommand] cmd="${command}" DATA chunk (${chunk.length} bytes) commandSent=${commandSent}: hex=${chunk.toString('hex').substring(0, 120)}`);
+
+      // Discard any data that arrives before we've written the command.
+      // Model 88 sends a '>' welcome prompt on connect that would otherwise
+      // be treated as a response and cause immediate spurious finish().
+      if (!commandSent) {
+        console.log(`[sendCommand] cmd="${command}" PRE-COMMAND data discarded (welcome/prompt noise)`);
+        return;
+      }
 
       const hadTelnet = handleTelnetNegotiation(socket, chunk);
       if (hadTelnet) {
@@ -803,18 +815,23 @@ async function _sendCommandToSocketImpl(printerId, command) {
           gotAnyData = true;
           console.log(`[sendCommand] cmd="${command}" stripped text: "${text.substring(0, 200)}"`);
         }
-        // Only finish on '>' prompt if we already have substantive data (> 20 chars).
-        // Some firmware sends '>' as a welcome/prompt BEFORE the actual response data,
-        // which would cause finish() to fire prematurely with an empty/incomplete response.
-        if (response.includes('>') && response.trim().length > 20) finish();
-        else scheduleFinishWhenIdle();
+        scheduleFinishWhenIdle();
         return;
       }
       const text = chunk.toString();
       response += text;
       gotAnyData = true;
       console.log(`[sendCommand] cmd="${command}" text: "${text.substring(0, 200)}"`);
-      if (response.includes('>') && response.trim().length > 20) { finish(); return; }
+
+      // '>' is a Telnet/CLI prompt that some firmware (e.g. Model 88) sends as a
+      // line-terminator AFTER the complete response. We only treat it as a "done"
+      // signal when the '>' appears NEAR THE END of a substantial response.
+      // This prevents premature cutoff when '>' appears in the middle of data.
+      const trimmed = response.trim();
+      const promptIndex = trimmed.lastIndexOf('>');
+      const isTrailingPrompt = promptIndex > 80 && promptIndex > trimmed.length - 10;
+      if (isTrailingPrompt) { finish(); return; }
+
       scheduleFinishWhenIdle();
     };
 
@@ -843,7 +860,9 @@ async function _sendCommandToSocketImpl(printerId, command) {
         console.error(`[sendCommand] Write error for cmd="${command}":`, err.message);
         return onError(err);
       }
-      console.log(`[sendCommand] Write OK for cmd="${command}"`);
+      // Mark that command has been sent — from this point, incoming data is the response.
+      commandSent = true;
+      console.log(`[sendCommand] Write OK for cmd="${command}", now accepting response data`);
     });
   });
 }
