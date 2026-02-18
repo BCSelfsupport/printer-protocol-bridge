@@ -102,6 +102,7 @@ const Index = () => {
     queryPrinterMetrics,
     checkPrinterStatus,
     isChecking,
+    refreshPolling,
   } = usePrinterConnection();
   
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
@@ -729,8 +730,14 @@ const Index = () => {
         <DevPanel 
           isOpen={devPanelOpen} 
           onToggle={() => {
+            const closing = devPanelOpen;
             setDevPanelOpen(!devPanelOpen);
-            if (devPanelOpen) setDevPanelTab(undefined);
+            if (closing) {
+              setDevPanelTab(undefined);
+              // When dev panel closes, immediately attempt socket reconnect
+              // in case polling was disrupted while the panel was open.
+              setTimeout(() => refreshPolling(), 100);
+            }
           }}
           connectedPrinterIp={connectionState.connectedPrinter?.ipAddress}
           connectedPrinterPort={connectionState.connectedPrinter?.port}
