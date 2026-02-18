@@ -291,15 +291,11 @@ ipcMain.handle('printer:connect', async (event, printer) => {
     return { success: true, reused: true };
   }
 
-  // Dead socket: destroy it and wait briefly so the printer's firmware has
-  // time to detect the TCP close and release its single-session slot.
-  // Without this pause, a new SYN arrives before the printer is ready → ETIMEDOUT.
+  // Dead socket: clean it up before opening a new one
   if (existing) {
     console.log(`[printer:connect] Destroying dead socket for printer ${printer.id}`);
     try { existing.destroy(); } catch (_) {}
     connections.delete(printer.id);
-    // 3s pause — Model 88 firmware needs ~2-3s to release the Telnet session
-    await new Promise(r => setTimeout(r, 3000));
   }
 
   return new Promise((resolve) => {
@@ -654,97 +650,38 @@ async function sendCommandToSocket(printerId, command) {
 }
 
 // Extract send-command logic into a reusable function for both IPC and relay
+// IMPORTANT: We ONLY use the persistent socket — no ephemeral fallback.
+// Model 88 supports exactly 1 Telnet session. Any second TCP connection (even
+// a short-lived one) will ETIMEDOUT the main socket. If the persistent socket
+// is gone, return an error and let the watchdog reconnect.
 async function _sendCommandToSocketImpl(printerId, command) {
-  const meta = printerMeta.get(printerId);
   const existing = connections.get(printerId);
+  const canUse = !!(existing && !existing.destroyed && existing.writable);
 
-  // More aggressive liveness check: also verify the socket hasn't errored
-  const canUseExisting = !!(existing && !existing.destroyed && existing.writable && !existing.pending);
+  console.log(`[sendCommand] printer=${printerId} cmd="${command}" hasSocket=${!!existing} canUse=${canUse}`);
 
-  console.log(`[sendCommand] printer=${printerId} cmd="${command}" hasExisting=${!!existing} canReuse=${canUseExisting} hasMeta=${!!meta}`);
-
-  const getSocket = async () => {
-    if (canUseExisting) {
-      console.log(`[sendCommand] Reusing persistent socket for printer ${printerId}`);
-      return { socket: existing, ephemeral: false };
-    }
-
-    // Clean up dead socket
+  if (!canUse) {
+    // Dead socket: clean it up so the watchdog can open a fresh one
     if (existing) {
       console.log(`[sendCommand] Destroying dead socket for printer ${printerId}`);
       try { existing.destroy(); } catch (_) {}
       connections.delete(printerId);
     }
+    return { success: false, error: 'No active connection — waiting for reconnect' };
+  }
 
-    if (!meta) throw new Error('Printer not connected (no meta)');
+  const socket = existing;
+  const ephemeral = false;
 
-    console.log(`[sendCommand] Creating ephemeral socket to ${meta.ipAddress}:${meta.port}`);
-
-    return await new Promise((resolve, reject) => {
-      const socket = new net.Socket();
-      socket.setTimeout(8000);
-      socket.setKeepAlive(true, 5000);
-
-      socket.once('connect', () => {
-        console.log(`[sendCommand] Ephemeral TCP connected to ${meta.ipAddress}:${meta.port}, waiting for Telnet handshake...`);
-
-        // Wait for Telnet negotiation to complete BEFORE resolving.
-        // Model 88 and other older printers need this handshake phase.
-        let handshakeData = false;
-        const onHandshakeData = (data) => {
-          const hadTelnet = handleTelnetNegotiation(socket, data);
-          if (hadTelnet) {
-            handshakeData = true;
-            console.log(`[sendCommand] Telnet negotiation handled on ephemeral socket`);
-          }
-          // Also log any text payload received during handshake
-          const stripped = stripTelnetBytes(data);
-          if (stripped && stripped.length > 0) {
-            console.log(`[sendCommand] Handshake text: "${stripped.toString().substring(0, 200)}"`);
-          }
-        };
-        socket.on('data', onHandshakeData);
-
-        // Give printer up to 1200ms to send Telnet negotiation.
-        // Must match the persistent connect handshake time — Model 88 (v01.09)
-        // and other firmware versions can be slow to complete negotiation.
-        setTimeout(() => {
-          socket.off('data', onHandshakeData);
-          connections.set(printerId, socket);
-          console.log(`[sendCommand] Handshake phase done (gotTelnet=${handshakeData}), ready to send command`);
-          resolve({ socket, ephemeral: true });
-        }, 1200);
-      });
-
-      socket.once('timeout', () => {
-        console.log(`[sendCommand] Ephemeral socket timeout for printer ${printerId}`);
-        socket.destroy();
-        connections.delete(printerId);
-        reject(new Error('Connection timeout'));
-      });
-      socket.once('error', (err) => {
-        console.error(`[sendCommand] Ephemeral socket error for printer ${printerId}:`, err.message);
-        socket.destroy();
-        connections.delete(printerId);
-        reject(err);
-      });
-      socket.once('close', () => { connections.delete(printerId); });
-      socket.connect(meta.port, meta.ipAddress);
-    });
-  };
-
-  const { socket, ephemeral } = await getSocket();
-
-  // Drain any stale buffered bytes that may still be in the socket's readable
-  // stream from a previous command (e.g. a leftover '>' prompt). Without this,
-  // the onData handler below can see an immediate '>' and call finish() before
-  // the actual response to our command has even arrived.
+  // Drain any stale bytes left in the stream from the previous command
+  // (e.g. a leftover '>' prompt). Without this the next onData can see
+  // an immediate '>' and finish before our real response arrives.
   await new Promise(r => {
     const stale = socket.read();
     if (stale && stale.length > 0) {
       console.log(`[sendCommand] Drained ${stale.length} stale bytes before cmd="${command}"`);
     }
-    setImmediate(r); // yield to the event loop so the stream is fully flushed
+    setImmediate(r);
   });
 
   return await new Promise((resolve, reject) => {
@@ -765,10 +702,6 @@ async function _sendCommandToSocketImpl(printerId, command) {
       socket.setTimeout(0);
       if (maxTimer) clearTimeout(maxTimer);
       if (idleTimer) clearTimeout(idleTimer);
-      if (ephemeral && !socket.destroyed) {
-        console.log(`[sendCommand] Destroying ephemeral socket after command "${command}"`);
-        socket.destroy();
-      }
     };
 
     const finish = () => {
@@ -787,22 +720,22 @@ async function _sendCommandToSocketImpl(printerId, command) {
     const onError = (err) => {
       if (finished) return;
       console.error(`[sendCommand] Socket error during cmd="${command}":`, err.message);
+      connections.delete(printerId);
       cleanup();
-      if (!ephemeral) connections.delete(printerId);
       reject(new Error(err.message));
     };
 
     const onClose = () => {
       if (finished) return;
       console.log(`[sendCommand] Socket closed during cmd="${command}", responseLen=${response.length}`);
-      if (!ephemeral) connections.delete(printerId);
+      connections.delete(printerId);
       if (response.length > 0) finish();
       else { cleanup(); reject(new Error('Connection closed by printer')); }
     };
 
     const onData = (chunk) => {
       if (finished) return;
-      console.log(`[sendCommand] cmd="${command}" DATA chunk (${chunk.length} bytes): hex=${chunk.toString('hex').substring(0, 120)}`);
+      console.log(`[sendCommand] cmd="${command}" DATA chunk (${chunk.length} bytes)`);
 
       const hadTelnet = handleTelnetNegotiation(socket, chunk);
       let text;
@@ -819,8 +752,7 @@ async function _sendCommandToSocketImpl(printerId, command) {
       gotAnyData = true;
       console.log(`[sendCommand] cmd="${command}" accumulated (${response.length} chars): "${text.substring(0, 200)}"`);
 
-      // '>' at end of response = printer's CLI prompt signalling it's done.
-      // Only treat it as terminal when it's the last non-whitespace character.
+      // '>' at the very end = printer's CLI prompt, response is complete
       const trimmed = response.trimEnd();
       if (trimmed.length > 3 && trimmed[trimmed.length - 1] === '>') {
         console.log(`[sendCommand] cmd="${command}" trailing '>' detected, finishing`);
@@ -837,14 +769,13 @@ async function _sendCommandToSocketImpl(printerId, command) {
 
     maxTimer = setTimeout(() => {
       if (finished) return;
-      console.log(`[sendCommand] cmd="${command}" MAX_WAIT timeout (${MAX_WAIT_MS}ms), gotData=${gotAnyData}, responseLen=${response.length}`);
+      console.log(`[sendCommand] cmd="${command}" MAX_WAIT timeout (${MAX_WAIT_MS}ms), gotData=${gotAnyData}`);
       if (gotAnyData) finish();
       else {
-        if (!ephemeral) {
-          console.log(`[sendCommand] Destroying dead persistent socket for printer ${printerId}`);
-          try { socket.destroy(); } catch (_) {}
-          connections.delete(printerId);
-        }
+        // No response — socket is likely dead, evict it so watchdog reconnects
+        console.log(`[sendCommand] Destroying unresponsive socket for printer ${printerId}`);
+        try { socket.destroy(); } catch (_) {}
+        connections.delete(printerId);
         cleanup();
         reject(new Error('No response from printer (timeout)'));
       }

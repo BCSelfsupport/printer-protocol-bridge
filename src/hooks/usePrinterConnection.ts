@@ -535,7 +535,6 @@ export function usePrinterConnection() {
 
   // Guard: only one reconnect attempt at a time
   const watchdogReconnecting = useRef(false);
-  const watchdogBackoffMs = useRef(10000); // starts at 10s, doubles up to 60s
   const socketReadyRef = useRef(socketReady);
   useEffect(() => { socketReadyRef.current = socketReady; }, [socketReady]);
 
@@ -602,27 +601,21 @@ export function usePrinterConnection() {
     return () => { cancelled = true; };
   }, [connectionState.isConnected, connectedPrinterId, socketReady]);
 
-  // Watchdog: if socket drops (socketReady=false) while connected, attempt reconnect
-  // with EXPONENTIAL BACKOFF so we don't spam the printer (Model 88 only allows 1 session
-  // and needs time to fully release it before accepting a new connection).
-  // Backoff: 10s → 20s → 40s → 60s max. Resets to 10s on successful reconnect.
+  // Watchdog: if socket drops (socketReady=false) while connected, attempt reconnect.
+  // Simple 15-second timer — give the Model 88 enough time to fully release its session
+  // before we knock again. No backoff complexity needed; if it fails we'll try again in 15s.
   useEffect(() => {
     if (!isElectron && !isRelayMode()) return;
     if (!connectionState.isConnected || !connectedPrinterId) return;
-    if (socketReady) {
-      // Reset backoff on successful connection
-      watchdogBackoffMs.current = 10000;
-      return;
-    }
+    if (socketReady) return;
 
     if (watchdogReconnecting.current) {
       console.log('[usePrinterConnection] Watchdog: reconnect already in-flight, skipping');
       return;
     }
 
-    const backoff = watchdogBackoffMs.current;
     watchdogReconnecting.current = true;
-    console.log(`[usePrinterConnection] Watchdog: socket not ready — scheduling reconnect in ${backoff / 1000}s`);
+    console.log('[usePrinterConnection] Watchdog: socket lost — reconnecting in 15s');
 
     const timer = setTimeout(async () => {
       const printerIp = connectedPrinterIpRef.current;
@@ -633,20 +626,17 @@ export function usePrinterConnection() {
         const result = await printerTransport.connect({ id: connectedPrinterId, ipAddress: printerIp, port: printerPort });
         if (result.success) {
           console.log('[usePrinterConnection] Watchdog reconnect OK');
-          watchdogBackoffMs.current = 10000; // reset backoff
           setSocketReady(true);
         } else {
           console.warn('[usePrinterConnection] Watchdog reconnect failed:', result.error);
-          // Increase backoff for next attempt (max 60s)
-          watchdogBackoffMs.current = Math.min(watchdogBackoffMs.current * 2, 60000);
+          // socketReady stays false → effect re-fires → try again in 15s
         }
       } catch (e) {
         console.error('[usePrinterConnection] Watchdog reconnect error:', e);
-        watchdogBackoffMs.current = Math.min(watchdogBackoffMs.current * 2, 60000);
       } finally {
         watchdogReconnecting.current = false;
       }
-    }, backoff);
+    }, 15000);
 
     return () => {
       clearTimeout(timer);
@@ -660,13 +650,8 @@ export function usePrinterConnection() {
     if (!isElectron && !isRelayMode()) return;
     
     try {
-      // Ensure socket is connected
-      await printerTransport.connect({
-        id: printer.id,
-        ipAddress: printer.ipAddress,
-        port: printer.port,
-      });
-      
+      // Use the existing persistent socket — do NOT call connect() here
+      // as that would open a second connection and ETIMEDOUT the main one.
       const result = await printerTransport.sendCommand(printer.id, '^SU');
       console.log('[queryPrinterStatus] ^SU response:', result);
       
