@@ -712,13 +712,15 @@ async function _sendCommandToSocketImpl(printerId, command) {
         };
         socket.on('data', onHandshakeData);
 
-        // Give printer up to 800ms to send Telnet negotiation
+        // Give printer up to 1200ms to send Telnet negotiation.
+        // Must match the persistent connect handshake time — Model 88 (v01.09)
+        // and other firmware versions can be slow to complete negotiation.
         setTimeout(() => {
           socket.off('data', onHandshakeData);
           connections.set(printerId, socket);
           console.log(`[sendCommand] Handshake phase done (gotTelnet=${handshakeData}), ready to send command`);
           resolve({ socket, ephemeral: true });
-        }, 800);
+        }, 1200);
       });
 
       socket.once('timeout', () => {
@@ -801,7 +803,10 @@ async function _sendCommandToSocketImpl(printerId, command) {
           gotAnyData = true;
           console.log(`[sendCommand] cmd="${command}" stripped text: "${text.substring(0, 200)}"`);
         }
-        if (response.includes('>')) finish();
+        // Only finish on '>' prompt if we already have substantive data (> 20 chars).
+        // Some firmware sends '>' as a welcome/prompt BEFORE the actual response data,
+        // which would cause finish() to fire prematurely with an empty/incomplete response.
+        if (response.includes('>') && response.trim().length > 20) finish();
         else scheduleFinishWhenIdle();
         return;
       }
@@ -809,7 +814,7 @@ async function _sendCommandToSocketImpl(printerId, command) {
       response += text;
       gotAnyData = true;
       console.log(`[sendCommand] cmd="${command}" text: "${text.substring(0, 200)}"`);
-      if (response.includes('>')) { finish(); return; }
+      if (response.includes('>') && response.trim().length > 20) { finish(); return; }
       scheduleFinishWhenIdle();
     };
 
