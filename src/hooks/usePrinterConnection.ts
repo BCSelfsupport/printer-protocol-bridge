@@ -633,6 +633,40 @@ export function usePrinterConnection() {
     connectedPrinterPortRef.current = connectionState.connectedPrinter?.port;
   }, [connectionState.connectedPrinter?.ipAddress, connectionState.connectedPrinter?.port]);
 
+  // Socket health watchdog: if polling should be active but socket is not ready,
+  // attempt to re-open the socket. This recovers from cases where the socket was
+  // silently dropped (e.g. after dev portal usage, network blip, or Electron IPC timeout).
+  const socketReadyRef = useRef(socketReady);
+  useEffect(() => { socketReadyRef.current = socketReady; }, [socketReady]);
+  const shouldPollStatusRef = useRef(shouldPollStatus);
+  useEffect(() => { shouldPollStatusRef.current = shouldPollStatus; }, [shouldPollStatus]);
+
+  useEffect(() => {
+    if (!isElectron && !isRelayMode()) return;
+    if (!connectionState.isConnected || !connectedPrinterId) return;
+
+    const watchdog = setInterval(() => {
+      if (shouldPollStatusRef.current && !socketReadyRef.current) {
+        console.log('[usePrinterConnection] Watchdog: shouldPollStatus=true but socketReady=false — triggering socket reconnect');
+        const printerIp = connectedPrinterIpRef.current;
+        const printerPort = connectedPrinterPortRef.current ?? 23;
+        if (!printerIp) return;
+        printerTransport.connect({ id: connectedPrinterId, ipAddress: printerIp, port: printerPort })
+          .then(result => {
+            if (result.success) {
+              console.log('[usePrinterConnection] Watchdog reconnect successful');
+              setSocketReady(true);
+            } else {
+              console.warn('[usePrinterConnection] Watchdog reconnect failed:', result.error);
+            }
+          })
+          .catch(e => console.error('[usePrinterConnection] Watchdog reconnect error:', e));
+      }
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(watchdog);
+  }, [connectionState.isConnected, connectedPrinterId]);
+
   useEffect(() => {
     if (!isElectron && !isRelayMode()) return;
     if (!window.electronAPI && !isRelayMode()) return;
@@ -2529,6 +2563,27 @@ export function usePrinterConnection() {
     }
   }, []);
 
+  // Explicit polling recovery: re-open socket if screens are active but socket died.
+  // Called externally (e.g. when dev panel closes) to immediately recover without
+  // waiting for the 5-second watchdog interval.
+  const refreshPolling = useCallback(() => {
+    if (!isElectron && !isRelayMode()) return;
+    if (!connectionState.isConnected || !connectedPrinterIdRef.current) return;
+    const printerIp = connectedPrinterIpRef.current;
+    const printerPort = connectedPrinterPortRef.current ?? 23;
+    if (!printerIp) return;
+    if (socketReadyRef.current) return; // Already ready, nothing to do
+    console.log('[usePrinterConnection] refreshPolling: attempting socket reconnect');
+    printerTransport.connect({ id: connectedPrinterIdRef.current, ipAddress: printerIp, port: printerPort })
+      .then(result => {
+        if (result.success) {
+          console.log('[usePrinterConnection] refreshPolling: reconnect successful');
+          setSocketReady(true);
+        }
+      })
+      .catch(e => console.error('[usePrinterConnection] refreshPolling error:', e));
+  }, [connectionState.isConnected]);
+
   return {
     printers,
     connectionState,
@@ -2566,5 +2621,6 @@ export function usePrinterConnection() {
     queryPrintSettings,
     sendCommand,
     queryPrinterMetrics,
+    refreshPolling,
   };
 }
