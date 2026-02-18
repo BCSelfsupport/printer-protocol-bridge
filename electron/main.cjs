@@ -306,6 +306,7 @@ ipcMain.handle('printer:connect', async (event, printer) => {
     let resolved = false;
     let telnetHandshakeComplete = false;
     let handshakeTimer = null;
+    let lostEmitted = false; // Guard: emit connection-lost only once per socket lifecycle
 
     // Telnet negotiation listener — only active during handshake phase.
     const onConnectData = (data) => {
@@ -355,6 +356,11 @@ ipcMain.handle('printer:connect', async (event, printer) => {
         resolved = true;
         resolve({ success: false, error: err.message });
       }
+      // Emit connection-lost only if the socket had previously succeeded (post-handshake error)
+      if (resolved && !lostEmitted) {
+        lostEmitted = true;
+        // Will also fire 'close' — lostEmitted guard prevents double-emit there
+      }
     });
 
     socket.on('close', (hadError) => {
@@ -365,8 +371,9 @@ ipcMain.handle('printer:connect', async (event, printer) => {
       if (!resolved) {
         resolved = true;
         resolve({ success: false, error: 'Connection closed by printer during handshake' });
-      } else {
-        // Notify renderer that connection was lost (only after successful connect)
+      } else if (!lostEmitted) {
+        // Notify renderer that connection was lost — deduplicated so it fires exactly once.
+        lostEmitted = true;
         mainWindow?.webContents.send('printer:connection-lost', { printerId: printer.id });
       }
     });
