@@ -380,13 +380,15 @@ export function usePrinterConnection() {
     // Extract current message from ^SU if available (ignore "NONE" placeholder)
     const parsedMessage = parsed.currentMessage && parsed.currentMessage !== 'NONE' ? parsed.currentMessage.toUpperCase() : undefined;
     if (connectedPrinterId) {
+      // Only pass currentMessage if ^SU actually returned one — otherwise leave the
+      // existing value intact (set by ^LM) so the print count stays visible in the UI.
       updatePrinterStatus(connectedPrinterId, {
         isAvailable: true,
         status: hvOn ? 'ready' : 'not_ready',
         hasActiveErrors: parsed.errorActive ?? false,
         inkLevel: inkLevelCard,
         makeupLevel: makeupLevelCard,
-        currentMessage: parsedMessage,
+        ...(parsedMessage !== undefined ? { currentMessage: parsedMessage } : {}),
       });
     }
 
@@ -405,7 +407,9 @@ export function usePrinterConnection() {
         // Also update currentMessage if parsed from ^SU (keeps it in sync with printer state)
         status: prev.status 
           ? { ...prev.status, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel, ...(parsedMessage ? { currentMessage: parsedMessage } : {}) } 
-          : { ...mockStatus, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel, currentMessage: parsedMessage ?? prev.status?.currentMessage ?? mockStatus.currentMessage },
+          // When status was null (fresh connect), seed from mockStatus but PRESERVE any
+          // counter values that ^CN may have already populated before this ^SU arrived.
+          : { ...mockStatus, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel, currentMessage: parsedMessage ?? mockStatus.currentMessage, productCount: 0, printCount: 0, customCounters: [0, 0, 0, 0] },
         metrics: {
           ...previous,
           modulation: parsed.modulation ?? previous.modulation,
