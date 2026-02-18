@@ -83,10 +83,10 @@ function UpdaterDiagnostics() {
     });
   };
 
-  if (!info) return <div className="text-[10px] text-blue-600">Loading...</div>;
+  if (!info) return <div className="text-[10px] text-primary">Loading...</div>;
 
   return (
-    <div className="text-[10px] text-blue-700 space-y-0.5 font-mono">
+    <div className="text-[10px] text-foreground space-y-0.5 font-mono">
       <div>Installed: v{info.version}</div>
       <div>Update Stage: {info.updateState?.stage || 'unknown'}</div>
       {info.updateState?.info && (
@@ -96,16 +96,16 @@ function UpdaterDiagnostics() {
         <div>Progress: {Math.round(info.updateState.progress.percent)}%</div>
       )}
       {info.updateState?.stage === 'idle' && (
-        <div className="text-orange-600 mt-1">⚠️ No update detected.</div>
+        <div className="text-warning mt-1">⚠️ No update detected.</div>
       )}
       <div className="flex gap-1 mt-1">
-        <button onClick={refresh} className="text-blue-500 underline text-[10px]">Refresh</button>
-        <button onClick={loadLog} className="text-blue-500 underline text-[10px]">View Log</button>
+        <button onClick={refresh} className="text-primary underline text-[10px]">Refresh</button>
+        <button onClick={loadLog} className="text-primary underline text-[10px]">View Log</button>
       </div>
       {showLog && log && (
         <div className="mt-1 max-h-40 overflow-auto bg-black/80 text-green-400 p-1 rounded text-[9px] whitespace-pre-wrap">
           {log}
-          <button onClick={() => setShowLog(false)} className="block text-red-400 mt-1 underline">Close</button>
+          <button onClick={() => setShowLog(false)} className="block text-destructive mt-1 underline">Close</button>
         </div>
       )}
     </div>
@@ -254,10 +254,10 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
 
   const StatusLight = ({ on, label, color = 'green' }: { on: boolean; label: string; color?: 'green' | 'red' | 'yellow' | 'blue' }) => {
     const colorClasses = {
-      green: on ? 'bg-green-500 shadow-green-500/50' : 'bg-gray-300',
-      red: on ? 'bg-red-500 shadow-red-500/50' : 'bg-gray-300',
-      yellow: on ? 'bg-yellow-500 shadow-yellow-500/50' : 'bg-gray-300',
-      blue: on ? 'bg-blue-500 shadow-blue-500/50' : 'bg-gray-300',
+      green: on ? 'bg-green-500 shadow-green-500/50' : 'bg-muted-foreground/40',
+      red: on ? 'bg-red-500 shadow-red-500/50' : 'bg-muted-foreground/40',
+      yellow: on ? 'bg-yellow-500 shadow-yellow-500/50' : 'bg-muted-foreground/40',
+      blue: on ? 'bg-blue-500 shadow-blue-500/50' : 'bg-muted-foreground/40',
     };
 
     return (
@@ -269,7 +269,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             on && "shadow-lg"
           )} 
         />
-        <span className="text-xs font-mono text-gray-700">{label}</span>
+        <span className="text-xs font-mono text-foreground">{label}</span>
       </div>
     );
   };
@@ -290,10 +290,9 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
       disabled={!emulatorEnabled}
       className={cn(
         "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all border",
-        "border-gray-300",
         on 
-          ? "bg-green-100 text-green-700 border-green-500" 
-          : "bg-gray-50 text-gray-600 hover:bg-gray-100",
+          ? "bg-success/20 text-success border-success/60" 
+          : "bg-muted text-muted-foreground border-border hover:bg-muted/80",
         !emulatorEnabled && "opacity-50 cursor-not-allowed"
       )}
     >
@@ -303,12 +302,12 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
   );
 
   const categoryColors: Record<string, string> = {
-    system: 'bg-blue-100 text-blue-700 border-blue-300',
-    query: 'bg-purple-100 text-purple-700 border-purple-300',
-    printing: 'bg-green-100 text-green-700 border-green-300',
-    message: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-    settings: 'bg-orange-100 text-orange-700 border-orange-300',
-    'one-to-one': 'bg-pink-100 text-pink-700 border-pink-300',
+    system: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
+    query: 'bg-purple-500/20 text-purple-400 border-purple-500/40',
+    printing: 'bg-green-500/20 text-green-400 border-green-500/40',
+    message: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
+    settings: 'bg-orange-500/20 text-orange-400 border-orange-500/40',
+    'one-to-one': 'bg-pink-500/20 text-pink-400 border-pink-500/40',
   };
 
   const filteredCommands = filterCategory === 'all' 
@@ -349,7 +348,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             className={cn(
               "absolute right-0 top-0",
               isMobile ? "w-full" : "w-[600px]",
-              "bg-white border-l-2 border-border shadow-xl",
+              "bg-card border-l-2 border-border shadow-xl",
               "h-[100dvh] pb-[env(safe-area-inset-bottom)]"
             )}
           >
@@ -358,13 +357,13 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
           {/* Header */}
           <div className="p-4 border-b border-border">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-sm flex items-center gap-2 text-gray-800">
+              <h2 className="font-semibold text-sm flex items-center gap-2 text-foreground">
                 <Settings2 className="w-4 h-4" />
                 Developer Panel
               </h2>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-600">Emulator</span>
+                  <span className="text-xs text-muted-foreground">Emulator</span>
                   <Switch
                     checked={emulatorEnabled}
                     onCheckedChange={handleEmulatorToggle}
@@ -372,16 +371,16 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                 </div>
                 <button
                   onClick={onToggle}
-                  className="p-1 rounded hover:bg-gray-100 transition-colors"
+                  className="p-1 rounded hover:bg-muted transition-colors"
                   title="Close panel"
                 >
-                  <ChevronRight className="w-4 h-4 text-gray-600" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
             </div>
             {emulatorEnabled && (
-              <div className="flex items-center gap-2 text-xs text-green-600 font-medium">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <div className="flex items-center gap-2 text-xs text-success font-medium">
+                <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
                 Emulator Active - Protocol v2.6
               </div>
             )}
@@ -409,10 +408,10 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
               <ScrollArea className="h-full p-4">
                 {/* Status Lights Section */}
                 <div className="mb-6">
-                  <h3 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
                     Subsystem Status
                   </h3>
-                  <div className="grid grid-cols-2 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="grid grid-cols-2 gap-2 p-3 bg-muted/50 rounded-lg border border-border">
                     <StatusLight on={emulatorState.hvOn} label="HV ON" color="green" />
                     <StatusLight on={emulatorState.jetRunning} label="JET RUN" color="blue" />
                     <StatusLight on={emulatorState.v300up} label="V300UP" color="green" />
@@ -426,7 +425,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
 
                 {/* Control Buttons */}
                 <div className="mb-6">
-                  <h3 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
                     Manual Controls
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
@@ -469,7 +468,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   </div>
                   
                   {/* Consumable Level Controls */}
-                  <h3 className="text-xs font-semibold text-gray-500 mt-4 mb-3 uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-muted-foreground mt-4 mb-3 uppercase tracking-wider">
                     Consumable Levels
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
@@ -480,12 +479,11 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                       disabled={!emulatorEnabled}
                       className={cn(
                         "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all border",
-                        "border-gray-300",
                         emulatorState.inkLevel === 'FULL' 
-                          ? "bg-green-100 text-green-700 border-green-500" 
+                          ? "bg-success/20 text-success border-success/60" 
                           : emulatorState.inkLevel === 'LOW'
-                          ? "bg-yellow-100 text-yellow-700 border-yellow-500"
-                          : "bg-red-100 text-red-700 border-red-500",
+                          ? "bg-warning/20 text-warning border-warning/60"
+                          : "bg-destructive/20 text-destructive border-destructive/60",
                         !emulatorEnabled && "opacity-50 cursor-not-allowed"
                       )}
                     >
@@ -499,12 +497,11 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                       disabled={!emulatorEnabled}
                       className={cn(
                         "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all border",
-                        "border-gray-300",
                         (emulatorState.makeupLevel === 'FULL' || emulatorState.makeupLevel === 'GOOD')
-                          ? "bg-green-100 text-green-700 border-green-500" 
+                          ? "bg-success/20 text-success border-success/60" 
                           : emulatorState.makeupLevel === 'LOW'
-                          ? "bg-yellow-100 text-yellow-700 border-yellow-500"
-                          : "bg-red-100 text-red-700 border-red-500",
+                          ? "bg-warning/20 text-warning border-warning/60"
+                          : "bg-destructive/20 text-destructive border-destructive/60",
                         !emulatorEnabled && "opacity-50 cursor-not-allowed"
                       )}
                     >
@@ -516,57 +513,57 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
 
                 {/* Metrics */}
                 <div className="mb-6">
-                  <h3 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
                     Metrics
                   </h3>
-                  <div className="space-y-2 text-xs font-mono bg-gray-50 rounded-lg p-3 border border-gray-200 text-gray-700">
+                  <div className="space-y-2 text-xs font-mono bg-muted/50 rounded-lg p-3 border border-border text-foreground">
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Modulation:</span>
-                      <span className="text-gray-800">{emulatorState.modulation}</span>
+                      <span className="text-muted-foreground">Modulation:</span>
+                      <span>{emulatorState.modulation}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Charge:</span>
-                      <span className="text-gray-800">{emulatorState.charge}</span>
+                      <span className="text-muted-foreground">Charge:</span>
+                      <span>{emulatorState.charge}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Pressure:</span>
-                      <span className="text-gray-800">{emulatorState.pressure} psi</span>
+                      <span className="text-muted-foreground">Pressure:</span>
+                      <span>{emulatorState.pressure} psi</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">RPS:</span>
-                      <span className="text-gray-800">{emulatorState.rps.toFixed(2)}</span>
+                      <span className="text-muted-foreground">RPS:</span>
+                      <span>{emulatorState.rps.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Phase Qual:</span>
-                      <span className="text-gray-800">{emulatorState.phaseQual}%</span>
+                      <span className="text-muted-foreground">Phase Qual:</span>
+                      <span>{emulatorState.phaseQual}%</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Viscosity:</span>
-                      <span className="text-gray-800">{emulatorState.viscosity.toFixed(2)}</span>
+                      <span className="text-muted-foreground">Viscosity:</span>
+                      <span>{emulatorState.viscosity.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Ink Level:</span>
-                      <span className={emulatorState.inkLevel === 'FULL' ? 'text-green-600 font-medium' : emulatorState.inkLevel === 'LOW' ? 'text-yellow-600 font-medium' : 'text-red-600 font-medium'}>
+                      <span className="text-muted-foreground">Ink Level:</span>
+                      <span className={emulatorState.inkLevel === 'FULL' ? 'text-success font-medium' : emulatorState.inkLevel === 'LOW' ? 'text-warning font-medium' : 'text-destructive font-medium'}>
                         {emulatorState.inkLevel}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Makeup:</span>
-                      <span className={(emulatorState.makeupLevel === 'FULL' || emulatorState.makeupLevel === 'GOOD') ? 'text-green-600 font-medium' : emulatorState.makeupLevel === 'LOW' ? 'text-yellow-600 font-medium' : 'text-red-600 font-medium'}>
+                      <span className="text-muted-foreground">Makeup:</span>
+                      <span className={(emulatorState.makeupLevel === 'FULL' || emulatorState.makeupLevel === 'GOOD') ? 'text-success font-medium' : emulatorState.makeupLevel === 'LOW' ? 'text-warning font-medium' : 'text-destructive font-medium'}>
                         {emulatorState.makeupLevel}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Current Msg:</span>
-                      <span className="text-gray-800">{emulatorState.currentMessage}</span>
+                      <span className="text-muted-foreground">Current Msg:</span>
+                      <span>{emulatorState.currentMessage}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Print Count:</span>
-                      <span className="text-gray-800">{emulatorState.printCount}</span>
+                      <span className="text-muted-foreground">Print Count:</span>
+                      <span>{emulatorState.printCount}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Product Count:</span>
-                      <span className="text-gray-800">{emulatorState.productCount}</span>
+                      <span className="text-muted-foreground">Product Count:</span>
+                      <span>{emulatorState.productCount}</span>
                     </div>
                   </div>
                 </div>
@@ -589,8 +586,8 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             <TabsContent value="protocol" className="flex-1 overflow-hidden m-0">
               <ScrollArea className="h-full p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <BookOpen className="w-4 h-4 text-gray-500" />
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <BookOpen className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Protocol v2.6 Commands
                   </h3>
                 </div>
@@ -623,18 +620,18 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                       onClick={() => handleQuickCommand(cmd.code)}
                       disabled={!emulatorEnabled}
                       className={cn(
-                        "w-full text-left p-2 rounded-md border border-gray-200",
-                        "bg-gray-50 hover:bg-gray-100 transition-colors",
+                        "w-full text-left p-2 rounded-md border border-border",
+                        "bg-muted/50 hover:bg-muted transition-colors",
                         !emulatorEnabled && "opacity-50 cursor-not-allowed"
                       )}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <code className="text-xs font-bold text-blue-600">{cmd.code}</code>
+                        <code className="text-xs font-bold text-primary">{cmd.code}</code>
                         <Badge variant="outline" className={cn("text-[9px]", categoryColors[cmd.category])}>
                           {cmd.category}
                         </Badge>
                       </div>
-                      <div className="text-[10px] text-gray-600">{cmd.description}</div>
+                      <div className="text-[10px] text-muted-foreground">{cmd.description}</div>
                     </button>
                   ))}
                 </div>
@@ -645,14 +642,14 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             <TabsContent value="commands" className="flex-1 overflow-hidden m-0">
               <ScrollArea className="h-full p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Terminal className="w-4 h-4 text-gray-500" />
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <Terminal className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Command Log
                   </h3>
                 </div>
                 
                 {commandLog.length === 0 ? (
-                  <div className="text-xs text-gray-500 text-center py-8">
+                  <div className="text-xs text-muted-foreground text-center py-8">
                     No commands logged yet.
                     <br />
                     Enable emulator and interact with the app.
@@ -665,26 +662,26 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                         className={cn(
                           "text-xs font-mono p-2 rounded",
                           entry.direction === 'sent' 
-                            ? "bg-blue-50 border-l-2 border-blue-500" 
-                            : "bg-green-50 border-l-2 border-green-500"
+                            ? "bg-primary/10 border-l-2 border-primary" 
+                            : "bg-success/10 border-l-2 border-success"
                         )}
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span className={cn(
                             "text-[10px] uppercase font-semibold",
-                            entry.direction === 'sent' ? "text-blue-600" : "text-green-600"
+                            entry.direction === 'sent' ? "text-primary" : "text-success"
                           )}>
                             {entry.direction === 'sent' ? '→ SENT' : '← RECV'}
                           </span>
-                          <span className="text-[10px] text-gray-500">
+                          <span className="text-[10px] text-muted-foreground">
                             {entry.timestamp.toLocaleTimeString()}
                           </span>
                         </div>
-                        <div className="text-gray-800 break-all">
+                        <div className="text-foreground break-all">
                           {entry.command}
                         </div>
                         {entry.response && entry.direction === 'received' && (
-                          <div className="text-gray-500 mt-1 whitespace-pre-wrap text-[10px]">
+                          <div className="text-muted-foreground mt-1 whitespace-pre-wrap text-[10px]">
                             {entry.response}
                           </div>
                         )}
@@ -699,8 +696,8 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             <TabsContent value="manual" className="flex-1 overflow-hidden m-0">
               <ScrollArea className="h-full p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Send className="w-4 h-4 text-gray-500" />
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <Send className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Send Command
                   </h3>
                 </div>
@@ -725,94 +722,38 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
 
                 {/* Quick Commands */}
                 <div className="mb-4">
-                  <h4 className="text-xs font-semibold text-gray-500 mb-2">Quick Commands</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-2">Quick Commands</h4>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs justify-start"
-                      onClick={() => handleQuickCommand('^SJ 1')}
-                      disabled={!emulatorEnabled}
-                    >
-                      <Play className="w-3 h-3 mr-2" />
-                      Start Jet
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^SJ 1')} disabled={!emulatorEnabled}>
+                      <Play className="w-3 h-3 mr-2" />Start Jet
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs justify-start"
-                      onClick={() => handleQuickCommand('^SJ 0')}
-                      disabled={!emulatorEnabled}
-                    >
-                      <Square className="w-3 h-3 mr-2" />
-                      Stop Jet
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^SJ 0')} disabled={!emulatorEnabled}>
+                      <Square className="w-3 h-3 mr-2" />Stop Jet
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs justify-start"
-                      onClick={() => handleQuickCommand('^PR 1')}
-                      disabled={!emulatorEnabled}
-                    >
-                      <Zap className="w-3 h-3 mr-2" />
-                      HV On
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^PR 1')} disabled={!emulatorEnabled}>
+                      <Zap className="w-3 h-3 mr-2" />HV On
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs justify-start"
-                      onClick={() => handleQuickCommand('^PR 0')}
-                      disabled={!emulatorEnabled}
-                    >
-                      <Zap className="w-3 h-3 mr-2 opacity-50" />
-                      HV Off
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^PR 0')} disabled={!emulatorEnabled}>
+                      <Zap className="w-3 h-3 mr-2 opacity-50" />HV Off
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs justify-start"
-                      onClick={() => handleQuickCommand('^SU')}
-                      disabled={!emulatorEnabled}
-                    >
-                      <List className="w-3 h-3 mr-2" />
-                      Status
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^SU')} disabled={!emulatorEnabled}>
+                      <List className="w-3 h-3 mr-2" />Status
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs justify-start"
-                      onClick={() => handleQuickCommand('^VV')}
-                      disabled={!emulatorEnabled}
-                    >
-                      <BookOpen className="w-3 h-3 mr-2" />
-                      Version
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^VV')} disabled={!emulatorEnabled}>
+                      <BookOpen className="w-3 h-3 mr-2" />Version
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs justify-start"
-                      onClick={() => handleQuickCommand('^LM')}
-                      disabled={!emulatorEnabled}
-                    >
-                      <List className="w-3 h-3 mr-2" />
-                      List Msgs
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^LM')} disabled={!emulatorEnabled}>
+                      <List className="w-3 h-3 mr-2" />List Msgs
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs justify-start"
-                      onClick={() => handleQuickCommand('^CN')}
-                      disabled={!emulatorEnabled}
-                    >
-                      <List className="w-3 h-3 mr-2" />
-                      Counters
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^CN')} disabled={!emulatorEnabled}>
+                      <List className="w-3 h-3 mr-2" />Counters
                     </Button>
                   </div>
                 </div>
 
                 {/* Command Reference */}
-                <div className="text-[10px] text-gray-600 space-y-1 bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <p className="font-semibold mb-2 text-gray-700">Command Format:</p>
+                <div className="text-[10px] text-muted-foreground space-y-1 bg-muted/50 rounded-lg p-3 border border-border">
+                  <p className="font-semibold mb-2 text-foreground">Command Format:</p>
                   <p>• Commands start with ^ (caret)</p>
                   <p>• Parameters separated by ; (semicolon)</p>
                   <p>• Case insensitive (except message data)</p>
@@ -825,75 +766,45 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             <TabsContent value="network" className="flex-1 overflow-hidden m-0">
               <ScrollArea className="h-full p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <Network className="w-4 h-4 text-gray-500" />
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <Network className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Network Configuration
                   </h3>
                 </div>
 
                 <div className="space-y-3 mb-4">
                   <div className="space-y-1">
-                    <Label className="text-xs text-gray-600">IP Address</Label>
-                    <Input
-                      value={netSettings.ipAddress}
-                      onChange={(e) => handleNetChange('ipAddress', e.target.value)}
-                      placeholder="192.168.1.55"
-                      className="h-8 text-xs font-mono"
-                    />
+                    <Label className="text-xs text-muted-foreground">IP Address</Label>
+                    <Input value={netSettings.ipAddress} onChange={(e) => handleNetChange('ipAddress', e.target.value)} placeholder="192.168.1.55" className="h-8 text-xs font-mono" />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label className="text-xs text-gray-600">Subnet Mask</Label>
-                      <Input
-                        value={netSettings.subnetMask}
-                        onChange={(e) => handleNetChange('subnetMask', e.target.value)}
-                        placeholder="255.255.255.0"
-                        className="h-8 text-xs font-mono"
-                      />
+                      <Label className="text-xs text-muted-foreground">Subnet Mask</Label>
+                      <Input value={netSettings.subnetMask} onChange={(e) => handleNetChange('subnetMask', e.target.value)} placeholder="255.255.255.0" className="h-8 text-xs font-mono" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs text-gray-600">Port</Label>
-                      <Input
-                        value={netSettings.port}
-                        onChange={(e) => handleNetChange('port', e.target.value)}
-                        placeholder="23"
-                        className="h-8 text-xs font-mono"
-                      />
+                      <Label className="text-xs text-muted-foreground">Port</Label>
+                      <Input value={netSettings.port} onChange={(e) => handleNetChange('port', e.target.value)} placeholder="23" className="h-8 text-xs font-mono" />
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-gray-600">Gateway</Label>
-                    <Input
-                      value={netSettings.gateway}
-                      onChange={(e) => handleNetChange('gateway', e.target.value)}
-                      placeholder="192.168.1.1"
-                      className="h-8 text-xs font-mono"
-                    />
+                    <Label className="text-xs text-muted-foreground">Gateway</Label>
+                    <Input value={netSettings.gateway} onChange={(e) => handleNetChange('gateway', e.target.value)} placeholder="192.168.1.1" className="h-8 text-xs font-mono" />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label className="text-xs text-gray-600">DNS 1</Label>
-                      <Input
-                        value={netSettings.dns1}
-                        onChange={(e) => handleNetChange('dns1', e.target.value)}
-                        placeholder="8.8.8.8"
-                        className="h-8 text-xs font-mono"
-                      />
+                      <Label className="text-xs text-muted-foreground">DNS 1</Label>
+                      <Input value={netSettings.dns1} onChange={(e) => handleNetChange('dns1', e.target.value)} placeholder="8.8.8.8" className="h-8 text-xs font-mono" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs text-gray-600">DNS 2</Label>
-                      <Input
-                        value={netSettings.dns2}
-                        onChange={(e) => handleNetChange('dns2', e.target.value)}
-                        placeholder="8.8.4.4"
-                        className="h-8 text-xs font-mono"
-                      />
+                      <Label className="text-xs text-muted-foreground">DNS 2</Label>
+                      <Input value={netSettings.dns2} onChange={(e) => handleNetChange('dns2', e.target.value)} placeholder="8.8.4.4" className="h-8 text-xs font-mono" />
                     </div>
                   </div>
                 </div>
 
                 {/* Embedded Terminal */}
-                <div className="border border-gray-200 rounded-lg overflow-hidden" style={{ height: '300px' }}>
+                <div className="border border-border rounded-lg overflow-hidden" style={{ height: '300px' }}>
                   <CommandTerminal
                     printerId={connectedPrinterIp ? 1 : null}
                     ipAddress={netSettings.ipAddress}
@@ -939,25 +850,25 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
           </Tabs>
 
           {/* Build Status & Push Update Footer */}
-          <div className="p-3 border-t border-gray-200 space-y-2">
+          <div className="p-3 border-t border-border space-y-2">
             {/* Build Runs */}
-            <div className="bg-gray-50 rounded-lg border border-gray-200 p-2">
+            <div className="bg-muted/50 rounded-lg border border-border p-2">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Build Status</h4>
+                <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Build Status</h4>
                 <button
                   onClick={fetchBuildStatus}
                   disabled={buildRunsLoading}
-                  className="p-1 rounded hover:bg-gray-200 transition-colors"
+                  className="p-1 rounded hover:bg-muted transition-colors"
                   title="Refresh"
                 >
-                  <RefreshCw className={cn("w-3 h-3 text-gray-500", buildRunsLoading && "animate-spin")} />
+                  <RefreshCw className={cn("w-3 h-3 text-muted-foreground", buildRunsLoading && "animate-spin")} />
                 </button>
               </div>
               {buildRuns.length === 0 && !buildRunsLoading && (
-                <div className="text-[10px] text-gray-400 text-center py-2">No recent builds</div>
+                <div className="text-[10px] text-muted-foreground text-center py-2">No recent builds</div>
               )}
               {buildRunsLoading && buildRuns.length === 0 && (
-                <div className="text-[10px] text-gray-400 text-center py-2">Loading...</div>
+                <div className="text-[10px] text-muted-foreground text-center py-2">Loading...</div>
               )}
               <div className="space-y-1.5 max-h-32 overflow-y-auto">
                 {buildRuns.map((run) => {
@@ -969,37 +880,37 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   return (
                     <div key={run.id} className="flex items-center gap-2 text-[10px]">
                       {isRunning ? (
-                        <Clock className="w-3 h-3 text-yellow-500 animate-pulse flex-shrink-0" />
+                        <Clock className="w-3 h-3 text-warning animate-pulse flex-shrink-0" />
                       ) : isSuccess ? (
-                        <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
+                        <CheckCircle2 className="w-3 h-3 text-success flex-shrink-0" />
                       ) : isFailed ? (
-                        <XCircle className="w-3 h-3 text-red-500 flex-shrink-0" />
+                        <XCircle className="w-3 h-3 text-destructive flex-shrink-0" />
                       ) : (
-                        <Clock className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                        <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1">
-                          <span className="font-medium text-gray-700">#{run.run_number}</span>
+                          <span className="font-medium text-foreground">#{run.run_number}</span>
                           <span className={cn(
                             "px-1 rounded text-[9px] font-medium",
-                            isRunning ? "bg-yellow-100 text-yellow-700" :
-                            isSuccess ? "bg-green-100 text-green-700" :
-                            isFailed ? "bg-red-100 text-red-700" :
-                            "bg-gray-100 text-gray-600"
+                            isRunning ? "bg-warning/20 text-warning" :
+                            isSuccess ? "bg-success/20 text-success" :
+                            isFailed ? "bg-destructive/20 text-destructive" :
+                            "bg-muted text-muted-foreground"
                           )}>
                             {isRunning ? run.status : run.conclusion || run.status}
                           </span>
-                          <span className="text-gray-400 ml-auto">{timeAgo}</span>
+                          <span className="text-muted-foreground ml-auto">{timeAgo}</span>
                         </div>
                       </div>
                       <a 
                         href={run.html_url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="p-0.5 hover:bg-gray-200 rounded"
+                        className="p-0.5 hover:bg-muted rounded"
                         title="View on GitHub"
                       >
-                        <ExternalLink className="w-2.5 h-2.5 text-gray-400" />
+                        <ExternalLink className="w-2.5 h-2.5 text-muted-foreground" />
                       </a>
                     </div>
                   );
@@ -1008,12 +919,12 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             </div>
 
             {/* Updater Diagnostics */}
-            <div className="p-2 bg-blue-50 rounded border border-blue-200">
-              <div className="text-[10px] font-semibold text-blue-800 mb-1">Auto-Updater Diagnostics</div>
+            <div className="p-2 bg-primary/10 rounded border border-primary/30">
+              <div className="text-[10px] font-semibold text-foreground mb-1">Auto-Updater Diagnostics</div>
               {(window as any).electronAPI ? (
                 <UpdaterDiagnostics />
               ) : (
-                <div className="text-[10px] text-blue-600">
+                <div className="text-[10px] text-muted-foreground">
                   ❌ Not running in Electron. Auto-updater only works in the installed desktop app.
                 </div>
               )}
@@ -1036,7 +947,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             {buildResult && (
               <div className={cn(
                 "text-[10px] text-center py-1 px-2 rounded",
-                buildResult.success ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                buildResult.success ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
               )}>
                 {buildResult.message}
               </div>
@@ -1050,13 +961,13 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
               return (isExpired || isWarning) ? (
                 <div className={cn(
                   "text-[10px] text-center py-1 px-2 rounded",
-                  isExpired ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"
+                  isExpired ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-warning"
                 )}>
                   {isExpired ? '⚠️ GitHub token expired! Renew it.' : `⚠️ GitHub token expires in ${daysLeft} days`}
                 </div>
               ) : null;
             })()}
-            <div className="text-[10px] text-gray-500 text-center">
+            <div className="text-[10px] text-muted-foreground text-center">
               Printer Emulator v2.0 • Bestcode Protocol • Dev Mode Only
             </div>
           </div>
