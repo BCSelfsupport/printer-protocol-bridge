@@ -744,24 +744,22 @@ async function _sendCommandToSocketImpl(printerId, command) {
 
   return await new Promise((resolve, reject) => {
     let response = '';
-    const MAX_WAIT_MS = 8000;    // 8 seconds max wait (older firmware can be slow)
-    const IDLE_AFTER_DATA_MS = 800; // 800ms idle = response complete (Model 88 sends in bursts)
+    const MAX_WAIT_MS = 8000;
+    const IDLE_AFTER_DATA_MS = 600; // 600ms idle = response done
     let maxTimer = null;
     let idleTimer = null;
     let gotAnyData = false;
-    // Only accept response data AFTER we've sent the command.
-    // Some printers (Model 88) send a '>' prompt or welcome text on connect that arrives
-    // in the first onData event — before our command write callback fires — causing false data.
-    let commandSent = false;
+    let finished = false;
 
     const cleanup = () => {
+      if (finished) return;
+      finished = true;
       socket.off('data', onData);
       socket.off('error', onError);
       socket.off('close', onClose);
       socket.setTimeout(0);
       if (maxTimer) clearTimeout(maxTimer);
       if (idleTimer) clearTimeout(idleTimer);
-      // For ephemeral sockets, destroy after use
       if (ephemeral && !socket.destroyed) {
         console.log(`[sendCommand] Destroying ephemeral socket after command "${command}"`);
         socket.destroy();
@@ -769,25 +767,28 @@ async function _sendCommandToSocketImpl(printerId, command) {
     };
 
     const finish = () => {
+      if (finished) return;
       console.log(`[sendCommand] cmd="${command}" DONE, responseLen=${response.length}, response="${response.substring(0, 300)}"`);
       cleanup();
       resolve({ success: true, response });
     };
 
     const scheduleFinishWhenIdle = () => {
+      if (finished) return;
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = setTimeout(() => finish(), IDLE_AFTER_DATA_MS);
     };
 
     const onError = (err) => {
+      if (finished) return;
       console.error(`[sendCommand] Socket error during cmd="${command}":`, err.message);
       cleanup();
-      // If persistent socket errored, remove it so next call creates fresh one
       if (!ephemeral) connections.delete(printerId);
       reject(new Error(err.message));
     };
 
     const onClose = () => {
+      if (finished) return;
       console.log(`[sendCommand] Socket closed during cmd="${command}", responseLen=${response.length}`);
       if (!ephemeral) connections.delete(printerId);
       if (response.length > 0) finish();
@@ -795,42 +796,32 @@ async function _sendCommandToSocketImpl(printerId, command) {
     };
 
     const onData = (chunk) => {
-      // Log raw hex for debugging Model 88
-      console.log(`[sendCommand] cmd="${command}" DATA chunk (${chunk.length} bytes) commandSent=${commandSent}: hex=${chunk.toString('hex').substring(0, 120)}`);
-
-      // Discard any data that arrives before we've written the command.
-      // Model 88 sends a '>' welcome prompt on connect that would otherwise
-      // be treated as a response and cause immediate spurious finish().
-      if (!commandSent) {
-        console.log(`[sendCommand] cmd="${command}" PRE-COMMAND data discarded (welcome/prompt noise)`);
-        return;
-      }
+      if (finished) return;
+      console.log(`[sendCommand] cmd="${command}" DATA chunk (${chunk.length} bytes): hex=${chunk.toString('hex').substring(0, 120)}`);
 
       const hadTelnet = handleTelnetNegotiation(socket, chunk);
+      let text;
       if (hadTelnet) {
         const stripped = stripTelnetBytes(chunk);
-        if (stripped && stripped.length > 0) {
-          const text = stripped.toString();
-          response += text;
-          gotAnyData = true;
-          console.log(`[sendCommand] cmd="${command}" stripped text: "${text.substring(0, 200)}"`);
-        }
-        scheduleFinishWhenIdle();
-        return;
+        text = (stripped && stripped.length > 0) ? stripped.toString() : '';
+      } else {
+        text = chunk.toString();
       }
-      const text = chunk.toString();
+
+      if (!text) { scheduleFinishWhenIdle(); return; }
+
       response += text;
       gotAnyData = true;
-      console.log(`[sendCommand] cmd="${command}" text: "${text.substring(0, 200)}"`);
+      console.log(`[sendCommand] cmd="${command}" accumulated (${response.length} chars): "${text.substring(0, 200)}"`);
 
-      // '>' is a Telnet/CLI prompt that some firmware (e.g. Model 88) sends as a
-      // line-terminator AFTER the complete response. We only treat it as a "done"
-      // signal when the '>' appears NEAR THE END of a substantial response.
-      // This prevents premature cutoff when '>' appears in the middle of data.
-      const trimmed = response.trim();
-      const promptIndex = trimmed.lastIndexOf('>');
-      const isTrailingPrompt = promptIndex > 80 && promptIndex > trimmed.length - 10;
-      if (isTrailingPrompt) { finish(); return; }
+      // '>' at end of response = printer's CLI prompt signalling it's done.
+      // Only treat it as terminal when it's the last non-whitespace character.
+      const trimmed = response.trimEnd();
+      if (trimmed.length > 3 && trimmed[trimmed.length - 1] === '>') {
+        console.log(`[sendCommand] cmd="${command}" trailing '>' detected, finishing`);
+        finish();
+        return;
+      }
 
       scheduleFinishWhenIdle();
     };
@@ -840,10 +831,10 @@ async function _sendCommandToSocketImpl(printerId, command) {
     socket.once('close', onClose);
 
     maxTimer = setTimeout(() => {
+      if (finished) return;
       console.log(`[sendCommand] cmd="${command}" MAX_WAIT timeout (${MAX_WAIT_MS}ms), gotData=${gotAnyData}, responseLen=${response.length}`);
       if (gotAnyData) finish();
       else {
-        // Persistent socket might be dead - destroy it
         if (!ephemeral) {
           console.log(`[sendCommand] Destroying dead persistent socket for printer ${printerId}`);
           try { socket.destroy(); } catch (_) {}
@@ -860,9 +851,7 @@ async function _sendCommandToSocketImpl(printerId, command) {
         console.error(`[sendCommand] Write error for cmd="${command}":`, err.message);
         return onError(err);
       }
-      // Mark that command has been sent — from this point, incoming data is the response.
-      commandSent = true;
-      console.log(`[sendCommand] Write OK for cmd="${command}", now accepting response data`);
+      console.log(`[sendCommand] Write OK for cmd="${command}"`);
     });
   });
 }

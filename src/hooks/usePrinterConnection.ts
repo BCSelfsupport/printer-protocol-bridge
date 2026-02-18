@@ -639,34 +639,65 @@ export function usePrinterConnection() {
 
   // Socket health watchdog: if polling should be active but socket is not ready,
   // attempt to re-open the socket. This recovers from cases where the socket was
-  // silently dropped (e.g. after dev portal usage, network blip, or Electron IPC timeout).
+  // silently dropped (e.g. network blip, printer closed idle Telnet session, etc.).
+  //
+  // CRITICAL: use a ref-based guard (watchdogReconnecting) so that only ONE reconnect
+  // attempt is in-flight at a time. Without this, the 5s interval fires again before
+  // the previous 10s-timeout attempt completes, creating a storm of concurrent TCP
+  // connections that overwhelms the printer port and causes every attempt to ETIMEDOUT.
   const socketReadyRef = useRef(socketReady);
   useEffect(() => { socketReadyRef.current = socketReady; }, [socketReady]);
   const shouldPollStatusRef = useRef(shouldPollStatus);
   useEffect(() => { shouldPollStatusRef.current = shouldPollStatus; }, [shouldPollStatus]);
+  const watchdogReconnecting = useRef(false);
+
+  // Listen for printer:connection-lost from Electron main process so we can
+  // clear socketReady immediately when the printer closes the Telnet session.
+  // Without this, the React layer stays socketReady=true while the socket is dead,
+  // causing silent polling failures until the watchdog eventually notices.
+  useEffect(() => {
+    if (!window.electronAPI?.onPrinterConnectionLost) return;
+    window.electronAPI.onPrinterConnectionLost(({ printerId: lostId }: { printerId: number }) => {
+      if (lostId === connectedPrinterIdRef.current) {
+        console.log('[usePrinterConnection] printer:connection-lost for connected printer — clearing socketReady');
+        setSocketReady(false);
+      }
+    });
+    // onPrinterConnectionLost uses ipcRenderer.on which doesn't expose a cleanup handle —
+    // the listener is process-scoped and persists for the app lifetime (acceptable for Electron).
+  }, []);
 
   useEffect(() => {
     if (!isElectron && !isRelayMode()) return;
     if (!connectionState.isConnected || !connectedPrinterId) return;
 
-    const watchdog = setInterval(() => {
-      if (shouldPollStatusRef.current && !socketReadyRef.current) {
-        console.log('[usePrinterConnection] Watchdog: shouldPollStatus=true but socketReady=false — triggering socket reconnect');
-        const printerIp = connectedPrinterIpRef.current;
-        const printerPort = connectedPrinterPortRef.current ?? 23;
-        if (!printerIp) return;
-        printerTransport.connect({ id: connectedPrinterId, ipAddress: printerIp, port: printerPort })
-          .then(result => {
-            if (result.success) {
-              console.log('[usePrinterConnection] Watchdog reconnect successful');
-              setSocketReady(true);
-            } else {
-              console.warn('[usePrinterConnection] Watchdog reconnect failed:', result.error);
-            }
-          })
-          .catch(e => console.error('[usePrinterConnection] Watchdog reconnect error:', e));
+    const watchdog = setInterval(async () => {
+      if (!shouldPollStatusRef.current || socketReadyRef.current) return;
+      if (watchdogReconnecting.current) {
+        console.log('[usePrinterConnection] Watchdog: reconnect already in-flight, skipping');
+        return;
       }
-    }, 5000); // Check every 5 seconds
+
+      watchdogReconnecting.current = true;
+      console.log('[usePrinterConnection] Watchdog: shouldPollStatus=true but socketReady=false — triggering socket reconnect');
+      const printerIp = connectedPrinterIpRef.current;
+      const printerPort = connectedPrinterPortRef.current ?? 23;
+      if (!printerIp) { watchdogReconnecting.current = false; return; }
+
+      try {
+        const result = await printerTransport.connect({ id: connectedPrinterId, ipAddress: printerIp, port: printerPort });
+        if (result.success) {
+          console.log('[usePrinterConnection] Watchdog reconnect successful');
+          setSocketReady(true);
+        } else {
+          console.warn('[usePrinterConnection] Watchdog reconnect failed:', result.error);
+        }
+      } catch (e) {
+        console.error('[usePrinterConnection] Watchdog reconnect error:', e);
+      } finally {
+        watchdogReconnecting.current = false;
+      }
+    }, 8000); // Check every 8s — longer than the 10s connect timeout to prevent overlap
 
     return () => clearInterval(watchdog);
   }, [connectionState.isConnected, connectedPrinterId]);
