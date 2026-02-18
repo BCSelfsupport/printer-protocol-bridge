@@ -9,6 +9,13 @@ import pkg from "./package.json";
 export default defineConfig(({ mode }) => ({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    // Ensure env vars are always strings (never undefined) so createClient doesn't throw at module load
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(
+      process.env.VITE_SUPABASE_URL || ''
+    ),
+    'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(
+      process.env.VITE_SUPABASE_PUBLISHABLE_KEY || ''
+    ),
   },
   base: './',
   server: {
