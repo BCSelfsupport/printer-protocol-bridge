@@ -40,10 +40,12 @@
               '<h1 style="color:#fff">CodeSync™ – Startup Error</h1>' +
               '<p>The application failed to start. Open DevTools (Ctrl+Shift+I) to see errors.</p>' +
               '<p>Check the Console tab for details.</p>' +
-              '<pre id="cs-error" style="background:#222;padding:16px;border-radius:8px;overflow:auto;max-height:400px"></pre></div>';
+              '<pre id="cs-error" style="background:#222;padding:16px;border-radius:8px;overflow:auto;max-height:400px;white-space:pre-wrap"></pre>' +
+              '<p style="color:#9ca3af;margin-top:12px">If you see a blank error box, press Ctrl+Shift+I → Console tab for the full stack trace.</p>' +
+              '</div>';
           }
         }
-      }, 8000);
+      }, 5000);
       window.addEventListener('error', function(e) {
         console.error('[global-error]', e.message, e.filename, e.lineno);
         var el = document.getElementById('cs-error');
