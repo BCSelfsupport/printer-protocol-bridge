@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize } from 'lucide-react';
+import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize, Stethoscope } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { getRelayConfig } from '@/lib/printerTransport';
 
@@ -15,6 +16,7 @@ interface HeaderProps {
 }
 
 export function Header({ isConnected, connectedIp, onSettings, onHome, printerTime, onRelayConnect }: HeaderProps) {
+  const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -156,6 +158,14 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
             ) : (
               <Maximize className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
             )}
+          </button>
+
+          <button
+            onClick={() => navigate('/diagnostics')}
+            className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+            title="Telnet Diagnostics"
+          >
+            <Stethoscope className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
           </button>
 
           {onHome && (
