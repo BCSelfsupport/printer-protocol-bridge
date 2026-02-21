@@ -563,7 +563,412 @@ export function DiagnosticTestProcedure({ ip, port, printerId, isElectron }: Pro
     ],
   };
 
-  const phases = [phase1, phase2, phase3, phase4, phase5];
+  // ═══════════════════════════════════════════════════════
+  // PHASE 6: NETWORK INFRASTRUCTURE
+  // ═══════════════════════════════════════════════════════
+  const phase6: TestPhase = {
+    id: 'phase6',
+    name: 'Phase 6: Network Infrastructure',
+    description: 'Diagnose wireless vs wired, jitter, packet loss, and routing issues',
+    tests: [
+      {
+        id: '6.1',
+        name: '6.1 — Ping Jitter (20 pings)',
+        description: 'Send 20 consecutive pings and measure jitter (variation in response time). High jitter often indicates WiFi interference or a congested switch.',
+        passCriteria: 'Jitter < 10ms and 0% packet loss',
+        run: async () => {
+          const details: string[] = [];
+          const times: number[] = [];
+          let lost = 0;
+
+          for (let i = 0; i < 20; i++) {
+            const t0 = performance.now();
+            const result = await window.electronAPI!.printer.checkStatus([{ id: printerId, ipAddress: ip, port }]);
+            const dt = Math.round(performance.now() - t0);
+            const r = result?.[0];
+            if (r?.isAvailable) {
+              times.push(dt);
+              if (i % 5 === 0) details.push(`Ping #${i + 1}: ${dt}ms ✓`);
+            } else {
+              lost++;
+              details.push(`Ping #${i + 1}: LOST ✗`);
+            }
+            await sleep(500);
+          }
+
+          const avg = times.length > 0 ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : 0;
+          const min = times.length > 0 ? Math.min(...times) : 0;
+          const max = times.length > 0 ? Math.max(...times) : 0;
+          const jitter = max - min;
+          const lossRate = Math.round((lost / 20) * 100);
+
+          details.push('---');
+          details.push(`Avg: ${avg}ms | Min: ${min}ms | Max: ${max}ms`);
+          details.push(`Jitter: ${jitter}ms | Packet loss: ${lossRate}%`);
+
+          if (jitter > 50) details.push('⚠ HIGH JITTER — typical of WiFi or congested network');
+          if (jitter < 5) details.push('✓ LOW JITTER — consistent, likely wired connection');
+          if (jitter >= 5 && jitter <= 50) details.push('⚡ MODERATE JITTER — could be WiFi or shared switch');
+
+          if (lost > 0) {
+            return { status: 'fail', message: `${lossRate}% packet loss, jitter ${jitter}ms`, details, recommendation: `NETWORK: ${lost} of 20 pings lost. This indicates an unreliable link — check cable connections, WiFi signal strength, or switch port status. Packet loss WILL cause Telnet command failures.` };
+          }
+          if (jitter > 50) {
+            return { status: 'warn', message: `High jitter: ${jitter}ms — likely WiFi`, timing: avg, details, recommendation: `NETWORK: Jitter of ${jitter}ms suggests a WiFi connection. For reliable Telnet communication, use a WIRED Ethernet connection. WiFi latency spikes cause command timeouts.` };
+          }
+          if (jitter > 10) {
+            return { status: 'warn', message: `Moderate jitter: ${jitter}ms`, timing: avg, details, recommendation: `NETWORK: Jitter of ${jitter}ms is borderline. If experiencing intermittent failures, switch to wired Ethernet.` };
+          }
+          return { status: 'pass', message: `Stable network — jitter ${jitter}ms, 0% loss, avg ${avg}ms`, timing: avg, details };
+        },
+      },
+      {
+        id: '6.2',
+        name: '6.2 — Connection Type Detection',
+        description: 'Analyze ping patterns to infer whether the connection is likely wired or wireless. WiFi typically shows >15ms average ping with high variance.',
+        passCriteria: 'Connection type identified',
+        run: async () => {
+          const times: number[] = [];
+          for (let i = 0; i < 10; i++) {
+            const t0 = performance.now();
+            const result = await window.electronAPI!.printer.checkStatus([{ id: printerId, ipAddress: ip, port }]);
+            const dt = Math.round(performance.now() - t0);
+            if (result?.[0]?.isAvailable) times.push(dt);
+            await sleep(300);
+          }
+
+          if (times.length < 5) {
+            return { status: 'fail', message: 'Too many pings lost to determine connection type', recommendation: 'NETWORK: Cannot even sustain pings. Check physical connectivity first.' };
+          }
+
+          const avg = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
+          const variance = Math.round(Math.sqrt(times.reduce((sum, t) => sum + Math.pow(t - avg, 2), 0) / times.length));
+          const details = [
+            `Avg ping: ${avg}ms`,
+            `Std deviation: ${variance}ms`,
+            `Samples: ${times.map(t => `${t}ms`).join(', ')}`,
+            '---',
+          ];
+
+          let connectionType: string;
+          if (avg < 5 && variance < 3) {
+            connectionType = 'WIRED (Ethernet) — ✓ Ideal for Telnet';
+            details.push('✓ Low latency + low variance = direct Ethernet connection');
+            return { status: 'pass', message: connectionType, timing: avg, details };
+          } else if (avg < 15 && variance < 10) {
+            connectionType = 'WIRED (through switch/hub) — ✓ Good';
+            details.push('✓ Acceptable latency — wired through network infrastructure');
+            return { status: 'pass', message: connectionType, timing: avg, details };
+          } else if (variance > 20) {
+            connectionType = 'WIRELESS (WiFi) — ⚠ Unreliable for Telnet';
+            details.push('⚠ High variance strongly indicates WiFi');
+            details.push('WiFi causes unpredictable latency spikes that break Telnet polling');
+            return { status: 'warn', message: connectionType, timing: avg, details, recommendation: 'NETWORK: WiFi detected. Industrial printers should be connected via Ethernet cable. WiFi introduces latency spikes that cause command timeouts and dropped connections.' };
+          } else {
+            connectionType = `UNCERTAIN — avg ${avg}ms, variance ${variance}ms`;
+            details.push('Cannot definitively determine connection type');
+            return { status: 'warn', message: connectionType, timing: avg, details };
+          }
+        },
+      },
+      {
+        id: '6.3',
+        name: '6.3 — Sustained Network Load',
+        description: 'Ping every 200ms for 30 seconds (150 pings). Detects intermittent network dropouts that only appear under sustained load — common with cheap switches/hubs.',
+        passCriteria: '< 2% packet loss, no consecutive drops',
+        run: async () => {
+          const details: string[] = [];
+          const times: number[] = [];
+          let lost = 0;
+          let maxConsecutiveLost = 0;
+          let currentConsecutiveLost = 0;
+
+          for (let i = 0; i < 150; i++) {
+            if (abortRef.current) { details.push('--- ABORTED ---'); break; }
+            const t0 = performance.now();
+            const result = await window.electronAPI!.printer.checkStatus([{ id: printerId, ipAddress: ip, port }]);
+            const dt = Math.round(performance.now() - t0);
+            const r = result?.[0];
+            if (r?.isAvailable) {
+              times.push(dt);
+              currentConsecutiveLost = 0;
+              if (i % 30 === 0) details.push(`Ping #${i + 1}: ${dt}ms ✓`);
+            } else {
+              lost++;
+              currentConsecutiveLost++;
+              maxConsecutiveLost = Math.max(maxConsecutiveLost, currentConsecutiveLost);
+              details.push(`Ping #${i + 1}: LOST ✗`);
+            }
+            await sleep(200);
+          }
+
+          const lossRate = Math.round((lost / 150) * 100);
+          const avg = times.length > 0 ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : 0;
+          const max = times.length > 0 ? Math.max(...times) : 0;
+          details.push('---');
+          details.push(`Total: 150 pings | Lost: ${lost} (${lossRate}%) | Avg: ${avg}ms | Max: ${max}ms`);
+          details.push(`Max consecutive drops: ${maxConsecutiveLost}`);
+
+          if (maxConsecutiveLost >= 3) {
+            return { status: 'fail', message: `${maxConsecutiveLost} consecutive drops detected`, details, recommendation: `NETWORK: ${maxConsecutiveLost} consecutive dropped pings indicates a network interruption (switch loop, cable fault, or WiFi dropout). Check physical infrastructure: cables, switch ports, and any managed switch logs for errors.` };
+          }
+          if (lossRate > 5) {
+            return { status: 'fail', message: `${lossRate}% packet loss under load`, details, recommendation: `NETWORK: ${lossRate}% loss under sustained load. This WILL cause Telnet failures. Common causes: overloaded switch, half-duplex mismatch, or WiFi interference. Try a different switch port or replace the network cable.` };
+          }
+          if (lossRate > 0) {
+            return { status: 'warn', message: `${lossRate}% loss (${lost}/150) — minor drops`, timing: avg, details, recommendation: `NETWORK: Minor packet loss detected. Individually these won't cause issues, but combined with firmware timing constraints they can trigger reconnection storms.` };
+          }
+          return { status: 'pass', message: `0% loss over 150 pings — network is solid`, timing: avg, details };
+        },
+      },
+      {
+        id: '6.4',
+        name: '6.4 — PC Network Interface Check',
+        description: 'Detect the local network interface being used to reach the printer. Checks if Ethernet has routing priority over WiFi.',
+        passCriteria: 'Ethernet interface detected with lower metric than WiFi',
+        run: async () => {
+          // We can infer from navigator APIs and the ping pattern
+          const details: string[] = [];
+          const connection = (navigator as any).connection;
+          if (connection) {
+            details.push(`Browser reports: type=${connection.type || 'unknown'}, effectiveType=${connection.effectiveType || 'unknown'}, downlink=${connection.downlink || 'unknown'}Mbps, rtt=${connection.rtt || 'unknown'}ms`);
+          } else {
+            details.push('Network Information API not available');
+          }
+
+          // Check if this is Electron (has access to more info)
+          if (window.electronAPI) {
+            details.push('Running in Electron — TCP routes through OS network stack');
+            details.push(`Target: ${ip}:${port}`);
+            details.push('');
+            details.push('⚙ Windows routing tips:');
+            details.push('  1. Open cmd → "route print" to see routing table');
+            details.push('  2. Ethernet should have lower metric (higher priority)');
+            details.push('  3. If WiFi has priority: netsh interface ip set interface "Ethernet" metric=10');
+            details.push('  4. Set WiFi metric higher: netsh interface ip set interface "Wi-Fi" metric=50');
+            details.push('');
+            details.push('⚙ Quick check:');
+            details.push(`  tracert ${ip} — should show 1-2 hops for local network`);
+            details.push(`  arp -a | findstr ${ip} — should show MAC address`);
+          }
+
+          // Do a quick connectivity check
+          const t0 = performance.now();
+          const result = await window.electronAPI!.printer.checkStatus([{ id: printerId, ipAddress: ip, port }]);
+          const pingTime = Math.round(performance.now() - t0);
+          const r = result?.[0];
+          details.push('');
+          details.push(`Quick ping: ${r?.isAvailable ? '✓' : '✗'} (${pingTime}ms)`);
+
+          if (pingTime < 5) {
+            details.push('✓ < 5ms response — almost certainly wired and direct');
+            return { status: 'pass', message: 'Fast response suggests wired Ethernet', timing: pingTime, details };
+          }
+          if (pingTime < 20) {
+            return { status: 'pass', message: 'Good response time — likely wired via switch', timing: pingTime, details };
+          }
+          return { status: 'warn', message: `${pingTime}ms response — may be WiFi or routing through additional hops`, timing: pingTime, details, recommendation: 'NETWORK: Response time suggests traffic may be routing through WiFi. Run "route print" in a Windows command prompt to verify Ethernet has routing priority (lower metric). Set Ethernet metric=10 and WiFi metric=50.' };
+        },
+      },
+    ],
+  };
+
+  // ═══════════════════════════════════════════════════════
+  // PHASE 7: APP BUILD & DEPLOYMENT
+  // ═══════════════════════════════════════════════════════
+  const phase7: TestPhase = {
+    id: 'phase7',
+    name: 'Phase 7: App Build & Deployment',
+    description: 'Verify the Electron build, auto-updater, and GitHub integration',
+    tests: [
+      {
+        id: '7.1',
+        name: '7.1 — Electron Environment',
+        description: 'Check if running in Electron, app version, and packaging state.',
+        passCriteria: 'Running in packaged Electron with valid version',
+        run: async () => {
+          const details: string[] = [];
+
+          if (!window.electronAPI) {
+            details.push('✗ Not running in Electron');
+            details.push('This diagnostic tool requires the Electron desktop app');
+            return { status: 'fail', message: 'Not in Electron — TCP features unavailable', details, recommendation: 'BUILD: Running in browser mode. Printer communication requires the Electron desktop app. Build and install the app from a GitHub Release.' };
+          }
+
+          details.push('✓ Running in Electron');
+
+          let version = 'unknown';
+          try {
+            version = await window.electronAPI.app.getVersion();
+            details.push(`App version: ${version}`);
+          } catch {
+            details.push('✗ Could not get app version');
+          }
+
+          let isFullscreen = false;
+          try {
+            isFullscreen = await window.electronAPI.app.isFullscreen();
+            details.push(`Fullscreen: ${isFullscreen}`);
+          } catch {}
+
+          return { status: 'pass', message: `Electron OK — v${version}`, details };
+        },
+      },
+      {
+        id: '7.2',
+        name: '7.2 — Auto-Updater Status',
+        description: 'Check the auto-updater state and whether updates are being detected.',
+        passCriteria: 'Updater is active and checking for updates',
+        run: async () => {
+          if (!window.electronAPI) return { status: 'fail', message: 'Not in Electron' };
+
+          const details: string[] = [];
+          try {
+            const state = await window.electronAPI.app.getUpdateState();
+            details.push(`Stage: ${state.stage}`);
+            if (state.info) details.push(`Info: ${JSON.stringify(state.info).substring(0, 200)}`);
+            if (state.progress) details.push(`Progress: ${JSON.stringify(state.progress)}`);
+
+            if (state.stage === 'idle') {
+              details.push('');
+              details.push('Updater is idle — no update available or not yet checked');
+              details.push('Note: Updates only work when installed from a GitHub Release (.exe)');
+              return { status: 'pass', message: 'Updater idle — no pending updates', details };
+            }
+            if (state.stage === 'downloading') {
+              return { status: 'warn', message: 'Update is downloading...', details };
+            }
+            if (state.stage === 'ready') {
+              return { status: 'pass', message: 'Update downloaded — will install on restart', details };
+            }
+            return { status: 'pass', message: `Updater state: ${state.stage}`, details };
+          } catch (err: any) {
+            return { status: 'warn', message: `Updater check failed: ${err.message}`, details };
+          }
+        },
+      },
+      {
+        id: '7.3',
+        name: '7.3 — Updater Log Analysis',
+        description: 'Read the auto-updater log file and check for errors or warnings.',
+        passCriteria: 'No errors in updater log',
+        run: async () => {
+          if (!window.electronAPI) return { status: 'fail', message: 'Not in Electron' };
+
+          try {
+            const log = await window.electronAPI.app.getUpdaterLog();
+            const lines = log.split('\n').filter((l: string) => l.trim());
+            const details: string[] = [];
+
+            const errors = lines.filter((l: string) => l.includes('[error]') || l.includes('Error:'));
+            const warnings = lines.filter((l: string) => l.includes('[warn]'));
+            const updates = lines.filter((l: string) => l.includes('Update available') || l.includes('update-downloaded'));
+
+            details.push(`Log entries: ${lines.length}`);
+            details.push(`Errors: ${errors.length}`);
+            details.push(`Warnings: ${warnings.length}`);
+            details.push(`Updates detected: ${updates.length}`);
+            details.push('');
+
+            if (errors.length > 0) {
+              details.push('--- Recent Errors ---');
+              errors.slice(-5).forEach((e: string) => details.push(`  ${e.trim()}`));
+            }
+            if (updates.length > 0) {
+              details.push('--- Update Events ---');
+              updates.slice(-3).forEach((u: string) => details.push(`  ${u.trim()}`));
+            }
+
+            // Show last 5 lines for context
+            details.push('');
+            details.push('--- Last 5 log lines ---');
+            lines.slice(-5).forEach((l: string) => details.push(`  ${l.trim()}`));
+
+            if (errors.length > 0) {
+              return { status: 'warn', message: `${errors.length} errors found in updater log`, details, recommendation: `BUILD: Auto-updater has ${errors.length} logged errors. Common causes: no internet during check, running in dev mode (not packaged), or GitHub release not found. Check the log details above.` };
+            }
+            return { status: 'pass', message: `Updater log clean — ${lines.length} entries`, details };
+          } catch (err: any) {
+            return { status: 'warn', message: `Could not read updater log: ${err.message}` };
+          }
+        },
+      },
+      {
+        id: '7.4',
+        name: '7.4 — Relay Server Status',
+        description: 'Check if the HTTP relay server (port 8766) is running for mobile PWA clients.',
+        passCriteria: 'Relay server is active and reports correct version',
+        run: async () => {
+          if (!window.electronAPI) return { status: 'fail', message: 'Not in Electron' };
+
+          const details: string[] = [];
+          try {
+            const info = await window.electronAPI.relay.getInfo();
+            details.push(`Relay port: ${info.port}`);
+            details.push(`Local IPs: ${info.ips?.join(', ') || 'none detected'}`);
+
+            if (info.ips && info.ips.length > 0) {
+              details.push('');
+              details.push('Mobile PWA clients can connect via:');
+              info.ips.forEach((ipAddr: string) => details.push(`  http://${ipAddr}:${info.port}/relay/info`));
+            }
+
+            return { status: 'pass', message: `Relay active on port ${info.port} — ${info.ips?.length || 0} interfaces`, details };
+          } catch (err: any) {
+            return { status: 'warn', message: `Relay check failed: ${err.message}`, details, recommendation: 'BUILD: Relay server is not responding. Mobile PWA clients will not be able to communicate with printers through this PC.' };
+          }
+        },
+      },
+      {
+        id: '7.5',
+        name: '7.5 — GitHub Build Status',
+        description: 'Check the latest GitHub Actions build status via the edge function.',
+        passCriteria: 'Latest build completed successfully',
+        run: async () => {
+          const details: string[] = [];
+          try {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+            if (!supabaseUrl || !supabaseKey) {
+              details.push('Supabase environment not configured');
+              return { status: 'warn', message: 'Cannot check — no backend config', details };
+            }
+
+            const res = await fetch(`${supabaseUrl}/functions/v1/github-build-status`, {
+              headers: { 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
+            });
+
+            if (!res.ok) {
+              details.push(`HTTP ${res.status}: ${res.statusText}`);
+              return { status: 'warn', message: `Build status API returned ${res.status}`, details };
+            }
+
+            const data = await res.json();
+            details.push(`Latest run: ${data.status || 'unknown'}`);
+            details.push(`Conclusion: ${data.conclusion || 'unknown'}`);
+            details.push(`Branch: ${data.head_branch || 'unknown'}`);
+            details.push(`Created: ${data.created_at || 'unknown'}`);
+
+            if (data.conclusion === 'success') {
+              return { status: 'pass', message: 'Latest GitHub build succeeded', details };
+            }
+            if (data.conclusion === 'failure') {
+              return { status: 'fail', message: 'Latest GitHub build FAILED', details, recommendation: 'BUILD: The latest GitHub Actions build failed. Check the workflow logs at github.com for error details. Common causes: missing secrets (GH_TOKEN, VITE_SUPABASE_URL), dependency issues, or TypeScript errors.' };
+            }
+            if (data.status === 'in_progress') {
+              return { status: 'warn', message: 'Build currently in progress', details };
+            }
+            return { status: 'pass', message: `Build status: ${data.conclusion || data.status || 'unknown'}`, details };
+          } catch (err: any) {
+            return { status: 'warn', message: `Could not check build status: ${err.message}`, details: [...details, err.message] };
+          }
+        },
+      },
+    ],
+  };
+
+  const phases = [phase1, phase2, phase3, phase4, phase5, phase6, phase7];
 
   // --- Run a single test ---
   const runTest = useCallback(async (test: TestDef) => {
