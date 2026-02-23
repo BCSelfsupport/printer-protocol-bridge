@@ -133,7 +133,8 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
     const cableY = H * 0.5;
     const cableH = 28;
     const spoolR = 40;
-    const spoolCX = W - 50; // Spool on right side
+    // Spool position depends on direction: left flow = spool on right, right flow = spool on left
+    const spoolCX = direction === 'left' ? W - 50 : 50;
     const spoolCY = cableY;
 
     // Scale: 1 pixel = 1mm, but clamp for display
@@ -199,9 +200,9 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       }
       ctx.restore();
 
-      // Cable strip
-      const cableStart = 20;
-      const cableEnd = spoolCX - spoolR - 5;
+      // Cable strip — extends from the non-spool side
+      const cableStart = direction === 'left' ? 20 : spoolCX + spoolR + 5;
+      const cableEnd = direction === 'left' ? spoolCX - spoolR - 5 : W - 20;
       const gradient = ctx.createLinearGradient(0, cableY - cableH / 2, 0, cableY + cableH / 2);
       gradient.addColorStop(0, 'hsl(220, 10%, 50%)');
       gradient.addColorStop(0.3, 'hsl(220, 10%, 60%)');
@@ -215,9 +216,14 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       ctx.fill();
 
       // Clip print marks to cable strip area (prevent overflow onto spool)
+      const clipMargin = spoolR + 15;
       ctx.save();
       ctx.beginPath();
-      ctx.rect(cableStart, 0, cableEnd - cableStart - spoolR - 15, H);
+      if (direction === 'left') {
+        ctx.rect(cableStart, 0, cableEnd - cableStart - clipMargin, H);
+      } else {
+        ctx.rect(cableStart + clipMargin, 0, cableEnd - cableStart - clipMargin, H);
+      }
       ctx.clip();
 
       // Print marks on cable
