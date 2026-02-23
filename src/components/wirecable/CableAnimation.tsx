@@ -96,40 +96,58 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
     }
 
     // --- Tower render: rotate each character 90° individually ---
+    // After 90° CW rotation, each char's W and H swap in the output
+    // We need a wider canvas to accommodate the swapped dimensions
+    let towerTotalW = 0;
+    let towerMaxH = 0;
+    for (const field of messageFields) {
+      if (field.type === 'barcode') continue;
+      const fontInfo = getFontInfo(field.fontSize);
+      const charH = fontInfo.height * DOT_SIZE; // becomes width after rotation
+      towerTotalW += field.data.length * (charH + DOT_SIZE); // rotated chars laid out horizontally
+      const charW = (fontInfo.charWidth + 1) * DOT_SIZE; // becomes height after rotation
+      if (charW > towerMaxH) towerMaxH = charW;
+    }
+
     const towerOffscreen = document.createElement('canvas');
-    towerOffscreen.width = canvasW;
+    towerOffscreen.width = Math.max(towerTotalW + 20, canvasW);
     towerOffscreen.height = canvasH;
     const tCtx = towerOffscreen.getContext('2d');
     if (tCtx) {
-      tCtx.clearRect(0, 0, canvasW, canvasH);
+      tCtx.clearRect(0, 0, towerOffscreen.width, towerOffscreen.height);
       for (const field of messageFields) {
         if (field.type === 'barcode') continue;
         const fontInfo = getFontInfo(field.fontSize);
-        const charW = (fontInfo.charWidth + 1) * DOT_SIZE;
+        const charW = fontInfo.charWidth * DOT_SIZE; // original char width (no spacing)
+        const charSpacing = DOT_SIZE; // 1-dot spacing
         const charH = fontInfo.height * DOT_SIZE;
-        let charX = field.x * DOT_SIZE;
-        const charY = field.y * DOT_SIZE;
+
+        // After 90° rotation: each char occupies charH wide × charW tall
+        const rotatedCharW = charH;
+        const rotatedCharH = charW;
+
+        let outX = field.x * DOT_SIZE; // output X position
+        const outY = field.y * DOT_SIZE; // output Y position
 
         for (const char of field.data) {
-          // Render single char to temp canvas
+          // Render single char normally to a temp canvas
           const tmpCanvas = document.createElement('canvas');
-          tmpCanvas.width = charW;
+          tmpCanvas.width = charW + charSpacing;
           tmpCanvas.height = charH;
           const tmpCtx = tmpCanvas.getContext('2d');
           if (tmpCtx) {
             tmpCtx.fillStyle = '#ffffff';
             renderText(tmpCtx, char, 0, 0, field.fontSize, DOT_SIZE);
 
-            // Draw rotated 90° clockwise around char center
-            const cx = charX + charW / 2;
-            const cy = charY + charH / 2;
+            // Draw rotated 90° clockwise: translate to output position, rotate, draw
             tCtx.save();
-            tCtx.translate(cx, cy);
+            tCtx.translate(outX + rotatedCharW / 2, outY + rotatedCharH / 2);
             tCtx.rotate(Math.PI / 2);
-            tCtx.drawImage(tmpCanvas, -charW / 2, -charH / 2);
+            // After rotation, draw centered (original dims)
+            tCtx.drawImage(tmpCanvas, -tmpCanvas.width / 2, -tmpCanvas.height / 2);
             tCtx.restore();
           }
-          charX += charW;
+          outX += rotatedCharW + DOT_SIZE; // advance by rotated width + spacing
         }
       }
     }
