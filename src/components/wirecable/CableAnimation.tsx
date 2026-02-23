@@ -115,39 +115,55 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
     const tCtx = towerOffscreen.getContext('2d');
     if (tCtx) {
       tCtx.clearRect(0, 0, towerOffscreen.width, towerOffscreen.height);
-      for (const field of messageFields) {
-        if (field.type === 'barcode') continue;
-        const fontInfo = getFontInfo(field.fontSize);
-        const charW = fontInfo.charWidth * DOT_SIZE;  // e.g. 5 dots × 6px = 30px
-        const charH = fontInfo.height * DOT_SIZE;      // e.g. 7 dots × 6px = 42px
 
-        // After 90° CW rotation: 7×5 char becomes 5×7 (height×width swap)
-        const rotatedW = charH;   // 7 dots wide after rotation
-        const rotatedH = charW;   // 5 dots tall after rotation
-
-        let outX = field.x * DOT_SIZE;
-        const outY = field.y * DOT_SIZE;
-
-        for (const char of field.data) {
-          // Render single char to tight temp canvas (no spacing)
-          const tmpCanvas = document.createElement('canvas');
-          tmpCanvas.width = charW;
-          tmpCanvas.height = charH;
-          const tmpCtx = tmpCanvas.getContext('2d');
-          if (tmpCtx) {
-            tmpCtx.fillStyle = '#ffffff';
-            renderText(tmpCtx, char, 0, 0, field.fontSize, DOT_SIZE);
-
-            // Rotate 90° CW around the output center
-            tCtx.save();
-            tCtx.translate(outX + rotatedW / 2, outY + rotatedH / 2);
-            tCtx.rotate(-Math.PI / 2);
-            // Draw with original dims centered (pre-rotation space)
-            tCtx.drawImage(tmpCanvas, -charW / 2, -charH / 2);
-            tCtx.restore();
+      // Flatten all fields into a single character sequence with spaces between fields
+      // so tower layout uses rotated widths consistently
+      const allChars: { char: string; fontSize: string; fieldY: number }[] = [];
+      const sortedFields = [...messageFields].filter(f => f.type !== 'barcode').sort((a, b) => a.x - b.x);
+      
+      for (let fi = 0; fi < sortedFields.length; fi++) {
+        const field = sortedFields[fi];
+        // Add gap between fields as space characters
+        if (fi > 0) {
+          const prevField = sortedFields[fi - 1];
+          const prevFontInfo = getFontInfo(prevField.fontSize);
+          const prevEnd = prevField.x + prevField.data.length * (prevFontInfo.charWidth + 1);
+          const gapDots = Math.max(0, field.x - prevEnd);
+          const gapChars = Math.round(gapDots / (getFontInfo(field.fontSize).charWidth + 1));
+          for (let g = 0; g < gapChars; g++) {
+            allChars.push({ char: ' ', fontSize: field.fontSize, fieldY: field.y });
           }
-          outX += rotatedW + DOT_SIZE; // advance by rotated width + 1-dot gap
         }
+        for (const char of field.data) {
+          allChars.push({ char, fontSize: field.fontSize, fieldY: field.y });
+        }
+      }
+
+      let outX = 0;
+      for (const { char, fontSize, fieldY } of allChars) {
+        const fontInfo = getFontInfo(fontSize);
+        const charW = fontInfo.charWidth * DOT_SIZE;
+        const charH = fontInfo.height * DOT_SIZE;
+        const rotatedW = charH;
+        const rotatedH = charW;
+        const outY = fieldY * DOT_SIZE;
+
+        // Render single char to temp canvas
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = charW;
+        tmpCanvas.height = charH;
+        const tmpCtx = tmpCanvas.getContext('2d');
+        if (tmpCtx) {
+          tmpCtx.fillStyle = '#ffffff';
+          renderText(tmpCtx, char, 0, 0, fontSize, DOT_SIZE);
+
+          tCtx.save();
+          tCtx.translate(outX + rotatedW / 2, outY + rotatedH / 2);
+          tCtx.rotate(-Math.PI / 2);
+          tCtx.drawImage(tmpCanvas, -charW / 2, -charH / 2);
+          tCtx.restore();
+        }
+        outX += rotatedW + DOT_SIZE;
       }
     }
 
