@@ -34,7 +34,7 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
     }
 
     // Calculate message width from fields
-    const DOT_SIZE = 3; // Larger dots for better readability
+    const DOT_SIZE = 6; // Large dots for clear readability
     const totalHeight = 32; // Always 32-dot canvas
     const blockedRows = totalHeight - messageHeight;
 
