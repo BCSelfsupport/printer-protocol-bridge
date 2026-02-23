@@ -81,8 +81,14 @@ export function WireCableScreen({
   const pitchMm = encoder.unit === 'inches' ? desiredPitch * 25.4 : desiredPitch;
   const pitchPulses = Math.round(pitchMm / mmPerPulse);
 
-  // Calculate total meters printed (rough estimate from print count and pitch)
-  const totalMetersPrinted = (printCount * pitchMm) / 1000;
+  // Display values in chosen unit
+  const isImperial = encoder.unit === 'inches';
+  const totalLengthMm = printCount * pitchMm;
+  const totalLengthDisplay = isImperial
+    ? (totalLengthMm / 25.4 / 12).toFixed(1) // feet
+    : (totalLengthMm / 1000).toFixed(1); // meters
+  const lengthUnit = isImperial ? 'ft' : 'm';
+  const lengthLabel = isImperial ? 'Feet Printed' : 'Meters Printed';
 
   // Apply pitch to printer
   const handleApplyPitch = useCallback(async () => {
@@ -113,14 +119,38 @@ export function WireCableScreen({
       <SubPageHeader title="Wire & Cable" onHome={onHome} />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Connection status */}
-        <div className="flex items-center gap-2">
-          <Badge variant={isConnected ? 'default' : 'secondary'} className={isConnected ? 'bg-success text-success-foreground' : ''}>
-            {isConnected ? 'Connected' : 'Not Connected'}
-          </Badge>
-          {!isConnected && (
-            <span className="text-xs text-muted-foreground">Connect to a printer to enable live controls</span>
-          )}
+        {/* Connection status + Unit toggle */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Badge variant={isConnected ? 'default' : 'secondary'} className={isConnected ? 'bg-success text-success-foreground' : ''}>
+              {isConnected ? 'Connected' : 'Not Connected'}
+            </Badge>
+            {!isConnected && (
+              <span className="text-xs text-muted-foreground hidden sm:inline">Connect to a printer to enable live controls</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 bg-card border border-border rounded-lg p-1">
+            <button
+              onClick={() => setEncoder(prev => ({ ...prev, unit: 'mm' }))}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                encoder.unit === 'mm'
+                  ? 'industrial-button text-white'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Metric (mm)
+            </button>
+            <button
+              onClick={() => setEncoder(prev => ({ ...prev, unit: 'inches' }))}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                encoder.unit === 'inches'
+                  ? 'industrial-button text-white'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Imperial (in)
+            </button>
+          </div>
         </div>
 
         {/* Animated Cable Visualization */}
@@ -142,9 +172,9 @@ export function WireCableScreen({
           />
           <MetricCard
             icon={<Gauge className="w-5 h-5 text-primary" />}
-            label="Meters Printed"
-            value={totalMetersPrinted.toFixed(1)}
-            subValue="m (est.)"
+            label={lengthLabel}
+            value={totalLengthDisplay}
+            subValue={`${lengthUnit} (est.)`}
           />
           <MetricCard
             icon={<Cable className="w-5 h-5 text-primary" />}
