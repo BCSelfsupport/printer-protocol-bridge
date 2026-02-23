@@ -232,12 +232,14 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       const cableLen = cableEnd - cableStart;
       const printHeadX = direction === 'left' ? cableEnd - cableLen * 0.25 : cableStart + cableLen * 0.25;
 
-      // Print marks on cable
+      // Print marks on cable — use stable index based on scroll offset
       const markOffset = offsetRef.current % pitchPx;
+      const baseIndex = Math.floor(offsetRef.current / pitchPx);
       let markIndex = 0;
       for (let x = cableStart + 20 - markOffset; x < cableEnd - 10; x += pitchPx) {
-        if (x < cableStart + 5) continue;
-        const isFlipped = flipFlopEnabled && markIndex % 2 === 1;
+        if (x < cableStart + 5) { markIndex++; continue; }
+        const stableIndex = baseIndex + markIndex;
+        const isFlipped = flipFlopEnabled && stableIndex % 2 === 1;
 
         ctx.save();
         ctx.translate(x, cableY);
