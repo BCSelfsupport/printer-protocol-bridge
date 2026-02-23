@@ -242,10 +242,6 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
         ctx.save();
         ctx.translate(x, cableY);
 
-        if (isFlipped) {
-          ctx.scale(1, -1);
-        }
-
         if (hasMessage) {
           // Draw dot-matrix message preview — half size, proportional
           const msgCanvas = messageCanvasRef.current!;
@@ -257,44 +253,48 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
           const drawW = msgCanvas.width * scale;
           const drawH = msgCanvas.height * scale;
 
-          // Progressive reveal: only show characters that have passed the print head
-          // In local coords, 0 = left edge of message, drawW = right edge
+          // Progressive reveal clip (before flip transform)
+          let shouldDraw = true;
           if (direction === 'left') {
-            // Cable moves left, spool on right. Print head is to the right.
-            // Characters visible only to the LEFT of the print head.
             const visibleW = Math.min(drawW, printHeadX - x);
-            if (visibleW <= 0) {
-              ctx.restore();
-              markIndex++;
-              continue;
+            if (visibleW <= 0) { shouldDraw = false; }
+            else {
+              ctx.save();
+              ctx.beginPath();
+              ctx.rect(0, -drawH, visibleW, drawH * 2);
+              ctx.clip();
             }
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(0, -drawH, visibleW, drawH * 2);
-            ctx.clip();
           } else {
-            // Cable moves right, spool on left. Print head is to the left.
-            // Characters visible only to the RIGHT of the print head.
-            const msgRight = x + drawW;
             const clipStart = Math.max(0, printHeadX - x);
             const visibleW = drawW - clipStart;
-            if (visibleW <= 0) {
-              ctx.restore();
-              markIndex++;
-              continue;
+            if (visibleW <= 0) { shouldDraw = false; }
+            else {
+              ctx.save();
+              ctx.beginPath();
+              ctx.rect(clipStart, -drawH, visibleW, drawH * 2);
+              ctx.clip();
             }
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(clipStart, -drawH, visibleW, drawH * 2);
-            ctx.clip();
           }
 
-          ctx.imageSmoothingEnabled = false;
-          ctx.drawImage(msgCanvas, 0, -drawH / 2, drawW, drawH);
-          ctx.imageSmoothingEnabled = true;
-          ctx.restore();
+          if (shouldDraw) {
+            // Apply flip AFTER clipping so clip coords stay consistent
+            if (isFlipped) {
+              ctx.scale(1, -1);
+            }
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(msgCanvas, 0, -drawH / 2, drawW, drawH);
+            ctx.imageSmoothingEnabled = true;
+            ctx.restore(); // restore clip
+          } else {
+            ctx.restore();
+            markIndex++;
+            continue;
+          }
         } else {
           // Fallback: orientation label
+          if (isFlipped) {
+            ctx.scale(1, -1);
+          }
           const markLabel = isFlipped ? orientationB.substring(0, 3).toUpperCase() : orientationA.substring(0, 3).toUpperCase();
 
           ctx.fillStyle = 'hsl(207, 90%, 54%)';
