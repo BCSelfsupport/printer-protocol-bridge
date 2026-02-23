@@ -223,27 +223,24 @@ export function WireCableScreen({
                       <span className="text-xs text-muted-foreground">Feet</span>
                       <Input
                         type="number"
-                        value={Math.floor(desiredPitch / 12)}
+                        value={parseFloat((desiredPitch / 12).toFixed(4))}
                         onChange={(e) => {
                           const ft = parseFloat(e.target.value) || 0;
-                          const currentIn = desiredPitch - Math.floor(desiredPitch / 12) * 12;
-                          setDesiredPitch(ft * 12 + currentIn);
+                          setDesiredPitch(ft * 12);
                         }}
                         min={0}
-                        step={1}
+                        step={0.01}
                       />
                     </div>
                     <div className="flex-1 space-y-1">
                       <span className="text-xs text-muted-foreground">Inches</span>
                       <Input
                         type="number"
-                        value={parseFloat((desiredPitch % 12).toFixed(4))}
+                        value={parseFloat(desiredPitch.toFixed(4))}
                         onChange={(e) => {
                           const inches = parseFloat(e.target.value) || 0;
-                          const ft = Math.floor(desiredPitch / 12);
-                          setDesiredPitch(ft * 12 + inches);
+                          setDesiredPitch(inches);
                         }}
-                        onBlur={() => setDesiredPitch(prev => prev)}
                         min={0}
                         step={0.1}
                       />
@@ -267,9 +264,8 @@ export function WireCableScreen({
                         type="number"
                         value={parseFloat((desiredPitch / 1000).toFixed(4))}
                         onChange={(e) => {
-                          const m = parseFloat(e.target.value) || 0;
-                          const currentMmRemainder = desiredPitch % 1000;
-                          setDesiredPitch(m * 1000 + currentMmRemainder);
+                          const meters = parseFloat(e.target.value) || 0;
+                          setDesiredPitch(meters * 1000);
                         }}
                         min={0}
                         step={0.001}
@@ -279,13 +275,11 @@ export function WireCableScreen({
                       <span className="text-xs text-muted-foreground">mm</span>
                       <Input
                         type="number"
-                        value={parseFloat((desiredPitch % 1000).toFixed(1))}
+                        value={parseFloat(desiredPitch.toFixed(1))}
                         onChange={(e) => {
                           const mm = parseFloat(e.target.value) || 0;
-                          const m = Math.floor(desiredPitch / 1000);
-                          setDesiredPitch(m * 1000 + mm);
+                          setDesiredPitch(mm);
                         }}
-                        onBlur={() => setDesiredPitch(prev => prev)}
                         min={0}
                         step={1}
                       />
