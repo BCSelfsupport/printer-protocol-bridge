@@ -65,7 +65,49 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       renderText(ctx, field.data, field.x * DOT_SIZE, field.y * DOT_SIZE, field.fontSize, DOT_SIZE);
     }
 
-    messageCanvasRef.current = offscreen;
+    // Crop to the actual drawn dots so preview text appears larger on cable
+    const imageData = ctx.getImageData(0, 0, canvasW, canvasH);
+    const data = imageData.data;
+    let minX = canvasW;
+    let minY = canvasH;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let y = 0; y < canvasH; y++) {
+      for (let x = 0; x < canvasW; x++) {
+        const alpha = data[(y * canvasW + x) * 4 + 3];
+        if (alpha > 0) {
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    // Fallback if nothing detected
+    if (maxX === -1 || maxY === -1) {
+      messageCanvasRef.current = offscreen;
+      return;
+    }
+
+    const pad = 2;
+    const cropX = Math.max(0, minX - pad);
+    const cropY = Math.max(0, minY - pad);
+    const cropW = Math.min(canvasW - cropX, maxX - minX + 1 + pad * 2);
+    const cropH = Math.min(canvasH - cropY, maxY - minY + 1 + pad * 2);
+
+    const cropped = document.createElement('canvas');
+    cropped.width = cropW;
+    cropped.height = cropH;
+    const croppedCtx = cropped.getContext('2d');
+    if (!croppedCtx) {
+      messageCanvasRef.current = offscreen;
+      return;
+    }
+
+    croppedCtx.drawImage(offscreen, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+    messageCanvasRef.current = cropped;
   }, [messageFields, messageHeight]);
 
   useEffect(() => {
