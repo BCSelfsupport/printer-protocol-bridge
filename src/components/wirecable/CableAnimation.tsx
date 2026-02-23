@@ -312,9 +312,11 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
 
           if (shouldDraw) {
             // Apply orientation transform AFTER clipping
+            // Translate to center of message, apply transform, then draw centered
+            ctx.translate(drawW / 2, 0);
             applyOrientation(ctx, currentOrientation);
             ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(msgCanvas, 0, -drawH / 2, drawW, drawH);
+            ctx.drawImage(msgCanvas, -drawW / 2, -drawH / 2, drawW, drawH);
             ctx.imageSmoothingEnabled = true;
             ctx.restore(); // restore clip
           } else {
