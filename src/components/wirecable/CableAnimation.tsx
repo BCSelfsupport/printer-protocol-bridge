@@ -225,10 +225,10 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
         }
 
         if (hasMessage) {
-          // Draw dot-matrix message preview — fit within cable height proportionally
+          // Draw dot-matrix message preview — half size, proportional
           const msgCanvas = messageCanvasRef.current!;
-          const maxH = cableH * 0.85;
-          const maxW = pitchPx * 0.9; // Don't exceed pitch spacing
+          const maxH = cableH * 0.42;
+          const maxW = pitchPx * 0.9;
           const scaleH = maxH / msgCanvas.height;
           const scaleW = maxW > 0 ? maxW / msgCanvas.width : scaleH;
           const scale = Math.min(scaleH, scaleW);
@@ -276,9 +276,9 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
 
           // Pitch label
           ctx.fillStyle = 'hsl(207, 60%, 60%)';
-          ctx.font = '9px sans-serif';
+          ctx.font = 'bold 12px sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(`${pitchMm.toFixed(0)}mm`, (x + nextX) / 2, dimY + 12);
+          ctx.fillText(`${pitchMm.toFixed(0)}mm`, (x + nextX) / 2, dimY + 14);
         }
 
         markIndex++;
