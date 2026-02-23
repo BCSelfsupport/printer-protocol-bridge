@@ -220,9 +220,11 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       ctx.save();
       ctx.beginPath();
       if (direction === 'left') {
+        // Spool on right — clip right edge
         ctx.rect(cableStart, 0, cableEnd - cableStart - clipMargin, H);
       } else {
-        ctx.rect(cableStart + clipMargin, 0, cableEnd - cableStart - clipMargin, H);
+        // Spool on left — clip left edge (cableStart already accounts for spool)
+        ctx.rect(cableStart, 0, cableEnd - cableStart, H);
       }
       ctx.clip();
 
