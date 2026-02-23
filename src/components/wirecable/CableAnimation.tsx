@@ -18,9 +18,11 @@ interface CableAnimationProps {
   isRunning: boolean;
   messageFields?: MessageFieldForCable[];
   messageHeight?: number;
+  unit?: 'mm' | 'inches';
+  desiredPitch?: number;
 }
 
-export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orientationB, isRunning, messageFields, messageHeight }: CableAnimationProps) {
+export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orientationB, isRunning, messageFields, messageHeight, unit = 'mm', desiredPitch }: CableAnimationProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const offsetRef = useRef(0);
@@ -131,7 +133,7 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
     const cableY = H * 0.5;
     const cableH = 28;
     const spoolR = 40;
-    const spoolCX = 50;
+    const spoolCX = W - 50; // Spool on right side
     const spoolCY = cableY;
 
     // Scale: 1 pixel = 1mm, but clamp for display
@@ -198,8 +200,8 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       ctx.restore();
 
       // Cable strip
-      const cableStart = spoolCX + spoolR + 5;
-      const cableEnd = W - 20;
+      const cableStart = 20;
+      const cableEnd = spoolCX - spoolR - 5;
       const gradient = ctx.createLinearGradient(0, cableY - cableH / 2, 0, cableY + cableH / 2);
       gradient.addColorStop(0, 'hsl(220, 10%, 50%)');
       gradient.addColorStop(0.3, 'hsl(220, 10%, 60%)');
@@ -276,25 +278,30 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
 
           ctx.setLineDash([]);
 
-          // Pitch label
+          // Pitch label - show in user's unit
+          const pitchLabel = unit === 'inches' && desiredPitch != null
+            ? `${desiredPitch.toFixed(2)} in`
+            : `${pitchMm.toFixed(0)}mm`;
           ctx.fillStyle = 'hsl(207, 60%, 60%)';
           ctx.font = 'bold 12px sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(`${pitchMm.toFixed(0)}mm`, (x + nextX) / 2, dimY + 14);
+          ctx.fillText(pitchLabel, (x + nextX) / 2, dimY + 14);
         }
 
         markIndex++;
       }
 
-      // Arrow showing direction of travel
+      // Arrow showing direction of travel — left arrow = flow right-to-left
       const arrowX = direction === 'left' ? cableStart + 15 : cableEnd - 15;
       ctx.fillStyle = 'hsl(142, 71%, 45%)';
       ctx.beginPath();
       if (direction === 'left') {
+        // Flow right-to-left: arrow points left
         ctx.moveTo(arrowX, cableY - 6);
         ctx.lineTo(arrowX - 10, cableY);
         ctx.lineTo(arrowX, cableY + 6);
       } else {
+        // Flow left-to-right: arrow points right
         ctx.moveTo(arrowX, cableY - 6);
         ctx.lineTo(arrowX + 10, cableY);
         ctx.lineTo(arrowX, cableY + 6);
@@ -302,16 +309,16 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       ctx.closePath();
       ctx.fill();
 
-      // Animate
+      // Animate — left direction = cable content scrolls right-to-left
       if (isRunning) {
-        offsetRef.current += direction === 'left' ? -0.5 : 0.5;
+        offsetRef.current += direction === 'left' ? 0.5 : -0.5;
       }
       animRef.current = requestAnimationFrame(draw);
     };
 
     draw();
     return () => cancelAnimationFrame(animRef.current);
-  }, [pitchMm, flipFlopEnabled, orientationA, orientationB, isRunning, messageFields, messageHeight, direction]);
+  }, [pitchMm, flipFlopEnabled, orientationA, orientationB, isRunning, messageFields, messageHeight, direction, unit, desiredPitch]);
 
   // Resize handler
   useEffect(() => {

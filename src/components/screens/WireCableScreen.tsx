@@ -177,6 +177,8 @@ export function WireCableScreen({
           isRunning={isConnected}
           messageFields={currentMessage?.fields}
           messageHeight={currentMessage?.height}
+          unit={encoder.unit as 'mm' | 'inches'}
+          desiredPitch={desiredPitch}
         />
 
         {/* Metric Dashboard */}
