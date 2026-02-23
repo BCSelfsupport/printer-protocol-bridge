@@ -299,12 +299,16 @@ export function WireCableScreen({
 
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-muted-foreground">mm/pulse:</span>
-                  <span className="ml-2 font-mono font-bold">{mmPerPulse.toFixed(4)}</span>
+                  <span className="text-muted-foreground">{isImperial ? 'in/pulse:' : 'mm/pulse:'}</span>
+                  <span className="ml-2 font-mono font-bold">
+                    {isImperial ? (mmPerPulse / 25.4).toFixed(6) : mmPerPulse.toFixed(4)}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Pitch (mm):</span>
-                  <span className="ml-2 font-mono font-bold">{pitchMm.toFixed(1)}</span>
+                  <span className="text-muted-foreground">{isImperial ? 'Pitch (in):' : 'Pitch (mm):'}</span>
+                  <span className="ml-2 font-mono font-bold">
+                    {isImperial ? (pitchMm / 25.4).toFixed(3) : pitchMm.toFixed(1)}
+                  </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">^PA value:</span>
