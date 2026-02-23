@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Settings2 } from 'lucide-react';
 
 export interface EncoderConfig {
@@ -18,6 +17,17 @@ interface EncoderCalibrationProps {
 export function EncoderCalibration({ config, onChange }: EncoderCalibrationProps) {
   const circumference = Math.PI * config.wheelDiameterMm;
   const mmPerPulse = circumference / config.pulsesPerRevolution;
+  const isImperial = config.unit === 'inches';
+
+  const diameterDisplay = isImperial
+    ? parseFloat((config.wheelDiameterMm / 25.4).toFixed(4))
+    : config.wheelDiameterMm;
+
+  const circumferenceDisplay = isImperial
+    ? (circumference / 25.4).toFixed(4)
+    : circumference.toFixed(2);
+
+  const diameterUnit = isImperial ? 'in' : 'mm';
 
   return (
     <Card>
@@ -29,16 +39,20 @@ export function EncoderCalibration({ config, onChange }: EncoderCalibrationProps
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label className="text-sm">Wheel Diameter (mm)</Label>
+          <Label className="text-sm">Wheel Diameter ({diameterUnit})</Label>
           <Input
             type="number"
-            value={config.wheelDiameterMm}
-            onChange={(e) => onChange({ ...config, wheelDiameterMm: parseFloat(e.target.value) || 0 })}
-            step={0.01}
+            value={diameterDisplay}
+            onChange={(e) => {
+              const val = parseFloat(e.target.value) || 0;
+              const mm = isImperial ? val * 25.4 : val;
+              onChange({ ...config, wheelDiameterMm: mm });
+            }}
+            step={isImperial ? 0.001 : 0.01}
             min={0}
           />
           <span className="text-xs text-muted-foreground">
-            Circumference: {circumference.toFixed(2)} mm
+            Circumference: {circumferenceDisplay} {diameterUnit}
           </span>
         </div>
 
@@ -52,26 +66,13 @@ export function EncoderCalibration({ config, onChange }: EncoderCalibrationProps
           />
         </div>
 
-        <div className="space-y-2">
-          <Label className="text-sm">Pitch Unit</Label>
-          <Select value={config.unit} onValueChange={(v) => onChange({ ...config, unit: v as 'mm' | 'inches' })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="mm">Millimeters (mm)</SelectItem>
-              <SelectItem value="inches">Inches (in)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         <div className="bg-muted/50 rounded-md p-3 text-sm space-y-1">
           <div className="font-medium text-foreground">Resolution</div>
           <div className="text-muted-foreground">
-            <span className="font-mono">{mmPerPulse.toFixed(4)}</span> mm/pulse
+            <span className="font-mono">{isImperial ? (mmPerPulse / 25.4).toFixed(6) : mmPerPulse.toFixed(4)}</span> {isImperial ? 'in' : 'mm'}/pulse
           </div>
           <div className="text-muted-foreground">
-            <span className="font-mono">{(mmPerPulse / 25.4).toFixed(6)}</span> in/pulse
+            <span className="font-mono">{isImperial ? mmPerPulse.toFixed(4) : (mmPerPulse / 25.4).toFixed(6)}</span> {isImperial ? 'mm' : 'in'}/pulse
           </div>
         </div>
       </CardContent>
