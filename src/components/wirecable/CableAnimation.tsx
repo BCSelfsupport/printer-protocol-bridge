@@ -141,7 +141,7 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
             // Rotate 90° CW around the output center
             tCtx.save();
             tCtx.translate(outX + rotatedW / 2, outY + rotatedH / 2);
-            tCtx.rotate(Math.PI / 2);
+            tCtx.rotate(-Math.PI / 2);
             // Draw with original dims centered (pre-rotation space)
             tCtx.drawImage(tmpCanvas, -charW / 2, -charH / 2);
             tCtx.restore();
