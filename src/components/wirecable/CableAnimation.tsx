@@ -225,11 +225,15 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
         }
 
         if (hasMessage) {
-          // Draw dot-matrix message preview — left-aligned at mark position
+          // Draw dot-matrix message preview — fit within cable height proportionally
           const msgCanvas = messageCanvasRef.current!;
-          const scale = (cableH * 0.9) / msgCanvas.height;
+          const maxH = cableH * 0.85;
+          const maxW = pitchPx * 0.9; // Don't exceed pitch spacing
+          const scaleH = maxH / msgCanvas.height;
+          const scaleW = maxW > 0 ? maxW / msgCanvas.width : scaleH;
+          const scale = Math.min(scaleH, scaleW);
           const drawW = msgCanvas.width * scale;
-          const drawH = cableH * 0.9;
+          const drawH = msgCanvas.height * scale;
           
           ctx.imageSmoothingEnabled = false;
           ctx.drawImage(msgCanvas, 0, -drawH / 2, drawW, drawH);
