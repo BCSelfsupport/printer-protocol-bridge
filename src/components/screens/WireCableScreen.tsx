@@ -168,7 +168,10 @@ export function WireCableScreen({
             icon={<Ruler className="w-5 h-5 text-primary" />}
             label="Pitch"
             value={`${desiredPitch} ${encoder.unit}`}
-            subValue={`${pitchPulses.toLocaleString()} pulses`}
+            subValue={isImperial
+              ? `${(desiredPitch / 12).toFixed(3)} ft · ${pitchMm.toFixed(1)} mm`
+              : `${(pitchMm / 1000).toFixed(4)} m · ${(pitchMm / 25.4).toFixed(3)} in`
+            }
           />
           <MetricCard
             icon={<Gauge className="w-5 h-5 text-primary" />}
