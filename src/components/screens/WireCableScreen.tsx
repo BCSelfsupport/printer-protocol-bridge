@@ -214,7 +214,7 @@ export function WireCableScreen({
                         value={Math.floor(desiredPitch / 12)}
                         onChange={(e) => {
                           const ft = parseFloat(e.target.value) || 0;
-                          const currentIn = desiredPitch % 12;
+                          const currentIn = desiredPitch - Math.floor(desiredPitch / 12) * 12;
                           setDesiredPitch(ft * 12 + currentIn);
                         }}
                         min={0}
@@ -231,6 +231,7 @@ export function WireCableScreen({
                           const ft = Math.floor(desiredPitch / 12);
                           setDesiredPitch(ft * 12 + inches);
                         }}
+                        onBlur={() => setDesiredPitch(prev => prev)}
                         min={0}
                         step={0.1}
                       />
@@ -272,6 +273,7 @@ export function WireCableScreen({
                           const m = Math.floor(desiredPitch / 1000);
                           setDesiredPitch(m * 1000 + mm);
                         }}
+                        onBlur={() => setDesiredPitch(prev => prev)}
                         min={0}
                         step={1}
                       />
