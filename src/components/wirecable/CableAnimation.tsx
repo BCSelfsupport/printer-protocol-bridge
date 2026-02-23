@@ -228,8 +228,9 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       }
       ctx.clip();
 
-      // Print head position — fixed point where printing happens
-      const printHeadX = direction === 'left' ? cableStart + 40 : cableEnd - 40;
+      // Print head position — 1/4 of cable length from the spool side
+      const cableLen = cableEnd - cableStart;
+      const printHeadX = direction === 'left' ? cableEnd - cableLen * 0.25 : cableStart + cableLen * 0.25;
 
       // Print marks on cable
       const markOffset = offsetRef.current % pitchPx;
