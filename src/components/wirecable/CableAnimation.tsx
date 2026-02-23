@@ -181,7 +181,7 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
 
       // Animate
       if (isRunning) {
-        offsetRef.current += 0.5;
+        offsetRef.current -= 0.5;
       }
       animRef.current = requestAnimationFrame(draw);
     };
