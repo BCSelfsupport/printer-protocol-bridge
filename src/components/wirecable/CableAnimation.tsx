@@ -218,7 +218,7 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       const markOffset = offsetRef.current % pitchPx;
       let markIndex = 0;
       for (let x = cableStart + 20 - markOffset; x < cableEnd - 10; x += pitchPx) {
-        if (x < cableStart + 5) continue;
+        if (x < cableStart + 5 || x > cableEnd - spoolR * 2 - 10) continue;
         const isFlipped = flipFlopEnabled && markIndex % 2 === 1;
 
         ctx.save();
