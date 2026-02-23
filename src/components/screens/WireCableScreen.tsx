@@ -131,7 +131,13 @@ export function WireCableScreen({
           </div>
           <div className="flex items-center gap-2 bg-card border border-border rounded-lg p-1">
             <button
-              onClick={() => setEncoder(prev => ({ ...prev, unit: 'mm' }))}
+              onClick={() => {
+                if (encoder.unit === 'inches') {
+                  // Convert inches to mm
+                  setDesiredPitch(prev => parseFloat((prev * 25.4).toFixed(2)));
+                }
+                setEncoder(prev => ({ ...prev, unit: 'mm' }));
+              }}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
                 encoder.unit === 'mm'
                   ? 'industrial-button text-white'
@@ -141,7 +147,13 @@ export function WireCableScreen({
               Metric (mm)
             </button>
             <button
-              onClick={() => setEncoder(prev => ({ ...prev, unit: 'inches' }))}
+              onClick={() => {
+                if (encoder.unit === 'mm') {
+                  // Convert mm to inches
+                  setDesiredPitch(prev => parseFloat((prev / 25.4).toFixed(4)));
+                }
+                setEncoder(prev => ({ ...prev, unit: 'inches' }));
+              }}
               className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
                 encoder.unit === 'inches'
                   ? 'industrial-button text-white'
