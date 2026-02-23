@@ -1,8 +1,8 @@
-import { Power, FileText, Database, SlidersHorizontal, Brush, Settings, Wrench, ChevronUp, ChevronDown, Wifi, Lock } from 'lucide-react';
+import { Power, FileText, Database, SlidersHorizontal, Brush, Settings, Wrench, ChevronUp, ChevronDown, Wifi, Lock, Cable } from 'lucide-react';
 import { useState } from 'react';
 import { useLicense } from '@/contexts/LicenseContext';
 
-export type NavItem = 'home' | 'messages' | 'datasource' | 'adjust' | 'clean' | 'setup' | 'service';
+export type NavItem = 'home' | 'messages' | 'datasource' | 'adjust' | 'clean' | 'setup' | 'service' | 'wirecable';
 
 interface BottomNavProps {
   activeItem: NavItem;
@@ -19,6 +19,7 @@ function useNavItems() {
     { id: 'messages', label: 'Messages', icon: <FileText className="w-6 h-6" /> },
     { id: 'datasource', label: 'Data', icon: canDatabase ? <Database className="w-6 h-6" /> : <Lock className="w-6 h-6" />, disabled: !canDatabase, locked: !canDatabase },
     { id: 'adjust', label: 'Adjust', icon: <SlidersHorizontal className="w-6 h-6" /> },
+    { id: 'wirecable', label: 'Cable', icon: <Cable className="w-6 h-6" /> },
     { id: 'clean', label: 'Clean', icon: <Brush className="w-6 h-6" />, disabled: true },
     { id: 'setup', label: 'Setup', icon: <Settings className="w-6 h-6" />, disabled: true },
     { id: 'service', label: 'Service', icon: <Wrench className="w-6 h-6" /> },

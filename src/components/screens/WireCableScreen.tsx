@@ -1,0 +1,244 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Cable, Gauge, RotateCcw, Ruler, ArrowLeft, Settings2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { SubPageHeader } from '@/components/layout/SubPageHeader';
+import { CableAnimation } from '@/components/wirecable/CableAnimation';
+import { EncoderCalibration, EncoderConfig } from '@/components/wirecable/EncoderCalibration';
+import { FlipFlopConfig, FlipFlopSettings } from '@/components/wirecable/FlipFlopConfig';
+import { PrintSettings } from '@/types/printer';
+
+interface WireCableScreenProps {
+  onHome: () => void;
+  settings: PrintSettings;
+  onUpdate: (settings: Partial<PrintSettings>) => void;
+  onSendCommand: (command: string) => Promise<any>;
+  isConnected: boolean;
+  printCount?: number;
+  productCount?: number;
+}
+
+const DEFAULT_ENCODER: EncoderConfig = {
+  wheelDiameterMm: 63.66, // ~200mm circumference
+  pulsesPerRevolution: 200,
+  unit: 'mm',
+};
+
+const DEFAULT_FLIPFLOP: FlipFlopSettings = {
+  enabled: false,
+  orientationA: 'Normal',
+  orientationB: 'Flip',
+};
+
+export function WireCableScreen({
+  onHome,
+  settings,
+  onUpdate,
+  onSendCommand,
+  isConnected,
+  printCount = 0,
+  productCount = 0,
+}: WireCableScreenProps) {
+  const [encoder, setEncoder] = useState<EncoderConfig>(() => {
+    const saved = localStorage.getItem('wirecable-encoder');
+    return saved ? JSON.parse(saved) : DEFAULT_ENCODER;
+  });
+
+  const [flipFlop, setFlipFlop] = useState<FlipFlopSettings>(() => {
+    const saved = localStorage.getItem('wirecable-flipflop');
+    return saved ? JSON.parse(saved) : DEFAULT_FLIPFLOP;
+  });
+
+  const [desiredPitch, setDesiredPitch] = useState<number>(() => {
+    const saved = localStorage.getItem('wirecable-pitch');
+    return saved ? parseFloat(saved) : 100;
+  });
+
+  const lastFlipFlopRef = useRef<'A' | 'B'>('A');
+
+  // Persist settings
+  useEffect(() => {
+    localStorage.setItem('wirecable-encoder', JSON.stringify(encoder));
+  }, [encoder]);
+
+  useEffect(() => {
+    localStorage.setItem('wirecable-flipflop', JSON.stringify(flipFlop));
+  }, [flipFlop]);
+
+  useEffect(() => {
+    localStorage.setItem('wirecable-pitch', desiredPitch.toString());
+  }, [desiredPitch]);
+
+  // Calculate mm per pulse from encoder config
+  const mmPerPulse = (Math.PI * encoder.wheelDiameterMm) / encoder.pulsesPerRevolution;
+
+  // Convert desired pitch to encoder pulses (^PA value)
+  const pitchMm = encoder.unit === 'inches' ? desiredPitch * 25.4 : desiredPitch;
+  const pitchPulses = Math.round(pitchMm / mmPerPulse);
+
+  // Calculate total meters printed (rough estimate from print count and pitch)
+  const totalMetersPrinted = (printCount * pitchMm) / 1000;
+
+  // Apply pitch to printer
+  const handleApplyPitch = useCallback(async () => {
+    const clamped = Math.max(0, Math.min(4000000000, pitchPulses));
+    onUpdate({ pitch: clamped });
+    await onSendCommand(`^PA ${clamped}`);
+  }, [pitchPulses, onUpdate, onSendCommand]);
+
+  // Flip-flop: alternate orientation on each print
+  // This would be triggered by the app watching print count changes
+  const ORIENTATION_MAP: Record<string, number> = {
+    'Normal': 0, 'Flip': 1, 'Mirror': 2, 'Mirror Flip': 3,
+    'Tower': 4, 'Tower Flip': 5, 'Tower Mirror': 6, 'Tower Mirror Flip': 7,
+  };
+
+  // Watch print count for flip-flop
+  useEffect(() => {
+    if (!flipFlop.enabled || !isConnected) return;
+    const next = lastFlipFlopRef.current === 'A' ? 'B' : 'A';
+    const orientation = next === 'A' ? flipFlop.orientationA : flipFlop.orientationB;
+    const orientationValue = ORIENTATION_MAP[orientation] ?? 0;
+    lastFlipFlopRef.current = next;
+    onSendCommand(`^CM o${orientationValue}`);
+  }, [printCount]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      <SubPageHeader title="Wire & Cable" onHome={onHome} />
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Connection status */}
+        <div className="flex items-center gap-2">
+          <Badge variant={isConnected ? 'default' : 'secondary'} className={isConnected ? 'bg-success text-success-foreground' : ''}>
+            {isConnected ? 'Connected' : 'Not Connected'}
+          </Badge>
+          {!isConnected && (
+            <span className="text-xs text-muted-foreground">Connect to a printer to enable live controls</span>
+          )}
+        </div>
+
+        {/* Animated Cable Visualization */}
+        <CableAnimation
+          pitchMm={pitchMm}
+          flipFlopEnabled={flipFlop.enabled}
+          orientationA={flipFlop.orientationA}
+          orientationB={flipFlop.orientationB}
+          isRunning={isConnected}
+        />
+
+        {/* Metric Dashboard */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <MetricCard
+            icon={<Ruler className="w-5 h-5 text-primary" />}
+            label="Pitch"
+            value={`${desiredPitch} ${encoder.unit}`}
+            subValue={`${pitchPulses.toLocaleString()} pulses`}
+          />
+          <MetricCard
+            icon={<Gauge className="w-5 h-5 text-primary" />}
+            label="Meters Printed"
+            value={totalMetersPrinted.toFixed(1)}
+            subValue="m (est.)"
+          />
+          <MetricCard
+            icon={<Cable className="w-5 h-5 text-primary" />}
+            label="Print Count"
+            value={printCount.toLocaleString()}
+            subValue="prints"
+          />
+          <MetricCard
+            icon={<RotateCcw className="w-5 h-5 text-primary" />}
+            label="Flip-Flop"
+            value={flipFlop.enabled ? 'Active' : 'Off'}
+            subValue={flipFlop.enabled ? `${flipFlop.orientationA} ↔ ${flipFlop.orientationB}` : '—'}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Pitch Control */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Ruler className="w-4 h-4" />
+                Pitch / Repeat Distance
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Desired Pitch ({encoder.unit})</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={desiredPitch}
+                    onChange={(e) => setDesiredPitch(parseFloat(e.target.value) || 0)}
+                    className="flex-1"
+                    min={0}
+                    step={encoder.unit === 'inches' ? 0.1 : 1}
+                  />
+                  <button
+                    onClick={handleApplyPitch}
+                    disabled={!isConnected}
+                    className="industrial-button text-white px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground">mm/pulse:</span>
+                  <span className="ml-2 font-mono font-bold">{mmPerPulse.toFixed(4)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Pitch (mm):</span>
+                  <span className="ml-2 font-mono font-bold">{pitchMm.toFixed(1)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">^PA value:</span>
+                  <span className="ml-2 font-mono font-bold">{pitchPulses.toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Current ^PA:</span>
+                  <span className="ml-2 font-mono font-bold">{settings.pitch.toLocaleString()}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Encoder Calibration */}
+          <EncoderCalibration config={encoder} onChange={setEncoder} />
+        </div>
+
+        {/* Flip-Flop Rotation */}
+        <FlipFlopConfig
+          config={flipFlop}
+          onChange={setFlipFlop}
+          isConnected={isConnected}
+          onSendCommand={onSendCommand}
+        />
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({ icon, label, value, subValue }: { icon: React.ReactNode; label: string; value: string; subValue: string }) {
+  return (
+    <div className="metric-card flex-col items-start gap-1">
+      <div className="flex items-center gap-2 w-full">
+        {icon}
+        <span className="text-xs text-muted-foreground font-medium">{label}</span>
+      </div>
+      <div className="text-xl font-bold tabular-nums text-foreground">{value}</div>
+      <div className="text-xs text-muted-foreground">{subValue}</div>
+    </div>
+  );
+}
