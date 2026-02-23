@@ -96,21 +96,27 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
     }
 
     // --- Tower render: rotate each character 90° individually ---
-    // After 90° CW rotation, each char's W and H swap in the output
-    // We need a wider canvas to accommodate the swapped dimensions
-    let towerTotalW = 0;
-    let towerMaxH = 0;
-    for (const field of messageFields) {
-      if (field.type === 'barcode') continue;
-      const fontInfo = getFontInfo(field.fontSize);
-      const charH = fontInfo.height * DOT_SIZE; // becomes width after rotation
-      towerTotalW += field.data.length * (charH + DOT_SIZE); // rotated chars laid out horizontally
-      const charW = (fontInfo.charWidth + 1) * DOT_SIZE; // becomes height after rotation
-      if (charW > towerMaxH) towerMaxH = charW;
+    // Calculate total tower width: count all chars including inter-field spaces
+    let totalTowerChars = 0;
+    const sortedFields = [...messageFields].filter(f => f.type !== 'barcode').sort((a, b) => a.x - b.x);
+    for (let fi = 0; fi < sortedFields.length; fi++) {
+      const field = sortedFields[fi];
+      if (fi > 0) {
+        const prevField = sortedFields[fi - 1];
+        const prevFontInfo = getFontInfo(prevField.fontSize);
+        const prevEnd = prevField.x + prevField.data.length * (prevFontInfo.charWidth + 1);
+        const gapDots = Math.max(0, field.x - prevEnd);
+        totalTowerChars += Math.max(1, Math.round(gapDots / (getFontInfo(field.fontSize).charWidth + 1)));
+      }
+      totalTowerChars += field.data.length;
     }
+    // Use first field's font for sizing (they should match in most cases)
+    const towerFontInfo = sortedFields.length > 0 ? getFontInfo(sortedFields[0].fontSize) : null;
+    const towerCharRotatedW = towerFontInfo ? towerFontInfo.height * DOT_SIZE : 42;
+    const towerTotalW = totalTowerChars * (towerCharRotatedW + DOT_SIZE) + DOT_SIZE * 4;
 
     const towerOffscreen = document.createElement('canvas');
-    towerOffscreen.width = Math.max(towerTotalW + 20, canvasW);
+    towerOffscreen.width = Math.max(towerTotalW, canvasW);
     towerOffscreen.height = canvasH;
     const tCtx = towerOffscreen.getContext('2d');
     if (tCtx) {
@@ -119,7 +125,7 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       // Flatten all fields into a single character sequence with spaces between fields
       // so tower layout uses rotated widths consistently
       const allChars: { char: string; fontSize: string; fieldY: number }[] = [];
-      const sortedFields = [...messageFields].filter(f => f.type !== 'barcode').sort((a, b) => a.x - b.x);
+      // sortedFields already computed above
       
       for (let fi = 0; fi < sortedFields.length; fi++) {
         const field = sortedFields[fi];
