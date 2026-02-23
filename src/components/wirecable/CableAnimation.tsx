@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface MessageFieldForCable {
   data: string;
@@ -23,6 +24,7 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const offsetRef = useRef(0);
+  const [direction, setDirection] = useState<'left' | 'right'>('left'); // left = cable moves left (right-to-left)
 
   // Pre-render message to an offscreen canvas for performance
   const messageCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -285,25 +287,31 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       }
 
       // Arrow showing direction of travel
-      const arrowX = cableStart + 5;
+      const arrowX = direction === 'left' ? cableStart + 15 : cableEnd - 15;
       ctx.fillStyle = 'hsl(142, 71%, 45%)';
       ctx.beginPath();
-      ctx.moveTo(arrowX, cableY - 6);
-      ctx.lineTo(arrowX - 10, cableY);
-      ctx.lineTo(arrowX, cableY + 6);
+      if (direction === 'left') {
+        ctx.moveTo(arrowX, cableY - 6);
+        ctx.lineTo(arrowX - 10, cableY);
+        ctx.lineTo(arrowX, cableY + 6);
+      } else {
+        ctx.moveTo(arrowX, cableY - 6);
+        ctx.lineTo(arrowX + 10, cableY);
+        ctx.lineTo(arrowX, cableY + 6);
+      }
       ctx.closePath();
       ctx.fill();
 
       // Animate
       if (isRunning) {
-        offsetRef.current -= 0.5;
+        offsetRef.current += direction === 'left' ? -0.5 : 0.5;
       }
       animRef.current = requestAnimationFrame(draw);
     };
 
     draw();
     return () => cancelAnimationFrame(animRef.current);
-  }, [pitchMm, flipFlopEnabled, orientationA, orientationB, isRunning, messageFields, messageHeight]);
+  }, [pitchMm, flipFlopEnabled, orientationA, orientationB, isRunning, messageFields, messageHeight, direction]);
 
   // Resize handler
   useEffect(() => {
@@ -321,9 +329,28 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
 
   return (
     <div className="panel p-3">
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Cable Preview</span>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Cable Preview</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted-foreground mr-1">Direction</span>
+          <button
+            onClick={() => setDirection('left')}
+            className={`p-1 rounded transition-colors ${direction === 'left' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
+            title="Cable moves left (right-to-left)"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setDirection('right')}
+            className={`p-1 rounded transition-colors ${direction === 'right' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
+            title="Cable moves right (left-to-right)"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
       <canvas
         ref={canvasRef}
