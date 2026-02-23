@@ -34,7 +34,7 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
     }
 
     // Calculate message width from fields
-    const DOT_SIZE = 2; // Small dots for cable preview
+    const DOT_SIZE = 3; // Larger dots for better readability
     const totalHeight = 32; // Always 32-dot canvas
     const blockedRows = totalHeight - messageHeight;
 
@@ -183,13 +183,14 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
         }
 
         if (hasMessage) {
-          // Draw dot-matrix message preview
+          // Draw dot-matrix message preview — left-aligned at mark position
           const msgCanvas = messageCanvasRef.current!;
-          const scale = cableH / msgCanvas.height;
+          const scale = (cableH * 0.9) / msgCanvas.height;
           const drawW = msgCanvas.width * scale;
+          const drawH = cableH * 0.9;
           
           ctx.imageSmoothingEnabled = false;
-          ctx.drawImage(msgCanvas, -drawW / 2, -cableH / 2, drawW, cableH);
+          ctx.drawImage(msgCanvas, 0, -drawH / 2, drawW, drawH);
           ctx.imageSmoothingEnabled = true;
         } else {
           // Fallback: orientation label
