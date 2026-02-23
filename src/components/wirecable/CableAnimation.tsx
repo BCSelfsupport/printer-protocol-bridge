@@ -214,11 +214,17 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       ctx.roundRect(cableStart, cableY - cableH / 2, cableEnd - cableStart, cableH, 2);
       ctx.fill();
 
+      // Clip print marks to cable strip area (prevent overflow onto spool)
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(cableStart, 0, cableEnd - cableStart - spoolR - 15, H);
+      ctx.clip();
+
       // Print marks on cable
       const markOffset = offsetRef.current % pitchPx;
       let markIndex = 0;
       for (let x = cableStart + 20 - markOffset; x < cableEnd - 10; x += pitchPx) {
-        if (x < cableStart + 5 || x > cableEnd - spoolR * 2 - 10) continue;
+        if (x < cableStart + 5) continue;
         const isFlipped = flipFlopEnabled && markIndex % 2 === 1;
 
         ctx.save();
@@ -290,6 +296,8 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
 
         markIndex++;
       }
+
+      ctx.restore(); // End clip region
 
       // Arrow showing direction of travel — left arrow = flow right-to-left
       const arrowX = direction === 'left' ? cableStart + 15 : cableEnd - 15;
