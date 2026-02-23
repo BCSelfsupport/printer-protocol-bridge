@@ -20,6 +20,7 @@ import { ConsumablesScreen } from '@/components/screens/ConsumablesScreen';
 import { ReportsScreen } from '@/components/screens/ReportsScreen';
 import { DataSourceScreen } from '@/components/screens/DataSourceScreen';
 import { LowStockAlert, LowStockAlertData } from '@/components/consumables/LowStockAlert';
+import { WireCableScreen } from '@/components/screens/WireCableScreen';
 import { LicenseActivationDialog } from '@/components/license/LicenseActivationDialog';
 
 import { SignInDialog } from '@/components/printers/SignInDialog';
@@ -38,7 +39,7 @@ import { logConsumption } from '@/lib/consumptionTracker';
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
 
-type ScreenType = NavItem | 'network' | 'control' | 'editMessage' | 'consumables' | 'reports' | 'datasource';
+type ScreenType = NavItem | 'network' | 'control' | 'editMessage' | 'consumables' | 'reports' | 'datasource' | 'wirecable';
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
@@ -271,6 +272,10 @@ const Index = () => {
     }
     if (item === 'datasource') {
       setCurrentScreen('datasource');
+      return;
+    }
+    if (item === 'wirecable') {
+      setCurrentScreen('wirecable');
       return;
     }
     setCurrentScreen(item);
@@ -582,6 +587,18 @@ const Index = () => {
             onHome={() => setCurrentScreen('control')}
             openNewDialogOnMount={openNewDialogOnMount}
             onNewDialogOpened={() => setOpenNewDialogOnMount(false)}
+          />
+        );
+      case 'wirecable':
+        return (
+          <WireCableScreen
+            onHome={handleHome}
+            settings={connectionState.settings}
+            onUpdate={updateSettings}
+            onSendCommand={sendCommand}
+            isConnected={connectionState.isConnected}
+            printCount={connectionState.status?.printCount ?? 0}
+            productCount={connectionState.status?.productCount ?? 0}
           />
         );
       case 'clean':

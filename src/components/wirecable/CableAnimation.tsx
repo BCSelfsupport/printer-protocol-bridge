@@ -1,0 +1,220 @@
+import { useEffect, useRef, useState } from 'react';
+
+interface CableAnimationProps {
+  pitchMm: number;
+  flipFlopEnabled: boolean;
+  orientationA: string;
+  orientationB: string;
+  isRunning: boolean;
+}
+
+export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orientationB, isRunning }: CableAnimationProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animRef = useRef<number>(0);
+  const offsetRef = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const W = rect.width;
+    const H = rect.height;
+
+    // Cable visual parameters
+    const cableY = H * 0.5;
+    const cableH = 28;
+    const spoolR = 40;
+    const spoolCX = 50;
+    const spoolCY = cableY;
+
+    // Scale: 1 pixel = 1mm, but clamp for display
+    const pixelsPerMm = Math.min(1, (W - 140) / Math.max(pitchMm * 3, 300));
+    const pitchPx = pitchMm * pixelsPerMm;
+
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+
+      // Background grid
+      ctx.strokeStyle = 'hsl(220, 20%, 25%)';
+      ctx.lineWidth = 0.5;
+      ctx.globalAlpha = 0.3;
+      for (let x = 0; x < W; x += 20) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+      for (let y = 0; y < H; y += 20) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      // Spool
+      ctx.save();
+      ctx.translate(spoolCX, spoolCY);
+      ctx.strokeStyle = 'hsl(207, 90%, 54%)';
+      ctx.lineWidth = 2;
+
+      // Spool outer circle
+      ctx.beginPath();
+      ctx.arc(0, 0, spoolR, 0, Math.PI * 2);
+      ctx.fillStyle = 'hsl(220, 20%, 18%)';
+      ctx.fill();
+      ctx.stroke();
+
+      // Inner hub
+      ctx.beginPath();
+      ctx.arc(0, 0, 10, 0, Math.PI * 2);
+      ctx.fillStyle = 'hsl(220, 20%, 30%)';
+      ctx.fill();
+      ctx.stroke();
+
+      // Spokes (animated)
+      const spokeAngle = (offsetRef.current / 50) % (Math.PI * 2);
+      for (let i = 0; i < 6; i++) {
+        const a = spokeAngle + (i * Math.PI) / 3;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 10, Math.sin(a) * 10);
+        ctx.lineTo(Math.cos(a) * (spoolR - 4), Math.sin(a) * (spoolR - 4));
+        ctx.strokeStyle = 'hsl(207, 50%, 40%)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // Cable wraps on spool
+      for (let r = spoolR - 6; r > 16; r -= 4) {
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.strokeStyle = `hsl(30, 10%, ${35 + (spoolR - r)}%)`;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Cable strip
+      const cableStart = spoolCX + spoolR + 5;
+      const cableEnd = W - 20;
+      const gradient = ctx.createLinearGradient(0, cableY - cableH / 2, 0, cableY + cableH / 2);
+      gradient.addColorStop(0, 'hsl(220, 10%, 50%)');
+      gradient.addColorStop(0.3, 'hsl(220, 10%, 60%)');
+      gradient.addColorStop(0.5, 'hsl(220, 10%, 65%)');
+      gradient.addColorStop(0.7, 'hsl(220, 10%, 60%)');
+      gradient.addColorStop(1, 'hsl(220, 10%, 45%)');
+
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.roundRect(cableStart, cableY - cableH / 2, cableEnd - cableStart, cableH, 2);
+      ctx.fill();
+
+      // Print marks on cable
+      const markOffset = offsetRef.current % pitchPx;
+      let markIndex = 0;
+      for (let x = cableStart + 20 - markOffset; x < cableEnd - 10; x += pitchPx) {
+        if (x < cableStart + 5) continue;
+        const isFlipped = flipFlopEnabled && markIndex % 2 === 1;
+        const markLabel = isFlipped ? orientationB.substring(0, 3).toUpperCase() : orientationA.substring(0, 3).toUpperCase();
+
+        ctx.save();
+        ctx.translate(x, cableY);
+
+        if (isFlipped) {
+          ctx.scale(1, -1);
+        }
+
+        // Print mark background
+        ctx.fillStyle = 'hsl(207, 90%, 54%)';
+        ctx.globalAlpha = 0.9;
+        ctx.fillRect(-15, -8, 30, 16);
+        ctx.globalAlpha = 1;
+
+        // Text on mark
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 7px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(markLabel, 0, 0);
+
+        ctx.restore();
+
+        // Pitch dimension line below cable
+        if (x + pitchPx < cableEnd - 10) {
+          const nextX = x + pitchPx;
+          const dimY = cableY + cableH / 2 + 14;
+
+          ctx.strokeStyle = 'hsl(207, 60%, 50%)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 3]);
+
+          // Left tick
+          ctx.beginPath(); ctx.moveTo(x, cableY + cableH / 2 + 4); ctx.lineTo(x, dimY + 4); ctx.stroke();
+          // Right tick
+          ctx.beginPath(); ctx.moveTo(nextX, cableY + cableH / 2 + 4); ctx.lineTo(nextX, dimY + 4); ctx.stroke();
+          // Horizontal
+          ctx.beginPath(); ctx.moveTo(x, dimY); ctx.lineTo(nextX, dimY); ctx.stroke();
+
+          ctx.setLineDash([]);
+
+          // Pitch label
+          ctx.fillStyle = 'hsl(207, 60%, 60%)';
+          ctx.font = '9px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`${pitchMm.toFixed(0)}mm`, (x + nextX) / 2, dimY + 12);
+        }
+
+        markIndex++;
+      }
+
+      // Arrow showing direction of travel
+      const arrowX = cableEnd - 5;
+      ctx.fillStyle = 'hsl(142, 71%, 45%)';
+      ctx.beginPath();
+      ctx.moveTo(arrowX, cableY - 6);
+      ctx.lineTo(arrowX + 10, cableY);
+      ctx.lineTo(arrowX, cableY + 6);
+      ctx.closePath();
+      ctx.fill();
+
+      // Animate
+      if (isRunning) {
+        offsetRef.current += 0.5;
+      }
+      animRef.current = requestAnimationFrame(draw);
+    };
+
+    draw();
+    return () => cancelAnimationFrame(animRef.current);
+  }, [pitchMm, flipFlopEnabled, orientationA, orientationB, isRunning]);
+
+  // Resize handler
+  useEffect(() => {
+    const handleResize = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return (
+    <div className="panel p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Cable Preview</span>
+      </div>
+      <canvas
+        ref={canvasRef}
+        className="w-full rounded-md bg-card border border-border"
+        style={{ height: 160 }}
+      />
+    </div>
+  );
+}
