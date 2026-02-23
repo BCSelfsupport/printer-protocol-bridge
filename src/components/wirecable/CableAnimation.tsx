@@ -257,30 +257,37 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
           const drawW = msgCanvas.width * scale;
           const drawH = msgCanvas.height * scale;
 
-          // Progressive reveal: clip based on how far past the print head
-          const revealAmount = direction === 'left'
-            ? printHeadX - x        // left flow: reveal grows as mark moves left past head
-            : x - printHeadX;       // right flow: reveal grows as mark moves right past head
-
-          if (revealAmount <= 0) {
-            // Haven't reached print head yet — don't draw
-            ctx.restore();
-            markIndex++;
-            continue;
-          }
-
-          const revealW = Math.min(revealAmount, drawW);
-
-          ctx.save();
-          ctx.beginPath();
+          // Progressive reveal: only show characters that have passed the print head
+          // In local coords, 0 = left edge of message, drawW = right edge
           if (direction === 'left') {
-            // Message draws left-to-right from its right edge (newest chars on right)
-            ctx.rect(drawW - revealW, -drawH, revealW, drawH * 2);
+            // Cable moves left, spool on right. Print head is to the right.
+            // Characters visible only to the LEFT of the print head.
+            const visibleW = Math.min(drawW, printHeadX - x);
+            if (visibleW <= 0) {
+              ctx.restore();
+              markIndex++;
+              continue;
+            }
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, -drawH, visibleW, drawH * 2);
+            ctx.clip();
           } else {
-            // Message draws right-to-left from its left edge
-            ctx.rect(0, -drawH, revealW, drawH * 2);
+            // Cable moves right, spool on left. Print head is to the left.
+            // Characters visible only to the RIGHT of the print head.
+            const msgRight = x + drawW;
+            const clipStart = Math.max(0, printHeadX - x);
+            const visibleW = drawW - clipStart;
+            if (visibleW <= 0) {
+              ctx.restore();
+              markIndex++;
+              continue;
+            }
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(clipStart, -drawH, visibleW, drawH * 2);
+            ctx.clip();
           }
-          ctx.clip();
 
           ctx.imageSmoothingEnabled = false;
           ctx.drawImage(msgCanvas, 0, -drawH / 2, drawW, drawH);
