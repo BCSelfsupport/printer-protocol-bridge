@@ -22,7 +22,8 @@ interface CableAnimationProps {
   desiredPitch?: number;
 }
 
-/** Apply printer orientation transform to canvas context */
+/** Apply printer orientation transform to canvas context.
+ *  Tower rotation is handled by pre-rendered tower canvas, so only flip/mirror here. */
 function applyOrientation(ctx: CanvasRenderingContext2D, orientation: string) {
   switch (orientation) {
     case 'Flip':
@@ -35,18 +36,15 @@ function applyOrientation(ctx: CanvasRenderingContext2D, orientation: string) {
       ctx.scale(-1, -1);
       break;
     case 'Tower':
-      ctx.rotate(Math.PI / 2);
+      // rotation handled by tower canvas
       break;
     case 'Tower Flip':
-      ctx.rotate(Math.PI / 2);
       ctx.scale(1, -1);
       break;
     case 'Tower Mirror':
-      ctx.rotate(Math.PI / 2);
       ctx.scale(-1, 1);
       break;
     case 'Tower Mirror Flip':
-      ctx.rotate(Math.PI / 2);
       ctx.scale(-1, -1);
       break;
     // 'Normal' = no transform
@@ -59,23 +57,23 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
   const offsetRef = useRef(0);
   const [direction, setDirection] = useState<'left' | 'right'>('left'); // left = cable moves left (right-to-left)
 
-  // Pre-render message to an offscreen canvas for performance
+  // Pre-render message to offscreen canvases (normal + tower variant)
   const messageCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const towerCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     if (!messageFields || messageFields.length === 0 || !messageHeight) {
       messageCanvasRef.current = null;
+      towerCanvasRef.current = null;
       return;
     }
 
-    // Calculate message width from fields
-    const DOT_SIZE = 6; // Large dots for clear readability
-    const totalHeight = 32; // Always 32-dot canvas
-    const blockedRows = totalHeight - messageHeight;
+    const DOT_SIZE = 6;
+    const totalHeight = 32;
 
     let maxRight = 0;
     for (const field of messageFields) {
-      if (field.type === 'barcode') continue; // Skip barcodes for simplicity
+      if (field.type === 'barcode') continue;
       const fontInfo = getFontInfo(field.fontSize);
       const fieldRight = field.x + field.data.length * (fontInfo.charWidth + 1);
       if (fieldRight > maxRight) maxRight = fieldRight;
@@ -84,65 +82,92 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
     const canvasW = Math.max(maxRight + 2, 20) * DOT_SIZE;
     const canvasH = totalHeight * DOT_SIZE;
 
+    // --- Normal render ---
     const offscreen = document.createElement('canvas');
     offscreen.width = canvasW;
     offscreen.height = canvasH;
     const ctx = offscreen.getContext('2d');
     if (!ctx) return;
-
-    // Transparent background
     ctx.clearRect(0, 0, canvasW, canvasH);
-
-    // Render each text field
     for (const field of messageFields) {
       if (field.type === 'barcode') continue;
       ctx.fillStyle = '#ffffff';
       renderText(ctx, field.data, field.x * DOT_SIZE, field.y * DOT_SIZE, field.fontSize, DOT_SIZE);
     }
 
-    // Crop to the actual drawn dots so preview text appears larger on cable
-    const imageData = ctx.getImageData(0, 0, canvasW, canvasH);
-    const data = imageData.data;
-    let minX = canvasW;
-    let minY = canvasH;
-    let maxX = -1;
-    let maxY = -1;
+    // --- Tower render: rotate each character 90° individually ---
+    const towerOffscreen = document.createElement('canvas');
+    towerOffscreen.width = canvasW;
+    towerOffscreen.height = canvasH;
+    const tCtx = towerOffscreen.getContext('2d');
+    if (tCtx) {
+      tCtx.clearRect(0, 0, canvasW, canvasH);
+      for (const field of messageFields) {
+        if (field.type === 'barcode') continue;
+        const fontInfo = getFontInfo(field.fontSize);
+        const charW = (fontInfo.charWidth + 1) * DOT_SIZE;
+        const charH = fontInfo.height * DOT_SIZE;
+        let charX = field.x * DOT_SIZE;
+        const charY = field.y * DOT_SIZE;
 
-    for (let y = 0; y < canvasH; y++) {
-      for (let x = 0; x < canvasW; x++) {
-        const alpha = data[(y * canvasW + x) * 4 + 3];
-        if (alpha > 0) {
-          if (x < minX) minX = x;
-          if (y < minY) minY = y;
-          if (x > maxX) maxX = x;
-          if (y > maxY) maxY = y;
+        for (const char of field.data) {
+          // Render single char to temp canvas
+          const tmpCanvas = document.createElement('canvas');
+          tmpCanvas.width = charW;
+          tmpCanvas.height = charH;
+          const tmpCtx = tmpCanvas.getContext('2d');
+          if (tmpCtx) {
+            tmpCtx.fillStyle = '#ffffff';
+            renderText(tmpCtx, char, 0, 0, field.fontSize, DOT_SIZE);
+
+            // Draw rotated 90° clockwise around char center
+            const cx = charX + charW / 2;
+            const cy = charY + charH / 2;
+            tCtx.save();
+            tCtx.translate(cx, cy);
+            tCtx.rotate(Math.PI / 2);
+            tCtx.drawImage(tmpCanvas, -charW / 2, -charH / 2);
+            tCtx.restore();
+          }
+          charX += charW;
         }
       }
     }
 
-    // Fallback if nothing detected
-    if (maxX === -1 || maxY === -1) {
-      messageCanvasRef.current = offscreen;
-      return;
+    // Crop helper
+    function cropCanvas(source: HTMLCanvasElement): HTMLCanvasElement {
+      const sCtx = source.getContext('2d');
+      if (!sCtx) return source;
+      const imageData = sCtx.getImageData(0, 0, source.width, source.height);
+      const d = imageData.data;
+      let minX = source.width, minY = source.height, maxX = -1, maxY = -1;
+      for (let y = 0; y < source.height; y++) {
+        for (let x = 0; x < source.width; x++) {
+          if (d[(y * source.width + x) * 4 + 3] > 0) {
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (maxX === -1) return source;
+      const pad = 2;
+      const cX = Math.max(0, minX - pad);
+      const cY = Math.max(0, minY - pad);
+      const cW = Math.min(source.width - cX, maxX - minX + 1 + pad * 2);
+      const cH = Math.min(source.height - cY, maxY - minY + 1 + pad * 2);
+      const cropped = document.createElement('canvas');
+      cropped.width = cW;
+      cropped.height = cH;
+      const croppedCtx = cropped.getContext('2d');
+      if (!croppedCtx) return source;
+      croppedCtx.drawImage(source, cX, cY, cW, cH, 0, 0, cW, cH);
+      return cropped;
     }
 
-    const pad = 2;
-    const cropX = Math.max(0, minX - pad);
-    const cropY = Math.max(0, minY - pad);
-    const cropW = Math.min(canvasW - cropX, maxX - minX + 1 + pad * 2);
-    const cropH = Math.min(canvasH - cropY, maxY - minY + 1 + pad * 2);
-
-    const cropped = document.createElement('canvas');
-    cropped.width = cropW;
-    cropped.height = cropH;
-    const croppedCtx = cropped.getContext('2d');
-    if (!croppedCtx) {
-      messageCanvasRef.current = offscreen;
-      return;
-    }
-
-    croppedCtx.drawImage(offscreen, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-    messageCanvasRef.current = cropped;
+    messageCanvasRef.current = cropCanvas(offscreen);
+    towerCanvasRef.current = cropCanvas(towerOffscreen);
   }, [messageFields, messageHeight]);
 
   useEffect(() => {
@@ -277,8 +302,9 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
         ctx.translate(x, cableY);
 
         if (hasMessage) {
-          // Draw dot-matrix message preview — half size, proportional
-          const msgCanvas = messageCanvasRef.current!;
+          // Pick tower canvas for tower orientations, normal canvas otherwise
+          const isTower = currentOrientation.startsWith('Tower');
+          const msgCanvas = (isTower && towerCanvasRef.current) ? towerCanvasRef.current : messageCanvasRef.current!;
           const maxH = cableH * 0.42;
           const maxW = pitchPx * 0.9;
           const scaleH = maxH / msgCanvas.height;
