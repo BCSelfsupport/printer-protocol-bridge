@@ -203,26 +203,89 @@ export function WireCableScreen({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-sm">Desired Pitch ({encoder.unit})</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    value={desiredPitch}
-                    onChange={(e) => setDesiredPitch(parseFloat(e.target.value) || 0)}
-                    className="flex-1"
-                    min={0}
-                    step={encoder.unit === 'inches' ? 0.1 : 1}
-                  />
-                  <button
-                    onClick={handleApplyPitch}
-                    disabled={!isConnected}
-                    className="industrial-button text-white px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
-                  >
-                    Apply
-                  </button>
+              {isImperial ? (
+                <div className="space-y-2">
+                  <Label className="text-sm">Desired Pitch</Label>
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1 space-y-1">
+                      <span className="text-xs text-muted-foreground">Feet</span>
+                      <Input
+                        type="number"
+                        value={Math.floor(desiredPitch / 12)}
+                        onChange={(e) => {
+                          const ft = parseFloat(e.target.value) || 0;
+                          const currentIn = desiredPitch % 12;
+                          setDesiredPitch(ft * 12 + currentIn);
+                        }}
+                        min={0}
+                        step={1}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <span className="text-xs text-muted-foreground">Inches</span>
+                      <Input
+                        type="number"
+                        value={parseFloat((desiredPitch % 12).toFixed(4))}
+                        onChange={(e) => {
+                          const inches = parseFloat(e.target.value) || 0;
+                          const ft = Math.floor(desiredPitch / 12);
+                          setDesiredPitch(ft * 12 + inches);
+                        }}
+                        min={0}
+                        step={0.1}
+                      />
+                    </div>
+                    <button
+                      onClick={handleApplyPitch}
+                      disabled={!isConnected}
+                      className="industrial-button text-white px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
+                    >
+                      Apply
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label className="text-sm">Desired Pitch</Label>
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1 space-y-1">
+                      <span className="text-xs text-muted-foreground">Meters</span>
+                      <Input
+                        type="number"
+                        value={parseFloat((desiredPitch / 1000).toFixed(4))}
+                        onChange={(e) => {
+                          const m = parseFloat(e.target.value) || 0;
+                          const currentMmRemainder = desiredPitch % 1000;
+                          setDesiredPitch(m * 1000 + currentMmRemainder);
+                        }}
+                        min={0}
+                        step={0.001}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <span className="text-xs text-muted-foreground">mm</span>
+                      <Input
+                        type="number"
+                        value={parseFloat((desiredPitch % 1000).toFixed(1))}
+                        onChange={(e) => {
+                          const mm = parseFloat(e.target.value) || 0;
+                          const m = Math.floor(desiredPitch / 1000);
+                          setDesiredPitch(m * 1000 + mm);
+                        }}
+                        min={0}
+                        step={1}
+                      />
+                    </div>
+                    <button
+                      onClick={handleApplyPitch}
+                      disabled={!isConnected}
+                      className="industrial-button text-white px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <Separator />
 
