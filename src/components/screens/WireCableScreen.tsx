@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { RotateCw } from 'lucide-react';
 import { Cable, Gauge, RotateCcw, Ruler, ArrowLeft, Settings2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -63,6 +64,7 @@ export function WireCableScreen({
   });
 
   const lastFlipFlopRef = useRef<'A' | 'B'>('A');
+  const [printCountOffset, setPrintCountOffset] = useState(0);
 
   // Persist settings
   useEffect(() => {
@@ -84,9 +86,10 @@ export function WireCableScreen({
   const pitchMm = encoder.unit === 'inches' ? desiredPitch * 25.4 : desiredPitch;
   const pitchPulses = Math.round(pitchMm / mmPerPulse);
 
-  // Display values in chosen unit
+  // Display values in chosen unit (with reset offset)
   const isImperial = encoder.unit === 'inches';
-  const totalLengthMm = printCount * pitchMm;
+  const adjustedPrintCount = Math.max(0, printCount - printCountOffset);
+  const totalLengthMm = adjustedPrintCount * pitchMm;
   const totalLengthDisplay = isImperial
     ? (totalLengthMm / 25.4 / 12).toFixed(1) // feet
     : (totalLengthMm / 1000).toFixed(1); // meters
@@ -197,12 +200,14 @@ export function WireCableScreen({
             label={lengthLabel}
             value={totalLengthDisplay}
             subValue={`${lengthUnit} (est.)`}
+            onReset={() => setPrintCountOffset(printCount)}
           />
           <MetricCard
             icon={<Cable className="w-5 h-5 text-primary" />}
             label="Print Count"
-            value={printCount.toLocaleString()}
+            value={adjustedPrintCount.toLocaleString()}
             subValue="prints"
+            onReset={() => setPrintCountOffset(printCount)}
           />
           <MetricCard
             icon={<RotateCcw className="w-5 h-5 text-primary" />}
@@ -345,12 +350,21 @@ export function WireCableScreen({
   );
 }
 
-function MetricCard({ icon, label, value, subValue }: { icon: React.ReactNode; label: string; value: string; subValue: string }) {
+function MetricCard({ icon, label, value, subValue, onReset }: { icon: React.ReactNode; label: string; value: string; subValue: string; onReset?: () => void }) {
   return (
-    <div className="metric-card flex-col items-start gap-1">
+    <div className="metric-card flex-col items-start gap-1 relative">
       <div className="flex items-center gap-2 w-full">
         {icon}
         <span className="text-xs text-muted-foreground font-medium">{label}</span>
+        {onReset && (
+          <button
+            onClick={onReset}
+            className="ml-auto p-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            title="Reset to zero"
+          >
+            <RotateCw className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
       <div className="text-xl font-bold tabular-nums text-foreground">{value}</div>
       <div className="text-xs text-muted-foreground">{subValue}</div>
