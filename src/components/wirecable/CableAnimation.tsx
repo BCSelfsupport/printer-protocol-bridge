@@ -22,6 +22,37 @@ interface CableAnimationProps {
   desiredPitch?: number;
 }
 
+/** Apply printer orientation transform to canvas context */
+function applyOrientation(ctx: CanvasRenderingContext2D, orientation: string) {
+  switch (orientation) {
+    case 'Flip':
+      ctx.scale(1, -1);
+      break;
+    case 'Mirror':
+      ctx.scale(-1, 1);
+      break;
+    case 'Mirror Flip':
+      ctx.scale(-1, -1);
+      break;
+    case 'Tower':
+      ctx.rotate(Math.PI / 2);
+      break;
+    case 'Tower Flip':
+      ctx.rotate(Math.PI / 2);
+      ctx.scale(1, -1);
+      break;
+    case 'Tower Mirror':
+      ctx.rotate(Math.PI / 2);
+      ctx.scale(-1, 1);
+      break;
+    case 'Tower Mirror Flip':
+      ctx.rotate(Math.PI / 2);
+      ctx.scale(-1, -1);
+      break;
+    // 'Normal' = no transform
+  }
+}
+
 export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orientationB, isRunning, messageFields, messageHeight, unit = 'mm', desiredPitch }: CableAnimationProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
@@ -240,6 +271,7 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
         if (x < cableStart + 5) { markIndex++; continue; }
         const stableIndex = baseIndex + markIndex;
         const isFlipped = flipFlopEnabled && stableIndex % 2 === 1;
+        const currentOrientation = isFlipped ? orientationB : orientationA;
 
         ctx.save();
         ctx.translate(x, cableY);
@@ -279,10 +311,8 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
           }
 
           if (shouldDraw) {
-            // Apply flip AFTER clipping so clip coords stay consistent
-            if (isFlipped) {
-              ctx.scale(1, -1);
-            }
+            // Apply orientation transform AFTER clipping
+            applyOrientation(ctx, currentOrientation);
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(msgCanvas, 0, -drawH / 2, drawW, drawH);
             ctx.imageSmoothingEnabled = true;
@@ -294,10 +324,8 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
           }
         } else {
           // Fallback: orientation label
-          if (isFlipped) {
-            ctx.scale(1, -1);
-          }
-          const markLabel = isFlipped ? orientationB.substring(0, 3).toUpperCase() : orientationA.substring(0, 3).toUpperCase();
+          applyOrientation(ctx, currentOrientation);
+          const markLabel = currentOrientation.substring(0, 3).toUpperCase();
 
           ctx.fillStyle = 'hsl(207, 90%, 54%)';
           ctx.globalAlpha = 0.9;
