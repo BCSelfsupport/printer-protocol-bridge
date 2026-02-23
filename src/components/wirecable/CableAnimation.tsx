@@ -228,6 +228,9 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       }
       ctx.clip();
 
+      // Print head position — fixed point where printing happens
+      const printHeadX = direction === 'left' ? cableStart + 40 : cableEnd - 40;
+
       // Print marks on cable
       const markOffset = offsetRef.current % pitchPx;
       let markIndex = 0;
@@ -252,10 +255,36 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
           const scale = Math.min(scaleH, scaleW);
           const drawW = msgCanvas.width * scale;
           const drawH = msgCanvas.height * scale;
-          
+
+          // Progressive reveal: clip based on how far past the print head
+          const revealAmount = direction === 'left'
+            ? printHeadX - x        // left flow: reveal grows as mark moves left past head
+            : x - printHeadX;       // right flow: reveal grows as mark moves right past head
+
+          if (revealAmount <= 0) {
+            // Haven't reached print head yet — don't draw
+            ctx.restore();
+            markIndex++;
+            continue;
+          }
+
+          const revealW = Math.min(revealAmount, drawW);
+
+          ctx.save();
+          ctx.beginPath();
+          if (direction === 'left') {
+            // Message draws left-to-right from its right edge (newest chars on right)
+            ctx.rect(drawW - revealW, -drawH, revealW, drawH * 2);
+          } else {
+            // Message draws right-to-left from its left edge
+            ctx.rect(0, -drawH, revealW, drawH * 2);
+          }
+          ctx.clip();
+
           ctx.imageSmoothingEnabled = false;
           ctx.drawImage(msgCanvas, 0, -drawH / 2, drawW, drawH);
           ctx.imageSmoothingEnabled = true;
+          ctx.restore();
         } else {
           // Fallback: orientation label
           const markLabel = isFlipped ? orientationB.substring(0, 3).toUpperCase() : orientationA.substring(0, 3).toUpperCase();
@@ -306,6 +335,16 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       }
 
       ctx.restore(); // End clip region
+
+      // Print head indicator
+      ctx.strokeStyle = 'hsl(0, 70%, 55%)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(printHeadX, cableY - cableH / 2 - 6);
+      ctx.lineTo(printHeadX, cableY + cableH / 2 + 6);
+      ctx.stroke();
+      ctx.setLineDash([]);
 
       // Arrow showing direction of travel — left arrow = flow right-to-left
       const arrowX = direction === 'left' ? cableStart + 15 : cableEnd - 15;
