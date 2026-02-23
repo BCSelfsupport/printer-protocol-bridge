@@ -118,36 +118,35 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       for (const field of messageFields) {
         if (field.type === 'barcode') continue;
         const fontInfo = getFontInfo(field.fontSize);
-        const charW = fontInfo.charWidth * DOT_SIZE; // original char width (no spacing)
-        const charSpacing = DOT_SIZE; // 1-dot spacing
-        const charH = fontInfo.height * DOT_SIZE;
+        const charW = fontInfo.charWidth * DOT_SIZE;  // e.g. 5 dots × 6px = 30px
+        const charH = fontInfo.height * DOT_SIZE;      // e.g. 7 dots × 6px = 42px
 
-        // After 90° rotation: each char occupies charH wide × charW tall
-        const rotatedCharW = charH;
-        const rotatedCharH = charW;
+        // After 90° CW rotation: 7×5 char becomes 5×7 (height×width swap)
+        const rotatedW = charH;   // 7 dots wide after rotation
+        const rotatedH = charW;   // 5 dots tall after rotation
 
-        let outX = field.x * DOT_SIZE; // output X position
-        const outY = field.y * DOT_SIZE; // output Y position
+        let outX = field.x * DOT_SIZE;
+        const outY = field.y * DOT_SIZE;
 
         for (const char of field.data) {
-          // Render single char normally to a temp canvas
+          // Render single char to tight temp canvas (no spacing)
           const tmpCanvas = document.createElement('canvas');
-          tmpCanvas.width = charW + charSpacing;
+          tmpCanvas.width = charW;
           tmpCanvas.height = charH;
           const tmpCtx = tmpCanvas.getContext('2d');
           if (tmpCtx) {
             tmpCtx.fillStyle = '#ffffff';
             renderText(tmpCtx, char, 0, 0, field.fontSize, DOT_SIZE);
 
-            // Draw rotated 90° clockwise: translate to output position, rotate, draw
+            // Rotate 90° CW around the output center
             tCtx.save();
-            tCtx.translate(outX + rotatedCharW / 2, outY + rotatedCharH / 2);
+            tCtx.translate(outX + rotatedW / 2, outY + rotatedH / 2);
             tCtx.rotate(Math.PI / 2);
-            // After rotation, draw centered (original dims)
-            tCtx.drawImage(tmpCanvas, -tmpCanvas.width / 2, -tmpCanvas.height / 2);
+            // Draw with original dims centered (pre-rotation space)
+            tCtx.drawImage(tmpCanvas, -charW / 2, -charH / 2);
             tCtx.restore();
           }
-          outX += rotatedCharW + DOT_SIZE; // advance by rotated width + spacing
+          outX += rotatedW + DOT_SIZE; // advance by rotated width + 1-dot gap
         }
       }
     }
