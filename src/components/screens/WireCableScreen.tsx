@@ -12,6 +12,7 @@ import { CableAnimation } from '@/components/wirecable/CableAnimation';
 import { EncoderCalibration, EncoderConfig } from '@/components/wirecable/EncoderCalibration';
 import { FlipFlopConfig, FlipFlopSettings } from '@/components/wirecable/FlipFlopConfig';
 import { PrintSettings } from '@/types/printer';
+import { MessageDetails } from '@/components/screens/EditMessageScreen';
 
 interface WireCableScreenProps {
   onHome: () => void;
@@ -21,6 +22,7 @@ interface WireCableScreenProps {
   isConnected: boolean;
   printCount?: number;
   productCount?: number;
+  currentMessage?: MessageDetails | null;
 }
 
 const DEFAULT_ENCODER: EncoderConfig = {
@@ -43,6 +45,7 @@ export function WireCableScreen({
   isConnected,
   printCount = 0,
   productCount = 0,
+  currentMessage,
 }: WireCableScreenProps) {
   const [encoder, setEncoder] = useState<EncoderConfig>(() => {
     const saved = localStorage.getItem('wirecable-encoder');
@@ -172,6 +175,8 @@ export function WireCableScreen({
           orientationA={flipFlop.orientationA}
           orientationB={flipFlop.orientationB}
           isRunning={isConnected}
+          messageFields={currentMessage?.fields}
+          messageHeight={currentMessage?.height}
         />
 
         {/* Metric Dashboard */}

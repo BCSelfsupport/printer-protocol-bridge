@@ -1,4 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
+import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
+
+interface MessageFieldForCable {
+  data: string;
+  x: number;
+  y: number;
+  fontSize: string;
+  type?: string;
+}
 
 interface CableAnimationProps {
   pitchMm: number;
@@ -6,12 +15,58 @@ interface CableAnimationProps {
   orientationA: string;
   orientationB: string;
   isRunning: boolean;
+  messageFields?: MessageFieldForCable[];
+  messageHeight?: number;
 }
 
-export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orientationB, isRunning }: CableAnimationProps) {
+export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orientationB, isRunning, messageFields, messageHeight }: CableAnimationProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const offsetRef = useRef(0);
+
+  // Pre-render message to an offscreen canvas for performance
+  const messageCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    if (!messageFields || messageFields.length === 0 || !messageHeight) {
+      messageCanvasRef.current = null;
+      return;
+    }
+
+    // Calculate message width from fields
+    const DOT_SIZE = 2; // Small dots for cable preview
+    const totalHeight = 32; // Always 32-dot canvas
+    const blockedRows = totalHeight - messageHeight;
+
+    let maxRight = 0;
+    for (const field of messageFields) {
+      if (field.type === 'barcode') continue; // Skip barcodes for simplicity
+      const fontInfo = getFontInfo(field.fontSize);
+      const fieldRight = field.x + field.data.length * (fontInfo.charWidth + 1);
+      if (fieldRight > maxRight) maxRight = fieldRight;
+    }
+
+    const canvasW = Math.max(maxRight + 2, 20) * DOT_SIZE;
+    const canvasH = totalHeight * DOT_SIZE;
+
+    const offscreen = document.createElement('canvas');
+    offscreen.width = canvasW;
+    offscreen.height = canvasH;
+    const ctx = offscreen.getContext('2d');
+    if (!ctx) return;
+
+    // Transparent background
+    ctx.clearRect(0, 0, canvasW, canvasH);
+
+    // Render each text field
+    for (const field of messageFields) {
+      if (field.type === 'barcode') continue;
+      ctx.fillStyle = '#ffffff';
+      renderText(ctx, field.data, field.x * DOT_SIZE, field.y * DOT_SIZE, field.fontSize, DOT_SIZE);
+    }
+
+    messageCanvasRef.current = offscreen;
+  }, [messageFields, messageHeight]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -38,6 +93,8 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
     // Scale: 1 pixel = 1mm, but clamp for display
     const pixelsPerMm = Math.min(1, (W - 140) / Math.max(pitchMm * 3, 300));
     const pitchPx = pitchMm * pixelsPerMm;
+
+    const hasMessage = !!messageCanvasRef.current;
 
     const draw = () => {
       ctx.clearRect(0, 0, W, H);
@@ -117,7 +174,6 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       for (let x = cableStart + 20 - markOffset; x < cableEnd - 10; x += pitchPx) {
         if (x < cableStart + 5) continue;
         const isFlipped = flipFlopEnabled && markIndex % 2 === 1;
-        const markLabel = isFlipped ? orientationB.substring(0, 3).toUpperCase() : orientationA.substring(0, 3).toUpperCase();
 
         ctx.save();
         ctx.translate(x, cableY);
@@ -126,18 +182,30 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
           ctx.scale(1, -1);
         }
 
-        // Print mark background
-        ctx.fillStyle = 'hsl(207, 90%, 54%)';
-        ctx.globalAlpha = 0.9;
-        ctx.fillRect(-15, -8, 30, 16);
-        ctx.globalAlpha = 1;
+        if (hasMessage) {
+          // Draw dot-matrix message preview
+          const msgCanvas = messageCanvasRef.current!;
+          const scale = cableH / msgCanvas.height;
+          const drawW = msgCanvas.width * scale;
+          
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(msgCanvas, -drawW / 2, -cableH / 2, drawW, cableH);
+          ctx.imageSmoothingEnabled = true;
+        } else {
+          // Fallback: orientation label
+          const markLabel = isFlipped ? orientationB.substring(0, 3).toUpperCase() : orientationA.substring(0, 3).toUpperCase();
 
-        // Text on mark
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 7px monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(markLabel, 0, 0);
+          ctx.fillStyle = 'hsl(207, 90%, 54%)';
+          ctx.globalAlpha = 0.9;
+          ctx.fillRect(-15, -8, 30, 16);
+          ctx.globalAlpha = 1;
+
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 7px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(markLabel, 0, 0);
+        }
 
         ctx.restore();
 
@@ -170,11 +238,11 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
       }
 
       // Arrow showing direction of travel
-      const arrowX = cableEnd - 5;
+      const arrowX = cableStart + 5;
       ctx.fillStyle = 'hsl(142, 71%, 45%)';
       ctx.beginPath();
       ctx.moveTo(arrowX, cableY - 6);
-      ctx.lineTo(arrowX + 10, cableY);
+      ctx.lineTo(arrowX - 10, cableY);
       ctx.lineTo(arrowX, cableY + 6);
       ctx.closePath();
       ctx.fill();
@@ -188,7 +256,7 @@ export function CableAnimation({ pitchMm, flipFlopEnabled, orientationA, orienta
 
     draw();
     return () => cancelAnimationFrame(animRef.current);
-  }, [pitchMm, flipFlopEnabled, orientationA, orientationB, isRunning]);
+  }, [pitchMm, flipFlopEnabled, orientationA, orientationB, isRunning, messageFields, messageHeight]);
 
   // Resize handler
   useEffect(() => {

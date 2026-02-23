@@ -599,6 +599,7 @@ const Index = () => {
             isConnected={connectionState.isConnected}
             printCount={connectionState.status?.printCount ?? 0}
             productCount={connectionState.status?.productCount ?? 0}
+            currentMessage={connectionState.status?.currentMessage ? getMessage(connectionState.status.currentMessage) : null}
           />
         );
       case 'clean':
