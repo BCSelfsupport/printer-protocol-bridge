@@ -345,12 +345,8 @@ ipcMain.handle('printer:quick-status', async (event, printers) => {
     setTimeout(() => finish({ id: printer.id, ok: false }), TIMEOUT);
   });
 
-  // Run queries sequentially to avoid overwhelming single-session printers.
-  // Each query opens and closes its own socket, so we stagger them.
-  const results = [];
-  for (const printer of printers) {
-    results.push(await queryOne(printer));
-  }
+  // Run queries in parallel — firmware supports multiple concurrent Telnet sessions.
+  const results = await Promise.all(printers.map(queryOne));
   return results;
 });
 
