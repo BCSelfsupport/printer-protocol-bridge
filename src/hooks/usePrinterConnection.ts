@@ -3,7 +3,7 @@ import { Printer, PrinterStatus, PrinterMetrics, PrintMessage, PrintSettings, Co
 import { usePrinterStorage } from '@/hooks/usePrinterStorage';
 import { supabase } from '@/integrations/supabase/client';
 import '@/types/electron.d.ts';
-import { parseStatusResponse, parseTemperatureResponse, parseVersionResponse } from '@/lib/printerProtocol';
+import { parseStatusResponse, parseTemperatureResponse, parseVersionResponse, parseErrorListResponse } from '@/lib/printerProtocol';
 import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
 import { useSerializedPolling, PollingCommand } from '@/hooks/useSerializedPolling';
 import { toast } from 'sonner';
@@ -486,14 +486,56 @@ export function usePrinterConnection() {
     }
   }, [updatePrinter]);
 
-  // Build serialized command list: ^SU, ^LM, ^CN, ^TP, ^SD sent sequentially to prevent TCP collisions
+  // Stable callback for ^LE (List Errors) – overrides fluid levels when firmware
+  // reports numeric "1" (LOW) but the error list confirms tanks are truly EMPTY.
+  const handleErrorListResponse = useCallback((raw: string) => {
+    const parsed = parseErrorListResponse(raw);
+    if (!parsed) return;
+
+    // Only override if ^LE confirms an EMPTY fault
+    if (!parsed.inkEmpty && !parsed.makeupEmpty) return;
+
+    setConnectionState((prev) => {
+      const status = prev.status;
+      const metrics = prev.metrics;
+      if (!status && !metrics) return prev;
+
+      const inkOverride = parsed.inkEmpty ? 'EMPTY' as const : undefined;
+      const makeupOverride = parsed.makeupEmpty ? 'EMPTY' as const : undefined;
+
+      return {
+        ...prev,
+        status: status ? {
+          ...status,
+          ...(inkOverride ? { inkLevel: inkOverride } : {}),
+          ...(makeupOverride ? { makeupLevel: makeupOverride } : {}),
+        } : null,
+        metrics: metrics ? {
+          ...metrics,
+          ...(inkOverride ? { inkLevel: inkOverride } : {}),
+          ...(makeupOverride ? { makeupLevel: makeupOverride } : {}),
+        } : null,
+      };
+    });
+
+    // Also sync the printer card in the list
+    if (connectedPrinterIdRef.current != null) {
+      const updates: Partial<Printer> = {};
+      if (parsed.inkEmpty) updates.inkLevel = 'EMPTY';
+      if (parsed.makeupEmpty) updates.makeupLevel = 'EMPTY';
+      updatePrinterStatus(connectedPrinterIdRef.current, updates as any);
+    }
+  }, [updatePrinterStatus]);
+
+  // Build serialized command list: ^SU, ^LE, ^LM, ^CN, ^TP, ^SD sent sequentially to prevent TCP collisions
   const pollingCommands = useMemo<PollingCommand[]>(() => [
     { command: '^SU', onResponse: handleServiceResponse },
+    { command: '^LE', onResponse: handleErrorListResponse },
     { command: '^LM', onResponse: handleMessageListResponse },
     { command: '^CN', onResponse: handleCounterResponse },
     { command: '^TP', onResponse: handleTemperatureResponse },
     { command: '^SD', onResponse: handleDateTimeResponse },
-  ], [handleServiceResponse, handleMessageListResponse, handleCounterResponse, handleTemperatureResponse, handleDateTimeResponse]);
+  ], [handleServiceResponse, handleErrorListResponse, handleMessageListResponse, handleCounterResponse, handleTemperatureResponse, handleDateTimeResponse]);
 
   // Track whether the TCP socket is confirmed open — gates polling to avoid
   // sending commands before the socket is ready (prevents 8s timeout storms).
