@@ -2,18 +2,12 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-try {
-  const root = createRoot(document.getElementById("root")!);
-  root.render(<App />);
-  // Signal to HTML fallback that React mounted
-  (window as any).__CS_MOUNTED = true;
-} catch (err) {
+const showCrashReport = (err: unknown) => {
   console.error("[main.tsx] Fatal render error:", err);
   const el = document.getElementById("root");
   if (el) {
     const errMsg = String(err);
     const stack = (err as any)?.stack || '';
-    // Show env var diagnostic if supabase URL is missing
     const missingEnv = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     el.innerHTML = `<div style="padding:40px;font-family:monospace;color:#ff6b6b;background:#111;min-height:100vh">
       <h1 style="color:#fff">CodeSync™ – Crash Report</h1>
@@ -24,4 +18,38 @@ try {
       <pre style="background:#222;padding:16px;border-radius:8px;white-space:pre-wrap;font-size:12px">${errMsg}\n\n${stack}</pre>
     </div>`;
   }
-}
+};
+
+const clearElectronPwaCaches = async () => {
+  if (typeof window === "undefined" || !window.electronAPI) return;
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+    }
+
+    if ("caches" in window) {
+      const cacheKeys = await caches.keys();
+      await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+    }
+  } catch (error) {
+    console.warn("[main.tsx] Failed to clear Electron cache state:", error);
+  }
+};
+
+const mountApp = () => {
+  const root = createRoot(document.getElementById("root")!);
+  root.render(<App />);
+  (window as any).__CS_MOUNTED = true;
+};
+
+void (async () => {
+  await clearElectronPwaCaches();
+
+  try {
+    mountApp();
+  } catch (err) {
+    showCrashReport(err);
+  }
+})();
