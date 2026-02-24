@@ -1,6 +1,7 @@
-import { AlertDialog, AlertDialogCancel, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { AlertTriangle, ExternalLink, Mail, Package, ShoppingCart, Droplets } from 'lucide-react';
 import { Consumable, ReorderConfig } from '@/types/consumable';
 
@@ -60,9 +61,9 @@ export function LowStockAlert({ alert, reorderConfig, onDismiss, onNavigateToCon
 
   const getReorderIcon = () => {
     switch (reorderConfig.action) {
-      case 'website': return <ExternalLink className="w-4 h-4 mr-1" />;
-      case 'email': return <Mail className="w-4 h-4 mr-1" />;
-      case 'consumables': return <Package className="w-4 h-4 mr-1" />;
+      case 'website': return <ExternalLink className="w-3.5 h-3.5" />;
+      case 'email': return <Mail className="w-3.5 h-3.5" />;
+      case 'consumables': return <Package className="w-3.5 h-3.5" />;
       default: return null;
     }
   };
@@ -70,119 +71,81 @@ export function LowStockAlert({ alert, reorderConfig, onDismiss, onNavigateToCon
   const isInk = alert.label === 'Ink';
 
   return (
-    <AlertDialog open={!!alert} onOpenChange={(open) => { if (!open) onDismiss(); }}>
-      <AlertDialogContent className="sm:max-w-md border-0 p-0 overflow-hidden">
-        {/* Warning banner header */}
-        <div className={`px-5 py-4 flex items-center gap-3 ${
-          isCritical
-            ? 'bg-destructive text-destructive-foreground'
-            : 'bg-warning text-warning-foreground'
-        }`}>
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-            <AlertTriangle className="w-6 h-6" />
+    <div className="fixed right-3 top-3 z-[65] w-[min(92vw,360px)] animate-slide-in-right">
+      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+        <div
+          className={cn(
+            'px-3 py-2 flex items-center gap-2',
+            isCritical
+              ? 'bg-destructive text-destructive-foreground'
+              : 'bg-warning text-warning-foreground',
+          )}
+        >
+          <div className="w-7 h-7 rounded-full bg-background/20 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle className="w-4 h-4" />
           </div>
-          <div>
-            <AlertDialogTitle className="text-lg font-bold">
-              {alert.label} {alert.level === 'EMPTY' ? 'Empty' : 'Low'} — Reorder Alert
-            </AlertDialogTitle>
-          </div>
+          <p className="text-sm font-semibold leading-tight">
+            {alert.label} {alert.level === 'EMPTY' ? 'Empty' : 'Low'} — Reorder Alert
+          </p>
         </div>
 
-        <div className="p-5 space-y-4">
-          <AlertDialogHeader className="p-0">
-            <AlertDialogDescription asChild>
-              <div className="space-y-4 text-sm">
-                {/* Printer status line */}
-                <p className="text-foreground">
-                  <span className="font-semibold">{alert.printerName}</span> reports {alert.label.toLowerCase()} level is{' '}
-                  <Badge variant={alert.level === 'EMPTY' ? 'destructive' : 'secondary'} className="text-xs font-bold">
-                    {alert.level}
-                  </Badge>
-                </p>
+        <div className="p-3 space-y-2.5 text-sm">
+          <p className="text-foreground leading-snug">
+            <span className="font-semibold">{alert.printerName}</span> ·
+            {' '}{alert.label.toLowerCase()} level{' '}
+            <Badge variant={alert.level === 'EMPTY' ? 'destructive' : 'secondary'} className="text-[10px] px-1.5 py-0">
+              {alert.level}
+            </Badge>
+          </p>
 
-                {/* Consumable detail card */}
-                <div className="rounded-lg border-2 overflow-hidden">
-                  {/* Part header */}
-                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/40 border-b">
-                    <div className={`w-7 h-7 rounded flex items-center justify-center flex-shrink-0 ${
-                      isInk ? 'bg-primary/15 text-primary' : 'bg-primary/15 text-primary'
-                    }`}>
-                      {isInk ? <Droplets className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
-                    </div>
-                    <span className="font-bold text-foreground">{alert.consumable.partNumber}</span>
-                    {alert.consumable.description && (
-                      <span className="text-muted-foreground">— {alert.consumable.description}</span>
-                    )}
-                  </div>
-
-                  {/* Stock gauge */}
-                  <div className="px-3 py-3 space-y-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground font-medium">Stock Level</span>
-                      <span className={`font-bold text-base ${
-                        isCritical ? 'text-destructive' :
-                        isLow ? 'text-warning' : 'text-foreground'
-                      }`}>
-                        {alert.consumable.currentStock} {stockUnit}
-                      </span>
-                    </div>
-                    <Progress
-                      value={percent}
-                      className={`h-3 rounded-full ${
-                        isCritical ? '[&>div]:bg-destructive' :
-                        isLow ? '[&>div]:bg-primary' :
-                        '[&>div]:bg-primary'
-                      }`}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Minimum: {alert.consumable.minimumStock} {stockUnit}
-                    </p>
-                  </div>
-
-                  {/* Deduction notice */}
-                  {alert.deducted && (
-                    <div className="px-3 pb-3">
-                      <p className="text-xs text-muted-foreground italic border-t pt-2">
-                        1 {stockUnit.replace(/s$/, '')} automatically deducted from stock.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Reorder suggestion with unit clarification */}
-                {hasReorderUnit && (
-                  <div className="rounded-lg bg-primary/5 border border-primary/20 p-3">
-                    <p className="text-xs text-foreground font-medium flex items-center gap-1.5">
-                      <Package className="w-4 h-4 text-primary" />
-                      Suggested order: <span className="font-bold text-primary">{suggestedReorderQty} {reorderUnit}</span>
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      1 {reorderUnit.replace(/s$/, '')} = {bottlesPerCase} {stockUnit}
-                    </p>
-                  </div>
-                )}
-
-                {/* Critical / low warning */}
-                {isCritical && (
-                  <p className="text-destructive font-bold text-center text-sm">⚠ Stock depleted — reorder immediately!</p>
-                )}
+          <div className="rounded-md border border-border overflow-hidden">
+            <div className="flex items-center gap-2 px-2.5 py-2 bg-muted/40 border-b border-border">
+              <div className="w-6 h-6 rounded flex items-center justify-center bg-primary/15 text-primary flex-shrink-0">
+                {isInk ? <Droplets className="w-3.5 h-3.5" /> : <ShoppingCart className="w-3.5 h-3.5" />}
               </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+              <span className="font-semibold text-foreground text-xs">{alert.consumable.partNumber}</span>
+            </div>
 
-          <AlertDialogFooter className="flex-row gap-2 sm:justify-between pt-2">
-            <AlertDialogCancel className="flex-1">
+            <div className="px-2.5 py-2 space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Stock</span>
+                <span className={cn(
+                  'font-semibold',
+                  isCritical ? 'text-destructive' : isLow ? 'text-warning' : 'text-foreground',
+                )}>
+                  {alert.consumable.currentStock} {stockUnit}
+                </span>
+              </div>
+              <Progress
+                value={percent}
+                className={cn(
+                  'h-2 rounded-full',
+                  isCritical ? '[&>div]:bg-destructive' : '[&>div]:bg-primary',
+                )}
+              />
+            </div>
+          </div>
+
+          {hasReorderUnit && (
+            <p className="text-[11px] text-muted-foreground">
+              Suggested order: <span className="font-semibold text-foreground">{suggestedReorderQty} {reorderUnit}</span>
+              {' '}({bottlesPerCase} {stockUnit}/{reorderUnit.replace(/s$/, '')})
+            </p>
+          )}
+
+          <div className="flex items-center gap-2 pt-1">
+            <Button variant="outline" size="sm" className="h-8 px-3 text-xs flex-1" onClick={onDismiss}>
               Dismiss
-            </AlertDialogCancel>
+            </Button>
             {reorderConfig.action !== 'none' && (
-              <AlertDialogAction onClick={handleReorder} className="flex-1">
+              <Button size="sm" className="h-8 px-3 text-xs flex-1 gap-1.5" onClick={handleReorder}>
                 {getReorderIcon()}
                 {getReorderLabel()}
-              </AlertDialogAction>
+              </Button>
             )}
-          </AlertDialogFooter>
+          </div>
         </div>
-      </AlertDialogContent>
-    </AlertDialog>
+      </div>
+    </div>
   );
 }

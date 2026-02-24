@@ -120,8 +120,9 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
   if (!currentFault || (!open && activeFaults.length === 0)) return null;
 
   // Build the fault code image path with extension fallback support (png/bmp/etc)
-  const qrImagePath = currentFault
-    ? `/fault-codes/${currentFault.code}.${FAULT_IMAGE_EXTENSIONS[imageExtIndex]}`
+  const normalizedFaultCode = currentFault?.code?.trim() ?? '';
+  const qrImagePath = normalizedFaultCode
+    ? `/fault-codes/${encodeURIComponent(normalizedFaultCode)}.${FAULT_IMAGE_EXTENSIONS[imageExtIndex]}`
     : '';
 
   const isLastFault = currentIndex >= activeFaults.length - 1;
