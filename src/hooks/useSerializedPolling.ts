@@ -19,6 +19,7 @@ export function useSerializedPolling(options: {
   printerIp?: string;
   printerPort?: number;
   intervalMs?: number;
+  initialDelayMs?: number;
   commands: PollingCommand[];
   onError?: (error: unknown) => void;
 }) {
@@ -28,6 +29,7 @@ export function useSerializedPolling(options: {
     printerIp,
     printerPort = 23,
     intervalMs = 3000,
+    initialDelayMs = 1500,
     commands,
     onError,
   } = options;
@@ -121,7 +123,7 @@ export function useSerializedPolling(options: {
     // Initial tick after delay to ensure the socket is fully open
     const initialDelay = setTimeout(() => {
       if (!cancelled) tick();
-    }, 1500);
+    }, initialDelayMs);
 
     const id = window.setInterval(tick, intervalMs);
 
@@ -130,5 +132,5 @@ export function useSerializedPolling(options: {
       clearTimeout(initialDelay);
       window.clearInterval(id);
     };
-  }, [enabled, printerId, printerIp, printerPort, intervalMs]);
+  }, [enabled, printerId, printerIp, printerPort, intervalMs, initialDelayMs]);
 }
