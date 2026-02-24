@@ -759,6 +759,7 @@ const Index = () => {
           }}
           connectedPrinterIp={connectionState.connectedPrinter?.ipAddress}
           connectedPrinterPort={connectionState.connectedPrinter?.port}
+          connectedPrinterId={connectionState.connectedPrinter?.id}
           defaultTab={devPanelTab}
           showToggleButton={isDevSignedIn}
         />
