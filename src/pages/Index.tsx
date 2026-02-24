@@ -22,6 +22,7 @@ import { DataSourceScreen } from '@/components/screens/DataSourceScreen';
 import { LowStockAlert, LowStockAlertData } from '@/components/consumables/LowStockAlert';
 import { WireCableScreen } from '@/components/screens/WireCableScreen';
 import { LicenseActivationDialog } from '@/components/license/LicenseActivationDialog';
+import { FaultAlertDialog } from '@/components/alerts/FaultAlertDialog';
 
 import { SignInDialog } from '@/components/printers/SignInDialog';
 import { HelpDialog } from '@/components/help/HelpDialog';
@@ -104,6 +105,7 @@ const Index = () => {
     checkPrinterStatus,
     isChecking,
     refreshPolling,
+    activeFaults,
   } = usePrinterConnection();
   
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
@@ -863,6 +865,12 @@ const Index = () => {
       <LicenseActivationDialog
         open={licenseDialogOpen}
         onOpenChange={setLicenseDialogOpen}
+      />
+
+      {/* Printer Fault Alert (dismisses on OK, re-appears after 3 min) */}
+      <FaultAlertDialog
+        faults={activeFaults}
+        isConnected={connectionState.isConnected}
       />
     </div>
   );

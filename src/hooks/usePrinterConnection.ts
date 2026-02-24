@@ -3,13 +3,14 @@ import { Printer, PrinterStatus, PrinterMetrics, PrintMessage, PrintSettings, Co
 import { usePrinterStorage } from '@/hooks/usePrinterStorage';
 import { supabase } from '@/integrations/supabase/client';
 import '@/types/electron.d.ts';
-import { parseStatusResponse, parseTemperatureResponse, parseVersionResponse, parseErrorListResponse } from '@/lib/printerProtocol';
+import { parseStatusResponse, parseTemperatureResponse, parseVersionResponse, parseErrorListResponse, ErrorListResult } from '@/lib/printerProtocol';
 import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
 import { useSerializedPolling, PollingCommand } from '@/hooks/useSerializedPolling';
 import { toast } from 'sonner';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
+import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
 const defaultSettings: PrintSettings = {
   width: 15,
   height: 8,
@@ -91,6 +92,8 @@ export function usePrinterConnection() {
   const offlineCountsRef = useRef<Record<number, number>>({});
   // Persistent ^LE empty overrides — prevents ^SU from downgrading EMPTY back to LOW
   const leEmptyOverridesRef = useRef<{ inkEmpty: boolean; makeupEmpty: boolean }>({ inkEmpty: false, makeupEmpty: false });
+  // Active fault codes from ^LE for the FaultAlertDialog
+  const [activeFaults, setActiveFaults] = useState<PrinterFault[]>([]);
   // Ref to avoid re-creating checkPrinterStatus when printers array changes
   const printersRef = useRef(printers);
   printersRef.current = printers;
@@ -499,6 +502,9 @@ export function usePrinterConnection() {
 
     // Update the persistent ref so handleServiceResponse can apply overrides
     leEmptyOverridesRef.current = { inkEmpty: parsed.inkEmpty, makeupEmpty: parsed.makeupEmpty };
+
+    // Expose all parsed faults for the FaultAlertDialog
+    setActiveFaults(parsed.errors);
 
     // Only override state if ^LE confirms an EMPTY fault
     if (!parsed.inkEmpty && !parsed.makeupEmpty) return;
@@ -2525,6 +2531,7 @@ export function usePrinterConnection() {
   return {
     printers,
     connectionState,
+    activeFaults,
     isChecking,
     availabilityPollingEnabled,
     connect,
