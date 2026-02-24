@@ -385,18 +385,14 @@ export function usePrinterConnection() {
     const leOverrides = leEmptyOverridesRef.current;
     const inkLevelCard = (leOverrides.inkEmpty ? 'EMPTY' : (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN')) as Printer['inkLevel'];
     const makeupLevelCard = (leOverrides.makeupEmpty ? 'EMPTY' : (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN')) as Printer['makeupLevel'];
-    // Extract current message from ^SU if available (ignore "NONE" placeholder)
-    const parsedMessage = parsed.currentMessage && parsed.currentMessage !== 'NONE' ? parsed.currentMessage.toUpperCase() : undefined;
+    // Do NOT extract currentMessage from ^SU — it's unreliable. ^SM is the authoritative source.
     if (connectedPrinterId) {
-      // Only pass currentMessage if ^SU actually returned one — otherwise leave the
-      // existing value intact (set by ^LM) so the print count stays visible in the UI.
       updatePrinterStatus(connectedPrinterId, {
         isAvailable: true,
         status: hvOn ? 'ready' : 'not_ready',
         hasActiveErrors: parsed.errorActive ?? false,
         inkLevel: inkLevelCard,
         makeupLevel: makeupLevelCard,
-        ...(parsedMessage !== undefined ? { currentMessage: parsedMessage } : {}),
       });
     }
 
@@ -414,12 +410,10 @@ export function usePrinterConnection() {
       return {
         ...prev,
         // Update isRunning and consumable levels based on ^SU response
-        // Also update currentMessage if parsed from ^SU (keeps it in sync with printer state)
+        // currentMessage is NOT set here — ^SM is the authoritative source
         status: prev.status 
-          ? { ...prev.status, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel, ...(parsedMessage ? { currentMessage: parsedMessage } : {}) } 
-          // When status was null (fresh connect), seed from mockStatus but PRESERVE any
-          // counter values that ^CN may have already populated before this ^SU arrived.
-          : { ...mockStatus, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel, currentMessage: parsedMessage ?? mockStatus.currentMessage, productCount: 0, printCount: 0, customCounters: [0, 0, 0, 0] },
+          ? { ...prev.status, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel } 
+          : { ...mockStatus, isRunning: hvOn, jetRunning: jetActive, inkLevel, makeupLevel, productCount: 0, printCount: 0, customCounters: [0, 0, 0, 0] },
         metrics: {
           ...previous,
           modulation: parsed.modulation ?? previous.modulation,
@@ -629,15 +623,35 @@ export function usePrinterConnection() {
     }
   }, [updatePrinterStatus]);
 
-  // Build serialized command list: ^SU, ^LE, ^LM, ^CN, ^TP, ^SD sent sequentially to prevent TCP collisions
+  // Stable callback for ^SM (Selected Message) — authoritative source for current message name
+  const handleSelectedMessageResponse = useCallback((raw: string) => {
+    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l && l !== '^SM' && !/^success$/i.test(l) && l !== '>');
+    if (lines.length === 0) return;
+    const msgName = lines[0].replace(/[^\x20-\x7E]/g, '').trim();
+    if (!msgName || msgName === 'NONE') return;
+    const upperMsg = msgName.toUpperCase();
+
+    setConnectionState(prev => ({
+      ...prev,
+      status: prev.status ? { ...prev.status, currentMessage: upperMsg } : null,
+    }));
+
+    const printerId = connectedPrinterIdRef.current;
+    if (printerId != null) {
+      updatePrinter(printerId, { currentMessage: upperMsg });
+    }
+  }, [updatePrinter]);
+
+  // Build serialized command list: ^SU, ^LE, ^SM, ^LM, ^CN, ^TP, ^SD sent sequentially to prevent TCP collisions
   const pollingCommands = useMemo<PollingCommand[]>(() => [
     { command: '^SU', onResponse: handleServiceResponse },
     { command: '^LE', onResponse: handleErrorListResponse },
+    { command: '^SM', onResponse: handleSelectedMessageResponse },
     { command: '^LM', onResponse: handleMessageListResponse },
     { command: '^CN', onResponse: handleCounterResponse },
     { command: '^TP', onResponse: handleTemperatureResponse },
     { command: '^SD', onResponse: handleDateTimeResponse },
-  ], [handleServiceResponse, handleErrorListResponse, handleMessageListResponse, handleCounterResponse, handleTemperatureResponse, handleDateTimeResponse]);
+  ], [handleServiceResponse, handleErrorListResponse, handleSelectedMessageResponse, handleMessageListResponse, handleCounterResponse, handleTemperatureResponse, handleDateTimeResponse]);
 
   // Track whether the TCP socket is confirmed open — gates polling to avoid
   // sending commands before the socket is ready (prevents 8s timeout storms).
