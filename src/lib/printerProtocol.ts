@@ -224,3 +224,54 @@ export function parseVersionResponse(response: string): string | null {
   const match = response.match(/v(\d+\.\d+\.\d+\.\d+)/);
   return match ? `v${match[1]}` : null;
 }
+
+/**
+ * Parse ^LE (List Errors) response to detect fluid level faults.
+ *
+ * Example response:
+ *   ^LE\r\n10-0002 (F) - Ink fluid level empty.\r\n11-0002 (F) - Makeup fluid level empty.\r\nEnd of list\r\nSuccess\r\n>
+ *
+ * Returns an object with authoritative fluid-empty flags derived from active
+ * fault codes. These override the numeric INK:/MAKEUP: values from ^SU because
+ * some firmware versions report "1" (LOW) even when the tank is truly empty.
+ */
+export interface ErrorListResult {
+  inkEmpty: boolean;
+  makeupEmpty: boolean;
+  errors: { code: string; severity: string; message: string }[];
+}
+
+export function parseErrorListResponse(response: string): ErrorListResult | null {
+  console.log('[parseErrorListResponse] raw:', response);
+
+  // Must contain at least "End of list" or a recognizable error line
+  if (!/end of list/i.test(response) && !/\d+-\d+\s*\(/.test(response)) {
+    console.log('[parseErrorListResponse] not a ^LE response');
+    return null;
+  }
+
+  const errors: ErrorListResult['errors'] = [];
+  let inkEmpty = false;
+  let makeupEmpty = false;
+
+  const lines = response.split(/[\r\n]+/);
+  for (const line of lines) {
+    // Match error lines like "10-0002 (F) - Ink fluid level empty."
+    const m = line.match(/(\d+-\d+)\s*\((\w)\)\s*-\s*(.+)/);
+    if (m) {
+      const [, code, severity, message] = m;
+      errors.push({ code, severity, message: message.trim() });
+
+      const upper = message.toUpperCase();
+      if (upper.includes('INK') && upper.includes('EMPTY')) {
+        inkEmpty = true;
+      }
+      if (upper.includes('MAKEUP') && upper.includes('EMPTY')) {
+        makeupEmpty = true;
+      }
+    }
+  }
+
+  console.log('[parseErrorListResponse] parsed:', { inkEmpty, makeupEmpty, errorCount: errors.length });
+  return { inkEmpty, makeupEmpty, errors };
+}
