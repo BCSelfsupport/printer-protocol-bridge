@@ -356,11 +356,25 @@ export function PrinterListItem({
         </div>
       </div>
 
-      {/* Bottom row: fluid levels + actions */}
-      {(printer.inkLevel || printer.makeupLevel || printer.currentMessage) && (
+      {/* Message + print count row */}
+      {printer.currentMessage && (
+        <div className={`mt-1.5 ml-12 text-xs ${subTextColor}`}>
+          <div className="flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="font-medium truncate">{printer.currentMessage}</span>
+          </div>
+          {printer.printCount !== undefined && (
+            <div className="ml-5 mt-0.5">
+              PRINTS: <span className="font-semibold">{printer.printCount.toString().padStart(7, '0')}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Fluid levels + actions row */}
+      {(printer.inkLevel || printer.makeupLevel || (printer.isAvailable && onService) || showConnectButton) && (
         <div className="flex items-center justify-between mt-1.5 ml-12">
-          {/* Left: fluid + message info */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3">
             {(printer.inkLevel || printer.makeupLevel) && (
               <>
                 <div className="flex items-center gap-1" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
@@ -384,15 +398,6 @@ export function PrinterListItem({
                   </div>
                 )}
               </>
-            )}
-            {printer.currentMessage && (
-              <div className={`flex items-center gap-1 text-[10px] ${subTextColor}`}>
-                <FileText className="w-3 h-3 flex-shrink-0" />
-                <span className="font-medium truncate max-w-[100px]">{printer.currentMessage}</span>
-                {printer.printCount !== undefined && (
-                  <span className="font-semibold">#{printer.printCount.toLocaleString()}</span>
-                )}
-              </div>
             )}
           </div>
 
