@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
-import { AlertTriangle } from 'lucide-react';
+
 
 export interface PrinterFault {
   code: string;
@@ -116,63 +116,43 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
   // Build the QR image path: /fault-codes/{code}.png
   const qrImagePath = `/fault-codes/${currentFault.code}.png`;
 
+  const isLastFault = currentIndex >= activeFaults.length - 1;
+
   return (
     <AlertDialogPrimitive.Root open={open} onOpenChange={(v) => { if (!v) handleDismiss(); }}>
       <AlertDialogPrimitive.Portal>
         <AlertDialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <AlertDialogPrimitive.Content
-          className="fixed left-[50%] top-[50%] z-[60] grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 border border-destructive/50 bg-card p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg"
+          className="fixed left-[50%] top-[50%] z-[60] grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] border border-destructive/50 bg-card shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg overflow-hidden"
         >
-          {/* Header */}
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-            </div>
-            <AlertDialogPrimitive.Title className="text-lg font-semibold text-destructive">
-              {currentFault.code} — Fault
-            </AlertDialogPrimitive.Title>
-          </div>
-
-          {/* Description wraps fault details + QR */}
-          <AlertDialogPrimitive.Description asChild>
-            <div className="space-y-3">
-              <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3">
-                <p className="font-medium text-foreground">{currentFault.message}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Code: {currentFault.code} · Severity: {currentFault.severity === 'F' ? 'Fault' : currentFault.severity}
-                </p>
-              </div>
-
-              {/* QR Code image */}
-              <div className="flex flex-col items-center gap-2">
-                <img
-                  src={qrImagePath}
-                  alt={`Scan for help with fault ${currentFault.code}`}
-                  className="w-full max-w-[280px] rounded-md border border-border"
-                  onError={(e) => {
-                    // Hide image if no QR exists for this fault code
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-                <p className="text-xs text-muted-foreground text-center">
-                  Scan with BestCode Buddy for troubleshooting help
-                </p>
-              </div>
-
-              {/* Fault counter & snooze info */}
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                {activeFaults.length > 1 && (
-                  <span>Fault {currentIndex + 1} of {activeFaults.length}</span>
-                )}
-                <span className="ml-auto">Reappears in 3 min if unresolved</span>
-              </div>
-            </div>
+          {/* Hidden title/description for accessibility */}
+          <AlertDialogPrimitive.Title className="sr-only">
+            Fault {currentFault.code}
+          </AlertDialogPrimitive.Title>
+          <AlertDialogPrimitive.Description className="sr-only">
+            {currentFault.message}
           </AlertDialogPrimitive.Description>
 
-          {/* Footer */}
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
-            <AlertDialogPrimitive.Action className={cn(buttonVariants())} onClick={handleDismiss}>
-              {activeFaults.length > 1 && currentIndex < activeFaults.length - 1 ? 'Next Fault' : 'OK'}
+          {/* Full fault code image — contains QR, description, everything */}
+          <img
+            src={qrImagePath}
+            alt={`Fault ${currentFault.code}: ${currentFault.message}`}
+            className="w-full"
+          />
+
+          {/* Footer bar */}
+          <div className="flex items-center justify-between px-4 py-3 bg-card border-t border-border">
+            <div className="text-xs text-muted-foreground">
+              {activeFaults.length > 1 && (
+                <span>Fault {currentIndex + 1} of {activeFaults.length} · </span>
+              )}
+              <span>Reappears in 3 min if unresolved</span>
+            </div>
+            <AlertDialogPrimitive.Action
+              className={cn(buttonVariants(), "min-w-[100px]")}
+              onClick={handleDismiss}
+            >
+              {activeFaults.length > 1 && !isLastFault ? 'Next Fault' : 'OK'}
             </AlertDialogPrimitive.Action>
           </div>
         </AlertDialogPrimitive.Content>
