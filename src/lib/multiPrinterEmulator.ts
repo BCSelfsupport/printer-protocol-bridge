@@ -310,6 +310,8 @@ class PrinterEmulatorInstance {
         response = this.cmdForcePhotoEye(true);
       } else if (trimmedCommand.startsWith('^FF')) {
         response = this.cmdForcePhotoEye(false);
+      } else if (trimmedCommand.startsWith('^LE')) {
+        response = this.cmdListErrors();
       } else {
         response = this.formatError(3, 'CmdNotRec', 'Command not recognized');
         success = false;
@@ -326,6 +328,21 @@ class PrinterEmulatorInstance {
   }
 
   // Command implementations (simplified versions from main emulator)
+
+  private cmdListErrors(): string {
+    const errors: string[] = [];
+    if (this.state.inkLevel === 'EMPTY') {
+      errors.push('10-0002 (F) - Ink fluid level empty.');
+    }
+    if (this.state.makeupLevel === 'EMPTY') {
+      errors.push('11-0002 (F) - Makeup fluid level empty.');
+    }
+    if (errors.length === 0) {
+      return 'End of list';
+    }
+    return errors.join('\r\n') + '\r\nEnd of list';
+  }
+
   private cmdViewVersion(): string {
     return `Remote Server ${this.VERSION} built ${this.BUILD_DATE}`;
   }
