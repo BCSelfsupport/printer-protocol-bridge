@@ -1,13 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogAction,
-} from '@/components/ui/alert-dialog';
+import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog';
+import { cn } from '@/lib/utils';
+import { buttonVariants } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
 
 export interface PrinterFault {
@@ -110,37 +104,44 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
   const primaryFault = activeFaults[0];
 
   return (
-    <AlertDialog open={open} onOpenChange={(v) => { if (!v) handleDismiss(); }}>
-      <AlertDialogContent className="max-w-md border-destructive/50 bg-destructive/5">
-        <AlertDialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
+    <AlertDialogPrimitive.Root open={open} onOpenChange={(v) => { if (!v) handleDismiss(); }}>
+      <AlertDialogPrimitive.Portal>
+        <AlertDialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <AlertDialogPrimitive.Content
+          className="fixed left-[50%] top-[50%] z-[60] grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border border-destructive/50 bg-destructive/5 p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg"
+        >
+          <div className="flex flex-col space-y-2 text-center sm:text-left">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <AlertDialogPrimitive.Title className="text-lg font-semibold text-destructive">
+                {primaryFault?.code} — Fault
+              </AlertDialogPrimitive.Title>
             </div>
-            <AlertDialogTitle className="text-destructive">
-              {primaryFault?.code} — Fault
-            </AlertDialogTitle>
-          </div>
-          <AlertDialogDescription className="mt-3 space-y-2 text-sm">
-            {activeFaults.map(f => (
-              <div key={f.code} className="rounded-md border border-destructive/20 bg-destructive/5 p-3">
-                <p className="font-medium text-foreground">{f.message}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Code: {f.code} · Severity: {f.severity === 'F' ? 'Fault' : f.severity}
+            <AlertDialogPrimitive.Description asChild>
+              <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                {activeFaults.map(f => (
+                  <div key={f.code} className="rounded-md border border-destructive/20 bg-destructive/5 p-3">
+                    <p className="font-medium text-foreground">{f.message}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Code: {f.code} · Severity: {f.severity === 'F' ? 'Fault' : f.severity}
+                    </p>
+                  </div>
+                ))}
+                <p className="pt-2 text-xs text-muted-foreground">
+                  This alert will reappear in 3 minutes if the fault persists.
                 </p>
               </div>
-            ))}
-            <p className="pt-2 text-xs text-muted-foreground">
-              This alert will reappear in 3 minutes if the fault persists.
-            </p>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogAction onClick={handleDismiss}>
-            OK
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+            </AlertDialogPrimitive.Description>
+          </div>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+            <AlertDialogPrimitive.Action className={cn(buttonVariants())} onClick={handleDismiss}>
+              OK
+            </AlertDialogPrimitive.Action>
+          </div>
+        </AlertDialogPrimitive.Content>
+      </AlertDialogPrimitive.Portal>
+    </AlertDialogPrimitive.Root>
   );
 }
