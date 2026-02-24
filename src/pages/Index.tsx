@@ -51,6 +51,7 @@ const Index = () => {
   const [isDevSignedIn, setIsDevSignedIn] = useState(false);
   const [devSignInDialogOpen, setDevSignInDialogOpen] = useState(false);
   const [editingMessage, setEditingMessage] = useState<PrintMessage | null>(null);
+  const [isCreatingNewMessage, setIsCreatingNewMessage] = useState(false);
   // Control whether to auto-open the new message dialog
   const [openNewDialogOnMount, setOpenNewDialogOnMount] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
@@ -455,7 +456,7 @@ const Index = () => {
 
   const getRightPanelContent = (): React.ReactNode | undefined => {
     if (isMobile) return undefined;
-    
+
     if (currentScreen === 'messages') {
       return (
         <MessagesScreen
@@ -469,12 +470,14 @@ const Index = () => {
             return success;
           }}
           onEdit={(message) => {
+            setIsCreatingNewMessage(false);
             setEditingMessage(message);
             setCurrentScreen('editMessage');
           }}
           onNew={(name: string) => {
             addMessage(name);
             const newId = Math.max(0, ...connectionState.messages.map(m => m.id)) + 1;
+            setIsCreatingNewMessage(true);
             setEditingMessage({ id: newId, name });
             setCurrentScreen('editMessage');
           }}
@@ -492,8 +495,9 @@ const Index = () => {
     if (currentScreen === 'editMessage' && editingMessage) {
       return (
         <EditMessageScreen
-          key={editingMessage.name}
+          key={`${editingMessage.name}-${isCreatingNewMessage ? 'new' : 'edit'}`}
           messageName={editingMessage.name}
+          startEmpty={isCreatingNewMessage}
           printerTime={connectionState.status?.printerTime}
           customCounters={connectionState.status?.customCounters}
           connectedPrinterId={connectionState.connectedPrinter?.id ?? null}
@@ -518,10 +522,12 @@ const Index = () => {
             });
             setCurrentScreen('messages');
             setEditingMessage(null);
+            setIsCreatingNewMessage(false);
           }}
           onCancel={() => {
             setCurrentScreen('messages');
             setEditingMessage(null);
+            setIsCreatingNewMessage(false);
           }}
           onGetMessageDetails={async (name: string) => {
             return getMessage(name);
@@ -540,11 +546,12 @@ const Index = () => {
         // Get the current message content from local storage
         const currentMsgName = connectionState.status?.currentMessage;
         const currentMsgContent = currentMsgName ? getMessage(currentMsgName) : undefined;
-        
+
         return (
           <Dashboard
             status={connectionState.status}
             isConnected={connectionState.isConnected}
+            messageContent={currentMsgContent}
             onStart={handleStartPrint}
             onStop={stopPrint}
             onJetStop={handleJetStop}
@@ -570,14 +577,10 @@ const Index = () => {
             onResetAllCounters={resetAllCounters}
             onQueryCounters={queryCounters}
             isSignedIn={isSignedIn}
-            onMount={() => setControlScreenOpen(true)}
-            onUnmount={() => setControlScreenOpen(false)}
             countdownSeconds={countdownSeconds}
             countdownType={countdownType}
-            messageContent={currentMsgContent}
             onNavigate={handleNavigate}
             onTurnOff={handleTurnOff}
-            onHome={handleHome}
             selectedPrinterId={connectionState.connectedPrinter?.id}
             streamHours={connectionState.metrics?.streamHours}
           />
@@ -590,8 +593,9 @@ const Index = () => {
         }
         return editingMessage ? (
           <EditMessageScreen
-            key={editingMessage.name}
+            key={`${editingMessage.name}-${isCreatingNewMessage ? 'new' : 'edit'}`}
             messageName={editingMessage.name}
+            startEmpty={isCreatingNewMessage}
             printerTime={connectionState.status?.printerTime}
             customCounters={connectionState.status?.customCounters}
             connectedPrinterId={connectionState.connectedPrinter?.id ?? null}
@@ -616,10 +620,12 @@ const Index = () => {
               });
               setCurrentScreen('messages');
               setEditingMessage(null);
+              setIsCreatingNewMessage(false);
             }}
             onCancel={() => {
               setCurrentScreen('messages');
               setEditingMessage(null);
+              setIsCreatingNewMessage(false);
             }}
             onGetMessageDetails={async (name: string) => {
               return getMessage(name);
@@ -643,12 +649,14 @@ const Index = () => {
               return success;
             }}
             onEdit={(message) => {
+              setIsCreatingNewMessage(false);
               setEditingMessage(message);
               setCurrentScreen('editMessage');
             }}
             onNew={(name: string) => {
               addMessage(name);
               const newId = Math.max(0, ...connectionState.messages.map(m => m.id)) + 1;
+              setIsCreatingNewMessage(true);
               setEditingMessage({ id: newId, name });
               setCurrentScreen('editMessage');
             }}
