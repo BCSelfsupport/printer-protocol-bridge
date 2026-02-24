@@ -172,17 +172,23 @@ const Index = () => {
     try { sessionStorage.setItem('__cs_alerted_consumables', JSON.stringify([...set])); } catch {}
   };
 
-  // Track previous ink/makeup levels per printer so we only alert on *transitions*
-  // to LOW/EMPTY, not on every poll tick that reports the same level.
-  const prevLevelsRef = useRef<Record<number, { ink?: string; makeup?: string }>>({});
+  // Track previous ink/makeup levels per printer — persisted to localStorage so
+  // they survive app restarts. Stock is only deducted when a level transitions
+  // FROM low/empty BACK TO full/good, proving a physical bottle was replaced.
+  const PREV_LEVELS_KEY = 'codesync-prev-fluid-levels';
+  const prevLevelsRef = useRef<Record<number, { ink?: string; makeup?: string }>>(
+    (() => {
+      try {
+        const stored = localStorage.getItem(PREV_LEVELS_KEY);
+        return stored ? JSON.parse(stored) : {};
+      } catch { return {}; }
+    })()
+  );
+  const persistPrevLevels = (data: Record<number, { ink?: string; makeup?: string }>) => {
+    try { localStorage.setItem(PREV_LEVELS_KEY, JSON.stringify(data)); } catch {}
+  };
 
-  const startupReadyRef = useRef(false);
   useEffect(() => {
-    const timer = setTimeout(() => { startupReadyRef.current = true; }, 5000);
-    return () => clearTimeout(timer);
-  }, []);
-  useEffect(() => {
-    if (!startupReadyRef.current) return;
     printers.forEach(printer => {
       if (!printer.isAvailable) return;
       const linked = consumableStorage.getConsumablesForPrinter(printer.id);
@@ -190,66 +196,62 @@ const Index = () => {
       const prev = prevLevelsRef.current[printer.id];
 
       // Seed baseline on first observation for this printer.
-      // Prevents alerts on startup/login/first connect snapshots.
       if (!prev) {
         prevLevelsRef.current[printer.id] = {
           ink: printer.inkLevel,
           makeup: printer.makeupLevel,
         };
+        persistPrevLevels(prevLevelsRef.current);
         return;
       }
-      
-      const checkAndDeduct = (level: string | undefined, prevLevel: string | undefined, consumable: ReturnType<typeof consumableStorage.getConsumablesForPrinter>['ink'], label: 'Ink' | 'Makeup') => {
-        if (!consumable || !level) return;
-        if (level !== 'LOW' && level !== 'EMPTY') return;
 
-        // Ignore first known reading after UNKNOWN/uninitialized state.
-        if (!prevLevel || prevLevel === 'UNKNOWN') return;
+      // Deduct stock when level goes from LOW/EMPTY → FULL/GOOD (bottle replaced).
+      const checkBottleReplaced = (level: string | undefined, prevLevel: string | undefined, consumable: ReturnType<typeof consumableStorage.getConsumablesForPrinter>['ink'], label: 'Ink' | 'Makeup') => {
+        if (!consumable || !level || !prevLevel) return;
 
-        // Only trigger when transitioning INTO a warning state (not already there)
-        if (level === prevLevel) return;
+        const wasLow = prevLevel === 'LOW' || prevLevel === 'EMPTY';
+        const isNowFull = level === 'FULL' || level === 'GOOD';
 
-        // Auto-deduct 1 unit
-        let deducted = false;
-        if (consumable.currentStock > 0) {
-          consumableStorage.adjustStock(consumable.id, -1);
-          deducted = true;
-          // Log consumption event for burn-rate predictions
-          logConsumption({
-            consumableId: consumable.id,
-            printerId: printer.id,
-            type: label === 'Ink' ? 'ink' : 'makeup',
-            qty: 1,
-          });
+        // A bottle was physically added — transition from low/empty to full/good
+        if (wasLow && isNowFull) {
+          if (consumable.currentStock > 0) {
+            consumableStorage.adjustStock(consumable.id, -1);
+            logConsumption({
+              consumableId: consumable.id,
+              printerId: printer.id,
+              type: label === 'Ink' ? 'ink' : 'makeup',
+              qty: 1,
+            });
+          }
+
+          // Check if we should alert about low stock after deduction
+          const updatedStock = consumable.currentStock > 0 ? consumable.currentStock - 1 : 0;
+          if (updatedStock <= consumable.minimumStock) {
+            const alertKey = `${printer.id}-${consumable.id}-refill`;
+            if (!alertedConsumablesRef.current.has(alertKey)) {
+              alertedConsumablesRef.current.add(alertKey);
+              persistAlerted(alertedConsumablesRef.current);
+              setLowStockAlertQueue(q => [...q, {
+                printerName: printer.name,
+                label,
+                level: 'LOW',
+                consumable: { ...consumable, currentStock: updatedStock },
+                deducted: true,
+              }]);
+            }
+          }
         }
-
-        // Only prompt reorder when inventory is truly low after this event.
-        const updatedStock = deducted ? consumable.currentStock - 1 : consumable.currentStock;
-        if (updatedStock > consumable.minimumStock) return;
-
-        const alertKey = `${printer.id}-${consumable.id}-${level}`;
-        if (alertedConsumablesRef.current.has(alertKey)) return;
-        alertedConsumablesRef.current.add(alertKey);
-        persistAlerted(alertedConsumablesRef.current);
-
-        // Queue a popup alert with updated stock info
-        setLowStockAlertQueue(prev => [...prev, {
-          printerName: printer.name,
-          label,
-          level: level as 'LOW' | 'EMPTY',
-          consumable: { ...consumable, currentStock: updatedStock },
-          deducted,
-        }]);
       };
-      
-      checkAndDeduct(printer.inkLevel, prev.ink, linked.ink, 'Ink');
-      checkAndDeduct(printer.makeupLevel, prev.makeup, linked.makeup, 'Makeup');
+
+      checkBottleReplaced(printer.inkLevel, prev.ink, linked.ink, 'Ink');
+      checkBottleReplaced(printer.makeupLevel, prev.makeup, linked.makeup, 'Makeup');
 
       // Update previous levels after processing
       prevLevelsRef.current[printer.id] = {
         ink: printer.inkLevel,
         makeup: printer.makeupLevel,
       };
+      persistPrevLevels(prevLevelsRef.current);
     });
   }, [printers, consumableStorage]);
 
