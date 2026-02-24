@@ -19,6 +19,15 @@ interface FaultAlertDialogProps {
 
 const SNOOZE_DURATION_MS = 3 * 60 * 1000; // 3 minutes
 const FAULT_IMAGE_EXTENSIONS = ['png', 'bmp', 'jpg', 'jpeg', 'webp'] as const;
+const DASH_VARIANTS_REGEX = /[‐‑‒–—−]/g;
+
+const normalizeFaultCodeForAsset = (rawCode: string) => {
+  const normalizedDashes = rawCode.trim().replace(DASH_VARIANTS_REGEX, '-');
+  const strictCodeMatch = normalizedDashes.match(/\b\d{2}-\d{4}\b/);
+  if (strictCodeMatch) return strictCodeMatch[0];
+
+  return normalizedDashes.replace(/[^a-zA-Z0-9_-]/g, '');
+};
 
 export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps) {
   const [open, setOpen] = useState(false);
@@ -120,9 +129,9 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
   if (!currentFault || (!open && activeFaults.length === 0)) return null;
 
   // Build the fault code image path with extension fallback support (png/bmp/etc)
-  const normalizedFaultCode = currentFault?.code?.trim() ?? '';
+  const normalizedFaultCode = normalizeFaultCodeForAsset(currentFault?.code ?? '');
   const qrImagePath = normalizedFaultCode
-    ? `/fault-codes/${encodeURIComponent(normalizedFaultCode)}.${FAULT_IMAGE_EXTENSIONS[imageExtIndex]}`
+    ? `/fault-codes/${normalizedFaultCode}.${FAULT_IMAGE_EXTENSIONS[imageExtIndex]}`
     : '';
 
   const isLastFault = currentIndex >= activeFaults.length - 1;
