@@ -117,11 +117,12 @@ interface DevPanelProps {
   onToggle: () => void;
   connectedPrinterIp?: string;
   connectedPrinterPort?: number;
+  connectedPrinterId?: number;
   defaultTab?: string;
   showToggleButton?: boolean;
 }
 
-export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinterPort, defaultTab, showToggleButton = true }: DevPanelProps) {
+export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinterPort, connectedPrinterId, defaultTab, showToggleButton = true }: DevPanelProps) {
   const isMobile = useIsMobile();
   
   // Resolve the correct emulator instance for the connected printer
@@ -136,12 +137,17 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
   const [commandLog, setCommandLog] = useState<CommandLogEntry[]>(printerEmulator.getCommandLog());
   const [emulatorEnabled, setEmulatorEnabled] = useState(printerEmulator.enabled);
   const [manualCommand, setManualCommand] = useState('');
+  const [manualResponse, setManualResponse] = useState<{ command: string; response: string; timestamp: Date }[]>([]);
+  const [manualSending, setManualSending] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [buildTriggering, setBuildTriggering] = useState(false);
   const [buildResult, setBuildResult] = useState<{ success: boolean; message: string } | null>(null);
   const [buildRuns, setBuildRuns] = useState<any[]>([]);
   const [buildRunsLoading, setBuildRunsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab || 'status');
+
+  // Whether we can send commands: either via emulator or via real printer
+  const canSendCommands = emulatorEnabled || (!!window.electronAPI && connectedPrinterId != null);
 
   // Network config state
   const NETWORK_STORAGE_KEY = 'printer-network-settings';
@@ -239,16 +245,45 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
     setEmulatorEnabled(enabled);
   };
 
-  const handleSendCommand = () => {
-    if (manualCommand.trim() && emulatorEnabled) {
-      printerEmulator.processCommand(manualCommand.trim());
-      setManualCommand('');
+  const handleSendCommand = async () => {
+    const cmd = manualCommand.trim();
+    if (!cmd || !canSendCommands) return;
+    setManualCommand('');
+    
+    if (emulatorEnabled) {
+      const result = printerEmulator.processCommand(cmd);
+      setManualResponse(prev => [{ command: cmd, response: result.response, timestamp: new Date() }, ...prev].slice(0, 50));
+    } else if (window.electronAPI && connectedPrinterId != null) {
+      setManualSending(true);
+      try {
+        const result = await window.electronAPI.printer.sendCommand(connectedPrinterId, cmd);
+        const responseText = result.success ? (result.response || '(no response)') : `ERROR: ${result.error || 'Unknown error'}`;
+        setManualResponse(prev => [{ command: cmd, response: responseText, timestamp: new Date() }, ...prev].slice(0, 50));
+      } catch (err: any) {
+        setManualResponse(prev => [{ command: cmd, response: `ERROR: ${err.message}`, timestamp: new Date() }, ...prev].slice(0, 50));
+      } finally {
+        setManualSending(false);
+      }
     }
   };
 
-  const handleQuickCommand = (code: string) => {
+  const handleQuickCommand = async (code: string) => {
+    if (!canSendCommands) return;
+    
     if (emulatorEnabled) {
-      printerEmulator.processCommand(code);
+      const result = printerEmulator.processCommand(code);
+      setManualResponse(prev => [{ command: code, response: result.response, timestamp: new Date() }, ...prev].slice(0, 50));
+    } else if (window.electronAPI && connectedPrinterId != null) {
+      setManualSending(true);
+      try {
+        const result = await window.electronAPI.printer.sendCommand(connectedPrinterId, code);
+        const responseText = result.success ? (result.response || '(no response)') : `ERROR: ${result.error || 'Unknown error'}`;
+        setManualResponse(prev => [{ command: code, response: responseText, timestamp: new Date() }, ...prev].slice(0, 50));
+      } catch (err: any) {
+        setManualResponse(prev => [{ command: code, response: `ERROR: ${err.message}`, timestamp: new Date() }, ...prev].slice(0, 50));
+      } finally {
+        setManualSending(false);
+      }
     }
   };
 
@@ -708,48 +743,80 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                     onChange={(e) => setManualCommand(e.target.value)}
                     placeholder="^SU"
                     className="font-mono text-sm"
-                    disabled={!emulatorEnabled}
+                    disabled={!canSendCommands || manualSending}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendCommand()}
                   />
                   <Button
                     size="sm"
                     onClick={handleSendCommand}
-                    disabled={!emulatorEnabled || !manualCommand.trim()}
+                    disabled={!canSendCommands || !manualCommand.trim() || manualSending}
                   >
-                    <Send className="w-4 h-4" />
+                    {manualSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </Button>
+                </div>
+
+                {/* Connection Mode Indicator */}
+                <div className="mb-3 text-[10px] font-mono px-2 py-1 rounded bg-muted">
+                  {emulatorEnabled ? (
+                    <span className="text-warning">⚡ Emulator Mode</span>
+                  ) : connectedPrinterId != null ? (
+                    <span className="text-success">🔌 Live: {connectedPrinterIp}:{connectedPrinterPort} (ID {connectedPrinterId})</span>
+                  ) : (
+                    <span className="text-muted-foreground">⚠ No printer connected — connect a printer or enable emulator</span>
+                  )}
                 </div>
 
                 {/* Quick Commands */}
                 <div className="mb-4">
                   <h4 className="text-xs font-semibold text-muted-foreground mb-2">Quick Commands</h4>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^SJ 1')} disabled={!emulatorEnabled}>
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^SJ 1')} disabled={!canSendCommands || manualSending}>
                       <Play className="w-3 h-3 mr-2" />Start Jet
                     </Button>
-                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^SJ 0')} disabled={!emulatorEnabled}>
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^SJ 0')} disabled={!canSendCommands || manualSending}>
                       <Square className="w-3 h-3 mr-2" />Stop Jet
                     </Button>
-                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^PR 1')} disabled={!emulatorEnabled}>
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^PR 1')} disabled={!canSendCommands || manualSending}>
                       <Zap className="w-3 h-3 mr-2" />HV On
                     </Button>
-                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^PR 0')} disabled={!emulatorEnabled}>
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^PR 0')} disabled={!canSendCommands || manualSending}>
                       <Zap className="w-3 h-3 mr-2 opacity-50" />HV Off
                     </Button>
-                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^SU')} disabled={!emulatorEnabled}>
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^SU')} disabled={!canSendCommands || manualSending}>
                       <List className="w-3 h-3 mr-2" />Status
                     </Button>
-                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^VV')} disabled={!emulatorEnabled}>
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^VV')} disabled={!canSendCommands || manualSending}>
                       <BookOpen className="w-3 h-3 mr-2" />Version
                     </Button>
-                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^LM')} disabled={!emulatorEnabled}>
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^LM')} disabled={!canSendCommands || manualSending}>
                       <List className="w-3 h-3 mr-2" />List Msgs
                     </Button>
-                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^CN')} disabled={!emulatorEnabled}>
+                    <Button variant="outline" size="sm" className="text-xs justify-start" onClick={() => handleQuickCommand('^CN')} disabled={!canSendCommands || manualSending}>
                       <List className="w-3 h-3 mr-2" />Counters
                     </Button>
                   </div>
                 </div>
+
+                {/* Response Log */}
+                {manualResponse.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-xs font-semibold text-muted-foreground">Response Log</h4>
+                      <Button variant="ghost" size="sm" className="text-[10px] h-5 px-2" onClick={() => setManualResponse([])}>
+                        Clear
+                      </Button>
+                    </div>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {manualResponse.map((entry, i) => (
+                        <div key={i} className="bg-muted rounded p-2 text-[10px] font-mono">
+                          <div className="text-primary font-bold">{'>'} {entry.command}</div>
+                          <pre className="text-foreground whitespace-pre-wrap mt-1">{entry.response}</pre>
+                          <div className="text-muted-foreground mt-1">{entry.timestamp.toLocaleTimeString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Command Reference */}
                 <div className="text-[10px] text-muted-foreground space-y-1 bg-muted/50 rounded-lg p-3 border border-border">
