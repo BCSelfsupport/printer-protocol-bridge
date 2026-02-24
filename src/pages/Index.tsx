@@ -156,7 +156,26 @@ const Index = () => {
   // Low-stock alerts: auto-deduct and show popup when printer signals LOW/EMPTY
   // Delay alerts on startup so update notification can appear first
   const [lowStockAlertQueue, setLowStockAlertQueue] = useState<LowStockAlertData[]>([]);
-  const alertedConsumablesRef = useRef<Set<string>>(new Set());
+
+  // Persist alerted keys in sessionStorage so they survive React remounts / page
+  // navigations but reset on a fresh app launch (closing Electron & reopening).
+  const alertedConsumablesRef = useRef<Set<string>>(
+    (() => {
+      try {
+        const stored = sessionStorage.getItem('__cs_alerted_consumables');
+        return stored ? new Set(JSON.parse(stored) as string[]) : new Set<string>();
+      } catch { return new Set<string>(); }
+    })()
+  );
+  // Keep ref → sessionStorage in sync
+  const persistAlerted = (set: Set<string>) => {
+    try { sessionStorage.setItem('__cs_alerted_consumables', JSON.stringify([...set])); } catch {}
+  };
+
+  // Track previous ink/makeup levels per printer so we only alert on *transitions*
+  // to LOW/EMPTY, not on every poll tick that reports the same level.
+  const prevLevelsRef = useRef<Record<number, { ink?: string; makeup?: string }>>({});
+
   const startupReadyRef = useRef(false);
   useEffect(() => {
     const timer = setTimeout(() => { startupReadyRef.current = true; }, 5000);
@@ -167,14 +186,20 @@ const Index = () => {
     printers.forEach(printer => {
       if (!printer.isAvailable) return;
       const linked = consumableStorage.getConsumablesForPrinter(printer.id);
+
+      const prev = prevLevelsRef.current[printer.id] ?? {};
       
-      const checkAndDeduct = (level: string | undefined, consumable: ReturnType<typeof consumableStorage.getConsumablesForPrinter>['ink'], label: 'Ink' | 'Makeup') => {
+      const checkAndDeduct = (level: string | undefined, prevLevel: string | undefined, consumable: ReturnType<typeof consumableStorage.getConsumablesForPrinter>['ink'], label: 'Ink' | 'Makeup') => {
         if (!consumable || !level) return;
         if (level !== 'LOW' && level !== 'EMPTY') return;
+
+        // Only trigger when transitioning INTO a warning state (not already there)
+        if (level === prevLevel) return;
         
         const alertKey = `${printer.id}-${consumable.id}-${level}`;
         if (alertedConsumablesRef.current.has(alertKey)) return;
         alertedConsumablesRef.current.add(alertKey);
+        persistAlerted(alertedConsumablesRef.current);
         
         // Auto-deduct 1 unit
         let deducted = false;
@@ -201,8 +226,14 @@ const Index = () => {
         }]);
       };
       
-      checkAndDeduct(printer.inkLevel, linked.ink, 'Ink');
-      checkAndDeduct(printer.makeupLevel, linked.makeup, 'Makeup');
+      checkAndDeduct(printer.inkLevel, prev.ink, linked.ink, 'Ink');
+      checkAndDeduct(printer.makeupLevel, prev.makeup, linked.makeup, 'Makeup');
+
+      // Update previous levels after processing
+      prevLevelsRef.current[printer.id] = {
+        ink: printer.inkLevel,
+        makeup: printer.makeupLevel,
+      };
     });
   }, [printers, consumableStorage]);
 
