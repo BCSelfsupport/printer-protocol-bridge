@@ -23,7 +23,7 @@ const DASH_VARIANTS_REGEX = /[‐‑‒–—−]/g;
 
 const normalizeFaultCodeForAsset = (rawCode: string) => {
   const normalizedDashes = rawCode.trim().replace(DASH_VARIANTS_REGEX, '-');
-  const strictCodeMatch = normalizedDashes.match(/\b\d{2}-\d{4}\b/);
+  const strictCodeMatch = normalizedDashes.match(/\b[0-9A-Fa-f]{2}-[0-9A-Fa-f]{4}\b/);
   if (strictCodeMatch) return strictCodeMatch[0];
 
   return normalizedDashes.replace(/[^a-zA-Z0-9_-]/g, '');

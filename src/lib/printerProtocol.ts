@@ -245,7 +245,7 @@ export function parseErrorListResponse(response: string): ErrorListResult | null
   console.log('[parseErrorListResponse] raw:', response);
 
   // Must contain at least "End of list" or a recognizable error line
-  if (!/end of list/i.test(response) && !/\d+-\d+\s*\(/.test(response)) {
+  if (!/end of list/i.test(response) && !/[0-9A-Fa-f]+-[0-9A-Fa-f]+\s*\(/.test(response)) {
     console.log('[parseErrorListResponse] not a ^LE response');
     return null;
   }
@@ -256,8 +256,8 @@ export function parseErrorListResponse(response: string): ErrorListResult | null
 
   const lines = response.split(/[\r\n]+/);
   for (const line of lines) {
-    // Match error lines like "10-0002 (F) - Ink fluid level empty."
-    const m = line.match(/(\d+-\d+)\s*\((\w)\)\s*-\s*(.+)/);
+    // Match error lines like "10-0002 (F) - Ink fluid level empty." (supports hex codes like 0A-8001)
+    const m = line.match(/([0-9A-Fa-f]+-[0-9A-Fa-f]+)\s*\((\w)\)\s*-\s*(.+)/);
     if (m) {
       const [, code, severity, message] = m;
       errors.push({ code, severity, message: message.trim() });
