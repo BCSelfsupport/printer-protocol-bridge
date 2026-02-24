@@ -490,6 +490,7 @@ const Index = () => {
     if (currentScreen === 'editMessage' && editingMessage) {
       return (
         <EditMessageScreen
+          key={editingMessage.name}
           messageName={editingMessage.name}
           printerTime={connectionState.status?.printerTime}
           customCounters={connectionState.status?.customCounters}
@@ -587,6 +588,7 @@ const Index = () => {
         }
         return editingMessage ? (
           <EditMessageScreen
+            key={editingMessage.name}
             messageName={editingMessage.name}
             printerTime={connectionState.status?.printerTime}
             customCounters={connectionState.status?.customCounters}
