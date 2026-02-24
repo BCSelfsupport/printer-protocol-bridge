@@ -275,6 +275,67 @@ export function usePrinterConnection() {
   const setServiceScreenOpen = (_: boolean) => {};
   const setControlScreenOpen = (_: boolean) => {};
 
+  // Quick-status polling: ephemeral TCP connect → ^SU → disconnect for reachable,
+  // non-connected printers. Runs every 15s to populate ink/makeup/message/count
+  // on the printer cards without requiring a full connection.
+  const quickStatusInProgressRef = useRef(false);
+  const quickStatusPoll = useCallback(async () => {
+    if (quickStatusInProgressRef.current) return;
+    if (shouldUseEmulator()) return;
+
+    const connectedId = connectedPrinterIdRef.current;
+    const targets = printersRef.current.filter(
+      (p) => p.isAvailable && p.id !== connectedId
+    );
+    if (targets.length === 0) return;
+
+    quickStatusInProgressRef.current = true;
+    try {
+      const results = await printerTransport.quickStatus(
+        targets.map((p) => ({ id: p.id, ipAddress: p.ipAddress, port: p.port }))
+      );
+      if (!results) return;
+
+      results.forEach((r) => {
+        if (!r.ok || !r.raw) return;
+        const parsed = parseStatusResponse(r.raw);
+        if (!parsed) return;
+
+        const hvOn = parsed.printStatus === 'Ready';
+        const inkLevel = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['inkLevel'];
+        const makeupLevel = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['makeupLevel'];
+        const parsedMessage = parsed.currentMessage && parsed.currentMessage !== 'NONE'
+          ? parsed.currentMessage.toUpperCase()
+          : undefined;
+
+        updatePrinterStatus(r.id, {
+          isAvailable: true,
+          status: hvOn ? 'ready' : 'not_ready',
+          hasActiveErrors: parsed.errorActive ?? false,
+          inkLevel,
+          makeupLevel,
+          ...(parsedMessage !== undefined ? { currentMessage: parsedMessage } : {}),
+        });
+      });
+    } catch (err) {
+      console.error('[quick-status] Poll failed:', err);
+    } finally {
+      quickStatusInProgressRef.current = false;
+    }
+  }, [updatePrinterStatus]);
+
+  useEffect(() => {
+    if (!availabilityPollingEnabled) return;
+    if (shouldUseEmulator()) return;
+
+    const initialTimer = setTimeout(quickStatusPoll, 5000);
+    const interval = setInterval(quickStatusPoll, 15000);
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [availabilityPollingEnabled, quickStatusPoll]);
+
 
   // Stable callback for service polling – avoids effect churn
   const handleServiceResponse = useCallback((raw: string) => {

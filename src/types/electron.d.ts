@@ -6,6 +6,11 @@ interface PrinterAPI {
     responseTime?: number;
     error?: string;
   }[]>;
+  quickStatus: (printers: { id: number; ipAddress: string; port: number }[]) => Promise<{
+    id: number;
+    ok: boolean;
+    raw?: string;
+  }[]>;
   // Register printer connection details without opening a TCP socket.
   setMeta: (printer: { id: number; ipAddress: string; port: number }) => Promise<{ success: boolean }>;
   connect: (printer: { id: number; ipAddress: string; port: number }) => Promise<{ success: boolean; reused?: boolean; error?: string }>;

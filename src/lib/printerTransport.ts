@@ -92,6 +92,22 @@ export const printerTransport = {
     return null; // No transport available
   },
 
+  /** Quick ephemeral status query: connect → ^SU → disconnect for each printer */
+  async quickStatus(printers: { id: number; ipAddress: string; port: number }[]): Promise<{ id: number; ok: boolean; raw?: string }[] | null> {
+    if (isRelayMode()) {
+      try {
+        const data = await relayFetch('quick-status', { printers });
+        return data.results || [];
+      } catch {
+        return null;
+      }
+    }
+    if (window.electronAPI?.printer?.quickStatus) {
+      return window.electronAPI.printer.quickStatus(printers);
+    }
+    return null;
+  },
+
   async connect(printer: { id: number; ipAddress: string; port: number }) {
     if (isRelayMode()) {
       return relayFetch('connect', { printer });
