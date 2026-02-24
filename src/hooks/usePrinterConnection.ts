@@ -89,6 +89,8 @@ export function usePrinterConnection() {
   const [availabilityPollingEnabled, setAvailabilityPollingEnabled] = useState(true);
   // Hysteresis: track consecutive offline counts per printer to prevent flapping
   const offlineCountsRef = useRef<Record<number, number>>({});
+  // Persistent ^LE empty overrides — prevents ^SU from downgrading EMPTY back to LOW
+  const leEmptyOverridesRef = useRef<{ inkEmpty: boolean; makeupEmpty: boolean }>({ inkEmpty: false, makeupEmpty: false });
   // Ref to avoid re-creating checkPrinterStatus when printers array changes
   const printersRef = useRef(printers);
   printersRef.current = printers;
@@ -288,9 +290,10 @@ export function usePrinterConnection() {
     const jetActive = parsed.subsystems?.vltOn || hvOn;
     console.log('[handleServiceResponse] Parsed ready state (printStatus):', parsed.printStatus, '-> hvOn:', hvOn, 'jetActive:', jetActive);
 
-    // Sync the printer's status in the list with the HV state + fluid levels
-    const inkLevelCard = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['inkLevel'];
-    const makeupLevelCard = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['makeupLevel'];
+    // Apply ^LE empty overrides so printer card also shows EMPTY, not LOW
+    const leOverrides = leEmptyOverridesRef.current;
+    const inkLevelCard = (leOverrides.inkEmpty ? 'EMPTY' : (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN')) as Printer['inkLevel'];
+    const makeupLevelCard = (leOverrides.makeupEmpty ? 'EMPTY' : (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN')) as Printer['makeupLevel'];
     // Extract current message from ^SU if available (ignore "NONE" placeholder)
     const parsedMessage = parsed.currentMessage && parsed.currentMessage !== 'NONE' ? parsed.currentMessage.toUpperCase() : undefined;
     if (connectedPrinterId) {
@@ -312,8 +315,10 @@ export function usePrinterConnection() {
       console.log('[handleServiceResponse] Updating state, previous isRunning:', prev.status?.isRunning, '-> new:', hvOn);
 
       // Map parsed levels to status-compatible types
-      const inkLevel = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
-      const makeupLevel = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+      // Apply ^LE empty overrides so ^SU can never downgrade EMPTY back to LOW
+      const leOverrides = leEmptyOverridesRef.current;
+      const inkLevel = (leOverrides.inkEmpty ? 'EMPTY' : (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN')) as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+      const makeupLevel = (leOverrides.makeupEmpty ? 'EMPTY' : (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN')) as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
 
       return {
         ...prev,
@@ -492,7 +497,10 @@ export function usePrinterConnection() {
     const parsed = parseErrorListResponse(raw);
     if (!parsed) return;
 
-    // Only override if ^LE confirms an EMPTY fault
+    // Update the persistent ref so handleServiceResponse can apply overrides
+    leEmptyOverridesRef.current = { inkEmpty: parsed.inkEmpty, makeupEmpty: parsed.makeupEmpty };
+
+    // Only override state if ^LE confirms an EMPTY fault
     if (!parsed.inkEmpty && !parsed.makeupEmpty) return;
 
     setConnectionState((prev) => {
