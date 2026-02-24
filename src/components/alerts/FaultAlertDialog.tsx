@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog';
-import { cn } from '@/lib/utils';
-import { buttonVariants } from '@/components/ui/button';
 
 
 export interface PrinterFault {
@@ -39,6 +37,10 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
   const [dismissedCodes, setDismissedCodes] = useState<Set<string>>(new Set());
   const [imageExtIndex, setImageExtIndex] = useState(0);
 
+  const previousActiveCodesRef = useRef<Set<string>>(new Set());
+  const previousDismissedCodesRef = useRef<Set<string>>(new Set());
+  const hasSeededConnectedSnapshotRef = useRef(false);
+
   // Determine which faults should trigger a popup (not snoozed)
   const getActiveFaults = useCallback(() => {
     const now = Date.now();
@@ -50,22 +52,49 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
     return faults.filter(f => !snoozedRef.current[f.code]);
   }, [faults]);
 
-  // When faults change, check if we need to show the dialog
+  // When faults change, show dialog only for newly introduced faults
+  // (or when a snoozed/dismissed fault becomes eligible again).
   useEffect(() => {
-    if (!isConnected || faults.length === 0) {
+    if (!isConnected) {
       setOpen(false);
       setCurrentIndex(0);
+      previousActiveCodesRef.current = new Set();
+      previousDismissedCodesRef.current = new Set();
+      hasSeededConnectedSnapshotRef.current = false;
       return;
     }
 
     const active = getActiveFaults();
-    if (active.length > 0) {
-      const hasNew = active.some(f => !dismissedCodes.has(f.code));
-      if (hasNew) {
-        setCurrentIndex(0);
-        setOpen(true);
-      }
+    const activeCodes = new Set(active.map((fault) => fault.code));
+
+    // Seed first connected snapshot to avoid popup on startup/connect.
+    if (!hasSeededConnectedSnapshotRef.current) {
+      hasSeededConnectedSnapshotRef.current = true;
+      previousActiveCodesRef.current = activeCodes;
+      previousDismissedCodesRef.current = new Set(dismissedCodes);
+      return;
     }
+
+    const previousActiveCodes = previousActiveCodesRef.current;
+    const previousDismissedCodes = previousDismissedCodesRef.current;
+
+    const hasNewFault = active.some((fault) => !previousActiveCodes.has(fault.code));
+    const hasDismissalExpired = active.some((fault) =>
+      previousDismissedCodes.has(fault.code) && !dismissedCodes.has(fault.code),
+    );
+
+    if ((hasNewFault || hasDismissalExpired) && active.length > 0) {
+      setCurrentIndex(0);
+      setOpen(true);
+    }
+
+    if (active.length === 0) {
+      setOpen(false);
+      setCurrentIndex(0);
+    }
+
+    previousActiveCodesRef.current = activeCodes;
+    previousDismissedCodesRef.current = new Set(dismissedCodes);
   }, [faults, isConnected, getActiveFaults, dismissedCodes]);
 
   // When faults are cleared, reset
@@ -82,6 +111,9 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
     if (!isConnected) {
       setDismissedCodes(new Set());
       snoozedRef.current = {};
+      previousActiveCodesRef.current = new Set();
+      previousDismissedCodesRef.current = new Set();
+      hasSeededConnectedSnapshotRef.current = false;
       setCurrentIndex(0);
     }
   }, [isConnected]);
@@ -128,12 +160,18 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
 
   if (!currentFault || (!open && activeFaults.length === 0)) return null;
 
-  // Build the fault code image path with extension fallback support (png/bmp/etc)
-  // Use BASE_URL so assets resolve in both web preview (/) and Electron file:// builds (./)
+  // Build the fault image URL robustly for both web and Electron file:// runtime.
   const normalizedFaultCode = normalizeFaultCodeForAsset(currentFault?.code ?? '');
-  const baseUrl = import.meta.env.BASE_URL ?? '/';
   const qrImagePath = normalizedFaultCode
-    ? `${baseUrl}fault-codes/${normalizedFaultCode}.${FAULT_IMAGE_EXTENSIONS[imageExtIndex]}`
+    ? (() => {
+        const ext = FAULT_IMAGE_EXTENSIONS[imageExtIndex];
+        try {
+          return new URL(`fault-codes/${normalizedFaultCode}.${ext}`, document.baseURI).toString();
+        } catch {
+          const baseUrl = import.meta.env.BASE_URL ?? '/';
+          return `${baseUrl}fault-codes/${normalizedFaultCode}.${ext}`;
+        }
+      })()
     : '';
 
   const isLastFault = currentIndex >= activeFaults.length - 1;
