@@ -208,12 +208,7 @@ const Index = () => {
 
         // Only trigger when transitioning INTO a warning state (not already there)
         if (level === prevLevel) return;
-        
-        const alertKey = `${printer.id}-${consumable.id}-${level}`;
-        if (alertedConsumablesRef.current.has(alertKey)) return;
-        alertedConsumablesRef.current.add(alertKey);
-        persistAlerted(alertedConsumablesRef.current);
-        
+
         // Auto-deduct 1 unit
         let deducted = false;
         if (consumable.currentStock > 0) {
@@ -227,9 +222,17 @@ const Index = () => {
             qty: 1,
           });
         }
-        
-        // Queue a popup alert with updated stock info
+
+        // Only prompt reorder when inventory is truly low after this event.
         const updatedStock = deducted ? consumable.currentStock - 1 : consumable.currentStock;
+        if (updatedStock > consumable.minimumStock) return;
+
+        const alertKey = `${printer.id}-${consumable.id}-${level}`;
+        if (alertedConsumablesRef.current.has(alertKey)) return;
+        alertedConsumablesRef.current.add(alertKey);
+        persistAlerted(alertedConsumablesRef.current);
+
+        // Queue a popup alert with updated stock info
         setLowStockAlertQueue(prev => [...prev, {
           printerName: printer.name,
           label,
@@ -249,6 +252,25 @@ const Index = () => {
       };
     });
   }, [printers, consumableStorage]);
+
+  // Drop stale queued alerts after manual stock replenishment and keep card stock in sync.
+  useEffect(() => {
+    setLowStockAlertQueue(prev => prev
+      .map((alert) => {
+        const live = consumableStorage.getConsumable(alert.consumable.id);
+        if (!live) return null;
+        if (live.currentStock > live.minimumStock) return null;
+        return {
+          ...alert,
+          consumable: {
+            ...live,
+            currentStock: live.currentStock,
+          },
+        };
+      })
+      .filter((alert): alert is LowStockAlertData => alert !== null)
+    );
+  }, [consumableStorage.consumables, consumableStorage]);
 
   // Auto-downtime detection: track jet/HV state transitions for active production runs
   const prevPrinterStateRef = useRef<{ jetRunning: boolean; isRunning: boolean }>({ jetRunning: false, isRunning: false });
