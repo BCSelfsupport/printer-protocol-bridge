@@ -116,6 +116,7 @@ interface EditMessageScreenProps {
   customCounters?: number[];
   connectedPrinterId?: number | null;
   isConnected?: boolean;
+  startEmpty?: boolean;
 }
 
 export function EditMessageScreen({
@@ -127,20 +128,23 @@ export function EditMessageScreen({
   customCounters,
   connectedPrinterId,
   isConnected = false,
+  startEmpty = false,
 }: EditMessageScreenProps) {
   const [message, setMessage] = useState<MessageDetails>({
     name: messageName,
     height: 16,
     width: 200,
-    fields: [
-      { id: 1, type: 'text', data: messageName, x: 0, y: 16, width: 60, height: 16, fontSize: 'Standard16High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
-    ],
+    fields: startEmpty
+      ? []
+      : [
+          { id: 1, type: 'text', data: messageName, x: 0, y: 16, width: 60, height: 16, fontSize: 'Standard16High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
+        ],
     templateValue: '16', // Default to 16 dots single template
     settings: defaultMessageSettings,
     advancedSettings: defaultAdvancedSettings,
   });
   const [loading, setLoading] = useState(false);
-  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(1);
+  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(startEmpty ? null : 1);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [loadedTemplate, setLoadedTemplate] = useState<ParsedTemplate | null>(null);
   const [saveAsDialogOpen, setSaveAsDialogOpen] = useState(false);
@@ -165,6 +169,11 @@ export function EditMessageScreen({
 
   // Load message details when component mounts (only once)
   useEffect(() => {
+    if (startEmpty) {
+      setInitialLoadDone(true);
+      return;
+    }
+
     if (onGetMessageDetails && !initialLoadDone) {
       setLoading(true);
       onGetMessageDetails(messageName)
@@ -181,7 +190,7 @@ export function EditMessageScreen({
           setInitialLoadDone(true);
         });
     }
-  }, [messageName, onGetMessageDetails, initialLoadDone]);
+  }, [messageName, onGetMessageDetails, initialLoadDone, startEmpty]);
 
   // Auto-load linked data source values (first row) when editor opens
   useEffect(() => {
