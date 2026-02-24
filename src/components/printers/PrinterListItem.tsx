@@ -197,7 +197,7 @@ export function PrinterListItem({
             )}
             
             {/* Fluid levels */}
-            {printer.isAvailable && (
+            {(printer.inkLevel || printer.makeupLevel) && (
               <div className="flex items-center gap-3 mt-1">
                 <div className="flex items-center gap-1" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
                   <Palette className={`w-3.5 h-3.5 ${getFluidColor(printer.inkLevel)}`} />
@@ -357,11 +357,11 @@ export function PrinterListItem({
       </div>
 
       {/* Bottom row: fluid levels + actions */}
-      {(printer.isAvailable || printer.currentMessage) && (
+      {(printer.inkLevel || printer.makeupLevel || printer.currentMessage) && (
         <div className="flex items-center justify-between mt-1.5 ml-12">
           {/* Left: fluid + message info */}
           <div className="flex items-center gap-3 min-w-0">
-            {printer.isAvailable && (
+            {(printer.inkLevel || printer.makeupLevel) && (
               <>
                 <div className="flex items-center gap-1" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
                   <Palette className={`w-3 h-3 ${getFluidColor(printer.inkLevel)}`} />
