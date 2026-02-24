@@ -187,11 +187,24 @@ const Index = () => {
       if (!printer.isAvailable) return;
       const linked = consumableStorage.getConsumablesForPrinter(printer.id);
 
-      const prev = prevLevelsRef.current[printer.id] ?? {};
+      const prev = prevLevelsRef.current[printer.id];
+
+      // Seed baseline on first observation for this printer.
+      // Prevents alerts on startup/login/first connect snapshots.
+      if (!prev) {
+        prevLevelsRef.current[printer.id] = {
+          ink: printer.inkLevel,
+          makeup: printer.makeupLevel,
+        };
+        return;
+      }
       
       const checkAndDeduct = (level: string | undefined, prevLevel: string | undefined, consumable: ReturnType<typeof consumableStorage.getConsumablesForPrinter>['ink'], label: 'Ink' | 'Makeup') => {
         if (!consumable || !level) return;
         if (level !== 'LOW' && level !== 'EMPTY') return;
+
+        // Ignore first known reading after UNKNOWN/uninitialized state.
+        if (!prevLevel || prevLevel === 'UNKNOWN') return;
 
         // Only trigger when transitioning INTO a warning state (not already there)
         if (level === prevLevel) return;
