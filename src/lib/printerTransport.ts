@@ -93,7 +93,7 @@ export const printerTransport = {
   },
 
   /** Quick ephemeral status query: connect → ^SU → disconnect for each printer */
-  async quickStatus(printers: { id: number; ipAddress: string; port: number }[]): Promise<{ id: number; ok: boolean; raw?: string }[] | null> {
+  async quickStatus(printers: { id: number; ipAddress: string; port: number }[]): Promise<{ id: number; ok: boolean; suRaw?: string; leRaw?: string; smRaw?: string; raw?: string }[] | null> {
     if (isRelayMode()) {
       try {
         const data = await relayFetch('quick-status', { printers });

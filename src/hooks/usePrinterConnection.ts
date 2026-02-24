@@ -296,25 +296,52 @@ export function usePrinterConnection() {
       );
       if (!results) return;
 
-      results.forEach((r) => {
-        if (!r.ok || !r.raw) return;
-        const parsed = parseStatusResponse(r.raw);
+      results.forEach((r: any) => {
+        if (!r.ok) return;
+
+        // Parse ^SU response
+        const suRaw = r.suRaw || r.raw || '';
+        const parsed = parseStatusResponse(suRaw);
         if (!parsed) return;
 
         const hvOn = parsed.printStatus === 'Ready';
-        const inkLevel = (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['inkLevel'];
-        const makeupLevel = (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN') as Printer['makeupLevel'];
-        const parsedMessage = parsed.currentMessage && parsed.currentMessage !== 'NONE'
-          ? parsed.currentMessage.toUpperCase()
-          : undefined;
+
+        // Parse ^LE response for authoritative EMPTY detection
+        const leRaw = r.leRaw || '';
+        const leResult = parseErrorListResponse(leRaw);
+        const inkEmpty = leResult?.inkEmpty ?? false;
+        const makeupEmpty = leResult?.makeupEmpty ?? false;
+
+        const inkLevel = (inkEmpty ? 'EMPTY' : (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN')) as Printer['inkLevel'];
+        const makeupLevel = (makeupEmpty ? 'EMPTY' : (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN')) as Printer['makeupLevel'];
+
+        // Parse ^SM response for current message name
+        // ^SM response format: "^SM\r\nMESSAGE_NAME\r\nSuccess\r\n>"
+        const smRaw = r.smRaw || '';
+        let currentMessage: string | undefined;
+        const smLines = smRaw.split(/\r?\n/).map((l: string) => l.trim()).filter((l: string) => l && l !== '^SM' && !/^success$/i.test(l) && l !== '>');
+        if (smLines.length > 0) {
+          const msgName = smLines[0].replace(/[^\x20-\x7E]/g, '').trim();
+          if (msgName && msgName !== 'NONE') {
+            currentMessage = msgName.toUpperCase();
+          }
+        }
+
+        // Detect active errors from ^LE
+        const hasErrors = (leResult?.errors?.length ?? 0) > 0;
+
+        // Parse print count from ^SU PRINT: field
+        const printCountMatch = suRaw.match(/PRINT\s*:\s*(\d+)/i);
+        const printCount = printCountMatch ? parseInt(printCountMatch[1], 10) : undefined;
 
         updatePrinterStatus(r.id, {
           isAvailable: true,
           status: hvOn ? 'ready' : 'not_ready',
-          hasActiveErrors: parsed.errorActive ?? false,
+          hasActiveErrors: hasErrors || (parsed.errorActive ?? false),
           inkLevel,
           makeupLevel,
-          ...(parsedMessage !== undefined ? { currentMessage: parsedMessage } : {}),
+          ...(currentMessage !== undefined ? { currentMessage } : {}),
+          ...(printCount !== undefined ? { printCount } : {}),
         });
       });
     } catch (err) {

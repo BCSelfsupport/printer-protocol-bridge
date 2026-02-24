@@ -280,19 +280,37 @@ ipcMain.handle('printer:check-status', async (event, printers) => {
   return results;
 });
 
-// Quick status: ephemeral TCP connect → ^SU → disconnect.
-// Returns ink/makeup levels, current message, print count without a persistent connection.
+// Quick status: ephemeral TCP connect → ^SU + ^LE + ^SM → disconnect.
+// Returns ink/makeup levels (with EMPTY override from ^LE), current message name (^SM),
+// and print count without a persistent connection.
 // IMPORTANT: Only call this for printers that are NOT currently connected via the main socket.
 ipcMain.handle('printer:quick-status', async (event, printers) => {
-  const TIMEOUT = 5000;
+  const TIMEOUT = 8000;
+
+  // Send a command on a socket and collect the response until '>' prompt
+  const sendAndCollect = (socket, command) => new Promise((resolve) => {
+    let buf = '';
+    const onData = (data) => {
+      handleTelnetNegotiation(socket, data);
+      const stripped = stripTelnetBytes(data);
+      if (stripped && stripped.length > 0) {
+        buf += stripped.toString();
+        if (buf.includes('>')) {
+          socket.off('data', onData);
+          resolve(buf);
+        }
+      }
+    };
+    socket.on('data', onData);
+    try { socket.write(command + '\r\n'); } catch (_) { resolve(''); }
+    // Safety timeout per command
+    setTimeout(() => { socket.off('data', onData); resolve(buf); }, 3000);
+  });
 
   const queryOne = (printer) => new Promise((resolve) => {
     const socket = new net.Socket();
     socket.setTimeout(TIMEOUT);
     let resolved = false;
-    let dataBuffer = '';
-    let handshakeDone = false;
-    let commandSent = false;
 
     const finish = (result) => {
       if (resolved) return;
@@ -302,27 +320,23 @@ ipcMain.handle('printer:quick-status', async (event, printers) => {
     };
 
     socket.on('connect', () => {
-      // Wait briefly for Telnet negotiation before sending command
-      setTimeout(() => {
-        if (!resolved) {
-          commandSent = true;
-          try { socket.write('^SU\r\n'); } catch (_) { finish({ id: printer.id, ok: false }); }
+      // Wait for Telnet negotiation before sending commands
+      setTimeout(async () => {
+        if (resolved) return;
+        try {
+          // Drain any welcome banner
+          const suRaw = await sendAndCollect(socket, '^SU');
+          const leRaw = await sendAndCollect(socket, '^LE');
+          const smRaw = await sendAndCollect(socket, '^SM');
+          finish({ id: printer.id, ok: true, suRaw, leRaw, smRaw });
+        } catch (_) {
+          finish({ id: printer.id, ok: false });
         }
       }, 600);
     });
 
-    socket.on('data', (data) => {
-      handleTelnetNegotiation(socket, data);
-      const stripped = stripTelnetBytes(data);
-      if (stripped && stripped.length > 0 && commandSent) {
-        dataBuffer += stripped.toString();
-        // Look for "Success" or ">" to know the response is complete
-        if (dataBuffer.includes('Success') || dataBuffer.includes('>')) {
-          finish({ id: printer.id, ok: true, raw: dataBuffer });
-        }
-      }
-    });
-
+    // Consume Telnet negotiation during handshake phase
+    socket.on('data', (data) => { handleTelnetNegotiation(socket, data); });
     socket.on('error', () => finish({ id: printer.id, ok: false }));
     socket.on('timeout', () => finish({ id: printer.id, ok: false }));
     socket.on('close', () => finish({ id: printer.id, ok: false }));
@@ -331,8 +345,12 @@ ipcMain.handle('printer:quick-status', async (event, printers) => {
     setTimeout(() => finish({ id: printer.id, ok: false }), TIMEOUT);
   });
 
-  // Run queries in parallel (each printer gets its own ephemeral socket)
-  const results = await Promise.all(printers.map(queryOne));
+  // Run queries sequentially to avoid overwhelming single-session printers.
+  // Each query opens and closes its own socket, so we stagger them.
+  const results = [];
+  for (const printer of printers) {
+    results.push(await queryOne(printer));
+  }
   return results;
 });
 
