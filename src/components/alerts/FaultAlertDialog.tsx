@@ -151,31 +151,28 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
             {currentFault.message}
           </AlertDialogPrimitive.Description>
 
-          {/* Full fault code image — contains QR, description, everything */}
-          <img
-            src={qrImagePath}
-            alt={`Fault ${currentFault.code}: ${currentFault.message}`}
-            className="w-full"
-            onError={() => {
-              setImageExtIndex((prev) =>
-                prev < FAULT_IMAGE_EXTENSIONS.length - 1 ? prev + 1 : prev,
-              );
-            }}
-          />
-
-          {/* Footer bar */}
-          <div className="flex items-center justify-between px-4 py-3 bg-card border-t border-border">
-            <div className="text-xs text-muted-foreground">
-              {activeFaults.length > 1 && (
-                <span>Fault {currentIndex + 1} of {activeFaults.length} · </span>
-              )}
-              <span>Reappears in 3 min if unresolved</span>
-            </div>
+          {/* Image with clickable OK hotspot overlay */}
+          <div className="relative">
+            <img
+              src={qrImagePath}
+              alt={`Fault ${currentFault.code}: ${currentFault.message}`}
+              className="w-full"
+              onError={() => {
+                setImageExtIndex((prev) =>
+                  prev < FAULT_IMAGE_EXTENSIONS.length - 1 ? prev + 1 : prev,
+                );
+              }}
+            />
+            {/* Invisible clickable hotspot over the OK button area in the image
+                Positioned at roughly bottom-right where the OK button sits */}
             <AlertDialogPrimitive.Action
-              className={cn(buttonVariants(), "min-w-[100px]")}
+              className="absolute cursor-pointer"
+              style={{ right: '8%', bottom: '4%', width: '25%', height: '12%' }}
               onClick={handleDismiss}
             >
-              {activeFaults.length > 1 && !isLastFault ? 'Next Fault' : 'OK'}
+              <span className="sr-only">
+                {activeFaults.length > 1 && !isLastFault ? 'Next Fault' : 'OK'}
+              </span>
             </AlertDialogPrimitive.Action>
           </div>
         </AlertDialogPrimitive.Content>
