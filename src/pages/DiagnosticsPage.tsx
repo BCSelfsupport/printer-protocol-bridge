@@ -205,7 +205,7 @@ export default function DiagnosticsPage() {
         </TabsList>
 
         {/* ═══ TEST PROCEDURE TAB ═══ */}
-        <TabsContent value="tests" className="flex-1 overflow-hidden mt-0">
+        <TabsContent value="tests" className="flex-1 overflow-hidden mt-0 flex flex-col">
           <DiagnosticTestProcedure ip={ip} port={port} printerId={DIAG_PRINTER_ID} isElectron={isElectron} />
         </TabsContent>
 
