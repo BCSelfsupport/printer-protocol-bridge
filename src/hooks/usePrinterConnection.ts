@@ -1075,6 +1075,8 @@ export function usePrinterConnection() {
         settings: defaultSettings,
         messages: emulatorMessages,
       });
+      // Enable polling in emulator mode — no real TCP socket needed
+      setSocketReady(true);
       return;
     }
 
