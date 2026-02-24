@@ -48,8 +48,9 @@ if errorlevel 1 (
 )
 echo.
 
-REM Step 3: Build the Vite frontend
+REM Step 3: Build the Vite frontend (Electron target disables PWA cache layer)
 echo [3/5] Building frontend...
+set ELECTRON_BUILD=1
 call npm run build
 if errorlevel 1 (
     echo ERROR: Frontend build failed
