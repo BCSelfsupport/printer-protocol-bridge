@@ -129,9 +129,11 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
   if (!currentFault || (!open && activeFaults.length === 0)) return null;
 
   // Build the fault code image path with extension fallback support (png/bmp/etc)
+  // Use BASE_URL so assets resolve in both web preview (/) and Electron file:// builds (./)
   const normalizedFaultCode = normalizeFaultCodeForAsset(currentFault?.code ?? '');
+  const baseUrl = import.meta.env.BASE_URL ?? '/';
   const qrImagePath = normalizedFaultCode
-    ? `/fault-codes/${normalizedFaultCode}.${FAULT_IMAGE_EXTENSIONS[imageExtIndex]}`
+    ? `${baseUrl}fault-codes/${normalizedFaultCode}.${FAULT_IMAGE_EXTENSIONS[imageExtIndex]}`
     : '';
 
   const isLastFault = currentIndex >= activeFaults.length - 1;
