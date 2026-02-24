@@ -18,6 +18,7 @@ interface FaultAlertDialogProps {
 }
 
 const SNOOZE_DURATION_MS = 3 * 60 * 1000; // 3 minutes
+const FAULT_IMAGE_EXTENSIONS = ['png', 'bmp', 'jpg', 'jpeg', 'webp'] as const;
 
 export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps) {
   const [open, setOpen] = useState(false);
@@ -27,6 +28,7 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
   const snoozedRef = useRef<Record<string, number>>({});
   // Track which faults we've already shown so we don't re-pop immediately
   const [dismissedCodes, setDismissedCodes] = useState<Set<string>>(new Set());
+  const [imageExtIndex, setImageExtIndex] = useState(0);
 
   // Determine which faults should trigger a popup (not snoozed)
   const getActiveFaults = useCallback(() => {
@@ -78,6 +80,10 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
   const activeFaults = getActiveFaults();
   const currentFault = activeFaults[currentIndex];
 
+  useEffect(() => {
+    setImageExtIndex(0);
+  }, [currentFault?.code]);
+
   const handleDismiss = useCallback(() => {
     if (!currentFault) return;
 
@@ -113,8 +119,10 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
 
   if (!currentFault || (!open && activeFaults.length === 0)) return null;
 
-  // Build the QR image path: /fault-codes/{code}.png
-  const qrImagePath = `/fault-codes/${currentFault.code}.png`;
+  // Build the fault code image path with extension fallback support (png/bmp/etc)
+  const qrImagePath = currentFault
+    ? `/fault-codes/${currentFault.code}.${FAULT_IMAGE_EXTENSIONS[imageExtIndex]}`
+    : '';
 
   const isLastFault = currentIndex >= activeFaults.length - 1;
 
@@ -138,6 +146,11 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
             src={qrImagePath}
             alt={`Fault ${currentFault.code}: ${currentFault.message}`}
             className="w-full"
+            onError={() => {
+              setImageExtIndex((prev) =>
+                prev < FAULT_IMAGE_EXTENSIONS.length - 1 ? prev + 1 : prev,
+              );
+            }}
           />
 
           {/* Footer bar */}
