@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.verify-dev-access]
 verify_jwt = false
+
+[functions.generate-license]
+verify_jwt = false
