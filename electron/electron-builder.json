@@ -36,6 +36,7 @@
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "CodeSync"
+    "shortcutName": "CodeSync",
+    "artifactName": "CodeSync-Setup-${version}.${ext}"
   }
 }
