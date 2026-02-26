@@ -120,6 +120,9 @@ Deno.serve(async (req) => {
     // TODO: Trigger email via CRM project's Graph integration
     // For now, return the key so the store can display it to the customer
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const downloadUrl = `${supabaseUrl}/functions/v1/download-installer`;
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -128,6 +131,7 @@ Deno.serve(async (req) => {
           tier: license.tier,
           expires_at: license.expires_at,
         },
+        download_url: downloadUrl,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
