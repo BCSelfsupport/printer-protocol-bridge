@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.generate-license]
 verify_jwt = false
+
+[functions.feedback-admin]
+verify_jwt = false
