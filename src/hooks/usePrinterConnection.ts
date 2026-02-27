@@ -321,7 +321,9 @@ export function usePrinterConnection() {
         let currentMessage: string | undefined;
         const smLines = smRaw.split(/\r?\n/).map((l: string) => l.trim()).filter((l: string) => l && l !== '^SM' && !/^success$/i.test(l) && l !== '>');
         if (smLines.length > 0) {
-          const msgName = smLines[0].replace(/[^\x20-\x7E]/g, '').trim();
+          let msgName = smLines[0].replace(/[^\x20-\x7E]/g, '').trim();
+          // Strip echo-on prefix: "Selected Message: NAME" or "Message: NAME"
+          msgName = msgName.replace(/^(Selected\s+)?Message\s*:\s*/i, '').trim();
           if (msgName && msgName !== 'NONE') {
             currentMessage = msgName.toUpperCase();
           }
