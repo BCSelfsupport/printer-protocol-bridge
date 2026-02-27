@@ -77,7 +77,7 @@ const shouldUseEmulator = () => printerEmulator.enabled || multiPrinterEmulator.
 
 // Track recently deleted message names so ^LM polling doesn't resurrect them
 const recentlyDeletedMessages = new Set<string>();
-const DELETION_GUARD_MS = 8000; // ignore deleted names for 8 seconds
+const DELETION_GUARD_MS = 20000; // ignore deleted names for 20 seconds (polling cycle can take 10s+)
 
 // Resolve the correct emulator instance for a given printer IP.
 // Always prefers the multi-printer instance; only falls back to singleton if no match.
@@ -476,7 +476,9 @@ export function usePrinterConnection() {
 
   // Stable callback for ^VV (version) polling – extracts firmware version, model, and variant
   const handleVersionResponse = useCallback((raw: string) => {
+    console.log('[handleVersionResponse] raw ^VV:', raw);
     const { version, model, variant } = parseVersionResponse(raw);
+    console.log('[handleVersionResponse] parsed:', { version, model, variant });
     if (!version && !model) return;
     setConnectionState((prev) => ({
       ...prev,
@@ -590,6 +592,9 @@ export function usePrinterConnection() {
     }
     if (messageNames.length > 0) {
       // Filter out recently deleted messages to prevent race with ^DM
+      if (recentlyDeletedMessages.size > 0) {
+        console.log('[handleMessageListResponse] Active delete guards:', [...recentlyDeletedMessages], '| message names:', messageNames);
+      }
       const filteredNames = messageNames.filter(n => !recentlyDeletedMessages.has(n));
       const printerMessages: PrintMessage[] = filteredNames.map((name, idx) => ({ id: idx + 1, name }));
       console.log('[handleMessageListResponse] Parsed messages:', printerMessages.length, 'current:', detectedCurrentMessage);
@@ -1846,6 +1851,18 @@ export function usePrinterConnection() {
     const msg = connectionState.messages.find(m => m.id === id);
     const msgName = msg?.name;
 
+    // Guard against ^LM polling resurrecting this message BEFORE removing from state
+    // so even if the ^DM command takes time, the guard is already in place.
+    if (msgName) {
+      const guardName = msgName.toUpperCase();
+      console.log('[deleteMessage] Adding guard for:', guardName, '| all guards:', [...recentlyDeletedMessages, guardName]);
+      recentlyDeletedMessages.add(guardName);
+      setTimeout(() => {
+        recentlyDeletedMessages.delete(guardName);
+        console.log('[deleteMessage] Guard expired for:', guardName);
+      }, DELETION_GUARD_MS);
+    }
+
     // Remove from local state
     setConnectionState((prev) => ({
       ...prev,
@@ -1854,12 +1871,6 @@ export function usePrinterConnection() {
 
     // Send ^DM to printer/emulator
     if (msgName && connectionState.isConnected && connectionState.connectedPrinter) {
-      // Guard against ^LM polling resurrecting this message
-      // ^LM parsing uppercases names, so store the guard in uppercase too
-      const guardName = msgName.toUpperCase();
-      recentlyDeletedMessages.add(guardName);
-      setTimeout(() => recentlyDeletedMessages.delete(guardName), DELETION_GUARD_MS);
-
       const command = `^DM ${msgName}`;
       console.log('[deleteMessage] Sending:', command);
 
@@ -1876,8 +1887,17 @@ export function usePrinterConnection() {
             command,
           );
           console.log('[deleteMessage] ^DM result:', result);
+          // Check if the printer rejected the delete (e.g. message is currently selected)
+          if (result && !result.success) {
+            console.error('[deleteMessage] ^DM FAILED:', result.error || result.response);
+            toast.error(`Failed to delete "${msgName}": ${result.error || result.response || 'Unknown error'}`);
+          } else if (result?.response && /fail|error|cannot/i.test(result.response)) {
+            console.error('[deleteMessage] ^DM response indicates failure:', result.response);
+            toast.error(`Cannot delete "${msgName}": ${result.response}`);
+          }
         } catch (e) {
           console.error('[deleteMessage] Failed to send ^DM:', e);
+          toast.error(`Failed to delete "${msgName}"`);
         }
       }
     }
