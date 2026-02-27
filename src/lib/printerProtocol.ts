@@ -225,13 +225,23 @@ export function parseVersionResponse(response: string): { version: string | null
   const versionMatch = response.match(/v(\d+\.\d+\.\d+\.\d+)/);
   const version = versionMatch ? `v${versionMatch[1]}` : null;
 
-  // Model appears as "N-86", "N-88", "Q-8", "Q8", etc. Strip the letter prefix.
-  const modelMatch = response.match(/\b[A-Z]-?(\d{1,3})\b/);
-  const model = modelMatch ? modelMatch[1] : null;
+  // Model appears as "N-86", "N-88", "Q-8", "QX", "Q-X", "Quantum X", etc.
+  // Try Quantum X / Qx first, then Quantum / Q, then numeric models
+  let model: string | null = null;
+  let variant: string | null = null;
 
-  // Variant follows the model number: STD, HS, HS1, OPQ, FG, MICRO, SEC, etc.
-  const variantMatch = response.match(/\b[A-Z]-?\d{1,3}\s+(\w+)/);
-  const variant = variantMatch ? variantMatch[1] : null;
+  if (/\bQ(?:uantum)?\s*[-]?\s*X\b/i.test(response)) {
+    model = 'Qx';
+  } else if (/\bQ(?:uantum)?\b/i.test(response) && !/\bQ(?:ual)/i.test(response)) {
+    model = 'Q';
+  } else {
+    const modelMatch = response.match(/\b[A-Z]-?(\d{1,3})\b/);
+    model = modelMatch ? modelMatch[1] : null;
+  }
+
+  // Variant follows the model identifier: STD, HS, HS1, OPQ, FG, MICRO, SEC, etc.
+  const variantMatch = response.match(/\b(?:[A-Z]-?\d{1,3}|Q(?:uantum)?\s*[-]?\s*X?)\s+(\w+)/i);
+  variant = variantMatch ? variantMatch[1] : null;
 
   return { version, model, variant };
 }
