@@ -89,18 +89,20 @@ const GUIDE_STEPS = [
   {
     title: 'Add Printer in CodeSync',
     icon: Cable,
-    image: '/help/step-add-printer.png',
+    image: '/help/step-click-printer-icon.png',
     content: [
-      'Now add the printer to CodeSync with its IP address and port.',
+      'Once a printer has been added, you need to configure its **communication settings** (name, IP address, and port).',
+      'To do this, click the **printer icon** on the printer card as shown above. This opens the edit dialog where you can set the connection details.',
     ],
     steps: [
-      'On the Printers screen, click the **+ Add** button',
+      'On the Printers screen, click the **+ Add** button to create a new printer',
+      'Click the **printer icon** (🖨️) on the card to open the edit dialog',
       'Enter a **Printer Name** (e.g., "Line 1 Printer")',
       'Enter the **IP Address** (e.g., 192.168.1.55)',
       'Enter the **Port** (default: 23)',
-      'Click **Add Printer**',
+      'Click **Save** to apply your changes',
     ],
-    tip: 'The printer name is for your reference only — it does not affect the connection.',
+    tip: 'The tooltip "Click to edit printer" appears when you hover over the printer icon. The printer name is for your reference only — it does not affect the connection.',
   },
   {
     title: 'Connect & Verify',
