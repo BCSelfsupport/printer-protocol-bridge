@@ -1730,9 +1730,18 @@ export function usePrinterConnection() {
     })();
     const blockedRows = 32 - templateHeight;
     
+    // Filter out empty/invalid fields to prevent phantom fields on the printer
+    const validFields = fields.filter(field => {
+      // Text/userdefine fields need data; date/time/counter/barcode/logo are always valid
+      if (field.type === 'text' || field.type === 'userdefine') {
+        return field.data && field.data.trim().length > 0;
+      }
+      return true;
+    });
+
     // Build field subcommands with inverted Y coordinates
     // Canvas Y (top-origin) → template-relative → printer Y (bottom-origin)
-    const fieldSubcommands = fields.map((field, index) => {
+    const fieldSubcommands = validFields.map((field, index) => {
       const fieldHeight = fontToDotHeight(field.fontSize);
       const templateRelativeY = field.y - blockedRows; // 0 = top of template
       const printerY = templateHeight - templateRelativeY - fieldHeight; // 0 = bottom of template
