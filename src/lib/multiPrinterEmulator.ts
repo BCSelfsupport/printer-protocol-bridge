@@ -350,7 +350,7 @@ class PrinterEmulatorInstance {
   }
 
   private cmdViewVersion(): string {
-    return `Remote Server ${this.VERSION} built ${this.BUILD_DATE}`;
+    return `Remote Server N-86 STD ${this.VERSION} NB X.602 built ${this.BUILD_DATE}`;
   }
 
   private cmdEchoOn(): string {

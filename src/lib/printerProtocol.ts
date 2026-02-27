@@ -219,10 +219,17 @@ export function parseTemperatureResponse(response: string): { printheadTemp: num
 /**
  * Parse ^VV version response
  * Example: Remote Server N-86 STD v01.09.00.14 NB X.602 built Oct 7 2025
+ * Returns both the firmware version and the model number (e.g. "86" from "N-86").
  */
-export function parseVersionResponse(response: string): string | null {
-  const match = response.match(/v(\d+\.\d+\.\d+\.\d+)/);
-  return match ? `v${match[1]}` : null;
+export function parseVersionResponse(response: string): { version: string | null; model: string | null } {
+  const versionMatch = response.match(/v(\d+\.\d+\.\d+\.\d+)/);
+  const version = versionMatch ? `v${versionMatch[1]}` : null;
+
+  // Model appears as "N-86", "N-88", "Q-8", "Q8", etc. Strip the letter prefix.
+  const modelMatch = response.match(/\b[A-Z]-?(\d{1,3})\b/);
+  const model = modelMatch ? modelMatch[1] : null;
+
+  return { version, model };
 }
 
 /**
