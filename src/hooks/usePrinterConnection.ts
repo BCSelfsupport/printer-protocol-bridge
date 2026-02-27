@@ -386,6 +386,10 @@ export function usePrinterConnection() {
     const inkLevelCard = (leOverrides.inkEmpty ? 'EMPTY' : (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN')) as Printer['inkLevel'];
     const makeupLevelCard = (leOverrides.makeupEmpty ? 'EMPTY' : (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN')) as Printer['makeupLevel'];
     // Do NOT extract currentMessage from ^SU — it's unreliable. ^SM is the authoritative source.
+    // Extract print count from raw ^SU so the printer card stays up-to-date
+    const printCountMatch = raw.match(/PRINT\s*:\s*(\d+)/i) || raw.match(/PrC\[(\d+)\]/);
+    const suPrintCount = printCountMatch ? parseInt(printCountMatch[1], 10) : undefined;
+
     if (connectedPrinterId) {
       updatePrinterStatus(connectedPrinterId, {
         isAvailable: true,
@@ -393,6 +397,7 @@ export function usePrinterConnection() {
         hasActiveErrors: parsed.errorActive ?? false,
         inkLevel: inkLevelCard,
         makeupLevel: makeupLevelCard,
+        ...(suPrintCount !== undefined && !isNaN(suPrintCount) ? { printCount: suPrintCount } : {}),
       });
     }
 
