@@ -170,7 +170,7 @@ export function ConnectionGuideDialog({ open, onOpenChange }: ConnectionGuideDia
               <img
                 src={step.image}
                 alt={step.title}
-                className="w-full h-auto object-contain max-h-[200px]"
+                className="w-full h-auto object-contain max-h-[300px]"
               />
             </div>
 
