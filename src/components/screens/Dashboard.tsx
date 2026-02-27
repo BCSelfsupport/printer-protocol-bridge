@@ -113,7 +113,7 @@ export function Dashboard({
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Status banner - fixed height to prevent layout shift */}
-      <div className={`w-full h-9 md:h-10 flex items-center justify-center ${
+      <div className={`w-full h-9 md:h-10 flex items-center px-3 ${
         showCountdown 
           ? countdownType === 'starting' 
             ? 'bg-gradient-to-r from-red-600 via-red-500 to-red-400' 
@@ -122,30 +122,28 @@ export function Dashboard({
             ? 'bg-gradient-to-r from-green-600 via-green-500 to-green-400'
             : 'bg-muted'
       }`}>
-        {showCountdown && (
-          <span className="text-lg md:text-xl font-bold text-white tracking-wide drop-shadow-md font-mono">
-            {countdownType === 'starting' ? 'Starting...' : 'Stopping...'} {formatCountdown(countdownSeconds)}
-          </span>
+        {/* Model badge - left aligned in status banner */}
+        {isConnected && printerModel && (
+          <ModelBadge model={printerModel} variant={printerVariant} />
         )}
-        {showReady && (
-          <span className="text-lg md:text-xl font-bold text-white tracking-wide drop-shadow-md">
-            Ready
-          </span>
-        )}
+        <div className="flex-1 flex items-center justify-center">
+          {showCountdown && (
+            <span className="text-lg md:text-xl font-bold text-white tracking-wide drop-shadow-md font-mono">
+              {countdownType === 'starting' ? 'Starting...' : 'Stopping...'} {formatCountdown(countdownSeconds)}
+            </span>
+          )}
+          {showReady && (
+            <span className="text-lg md:text-xl font-bold text-white tracking-wide drop-shadow-md">
+              Ready
+            </span>
+          )}
+        </div>
       </div>
       
       <div className="flex-1 p-2 md:p-2 flex flex-col gap-2 md:gap-2 overflow-hidden">
       {/* Top section - two rows with Makeup/Ink spanning both */}
       <div className="overflow-x-auto pb-2 -mx-2 px-2 md:mx-0 md:px-0 md:overflow-visible">
         <div className="min-w-max md:min-w-0">
-          {isConnected && printerModel && (
-            <div className="mb-1 flex items-start">
-              <ModelBadge model={printerModel} variant={printerVariant} />
-            </div>
-          )}
-          {isConnected && !printerModel && (
-            <div className="mb-1 text-xs text-muted-foreground">Identifying printer...</div>
-          )}
           <div className="flex gap-2 md:flex-wrap">
             <button 
               onClick={onSignIn}

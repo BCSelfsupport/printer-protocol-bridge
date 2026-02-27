@@ -43,7 +43,7 @@ export function ModelBadge({ model, variant, className = '' }: ModelBadgeProps) 
       <img
         src={badge}
         alt={`Bestcode Model ${displayModel}`}
-        className="h-12 w-auto object-contain"
+        className="h-16 w-auto object-contain"
         draggable={false}
       />
     </div>
