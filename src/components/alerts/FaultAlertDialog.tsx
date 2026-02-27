@@ -172,7 +172,7 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
   const isLastFault = currentIndex >= activeFaults.length - 1;
 
   return (
-    <AlertDialogPrimitive.Root open={open} onOpenChange={(v) => { if (!v) handleDismiss(); }}>
+    <AlertDialogPrimitive.Root open={open} onOpenChange={setOpen}>
       <AlertDialogPrimitive.Portal>
         <AlertDialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <AlertDialogPrimitive.Content
