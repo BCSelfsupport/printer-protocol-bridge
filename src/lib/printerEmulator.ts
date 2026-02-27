@@ -787,6 +787,7 @@ class PrinterEmulator {
         return this.formatError(4, 'MsgNotFnd', 'Message not found');
       }
       this.state.messages.splice(idx, 1);
+      this.notifyListeners();
       return this.formatSuccess();
     }
     return this.formatError(2, 'CmdFormat', 'Invalid command format');

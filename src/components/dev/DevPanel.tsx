@@ -252,7 +252,8 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
     setManualCommand('');
     
     if (emulatorEnabled) {
-      const result = printerEmulator.processCommand(cmd);
+      const emulator = getConnectedEmulator();
+      const result = emulator.processCommand(cmd);
       setManualResponse(prev => [{ command: cmd, response: result.response, timestamp: new Date() }, ...prev].slice(0, 50));
     } else if (window.electronAPI && connectedPrinterId != null) {
       setManualSending(true);
@@ -272,7 +273,8 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
     if (!canSendCommands) return;
     
     if (emulatorEnabled) {
-      const result = printerEmulator.processCommand(code);
+      const emulator = getConnectedEmulator();
+      const result = emulator.processCommand(code);
       setManualResponse(prev => [{ command: code, response: result.response, timestamp: new Date() }, ...prev].slice(0, 50));
     } else if (window.electronAPI && connectedPrinterId != null) {
       setManualSending(true);
