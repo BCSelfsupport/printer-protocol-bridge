@@ -853,6 +853,8 @@ const Index = () => {
         onHome={currentScreen !== 'home' ? handleHome : undefined}
         printerTime={connectionState.status?.printerTime}
         onRelayConnect={() => setRelayDialogOpen(true)}
+        printerModel={connectionState.status?.printerModel}
+        printerVariant={connectionState.status?.printerVariant}
       />
 
       <main className="flex-1 flex flex-col overflow-hidden">

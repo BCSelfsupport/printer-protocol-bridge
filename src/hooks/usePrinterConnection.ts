@@ -38,6 +38,7 @@ const mockStatus: PrinterStatus = {
   errorMessage: null,
   printerVersion: null,
   printerModel: null,
+  printerVariant: null,
   printerTime: new Date(),
   inkLevel: 'UNKNOWN',
   makeupLevel: 'UNKNOWN',
@@ -469,9 +470,9 @@ export function usePrinterConnection() {
     }));
   }, []);
 
-  // Stable callback for ^VV (version) polling – extracts firmware version and model number
+  // Stable callback for ^VV (version) polling – extracts firmware version, model, and variant
   const handleVersionResponse = useCallback((raw: string) => {
-    const { version, model } = parseVersionResponse(raw);
+    const { version, model, variant } = parseVersionResponse(raw);
     if (!version && !model) return;
     setConnectionState((prev) => ({
       ...prev,
@@ -479,6 +480,7 @@ export function usePrinterConnection() {
         ...prev.status,
         ...(version ? { printerVersion: version } : {}),
         ...(model ? { printerModel: model } : {}),
+        ...(variant ? { printerVariant: variant } : {}),
       } : null,
     }));
   }, []);
