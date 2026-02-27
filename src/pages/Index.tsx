@@ -712,12 +712,19 @@ const Index = () => {
             onHome={handleHome}
           />
         );
-      case 'reports':
+      case 'reports': {
+        // In Lite mode (no network), only show the connected printer or first printer
+        const reportPrinters = canNetwork ? printers : printers.filter(p => 
+          connectedPrinterId ? p.id === connectedPrinterId : p.id === printers[0]?.id
+        );
+        const reportRuns = canNetwork ? productionStorage.runs : productionStorage.runs.filter(r => 
+          reportPrinters.some(p => p.id === r.printerId)
+        );
         return (
           <ReportsScreen
-            runs={productionStorage.runs}
+            runs={reportRuns}
             snapshots={productionStorage.snapshots}
-            printers={printers}
+            printers={reportPrinters}
             onAddRun={productionStorage.addRun}
             onUpdateRun={productionStorage.updateRun}
             onDeleteRun={productionStorage.deleteRun}
@@ -726,6 +733,7 @@ const Index = () => {
             onHome={handleHome}
           />
         );
+      }
       case 'datasource':
         return (
           <DataSourceScreen
@@ -804,7 +812,7 @@ const Index = () => {
     );
   };
 
-  const { isActivated, isLoading: licenseLoading, error: licenseError } = useLicense();
+  const { isActivated, isLoading: licenseLoading, error: licenseError, canNetwork } = useLicense();
 
   // Full lockout: if no valid license, show only the activation dialog
   if (!isActivated && !licenseLoading) {
