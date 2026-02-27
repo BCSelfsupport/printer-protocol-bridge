@@ -81,14 +81,10 @@ const DELETION_GUARD_MS = 20000; // ignore deleted names for 20 seconds (polling
 const DELETE_VERIFY_RETRIES = 3;
 const DELETE_VERIFY_DELAY_MS = 250;
 const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCODE_AUTO']);
-const buildDeleteCommandVariants = (messageName: string): string[] => {
-  const variants = [
-    `^DM ${messageName}`,
-    `^DM "${messageName}"`,
-    `^DM${messageName}`,
-  ];
-  return [...new Set(variants)];
-};
+// ^SV flushes the firmware's queued message writes/deletes to NOR filesystem.
+// Without this, ^DM and ^NM changes are only queued in RAM until a manual save
+// or shutdown occurs on the printer HMI.
+const FLUSH_COMMAND = '^SV';
 
 const isProtocolCommandFailure = (rawResponse?: string): boolean => {
   if (!rawResponse) return false;
@@ -1760,6 +1756,8 @@ export function usePrinterConnection() {
       try {
         const result = await printerTransport.sendCommand(connectionState.connectedPrinter.id, minimalNM);
         console.log('[createMessageOnPrinter] ^NM result:', result);
+        // Flush to NOR so the message persists
+        await printerTransport.sendCommand(connectionState.connectedPrinter.id, FLUSH_COMMAND);
         return true;
       } catch (e) {
         console.error('[createMessageOnPrinter] Failed to send ^NM:', e);
@@ -1852,6 +1850,7 @@ export function usePrinterConnection() {
       commands.push(`^DM ${messageName}`);
     }
     commands.push(nmCommand);
+    commands.push(FLUSH_COMMAND);
 
     if (shouldUseEmulator()) {
       const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
@@ -1929,41 +1928,44 @@ export function usePrinterConnection() {
         console.log('[deleteMessage] Guard expired for:', normalizedName);
       }, DELETION_GUARD_MS);
 
-      const deleteCommands = buildDeleteCommandVariants(msgName);
-      console.log('[deleteMessage] Candidate delete commands:', deleteCommands);
+      const deleteCommand = `^DM ${msgName}`;
+      console.log('[deleteMessage] Sending:', deleteCommand);
 
       if (shouldUseEmulator()) {
         const emulator = getEmulatorForPrinter(
           connectionState.connectedPrinter.ipAddress,
           connectionState.connectedPrinter.port,
         );
-        const result = emulator.processCommand(deleteCommands[0]);
+        const result = emulator.processCommand(deleteCommand);
         deleteConfirmed = !!result?.success;
         if (!deleteConfirmed) {
           toast.error(`Failed to delete "${msgName}"`);
         }
       } else if (isElectron || isRelayMode()) {
         try {
-          deleteConfirmed = false;
-          let lastFailure = 'Printer rejected delete command';
+          const result = await printerTransport.sendCommand(
+            connectionState.connectedPrinter.id,
+            deleteCommand,
+          );
 
-          for (const command of deleteCommands) {
-            const result = await printerTransport.sendCommand(
-              connectionState.connectedPrinter.id,
-              command,
-            );
+          const responseText = result?.response ?? '';
+          console.log('[deleteMessage] ^DM result:', result);
 
-            const responseText = result?.response ?? '';
-            console.log('[deleteMessage] ^DM result for', command, ':', result);
+          if (!result?.success || isProtocolCommandFailure(responseText)) {
+            deleteConfirmed = false;
+            toast.error(`Cannot delete "${msgName}": ${result?.error || responseText || 'Printer rejected command'}`);
+          }
 
-            if (!result?.success || isProtocolCommandFailure(responseText)) {
-              lastFailure = result?.error || responseText || 'Printer rejected command';
-              continue;
-            }
+          // Flush the queued deletion to NOR filesystem
+          if (deleteConfirmed) {
+            console.log('[deleteMessage] Flushing with ^SV');
+            await printerTransport.sendCommand(connectionState.connectedPrinter.id, FLUSH_COMMAND);
+          }
 
+          // Verify with fresh ^LM (retry with small delay) so UI updates only after confirmed deletion
+          if (deleteConfirmed) {
             let stillExists = true;
 
-            // Verify with fresh ^LM (retry with small delay) so UI updates only after confirmed deletion
             for (let attempt = 1; attempt <= DELETE_VERIFY_RETRIES; attempt += 1) {
               const verifyList = await printerTransport.sendCommand(
                 connectionState.connectedPrinter.id,
@@ -1981,16 +1983,10 @@ export function usePrinterConnection() {
               }
             }
 
-            if (!stillExists) {
-              deleteConfirmed = true;
-              break;
+            if (stillExists) {
+              deleteConfirmed = false;
+              toast.error(`Delete failed — "${msgName}" is still on the printer.`);
             }
-
-            lastFailure = `Delete command acknowledged but "${msgName}" is still listed.`;
-          }
-
-          if (!deleteConfirmed) {
-            toast.error(`Cannot delete "${msgName}": ${lastFailure}`);
           }
         } catch (e) {
           console.error('[deleteMessage] Failed to send ^DM:', e);
