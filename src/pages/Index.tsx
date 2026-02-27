@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import type { CountdownType } from '@/hooks/useJetCountdown';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
 import { NavItem } from '@/components/layout/BottomNav';
 import { Dashboard } from '@/components/screens/Dashboard';
@@ -802,6 +803,30 @@ const Index = () => {
       />
     );
   };
+
+  const { isActivated, isLoading: licenseLoading, error: licenseError } = useLicense();
+
+  // Full lockout: if no valid license, show only the activation dialog
+  if (!isActivated && !licenseLoading) {
+    return (
+      <div className="min-h-dvh h-dvh flex flex-col items-center justify-center bg-background p-6">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="text-6xl mb-2">🔒</div>
+          <h1 className="text-2xl font-bold text-foreground">License Required</h1>
+          <p className="text-muted-foreground text-sm">
+            {licenseError || 'A valid product key is required to use CodeSync™. Please enter your license key to continue.'}
+          </p>
+          <Button onClick={() => setLicenseDialogOpen(true)} className="mt-4">
+            Enter Product Key
+          </Button>
+        </div>
+        <LicenseActivationDialog
+          open={licenseDialogOpen}
+          onOpenChange={setLicenseDialogOpen}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh h-dvh overflow-hidden flex flex-col bg-background">
