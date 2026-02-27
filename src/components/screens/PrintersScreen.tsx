@@ -400,13 +400,20 @@ export function PrintersScreen({
           {/* Action buttons */}
           <div className="flex gap-2">
             <Button
-              onClick={() => canNetwork ? setAddDialogOpen(true) : null}
+              onClick={() => {
+                const isLiteMaxed = tier === 'lite' && printers.length >= 1;
+                if (canNetwork && !isLiteMaxed) setAddDialogOpen(true);
+              }}
               size="sm"
               className="flex-1 bg-primary hover:bg-primary/90 h-8 text-xs"
-              disabled={!canNetwork}
-              title={!canNetwork ? 'Network access requires FULL or DATABASE license' : undefined}
+              disabled={!canNetwork || (tier === 'lite' && printers.length >= 1)}
+              title={
+                !canNetwork ? 'Network access requires FULL or DATABASE license' 
+                : tier === 'lite' && printers.length >= 1 ? 'LITE license supports 1 printer only'
+                : undefined
+              }
             >
-              {!canNetwork ? <Lock className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+              {!canNetwork || (tier === 'lite' && printers.length >= 1) ? <Lock className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
               Add
             </Button>
             {onRefreshNetwork && (

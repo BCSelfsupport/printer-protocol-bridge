@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { toast } from 'sonner';
 
 export type LicenseTier = 'lite' | 'full' | 'database' | 'demo' | 'dev';
 
@@ -66,14 +67,19 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
       const result = await res.json();
 
       if (!result.valid) {
+        const errorMsg = result.error || 'License validation failed';
         setState(prev => ({
           ...prev,
           isActivated: false,
           tier: 'lite',
-          error: result.error || 'License validation failed',
+          error: errorMsg,
           isLoading: false,
         }));
         localStorage.removeItem(LICENSE_STORAGE_KEY);
+        toast.error('License Deactivated', {
+          description: errorMsg,
+          duration: 10000,
+        });
       } else {
         setState(prev => ({ ...prev, tier: result.tier, error: null, isLoading: false }));
       }
