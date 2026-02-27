@@ -27,6 +27,7 @@ export function LicenseActivationDialog({ open, onOpenChange }: LicenseActivatio
     lite: { label: 'LITE', color: 'bg-slate-100 text-slate-700' },
     full: { label: 'FULL', color: 'bg-blue-100 text-blue-700' },
     database: { label: 'DATABASE', color: 'bg-purple-100 text-purple-700' },
+    demo: { label: 'DEMO', color: 'bg-amber-100 text-amber-700' },
     dev: { label: 'DEVELOPER', color: 'bg-green-100 text-green-700' },
   };
 
