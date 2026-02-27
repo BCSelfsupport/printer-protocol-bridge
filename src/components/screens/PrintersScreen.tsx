@@ -233,6 +233,9 @@ export function PrintersScreen({
   const isMobile = useIsMobile();
   const { canNetwork, canDatabase, tier, isActivated } = useLicense();
 
+  // Lite tier: only show the first printer
+  const visiblePrinters = tier === 'lite' ? printers.slice(0, 1) : printers;
+
   // Compute sync group color index for each printer
   // Each master gets a unique index; its slaves share the same index
   const syncGroupMap = useMemo(() => {
@@ -365,7 +368,7 @@ export function PrintersScreen({
               </div>
               <div>
                 <h2 className="font-bold text-white text-sm">Network Printers</h2>
-                <p className="text-[10px] text-slate-400">{printers.length} device{printers.length !== 1 ? 's' : ''} • drag to reorder</p>
+                <p className="text-[10px] text-slate-400">{visiblePrinters.length} device{visiblePrinters.length !== 1 ? 's' : ''} • drag to reorder</p>
               </div>
             </div>
           </div>
@@ -406,14 +409,14 @@ export function PrintersScreen({
               }}
               size="sm"
               className="flex-1 bg-primary hover:bg-primary/90 h-8 text-xs"
-              disabled={!canNetwork || (tier === 'lite' && printers.length >= 1)}
+              disabled={!canNetwork || (tier === 'lite' && visiblePrinters.length >= 1)}
               title={
                 !canNetwork ? 'Network access requires FULL or DATABASE license' 
-                : tier === 'lite' && printers.length >= 1 ? 'LITE license supports 1 printer only'
+                : tier === 'lite' && visiblePrinters.length >= 1 ? 'LITE license supports 1 printer only'
                 : undefined
               }
             >
-              {!canNetwork || (tier === 'lite' && printers.length >= 1) ? <Lock className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+              {!canNetwork || (tier === 'lite' && visiblePrinters.length >= 1) ? <Lock className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
               Add
             </Button>
             {onRefreshNetwork && (
@@ -444,7 +447,7 @@ export function PrintersScreen({
         {/* Printer List with ScrollArea */}
         <ScrollArea className="flex-1">
           <div className="p-2 pr-3 space-y-2">
-            {printers.length === 0 ? (
+            {visiblePrinters.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-slate-500 py-8">
                 <PrinterIcon className="w-10 h-10 mb-3 opacity-50" />
                 <p className="font-medium text-sm">No printers configured</p>
@@ -459,10 +462,10 @@ export function PrintersScreen({
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={printers.map(p => p.id)}
+                  items={visiblePrinters.map(p => p.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  {printers.map((printer) => (
+                  {visiblePrinters.map((printer) => (
                     <SortablePrinterItem
                       key={printer.id}
                       printer={printer}
