@@ -43,6 +43,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { LicenseAssignmentPanel } from '@/components/dev/LicenseAssignmentPanel';
 import { FleetMonitoringPanel } from '@/components/dev/FleetMonitoringPanel';
+import { FeedbackPanel } from '@/components/dev/FeedbackPanel';
 function getTimeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
@@ -422,7 +423,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <TabsList className="mx-4 mt-2 grid grid-cols-7 h-10">
+            <TabsList className="mx-4 mt-2 grid grid-cols-8 h-10">
               <TabsTrigger value="status" className="text-xs gap-1"><Gauge className="w-3.5 h-3.5" />Status</TabsTrigger>
               <TabsTrigger value="protocol" className="text-xs gap-1"><BookOpen className="w-3.5 h-3.5" />Protocol</TabsTrigger>
               <TabsTrigger value="commands" className="text-xs gap-1"><Terminal className="w-3.5 h-3.5" />Log</TabsTrigger>
@@ -435,6 +436,10 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
               <TabsTrigger value="licenses" className="text-xs gap-1">
                 <Shield className="w-3.5 h-3.5" />
                 Licenses
+              </TabsTrigger>
+              <TabsTrigger value="feedback" className="text-xs gap-1">
+                <List className="w-3.5 h-3.5" />
+                Feedback
               </TabsTrigger>
             </TabsList>
 
@@ -913,6 +918,11 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             {/* Licenses Tab */}
             <TabsContent value="licenses" className="flex-1 overflow-hidden m-0">
               <LicenseAssignmentPanel />
+            </TabsContent>
+
+            {/* Feedback Tab */}
+            <TabsContent value="feedback" className="flex-1 overflow-hidden m-0">
+              <FeedbackPanel />
             </TabsContent>
           </Tabs>
 

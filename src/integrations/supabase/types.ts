@@ -103,6 +103,7 @@ export type Database = {
           created_at: string
           id: string
           message: string
+          screenshot_urls: string[] | null
           type: string
         }
         Insert: {
@@ -110,6 +111,7 @@ export type Database = {
           created_at?: string
           id?: string
           message: string
+          screenshot_urls?: string[] | null
           type?: string
         }
         Update: {
@@ -117,6 +119,7 @@ export type Database = {
           created_at?: string
           id?: string
           message?: string
+          screenshot_urls?: string[] | null
           type?: string
         }
         Relationships: []
