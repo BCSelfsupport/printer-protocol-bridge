@@ -75,6 +75,10 @@ const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectr
 // Helper to check if emulator should be used
 const shouldUseEmulator = () => printerEmulator.enabled || multiPrinterEmulator.enabled;
 
+// Track recently deleted message names so ^LM polling doesn't resurrect them
+const recentlyDeletedMessages = new Set<string>();
+const DELETION_GUARD_MS = 8000; // ignore deleted names for 8 seconds
+
 // Resolve the correct emulator instance for a given printer IP.
 // Always prefers the multi-printer instance; only falls back to singleton if no match.
 const getEmulatorForPrinter = (ipAddress?: string, port?: number) => {
@@ -585,7 +589,9 @@ export function usePrinterConnection() {
       }
     }
     if (messageNames.length > 0) {
-      const printerMessages: PrintMessage[] = messageNames.map((name, idx) => ({ id: idx + 1, name }));
+      // Filter out recently deleted messages to prevent race with ^DM
+      const filteredNames = messageNames.filter(n => !recentlyDeletedMessages.has(n));
+      const printerMessages: PrintMessage[] = filteredNames.map((name, idx) => ({ id: idx + 1, name }));
       console.log('[handleMessageListResponse] Parsed messages:', printerMessages.length, 'current:', detectedCurrentMessage);
       setConnectionState((prev) => ({
         ...prev,
@@ -1848,6 +1854,10 @@ export function usePrinterConnection() {
 
     // Send ^DM to printer/emulator
     if (msgName && connectionState.isConnected && connectionState.connectedPrinter) {
+      // Guard against ^LM polling resurrecting this message
+      recentlyDeletedMessages.add(msgName);
+      setTimeout(() => recentlyDeletedMessages.delete(msgName), DELETION_GUARD_MS);
+
       const command = `^DM ${msgName}`;
       console.log('[deleteMessage] Sending:', command);
 
