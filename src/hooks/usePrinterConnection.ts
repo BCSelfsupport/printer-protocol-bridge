@@ -1596,6 +1596,22 @@ export function usePrinterConnection() {
     return map[fontSize] ?? 5; // Default to 16-high
   };
 
+  // Font size name to dot height (for Y coordinate inversion)
+  const fontToDotHeight = (fontSize: string): number => {
+    const map: Record<string, number> = {
+      'Standard5High': 5,
+      'Narrow7High': 7,
+      'Standard7High': 7,
+      'Standard9High': 9,
+      'Standard12High': 12,
+      'Standard16High': 16,
+      'Standard19High': 19,
+      'Standard25High': 25,
+      'Standard32High': 32,
+    };
+    return map[fontSize] ?? 16;
+  };
+
   // Build field subcommand for ^NM (per v2.6 spec section 5.33.2)
   const buildFieldSubcommand = (field: {
     id: number;
@@ -1697,15 +1713,14 @@ export function usePrinterConnection() {
     const printer = connectionState.connectedPrinter;
     const templateCode = templateToProtocolCode(templateValue);
     
-    // Convert absolute 32-dot canvas Y coordinates to template-relative Y coordinates.
-    // The canvas places the template area at the bottom of a 32-dot grid, so a 7-dot
-    // template starts at y=25 (32-7). The printer expects y=0 for the top of the template.
+    // Convert absolute 32-dot canvas Y coordinates to printer Y coordinates.
+    // The canvas uses Y=0 at the top (screen convention) with the template area
+    // at the bottom of a 32-dot grid. The printer uses Y=0 at the BOTTOM of the
+    // template area (print origin), so we must invert the Y axis.
     const templateHeight = (() => {
       if (!templateValue) return 32;
-      // Single-line templates: '7', '9', '16', etc.
       const parsed = parseInt(templateValue);
       if (!isNaN(parsed)) return parsed;
-      // Multi-line templates: 'multi-2x7' → height from known map
       const multiHeightMap: Record<string, number> = {
         'multi-5x5': 29, 'multi-4x7': 31, 'multi-4x5': 23,
         'multi-3x9': 29, 'multi-3x7': 23,
@@ -1715,13 +1730,17 @@ export function usePrinterConnection() {
     })();
     const blockedRows = 32 - templateHeight;
     
-    // Build field subcommands with corrected coordinates
-    const fieldSubcommands = fields.map((field, index) => 
-      buildFieldSubcommand({
+    // Build field subcommands with inverted Y coordinates
+    // Canvas Y (top-origin) → template-relative → printer Y (bottom-origin)
+    const fieldSubcommands = fields.map((field, index) => {
+      const fieldHeight = fontToDotHeight(field.fontSize);
+      const templateRelativeY = field.y - blockedRows; // 0 = top of template
+      const printerY = templateHeight - templateRelativeY - fieldHeight; // 0 = bottom of template
+      return buildFieldSubcommand({
         ...field,
-        y: field.y - blockedRows, // Convert to template-relative Y
-      }, index + 1)
-    ).join('');
+        y: Math.max(0, printerY),
+      }, index + 1);
+    }).join('');
 
     // Build the full ^NM command: ^NM t;s;o;p;name^AT1;...^AT2;...
     // Speed=0 (Fast), Orientation=0 (Normal), Mode=0 (Normal) as defaults
