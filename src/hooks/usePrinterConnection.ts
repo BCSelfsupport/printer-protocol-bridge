@@ -78,6 +78,8 @@ const shouldUseEmulator = () => printerEmulator.enabled || multiPrinterEmulator.
 // Track recently deleted message names so ^LM polling doesn't resurrect them
 const recentlyDeletedMessages = new Set<string>();
 const DELETION_GUARD_MS = 20000; // ignore deleted names for 20 seconds (polling cycle can take 10s+)
+const DELETE_VERIFY_RETRIES = 3;
+const DELETE_VERIFY_DELAY_MS = 250;
 const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCODE_AUTO']);
 
 const isProtocolCommandFailure = (rawResponse?: string): boolean => {
@@ -1947,19 +1949,30 @@ export function usePrinterConnection() {
             toast.error(`Cannot delete "${msgName}": ${result?.error || responseText || 'Printer rejected command'}`);
           }
 
-          // Verify with fresh ^LM so we only update UI after confirmed printer deletion
+          // Verify with fresh ^LM (retry with small delay) so UI updates only after confirmed deletion
           if (deleteConfirmed) {
-            const verifyList = await printerTransport.sendCommand(
-              connectionState.connectedPrinter.id,
-              '^LM',
-            );
+            let stillExists = true;
 
-            if (verifyList?.success && typeof verifyList.response === 'string') {
-              const namesAfterDelete = parseLmMessageNames(verifyList.response);
-              if (namesAfterDelete.includes(normalizedName)) {
-                deleteConfirmed = false;
-                toast.error(`Delete failed — "${msgName}" is still on the printer.`);
+            for (let attempt = 1; attempt <= DELETE_VERIFY_RETRIES; attempt += 1) {
+              const verifyList = await printerTransport.sendCommand(
+                connectionState.connectedPrinter.id,
+                '^LM',
+              );
+
+              if (verifyList?.success && typeof verifyList.response === 'string') {
+                const namesAfterDelete = parseLmMessageNames(verifyList.response);
+                stillExists = namesAfterDelete.includes(normalizedName);
+                if (!stillExists) break;
               }
+
+              if (attempt < DELETE_VERIFY_RETRIES) {
+                await new Promise((resolve) => setTimeout(resolve, DELETE_VERIFY_DELAY_MS));
+              }
+            }
+
+            if (stillExists) {
+              deleteConfirmed = false;
+              toast.error(`Delete failed — "${msgName}" is still on the printer.`);
             }
           }
         } catch (e) {
