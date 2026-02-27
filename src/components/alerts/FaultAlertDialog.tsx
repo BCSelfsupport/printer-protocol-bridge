@@ -134,23 +134,13 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
     onAcknowledge?.();
 
     const now = Date.now();
-    // Snooze this specific fault
-    snoozedRef.current[currentFault.code] = now + SNOOZE_DURATION_MS;
+    // Mark this fault as permanently dismissed until it disappears from ^LE
+    // and then re-appears as a genuinely new fault.
     setDismissedCodes(prev => {
       const next = new Set(prev);
       next.add(currentFault.code);
       return next;
     });
-
-    // Schedule re-check after snooze expires
-    const code = currentFault.code;
-    setTimeout(() => {
-      setDismissedCodes(prev => {
-        const next = new Set(prev);
-        next.delete(code);
-        return next;
-      });
-    }, SNOOZE_DURATION_MS);
 
     // Check if there are more faults to show
     const remaining = activeFaults.filter((f, i) => i !== currentIndex && !snoozedRef.current[f.code]);
