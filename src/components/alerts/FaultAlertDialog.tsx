@@ -51,8 +51,8 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
         delete snoozedRef.current[code];
       }
     }
-    return faults.filter(f => !snoozedRef.current[f.code]);
-  }, [faults]);
+    return faults.filter(f => !snoozedRef.current[f.code] && !dismissedCodes.has(f.code));
+  }, [faults, dismissedCodes]);
 
   // When faults change, show dialog only for newly introduced faults
   // (or when a snoozed/dismissed fault becomes eligible again).
@@ -133,24 +133,23 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
     // Send ^CA to clear the fault on the printer hardware
     onAcknowledge?.();
 
-    const now = Date.now();
-    // Mark this fault as permanently dismissed until it disappears from ^LE
-    // and then re-appears as a genuinely new fault.
+    // Mark this fault as dismissed and check for remaining faults
     setDismissedCodes(prev => {
       const next = new Set(prev);
       next.add(currentFault.code);
+      // Calculate remaining undismissed faults
+      const remaining = activeFaults.filter(f => f.code !== currentFault.code && !next.has(f.code));
+      if (remaining.length > 0) {
+        // Keep dialog open and reset index for next fault
+        setCurrentIndex(0);
+        // Force re-open in case AlertDialogPrimitive.Action auto-closed it
+        setTimeout(() => setOpen(true), 50);
+      } else {
+        setOpen(false);
+        setCurrentIndex(0);
+      }
       return next;
     });
-
-    // Check if there are more faults to show
-    const remaining = activeFaults.filter((f, i) => i !== currentIndex && !snoozedRef.current[f.code]);
-    if (remaining.length > 0) {
-      // Move to next fault (recalculate index since we snoozed current)
-      setCurrentIndex(0);
-    } else {
-      setOpen(false);
-      setCurrentIndex(0);
-    }
   }, [currentFault, activeFaults, currentIndex, onAcknowledge]);
 
   if (!currentFault || (!open && activeFaults.length === 0)) return null;
