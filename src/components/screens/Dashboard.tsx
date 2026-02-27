@@ -410,7 +410,9 @@ export function Dashboard({
         </div>
         
         {/* Right version */}
-        <span className="text-sidebar-foreground text-xs md:text-sm whitespace-nowrap flex-shrink-0">{status?.printerVersion ?? ''}</span>
+        <span className="text-sidebar-foreground text-xs md:text-sm whitespace-nowrap flex-shrink-0">
+          {status?.printerModel ? `Model ${status.printerModel}` : ''}{status?.printerModel && status?.printerVersion ? ' · ' : ''}{status?.printerVersion ?? ''}
+        </span>
       </div>
     )}
   </div>

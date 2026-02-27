@@ -37,6 +37,7 @@ const mockStatus: PrinterStatus = {
   currentMessage: null,
   errorMessage: null,
   printerVersion: null,
+  printerModel: null,
   printerTime: new Date(),
   inkLevel: 'UNKNOWN',
   makeupLevel: 'UNKNOWN',
@@ -468,7 +469,21 @@ export function usePrinterConnection() {
     }));
   }, []);
 
-  // Stable callback for ^CN counter polling – keeps counters live on Dashboard
+  // Stable callback for ^VV (version) polling – extracts firmware version and model number
+  const handleVersionResponse = useCallback((raw: string) => {
+    const { version, model } = parseVersionResponse(raw);
+    if (!version && !model) return;
+    setConnectionState((prev) => ({
+      ...prev,
+      status: prev.status ? {
+        ...prev.status,
+        ...(version ? { printerVersion: version } : {}),
+        ...(model ? { printerModel: model } : {}),
+      } : null,
+    }));
+  }, []);
+
+
   const handleCounterResponse = useCallback((raw: string) => {
     let parts: number[] = [];
 
@@ -651,7 +666,7 @@ export function usePrinterConnection() {
     }
   }, [updatePrinter]);
 
-  // Build serialized command list: ^SU, ^LE, ^SM, ^LM, ^CN, ^TP, ^SD sent sequentially to prevent TCP collisions
+  // Build serialized command list: ^SU, ^LE, ^SM, ^LM, ^CN, ^TP, ^SD, ^VV sent sequentially to prevent TCP collisions
   const pollingCommands = useMemo<PollingCommand[]>(() => [
     { command: '^SU', onResponse: handleServiceResponse },
     { command: '^LE', onResponse: handleErrorListResponse },
@@ -660,7 +675,8 @@ export function usePrinterConnection() {
     { command: '^CN', onResponse: handleCounterResponse },
     { command: '^TP', onResponse: handleTemperatureResponse },
     { command: '^SD', onResponse: handleDateTimeResponse },
-  ], [handleServiceResponse, handleErrorListResponse, handleSelectedMessageResponse, handleMessageListResponse, handleCounterResponse, handleTemperatureResponse, handleDateTimeResponse]);
+    { command: '^VV', onResponse: handleVersionResponse },
+  ], [handleServiceResponse, handleErrorListResponse, handleSelectedMessageResponse, handleMessageListResponse, handleCounterResponse, handleTemperatureResponse, handleDateTimeResponse, handleVersionResponse]);
 
   // Track whether the TCP socket is confirmed open — gates polling to avoid
   // sending commands before the socket is ready (prevents 8s timeout storms).
