@@ -691,14 +691,18 @@ const Index = () => {
       case 'service':
         // Now handled as dialog
         break;
-      case 'consumables':
+      case 'consumables': {
+        // In Lite mode (no network), only show the connected printer or first printer
+        const consumablePrinters = canNetwork ? printers : printers.filter(p => 
+          connectedPrinterId ? p.id === connectedPrinterId : p.id === printers[0]?.id
+        );
         return (
           <ConsumablesScreen
             reorderConfig={consumableStorage.reorderConfig}
             onUpdateReorderConfig={consumableStorage.updateReorderConfig}
             consumables={consumableStorage.consumables}
             assignments={consumableStorage.assignments}
-            printers={printers}
+            printers={consumablePrinters}
             metricsMap={connectionState.connectedPrinter && connectionState.metrics
               ? { [connectionState.connectedPrinter.id]: connectionState.metrics }
               : {}
@@ -712,6 +716,7 @@ const Index = () => {
             onHome={handleHome}
           />
         );
+      }
       case 'reports': {
         // In Lite mode (no network), only show the connected printer or first printer
         const reportPrinters = canNetwork ? printers : printers.filter(p => 
