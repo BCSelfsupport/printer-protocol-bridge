@@ -5,6 +5,7 @@ import { useTheme } from 'next-themes';
 import { getRelayConfig } from '@/lib/printerTransport';
 import { ConnectionGuideDialog } from '@/components/help/ConnectionGuideDialog';
 import { FeedbackDialog } from '@/components/feedback/FeedbackDialog';
+import { ModelBadge } from '@/components/branding/ModelBadge';
 
 declare const __APP_VERSION__: string;
 
@@ -15,9 +16,11 @@ interface HeaderProps {
   onHome?: () => void;
   printerTime?: Date | null;
   onRelayConnect?: () => void;
+  printerModel?: string | null;
+  printerVariant?: string | null;
 }
 
-export function Header({ isConnected, connectedIp, onSettings, onHome, printerTime, onRelayConnect }: HeaderProps) {
+export function Header({ isConnected, connectedIp, onSettings, onHome, printerTime, onRelayConnect, printerModel, printerVariant }: HeaderProps) {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const { theme, setTheme } = useTheme();
@@ -113,6 +116,9 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
             <span className="text-[10px] text-muted-foreground font-mono ml-1 self-end mb-0.5">
               v{appVersion}
             </span>
+          )}
+          {isConnected && printerModel && (
+            <ModelBadge model={printerModel} variant={printerVariant} />
           )}
         </div>
 

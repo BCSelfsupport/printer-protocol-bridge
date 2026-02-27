@@ -219,9 +219,9 @@ export function parseTemperatureResponse(response: string): { printheadTemp: num
 /**
  * Parse ^VV version response
  * Example: Remote Server N-86 STD v01.09.00.14 NB X.602 built Oct 7 2025
- * Returns both the firmware version and the model number (e.g. "86" from "N-86").
+ * Returns firmware version, model number (e.g. "86"), and variant (e.g. "STD").
  */
-export function parseVersionResponse(response: string): { version: string | null; model: string | null } {
+export function parseVersionResponse(response: string): { version: string | null; model: string | null; variant: string | null } {
   const versionMatch = response.match(/v(\d+\.\d+\.\d+\.\d+)/);
   const version = versionMatch ? `v${versionMatch[1]}` : null;
 
@@ -229,7 +229,11 @@ export function parseVersionResponse(response: string): { version: string | null
   const modelMatch = response.match(/\b[A-Z]-?(\d{1,3})\b/);
   const model = modelMatch ? modelMatch[1] : null;
 
-  return { version, model };
+  // Variant follows the model number: STD, HS, HS1, OPQ, FG, MICRO, SEC, etc.
+  const variantMatch = response.match(/\b[A-Z]-?\d{1,3}\s+(\w+)/);
+  const variant = variantMatch ? variantMatch[1] : null;
+
+  return { version, model, variant };
 }
 
 /**

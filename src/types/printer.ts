@@ -32,6 +32,7 @@ export interface PrinterStatus {
   errorMessage: string | null;
   printerVersion: string | null;
   printerModel: string | null;
+  printerVariant: string | null;
   printerTime: Date | null;
   // Detailed consumable levels from ^SU
   inkLevel: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
