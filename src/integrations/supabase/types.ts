@@ -97,6 +97,30 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback: {
+        Row: {
+          app_version: string | null
+          created_at: string
+          id: string
+          message: string
+          type: string
+        }
+        Insert: {
+          app_version?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          type?: string
+        }
+        Update: {
+          app_version?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          type?: string
+        }
+        Relationships: []
+      }
       fleet_events: {
         Row: {
           event_type: string

@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize, Stethoscope, HelpCircle } from 'lucide-react';
+import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize, Stethoscope, HelpCircle, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { getRelayConfig } from '@/lib/printerTransport';
 import { ConnectionGuideDialog } from '@/components/help/ConnectionGuideDialog';
+import { FeedbackDialog } from '@/components/feedback/FeedbackDialog';
 
 declare const __APP_VERSION__: string;
 
@@ -72,6 +73,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -163,6 +165,14 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
           </button>
 
           <button
+            onClick={() => setShowFeedback(true)}
+            className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+            title="Send Feedback"
+          >
+            <MessageSquare className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+          </button>
+
+          <button
             onClick={() => setShowGuide(true)}
             className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
             title="Connection Setup Guide"
@@ -199,6 +209,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
         </div>
       </div>
       <ConnectionGuideDialog open={showGuide} onOpenChange={setShowGuide} />
+      <FeedbackDialog open={showFeedback} onOpenChange={setShowFeedback} appVersion={appVersion} />
     </header>
   );
 }
