@@ -503,6 +503,7 @@ const Index = () => {
           customCounters={connectionState.status?.customCounters}
           connectedPrinterId={connectionState.connectedPrinter?.id ?? null}
           isConnected={connectionState.isConnected}
+          printerModel={connectionState.status?.printerModel}
           onSave={async (details: MessageDetails, isNew?: boolean) => {
             const targetName = isNew ? details.name : editingMessage.name;
             const success = await saveMessageContent(
@@ -601,6 +602,7 @@ const Index = () => {
             customCounters={connectionState.status?.customCounters}
             connectedPrinterId={connectionState.connectedPrinter?.id ?? null}
             isConnected={connectionState.isConnected}
+            printerModel={connectionState.status?.printerModel}
             onSave={async (details: MessageDetails, isNew?: boolean) => {
               const targetName = isNew ? details.name : editingMessage.name;
               const success = await saveMessageContent(

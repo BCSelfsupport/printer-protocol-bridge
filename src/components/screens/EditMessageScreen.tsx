@@ -21,6 +21,7 @@ import { AdvancedSettingsDialog, AdvancedSettings, defaultAdvancedSettings } fro
 import { DataLinkDialog } from '@/components/messages/DataLinkDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { FieldSettingsPanel, FieldSettings, defaultFieldSettings } from '@/components/messages/FieldSettingsPanel';
+import { getModelCapabilities } from '@/lib/modelCapabilities';
 import {
   Dialog,
   DialogContent,
@@ -117,6 +118,7 @@ interface EditMessageScreenProps {
   connectedPrinterId?: number | null;
   isConnected?: boolean;
   startEmpty?: boolean;
+  printerModel?: string | null;
 }
 
 export function EditMessageScreen({
@@ -129,7 +131,19 @@ export function EditMessageScreen({
   connectedPrinterId,
   isConnected = false,
   startEmpty = false,
+  printerModel,
 }: EditMessageScreenProps) {
+  // Filter templates and fonts based on connected printer model
+  const capabilities = getModelCapabilities(printerModel);
+  const availableSingleTemplates = capabilities
+    ? SINGLE_TEMPLATES.filter(t => capabilities.templates.includes(t.value as any))
+    : SINGLE_TEMPLATES;
+  const availableMultilineTemplates = capabilities
+    ? MULTILINE_TEMPLATES.filter(t => capabilities.templates.includes(t.value as any))
+    : MULTILINE_TEMPLATES;
+  const availableFontSizes = capabilities
+    ? FONT_SIZES.filter(f => capabilities.fonts.includes(f.value as any))
+    : FONT_SIZES;
   const [message, setMessage] = useState<MessageDetails>({
     name: messageName,
     height: 16,
@@ -394,11 +408,11 @@ export function EditMessageScreen({
       fields: prev.fields.map((f, index) => {
         const currentFontHeight = FONT_SIZES.find(fs => fs.value === f.fontSize)?.height || 16;
         
-        // If current font is too tall for the new template, find the largest font that fits
+        // If current font is too tall for the new template, find the largest available font that fits
         let newFontSize = f.fontSize;
         let newFieldHeight = currentFontHeight;
         if (currentFontHeight > maxFontHeight) {
-          const fittingFonts = FONT_SIZES.filter(fs => fs.height <= maxFontHeight);
+          const fittingFonts = availableFontSizes.filter(fs => fs.height <= maxFontHeight);
           if (fittingFonts.length > 0) {
             // Pick the largest font that fits
             const bestFont = fittingFonts[fittingFonts.length - 1];
@@ -428,10 +442,10 @@ export function EditMessageScreen({
     }));
   };
 
-  // Combined list of all templates for navigation
+  // Combined list of all templates for navigation (filtered by model)
   const ALL_TEMPLATES = [
-    ...SINGLE_TEMPLATES.map(t => ({ ...t, type: 'single' as const })),
-    ...MULTILINE_TEMPLATES.map(t => ({ ...t, type: 'multi' as const })),
+    ...availableSingleTemplates.map(t => ({ ...t, type: 'single' as const })),
+    ...availableMultilineTemplates.map(t => ({ ...t, type: 'multi' as const })),
   ];
 
   // Handle template navigation (delta-based: +1 = next, -1 = prev)
@@ -454,14 +468,14 @@ export function EditMessageScreen({
     ? MULTILINE_TEMPLATES.find(t => t.value === message.templateValue)
     : null;
   
-  // Get allowed font sizes based on current template
+  // Get allowed font sizes based on current template and model capabilities
   const getAllowedFonts = () => {
     if (currentMultilineTemplate) {
-      // For multiline templates, only allow fonts that match the dots per line
-      return FONT_SIZES.filter(fs => fs.height <= currentMultilineTemplate.dotsPerLine);
+      // For multiline templates, only allow fonts that match the dots per line AND are available for this model
+      return availableFontSizes.filter(fs => fs.height <= currentMultilineTemplate.dotsPerLine);
     }
-    // For single-height templates, allow all fonts up to the template height
-    return FONT_SIZES.filter(fs => fs.height <= message.height);
+    // For single-height templates, allow fonts up to the template height that are available for this model
+    return availableFontSizes.filter(fs => fs.height <= message.height);
   };
 
   // Helper to get current time source (printer time if synced, otherwise local)
@@ -615,8 +629,8 @@ export function EditMessageScreen({
     let fontSize: string;
     if (multiTemplate) {
       const maxH = multiTemplate.dotsPerLine;
-      const fittingFonts = FONT_SIZES.filter(fs => fs.height <= maxH);
-      const bestFont = fittingFonts.length > 0 ? fittingFonts[fittingFonts.length - 1] : FONT_SIZES[0];
+      const fittingFonts = availableFontSizes.filter(fs => fs.height <= maxH);
+      const bestFont = fittingFonts.length > 0 ? fittingFonts[fittingFonts.length - 1] : availableFontSizes[0];
       fontHeight = bestFont.height;
       fontSize = bestFont.value;
     } else {
@@ -624,8 +638,8 @@ export function EditMessageScreen({
       fontSize = 'Standard16High';
       // Ensure font fits single-line template height
       if (fontHeight > message.height) {
-        const fittingFonts = FONT_SIZES.filter(fs => fs.height <= message.height);
-        const bestFont = fittingFonts.length > 0 ? fittingFonts[fittingFonts.length - 1] : FONT_SIZES[0];
+        const fittingFonts = availableFontSizes.filter(fs => fs.height <= message.height);
+        const bestFont = fittingFonts.length > 0 ? fittingFonts[fittingFonts.length - 1] : availableFontSizes[0];
         fontHeight = bestFont.height;
         fontSize = bestFont.value;
       }
