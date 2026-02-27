@@ -116,10 +116,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
             <span className="text-[10px] text-muted-foreground font-mono ml-1 self-end mb-0.5">
               v{appVersion}
             </span>
-          )}
-          {isConnected && printerModel && (
-            <ModelBadge model={printerModel} variant={printerVariant} />
-          )}
+           )}
         </div>
 
         <div className="flex items-center gap-1 md:gap-4 flex-shrink-0 ml-2 md:ml-4">
