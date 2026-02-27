@@ -1855,8 +1855,10 @@ export function usePrinterConnection() {
     // Send ^DM to printer/emulator
     if (msgName && connectionState.isConnected && connectionState.connectedPrinter) {
       // Guard against ^LM polling resurrecting this message
-      recentlyDeletedMessages.add(msgName);
-      setTimeout(() => recentlyDeletedMessages.delete(msgName), DELETION_GUARD_MS);
+      // ^LM parsing uppercases names, so store the guard in uppercase too
+      const guardName = msgName.toUpperCase();
+      recentlyDeletedMessages.add(guardName);
+      setTimeout(() => recentlyDeletedMessages.delete(guardName), DELETION_GUARD_MS);
 
       const command = `^DM ${msgName}`;
       console.log('[deleteMessage] Sending:', command);
