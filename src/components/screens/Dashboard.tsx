@@ -8,10 +8,13 @@ import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
 import { MessageDetails, MessageField } from '@/components/screens/EditMessageScreen';
 import { CountersDialog } from '@/components/counters/CountersDialog';
 import { NavItem } from '@/components/layout/BottomNav';
+import { ModelBadge } from '@/components/branding/ModelBadge';
 
 interface DashboardProps {
   status: PrinterStatus | null;
   isConnected: boolean;
+  printerModel?: string | null;
+  printerVariant?: string | null;
   onStart: () => void;
   onStop: () => void;
   onJetStop: () => void;
@@ -68,6 +71,8 @@ export function Dashboard({
   onHome,
   selectedPrinterId,
   streamHours,
+  printerModel,
+  printerVariant,
 }: DashboardProps) {
   const [countersDialogOpen, setCountersDialogOpen] = useState(false);
 
@@ -133,6 +138,11 @@ export function Dashboard({
       {/* Top section - two rows with Makeup/Ink spanning both */}
       <div className="overflow-x-auto pb-2 -mx-2 px-2 md:mx-0 md:px-0 md:overflow-visible">
         <div className="min-w-max md:min-w-0">
+          {isConnected && printerModel && (
+            <div className="mb-1.5">
+              <ModelBadge model={printerModel} variant={printerVariant} />
+            </div>
+          )}
           <div className="flex gap-2 md:flex-wrap">
             <button 
               onClick={onSignIn}
