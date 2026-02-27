@@ -139,9 +139,12 @@ export function Dashboard({
       <div className="overflow-x-auto pb-2 -mx-2 px-2 md:mx-0 md:px-0 md:overflow-visible">
         <div className="min-w-max md:min-w-0">
           {isConnected && printerModel && (
-            <div className="mb-1.5 flex items-start">
-              <ModelBadge model={printerModel} variant={printerVariant} className="scale-110 origin-left" />
+            <div className="mb-1 flex items-start">
+              <ModelBadge model={printerModel} variant={printerVariant} />
             </div>
+          )}
+          {isConnected && !printerModel && (
+            <div className="mb-1 text-xs text-muted-foreground">Identifying printer...</div>
           )}
           <div className="flex gap-2 md:flex-wrap">
             <button 
