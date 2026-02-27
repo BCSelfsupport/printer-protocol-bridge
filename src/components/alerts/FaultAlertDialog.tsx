@@ -13,6 +13,8 @@ interface FaultAlertDialogProps {
   faults: PrinterFault[];
   /** Whether a printer is currently connected */
   isConnected: boolean;
+  /** Send ^CA to acknowledge/clear the fault on the printer hardware */
+  onAcknowledge?: () => void;
 }
 
 const SNOOZE_DURATION_MS = 3 * 60 * 1000; // 3 minutes
@@ -27,7 +29,7 @@ const normalizeFaultCodeForAsset = (rawCode: string) => {
   return normalizedDashes.replace(/[^a-zA-Z0-9_-]/g, '');
 };
 
-export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps) {
+export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAlertDialogProps) {
   const [open, setOpen] = useState(false);
   // Index of the fault currently being displayed
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -128,6 +130,9 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
   const handleDismiss = useCallback(() => {
     if (!currentFault) return;
 
+    // Send ^CA to clear the fault on the printer hardware
+    onAcknowledge?.();
+
     const now = Date.now();
     // Snooze this specific fault
     snoozedRef.current[currentFault.code] = now + SNOOZE_DURATION_MS;
@@ -156,7 +161,7 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
       setOpen(false);
       setCurrentIndex(0);
     }
-  }, [currentFault, activeFaults, currentIndex]);
+  }, [currentFault, activeFaults, currentIndex, onAcknowledge]);
 
   if (!currentFault || (!open && activeFaults.length === 0)) return null;
 
