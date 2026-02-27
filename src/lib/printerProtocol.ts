@@ -230,9 +230,9 @@ export function parseVersionResponse(response: string): { version: string | null
   let model: string | null = null;
   let variant: string | null = null;
 
-  if (/\bQ(?:uantum)?\s*[-]?\s*X\b/i.test(response)) {
+  if (/\bQ(?:UAN(?:TUM)?)?[\s-]*X\b/i.test(response)) {
     model = 'Qx';
-  } else if (/\bQ(?:uantum)?\b/i.test(response) && !/\bQ(?:ual)/i.test(response)) {
+  } else if (/\bQ(?:UAN(?:TUM)?)?\b/i.test(response) && !/\bQ(?:ual)/i.test(response)) {
     model = 'Q';
   } else {
     const modelMatch = response.match(/\b[A-Z]-?(\d{1,3})\b/);
@@ -240,7 +240,7 @@ export function parseVersionResponse(response: string): { version: string | null
   }
 
   // Variant follows the model identifier: STD, HS, HS1, OPQ, FG, MICRO, SEC, etc.
-  const variantMatch = response.match(/\b(?:[A-Z]-?\d{1,3}|Q(?:uantum)?\s*[-]?\s*X?)\s+(\w+)/i);
+  const variantMatch = response.match(/\b(?:[A-Z]-?\d{1,3}|Q(?:UAN(?:TUM)?)?\s*[-]?\s*X?)\s+(\w+)/i);
   variant = variantMatch ? variantMatch[1] : null;
 
   return { version, model, variant };
