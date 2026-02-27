@@ -572,6 +572,8 @@ export function PrintersScreen({
               onTurnOff={onTurnOff}
               selectedPrinterId={connectedPrinter?.id}
               streamHours={connectedMetrics?.streamHours}
+              printerModel={status?.printerModel}
+              printerVariant={status?.printerVariant}
             />
           </div>
         ) : (
