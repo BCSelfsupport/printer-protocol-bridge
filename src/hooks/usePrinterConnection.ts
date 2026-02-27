@@ -81,6 +81,14 @@ const DELETION_GUARD_MS = 20000; // ignore deleted names for 20 seconds (polling
 const DELETE_VERIFY_RETRIES = 3;
 const DELETE_VERIFY_DELAY_MS = 250;
 const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCODE_AUTO']);
+const buildDeleteCommandVariants = (messageName: string): string[] => {
+  const variants = [
+    `^DM ${messageName}`,
+    `^DM "${messageName}"`,
+    `^DM${messageName}`,
+  ];
+  return [...new Set(variants)];
+};
 
 const isProtocolCommandFailure = (rawResponse?: string): boolean => {
   if (!rawResponse) return false;
@@ -1921,38 +1929,41 @@ export function usePrinterConnection() {
         console.log('[deleteMessage] Guard expired for:', normalizedName);
       }, DELETION_GUARD_MS);
 
-      const command = `^DM ${msgName}`;
-      console.log('[deleteMessage] Sending:', command);
+      const deleteCommands = buildDeleteCommandVariants(msgName);
+      console.log('[deleteMessage] Candidate delete commands:', deleteCommands);
 
       if (shouldUseEmulator()) {
         const emulator = getEmulatorForPrinter(
           connectionState.connectedPrinter.ipAddress,
           connectionState.connectedPrinter.port,
         );
-        const result = emulator.processCommand(command);
+        const result = emulator.processCommand(deleteCommands[0]);
         deleteConfirmed = !!result?.success;
         if (!deleteConfirmed) {
           toast.error(`Failed to delete "${msgName}"`);
         }
       } else if (isElectron || isRelayMode()) {
         try {
-          const result = await printerTransport.sendCommand(
-            connectionState.connectedPrinter.id,
-            command,
-          );
+          deleteConfirmed = false;
+          let lastFailure = 'Printer rejected delete command';
 
-          const responseText = result?.response ?? '';
-          console.log('[deleteMessage] ^DM result:', result);
+          for (const command of deleteCommands) {
+            const result = await printerTransport.sendCommand(
+              connectionState.connectedPrinter.id,
+              command,
+            );
 
-          if (!result?.success || isProtocolCommandFailure(responseText)) {
-            deleteConfirmed = false;
-            toast.error(`Cannot delete "${msgName}": ${result?.error || responseText || 'Printer rejected command'}`);
-          }
+            const responseText = result?.response ?? '';
+            console.log('[deleteMessage] ^DM result for', command, ':', result);
 
-          // Verify with fresh ^LM (retry with small delay) so UI updates only after confirmed deletion
-          if (deleteConfirmed) {
+            if (!result?.success || isProtocolCommandFailure(responseText)) {
+              lastFailure = result?.error || responseText || 'Printer rejected command';
+              continue;
+            }
+
             let stillExists = true;
 
+            // Verify with fresh ^LM (retry with small delay) so UI updates only after confirmed deletion
             for (let attempt = 1; attempt <= DELETE_VERIFY_RETRIES; attempt += 1) {
               const verifyList = await printerTransport.sendCommand(
                 connectionState.connectedPrinter.id,
@@ -1970,10 +1981,16 @@ export function usePrinterConnection() {
               }
             }
 
-            if (stillExists) {
-              deleteConfirmed = false;
-              toast.error(`Delete failed — "${msgName}" is still on the printer.`);
+            if (!stillExists) {
+              deleteConfirmed = true;
+              break;
             }
+
+            lastFailure = `Delete command acknowledged but "${msgName}" is still listed.`;
+          }
+
+          if (!deleteConfirmed) {
+            toast.error(`Cannot delete "${msgName}": ${lastFailure}`);
           }
         } catch (e) {
           console.error('[deleteMessage] Failed to send ^DM:', e);
