@@ -78,6 +78,47 @@ const shouldUseEmulator = () => printerEmulator.enabled || multiPrinterEmulator.
 // Track recently deleted message names so ^LM polling doesn't resurrect them
 const recentlyDeletedMessages = new Set<string>();
 const DELETION_GUARD_MS = 20000; // ignore deleted names for 20 seconds (polling cycle can take 10s+)
+const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCODE_AUTO']);
+
+const isProtocolCommandFailure = (rawResponse?: string): boolean => {
+  if (!rawResponse) return false;
+  const upper = rawResponse.toUpperCase();
+  return /\?\s*\d+\s*:/.test(upper)
+    || /COMMAND\s+FAILED/.test(upper)
+    || /\bERROR\b/.test(upper)
+    || /\bFAILED\b/.test(upper)
+    || /\bCANNOT\b/.test(upper);
+};
+
+const parseLmMessageNames = (raw: string): string[] => {
+  const lines = raw.split(/[\r\n]+/).filter(Boolean);
+  const messageNames: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.replace(/[^\x20-\x7E]/g, '').trim();
+    const upper = trimmed.toUpperCase();
+
+    if (!trimmed || trimmed === '//EOL' || trimmed === '>' || trimmed.startsWith('^')
+      || upper.includes('COMMAND SUCCESSFUL') || upper.includes('COMMAND FAILED')
+      || upper.startsWith('MESSAGES (')
+      || upper.includes('PRODUCT:') || upper.includes('PRINT:') || upper.includes('CUSTOM1:')
+      || /\bMOD\s*\[/i.test(trimmed) || /\bINK\s*:/i.test(trimmed)
+      || /\bV300UP/i.test(trimmed) || /\bVLT_ON/i.test(trimmed)
+      || /\bGUT_ON/i.test(trimmed) || /\bMOD_ON/i.test(trimmed)
+      || /\bCHG\s*\[/i.test(trimmed) || /\bPRS\s*\[/i.test(trimmed)
+      || /\bRPS\s*\[/i.test(trimmed) || /\bHVD\s*\[/i.test(trimmed)
+      || /\bVIS\s*\[/i.test(trimmed) || /\bPHQ\s*\[/i.test(trimmed)
+      || /\bERR\s*\[/i.test(trimmed)
+      || upper === 'SUCCESS' || upper === 'OK') {
+      continue;
+    }
+
+    const cleanName = trimmed.replace(/\s*\(current\)\s*/gi, '').replace(/^\d+\.\s*/, '').trim().toUpperCase();
+    if (cleanName) messageNames.push(cleanName);
+  }
+
+  return messageNames;
+};
 
 // Resolve the correct emulator instance for a given printer IP.
 // Always prefers the multi-printer instance; only falls back to singleton if no match.
@@ -1845,32 +1886,39 @@ export function usePrinterConnection() {
     }));
   }, []);
 
-  // Delete a message — also sends ^DM to the printer/emulator
+  // Delete a message — protocol ^DM <message>
+  // Per protocol, delete fails for: non-existent, reserved, or currently-printing message.
   const deleteMessage = useCallback(async (id: number) => {
-    // Find message name before removing from state
     const msg = connectionState.messages.find(m => m.id === id);
-    const msgName = msg?.name;
+    const msgName = msg?.name?.trim();
+    if (!msgName) return false;
 
-    // Guard against ^LM polling resurrecting this message BEFORE removing from state
-    // so even if the ^DM command takes time, the guard is already in place.
-    if (msgName) {
-      const guardName = msgName.toUpperCase();
-      console.log('[deleteMessage] Adding guard for:', guardName, '| all guards:', [...recentlyDeletedMessages, guardName]);
-      recentlyDeletedMessages.add(guardName);
-      setTimeout(() => {
-        recentlyDeletedMessages.delete(guardName);
-        console.log('[deleteMessage] Guard expired for:', guardName);
-      }, DELETION_GUARD_MS);
+    const normalizedName = msgName.toUpperCase();
+
+    // Protocol guard: reserved messages cannot be deleted
+    if (RESERVED_PRINTER_MESSAGES.has(normalizedName)) {
+      toast.error(`Cannot delete "${msgName}" — this is a reserved printer message.`);
+      return false;
     }
 
-    // Remove from local state
-    setConnectionState((prev) => ({
-      ...prev,
-      messages: prev.messages.filter(m => m.id !== id),
-    }));
+    // Protocol guard: current printing message cannot be deleted
+    const currentMessage = connectionState.status?.currentMessage?.trim().toUpperCase();
+    if (currentMessage && currentMessage === normalizedName) {
+      toast.error(`Can't delete "${msgName}" — it is currently selected for printing.`);
+      return false;
+    }
 
-    // Send ^DM to printer/emulator
-    if (msgName && connectionState.isConnected && connectionState.connectedPrinter) {
+    let deleteConfirmed = true;
+
+    if (connectionState.isConnected && connectionState.connectedPrinter) {
+      // Guard against ^LM polling race while delete is being processed
+      console.log('[deleteMessage] Adding guard for:', normalizedName, '| all guards:', [...recentlyDeletedMessages, normalizedName]);
+      recentlyDeletedMessages.add(normalizedName);
+      setTimeout(() => {
+        recentlyDeletedMessages.delete(normalizedName);
+        console.log('[deleteMessage] Guard expired for:', normalizedName);
+      }, DELETION_GUARD_MS);
+
       const command = `^DM ${msgName}`;
       console.log('[deleteMessage] Sending:', command);
 
@@ -1879,29 +1927,62 @@ export function usePrinterConnection() {
           connectionState.connectedPrinter.ipAddress,
           connectionState.connectedPrinter.port,
         );
-        emulator.processCommand(command);
+        const result = emulator.processCommand(command);
+        deleteConfirmed = !!result?.success;
+        if (!deleteConfirmed) {
+          toast.error(`Failed to delete "${msgName}"`);
+        }
       } else if (isElectron || isRelayMode()) {
         try {
           const result = await printerTransport.sendCommand(
             connectionState.connectedPrinter.id,
             command,
           );
+
+          const responseText = result?.response ?? '';
           console.log('[deleteMessage] ^DM result:', result);
-          // Check if the printer rejected the delete (e.g. message is currently selected)
-          if (result && !result.success) {
-            console.error('[deleteMessage] ^DM FAILED:', result.error || result.response);
-            toast.error(`Failed to delete "${msgName}": ${result.error || result.response || 'Unknown error'}`);
-          } else if (result?.response && /fail|error|cannot/i.test(result.response)) {
-            console.error('[deleteMessage] ^DM response indicates failure:', result.response);
-            toast.error(`Cannot delete "${msgName}": ${result.response}`);
+
+          if (!result?.success || isProtocolCommandFailure(responseText)) {
+            deleteConfirmed = false;
+            toast.error(`Cannot delete "${msgName}": ${result?.error || responseText || 'Printer rejected command'}`);
+          }
+
+          // Verify with fresh ^LM so we only update UI after confirmed printer deletion
+          if (deleteConfirmed) {
+            const verifyList = await printerTransport.sendCommand(
+              connectionState.connectedPrinter.id,
+              '^LM',
+            );
+
+            if (verifyList?.success && typeof verifyList.response === 'string') {
+              const namesAfterDelete = parseLmMessageNames(verifyList.response);
+              if (namesAfterDelete.includes(normalizedName)) {
+                deleteConfirmed = false;
+                toast.error(`Delete failed — "${msgName}" is still on the printer.`);
+              }
+            }
           }
         } catch (e) {
           console.error('[deleteMessage] Failed to send ^DM:', e);
+          deleteConfirmed = false;
           toast.error(`Failed to delete "${msgName}"`);
         }
       }
+
+      if (!deleteConfirmed) {
+        recentlyDeletedMessages.delete(normalizedName);
+        return false;
+      }
     }
-  }, [connectionState.messages, connectionState.isConnected, connectionState.connectedPrinter]);
+
+    // Remove from UI only after delete is confirmed
+    setConnectionState((prev) => ({
+      ...prev,
+      messages: prev.messages.filter(m => m.id !== id),
+    }));
+
+    return true;
+  }, [connectionState.messages, connectionState.isConnected, connectionState.connectedPrinter, connectionState.status?.currentMessage]);
 
   // Reset or set a counter value using ^CC command
   // Counter IDs: 0 = Print Counter, 1-4 = Custom Counters, 6 = Product Counter
