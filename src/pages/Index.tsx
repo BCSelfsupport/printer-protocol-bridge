@@ -585,6 +585,8 @@ const Index = () => {
             onTurnOff={handleTurnOff}
             selectedPrinterId={connectionState.connectedPrinter?.id}
             streamHours={connectionState.metrics?.streamHours}
+            printerModel={connectionState.status?.printerModel}
+            printerVariant={connectionState.status?.printerVariant}
           />
         );
       case 'editMessage':
