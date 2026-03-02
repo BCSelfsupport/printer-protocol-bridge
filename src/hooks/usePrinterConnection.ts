@@ -677,6 +677,10 @@ export function usePrinterConnection() {
 
   // Stable callback for ^LE (List Errors) – overrides fluid levels when firmware
   // reports numeric "1" (LOW) but the error list confirms tanks are truly EMPTY.
+  // Also infers minimum fluid levels from ^LE when ^SU doesn't include them:
+  //   - No ink error in ^LE → at least GOOD (if currently UNKNOWN)
+  //   - Ink LOW fault in ^LE → LOW
+  //   - Ink EMPTY fault in ^LE → EMPTY
   const handleErrorListResponse = useCallback((raw: string) => {
     const parsed = parseErrorListResponse(raw);
     if (!parsed) return;
@@ -690,38 +694,54 @@ export function usePrinterConnection() {
     // Determine if there are ANY active errors (not just fluid-empty)
     const hasAnyErrors = parsed.errors.length > 0;
 
+    // Derive fluid levels from error messages
+    const hasInkLow = parsed.errors.some(e => /ink/i.test(e.message) && /low/i.test(e.message));
+    const hasMakeupLow = parsed.errors.some(e => /makeup/i.test(e.message) && /low/i.test(e.message));
+
     // Always update state — both when faults appear AND when they clear
     setConnectionState((prev) => {
       const status = prev.status;
       const metrics = prev.metrics;
       if (!status && !metrics) return prev;
 
-      const inkOverride = parsed.inkEmpty ? 'EMPTY' as const : undefined;
-      const makeupOverride = parsed.makeupEmpty ? 'EMPTY' as const : undefined;
+      // Determine ink level from ^LE:
+      // EMPTY > LOW > (no error → infer GOOD if currently UNKNOWN)
+      let inkFromLE: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | undefined;
+      if (parsed.inkEmpty) inkFromLE = 'EMPTY';
+      else if (hasInkLow) inkFromLE = 'LOW';
+      else if (status && status.inkLevel === 'UNKNOWN') inkFromLE = 'GOOD';
+
+      let makeupFromLE: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | undefined;
+      if (parsed.makeupEmpty) makeupFromLE = 'EMPTY';
+      else if (hasMakeupLow) makeupFromLE = 'LOW';
+      else if (status && status.makeupLevel === 'UNKNOWN') makeupFromLE = 'GOOD';
 
       return {
         ...prev,
         status: status ? {
           ...status,
-          ...(inkOverride ? { inkLevel: inkOverride } : {}),
-          ...(makeupOverride ? { makeupLevel: makeupOverride } : {}),
+          ...(inkFromLE ? { inkLevel: inkFromLE } : {}),
+          ...(makeupFromLE ? { makeupLevel: makeupFromLE } : {}),
         } : null,
         metrics: metrics ? {
           ...metrics,
-          ...(inkOverride ? { inkLevel: inkOverride } : {}),
-          ...(makeupOverride ? { makeupLevel: makeupOverride } : {}),
+          ...(inkFromLE ? { inkLevel: inkFromLE } : {}),
+          ...(makeupFromLE ? { makeupLevel: makeupFromLE } : {}),
           errorActive: hasAnyErrors,
         } : null,
       };
     });
 
     // Always sync the printer card — update hasActiveErrors from ^LE (authoritative)
+    // Also set fluid levels derived from ^LE when ^SU doesn't provide them
     if (connectedPrinterIdRef.current != null) {
       const updates: Partial<Printer> & { hasActiveErrors: boolean } = {
         hasActiveErrors: hasAnyErrors,
       };
       if (parsed.inkEmpty) updates.inkLevel = 'EMPTY';
+      else if (hasInkLow) updates.inkLevel = 'LOW';
       if (parsed.makeupEmpty) updates.makeupLevel = 'EMPTY';
+      else if (hasMakeupLow) updates.makeupLevel = 'LOW';
       updatePrinterStatus(connectedPrinterIdRef.current, updates as any);
     }
   }, [updatePrinterStatus]);
