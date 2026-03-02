@@ -158,14 +158,15 @@ export function MessageCanvas({
         const parsed = parseBarcodeLabelData(field.data);
         if (!parsed) continue;
         
-        const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${templateHeight}:${parsed.humanReadable}`;
+        const barcodeHeight = field.height || templateHeight;
+        const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeHeight}:${parsed.humanReadable}`;
         if (newImages.has(cacheKey)) continue;
         
         try {
           const barcodeCanvas = await renderBarcodeToCanvas(
             parsed.encoding,
             parsed.data,
-            templateHeight,
+            barcodeHeight,
             parsed.humanReadable
           );
           if (barcodeCanvas && !cancelled) {
@@ -318,18 +319,19 @@ export function MessageCanvas({
       
       if (isBarcode) {
         const parsed = parseBarcodeLabelData(field.data);
-        const cacheKey = parsed ? `${field.id}:${parsed.encoding}:${parsed.data}:${templateHeight}:${parsed.humanReadable}` : '';
+        const barcodeFieldHeight = field.height || templateHeight;
+        const cacheKey = parsed ? `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeFieldHeight}:${parsed.humanReadable}` : '';
         const barcodeCanvas = parsed ? barcodeImages.get(cacheKey) : null;
         const quietZoneDots = 10; // 10-dot quiet zone on each side
         quietZonePx = quietZoneDots * DOT_SIZE;
         if (barcodeCanvas) {
-          const scale = (templateHeight * DOT_SIZE) / barcodeCanvas.height;
+          const scale = (barcodeFieldHeight * DOT_SIZE) / barcodeCanvas.height;
           const barcodeW = Math.ceil(barcodeCanvas.width * scale);
           fieldW = barcodeW + quietZonePx * 2;
         } else {
           fieldW = field.width * DOT_SIZE + quietZonePx * 2;
         }
-        fieldH = templateHeight * DOT_SIZE;
+        fieldH = barcodeFieldHeight * DOT_SIZE;
         // Shift box left so barcode sits in the center with equal quiet zones
         fieldX -= quietZonePx;
       } else {
@@ -377,7 +379,8 @@ export function MessageCanvas({
         // Try to render actual barcode
         const parsed = parseBarcodeLabelData(field.data);
         if (parsed) {
-          const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${templateHeight}:${parsed.humanReadable}`;
+          const barcodeRenderHeight = field.height || templateHeight;
+          const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeRenderHeight}:${parsed.humanReadable}`;
           const barcodeCanvas = barcodeImages.get(cacheKey);
           
           if (barcodeCanvas) {

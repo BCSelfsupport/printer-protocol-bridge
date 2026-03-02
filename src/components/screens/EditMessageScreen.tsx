@@ -455,10 +455,14 @@ export function EditMessageScreen({
           newY = Math.max(blockedRows, 32 - newFieldHeight);
         }
         
+        // Barcode fields should size to the available template height, not font height
+        const isBarcode = f.type === 'barcode';
+        const effectiveHeight = isBarcode ? maxFontHeight : newFieldHeight;
+
         return {
           ...f,
-          fontSize: newFontSize,
-          height: newFieldHeight,
+          fontSize: isBarcode ? f.fontSize : newFontSize,
+          height: effectiveHeight,
           y: newY,
         };
       }),
