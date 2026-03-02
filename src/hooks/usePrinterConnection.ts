@@ -681,9 +681,10 @@ export function usePrinterConnection() {
     // Expose all parsed faults for the FaultAlertDialog
     setActiveFaults(parsed.errors);
 
-    // Only override state if ^LE confirms an EMPTY fault
-    if (!parsed.inkEmpty && !parsed.makeupEmpty) return;
+    // Determine if there are ANY active errors (not just fluid-empty)
+    const hasAnyErrors = parsed.errors.length > 0;
 
+    // Always update state — both when faults appear AND when they clear
     setConnectionState((prev) => {
       const status = prev.status;
       const metrics = prev.metrics;
@@ -703,13 +704,16 @@ export function usePrinterConnection() {
           ...metrics,
           ...(inkOverride ? { inkLevel: inkOverride } : {}),
           ...(makeupOverride ? { makeupLevel: makeupOverride } : {}),
+          errorActive: hasAnyErrors,
         } : null,
       };
     });
 
-    // Also sync the printer card in the list
+    // Always sync the printer card — update hasActiveErrors from ^LE (authoritative)
     if (connectedPrinterIdRef.current != null) {
-      const updates: Partial<Printer> = {};
+      const updates: Partial<Printer> & { hasActiveErrors: boolean } = {
+        hasActiveErrors: hasAnyErrors,
+      };
       if (parsed.inkEmpty) updates.inkLevel = 'EMPTY';
       if (parsed.makeupEmpty) updates.makeupLevel = 'EMPTY';
       updatePrinterStatus(connectedPrinterIdRef.current, updates as any);
