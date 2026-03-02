@@ -634,10 +634,8 @@ export function DataSourceScreen({
         </TabsContent>
 
         {/* ── Integrations Tab ── */}
-        <TabsContent value="integrations" className="flex-1 min-h-0">
-          <ScrollArea className="h-full">
-            <IntegrationConfig projectId={import.meta.env.VITE_SUPABASE_PROJECT_ID || ''} />
-          </ScrollArea>
+        <TabsContent value="integrations" className="flex-1 overflow-auto">
+          <IntegrationConfig projectId={import.meta.env.VITE_SUPABASE_PROJECT_ID || ''} />
         </TabsContent>
       </Tabs>
 
