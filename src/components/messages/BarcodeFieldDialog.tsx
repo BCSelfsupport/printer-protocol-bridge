@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { ArrowLeft, X, Keyboard, Hash, User, ChevronRight, AlertTriangle, Clock, Calendar, Layers } from 'lucide-react';
+import { ArrowLeft, X, Keyboard, Hash, User, ChevronRight, AlertTriangle, Clock, Calendar, Layers, Leaf } from 'lucide-react';
 import { validateBarcodeData } from '@/lib/barcodeRenderer';
 import {
   Dialog,
@@ -180,8 +180,11 @@ export function BarcodeFieldDialog({
     setData('');
   };
 
+  const hasVariableToken = /\{[A-Z0-9_]+\}/.test(data);
+  
   const handleAdd = () => {
-    if (!data.trim() || !validation.valid) return;
+    // Allow empty/token-only data for variable data fields (VDP, METRC, etc.)
+    if (!hasVariableToken && (!data.trim() || !validation.valid)) return;
     
     onAddBarcode({
       data: data.trim(),
@@ -565,6 +568,7 @@ export function BarcodeFieldDialog({
                 <p className="text-xs text-muted-foreground font-medium">Insert variable token into barcode data:</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
+                    { token: '{METRC}', label: 'METRC Tag', icon: Leaf },
                     { token: '{C1}', label: 'Counter 1', icon: Hash },
                     { token: '{C2}', label: 'Counter 2', icon: Hash },
                     { token: '{C3}', label: 'Counter 3', icon: Hash },
@@ -620,7 +624,7 @@ export function BarcodeFieldDialog({
         <div className="shrink-0 bg-background border-t border-border p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <Button 
             onClick={handleAdd}
-            disabled={!data.trim() || !validation.valid}
+            disabled={!hasVariableToken && (!data.trim() || !validation.valid)}
             className="w-full"
           >
             Add Barcode Field
