@@ -622,20 +622,6 @@ export function DataSourceScreen({
 
           {/* New Job button */}
           <div className="flex justify-end mb-3">
-            <Button
-              onClick={() => {
-                // Open dialog with source picker
-                setJobSourceId('');
-                setJobMessageName('');
-                setJobFieldMappings({});
-                setJobDialogOpen(true);
-              }}
-              disabled={dataSources.length === 0}
-              className="gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              New Print Job
-            </Button>
           </div>
 
           <div className="flex-1 bg-card rounded-lg p-4 overflow-auto">
