@@ -96,6 +96,7 @@ const isProtocolCommandFailure = (rawResponse?: string): boolean => {
   return /\?\s*\d+\s*:/.test(upper)
     || /COMMAND\s+FAILED/.test(upper)
     || /\bERROR\b/.test(upper)
+    || /\bERR\s*\[\s*\d+\s*\]/.test(upper)
     || /\bFAILED\b/.test(upper)
     || /\bCANNOT\b/.test(upper);
 };
@@ -1597,19 +1598,22 @@ export function usePrinterConnection() {
         console.log('[selectMessage] Sending ^SM command:', message.name);
         const result = await printerTransport.sendCommand(printer.id, `^SM ${message.name}`);
         console.log('[selectMessage] Result:', JSON.stringify(result));
-        
-        if (result?.success) {
-          // Set grace period so polling doesn't revert the selection
-          smSelectGraceUntilRef.current = Date.now() + 15000;
-          smExpectedMessageRef.current = message.name.toUpperCase();
-          setConnectionState(prev => ({
-            ...prev,
-            status: prev.status ? { ...prev.status, currentMessage: message.name } : null,
-          }));
-          updatePrinter(printer.id, { currentMessage: message.name });
-          return true;
+
+        const responseText = result?.response ?? '';
+        if (!result?.success || isProtocolCommandFailure(responseText)) {
+          console.error('[selectMessage] ^SM rejected by printer:', responseText || result?.error);
+          return false;
         }
-        return false;
+
+        // Set grace period so polling doesn't revert the selection
+        smSelectGraceUntilRef.current = Date.now() + 15000;
+        smExpectedMessageRef.current = message.name.toUpperCase();
+        setConnectionState(prev => ({
+          ...prev,
+          status: prev.status ? { ...prev.status, currentMessage: message.name } : null,
+        }));
+        updatePrinter(printer.id, { currentMessage: message.name });
+        return true;
       } catch (e) {
         console.error('[selectMessage] Failed to send ^SM command:', e);
         return false;
@@ -1780,12 +1784,14 @@ export function usePrinterConnection() {
         return `^AC${fieldNum};${field.x};${field.y};${fontCode};0`;
       case 'barcode': {
         // ^AB n;x;y;s;type;data  (per v2.6 protocol / ^HN help)
-        // Parse the UI encoding prefix e.g. "[QR] data", "[CODE128|HR] data"
+        // Parse UI prefix: [QR], [QRCODE|S=2], [CODE128|HR], etc.
         const prefixMatch = field.data.match(/^\[([^\]]+)\]\s*/);
         const rawData = prefixMatch ? field.data.slice(prefixMatch[0].length) : field.data;
         const prefixContent = prefixMatch ? prefixMatch[1] : 'CODE128';
-        const parts = prefixContent.split('|');
-        const encodingName = parts[0].trim().toUpperCase();
+        const parts = prefixContent.split('|').map((p) => p.trim()).filter(Boolean);
+        const encodingName = (parts[0] || 'CODE128').toUpperCase();
+        const sizeFlag = parts.find((p) => /^S=\d+$/i.test(p));
+        const parsedSize = sizeFlag ? parseInt(sizeFlag.split('=')[1], 10) : NaN;
 
         // Map UI encoding name to v2.6 protocol barcode type code
         const barcodeTypeMap: Record<string, number> = {
@@ -1804,8 +1810,14 @@ export function usePrinterConnection() {
           'DOTCODE': 12,
         };
         const typeCode = barcodeTypeMap[encodingName] ?? 6;
-        // Protocol format: ^AB n;x;y;s;type;data (6 params, no mode/HR params)
-        return `^AB${fieldNum};${field.x};${field.y};${fontCode};${typeCode};${rawData}`;
+
+        // Barcode "s" is size/scale, not text font code. Keep defaults firmware-safe.
+        const is2D = typeCode === 10 || typeCode === 11 || typeCode === 12;
+        const barcodeSize = Number.isFinite(parsedSize)
+          ? Math.max(0, parsedSize)
+          : (is2D ? 1 : 0);
+
+        return `^AB${fieldNum};${field.x};${field.y};${barcodeSize};${typeCode};${rawData}`;
       }
       case 'logo':
         // ^AL n; x; y; logoname
@@ -1948,9 +1960,11 @@ export function usePrinterConnection() {
           console.log('[saveMessageContent] Sending:', cmd);
           const result = await printerTransport.sendCommand(printer.id, cmd);
           console.log('[saveMessageContent] Result:', JSON.stringify(result));
+          const responseText = result?.response ?? '';
+          const rejectedByPrinter = isProtocolCommandFailure(responseText);
           // Don't fail on ^DM error (message might not exist yet)
-          if (!result?.success && !cmd.startsWith('^DM')) {
-            console.error('[saveMessageContent] Command failed:', cmd);
+          if ((!result?.success || rejectedByPrinter) && !cmd.startsWith('^DM')) {
+            console.error('[saveMessageContent] Command rejected:', cmd, responseText || result?.error);
             return false;
           }
         }
