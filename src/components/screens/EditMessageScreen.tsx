@@ -243,15 +243,24 @@ export function EditMessageScreen({
         if (!firstRow) return;
 
         const rowValues = firstRow.values as Record<string, string>;
-        const fieldMappings = job.field_mappings as Record<string, string>;
+        const fieldMappings = job.field_mappings as Record<string, string | string[]>;
 
         setMessage((prev) => {
           const updatedFields = prev.fields.map((f, idx) => {
             const fieldNum = idx + 1;
-            // Find which column maps to this field
-            const mappedCol = Object.entries(fieldMappings).find(([, fIdx]) => parseInt(fIdx) === fieldNum);
+            // Find which column maps to this field (supports single and multi-mapping)
+            const mappedCol = Object.entries(fieldMappings).find(([, mapped]) => {
+              const mappedFields = Array.isArray(mapped) ? mapped : [mapped];
+              return mappedFields.some((v) => parseInt(v, 10) === fieldNum);
+            });
             if (mappedCol && rowValues[mappedCol[0]] != null) {
-              return { ...f, data: String(rowValues[mappedCol[0]]) };
+              const newValue = String(rowValues[mappedCol[0]]);
+              if (f.type === 'barcode') {
+                const prefixMatch = f.data.match(/^(\[[^\]]+\])\s*/);
+                const prefix = prefixMatch ? prefixMatch[1] : '[QR]';
+                return { ...f, data: `${prefix} ${newValue}` };
+              }
+              return { ...f, data: newValue };
             }
             return f;
           });
