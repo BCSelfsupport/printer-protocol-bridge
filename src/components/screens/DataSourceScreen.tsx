@@ -622,6 +622,20 @@ export function DataSourceScreen({
                             {job.status === 'paused' ? 'Resume' : 'Run'}
                           </Button>
                         )}
+                        {!jobRunning && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={async () => {
+                              await supabase.from('print_jobs').delete().eq('id', job.id);
+                              queryClient.invalidateQueries({ queryKey: ['print-jobs'] });
+                              toast.success('Job deleted');
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   );
