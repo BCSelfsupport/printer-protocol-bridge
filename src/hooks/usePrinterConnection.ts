@@ -716,18 +716,15 @@ export function usePrinterConnection() {
   }, [updatePrinterStatus]);
 
   // Grace period: after selecting a message via ^SM, ignore poll ^SM responses
-  // for a few seconds so the polling doesn't revert the selection before the
-  // printer firmware fully switches.
+  // for a window so the polling doesn't revert the selection before the
+  // printer firmware fully switches. We also store the expected message name
+  // so that after grace expires, we only accept a poll response if it matches
+  // the expected name (confirming the switch) or we truly get a different name.
   const smSelectGraceUntilRef = useRef<number>(0);
+  const smExpectedMessageRef = useRef<string | null>(null);
 
   // Stable callback for ^SM (Selected Message) — authoritative source for current message name
   const handleSelectedMessageResponse = useCallback((raw: string) => {
-    // If we recently selected a message, skip this poll response to avoid reverting
-    if (Date.now() < smSelectGraceUntilRef.current) {
-      console.log('[handleSelectedMessageResponse] Skipping — within grace period after ^SM select');
-      return;
-    }
-
     const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l && l !== '^SM' && !/^success$/i.test(l) && l !== '>');
     if (lines.length === 0) return;
     let msgName = lines[0].replace(/[^\x20-\x7E]/g, '').trim();
@@ -735,6 +732,24 @@ export function usePrinterConnection() {
     msgName = msgName.replace(/^(Selected\s+)?Message\s*:\s*/i, '').trim();
     if (!msgName || msgName === 'NONE') return;
     const upperMsg = msgName.toUpperCase();
+
+    // During grace period: only accept if the printer confirms the expected message
+    if (Date.now() < smSelectGraceUntilRef.current) {
+      if (smExpectedMessageRef.current && upperMsg === smExpectedMessageRef.current) {
+        // Printer confirmed the switch — end grace early
+        console.log('[handleSelectedMessageResponse] Printer confirmed switch to', upperMsg, '— ending grace');
+        smSelectGraceUntilRef.current = 0;
+        smExpectedMessageRef.current = null;
+      } else {
+        console.log('[handleSelectedMessageResponse] Skipping — within grace period, got', upperMsg, 'expected', smExpectedMessageRef.current);
+        return;
+      }
+    } else if (smExpectedMessageRef.current) {
+      // Grace just expired — if the poll still returns the OLD message (not our expected),
+      // the selection may not have taken effect. Clear expected and accept whatever the printer says.
+      console.log('[handleSelectedMessageResponse] Grace expired, accepting', upperMsg);
+      smExpectedMessageRef.current = null;
+    }
 
     setConnectionState(prev => ({
       ...prev,
@@ -1566,7 +1581,8 @@ export function usePrinterConnection() {
       if (result.success) {
         const state = emulator.getState();
         // Set grace period so polling doesn't revert the selection
-        smSelectGraceUntilRef.current = Date.now() + 10000;
+        smSelectGraceUntilRef.current = Date.now() + 15000;
+        smExpectedMessageRef.current = (state.currentMessage || '').toUpperCase();
         setConnectionState(prev => ({
           ...prev,
           status: prev.status ? { ...prev.status, currentMessage: state.currentMessage } : null,
@@ -1584,7 +1600,8 @@ export function usePrinterConnection() {
         
         if (result?.success) {
           // Set grace period so polling doesn't revert the selection
-          smSelectGraceUntilRef.current = Date.now() + 10000;
+          smSelectGraceUntilRef.current = Date.now() + 15000;
+          smExpectedMessageRef.current = message.name.toUpperCase();
           setConnectionState(prev => ({
             ...prev,
             status: prev.status ? { ...prev.status, currentMessage: message.name } : null,
