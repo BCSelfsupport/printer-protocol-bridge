@@ -75,8 +75,10 @@ export function DataSourceScreen({
   const [activeJob, setActiveJob] = useState<PrintJob | null>(null);
   const [jobRunning, setJobRunning] = useState(false);
   const [jobPaused, setJobPaused] = useState(false);
+  const [rttStats, setRttStats] = useState<{ last: number; avg: number; min: number; max: number } | null>(null);
   const jobAbortRef = useRef(false);
   const jobPausedRef = useRef(false);
+  const rttSamplesRef = useRef<number[]>([]);
 
   // Fetch data sources
   const { data: dataSources = [], isLoading } = useQuery({
@@ -266,6 +268,8 @@ export function DataSourceScreen({
     setActiveJob(job);
     setJobRunning(true);
     setJobPaused(false);
+    setRttStats(null);
+    rttSamplesRef.current = [];
     jobAbortRef.current = false;
     jobPausedRef.current = false;
 
@@ -321,8 +325,22 @@ export function DataSourceScreen({
 
         if (!fieldSubcommands) continue;
 
+        const t0 = performance.now();
         const nmCommand = `^NM 0;0;0;0;${job.message_name}${fieldSubcommands}`;
         const result = await onSendCommand(nmCommand);
+        const rtt = Math.round(performance.now() - t0);
+
+        // Update RTT stats
+        const samples = rttSamplesRef.current;
+        samples.push(rtt);
+        // Keep last 50 samples for rolling average
+        if (samples.length > 50) samples.shift();
+        setRttStats({
+          last: rtt,
+          avg: Math.round(samples.reduce((a, b) => a + b, 0) / samples.length),
+          min: Math.min(...samples),
+          max: Math.max(...samples),
+        });
 
         const newIndex = i + 1;
         setActiveJob(prev => prev ? { ...prev, current_row_index: newIndex } : null);
@@ -529,6 +547,18 @@ export function DataSourceScreen({
                 }
                 className="mb-3"
               />
+              {/* TCP Round-Trip Time display */}
+              {rttStats && (
+                <div className="flex items-center gap-4 mb-3 text-xs font-mono bg-background/50 rounded px-3 py-2 border border-border">
+                  <span className="text-muted-foreground">TCP RTT:</span>
+                  <span className={rttStats.last < 50 ? 'text-green-500' : rttStats.last < 150 ? 'text-yellow-500' : 'text-destructive'}>
+                    {rttStats.last}ms
+                  </span>
+                  <span className="text-muted-foreground">avg: {rttStats.avg}ms</span>
+                  <span className="text-muted-foreground">min: {rttStats.min}ms</span>
+                  <span className="text-muted-foreground">max: {rttStats.max}ms</span>
+                </div>
+              )}
               <div className="flex gap-2 justify-end">
                 <Button size="sm" variant="outline" onClick={handlePauseResume}>
                   {jobPaused ? <Play className="w-4 h-4 mr-1" /> : <Pause className="w-4 h-4 mr-1" />}
