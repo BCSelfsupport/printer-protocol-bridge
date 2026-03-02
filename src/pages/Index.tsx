@@ -22,6 +22,7 @@ import { ReportsScreen } from '@/components/screens/ReportsScreen';
 import { DataSourceScreen } from '@/components/screens/DataSourceScreen';
 import { LowStockAlert, LowStockAlertData } from '@/components/consumables/LowStockAlert';
 import { WireCableScreen } from '@/components/screens/WireCableScreen';
+import { TrainingVideosScreen } from '@/components/screens/TrainingVideosScreen';
 import { LicenseActivationDialog } from '@/components/license/LicenseActivationDialog';
 import { FaultAlertDialog } from '@/components/alerts/FaultAlertDialog';
 
@@ -41,7 +42,7 @@ import { logConsumption } from '@/lib/consumptionTracker';
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
 
-type ScreenType = NavItem | 'network' | 'control' | 'editMessage' | 'consumables' | 'reports' | 'datasource' | 'wirecable';
+type ScreenType = NavItem | 'network' | 'control' | 'editMessage' | 'consumables' | 'reports' | 'datasource' | 'wirecable' | 'training';
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
@@ -753,6 +754,10 @@ const Index = () => {
             onSendCommand={sendCommand}
           />
         );
+      case 'training':
+        return (
+          <TrainingVideosScreen onBack={handleHome} />
+        );
     }
     
     // Default / home / desktop messages+editMessage: render PrintersScreen
@@ -859,6 +864,7 @@ const Index = () => {
         onRelayConnect={() => setRelayDialogOpen(true)}
         printerModel={connectionState.status?.printerModel}
         printerVariant={connectionState.status?.printerVariant}
+        onTrainingVideos={() => setCurrentScreen('training')}
       />
 
       <main className="flex-1 flex flex-col overflow-hidden">

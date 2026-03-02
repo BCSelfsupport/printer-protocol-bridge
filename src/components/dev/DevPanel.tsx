@@ -31,7 +31,8 @@ import {
   Network,
   Shield,
   Globe,
-  Signal
+  Signal,
+  Video
 } from 'lucide-react';
 import { CommandTerminal } from '@/components/terminal/CommandTerminal';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -44,6 +45,7 @@ import { Badge } from '@/components/ui/badge';
 import { LicenseAssignmentPanel } from '@/components/dev/LicenseAssignmentPanel';
 import { FleetMonitoringPanel } from '@/components/dev/FleetMonitoringPanel';
 import { FeedbackPanel } from '@/components/dev/FeedbackPanel';
+import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
 function getTimeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
@@ -425,7 +427,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <TabsList className="mx-4 mt-2 grid grid-cols-8 h-10">
+            <TabsList className="mx-4 mt-2 grid grid-cols-9 h-10">
               <TabsTrigger value="status" className="text-xs gap-1"><Gauge className="w-3.5 h-3.5" />Status</TabsTrigger>
               <TabsTrigger value="protocol" className="text-xs gap-1"><BookOpen className="w-3.5 h-3.5" />Protocol</TabsTrigger>
               <TabsTrigger value="commands" className="text-xs gap-1"><Terminal className="w-3.5 h-3.5" />Log</TabsTrigger>
@@ -442,6 +444,10 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
               <TabsTrigger value="feedback" className="text-xs gap-1">
                 <List className="w-3.5 h-3.5" />
                 Feedback
+              </TabsTrigger>
+              <TabsTrigger value="training" className="text-xs gap-1">
+                <Video className="w-3.5 h-3.5" />
+                Training
               </TabsTrigger>
             </TabsList>
 
@@ -925,6 +931,11 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             {/* Feedback Tab */}
             <TabsContent value="feedback" className="flex-1 overflow-hidden m-0">
               <FeedbackPanel />
+            </TabsContent>
+
+            {/* Training Videos Tab */}
+            <TabsContent value="training" className="flex-1 overflow-hidden m-0">
+              <TrainingVideoRecorder />
             </TabsContent>
           </Tabs>
 
