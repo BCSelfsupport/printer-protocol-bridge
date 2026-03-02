@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
@@ -78,6 +79,7 @@ export function DataSourceScreen({
   const [jobRunning, setJobRunning] = useState(false);
   const [jobPaused, setJobPaused] = useState(false);
   const [rttStats, setRttStats] = useState<{ last: number; avg: number; min: number; max: number } | null>(null);
+  const [manualPrintGo, setManualPrintGo] = useState(true);
   const jobAbortRef = useRef(false);
   const jobPausedRef = useRef(false);
   const rttSamplesRef = useRef<number[]>([]);
@@ -333,9 +335,15 @@ export function DataSourceScreen({
         const t0 = performance.now();
         const nmCommand = `^NM 0;0;0;0;${job.message_name}${fieldSubcommands}`;
         const result = await onSendCommand(nmCommand);
+
+        // Send ^PT (Force Print) if manual print go is enabled — simulates photocell trigger
+        if (manualPrintGo) {
+          await onSendCommand('^PT');
+        }
+
         const rtt = Math.round(performance.now() - t0);
 
-        // Update RTT stats
+        // Update RTT stats (includes ^NM + optional ^PT round-trip)
         const samples = rttSamplesRef.current;
         samples.push(rtt);
         // Keep last 50 samples for rolling average
@@ -349,17 +357,6 @@ export function DataSourceScreen({
 
         const newIndex = i + 1;
         setActiveJob(prev => prev ? { ...prev, current_row_index: newIndex } : null);
-
-        // Update DB progress every 50 rows or at the end (minimise DB overhead during fast printing)
-        if (newIndex % 50 === 0 || newIndex === rows.length) {
-          await supabase
-            .from('print_jobs')
-            .update({
-              current_row_index: newIndex,
-              status: newIndex >= rows.length ? 'completed' : 'running',
-            })
-            .eq('id', job.id);
-        }
 
         // If printer returned 'R' (ready), proceed immediately — no delay needed.
         // Otherwise wait a minimal 50ms for the printer to finish processing.
@@ -558,13 +555,14 @@ export function DataSourceScreen({
               {/* TCP Round-Trip Time display */}
               {rttStats && (
                 <div className="flex items-center gap-4 mb-3 text-xs font-mono bg-background/50 rounded px-3 py-2 border border-border">
-                  <span className="text-muted-foreground">TCP RTT:</span>
+                  <span className="text-muted-foreground">TCP RTT{manualPrintGo ? ' (NM+PT)' : ''}:</span>
                   <span className={rttStats.last < 50 ? 'text-green-500' : rttStats.last < 150 ? 'text-yellow-500' : 'text-destructive'}>
                     {rttStats.last}ms
                   </span>
                   <span className="text-muted-foreground">avg: {rttStats.avg}ms</span>
                   <span className="text-muted-foreground">min: {rttStats.min}ms</span>
                   <span className="text-muted-foreground">max: {rttStats.max}ms</span>
+                  <span className="text-muted-foreground">~{rttStats.avg > 0 ? Math.round(60000 / rttStats.avg) : '—'}/min</span>
                 </div>
               )}
               <div className="flex gap-2 justify-end">
@@ -709,6 +707,13 @@ export function DataSourceScreen({
                 </div>
               </div>
             )}
+            <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3 border border-border">
+              <div>
+                <Label className="text-sm font-medium">Manual Print Go (^PT)</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Send force-print after each row (no photocell needed)</p>
+              </div>
+              <Switch checked={manualPrintGo} onCheckedChange={setManualPrintGo} />
+            </div>
             {!isConnected && (
               <p className="text-sm text-destructive">
                 ⚠ Connect to a printer before creating a print job
