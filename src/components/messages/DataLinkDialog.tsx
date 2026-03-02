@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Database, Link, Unlink } from 'lucide-react';
+import { Database, Link, Unlink, Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -48,7 +48,7 @@ export function DataLinkDialog({
 }: DataLinkDialogProps) {
   const queryClient = useQueryClient();
   const [selectedSourceId, setSelectedSourceId] = useState<string>('');
-  const [mappings, setMappings] = useState<Record<string, string>>({}); // column -> field index
+  const [mappings, setMappings] = useState<Record<string, string[]>>({}); // column -> field indices array
 
   // Fetch data sources
   const { data: dataSources = [] } = useQuery({
@@ -84,7 +84,13 @@ export function DataLinkDialog({
   useEffect(() => {
     if (existingJob) {
       setSelectedSourceId(existingJob.data_source_id);
-      setMappings((existingJob.field_mappings as Record<string, string>) || {});
+      // Migrate old single-value mappings to array format
+      const raw = (existingJob.field_mappings as Record<string, string | string[]>) || {};
+      const migrated: Record<string, string[]> = {};
+      Object.entries(raw).forEach(([col, val]) => {
+        migrated[col] = Array.isArray(val) ? val : [val];
+      });
+      setMappings(migrated);
     } else {
       setSelectedSourceId('');
       setMappings({});
@@ -93,14 +99,20 @@ export function DataLinkDialog({
 
   const selectedSource = dataSources.find(s => s.id === selectedSourceId);
 
-  const handleMappingChange = (column: string, fieldIndex: string) => {
+  const handleToggleMapping = (column: string, fieldIndex: string) => {
     setMappings(prev => {
-      if (fieldIndex === 'none') {
-        const updated = { ...prev };
-        delete updated[column];
-        return updated;
+      const current = prev[column] || [];
+      if (current.includes(fieldIndex)) {
+        // Remove this field
+        const updated = current.filter(f => f !== fieldIndex);
+        if (updated.length === 0) {
+          const { [column]: _, ...rest } = prev;
+          return rest;
+        }
+        return { ...prev, [column]: updated };
       }
-      return { ...prev, [column]: fieldIndex };
+      // Add this field
+      return { ...prev, [column]: [...current, fieldIndex] };
     });
   };
 
@@ -162,17 +174,19 @@ export function DataLinkDialog({
             .limit(1)
             .single();
 
-          if (firstRow) {
-            const rowValues = firstRow.values as Record<string, string>;
-            const fieldValues: Record<number, string> = {};
-            Object.entries(mappings).forEach(([colName, fieldIdx]) => {
-              const idx = parseInt(fieldIdx);
-              if (!isNaN(idx) && rowValues[colName] != null) {
-                fieldValues[idx] = String(rowValues[colName]);
-              }
-            });
-            onLink(fieldValues);
-          }
+           if (firstRow) {
+             const rowValues = firstRow.values as Record<string, string>;
+             const fieldValues: Record<number, string> = {};
+             Object.entries(mappings).forEach(([colName, fieldIndices]) => {
+               for (const fi of fieldIndices) {
+                 const idx = parseInt(fi);
+                 if (!isNaN(idx) && rowValues[colName] != null) {
+                   fieldValues[idx] = String(rowValues[colName]);
+                 }
+               }
+             });
+             onLink(fieldValues);
+           }
         } catch (e) {
           console.warn('Could not fetch first row for preview:', e);
         }
@@ -256,29 +270,35 @@ export function DataLinkDialog({
               <p className="text-xs text-muted-foreground mb-3">
                 Assign each CSV column to a field number (F1, F2, etc.) shown on the canvas.
               </p>
-              <div className="space-y-2">
-                {selectedSource.columns.map(col => (
-                  <div key={col} className="flex items-center gap-3">
-                    <span className="text-sm font-medium min-w-[120px] truncate">{col}</span>
-                    <span className="text-muted-foreground">→</span>
-                    <Select
-                      value={mappings[col] || 'none'}
-                      onValueChange={(v) => handleMappingChange(col, v)}
-                    >
-                      <SelectTrigger className="w-[100px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">—</SelectItem>
-                        {fieldOptions.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+              <div className="space-y-3">
+                {selectedSource.columns.map(col => {
+                  const selected = mappings[col] || [];
+                  return (
+                    <div key={col} className="flex items-start gap-3">
+                      <span className="text-sm font-medium min-w-[120px] truncate mt-1">{col}</span>
+                      <span className="text-muted-foreground mt-1">→</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {fieldOptions.map(opt => {
+                          const isActive = selected.includes(opt.value);
+                          return (
+                            <button
+                              key={opt.value}
+                              onClick={() => handleToggleMapping(col, opt.value)}
+                              className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${
+                                isActive
+                                  ? 'bg-primary text-primary-foreground border-primary'
+                                  : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
+                              }`}
+                            >
+                              {isActive && <Check className="w-3 h-3 inline mr-0.5 -mt-0.5" />}
+                              {opt.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               {rowCount != null && (
                 <p className="text-xs text-muted-foreground mt-2">

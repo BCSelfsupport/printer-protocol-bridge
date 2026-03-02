@@ -39,7 +39,7 @@ interface PrintJob {
   data_source_id: string;
   message_name: string;
   printer_id: number;
-  field_mappings: Record<string, string>;
+  field_mappings: Record<string, string | string[]>;
   current_row_index: number;
   total_rows: number;
   status: string;
@@ -316,11 +316,14 @@ export function DataSourceScreen({
         const rowValues = row.values as Record<string, string>;
 
         let fieldSubcommands = '';
-        Object.entries(job.field_mappings).forEach(([colName, fieldIdx]) => {
+        Object.entries(job.field_mappings).forEach(([colName, fieldIdxOrArr]) => {
           const value = rowValues[colName] || '';
-          const idx = parseInt(fieldIdx);
-          if (!isNaN(idx)) {
-            fieldSubcommands += `^AT${idx};0;0;7;${value}`;
+          const indices = Array.isArray(fieldIdxOrArr) ? fieldIdxOrArr : [fieldIdxOrArr];
+          for (const fi of indices) {
+            const idx = parseInt(fi);
+            if (!isNaN(idx)) {
+              fieldSubcommands += `^AT${idx};0;0;7;${value}`;
+            }
           }
         });
 
