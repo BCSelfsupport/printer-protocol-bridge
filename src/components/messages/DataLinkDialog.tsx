@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Database, Link, Unlink, Check } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Database, Link, Unlink, Check, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -49,6 +49,10 @@ export function DataLinkDialog({
   const queryClient = useQueryClient();
   const [selectedSourceId, setSelectedSourceId] = useState<string>('');
   const [mappings, setMappings] = useState<Record<string, string[]>>({}); // column -> field indices array
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [previewRows, setPreviewRows] = useState<Record<string, string>[]>([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewActive, setPreviewActive] = useState(false);
 
   // Fetch data sources
   const { data: dataSources = [] } = useQuery({
@@ -219,6 +223,50 @@ export function DataLinkDialog({
     },
   });
 
+  // Preview: push row values to the editor via onLink
+  const pushRowToEditor = useCallback((row: Record<string, string>) => {
+    if (!onLink) return;
+    const fieldValues: Record<number, string> = {};
+    Object.entries(mappings).forEach(([colName, fieldIndices]) => {
+      for (const fi of fieldIndices) {
+        const idx = parseInt(fi);
+        if (!isNaN(idx) && row[colName] != null) {
+          fieldValues[idx] = String(row[colName]);
+        }
+      }
+    });
+    onLink(fieldValues);
+  }, [mappings, onLink]);
+
+  const startPreview = useCallback(async () => {
+    if (!selectedSourceId) return;
+    setPreviewLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('data_source_rows')
+        .select('values')
+        .eq('data_source_id', selectedSourceId)
+        .order('row_index', { ascending: true })
+        .limit(1000);
+      if (error) throw error;
+      const rows = (data || []).map(r => r.values as Record<string, string>);
+      setPreviewRows(rows);
+      setPreviewIndex(0);
+      setPreviewActive(true);
+      if (rows.length > 0) pushRowToEditor(rows[0]);
+    } catch (e) {
+      toast.error('Failed to load preview rows');
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [selectedSourceId, pushRowToEditor]);
+
+  const goToRow = useCallback((idx: number) => {
+    if (idx < 0 || idx >= previewRows.length) return;
+    setPreviewIndex(idx);
+    pushRowToEditor(previewRows[idx]);
+  }, [previewRows, pushRowToEditor]);
+
   const fieldOptions = Array.from({ length: fieldCount }, (_, i) => ({
     value: String(i + 1),
     label: `F${i + 1}`,
@@ -304,6 +352,94 @@ export function DataLinkDialog({
                 <p className="text-xs text-muted-foreground mt-2">
                   {rowCount} rows will be printed using this mapping.
                 </p>
+              )}
+            </div>
+          )}
+
+          {/* Preview / Test stepper */}
+          {selectedSource && Object.keys(mappings).length > 0 && (
+            <div className="border border-border rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1.5 text-sm">
+                  <Eye className="w-4 h-4" /> Preview Data
+                </Label>
+                {!previewActive ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={startPreview}
+                    disabled={previewLoading}
+                  >
+                    {previewLoading ? 'Loading…' : 'Start Preview'}
+                  </Button>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Row {previewIndex + 1} of {previewRows.length}
+                  </span>
+                )}
+              </div>
+
+              {previewActive && previewRows.length > 0 && (
+                <>
+                  {/* Current row values */}
+                  <div className="bg-muted rounded p-2 space-y-1 max-h-[120px] overflow-y-auto">
+                    {Object.entries(mappings).map(([colName, fieldIndices]) => (
+                      <div key={colName} className="flex items-baseline gap-2 text-xs">
+                        <span className="text-muted-foreground min-w-[80px] truncate">{colName}:</span>
+                        <span className="font-mono font-medium truncate">
+                          {previewRows[previewIndex]?.[colName] || '—'}
+                        </span>
+                        <span className="text-muted-foreground ml-auto shrink-0">
+                          → {fieldIndices.map(f => `F${f}`).join(', ')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Stepper controls */}
+                  <div className="flex items-center justify-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => goToRow(0)}
+                      disabled={previewIndex === 0}
+                      className="px-2"
+                    >
+                      ⏮
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => goToRow(previewIndex - 1)}
+                      disabled={previewIndex === 0}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <span className="text-sm font-medium tabular-nums min-w-[60px] text-center">
+                      {previewIndex + 1} / {previewRows.length}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => goToRow(previewIndex + 1)}
+                      disabled={previewIndex >= previewRows.length - 1}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => goToRow(previewRows.length - 1)}
+                      disabled={previewIndex >= previewRows.length - 1}
+                      className="px-2"
+                    >
+                      ⏭
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground text-center">
+                    Step through rows to preview on the canvas behind this dialog
+                  </p>
+                </>
               )}
             </div>
           )}
