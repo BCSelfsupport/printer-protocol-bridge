@@ -442,16 +442,23 @@ const Index = () => {
       const storedMessage = getMessage(currentMsg);
       if (!storedMessage) return;
 
-      const fieldMappings = job.field_mappings as Record<string, string>;
+      const fieldMappings = job.field_mappings as Record<string, string | string[]>;
       const rowValues = nextRow.values as Record<string, string>;
 
       const updatedFields = storedMessage.fields.map((f, idx) => {
         const fieldNum = idx + 1;
-        const mappedCol = Object.entries(fieldMappings).find(
-          ([, fIdx]) => parseInt(fIdx as string) === fieldNum
-        );
+        const mappedCol = Object.entries(fieldMappings).find(([, mapped]) => {
+          const mappedFields = Array.isArray(mapped) ? mapped : [mapped];
+          return mappedFields.some((v) => parseInt(v, 10) === fieldNum);
+        });
         if (mappedCol) {
-          return { ...f, data: String(rowValues[mappedCol[0]] ?? f.data) };
+          const newValue = String(rowValues[mappedCol[0]] ?? f.data);
+          if (f.type === 'barcode') {
+            const prefixMatch = f.data.match(/^(\[[^\]]+\])\s*/);
+            const prefix = prefixMatch ? prefixMatch[1] : '[QR]';
+            return { ...f, data: `${prefix} ${newValue}` };
+          }
+          return { ...f, data: newValue };
         }
         return f;
       });
