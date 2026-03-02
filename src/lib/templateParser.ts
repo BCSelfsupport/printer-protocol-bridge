@@ -27,7 +27,10 @@ export interface ParsedTemplate {
  */
 export async function parseTemplateFile(url: string): Promise<ParsedTemplate | null> {
   try {
-    const response = await fetch(url);
+    const { fetchAuthenticatedAsset } = await import('./assetAuth');
+    // Strip leading slash and prepend folder for authenticated fetch
+    const assetPath = url.replace(/^\/+/, '');
+    const response = await fetchAuthenticatedAsset(assetPath);
     if (!response.ok) {
       console.error('Failed to fetch template file:', response.status);
       return null;

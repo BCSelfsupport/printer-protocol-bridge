@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog';
+import { getAuthenticatedAssetUrl } from '@/lib/assetAuth';
 
 
 export interface PrinterFault {
@@ -184,17 +185,12 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
 
   if (!currentFault || (!open && activeFaults.length === 0)) return null;
 
-  // Build the fault image URL robustly for both web and Electron file:// runtime.
+  // Build the fault image URL through authenticated asset serving
   const normalizedFaultCode = normalizeFaultCodeForAsset(currentFault?.code ?? '');
   const qrImagePath = normalizedFaultCode
     ? (() => {
         const ext = FAULT_IMAGE_EXTENSIONS[imageExtIndex];
-        try {
-          return new URL(`fault-codes/${normalizedFaultCode}.${ext}`, document.baseURI).toString();
-        } catch {
-          const baseUrl = import.meta.env.BASE_URL ?? '/';
-          return `${baseUrl}fault-codes/${normalizedFaultCode}.${ext}`;
-        }
+        return getAuthenticatedAssetUrl(`fault-codes/${normalizedFaultCode}.${ext}`);
       })()
     : '';
 
