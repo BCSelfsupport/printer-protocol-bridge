@@ -321,7 +321,7 @@ export function MessageCanvas({
       if (isBarcode) {
         const parsed = parseBarcodeLabelData(field.data);
         const barcodeFieldHeight = field.height || templateHeight;
-        const cacheKey = parsed ? `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeFieldHeight}:${parsed.humanReadable}` : '';
+        const cacheKey = parsed ? `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeFieldHeight}:${parsed.humanReadable}:${parsed.sizeFlag ?? ''}` : '';
         const barcodeCanvas = parsed ? barcodeImages.get(cacheKey) : null;
         const quietZoneDots = 10; // 10-dot quiet zone on each side
         quietZonePx = quietZoneDots * DOT_SIZE;
@@ -381,7 +381,7 @@ export function MessageCanvas({
         const parsed = parseBarcodeLabelData(field.data);
         if (parsed) {
           const barcodeRenderHeight = field.height || templateHeight;
-          const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeRenderHeight}:${parsed.humanReadable}`;
+          const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeRenderHeight}:${parsed.humanReadable}:${parsed.sizeFlag ?? ''}`;
           const barcodeCanvas = barcodeImages.get(cacheKey);
           
           if (barcodeCanvas) {
