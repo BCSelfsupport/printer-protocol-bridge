@@ -259,13 +259,18 @@ export async function renderBarcodeToCanvas(
     
       if (is2D) {
         const size = Math.max(4, barcodeHeightDots);
-        options.height = size;
-        options.width = size;
         // Force QR version based on sizeFlag (1=V1 21x21, 2=V2 25x25, 3=V3 29x29)
         if (encoding === 'qrcode' && sizeFlag) {
-          (options as any).version = sizeFlag;
+          (options as any).version = parseInt(sizeFlag, 10);
+          // Let bwip-js determine module size from version; just set scale
+          // QR V1=21, V2=25, V3=29 modules. Scale so output ≈ targetBarPx
+          const modules = [0, 21, 25, 29][parseInt(sizeFlag, 10)] || 25;
+          options.scale = Math.max(1, Math.floor(targetBarPx / modules));
+        } else {
+          options.height = size;
+          options.width = size;
+          options.scale = Math.max(1, Math.floor(targetBarPx / (size * 2)));
         }
-        options.scale = Math.max(1, Math.floor(targetBarPx / (size * 2)));
     } else {
       // bwip-js height is in mm at 72dpi. 1mm ≈ 2.835 pixels at 72dpi.
       // With scale=S, pixel height ≈ height_mm * 2.835 * S
