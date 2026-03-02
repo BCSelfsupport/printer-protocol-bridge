@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.receive-print-data]
 verify_jwt = false
+
+[functions.serve-asset]
+verify_jwt = false
