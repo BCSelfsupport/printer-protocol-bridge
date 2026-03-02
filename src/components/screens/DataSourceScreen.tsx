@@ -27,6 +27,7 @@ import { PrintMessage } from '@/types/printer';
 import { DataSourceWizard } from '@/components/datasource/DataSourceWizard';
 import { InlineDataGrid } from '@/components/datasource/InlineDataGrid';
 import { IntegrationConfig } from '@/components/datasource/IntegrationConfig';
+import { LiveJobDataRow } from '@/components/datasource/LiveJobDataRow';
 
 interface DataSource {
   id: string;
@@ -223,13 +224,16 @@ export function DataSourceScreen({
   const handleLoadSample = () => loadSampleCsv('/sample-data/food-products-sample.csv', 'Food Products Sample');
   const handleLoadMetrcSample = () => loadSampleCsv('/sample-data/metrc-tags-sample.csv', 'METRC Tags Sample');
 
-  // Print job creation
-  const handleCreateJob = () => {
-    if (!selectedSource || selectedSource.columns.length === 0) {
+  // Print job creation — can be called from Data Sources tab (pre-selects source) or Print Jobs tab (shows picker)
+  const handleCreateJob = (preselectedSourceId?: string) => {
+    const srcId = preselectedSourceId || selectedSource?.id;
+    if (preselectedSourceId) {
+      // From Print Jobs tab — allow any source
+    } else if (!selectedSource || selectedSource.columns.length === 0) {
       toast.error('Select a data source with imported data first');
       return;
     }
-    setJobSourceId(selectedSource.id);
+    setJobSourceId(srcId || '');
     setJobMessageName('');
     setJobFieldMappings({});
     setJobDialogOpen(true);
@@ -516,7 +520,7 @@ export function DataSourceScreen({
               </button>
 
               <button
-                onClick={handleCreateJob}
+                onClick={() => handleCreateJob()}
                 disabled={!selectedSource || (selectedSource.rowCount ?? 0) === 0}
                 className="industrial-button-success text-white px-6 py-3 rounded-lg flex flex-col items-center min-w-[100px] disabled:opacity-50"
               >
@@ -538,6 +542,7 @@ export function DataSourceScreen({
 
         {/* ── Print Jobs Tab ── */}
         <TabsContent value="jobs" className="flex-1 flex flex-col">
+          {/* Active job panel with live data scrolling */}
           {activeJob && jobRunning && (
             <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-4">
               <div className="flex items-center justify-between mb-2">
@@ -555,6 +560,14 @@ export function DataSourceScreen({
                 }
                 className="mb-3"
               />
+
+              {/* Live data row display — shows current record scrolling through */}
+              <LiveJobDataRow
+                dataSourceId={activeJob.data_source_id}
+                currentRowIndex={activeJob.current_row_index}
+                dataSources={dataSources}
+              />
+
               {/* TCP Round-Trip Time display */}
               {rttStats && (
                 <div className="flex items-center gap-4 mb-3 text-xs font-mono bg-background/50 rounded px-3 py-2 border border-border">
@@ -593,7 +606,6 @@ export function DataSourceScreen({
                 </Button>
                 <Button size="sm" variant="destructive" onClick={() => {
                   handleStopJob();
-                  // Also resolve waiting print go so the loop can exit
                   if (printGoResolveRef.current) {
                     printGoResolveRef.current();
                     printGoResolveRef.current = null;
@@ -605,6 +617,24 @@ export function DataSourceScreen({
               </div>
             </div>
           )}
+
+          {/* New Job button */}
+          <div className="flex justify-end mb-3">
+            <Button
+              onClick={() => {
+                // Open dialog with source picker
+                setJobSourceId('');
+                setJobMessageName('');
+                setJobFieldMappings({});
+                setJobDialogOpen(true);
+              }}
+              disabled={dataSources.length === 0}
+              className="gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              New Print Job
+            </Button>
+          </div>
 
           <div className="flex-1 bg-card rounded-lg p-4 overflow-auto">
             {printJobs.length === 0 ? (
@@ -700,9 +730,18 @@ export function DataSourceScreen({
           <div className="py-4 space-y-4">
             <div>
               <Label>Data Source</Label>
-              <p className="text-sm text-muted-foreground mt-1">
-                {selectedSourceForJob?.name ?? 'Unknown'} ({selectedSourceForJob?.rowCount ?? 0} rows)
-              </p>
+              <Select value={jobSourceId} onValueChange={(v) => { setJobSourceId(v); setJobFieldMappings({}); }}>
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Select a data source" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dataSources.filter(s => (s.rowCount ?? 0) > 0).map((ds) => (
+                    <SelectItem key={ds.id} value={ds.id}>
+                      {ds.name} ({ds.rowCount} rows)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Target Message</Label>
@@ -769,6 +808,7 @@ export function DataSourceScreen({
             <Button
               onClick={() => createJobMutation.mutate()}
               disabled={
+                !jobSourceId ||
                 !jobMessageName ||
                 !isConnected ||
                 Object.values(jobFieldMappings).filter(v => v).length === 0
