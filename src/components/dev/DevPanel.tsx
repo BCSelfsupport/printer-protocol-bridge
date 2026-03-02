@@ -123,9 +123,11 @@ interface DevPanelProps {
   connectedPrinterId?: number;
   defaultTab?: string;
   showToggleButton?: boolean;
+  recorderState?: import('@/hooks/useScreenRecorder').ScreenRecorderState;
+  recorderActions?: import('@/hooks/useScreenRecorder').ScreenRecorderActions;
 }
 
-export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinterPort, connectedPrinterId, defaultTab, showToggleButton = true }: DevPanelProps) {
+export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinterPort, connectedPrinterId, defaultTab, showToggleButton = true, recorderState, recorderActions }: DevPanelProps) {
   const isMobile = useIsMobile();
   
   // Resolve the correct emulator instance for the connected printer
@@ -935,7 +937,11 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
 
             {/* Training Videos Tab */}
             <TabsContent value="training" className="flex-1 overflow-hidden m-0">
-              <TrainingVideoRecorder />
+              {recorderState && recorderActions ? (
+                <TrainingVideoRecorder recorderState={recorderState} recorderActions={recorderActions} />
+              ) : (
+                <div className="p-4 text-xs text-muted-foreground">Recorder not available</div>
+              )}
             </TabsContent>
           </Tabs>
 

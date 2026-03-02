@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { Video, Square, Upload, Loader2, Trash2, Play, Clock, AlertCircle } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { Video, Upload, Loader2, Trash2, Play, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import type { ScreenRecorderState, ScreenRecorderActions } from '@/hooks/useScreenRecorder';
 
 interface TrainingVideo {
   id: string;
@@ -20,25 +21,21 @@ interface TrainingVideo {
   created_at: string;
 }
 
-const MAX_DURATION = 300; // 5 minutes in seconds
+interface TrainingVideoRecorderProps {
+  recorderState: ScreenRecorderState;
+  recorderActions: ScreenRecorderActions;
+}
 
-export function TrainingVideoRecorder() {
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
-  const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
-  const [elapsed, setElapsed] = useState(0);
+export function TrainingVideoRecorder({ recorderState, recorderActions }: TrainingVideoRecorderProps) {
+  const { isRecording, elapsed, recordedBlob, recordedUrl } = recorderState;
+  const { startRecording, stopRecording, discardRecording: discardRaw } = recorderActions;
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('general');
   const [uploading, setUploading] = useState(false);
   const [videos, setVideos] = useState<TrainingVideo[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const fetchVideos = useCallback(async () => {
     try {
@@ -58,74 +55,18 @@ export function TrainingVideoRecorder() {
     fetchVideos();
   }, [fetchVideos]);
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 15 },
-        audio: false,
-      });
-
-      streamRef.current = stream;
-      chunksRef.current = [];
-      setElapsed(0);
-
-      const recorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp9',
-      });
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-        setRecordedBlob(blob);
-        setRecordedUrl(URL.createObjectURL(blob));
-        stream.getTracks().forEach(t => t.stop());
-        if (timerRef.current) clearInterval(timerRef.current);
-      };
-
-      // Auto-stop if user closes the share dialog
-      stream.getVideoTracks()[0].onended = () => {
-        if (recorder.state === 'recording') recorder.stop();
-        setIsRecording(false);
-      };
-
-      recorder.start(1000);
-      mediaRecorderRef.current = recorder;
-      setIsRecording(true);
-
-      // Timer
-      timerRef.current = setInterval(() => {
-        setElapsed(prev => {
-          if (prev + 1 >= MAX_DURATION) {
-            recorder.stop();
-            setIsRecording(false);
-            return MAX_DURATION;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-    } catch (err: any) {
-      if (err.name !== 'NotAllowedError') {
-        toast.error('Failed to start recording: ' + err.message);
-      }
-    }
-  };
-
-  const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
-    setIsRecording(false);
-    if (timerRef.current) clearInterval(timerRef.current);
-  };
-
   const discardRecording = () => {
-    if (recordedUrl) URL.revokeObjectURL(recordedUrl);
-    setRecordedBlob(null);
-    setRecordedUrl(null);
-    setElapsed(0);
+    discardRaw();
     setTitle('');
     setDescription('');
+  };
+
+  const handleStartRecording = async () => {
+    try {
+      await startRecording();
+    } catch (err: any) {
+      toast.error('Failed to start recording: ' + err.message);
+    }
   };
 
   const captureThumbnail = (): Promise<Blob | null> => {
@@ -135,9 +76,7 @@ export function TrainingVideoRecorder() {
       video.src = recordedUrl;
       video.currentTime = 1;
       video.muted = true;
-      video.onloadeddata = () => {
-        video.currentTime = 1;
-      };
+      video.onloadeddata = () => { video.currentTime = 1; };
       video.onseeked = () => {
         const canvas = document.createElement('canvas');
         canvas.width = 320;
@@ -146,9 +85,7 @@ export function TrainingVideoRecorder() {
         if (ctx) {
           ctx.drawImage(video, 0, 0, 320, 180);
           canvas.toBlob(blob => resolve(blob), 'image/png');
-        } else {
-          resolve(null);
-        }
+        } else { resolve(null); }
       };
       video.onerror = () => resolve(null);
     });
@@ -159,7 +96,6 @@ export function TrainingVideoRecorder() {
       toast.error('Please enter a title');
       return;
     }
-
     setUploading(true);
     try {
       const thumbnail = await captureThumbnail();
@@ -169,16 +105,12 @@ export function TrainingVideoRecorder() {
       formData.append('description', description.trim());
       formData.append('category', category);
       formData.append('duration_seconds', String(elapsed));
+      if (thumbnail) formData.append('thumbnail', thumbnail, 'thumb.png');
 
-      if (thumbnail) {
-        formData.append('thumbnail', thumbnail, 'thumb.png');
-      }
-
-      const { data, error } = await supabase.functions.invoke('training-videos', {
+      const { error } = await supabase.functions.invoke('training-videos', {
         method: 'POST',
         body: formData,
       });
-
       if (error) throw error;
       toast.success('Video uploaded successfully');
       discardRecording();
@@ -225,27 +157,20 @@ export function TrainingVideoRecorder() {
             Screen Recorder
           </h3>
 
-          {!recordedBlob && (
+          {!recordedBlob && !isRecording && (
             <div className="flex items-center gap-3">
-              {!isRecording ? (
-                <Button size="sm" onClick={startRecording} className="gap-2">
-                  <Video className="w-4 h-4" />
-                  Start Recording
-                </Button>
-              ) : (
-                <Button size="sm" variant="destructive" onClick={stopRecording} className="gap-2">
-                  <Square className="w-3 h-3" />
-                  Stop Recording
-                </Button>
-              )}
-              {isRecording && (
-                <div className="flex items-center gap-2 text-sm font-mono">
-                  <div className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-                  <span className="text-foreground">{formatTime(elapsed)}</span>
-                  <span className="text-muted-foreground">/ {formatTime(MAX_DURATION)}</span>
-                </div>
-              )}
+              <Button size="sm" onClick={handleStartRecording} className="gap-2">
+                <Video className="w-4 h-4" />
+                Start Recording
+              </Button>
             </div>
+          )}
+
+          {isRecording && (
+            <p className="text-xs text-muted-foreground">
+              <AlertCircle className="w-3 h-3 inline mr-1" />
+              Recording in progress — close the Dev Panel to capture the screen. Use the floating stop button to finish.
+            </p>
           )}
 
           {/* Preview & Upload */}
@@ -256,38 +181,22 @@ export function TrainingVideoRecorder() {
                 controls
                 className="w-full rounded-md max-h-[200px] bg-black"
               />
-
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="w-3 h-3" />
                 {formatTime(elapsed)} • {formatFileSize(recordedBlob.size)}
               </div>
-
               <div className="space-y-2">
                 <div>
                   <Label className="text-xs">Title *</Label>
-                  <Input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. How to Create a Message"
-                    className="h-8 text-sm"
-                  />
+                  <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. How to Create a Message" className="h-8 text-sm" />
                 </div>
                 <div>
                   <Label className="text-xs">Description</Label>
-                  <Input
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Optional description"
-                    className="h-8 text-sm"
-                  />
+                  <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" className="h-8 text-sm" />
                 </div>
                 <div>
                   <Label className="text-xs">Category</Label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full h-8 text-sm rounded-md border border-input bg-background px-2"
-                  >
+                  <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full h-8 text-sm rounded-md border border-input bg-background px-2">
                     <option value="general">General</option>
                     <option value="setup">Setup</option>
                     <option value="messages">Messages</option>
@@ -296,20 +205,12 @@ export function TrainingVideoRecorder() {
                   </select>
                 </div>
               </div>
-
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={uploadVideo}
-                  disabled={uploading || !title.trim()}
-                  className="gap-2"
-                >
+                <Button size="sm" onClick={uploadVideo} disabled={uploading || !title.trim()} className="gap-2">
                   {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                   {uploading ? 'Uploading...' : 'Save Video'}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={discardRecording}>
-                  Discard
-                </Button>
+                <Button size="sm" variant="ghost" onClick={discardRecording}>Discard</Button>
               </div>
             </div>
           )}
@@ -317,7 +218,7 @@ export function TrainingVideoRecorder() {
           {!isRecording && !recordedBlob && (
             <p className="text-xs text-muted-foreground">
               <AlertCircle className="w-3 h-3 inline mr-1" />
-              Click "Start Recording" to capture your screen. Max 5 minutes, no audio. Videos are available to all operators in the Training Videos library.
+              Click "Start Recording" to capture your screen. Max 5 minutes, no audio. A floating stop button will appear so you can close this panel during recording.
             </p>
           )}
         </div>
@@ -355,12 +256,7 @@ export function TrainingVideoRecorder() {
                       <span>{formatFileSize(v.file_size_bytes)}</span>
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                    onClick={() => deleteVideo(v.id)}
-                  >
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => deleteVideo(v.id)}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
