@@ -94,7 +94,7 @@ export function validateBarcodeData(encoding: string, data: string): BarcodeVali
 
 // Extract encoding type and settings from barcode field data string like "[CODE128|HR] 12345"
 // HR = Human Readable enabled
-export function parseBarcodeLabelData(label: string): { encoding: string; data: string; humanReadable: boolean } | null {
+export function parseBarcodeLabelData(label: string): { encoding: string; data: string; humanReadable: boolean; sizeFlag?: string } | null {
   // Match pattern: [ENCODING|FLAGS] data or [ENCODING] data
   const match = label.match(/^\[([^\]]+)\]\s*(.*)$/);
   if (!match) return null;
@@ -102,11 +102,18 @@ export function parseBarcodeLabelData(label: string): { encoding: string; data: 
   const encodingPart = match[1];
   const data = match[2];
   
-  // Check for flags (e.g., CODE128|HR)
+  // Check for flags (e.g., CODE128|HR|S=2)
   const parts = encodingPart.split('|');
   const encodingLabel = parts[0].toLowerCase();
   const flags = parts.slice(1).map(f => f.toUpperCase());
   const humanReadable = flags.includes('HR');
+  
+  // Extract S=<value> size flag
+  let sizeFlag: string | undefined;
+  for (const f of flags) {
+    const sm = f.match(/^S=(\d+)$/);
+    if (sm) { sizeFlag = sm[1]; break; }
+  }
   
   // Map label back to encoding key
   const encodingMap: Record<string, string> = {
@@ -140,7 +147,7 @@ export function parseBarcodeLabelData(label: string): { encoding: string; data: 
   };
   
   const encoding = encodingMap[encodingLabel] || 'code128';
-  return { encoding, data, humanReadable };
+  return { encoding, data, humanReadable, sizeFlag };
 }
 
 // ── Width estimation per encoding (in dots) ────────────────────────────
@@ -212,7 +219,8 @@ export async function renderBarcodeToCanvas(
   encoding: string,
   data: string,
   targetHeight: number, // in dots
-  humanReadable: boolean = false
+  humanReadable: boolean = false,
+  sizeFlag?: string
 ): Promise<HTMLCanvasElement | null> {
   if (!data || data.trim() === '') return null;
   
@@ -223,37 +231,41 @@ export async function renderBarcodeToCanvas(
     return null;
   }
   
-  const cacheKey = `${encoding}:${data}:${targetHeight}:${humanReadable}`;
-  if (barcodeCache.has(cacheKey)) {
-    return barcodeCache.get(cacheKey)!;
-  }
+   const cacheKey = `${encoding}:${data}:${targetHeight}:${humanReadable}:${sizeFlag ?? ''}`;
+    if (barcodeCache.has(cacheKey)) {
+      return barcodeCache.get(cacheKey)!;
+    }
   
-  const bwipEncoder = ENCODING_MAP[encoding] || 'code128';
+    const bwipEncoder = ENCODING_MAP[encoding] || 'code128';
   
-  try {
-    const tempCanvas = document.createElement('canvas');
+    try {
+      const tempCanvas = document.createElement('canvas');
     
-    const is2D = ['datamatrix', 'qrcode', 'dotcode'].includes(encoding);
-    // Reserve dots for human readable text below barcode
-    const textHeightDots = (humanReadable && !is2D) ? 5 : 0;
-    const barcodeHeightDots = targetHeight - textHeightDots;
+      const is2D = ['datamatrix', 'qrcode', 'dotcode'].includes(encoding);
+      // Reserve dots for human readable text below barcode
+      const textHeightDots = (humanReadable && !is2D) ? 5 : 0;
+      const barcodeHeightDots = targetHeight - textHeightDots;
     
-    const DOT_PX = 8;
-    const targetBarPx = barcodeHeightDots * DOT_PX; // target bar pixel height
+      const DOT_PX = 8;
+      const targetBarPx = barcodeHeightDots * DOT_PX; // target bar pixel height
     
-    const options: bwipjs.RenderOptions = {
-      bcid: bwipEncoder,
-      text: data,
-      scale: 1,
-      includetext: false,
-      backgroundcolor: 'f5e6c8',
-    };
+      const options: bwipjs.RenderOptions = {
+        bcid: bwipEncoder,
+        text: data,
+        scale: 1,
+        includetext: false,
+        backgroundcolor: 'f5e6c8',
+      };
     
-    if (is2D) {
-      const size = Math.max(4, barcodeHeightDots);
-      options.height = size;
-      options.width = size;
-      options.scale = Math.max(1, Math.floor(targetBarPx / (size * 2)));
+      if (is2D) {
+        const size = Math.max(4, barcodeHeightDots);
+        options.height = size;
+        options.width = size;
+        // Force QR version based on sizeFlag (1=V1 21x21, 2=V2 25x25, 3=V3 29x29)
+        if (encoding === 'qrcode' && sizeFlag) {
+          (options as any).version = sizeFlag;
+        }
+        options.scale = Math.max(1, Math.floor(targetBarPx / (size * 2)));
     } else {
       // bwip-js height is in mm at 72dpi. 1mm ≈ 2.835 pixels at 72dpi.
       // With scale=S, pixel height ≈ height_mm * 2.835 * S

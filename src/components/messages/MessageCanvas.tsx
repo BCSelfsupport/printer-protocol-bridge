@@ -159,7 +159,7 @@ export function MessageCanvas({
         if (!parsed) continue;
         
         const barcodeHeight = field.height || templateHeight;
-        const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeHeight}:${parsed.humanReadable}`;
+        const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeHeight}:${parsed.humanReadable}:${parsed.sizeFlag ?? ''}`;
         if (newImages.has(cacheKey)) continue;
         
         try {
@@ -167,7 +167,8 @@ export function MessageCanvas({
             parsed.encoding,
             parsed.data,
             barcodeHeight,
-            parsed.humanReadable
+            parsed.humanReadable,
+            parsed.sizeFlag
           );
           if (barcodeCanvas && !cancelled) {
             newImages.set(cacheKey, barcodeCanvas);
