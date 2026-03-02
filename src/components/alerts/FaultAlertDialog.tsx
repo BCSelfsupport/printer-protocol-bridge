@@ -150,7 +150,11 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
     // Send ^CA to clear the fault on the printer hardware
     onAcknowledge?.();
 
-    // Mark this fault as dismissed and check for remaining faults
+    // Snooze this fault instead of permanently dismissing — it will re-appear
+    // after SNOOZE_DURATION_MS if the fault is still active on the printer.
+    snoozedRef.current[currentFault.code] = Date.now() + SNOOZE_DURATION_MS;
+
+    // Also add to dismissed so getActiveFaults() filters it out immediately
     setDismissedCodes(prev => {
       const next = new Set(prev);
       next.add(currentFault.code);
@@ -167,6 +171,15 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
       }
       return next;
     });
+
+    // After snooze expires, clear from dismissedCodes so the fault can re-trigger
+    setTimeout(() => {
+      setDismissedCodes(prev => {
+        const next = new Set(prev);
+        next.delete(currentFault.code);
+        return next;
+      });
+    }, SNOOZE_DURATION_MS + 100);
   }, [currentFault, activeFaults, currentIndex, onAcknowledge]);
 
   if (!currentFault || (!open && activeFaults.length === 0)) return null;

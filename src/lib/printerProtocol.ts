@@ -94,6 +94,8 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
     || extract(/INK\s+LEVEL\s*:\s*(\w+)/i)
     || extract(/\bInk\s*Level\s*:\s*(\w+)/i)
     || extract(/\bInk\s*=\s*(\w+)/i)
+    || extract(/\bInkLevel\s*:\s*(\w+)/i)   // no space variant
+    || extract(/\bInkLevel\s*=\s*(\w+)/i)   // no space variant
     || extract(/\bI\s*:\s*(\w+)/i);  // ultra-terse: "I:FULL"
   
   const makeupRaw = extract(/MAKEUP\s*:\s*(\w+)/i)
@@ -102,7 +104,10 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
     || extract(/MAKEUP\s+LEVEL\s*:\s*(\w+)/i)
     || extract(/\bMakeup\s*Level\s*:\s*(\w+)/i)
     || extract(/\bMakeup\s*=\s*(\w+)/i)
+    || extract(/\bMakeupLevel\s*:\s*(\w+)/i) // no space variant
+    || extract(/\bMakeupLevel\s*=\s*(\w+)/i) // no space variant
     || extract(/\bMKP\s*:\s*(\w+)/i)   // abbreviation
+    || extract(/\bMKP\s*=\s*(\w+)/i)   // abbreviation with equals
     || extract(/\bM\s*:\s*(\w+)/i);    // ultra-terse: "M:GOOD"
 
   console.log('[parseStatusResponse] ink raw match:', inkRaw, '| makeup raw match:', makeupRaw);
