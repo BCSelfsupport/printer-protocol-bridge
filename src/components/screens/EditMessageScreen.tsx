@@ -455,9 +455,11 @@ export function EditMessageScreen({
           newY = Math.max(blockedRows, 32 - newFieldHeight);
         }
         
-        // Barcode fields should size to the available template height, not font height
+        // Barcode fields: 2D codes (QR/DM/DotCode) keep their explicit height
+        // (set from version/size selection); 1D codes resize to template height
         const isBarcode = f.type === 'barcode';
-        const effectiveHeight = isBarcode ? maxFontHeight : newFieldHeight;
+        const is2DCode = isBarcode && f.data && /^\[(QR|QRCODE|DATAMATRIX|DM|DATA MATRIX|DOTCODE)/i.test(f.data);
+        const effectiveHeight = is2DCode ? f.height : isBarcode ? maxFontHeight : newFieldHeight;
 
         return {
           ...f,
@@ -773,14 +775,28 @@ export function EditMessageScreen({
     // Estimate barcode width in dots based on encoding type and data
     const widthDots = estimateBarcodeWidthDots(config.encoding, config.data, config.humanReadable);
     
+    // For QR codes, height = version dot size (V1=21, V2=25, V3=29)
+    // For DataMatrix, derive from selected matrix size (e.g. "12x12" → 12)
+    // For others, use template height
+    const is2DBarcode = ['qrcode', 'datamatrix', 'dotcode'].includes(config.encoding);
+    let barcodeHeight = Math.min(message.height, 32);
+    if (config.encoding === 'qrcode' && config.size) {
+      const QR_VERSION_DOTS: Record<string, number> = { '1': 21, '2': 25, '3': 29 };
+      barcodeHeight = QR_VERSION_DOTS[config.size] || 25;
+    } else if (config.encoding === 'datamatrix' && config.size) {
+      // size is like "12x12", "16x16", etc. — extract the height portion
+      const dmMatch = config.size.match(/(\d+)x(\d+)/);
+      if (dmMatch) barcodeHeight = parseInt(dmMatch[2], 10);
+    }
+
     const newField: MessageField = {
       id: newId,
       type: 'barcode',
       data: barcodeLabel,
       x: message.fields.length * 50,
-      y: 32 - message.height,
+      y: 32 - barcodeHeight,
       width: widthDots,
-      height: Math.min(message.height, 32),
+      height: barcodeHeight,
       fontSize: 'Standard16High',
     };
     
