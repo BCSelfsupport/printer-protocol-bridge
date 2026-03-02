@@ -338,44 +338,31 @@ export function DataSourceScreen({
         const nmCommand = `^NM 0;0;0;0;${job.message_name}${fieldSubcommands}`;
         await onSendCommand(nmCommand);
 
+        // Always wait for user to trigger print (simulates product arrival)
+        setWaitingForPrintGo(true);
+        await new Promise<void>((resolve) => {
+          printGoResolveRef.current = resolve;
+        });
+        setWaitingForPrintGo(false);
+        if (jobAbortRef.current) continue;
+
+        // Send ^PT (force print) if manual print go is enabled — simulates photocell
+        // If disabled, the real photocell/product triggers the print on the hardware
+        const t0 = performance.now();
         if (manualPrintGo) {
-          // Wait for the user to press the Print Go button
-          setWaitingForPrintGo(true);
-          await new Promise<void>((resolve) => {
-            printGoResolveRef.current = resolve;
-          });
-          setWaitingForPrintGo(false);
-
-          // Now send ^PT and measure RTT
-          const t0 = performance.now();
           await onSendCommand('^PT');
-          const rtt = Math.round(performance.now() - t0);
-
-          const samples = rttSamplesRef.current;
-          samples.push(rtt);
-          if (samples.length > 50) samples.shift();
-          setRttStats({
-            last: rtt,
-            avg: Math.round(samples.reduce((a, b) => a + b, 0) / samples.length),
-            min: Math.min(...samples),
-            max: Math.max(...samples),
-          });
-        } else {
-          // Auto mode — just measure NM RTT
-          const t0 = performance.now();
-          // Small wait for printer processing
-          await new Promise(r => setTimeout(r, 50));
-          const rtt = Math.round(performance.now() - t0);
-          const samples = rttSamplesRef.current;
-          samples.push(rtt);
-          if (samples.length > 50) samples.shift();
-          setRttStats({
-            last: rtt,
-            avg: Math.round(samples.reduce((a, b) => a + b, 0) / samples.length),
-            min: Math.min(...samples),
-            max: Math.max(...samples),
-          });
         }
+        const rtt = Math.round(performance.now() - t0);
+
+        const samples = rttSamplesRef.current;
+        samples.push(rtt);
+        if (samples.length > 50) samples.shift();
+        setRttStats({
+          last: rtt,
+          avg: Math.round(samples.reduce((a, b) => a + b, 0) / samples.length),
+          min: Math.min(...samples),
+          max: Math.max(...samples),
+        });
 
         const newIndex = i + 1;
         setActiveJob(prev => prev ? { ...prev, current_row_index: newIndex } : null);
@@ -593,10 +580,10 @@ export function DataSourceScreen({
                   }}
                 >
                   <Play className="w-6 h-6 mr-2" />
-                  PRINT GO (^PT)
+                  {manualPrintGo ? 'PRINT GO (^PT)' : 'NEXT PRINT (product trigger)'}
                 </Button>
               )}
-              {!waitingForPrintGo && manualPrintGo && jobRunning && !rttStats && (
+              {!waitingForPrintGo && jobRunning && !rttStats && (
                 <p className="text-xs text-muted-foreground mb-3">Loading record data...</p>
               )}
               <div className="flex gap-2 justify-end">
