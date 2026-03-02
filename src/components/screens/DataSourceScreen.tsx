@@ -80,9 +80,11 @@ export function DataSourceScreen({
   const [jobPaused, setJobPaused] = useState(false);
   const [rttStats, setRttStats] = useState<{ last: number; avg: number; min: number; max: number } | null>(null);
   const [manualPrintGo, setManualPrintGo] = useState(true);
+  const [waitingForPrintGo, setWaitingForPrintGo] = useState(false);
   const jobAbortRef = useRef(false);
   const jobPausedRef = useRef(false);
   const rttSamplesRef = useRef<number[]>([]);
+  const printGoResolveRef = useRef<(() => void) | null>(null);
 
   // Fetch data sources
   const { data: dataSources = [], isLoading } = useQuery({
@@ -332,37 +334,51 @@ export function DataSourceScreen({
 
         if (!fieldSubcommands) continue;
 
-        const t0 = performance.now();
+        // Send ^NM to load record data into the printer
         const nmCommand = `^NM 0;0;0;0;${job.message_name}${fieldSubcommands}`;
-        const result = await onSendCommand(nmCommand);
+        await onSendCommand(nmCommand);
 
-        // Send ^PT (Force Print) if manual print go is enabled — simulates photocell trigger
         if (manualPrintGo) {
+          // Wait for the user to press the Print Go button
+          setWaitingForPrintGo(true);
+          await new Promise<void>((resolve) => {
+            printGoResolveRef.current = resolve;
+          });
+          setWaitingForPrintGo(false);
+
+          // Now send ^PT and measure RTT
+          const t0 = performance.now();
           await onSendCommand('^PT');
+          const rtt = Math.round(performance.now() - t0);
+
+          const samples = rttSamplesRef.current;
+          samples.push(rtt);
+          if (samples.length > 50) samples.shift();
+          setRttStats({
+            last: rtt,
+            avg: Math.round(samples.reduce((a, b) => a + b, 0) / samples.length),
+            min: Math.min(...samples),
+            max: Math.max(...samples),
+          });
+        } else {
+          // Auto mode — just measure NM RTT
+          const t0 = performance.now();
+          // Small wait for printer processing
+          await new Promise(r => setTimeout(r, 50));
+          const rtt = Math.round(performance.now() - t0);
+          const samples = rttSamplesRef.current;
+          samples.push(rtt);
+          if (samples.length > 50) samples.shift();
+          setRttStats({
+            last: rtt,
+            avg: Math.round(samples.reduce((a, b) => a + b, 0) / samples.length),
+            min: Math.min(...samples),
+            max: Math.max(...samples),
+          });
         }
-
-        const rtt = Math.round(performance.now() - t0);
-
-        // Update RTT stats (includes ^NM + optional ^PT round-trip)
-        const samples = rttSamplesRef.current;
-        samples.push(rtt);
-        // Keep last 50 samples for rolling average
-        if (samples.length > 50) samples.shift();
-        setRttStats({
-          last: rtt,
-          avg: Math.round(samples.reduce((a, b) => a + b, 0) / samples.length),
-          min: Math.min(...samples),
-          max: Math.max(...samples),
-        });
 
         const newIndex = i + 1;
         setActiveJob(prev => prev ? { ...prev, current_row_index: newIndex } : null);
-
-        // If printer returned 'R' (ready), proceed immediately — no delay needed.
-        // Otherwise wait a minimal 50ms for the printer to finish processing.
-        if (result.response?.trim() !== 'R') {
-          await new Promise(r => setTimeout(r, 50));
-        }
       }
 
       await onSendCommand('^ME');
@@ -555,22 +571,47 @@ export function DataSourceScreen({
               {/* TCP Round-Trip Time display */}
               {rttStats && (
                 <div className="flex items-center gap-4 mb-3 text-xs font-mono bg-background/50 rounded px-3 py-2 border border-border">
-                  <span className="text-muted-foreground">TCP RTT{manualPrintGo ? ' (NM+PT)' : ''}:</span>
+                  <span className="text-muted-foreground">^PT RTT:</span>
                   <span className={rttStats.last < 50 ? 'text-green-500' : rttStats.last < 150 ? 'text-yellow-500' : 'text-destructive'}>
                     {rttStats.last}ms
                   </span>
                   <span className="text-muted-foreground">avg: {rttStats.avg}ms</span>
                   <span className="text-muted-foreground">min: {rttStats.min}ms</span>
                   <span className="text-muted-foreground">max: {rttStats.max}ms</span>
-                  <span className="text-muted-foreground">~{rttStats.avg > 0 ? Math.round(60000 / rttStats.avg) : '—'}/min</span>
                 </div>
+              )}
+              {/* Print Go button — visible when waiting for manual trigger */}
+              {waitingForPrintGo && (
+                <Button
+                  size="lg"
+                  className="w-full mb-3 text-lg font-bold py-6"
+                  onClick={() => {
+                    if (printGoResolveRef.current) {
+                      printGoResolveRef.current();
+                      printGoResolveRef.current = null;
+                    }
+                  }}
+                >
+                  <Play className="w-6 h-6 mr-2" />
+                  PRINT GO (^PT)
+                </Button>
+              )}
+              {!waitingForPrintGo && manualPrintGo && jobRunning && !rttStats && (
+                <p className="text-xs text-muted-foreground mb-3">Loading record data...</p>
               )}
               <div className="flex gap-2 justify-end">
                 <Button size="sm" variant="outline" onClick={handlePauseResume}>
                   {jobPaused ? <Play className="w-4 h-4 mr-1" /> : <Pause className="w-4 h-4 mr-1" />}
                   {jobPaused ? 'Resume' : 'Pause'}
                 </Button>
-                <Button size="sm" variant="destructive" onClick={handleStopJob}>
+                <Button size="sm" variant="destructive" onClick={() => {
+                  handleStopJob();
+                  // Also resolve waiting print go so the loop can exit
+                  if (printGoResolveRef.current) {
+                    printGoResolveRef.current();
+                    printGoResolveRef.current = null;
+                  }
+                }}>
                   <Square className="w-4 h-4 mr-1" />
                   Stop
                 </Button>
