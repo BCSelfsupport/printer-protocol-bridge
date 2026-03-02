@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Video, Upload, Loader2, Trash2, Play, Clock, AlertCircle } from 'lucide-react';
+import { Video, Upload, Loader2, Trash2, Play, Clock, AlertCircle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -256,6 +256,11 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
                       <span>{formatFileSize(v.file_size_bytes)}</span>
                     </div>
                   </div>
+                  <a href={v.video_url} download={`${v.title}.webm`} target="_blank" rel="noopener noreferrer">
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground">
+                      <Download className="w-3.5 h-3.5" />
+                    </Button>
+                  </a>
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => deleteVideo(v.id)}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
