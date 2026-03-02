@@ -122,11 +122,19 @@ const Index = () => {
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
 
   // Keep message storage scoped to the connected printer
+  // Exit edit mode when switching printers so we don't appear to edit
+  // a message belonging to a different printer.
   useEffect(() => {
     if (connectedPrinterId !== null) {
       setStoragePrinterId(connectedPrinterId);
     }
-  }, [connectedPrinterId, setStoragePrinterId]);
+    // If we're on the edit screen, go back to home when printer changes
+    if (currentScreen === 'editMessage') {
+      setCurrentScreen('home');
+      setEditingMessage(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connectedPrinterId]);
   const handleCountdownComplete = useCallback((printerId: number, type: CountdownType) => {
     console.log('[handleCountdownComplete] printerId:', printerId, 'type:', type);
     if (type === 'starting') {
