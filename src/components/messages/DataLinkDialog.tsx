@@ -225,9 +225,14 @@ export function DataLinkDialog({
           <div>
             <Label>Data Source</Label>
             {dataSources.length === 0 ? (
-              <p className="text-sm text-muted-foreground mt-1">
-                No data sources found. Go to the Data screen to import a CSV first.
-              </p>
+              <div className="space-y-2 mt-1">
+                <p className="text-sm text-muted-foreground">
+                  No data sources found. Go to the <strong>Data</strong> screen to import a CSV first.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  💡 For METRC tags, import your METRC CSV export — the system will auto-detect the tag columns.
+                </p>
+              </div>
             ) : (
               <Select value={selectedSourceId} onValueChange={setSelectedSourceId}>
                 <SelectTrigger className="mt-1">
