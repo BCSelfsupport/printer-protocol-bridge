@@ -33,6 +33,8 @@ import { useJetCountdown } from '@/hooks/useJetCountdown';
 import { useMessageStorage, isReadOnlyMessage } from '@/hooks/useMessageStorage';
 import { useConsumableStorage } from '@/hooks/useConsumableStorage';
 import { DevPanel } from '@/components/dev/DevPanel';
+import { RecordingOverlay } from '@/components/dev/RecordingOverlay';
+import { useScreenRecorder } from '@/hooks/useScreenRecorder';
 import { useLicense } from '@/contexts/LicenseContext';
 import { PrintMessage } from '@/types/printer';
 import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
@@ -47,6 +49,11 @@ type ScreenType = NavItem | 'network' | 'control' | 'editMessage' | 'consumables
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
   const [devPanelOpen, setDevPanelOpen] = useState(false);
+
+  // Screen recorder: auto-close Dev Panel when recording starts
+  const screenRecorder = useScreenRecorder(useCallback(() => {
+    setDevPanelOpen(false);
+  }, []));
   const [devPanelTab, setDevPanelTab] = useState<string | undefined>(undefined);
   const [signInDialogOpen, setSignInDialogOpen] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -867,6 +874,14 @@ const Index = () => {
         onTrainingVideos={() => setCurrentScreen('training')}
       />
 
+      {/* Floating recording overlay - visible in main screen when recording */}
+      {screenRecorder.state.isRecording && (
+        <RecordingOverlay
+          elapsed={screenRecorder.state.elapsed}
+          onStop={screenRecorder.actions.stopRecording}
+        />
+      )}
+
       <main className="flex-1 flex flex-col overflow-hidden">
         {renderScreen()}
       </main>
@@ -892,6 +907,8 @@ const Index = () => {
           connectedPrinterId={connectionState.connectedPrinter?.id}
           defaultTab={devPanelTab}
           showToggleButton={isDevSignedIn}
+          recorderState={screenRecorder.state}
+          recorderActions={screenRecorder.actions}
         />
       ) : null}
       
