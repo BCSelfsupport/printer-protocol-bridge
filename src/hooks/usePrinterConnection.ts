@@ -1873,11 +1873,17 @@ export function usePrinterConnection() {
 
         if (typeCode === 8) {
           // QR Code: ^AB n;x;y;f;t;s;data
-          // s: 0=21x21, 1=25x25, 2=29x29
-          // Auto-select QR size based on field height when no explicit S= flag
+          // Protocol s: 0=21x21, 1=25x25, 2=29x29
+          // Editor S flag stores QR version: 1=21x21, 2=25x25, 3=29x29
+          // Convert version -> protocol size while preserving legacy S=0..2 payloads.
           let qrSize: number;
           if (Number.isFinite(parsedSize)) {
-            qrSize = Math.min(Math.max(0, parsedSize), 2);
+            const barcodeHeight = field.height || fieldTemplateHeight || 32;
+            const versionDots: Record<number, number> = { 1: 21, 2: 25, 3: 29 };
+            const looksLikeVersion = parsedSize >= 1 && parsedSize <= 3 && barcodeHeight === versionDots[parsedSize];
+            qrSize = looksLikeVersion
+              ? parsedSize - 1
+              : Math.min(Math.max(0, parsedSize), 2);
           } else {
             // Pick best fit: 29 dots → s=2, 25 dots → s=1, else s=0
             const barcodeHeight = field.height || fieldTemplateHeight || 32;
