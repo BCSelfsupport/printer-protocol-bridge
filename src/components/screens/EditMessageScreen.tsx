@@ -119,6 +119,7 @@ interface EditMessageScreenProps {
   isConnected?: boolean;
   startEmpty?: boolean;
   printerModel?: string | null;
+  preset?: 'metrc-retail-id';
 }
 
 export function EditMessageScreen({
@@ -132,6 +133,7 @@ export function EditMessageScreen({
   isConnected = false,
   startEmpty = false,
   printerModel,
+  preset,
 }: EditMessageScreenProps) {
   // Filter templates and fonts based on connected printer model
   const capabilities = getModelCapabilities(printerModel);
@@ -144,21 +146,31 @@ export function EditMessageScreen({
   const availableFontSizes = capabilities
     ? FONT_SIZES.filter(f => capabilities.fonts.includes(f.value as any))
     : FONT_SIZES;
+  // Build initial fields based on preset or defaults
+  const buildInitialFields = (): MessageField[] => {
+    if (preset === 'metrc-retail-id') {
+      return [
+        { id: 1, type: 'barcode', data: '[QR] https://d.1a4.com/sample', x: 0, y: 25, width: 25, height: 25, fontSize: 'Standard25High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
+        { id: 2, type: 'text', data: 'Retail ID', x: 28, y: 7, width: 60, height: 7, fontSize: 'Standard7High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
+      ];
+    }
+    if (startEmpty) return [];
+    return [
+      { id: 1, type: 'text', data: messageName, x: 0, y: 16, width: 60, height: 16, fontSize: 'Standard16High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
+    ];
+  };
+
   const [message, setMessage] = useState<MessageDetails>({
     name: messageName,
-    height: 16,
+    height: preset === 'metrc-retail-id' ? 25 : 16,
     width: 200,
-    fields: startEmpty
-      ? []
-      : [
-          { id: 1, type: 'text', data: messageName, x: 0, y: 16, width: 60, height: 16, fontSize: 'Standard16High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
-        ],
-    templateValue: '16', // Default to 16 dots single template
+    fields: buildInitialFields(),
+    templateValue: preset === 'metrc-retail-id' ? '25' : '16',
     settings: defaultMessageSettings,
     advancedSettings: defaultAdvancedSettings,
   });
   const [loading, setLoading] = useState(false);
-  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(startEmpty ? null : 1);
+  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(startEmpty && !preset ? null : 1);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [loadedTemplate, setLoadedTemplate] = useState<ParsedTemplate | null>(null);
   const [saveAsDialogOpen, setSaveAsDialogOpen] = useState(false);

@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe } from 'lucide-react';
+import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf } from 'lucide-react';
 import { PrintMessage } from '@/types/printer';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -30,7 +30,7 @@ interface MessagesScreenProps {
   currentMessageName: string | null;
   onSelect: (message: PrintMessage) => Promise<boolean>;
   onEdit: (message: PrintMessage) => void;
-  onNew: (name: string) => void;
+  onNew: (name: string, preset?: 'metrc-retail-id') => void;
   onDelete: (message: PrintMessage) => void;
   onHome: () => void;
   openNewDialogOnMount?: boolean;
@@ -84,9 +84,9 @@ export function MessagesScreen({
 
   const nameValidation = validateMessageName(newMessageName);
 
-  const handleNewMessage = () => {
+  const handleNewMessage = (preset?: 'metrc-retail-id') => {
     if (nameValidation.valid) {
-      onNew(newMessageName.trim().toUpperCase());
+      onNew(newMessageName.trim().toUpperCase(), preset);
       setNewDialogOpen(false);
       setNewMessageName('');
     }
@@ -211,12 +211,22 @@ export function MessagesScreen({
               <p className="text-sm text-destructive mt-1">{nameValidation.error}</p>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleNewMessage('metrc-retail-id')}
+              disabled={!nameValidation.valid}
+              className="mr-auto flex items-center gap-1.5 text-green-600 border-green-600/30 hover:bg-green-600/10"
+            >
+              <Leaf className="w-4 h-4" />
+              METRC Retail ID
+            </Button>
             <Button variant="outline" onClick={() => setNewDialogOpen(false)}>
               Cancel
             </Button>
             <Button
-              onClick={handleNewMessage}
+              onClick={() => handleNewMessage()}
               disabled={!nameValidation.valid}
             >
               Create

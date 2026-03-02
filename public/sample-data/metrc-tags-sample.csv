@@ -1,21 +1,21 @@
-Tag,Package Type,Item Name,Strain Name,Quantity,Unit of Measure,THC%,CBD%,Harvest Date,Retail ID,License Number,Facility
-1A4060300007199000001234,Flower,Blue Dream 3.5g,Blue Dream,3.5,Grams,24.5,0.08,2026-01-15,RET-2026-0001,LIC-420-0001,Green Valley Farms
-1A4060300007199000001235,Flower,OG Kush 3.5g,OG Kush,3.5,Grams,27.1,0.12,2026-01-18,RET-2026-0002,LIC-420-0001,Green Valley Farms
-1A4060300007199000001236,Concentrate,Gorilla Glue Shatter 1g,Gorilla Glue #4,1.0,Grams,78.3,0.45,2026-01-20,RET-2026-0003,LIC-420-0002,Mountain Extract Co
-1A4060300007199000001237,Edible,Sour Gummy Bears 100mg,Hybrid Blend,10.0,Each,10.0,2.0,2026-02-01,RET-2026-0004,LIC-420-0003,Canna Kitchen LLC
-1A4060300007199000001238,Flower,Girl Scout Cookies 7g,GSC,7.0,Grams,25.8,0.15,2026-01-22,RET-2026-0005,LIC-420-0001,Green Valley Farms
-1A4060300007199000001239,Flower,Jack Herer 3.5g,Jack Herer,3.5,Grams,22.4,0.20,2026-01-25,RET-2026-0006,LIC-420-0004,Sunny Side Cultivation
-1A4060300007199000001240,Cartridge,Pineapple Express 0.5g,Pineapple Express,0.5,Grams,85.2,1.1,2026-02-05,RET-2026-0007,LIC-420-0002,Mountain Extract Co
-1A4060300007199000001241,Flower,Wedding Cake 3.5g,Wedding Cake,3.5,Grams,26.9,0.09,2026-01-28,RET-2026-0008,LIC-420-0001,Green Valley Farms
-1A4060300007199000001242,Pre-Roll,Sour Diesel 1g,Sour Diesel,1.0,Grams,21.7,0.18,2026-02-02,RET-2026-0009,LIC-420-0004,Sunny Side Cultivation
-1A4060300007199000001243,Tincture,CBD Relief Drops 30ml,Charlotte's Web,30.0,Milliliters,1.2,18.5,2026-02-08,RET-2026-0010,LIC-420-0003,Canna Kitchen LLC
-1A4060300007199000001244,Flower,Northern Lights 7g,Northern Lights,7.0,Grams,20.3,0.22,2026-01-30,RET-2026-0011,LIC-420-0001,Green Valley Farms
-1A4060300007199000001245,Concentrate,Durban Poison Wax 1g,Durban Poison,1.0,Grams,72.6,0.38,2026-02-10,RET-2026-0012,LIC-420-0002,Mountain Extract Co
-1A4060300007199000001246,Edible,Dark Chocolate Bar 50mg,Indica Blend,1.0,Each,50.0,5.0,2026-02-12,RET-2026-0013,LIC-420-0003,Canna Kitchen LLC
-1A4060300007199000001247,Flower,Gelato 3.5g,Gelato,3.5,Grams,23.6,0.14,2026-02-01,RET-2026-0014,LIC-420-0004,Sunny Side Cultivation
-1A4060300007199000001248,Flower,Purple Punch 3.5g,Purple Punch,3.5,Grams,19.8,0.25,2026-02-03,RET-2026-0015,LIC-420-0001,Green Valley Farms
-1A4060300007199000001249,Cartridge,Maui Wowie 1g,Maui Wowie,1.0,Grams,81.4,0.92,2026-02-15,RET-2026-0016,LIC-420-0002,Mountain Extract Co
-1A4060300007199000001250,Flower,Zkittlez 3.5g,Zkittlez,3.5,Grams,21.2,0.17,2026-02-05,RET-2026-0017,LIC-420-0004,Sunny Side Cultivation
-1A4060300007199000001251,Pre-Roll,White Widow 1g,White Widow,1.0,Grams,23.1,0.11,2026-02-08,RET-2026-0018,LIC-420-0001,Green Valley Farms
-1A4060300007199000001252,Topical,Pain Relief Balm 2oz,CBD Dominant,2.0,Ounces,0.5,15.2,2026-02-18,RET-2026-0019,LIC-420-0003,Canna Kitchen LLC
-1A4060300007199000001253,Flower,Runtz 3.5g,Runtz,3.5,Grams,28.4,0.06,2026-02-10,RET-2026-0020,LIC-420-0001,Green Valley Farms
+Unit Code,index,reel,kind,Package Tag,Item Name,Strain Name,Quantity,Unit of Measure,THC%,CBD%,Retail ID
+https://d.1a4.com/q83vASNFZwAAAgWDAA,0,1,flower,1A4060300007199000001234,Blue Dream 3.5g,Blue Dream,3.5,Grams,24.5,0.08,RET-2026-0001
+https://d.1a4.com/q83vASNFZwAAAgWDAQ,1,1,flower,1A4060300007199000001235,OG Kush 3.5g,OG Kush,3.5,Grams,27.1,0.12,RET-2026-0002
+https://d.1a4.com/q83vASNFZwAAAgWDAg,2,1,concentrate,1A4060300007199000001236,Gorilla Glue Shatter 1g,Gorilla Glue #4,1.0,Grams,78.3,0.45,RET-2026-0003
+https://d.1a4.com/q83vASNFZwAAAgWDAw,3,1,edible,1A4060300007199000001237,Sour Gummy Bears 100mg,Hybrid Blend,10.0,Each,10.0,2.0,RET-2026-0004
+https://d.1a4.com/q83vASNFZwAAAgWDBA,4,1,flower,1A4060300007199000001238,Girl Scout Cookies 7g,GSC,7.0,Grams,25.8,0.15,RET-2026-0005
+https://d.1a4.com/q83vASNFZwAAAgWDBQ,5,1,flower,1A4060300007199000001239,Jack Herer 3.5g,Jack Herer,3.5,Grams,22.4,0.20,RET-2026-0006
+https://d.1a4.com/q83vASNFZwAAAgWDBg,6,1,cartridge,1A4060300007199000001240,Pineapple Express 0.5g,Pineapple Express,0.5,Grams,85.2,1.1,RET-2026-0007
+https://d.1a4.com/q83vASNFZwAAAgWDBw,7,1,flower,1A4060300007199000001241,Wedding Cake 3.5g,Wedding Cake,3.5,Grams,26.9,0.09,RET-2026-0008
+https://d.1a4.com/q83vASNFZwAAAgWDCA,8,1,preroll,1A4060300007199000001242,Sour Diesel 1g,Sour Diesel,1.0,Grams,21.7,0.18,RET-2026-0009
+https://d.1a4.com/q83vASNFZwAAAgWDCQ,9,1,tincture,1A4060300007199000001243,CBD Relief Drops 30ml,Charlottes Web,30.0,Milliliters,1.2,18.5,RET-2026-0010
+https://d.1a4.com/q83vASNFZwAAAgWDCg,10,2,flower,1A4060300007199000001244,Northern Lights 7g,Northern Lights,7.0,Grams,20.3,0.22,RET-2026-0011
+https://d.1a4.com/q83vASNFZwAAAgWDCw,11,2,concentrate,1A4060300007199000001245,Durban Poison Wax 1g,Durban Poison,1.0,Grams,72.6,0.38,RET-2026-0012
+https://d.1a4.com/q83vASNFZwAAAgWDDA,12,2,edible,1A4060300007199000001246,Dark Chocolate Bar 50mg,Indica Blend,1.0,Each,50.0,5.0,RET-2026-0013
+https://d.1a4.com/q83vASNFZwAAAgWDDQ,13,2,flower,1A4060300007199000001247,Gelato 3.5g,Gelato,3.5,Grams,23.6,0.14,RET-2026-0014
+https://d.1a4.com/q83vASNFZwAAAgWDDg,14,2,flower,1A4060300007199000001248,Purple Punch 3.5g,Purple Punch,3.5,Grams,19.8,0.25,RET-2026-0015
+https://d.1a4.com/q83vASNFZwAAAgWDDw,15,2,cartridge,1A4060300007199000001249,Maui Wowie 1g,Maui Wowie,1.0,Grams,81.4,0.92,RET-2026-0016
+https://d.1a4.com/q83vASNFZwAAAgWDEA,16,2,flower,1A4060300007199000001250,Zkittlez 3.5g,Zkittlez,3.5,Grams,21.2,0.17,RET-2026-0017
+https://d.1a4.com/q83vASNFZwAAAgWDEQ,17,2,preroll,1A4060300007199000001251,White Widow 1g,White Widow,1.0,Grams,23.1,0.11,RET-2026-0018
+https://d.1a4.com/q83vASNFZwAAAgWDEg,18,2,topical,1A4060300007199000001252,Pain Relief Balm 2oz,CBD Dominant,2.0,Ounces,0.5,15.2,RET-2026-0019
+https://d.1a4.com/q83vASNFZwAAAgWDEw,19,2,flower,1A4060300007199000001253,Runtz 3.5g,Runtz,3.5,Grams,28.4,0.06,RET-2026-0020

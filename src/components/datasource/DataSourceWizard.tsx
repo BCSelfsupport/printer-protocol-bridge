@@ -82,12 +82,17 @@ export function DataSourceWizard({ open, onOpenChange }: DataSourceWizardProps) 
       setSourceName(name);
     }
 
-    // METRC detection
-    const detection = detectMetrcCsv(headers);
+    // METRC detection — pass first row as sample for URL pattern detection
+    const sampleRow = rows.length > 0 ? rows[0] : undefined;
+    const detection = detectMetrcCsv(headers, sampleRow);
     setMetrcResult(detection);
 
     if (sourceType === 'csv' && detection.isMetrc && detection.confidence === 'high') {
-      toast.info('🌿 METRC format detected! Tag/UID column found.');
+      if (detection.format === 'retail-id') {
+        toast.info('🌿 METRC Retail ID format detected! Unit Code column found for QR printing.');
+      } else {
+        toast.info('🌿 METRC format detected! Tag/UID column found.');
+      }
     }
 
     setStep('preview');
@@ -210,9 +215,9 @@ export function DataSourceWizard({ open, onOpenChange }: DataSourceWizardProps) 
                 className={`p-4 rounded-lg border-2 text-left transition-all hover:border-green-500/50 hover:bg-green-500/5 border-border`}
               >
                 <Leaf className="w-8 h-8 mb-2 text-green-600" />
-                <p className="font-medium">METRC Export</p>
+                <p className="font-medium">METRC / Retail ID</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Import METRC tag/UID data for cannabis compliance labeling with DataMatrix codes
+                  Import METRC Retail ID or tag/UID data for cannabis compliance labeling with QR codes
                 </p>
               </button>
             </div>
@@ -280,14 +285,18 @@ export function DataSourceWizard({ open, onOpenChange }: DataSourceWizardProps) 
                 <Leaf className="w-5 h-5 mt-0.5 text-green-600 shrink-0" />
                 <div>
                   <p className="text-sm font-medium">
-                    METRC format detected ({metrcResult.confidence} confidence)
+                    {metrcResult.format === 'retail-id' ? 'METRC Retail ID' : 'METRC'} format detected ({metrcResult.confidence} confidence)
                   </p>
-                  {metrcResult.tagColumn && (
-                    <p className="text-xs text-muted-foreground">
-                      Tag/UID column: <strong>{metrcResult.tagColumn}</strong>
-                      {metrcResult.retailIdColumn && <> · Retail ID: <strong>{metrcResult.retailIdColumn}</strong></>}
-                    </p>
-                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {metrcResult.unitCodeColumn && (
+                      <>Unit Code (QR): <strong>{metrcResult.unitCodeColumn}</strong></>
+                    )}
+                    {!metrcResult.unitCodeColumn && metrcResult.tagColumn && (
+                      <>Tag/UID column: <strong>{metrcResult.tagColumn}</strong></>
+                    )}
+                    {metrcResult.retailIdColumn && <> · Retail ID: <strong>{metrcResult.retailIdColumn}</strong></>}
+                    {metrcResult.tagColumn && metrcResult.unitCodeColumn && <> · Package Tag: <strong>{metrcResult.tagColumn}</strong></>}
+                  </p>
                 </div>
               </div>
             )}
@@ -352,7 +361,7 @@ export function DataSourceWizard({ open, onOpenChange }: DataSourceWizardProps) 
             </p>
             {metrcResult?.isMetrc && (
               <p className="text-sm text-green-600 mt-2">
-                🌿 METRC data ready for DataMatrix/QR printing
+                🌿 {metrcResult.format === 'retail-id' ? 'Retail ID data ready for QR code printing' : 'METRC data ready for DataMatrix/QR printing'}
               </p>
             )}
             <p className="text-xs text-muted-foreground mt-4">
