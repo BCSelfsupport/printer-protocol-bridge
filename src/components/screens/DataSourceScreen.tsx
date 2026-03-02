@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import {
-  Database, Plus, Upload, Trash2, Play, Square, Pause, Link, FileDown, Wand2, Leaf,
+  Database, Plus, Upload, Trash2, Play, Square, Pause, Link, FileDown, Wand2, Leaf, Settings2,
 } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PrintMessage } from '@/types/printer';
 import { DataSourceWizard } from '@/components/datasource/DataSourceWizard';
 import { InlineDataGrid } from '@/components/datasource/InlineDataGrid';
+import { IntegrationConfig } from '@/components/datasource/IntegrationConfig';
 
 interface DataSource {
   id: string;
@@ -404,9 +405,12 @@ export function DataSourceScreen({
       <SubPageHeader title="Data Sources" onHome={onHome} />
 
       <Tabs defaultValue="sources" className="flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
+        <TabsList className="grid w-full grid-cols-3 mb-4">
           <TabsTrigger value="sources">Data Sources</TabsTrigger>
           <TabsTrigger value="jobs">Print Jobs</TabsTrigger>
+          <TabsTrigger value="integrations" className="flex items-center gap-1">
+            <Settings2 className="w-3.5 h-3.5" /> Integrations
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Data Sources Tab ── */}
@@ -623,6 +627,11 @@ export function DataSourceScreen({
               </div>
             )}
           </div>
+        </TabsContent>
+
+        {/* ── Integrations Tab ── */}
+        <TabsContent value="integrations" className="flex-1 overflow-y-auto">
+          <IntegrationConfig projectId={import.meta.env.VITE_SUPABASE_PROJECT_ID || ''} />
         </TabsContent>
       </Tabs>
 

@@ -16,7 +16,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('printer:send-command', { printerId, command }),
   },
 
-  // Relay server info
+  // Hotfolder operations
+  hotfolder: {
+    configure: (config) => ipcRenderer.invoke('hotfolder:configure', config),
+  },
   relay: {
     getInfo: () => ipcRenderer.invoke('relay:get-info'),
   },
@@ -51,5 +54,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Relay events
   onRelayInfo: (callback) => {
     ipcRenderer.on('relay:info', (event, info) => callback(info));
+  },
+
+  // Hotfolder events
+  onHotfolderNewFile: (callback) => {
+    ipcRenderer.on('hotfolder:new-file', (event, data) => callback(data));
   },
 });
