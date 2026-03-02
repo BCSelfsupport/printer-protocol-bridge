@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import {
-  Database, Plus, Upload, Trash2, Play, Square, Pause, Link, FileDown, Wand2,
+  Database, Plus, Upload, Trash2, Play, Square, Pause, Link, FileDown, Wand2, Leaf,
 } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Button } from '@/components/ui/button';
@@ -179,24 +179,22 @@ export function DataSourceScreen({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Load sample
-  const handleLoadSample = async () => {
+  // Generic sample loader
+  const loadSampleCsv = useCallback(async (filePath: string, displayName: string) => {
     try {
-      const { data: source, error: createErr } = await supabase
-        .from('data_sources')
-        .insert({ name: 'Food Products Sample', columns: [] })
-        .select()
-        .single();
-      if (createErr || !source) throw createErr || new Error('Failed to create');
-
-      const res = await fetch('/sample-data/food-products-sample.csv');
+      const res = await fetch(filePath);
       if (!res.ok) throw new Error('Could not load sample file');
       const csvText = await res.text();
 
       const lines = csvText.trim().split('\n');
       const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-      await supabase.from('data_sources').update({ columns: headers }).eq('id', source.id);
-      await supabase.from('data_source_rows').delete().eq('data_source_id', source.id);
+
+      const { data: source, error: createErr } = await supabase
+        .from('data_sources')
+        .insert({ name: displayName, columns: headers })
+        .select()
+        .single();
+      if (createErr || !source) throw createErr || new Error('Failed to create');
 
       const rows = lines.slice(1).map((line, idx) => {
         const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
@@ -208,11 +206,14 @@ export function DataSourceScreen({
         await supabase.from('data_source_rows').insert(rows.slice(i, i + 100));
       }
       queryClient.invalidateQueries({ queryKey: ['data-sources'] });
-      toast.success('Sample data loaded — 40 food products');
+      toast.success(`Loaded "${displayName}" — ${rows.length} rows`);
     } catch (err: any) {
       toast.error(`Failed to load sample: ${err.message}`);
     }
-  };
+  }, [queryClient]);
+
+  const handleLoadSample = () => loadSampleCsv('/sample-data/food-products-sample.csv', 'Food Products Sample');
+  const handleLoadMetrcSample = () => loadSampleCsv('/sample-data/metrc-tags-sample.csv', 'METRC Tags Sample');
 
   // Print job creation
   const handleCreateJob = () => {
@@ -326,7 +327,8 @@ export function DataSourceScreen({
         const newIndex = i + 1;
         setActiveJob(prev => prev ? { ...prev, current_row_index: newIndex } : null);
 
-        if (newIndex % 10 === 0 || newIndex === rows.length) {
+        // Update DB progress every 50 rows or at the end (minimise DB overhead during fast printing)
+        if (newIndex % 50 === 0 || newIndex === rows.length) {
           await supabase
             .from('print_jobs')
             .update({
@@ -336,8 +338,10 @@ export function DataSourceScreen({
             .eq('id', job.id);
         }
 
+        // If printer returned 'R' (ready), proceed immediately — no delay needed.
+        // Otherwise wait a minimal 50ms for the printer to finish processing.
         if (result.response?.trim() !== 'R') {
-          await new Promise(r => setTimeout(r, 100));
+          await new Promise(r => setTimeout(r, 50));
         }
       }
 
@@ -421,7 +425,14 @@ export function DataSourceScreen({
                     className="industrial-button-success text-white px-6 py-3 rounded-lg inline-flex items-center gap-2"
                   >
                     <FileDown className="w-5 h-5" />
-                    <span className="font-medium">Load Sample</span>
+                    <span className="font-medium">Food Sample</span>
+                  </button>
+                  <button
+                    onClick={handleLoadMetrcSample}
+                    className="px-6 py-3 rounded-lg inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white transition-colors"
+                  >
+                    <Leaf className="w-5 h-5" />
+                    <span className="font-medium">METRC Sample</span>
                   </button>
                 </div>
               </div>
