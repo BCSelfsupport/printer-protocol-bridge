@@ -1017,6 +1017,12 @@ export function usePrinterConnection() {
           }
         }
         if (messageNames.length > 0) {
+          // Merge in recently added messages that the printer hasn't reported yet
+          for (const addedName of recentlyAddedMessages) {
+            if (!messageNames.some(n => n.toUpperCase() === addedName.toUpperCase())) {
+              messageNames.push(addedName);
+            }
+          }
           const printerMessages: PrintMessage[] = messageNames.map((name, idx) => ({
             id: idx + 1,
             name,
