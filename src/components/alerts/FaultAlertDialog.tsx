@@ -99,14 +99,31 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
     previousDismissedCodesRef.current = new Set(dismissedCodes);
   }, [faults, isConnected, getActiveFaults, dismissedCodes]);
 
-  // When faults are cleared, reset
+  // When a fault disappears from the list, remove it from dismissedCodes
+  // so it can re-trigger the dialog if it comes back later.
   useEffect(() => {
     if (faults.length === 0) {
       setDismissedCodes(new Set());
       snoozedRef.current = {};
       setCurrentIndex(0);
+    } else {
+      // Remove dismissed/snoozed entries for faults that are no longer active
+      const currentCodes = new Set(faults.map(f => f.code));
+      setDismissedCodes(prev => {
+        const next = new Set<string>();
+        for (const code of prev) {
+          if (currentCodes.has(code)) next.add(code);
+        }
+        return next.size !== prev.size ? next : prev;
+      });
+      // Also clear snooze for faults that went away
+      for (const code of Object.keys(snoozedRef.current)) {
+        if (!currentCodes.has(code)) {
+          delete snoozedRef.current[code];
+        }
+      }
     }
-  }, [faults.length]);
+  }, [faults]);
 
   // Reset when disconnected
   useEffect(() => {
