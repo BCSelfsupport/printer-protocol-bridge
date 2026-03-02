@@ -409,10 +409,10 @@ export function DataSourceScreen({
   const selectedSourceForJob = dataSources.find(s => s.id === jobSourceId);
 
   return (
-    <div className="flex-1 p-4 flex flex-col">
+    <div className="flex-1 p-4 flex flex-col min-h-0">
       <SubPageHeader title="Data Sources" onHome={onHome} />
 
-      <Tabs defaultValue="sources" className="flex-1 flex flex-col">
+      <Tabs defaultValue="sources" className="flex-1 flex flex-col min-h-0">
         <TabsList className="grid w-full grid-cols-3 mb-4">
           <TabsTrigger value="sources">Data Sources</TabsTrigger>
           <TabsTrigger value="jobs">Print Jobs</TabsTrigger>
