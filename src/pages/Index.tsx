@@ -61,6 +61,7 @@ const Index = () => {
   const [devSignInDialogOpen, setDevSignInDialogOpen] = useState(false);
   const [editingMessage, setEditingMessage] = useState<PrintMessage | null>(null);
   const [isCreatingNewMessage, setIsCreatingNewMessage] = useState(false);
+  const [messagePreset, setMessagePreset] = useState<'metrc-retail-id' | undefined>(undefined);
   // Control whether to auto-open the new message dialog
   const [openNewDialogOnMount, setOpenNewDialogOnMount] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
@@ -483,10 +484,11 @@ const Index = () => {
             setEditingMessage(message);
             setCurrentScreen('editMessage');
           }}
-          onNew={(name: string) => {
+          onNew={(name: string, preset?: 'metrc-retail-id') => {
             addMessage(name);
             const newId = Math.max(0, ...connectionState.messages.map(m => m.id)) + 1;
             setIsCreatingNewMessage(true);
+            setMessagePreset(preset);
             setEditingMessage({ id: newId, name });
             setCurrentScreen('editMessage');
           }}
@@ -507,6 +509,7 @@ const Index = () => {
           key={`${editingMessage.name}-${isCreatingNewMessage ? 'new' : 'edit'}`}
           messageName={editingMessage.name}
           startEmpty={isCreatingNewMessage}
+          preset={messagePreset}
           printerTime={connectionState.status?.printerTime}
           customCounters={connectionState.status?.customCounters}
           connectedPrinterId={connectionState.connectedPrinter?.id ?? null}
@@ -533,11 +536,13 @@ const Index = () => {
             setCurrentScreen('messages');
             setEditingMessage(null);
             setIsCreatingNewMessage(false);
+            setMessagePreset(undefined);
           }}
           onCancel={() => {
             setCurrentScreen('messages');
             setEditingMessage(null);
             setIsCreatingNewMessage(false);
+            setMessagePreset(undefined);
           }}
           onGetMessageDetails={async (name: string) => {
             return getMessage(name);
@@ -608,6 +613,7 @@ const Index = () => {
             key={`${editingMessage.name}-${isCreatingNewMessage ? 'new' : 'edit'}`}
             messageName={editingMessage.name}
             startEmpty={isCreatingNewMessage}
+            preset={messagePreset}
             printerTime={connectionState.status?.printerTime}
             customCounters={connectionState.status?.customCounters}
             connectedPrinterId={connectionState.connectedPrinter?.id ?? null}
@@ -634,11 +640,13 @@ const Index = () => {
               setCurrentScreen('messages');
               setEditingMessage(null);
               setIsCreatingNewMessage(false);
+              setMessagePreset(undefined);
             }}
             onCancel={() => {
               setCurrentScreen('messages');
               setEditingMessage(null);
               setIsCreatingNewMessage(false);
+              setMessagePreset(undefined);
             }}
             onGetMessageDetails={async (name: string) => {
               return getMessage(name);
@@ -666,10 +674,11 @@ const Index = () => {
               setEditingMessage(message);
               setCurrentScreen('editMessage');
             }}
-            onNew={(name: string) => {
+              onNew={(name: string, preset?: 'metrc-retail-id') => {
               addMessage(name);
               const newId = Math.max(0, ...connectionState.messages.map(m => m.id)) + 1;
               setIsCreatingNewMessage(true);
+              setMessagePreset(preset);
               setEditingMessage({ id: newId, name });
               setCurrentScreen('editMessage');
             }}
