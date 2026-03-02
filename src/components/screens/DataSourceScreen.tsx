@@ -723,7 +723,7 @@ export function DataSourceScreen({
 
       {/* Create Print Job Dialog */}
       <Dialog open={jobDialogOpen} onOpenChange={setJobDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Print Job</DialogTitle>
           </DialogHeader>
