@@ -2684,10 +2684,20 @@ export function usePrinterConnection() {
       const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
       const result = emulator.processCommand('^SU');
       const sdResult = emulator.processCommand('^SD');
+      const tpResult = emulator.processCommand('^TP');
       let pTime: Date | null = null;
       if (sdResult.success && sdResult.response) {
         const p = new Date(sdResult.response.replace(/[^\x20-\x7E]/g, '').trim());
         if (!isNaN(p.getTime())) pTime = p;
+      }
+      let printheadTemp = 0;
+      let electronicsTemp = 0;
+      if (tpResult.success && tpResult.response) {
+        const tempParsed = parseTemperatureResponse(tpResult.response);
+        if (tempParsed) {
+          printheadTemp = tempParsed.printheadTemp;
+          electronicsTemp = tempParsed.electronicsTemp;
+        }
       }
       if (result.success && result.response) {
         const parsed = parseStatusResponse(result.response);
@@ -2707,8 +2717,8 @@ export function usePrinterConnection() {
             printStatus: parsed.hvDeflection ? 'Ready' : 'Not Ready',
             allowErrors: parsed.allowErrors ?? true,
             errorActive: parsed.errorActive ?? false,
-            printheadTemp: parsed.printheadTemp ?? 0,
-            electronicsTemp: parsed.electronicsTemp ?? 0,
+            printheadTemp,
+            electronicsTemp,
             subsystems: {
               v300up: parsed.subsystems?.v300up ?? false,
               vltOn: parsed.subsystems?.vltOn ?? false,
@@ -2745,6 +2755,22 @@ export function usePrinterConnection() {
           console.error('[queryPrinterMetrics] Failed to query ^SD:', e2);
         }
 
+        // Also fetch temperatures
+        let printheadTemp = 0;
+        let electronicsTemp = 0;
+        try {
+          const tpResult = await printerTransport.sendCommand(printer.id, '^TP');
+          if (tpResult.success && tpResult.response) {
+            const tempParsed = parseTemperatureResponse(tpResult.response);
+            if (tempParsed) {
+              printheadTemp = tempParsed.printheadTemp;
+              electronicsTemp = tempParsed.electronicsTemp;
+            }
+          }
+        } catch (e3) {
+          console.error('[queryPrinterMetrics] Failed to query ^TP:', e3);
+        }
+
         if (result.success && result.response) {
           const parsed = parseStatusResponse(result.response);
           if (parsed) {
@@ -2763,8 +2789,8 @@ export function usePrinterConnection() {
               printStatus: parsed.hvDeflection ? 'Ready' : 'Not Ready',
               allowErrors: parsed.allowErrors ?? true,
               errorActive: parsed.errorActive ?? false,
-              printheadTemp: parsed.printheadTemp ?? 0,
-              electronicsTemp: parsed.electronicsTemp ?? 0,
+              printheadTemp,
+              electronicsTemp,
               subsystems: {
                 v300up: parsed.subsystems?.v300up ?? false,
                 vltOn: parsed.subsystems?.vltOn ?? false,
