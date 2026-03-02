@@ -113,7 +113,7 @@ export function Dashboard({
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Status banner - fixed height to prevent layout shift */}
-      <div className={`w-full h-9 md:h-10 flex items-center px-3 ${
+      <div className={`w-full h-14 md:h-16 flex items-center px-3 ${
         showCountdown 
           ? countdownType === 'starting' 
             ? 'bg-gradient-to-r from-red-600 via-red-500 to-red-400' 
