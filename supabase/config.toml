@@ -29,6 +29,3 @@ verify_jwt = false
 
 [functions.serve-asset]
 verify_jwt = false
-
-[functions.migrate-assets]
-verify_jwt = false
