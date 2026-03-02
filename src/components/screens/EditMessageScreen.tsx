@@ -149,11 +149,11 @@ export function EditMessageScreen({
   // Build initial fields based on preset or defaults
   const buildInitialFields = (): MessageField[] => {
     if (preset === 'metrc-retail-id') {
-      // QR code: 25 dots tall, positioned at the bottom of a 32-dot canvas (y=7 so it spans rows 7-31)
-      // Text: 7 dots tall, positioned at the top (y=0)
+      // 25-dot template for max throughput (~200 units/min)
+      // QR/DataMatrix: 18 dots tall at bottom (y=7), Text: 5 dots at top (y=0)
       return [
-        { id: 1, type: 'barcode', data: '[QR] https://d.1a4.com/sample', x: 0, y: 7, width: 25, height: 25, fontSize: 'Standard25High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
-        { id: 2, type: 'text', data: 'RETAIL ID', x: 28, y: 0, width: 60, height: 7, fontSize: 'Standard7High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
+        { id: 1, type: 'barcode', data: '[QR] https://d.1a4.com/sample', x: 0, y: 7, width: 18, height: 18, fontSize: 'Standard25High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
+        { id: 2, type: 'text', data: 'RETAIL ID', x: 22, y: 0, width: 60, height: 5, fontSize: 'Standard5High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
       ];
     }
     if (startEmpty) return [];
@@ -164,10 +164,10 @@ export function EditMessageScreen({
 
   const [message, setMessage] = useState<MessageDetails>({
     name: messageName,
-    height: preset === 'metrc-retail-id' ? 32 : 16,
+    height: preset === 'metrc-retail-id' ? 25 : 16,
     width: 200,
     fields: buildInitialFields(),
-    templateValue: preset === 'metrc-retail-id' ? '32' : '16',
+    templateValue: preset === 'metrc-retail-id' ? '25' : '16',
     settings: defaultMessageSettings,
     advancedSettings: defaultAdvancedSettings,
   });
