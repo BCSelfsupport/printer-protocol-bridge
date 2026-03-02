@@ -5,6 +5,7 @@ import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { PrinterStatus } from '@/types/printer';
 import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
+import { parseBarcodeLabelData, renderBarcodeToCanvas, estimateBarcodeWidthDots } from '@/lib/barcodeRenderer';
 import { MessageDetails, MessageField } from '@/components/screens/EditMessageScreen';
 import { CountersDialog } from '@/components/counters/CountersDialog';
 import { NavItem } from '@/components/layout/BottomNav';
@@ -488,6 +489,31 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dotSize, setDotSize] = useState<number>(DOT_SIZE_DESKTOP);
   const [zoomIndex, setZoomIndex] = useState(2); // Default to 2x zoom
+  const [barcodeImages, setBarcodeImages] = useState<Map<string, HTMLCanvasElement>>(new Map());
+
+  // Load barcode images for barcode-type fields
+  useEffect(() => {
+    if (!messageContent) return;
+    const barcodeFields = messageContent.fields.filter(f => f.type === 'barcode');
+    if (barcodeFields.length === 0) return;
+
+    let cancelled = false;
+    const load = async () => {
+      const imgs = new Map<string, HTMLCanvasElement>();
+      for (const field of barcodeFields) {
+        const parsed = parseBarcodeLabelData(field.data);
+        if (!parsed || !parsed.data) continue;
+        const h = field.height || messageContent.height || TOTAL_ROWS;
+        try {
+          const bc = await renderBarcodeToCanvas(parsed.encoding, parsed.data, h, parsed.humanReadable);
+          if (bc && !cancelled) imgs.set(`${field.id}`, bc);
+        } catch {}
+      }
+      if (!cancelled && imgs.size > 0) setBarcodeImages(imgs);
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [messageContent]);
 
   // Current zoom multiplier based on index
   const zoomMultiplier = ZOOM_LEVELS[zoomIndex];
@@ -565,6 +591,27 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
       let maxXEnd = 0;
 
       messageContent.fields.forEach((field) => {
+        const previewYOffsetDots_inner = previewYOffsetDots;
+
+        // Handle barcode fields
+        if (field.type === 'barcode') {
+          const bc = barcodeImages.get(`${field.id}`);
+          if (bc) {
+            const fieldH = (field.height || TOTAL_ROWS) * effectiveDotSize;
+            const scale = fieldH / bc.height;
+            const drawW = bc.width * scale;
+            const x = field.x * effectiveDotSize;
+            const clampedYDots = Math.min(field.y, Math.max(0, TOTAL_ROWS - (field.height || TOTAL_ROWS)));
+            const yDots = Math.max(0, clampedYDots - previewYOffsetDots_inner);
+            const y = yDots * effectiveDotSize;
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(bc, x, y, drawW, fieldH);
+            ctx.imageSmoothingEnabled = true;
+            maxXEnd = Math.max(maxXEnd, x + drawW);
+          }
+          return;
+        }
+
         const fontName = field.fontSize || 'Standard16High';
         const fontInfo = getFontInfo(fontName);
 
@@ -630,7 +677,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     ctx.font = '16px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('No message selected', width / 2, height / 2 + 5);
-  }, [message, printerTime, messageContent, renderWidth, effectiveDotSize]);
+  }, [message, printerTime, messageContent, renderWidth, effectiveDotSize, barcodeImages]);
 
   const canvasHeight = TOTAL_ROWS * effectiveDotSize + 1;
 
