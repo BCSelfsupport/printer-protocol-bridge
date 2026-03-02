@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { ArrowLeft, X, Keyboard, Hash, User, ChevronRight, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, X, Keyboard, Hash, User, ChevronRight, AlertTriangle, Clock, Calendar, Layers } from 'lucide-react';
 import { validateBarcodeData } from '@/lib/barcodeRenderer';
 import {
   Dialog,
@@ -154,6 +154,9 @@ export function BarcodeFieldDialog({
   const [dotcodeHeight, setDotcodeHeight] = useState(9);
   const [dotcodeWidth, setDotcodeWidth] = useState(36);
   const [dotcodeMask, setDotcodeMask] = useState<'auto' | 'manual'>('auto');
+  const [showAutoCodePanel, setShowAutoCodePanel] = useState(false);
+  const [showUserDefinePanel, setShowUserDefinePanel] = useState(false);
+  const [userDefineId, setUserDefineId] = useState('USER1');
 
   const is2D = encoding === 'datamatrix' || encoding === 'qrcode' || encoding === 'dotcode';
   const isCode128 = encoding.startsWith('code128');
@@ -223,6 +226,26 @@ export function BarcodeFieldDialog({
 
   const focusDataInput = () => {
     dataInputRef.current?.focus();
+  };
+
+  const insertToken = (token: string) => {
+    const input = dataInputRef.current;
+    if (input) {
+      const start = input.selectionStart ?? data.length;
+      const end = input.selectionEnd ?? data.length;
+      const newData = data.slice(0, start) + token + data.slice(end);
+      setData(newData);
+      // Move cursor after token
+      requestAnimationFrame(() => {
+        input.focus();
+        const pos = start + token.length;
+        input.setSelectionRange(pos, pos);
+      });
+    } else {
+      setData(prev => prev + token);
+    }
+    setShowAutoCodePanel(false);
+    setShowUserDefinePanel(false);
   };
 
   return (
@@ -486,7 +509,11 @@ export function BarcodeFieldDialog({
             <div className="grid grid-cols-3 gap-3">
               <button
                 className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 hover:from-muted/80 hover:to-muted/40 border border-border rounded-lg p-3 transition-colors"
-                onClick={focusDataInput}
+                onClick={() => {
+                  setShowAutoCodePanel(false);
+                  setShowUserDefinePanel(false);
+                  focusDataInput();
+                }}
                 type="button"
               >
                 <span className="text-sm font-medium">Keyboard</span>
@@ -496,10 +523,14 @@ export function BarcodeFieldDialog({
               </button>
 
               <button
-                className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 hover:from-muted/80 hover:to-muted/40 border border-border rounded-lg p-3 transition-colors"
+                className={`flex items-center justify-between border rounded-lg p-3 transition-colors ${
+                  showAutoCodePanel
+                    ? 'bg-primary/20 border-primary'
+                    : 'bg-gradient-to-b from-muted to-muted/60 hover:from-muted/80 hover:to-muted/40 border-border'
+                }`}
                 onClick={() => {
-                  // Placeholder for future: open AutoCode selector to inject barcode data
-                  focusDataInput();
+                  setShowAutoCodePanel(!showAutoCodePanel);
+                  setShowUserDefinePanel(false);
                 }}
                 type="button"
               >
@@ -510,10 +541,14 @@ export function BarcodeFieldDialog({
               </button>
 
               <button
-                className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 hover:from-muted/80 hover:to-muted/40 border border-border rounded-lg p-3 transition-colors"
+                className={`flex items-center justify-between border rounded-lg p-3 transition-colors ${
+                  showUserDefinePanel
+                    ? 'bg-primary/20 border-primary'
+                    : 'bg-gradient-to-b from-muted to-muted/60 hover:from-muted/80 hover:to-muted/40 border-border'
+                }`}
                 onClick={() => {
-                  // Placeholder for future: open User Define selector to inject barcode data
-                  focusDataInput();
+                  setShowUserDefinePanel(!showUserDefinePanel);
+                  setShowAutoCodePanel(false);
                 }}
                 type="button"
               >
@@ -523,6 +558,61 @@ export function BarcodeFieldDialog({
                 </div>
               </button>
             </div>
+
+            {/* AutoCode token picker panel */}
+            {showAutoCodePanel && (
+              <div className="bg-muted/50 border border-border rounded-lg p-3 space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Insert variable token into barcode data:</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { token: '{C1}', label: 'Counter 1', icon: Hash },
+                    { token: '{C2}', label: 'Counter 2', icon: Hash },
+                    { token: '{C3}', label: 'Counter 3', icon: Hash },
+                    { token: '{C4}', label: 'Counter 4', icon: Hash },
+                    { token: '{DATE}', label: 'Date', icon: Calendar },
+                    { token: '{TIME}', label: 'Time', icon: Clock },
+                    { token: '{SHIFT}', label: 'Shift Code', icon: Layers },
+                  ].map(({ token, label, icon: Icon }) => (
+                    <button
+                      key={token}
+                      type="button"
+                      onClick={() => insertToken(token)}
+                      className="flex items-center gap-2 bg-gradient-to-b from-card to-card/80 hover:from-primary/10 hover:to-primary/5 border border-border rounded-md px-3 py-2 transition-colors text-left"
+                    >
+                      <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-xs font-medium">{label}</span>
+                      <span className="text-[10px] text-muted-foreground ml-auto font-mono">{token}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* User Define token panel */}
+            {showUserDefinePanel && (
+              <div className="bg-muted/50 border border-border rounded-lg p-3 space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Insert User Define placeholder:</p>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    value={userDefineId}
+                    onChange={(e) => setUserDefineId(e.target.value.toUpperCase())}
+                    placeholder="USER1"
+                    className="flex-1 h-9 text-sm"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => insertToken(`{${userDefineId}}`)}
+                    disabled={!userDefineId.trim()}
+                  >
+                    Insert
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Operator will enter this value at print time
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
