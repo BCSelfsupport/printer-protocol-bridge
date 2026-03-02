@@ -259,6 +259,9 @@ export async function renderBarcodeToCanvas(
     
       if (is2D) {
         const size = Math.max(4, barcodeHeightDots);
+        // Remove built-in quiet zone — we handle quiet zones separately in the canvas
+        (options as any).paddingwidth = 0;
+        (options as any).paddingheight = 0;
         // Force QR version based on sizeFlag (1=V1 21x21, 2=V2 25x25, 3=V3 29x29)
         if (encoding === 'qrcode' && sizeFlag) {
           (options as any).version = parseInt(sizeFlag, 10);
