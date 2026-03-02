@@ -503,7 +503,7 @@ export function DataSourceScreen({
           </div>
 
           {/* Action buttons - always visible */}
-          <div className="overflow-x-auto -mx-4 px-4 pb-2 flex-shrink-0">
+          <div className="overflow-x-auto -mx-4 px-4 pb-6 pt-2 flex-shrink-0">
             <div className="flex gap-3 justify-center min-w-max">
               <button
                 onClick={() => setWizardOpen(true)}
