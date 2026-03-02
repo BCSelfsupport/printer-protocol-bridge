@@ -152,8 +152,8 @@ export function EditMessageScreen({
       // 25-dot template for max throughput (~200 units/min)
       // QR/DataMatrix: 18 dots tall at bottom (y=7), Text: 5 dots at top (y=0)
       return [
-        { id: 1, type: 'barcode', data: '[QR] https://d.1a4.com/sample', x: 0, y: 7, width: 18, height: 18, fontSize: 'Standard25High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
-        { id: 2, type: 'text', data: 'RETAIL ID', x: 22, y: 0, width: 60, height: 5, fontSize: 'Standard5High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
+        { id: 1, type: 'barcode', data: '[QR] https://d.1a4.com/sample', x: 0, y: 0, width: 25, height: 25, fontSize: 'Standard25High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
+        { id: 2, type: 'text', data: 'RETAIL ID', x: 28, y: 10, width: 60, height: 5, fontSize: 'Standard5High', bold: 0, gap: 1, rotation: 'Normal', autoNumerals: 0 },
       ];
     }
     if (startEmpty) return [];
