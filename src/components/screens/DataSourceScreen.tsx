@@ -409,10 +409,10 @@ export function DataSourceScreen({
   const selectedSourceForJob = dataSources.find(s => s.id === jobSourceId);
 
   return (
-    <div className="flex-1 p-4 flex flex-col min-h-0">
+    <div className="flex-1 p-4 flex flex-col min-h-0 overflow-hidden">
       <SubPageHeader title="Data Sources" onHome={onHome} />
 
-      <Tabs defaultValue="sources" className="flex-1 flex flex-col min-h-0">
+      <Tabs defaultValue="sources" className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <TabsList className="grid w-full grid-cols-3 mb-4">
           <TabsTrigger value="sources">Data Sources</TabsTrigger>
           <TabsTrigger value="jobs">Print Jobs</TabsTrigger>
@@ -422,7 +422,7 @@ export function DataSourceScreen({
         </TabsList>
 
         {/* ── Data Sources Tab ── */}
-        <TabsContent value="sources" className="flex-1 flex flex-col gap-3 min-h-0">
+        <TabsContent value="sources" className="flex-1 flex flex-col gap-3 min-h-0 overflow-hidden">
           {/* Source list + drop zone */}
           <div
             onDrop={handleDrop}
@@ -503,7 +503,7 @@ export function DataSourceScreen({
           </div>
 
           {/* Action buttons - always visible */}
-          <div className="overflow-x-auto -mx-4 px-4 pb-6 pt-2 flex-shrink-0">
+          <div className="sticky bottom-0 z-10 overflow-x-auto -mx-4 px-4 pt-2 pb-4 flex-shrink-0 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
             <div className="flex gap-3 justify-center min-w-max">
               <button
                 onClick={() => setWizardOpen(true)}
@@ -543,7 +543,7 @@ export function DataSourceScreen({
         </TabsContent>
 
         {/* ── Print Jobs Tab ── */}
-        <TabsContent value="jobs" className="flex-1 flex flex-col">
+        <TabsContent value="jobs" className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {/* Active job panel with live data scrolling */}
           {activeJob && jobRunning && (
             <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-4">
@@ -620,9 +620,6 @@ export function DataSourceScreen({
             </div>
           )}
 
-          {/* New Job button */}
-          <div className="flex justify-end mb-3">
-          </div>
 
           <div className="flex-1 bg-card rounded-lg p-4 overflow-auto">
             {printJobs.length === 0 ? (
@@ -692,7 +689,7 @@ export function DataSourceScreen({
         </TabsContent>
 
         {/* ── Integrations Tab ── */}
-        <TabsContent value="integrations" className="flex-1 overflow-auto">
+        <TabsContent value="integrations" className="flex-1 min-h-0 overflow-auto">
           <IntegrationConfig projectId={import.meta.env.VITE_SUPABASE_PROJECT_ID || ''} />
         </TabsContent>
       </Tabs>
