@@ -71,8 +71,8 @@ const Index = () => {
   const [relayDialogOpen, setRelayDialogOpen] = useState(false);
   const [licenseDialogOpen, setLicenseDialogOpen] = useState(false);
   
-  // Local message storage (persists to localStorage)
-  const { saveMessage, getMessage, deleteMessage: deleteStoredMessage } = useMessageStorage();
+  // Local message storage (persists to localStorage, scoped by printer ID)
+  const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId } = useMessageStorage();
   
   // Consumable storage
   const consumableStorage = useConsumableStorage();
@@ -120,6 +120,13 @@ const Index = () => {
   } = usePrinterConnection();
   
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
+
+  // Keep message storage scoped to the connected printer
+  useEffect(() => {
+    if (connectedPrinterId !== null) {
+      setStoragePrinterId(connectedPrinterId);
+    }
+  }, [connectedPrinterId, setStoragePrinterId]);
   const handleCountdownComplete = useCallback((printerId: number, type: CountdownType) => {
     console.log('[handleCountdownComplete] printerId:', printerId, 'type:', type);
     if (type === 'starting') {
@@ -406,14 +413,15 @@ const Index = () => {
       }
       toast.success('Force Print triggered');
 
-      // Check if current message has a linked data source
+      // Check if current message has a linked data source (scoped to connected printer)
       const currentMsg = connectionState.status?.currentMessage;
-      if (!currentMsg) return;
+      if (!currentMsg || !connectedPrinterId) return;
 
       const { data: job } = await supabase
         .from('print_jobs')
         .select('*')
         .eq('message_name', currentMsg)
+        .eq('printer_id', connectedPrinterId)
         .limit(1)
         .maybeSingle();
 
@@ -468,7 +476,7 @@ const Index = () => {
       toast.error('Force Print failed');
       console.error('[handleForcePrint]', e);
     }
-  }, [sendCommand, connectionState.status?.currentMessage, getMessage, saveMessage]);
+  }, [sendCommand, connectionState.status?.currentMessage, getMessage, saveMessage, connectedPrinterId]);
 
 
   const getRightPanelContent = (): React.ReactNode | undefined => {

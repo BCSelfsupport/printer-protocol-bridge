@@ -1297,6 +1297,10 @@ export function usePrinterConnection() {
        hasActiveErrors: false,
      });
 
+    // Reset ^LE overrides for the new connection so stale EMPTY doesn't carry over
+    leEmptyOverridesRef.current = { inkEmpty: false, makeupEmpty: false };
+    setActiveFaults([]);
+
     setConnectionState({
       isConnected: true,
       connectedPrinter: { ...printer, isConnected: true },
