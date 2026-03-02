@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -633,8 +634,10 @@ export function DataSourceScreen({
         </TabsContent>
 
         {/* ── Integrations Tab ── */}
-        <TabsContent value="integrations" className="flex-1 overflow-y-auto">
-          <IntegrationConfig projectId={import.meta.env.VITE_SUPABASE_PROJECT_ID || ''} />
+        <TabsContent value="integrations" className="flex-1 min-h-0">
+          <ScrollArea className="h-full">
+            <IntegrationConfig projectId={import.meta.env.VITE_SUPABASE_PROJECT_ID || ''} />
+          </ScrollArea>
         </TabsContent>
       </Tabs>
 
