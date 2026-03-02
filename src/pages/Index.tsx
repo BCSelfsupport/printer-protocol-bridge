@@ -532,6 +532,8 @@ const Index = () => {
             );
             if (!success) {
               console.error('Failed to save message on printer');
+              toast.error('Printer rejected message save. Check barcode settings and try again.');
+              return;
             }
             if (!isNew) {
               updateMessage(editingMessage.id, details.name);
@@ -636,6 +638,8 @@ const Index = () => {
               );
               if (!success) {
                 console.error('Failed to save message on printer');
+                toast.error('Printer rejected message save. Check barcode settings and try again.');
+                return;
               }
               if (!isNew) {
                 updateMessage(editingMessage.id, details.name);

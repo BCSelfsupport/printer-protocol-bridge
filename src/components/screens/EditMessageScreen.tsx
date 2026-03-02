@@ -742,9 +742,22 @@ export function EditMessageScreen({
     
     // Format barcode data string with encoding info and flags for display/protocol
     // Include HR flag if human readable is enabled
-    const encodingWithFlags = config.humanReadable 
-      ? `${config.encoding.toUpperCase()}|HR`
-      : config.encoding.toUpperCase();
+    const preferredSize =
+      config.encoding === 'qrcode'
+        ? config.size
+        : config.encoding === 'dotcode'
+          ? config.dotcodeScale
+          : undefined;
+
+    const barcodeFlags: string[] = [];
+    if (preferredSize && /^\d+$/.test(preferredSize)) {
+      barcodeFlags.push(`S=${preferredSize}`);
+    }
+    if (config.humanReadable) {
+      barcodeFlags.push('HR');
+    }
+
+    const encodingWithFlags = [config.encoding.toUpperCase(), ...barcodeFlags].join('|');
     const barcodeLabel = `[${encodingWithFlags}] ${config.data}`;
     
     // Estimate barcode width in dots based on encoding type and data
