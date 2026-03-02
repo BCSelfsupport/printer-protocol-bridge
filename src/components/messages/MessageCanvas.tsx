@@ -516,6 +516,61 @@ export function MessageCanvas({
     }
     return null;
   };
+
+  /**
+   * Snap Y position to a valid grid row for single-line templates.
+   * Enforces minimum 2-dot gap between field rows (firmware requirement).
+   * Returns the nearest valid Y that doesn't violate spacing with other fields.
+   */
+  const snapToValidY = (candidateY: number, fontHeight: number, draggedFieldId: number | null): number => {
+    // For multi-line templates, getLineForY handles snapping
+    if (multilineTemplate) return candidateY;
+
+    const minGap = 2; // Firmware-required minimum gap between rows
+
+    // Clamp within template area
+    let y = Math.max(blockedRows, candidateY);
+    y = Math.min(TOTAL_ROWS - fontHeight, y);
+
+    // Gather Y-ranges of OTHER fields (exclude the field being dragged)
+    const otherFields = fields.filter(f => f.id !== draggedFieldId);
+    if (otherFields.length === 0) return y;
+
+    const occupied = otherFields.map(f => {
+      const fh = getFontInfo(f.fontSize).height;
+      return { top: f.y, bottom: f.y + fh };
+    }).sort((a, b) => a.top - b.top);
+
+    // Build list of valid Y positions: scan through the template area in 1-dot steps
+    // and collect positions where the field fits without violating minGap
+    const validPositions: number[] = [];
+    for (let testY = blockedRows; testY <= TOTAL_ROWS - fontHeight; testY++) {
+      const testBottom = testY + fontHeight;
+      let valid = true;
+      for (const occ of occupied) {
+        // Check gap above: if this field is below another, need minGap between them
+        // Check gap below: if this field is above another, need minGap between them
+        // Or they can overlap (same row) which is fine — firmware stacks horizontally
+        const gapAbove = testY - occ.bottom;
+        const gapBelow = occ.top - testBottom;
+        if (gapAbove >= 0 && gapAbove < minGap) { valid = false; break; }
+        if (gapBelow >= 0 && gapBelow < minGap) { valid = false; break; }
+        // Overlapping vertically (same row) is ok — fields share the row
+      }
+      if (valid) validPositions.push(testY);
+    }
+
+    if (validPositions.length === 0) return y; // fallback
+
+    // Snap to nearest valid position
+    let best = validPositions[0];
+    let bestDist = Math.abs(y - best);
+    for (const vp of validPositions) {
+      const dist = Math.abs(y - vp);
+      if (dist < bestDist) { best = vp; bestDist = dist; }
+    }
+    return best;
+  };
   
   const startEditing = useCallback((fieldId: number, clickX?: number) => {
     const field = fields.find(f => f.id === fieldId);
@@ -696,6 +751,9 @@ export function MessageCanvas({
         if (lineInfo) {
           newY = lineInfo.lineY;
         }
+      } else {
+        // Single-line: snap to valid Y with min 2-dot gap enforcement
+        newY = snapToValidY(newY, fontInfo.height, dragFieldId);
       }
 
       setDragPosition({ x: newX, y: newY });
@@ -885,6 +943,9 @@ export function MessageCanvas({
         if (lineInfo) {
           newY = lineInfo.lineY;
         }
+      } else {
+        // Single-line: snap to valid Y with min 2-dot gap enforcement
+        newY = snapToValidY(newY, fontInfo.height, dragFieldId);
       }
 
       setDragPosition({ x: newX, y: newY });

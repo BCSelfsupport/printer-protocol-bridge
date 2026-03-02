@@ -687,20 +687,26 @@ export function EditMessageScreen({
       newY = linePositions[lineIndex];
     } else if (message.fields.length > 0) {
       // For single-line templates, try to stack fields vertically if font is shorter than template
-      // Find the lowest available Y that doesn't overlap existing fields
+      // Enforce minimum 2-dot gap between rows (firmware requirement)
+      const MIN_GAP = 2;
       const existingYRanges = message.fields.map(f => ({ y: f.y, bottom: f.y + f.height }));
       existingYRanges.sort((a, b) => a.y - b.y);
       
-      // Try to place below existing fields first
+      // Try to place below existing fields first, respecting min gap
       let placed = false;
       for (const range of existingYRanges) {
-        const candidateY = range.bottom;
+        const candidateY = range.bottom + MIN_GAP; // 2-dot gap after previous field
         if (candidateY + fontHeight <= 32) {
-          // Check no overlap with other fields at this Y
-          const overlaps = existingYRanges.some(r => 
-            candidateY < r.bottom && candidateY + fontHeight > r.y
-          );
-          if (!overlaps) {
+          // Check no overlap and no gap violation with other fields
+          const violates = existingYRanges.some(r => {
+            const gapAbove = candidateY - r.bottom;
+            const gapBelow = r.y - (candidateY + fontHeight);
+            if (gapAbove >= 0 && gapAbove < MIN_GAP) return true;
+            if (gapBelow >= 0 && gapBelow < MIN_GAP) return true;
+            // Overlapping (same row) is fine
+            return false;
+          });
+          if (!violates) {
             newY = candidateY;
             placed = true;
             break;
@@ -708,7 +714,7 @@ export function EditMessageScreen({
         }
       }
       if (!placed) {
-        // Fall back to same row as first field
+        // Fall back to same row as first field (horizontal stacking)
         newY = message.fields[0]?.y ?? blockedRows;
       }
     }
