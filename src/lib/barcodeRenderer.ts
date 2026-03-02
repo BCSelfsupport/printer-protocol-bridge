@@ -132,8 +132,10 @@ export function parseBarcodeLabelData(label: string): { encoding: string; data: 
     'multi-information': 'code128_multi',
     'datamatrix': 'datamatrix',
     'data matrix': 'datamatrix',
+    'dm': 'datamatrix',
     'qrcode': 'qrcode',
     'qr code': 'qrcode',
+    'qr': 'qrcode',
     'dotcode': 'dotcode',
   };
   
