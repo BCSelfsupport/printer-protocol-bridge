@@ -443,8 +443,11 @@ export function usePrinterConnection() {
 
     // Apply ^LE empty overrides so printer card also shows EMPTY, not LOW
     const leOverrides = leEmptyOverridesRef.current;
-    const inkLevelCard = (leOverrides.inkEmpty ? 'EMPTY' : (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN')) as Printer['inkLevel'];
-    const makeupLevelCard = (leOverrides.makeupEmpty ? 'EMPTY' : (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN')) as Printer['makeupLevel'];
+    const parsedInk = parsed.inkLevel?.toUpperCase();
+    const parsedMakeup = parsed.makeupLevel?.toUpperCase();
+    // Preserve last-known levels if parsing returned UNKNOWN (firmware may not include INK/MAKEUP in ^SU)
+    const inkLevelCard = (leOverrides.inkEmpty ? 'EMPTY' : (parsedInk && parsedInk !== 'UNKNOWN' ? parsedInk : undefined)) as Printer['inkLevel'] | undefined;
+    const makeupLevelCard = (leOverrides.makeupEmpty ? 'EMPTY' : (parsedMakeup && parsedMakeup !== 'UNKNOWN' ? parsedMakeup : undefined)) as Printer['makeupLevel'] | undefined;
     // Do NOT extract currentMessage from ^SU — it's unreliable. ^SM is the authoritative source.
     // Extract print count from raw ^SU so the printer card stays up-to-date
     const printCountMatch = raw.match(/PRINT\s*:\s*(\d+)/i) || raw.match(/PrC\[(\d+)\]/);
@@ -455,8 +458,8 @@ export function usePrinterConnection() {
         isAvailable: true,
         status: hvOn ? 'ready' : 'not_ready',
         hasActiveErrors: parsed.errorActive ?? false,
-        inkLevel: inkLevelCard,
-        makeupLevel: makeupLevelCard,
+        ...(inkLevelCard ? { inkLevel: inkLevelCard } : {}),
+        ...(makeupLevelCard ? { makeupLevel: makeupLevelCard } : {}),
         ...(suPrintCount !== undefined && !isNaN(suPrintCount) ? { printCount: suPrintCount } : {}),
       });
     }
@@ -468,9 +471,12 @@ export function usePrinterConnection() {
 
       // Map parsed levels to status-compatible types
       // Apply ^LE empty overrides so ^SU can never downgrade EMPTY back to LOW
+      // Preserve last-known levels if parsing returned UNKNOWN (firmware may not include INK/MAKEUP in ^SU)
       const leOverrides = leEmptyOverridesRef.current;
-      const inkLevel = (leOverrides.inkEmpty ? 'EMPTY' : (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN')) as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
-      const makeupLevel = (leOverrides.makeupEmpty ? 'EMPTY' : (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN')) as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+      const parsedInk2 = parsed.inkLevel?.toUpperCase();
+      const parsedMakeup2 = parsed.makeupLevel?.toUpperCase();
+      const inkLevel = (leOverrides.inkEmpty ? 'EMPTY' : (parsedInk2 && parsedInk2 !== 'UNKNOWN' ? parsedInk2 : prev.status?.inkLevel ?? 'UNKNOWN')) as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
+      const makeupLevel = (leOverrides.makeupEmpty ? 'EMPTY' : (parsedMakeup2 && parsedMakeup2 !== 'UNKNOWN' ? parsedMakeup2 : prev.status?.makeupLevel ?? 'UNKNOWN')) as 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
 
       return {
         ...prev,
