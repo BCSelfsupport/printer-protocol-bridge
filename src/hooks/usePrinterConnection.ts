@@ -1769,7 +1769,8 @@ export function usePrinterConnection() {
     fontSize: string;
     bold?: number;
     gap?: number;
-  }, fieldNum: number): string => {
+    height?: number;
+  }, fieldNum: number, fieldTemplateHeight?: number): string => {
     const fontCode = fontToProtocolCode(field.fontSize);
     
     switch (field.type) {
@@ -1827,21 +1828,34 @@ export function usePrinterConnection() {
         };
         const typeCode = barcodeTypeMap[encodingName] ?? 6;
 
-        // f = font size code (controls bar height for 1D / overall size for 2D)
+        // f = font size code (controls bar height for 1D / module scaling for 2D)
         const f = fontToProtocolCode(field.fontSize);
+        // For 2D barcodes (QR, DataMatrix), use f=0 since the s parameter
+        // controls the matrix dimensions and f likely scales each module.
+        // Using the text font code would over-scale the barcode.
+        const is2D = typeCode === 7 || typeCode === 8;
+        const barcodeF = is2D ? 0 : f;
         // r = human readable (0/1)
         const r = hrFlag ? 1 : 0;
 
         if (typeCode === 8) {
           // QR Code: ^AB n;x;y;f;t;s;data
           // s: 0=21x21, 1=25x25, 2=29x29
-          const qrSize = Number.isFinite(parsedSize) ? Math.min(Math.max(0, parsedSize), 2) : 0;
-          return `^AB${fieldNum};${field.x};${field.y};${f};${typeCode};${qrSize};${rawData}`;
+          // Auto-select QR size based on field height when no explicit S= flag
+          let qrSize: number;
+          if (Number.isFinite(parsedSize)) {
+            qrSize = Math.min(Math.max(0, parsedSize), 2);
+          } else {
+            // Pick best fit: 29 dots → s=2, 25 dots → s=1, else s=0
+            const barcodeHeight = field.height || fieldTemplateHeight || 32;
+            qrSize = barcodeHeight >= 29 ? 2 : barcodeHeight >= 25 ? 1 : 0;
+          }
+          return `^AB${fieldNum};${field.x};${field.y};${barcodeF};${typeCode};${qrSize};${rawData}`;
         } else if (typeCode === 7) {
           // DataMatrix: ^AB n;x;y;f;t;r;s;data
           // s: 0-15 (specific matrix sizes)
           const dmSize = Number.isFinite(parsedSize) ? Math.min(Math.max(0, parsedSize), 15) : 0;
-          return `^AB${fieldNum};${field.x};${field.y};${f};${typeCode};${r};${dmSize};${rawData}`;
+          return `^AB${fieldNum};${field.x};${field.y};${barcodeF};${typeCode};${r};${dmSize};${rawData}`;
         } else if (typeCode === 6) {
           // Code 128: ^AB n;x;y;f;t;m;r;c;data
           // c: start code (0=A, 1=B, 2=C)
@@ -1906,6 +1920,7 @@ export function usePrinterConnection() {
       fontSize: string;
       bold?: number;
       gap?: number;
+      height?: number;
     }>,
     templateValue?: string,
     isNew?: boolean,
@@ -1953,13 +1968,16 @@ export function usePrinterConnection() {
     // Build field subcommands with inverted Y coordinates
     // Canvas Y (top-origin) → template-relative → printer Y (bottom-origin)
     const fieldSubcommands = validFields.map((field, index) => {
-      const fieldHeight = fontToDotHeight(field.fontSize);
+      // For barcode fields, use actual field height; for text, use font dot height
+      const fieldHeight = field.type === 'barcode' && field.height 
+        ? field.height 
+        : fontToDotHeight(field.fontSize);
       const templateRelativeY = field.y - blockedRows; // 0 = top of template
       const printerY = templateHeight - templateRelativeY - fieldHeight; // 0 = bottom of template
       return buildFieldSubcommand({
         ...field,
         y: Math.max(0, printerY),
-      }, index + 1);
+      }, index + 1, templateHeight);
     }).join('');
 
     // Build the full ^NM command: ^NM t;s;o;p;name^AT1;...^AT2;...
