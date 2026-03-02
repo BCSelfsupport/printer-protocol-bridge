@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
-import { Database, Plus, Upload, Trash2, Eye, Play, Square, Pause, Link, FileDown } from 'lucide-react';
+import {
+  Database, Plus, Upload, Trash2, Play, Square, Pause, Link, FileDown, Wand2,
+} from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,41 +9,21 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PrintMessage } from '@/types/printer';
+import { DataSourceWizard } from '@/components/datasource/DataSourceWizard';
+import { InlineDataGrid } from '@/components/datasource/InlineDataGrid';
 
 interface DataSource {
   id: string;
@@ -56,7 +38,7 @@ interface PrintJob {
   data_source_id: string;
   message_name: string;
   printer_id: number;
-  field_mappings: Record<string, string>; // column -> field index
+  field_mappings: Record<string, string>;
   current_row_index: number;
   total_rows: number;
   status: string;
@@ -71,21 +53,19 @@ interface DataSourceScreenProps {
   onSendCommand: (command: string) => Promise<{ success: boolean; response: string }>;
 }
 
-export function DataSourceScreen({ 
-  onHome, 
-  messages, 
-  isConnected, 
+export function DataSourceScreen({
+  onHome,
+  messages,
+  isConnected,
   connectedPrinterId,
   onSendCommand,
 }: DataSourceScreenProps) {
   const queryClient = useQueryClient();
-  const [newDialogOpen, setNewDialogOpen] = useState(false);
-  const [newName, setNewName] = useState('');
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedSource, setSelectedSource] = useState<DataSource | null>(null);
-  const [viewingSource, setViewingSource] = useState<DataSource | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [importingForSource, setImportingForSource] = useState<DataSource | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   // Print job state
   const [jobDialogOpen, setJobDialogOpen] = useState(false);
@@ -121,27 +101,6 @@ export function DataSourceScreen({
     },
   });
 
-  // Fetch rows for viewing
-  const { data: viewRows = [] } = useQuery({
-    queryKey: ['data-source-rows', viewingSource?.id],
-    queryFn: async () => {
-      if (!viewingSource) return [];
-      const { data, error } = await supabase
-        .from('data_source_rows')
-        .select('*')
-        .eq('data_source_id', viewingSource.id)
-        .order('row_index', { ascending: true })
-        .limit(200);
-      if (error) throw error;
-      return (data || []).map((r: any) => ({
-        id: r.id,
-        row_index: r.row_index,
-        values: r.values as Record<string, string>,
-      }));
-    },
-    enabled: !!viewingSource,
-  });
-
   // Fetch print jobs
   const { data: printJobs = [] } = useQuery({
     queryKey: ['print-jobs'],
@@ -158,23 +117,6 @@ export function DataSourceScreen({
     },
   });
 
-  // Create data source
-  const createMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const { data, error } = await supabase
-        .from('data_sources')
-        .insert({ name, columns: [] })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['data-sources'] });
-      toast.success('Data source created');
-    },
-  });
-
   // Delete data source
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -188,77 +130,58 @@ export function DataSourceScreen({
     },
   });
 
-  // Import CSV rows
-  const importMutation = useMutation({
-    mutationFn: async ({ sourceId, csvText }: { sourceId: string; csvText: string }) => {
-      const lines = csvText.trim().split('\n');
-      if (lines.length < 2) throw new Error('CSV must have a header row and at least one data row');
+  // Quick-import: drag-drop CSV directly onto the source list
+  const quickImport = useCallback(async (file: File) => {
+    const text = await file.text();
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) { toast.error('CSV needs header + data rows'); return; }
 
-      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    const name = file.name.replace(/\.(csv|txt)$/i, '').replace(/[_-]/g, ' ');
 
-      await supabase
-        .from('data_sources')
-        .update({ columns: headers })
-        .eq('id', sourceId);
+    const { data: source, error: createErr } = await supabase
+      .from('data_sources')
+      .insert({ name, columns: headers })
+      .select()
+      .single();
+    if (createErr || !source) { toast.error('Failed to create'); return; }
 
-      await supabase.from('data_source_rows').delete().eq('data_source_id', sourceId);
+    const rows = lines.slice(1).map((line, idx) => {
+      const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+      const values: Record<string, string> = {};
+      headers.forEach((h, i) => { values[h] = vals[i] || ''; });
+      return { data_source_id: source.id, row_index: idx, values };
+    });
 
-      const rows = lines.slice(1).map((line, idx) => {
-        const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-        const values: Record<string, string> = {};
-        headers.forEach((h, i) => {
-          values[h] = vals[i] || '';
-        });
-        return {
-          data_source_id: sourceId,
-          row_index: idx,
-          values,
-        };
-      });
+    for (let i = 0; i < rows.length; i += 100) {
+      const batch = rows.slice(i, i + 100);
+      await supabase.from('data_source_rows').insert(batch);
+    }
 
-      for (let i = 0; i < rows.length; i += 100) {
-        const batch = rows.slice(i, i + 100);
-        const { error } = await supabase.from('data_source_rows').insert(batch);
-        if (error) throw error;
-      }
+    queryClient.invalidateQueries({ queryKey: ['data-sources'] });
+    toast.success(`Quick import: ${rows.length} rows from "${name}"`);
+  }, [queryClient]);
 
-      return { rowCount: rows.length, columns: headers };
-    },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['data-sources'] });
-      queryClient.invalidateQueries({ queryKey: ['data-source-rows'] });
-      toast.success(`Imported ${result.rowCount} rows with ${result.columns.length} columns`);
-    },
-    onError: (err: Error) => {
-      toast.error(`Import failed: ${err.message}`);
-    },
-  });
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file && (file.name.endsWith('.csv') || file.name.endsWith('.txt'))) {
+      quickImport(file);
+    } else {
+      toast.error('Drop a CSV or TXT file');
+    }
+  }, [quickImport]);
 
-  const handleCreate = () => {
-    if (!newName.trim()) return;
-    createMutation.mutate(newName.trim());
-    setNewDialogOpen(false);
-    setNewName('');
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleQuickFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !importingForSource) return;
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      importMutation.mutate({ sourceId: importingForSource.id, csvText: text });
-      setImportingForSource(null);
-    };
-    reader.readAsText(file);
+    if (file) quickImport(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Load built-in sample CSV
+  // Load sample
   const handleLoadSample = async () => {
     try {
-      // Create the data source
       const { data: source, error: createErr } = await supabase
         .from('data_sources')
         .insert({ name: 'Food Products Sample', columns: [] })
@@ -266,20 +189,32 @@ export function DataSourceScreen({
         .single();
       if (createErr || !source) throw createErr || new Error('Failed to create');
 
-      // Fetch the CSV from public folder
       const res = await fetch('/sample-data/food-products-sample.csv');
       if (!res.ok) throw new Error('Could not load sample file');
       const csvText = await res.text();
 
-      // Import it
-      await importMutation.mutateAsync({ sourceId: source.id, csvText });
+      const lines = csvText.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      await supabase.from('data_sources').update({ columns: headers }).eq('id', source.id);
+      await supabase.from('data_source_rows').delete().eq('data_source_id', source.id);
+
+      const rows = lines.slice(1).map((line, idx) => {
+        const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+        const values: Record<string, string> = {};
+        headers.forEach((h, i) => { values[h] = vals[i] || ''; });
+        return { data_source_id: source.id, row_index: idx, values };
+      });
+      for (let i = 0; i < rows.length; i += 100) {
+        await supabase.from('data_source_rows').insert(rows.slice(i, i + 100));
+      }
+      queryClient.invalidateQueries({ queryKey: ['data-sources'] });
       toast.success('Sample data loaded — 40 food products');
     } catch (err: any) {
       toast.error(`Failed to load sample: ${err.message}`);
     }
   };
 
-  // Open print job creation dialog
+  // Print job creation
   const handleCreateJob = () => {
     if (!selectedSource || selectedSource.columns.length === 0) {
       toast.error('Select a data source with imported data first');
@@ -291,13 +226,12 @@ export function DataSourceScreen({
     setJobDialogOpen(true);
   };
 
-  // Save print job to database
   const createJobMutation = useMutation({
     mutationFn: async () => {
       if (!connectedPrinterId || !jobMessageName) throw new Error('Missing printer or message');
       const source = dataSources.find(s => s.id === jobSourceId);
       if (!source) throw new Error('Data source not found');
-      
+
       const { data, error } = await supabase
         .from('print_jobs')
         .insert({
@@ -314,14 +248,14 @@ export function DataSourceScreen({
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['print-jobs'] });
       setJobDialogOpen(false);
       toast.success('Print job created');
     },
   });
 
-  // Run a print job using ^MB / ^NM / ^ME protocol
+  // Run print job (^MB / ^NM / ^ME protocol)
   const runPrintJob = useCallback(async (job: PrintJob) => {
     if (!isConnected || !connectedPrinterId) {
       toast.error('Not connected to printer');
@@ -335,7 +269,6 @@ export function DataSourceScreen({
     jobPausedRef.current = false;
 
     try {
-      // Step 1: Enter one-to-one mode
       const mbResult = await onSendCommand('^MB');
       if (!mbResult.success) {
         toast.error(`Failed to enter one-to-one mode: ${mbResult.response}`);
@@ -344,13 +277,12 @@ export function DataSourceScreen({
       }
       toast.info('Entered One-to-One print mode');
 
-      // Step 2: Fetch all rows for this data source
       const { data: rows, error } = await supabase
         .from('data_source_rows')
         .select('*')
         .eq('data_source_id', job.data_source_id)
         .order('row_index', { ascending: true });
-      
+
       if (error || !rows) {
         toast.error('Failed to fetch data rows');
         await onSendCommand('^ME');
@@ -358,21 +290,10 @@ export function DataSourceScreen({
         return;
       }
 
-      // Get the data source for columns
-      const source = dataSources.find(s => s.id === job.data_source_id);
-      if (!source) {
-        await onSendCommand('^ME');
-        setJobRunning(false);
-        return;
-      }
-
-      // Step 3: Send each row as a ^NM command
       const startIndex = job.current_row_index;
       for (let i = startIndex; i < rows.length; i++) {
-        // Check abort
         if (jobAbortRef.current) {
           toast.info(`Job stopped at row ${i + 1}/${rows.length}`);
-          // Save progress
           await supabase
             .from('print_jobs')
             .update({ current_row_index: i, status: 'paused' })
@@ -380,7 +301,6 @@ export function DataSourceScreen({
           break;
         }
 
-        // Check pause
         while (jobPausedRef.current && !jobAbortRef.current) {
           await new Promise(r => setTimeout(r, 200));
         }
@@ -389,58 +309,45 @@ export function DataSourceScreen({
         const row = rows[i];
         const rowValues = row.values as Record<string, string>;
 
-        // Build field subcommands from mappings
-        // field_mappings: { "columnName": "1", "anotherCol": "2" } where value = field index
         let fieldSubcommands = '';
         Object.entries(job.field_mappings).forEach(([colName, fieldIdx]) => {
           const value = rowValues[colName] || '';
           const idx = parseInt(fieldIdx);
           if (!isNaN(idx)) {
-            // Simple text field: ^AT fieldIdx; x; y; font; data
-            // In one-to-one mode, we just need the field data update
             fieldSubcommands += `^AT${idx};0;0;7;${value}`;
           }
         });
 
         if (!fieldSubcommands) continue;
 
-        // Send ^NM with the variable data for this row
         const nmCommand = `^NM 0;0;0;0;${job.message_name}${fieldSubcommands}`;
         const result = await onSendCommand(nmCommand);
-        
-        // Update progress
+
         const newIndex = i + 1;
         setActiveJob(prev => prev ? { ...prev, current_row_index: newIndex } : null);
-        
-        // Update DB progress periodically (every 10 rows)
+
         if (newIndex % 10 === 0 || newIndex === rows.length) {
           await supabase
             .from('print_jobs')
-            .update({ 
+            .update({
               current_row_index: newIndex,
               status: newIndex >= rows.length ? 'completed' : 'running',
             })
             .eq('id', job.id);
         }
 
-        // The printer should respond with 'R' when ready for next
-        // Small delay to allow the printer to process
         if (result.response?.trim() !== 'R') {
-          // Wait a bit for the printer to be ready
           await new Promise(r => setTimeout(r, 100));
         }
       }
 
-      // Step 4: Exit one-to-one mode
       await onSendCommand('^ME');
       toast.success('Print job completed');
 
-      // Mark as completed
       await supabase
         .from('print_jobs')
         .update({ status: 'completed', current_row_index: rows.length })
         .eq('id', job.id);
-
     } catch (err: any) {
       toast.error(`Print job error: ${err.message}`);
       await onSendCommand('^ME');
@@ -449,7 +356,7 @@ export function DataSourceScreen({
       setActiveJob(null);
       queryClient.invalidateQueries({ queryKey: ['print-jobs'] });
     }
-  }, [isConnected, connectedPrinterId, onSendCommand, dataSources, queryClient]);
+  }, [isConnected, connectedPrinterId, onSendCommand, queryClient]);
 
   const handlePauseResume = () => {
     if (jobPaused) {
@@ -480,40 +387,60 @@ export function DataSourceScreen({
           <TabsTrigger value="jobs">Print Jobs</TabsTrigger>
         </TabsList>
 
-        {/* Data Sources Tab */}
-        <TabsContent value="sources" className="flex-1 flex flex-col">
-          <div className="flex-1 bg-card rounded-lg p-4 mb-4 overflow-auto">
+        {/* ── Data Sources Tab ── */}
+        <TabsContent value="sources" className="flex-1 flex flex-col gap-3">
+          {/* Source list + drop zone */}
+          <div
+            onDrop={handleDrop}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            className={`bg-card rounded-lg p-4 overflow-auto transition-all ${
+              dragOver ? 'ring-2 ring-primary ring-offset-2' : ''
+            }`}
+            style={{ minHeight: 120, maxHeight: '35vh' }}
+          >
             {isLoading ? (
               <p className="text-muted-foreground text-center py-8">Loading...</p>
             ) : dataSources.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Database className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                <p className="text-lg font-medium">No Data Sources</p>
-                <p className="text-sm mt-1">Create a data source and import CSV data for variable printing</p>
-                <button
-                  onClick={handleLoadSample}
-                  className="mt-4 industrial-button-success text-white px-6 py-3 rounded-lg inline-flex items-center gap-2"
-                >
-                  <FileDown className="w-5 h-5" />
-                  <span className="font-medium">Load Sample Data</span>
-                </button>
+              <div className="text-center py-8 text-muted-foreground">
+                <Database className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                <p className="font-medium">No Data Sources</p>
+                <p className="text-sm mt-1">
+                  Use the <strong>Wizard</strong> for guided setup, or <strong>drop a CSV</strong> here for quick import
+                </p>
+                <div className="flex justify-center gap-3 mt-4">
+                  <button
+                    onClick={() => setWizardOpen(true)}
+                    className="industrial-button text-white px-6 py-3 rounded-lg inline-flex items-center gap-2"
+                  >
+                    <Wand2 className="w-5 h-5" />
+                    <span className="font-medium">Database Wizard</span>
+                  </button>
+                  <button
+                    onClick={handleLoadSample}
+                    className="industrial-button-success text-white px-6 py-3 rounded-lg inline-flex items-center gap-2"
+                  >
+                    <FileDown className="w-5 h-5" />
+                    <span className="font-medium">Load Sample</span>
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {dataSources.map((ds) => (
                   <div
                     key={ds.id}
                     onClick={() => setSelectedSource(ds)}
-                    className={`flex items-center justify-between py-3 px-4 rounded-lg cursor-pointer transition-colors ${
+                    className={`flex items-center justify-between py-2.5 px-4 rounded-lg cursor-pointer transition-colors ${
                       selectedSource?.id === ds.id
                         ? 'bg-primary/20 border border-primary/30'
                         : 'hover:bg-muted/50 border border-transparent'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Database className="w-5 h-5 text-primary" />
+                      <Database className="w-4 h-4 text-primary" />
                       <div>
-                        <span className="font-medium">{ds.name}</span>
+                        <span className="font-medium text-sm">{ds.name}</span>
                         <p className="text-xs text-muted-foreground">
                           {ds.columns.length} columns · {ds.rowCount ?? 0} rows
                         </p>
@@ -521,70 +448,59 @@ export function DataSourceScreen({
                     </div>
                   </div>
                 ))}
+                {/* Drop hint */}
+                <p className="text-xs text-center text-muted-foreground pt-2">
+                  Drop a CSV file here for quick import
+                </p>
               </div>
             )}
           </div>
 
+          {/* Inline data preview grid */}
+          <InlineDataGrid source={selectedSource} />
+
           {/* Action buttons */}
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
-            <div className="flex gap-4 justify-center min-w-max">
+            <div className="flex gap-3 justify-center min-w-max">
               <button
-                onClick={() => {
-                  setNewName('');
-                  setNewDialogOpen(true);
-                }}
-                className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
+                onClick={() => setWizardOpen(true)}
+                className="industrial-button text-white px-6 py-3 rounded-lg flex flex-col items-center min-w-[100px]"
               >
-                <Plus className="w-8 h-8 mb-1" />
-                <span className="font-medium">New</span>
+                <Wand2 className="w-7 h-7 mb-1" />
+                <span className="text-xs font-medium">Wizard</span>
               </button>
 
               <button
-                onClick={() => {
-                  if (!selectedSource) return;
-                  setImportingForSource(selectedSource);
-                  fileInputRef.current?.click();
-                }}
-                disabled={!selectedSource}
-                className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
+                onClick={() => fileInputRef.current?.click()}
+                className="industrial-button text-white px-6 py-3 rounded-lg flex flex-col items-center min-w-[100px]"
               >
-                <Upload className="w-8 h-8 mb-1" />
-                <span className="font-medium">Import CSV</span>
-              </button>
-
-              <button
-                onClick={() => selectedSource && setViewingSource(selectedSource)}
-                disabled={!selectedSource}
-                className="industrial-button-gray text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
-              >
-                <Eye className="w-8 h-8 mb-1" />
-                <span className="font-medium">View</span>
+                <Upload className="w-7 h-7 mb-1" />
+                <span className="text-xs font-medium">Quick Import</span>
               </button>
 
               <button
                 onClick={handleCreateJob}
                 disabled={!selectedSource || (selectedSource.rowCount ?? 0) === 0}
-                className="industrial-button-success text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
+                className="industrial-button-success text-white px-6 py-3 rounded-lg flex flex-col items-center min-w-[100px] disabled:opacity-50"
               >
-                <Link className="w-8 h-8 mb-1" />
-                <span className="font-medium">Print Job</span>
+                <Link className="w-7 h-7 mb-1" />
+                <span className="text-xs font-medium">Print Job</span>
               </button>
 
               <button
                 onClick={() => selectedSource && setDeleteConfirmOpen(true)}
                 disabled={!selectedSource}
-                className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
+                className="industrial-button-danger text-white px-6 py-3 rounded-lg flex flex-col items-center min-w-[100px] disabled:opacity-50"
               >
-                <Trash2 className="w-8 h-8 mb-1" />
-                <span className="font-medium">Delete</span>
+                <Trash2 className="w-7 h-7 mb-1" />
+                <span className="text-xs font-medium">Delete</span>
               </button>
             </div>
           </div>
         </TabsContent>
 
-        {/* Print Jobs Tab */}
+        {/* ── Print Jobs Tab ── */}
         <TabsContent value="jobs" className="flex-1 flex flex-col">
-          {/* Active Job Runner */}
           {activeJob && jobRunning && (
             <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-4">
               <div className="flex items-center justify-between mb-2">
@@ -595,27 +511,19 @@ export function DataSourceScreen({
                   {activeJob.current_row_index} / {activeJob.total_rows}
                 </span>
               </div>
-              <Progress 
-                value={activeJob.total_rows > 0 
-                  ? (activeJob.current_row_index / activeJob.total_rows) * 100 
+              <Progress
+                value={activeJob.total_rows > 0
+                  ? (activeJob.current_row_index / activeJob.total_rows) * 100
                   : 0
-                } 
+                }
                 className="mb-3"
               />
               <div className="flex gap-2 justify-end">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handlePauseResume}
-                >
+                <Button size="sm" variant="outline" onClick={handlePauseResume}>
                   {jobPaused ? <Play className="w-4 h-4 mr-1" /> : <Pause className="w-4 h-4 mr-1" />}
                   {jobPaused ? 'Resume' : 'Pause'}
                 </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={handleStopJob}
-                >
+                <Button size="sm" variant="destructive" onClick={handleStopJob}>
                   <Square className="w-4 h-4 mr-1" />
                   Stop
                 </Button>
@@ -647,8 +555,8 @@ export function DataSourceScreen({
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-2 py-1 rounded ${
-                          job.status === 'completed' 
-                            ? 'bg-green-500/20 text-green-700' 
+                          job.status === 'completed'
+                            ? 'bg-green-500/20 text-green-700'
                             : job.status === 'running'
                             ? 'bg-blue-500/20 text-blue-700'
                             : job.status === 'paused'
@@ -677,82 +585,17 @@ export function DataSourceScreen({
         </TabsContent>
       </Tabs>
 
-      {/* Hidden file input */}
+      {/* Hidden file input for quick import */}
       <input
         ref={fileInputRef}
         type="file"
         accept=".csv,.txt"
         className="hidden"
-        onChange={handleFileSelect}
+        onChange={handleQuickFileSelect}
       />
 
-      {/* New Data Source Dialog */}
-      <Dialog open={newDialogOpen} onOpenChange={setNewDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>New Data Source</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="dsName">Name</Label>
-            <Input
-              id="dsName"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="e.g. Address Labels, Batch Codes"
-              className="mt-2"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleCreate();
-              }}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNewDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreate} disabled={!newName.trim()}>
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Data Dialog */}
-      <Dialog open={!!viewingSource} onOpenChange={() => setViewingSource(null)}>
-        <DialogContent className="sm:max-w-4xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>{viewingSource?.name} — Data Preview</DialogTitle>
-          </DialogHeader>
-          <div className="overflow-auto max-h-[60vh]">
-            {viewingSource && viewingSource.columns.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    {viewingSource.columns.map((col) => (
-                      <TableHead key={col}>{col}</TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {viewRows.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell className="text-muted-foreground">{row.row_index + 1}</TableCell>
-                      {viewingSource.columns.map((col) => (
-                        <TableCell key={col}>{row.values[col] || ''}</TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-center py-8 text-muted-foreground">
-                No data imported yet. Use "Import CSV" to add data.
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Database Setup Wizard */}
+      <DataSourceWizard open={wizardOpen} onOpenChange={setWizardOpen} />
 
       {/* Create Print Job Dialog */}
       <Dialog open={jobDialogOpen} onOpenChange={setJobDialogOpen}>
@@ -767,7 +610,6 @@ export function DataSourceScreen({
                 {selectedSourceForJob?.name ?? 'Unknown'} ({selectedSourceForJob?.rowCount ?? 0} rows)
               </p>
             </div>
-
             <div>
               <Label>Target Message</Label>
               <Select value={jobMessageName} onValueChange={setJobMessageName}>
@@ -783,7 +625,6 @@ export function DataSourceScreen({
                 </SelectContent>
               </Select>
             </div>
-
             {jobMessageName && selectedSourceForJob && selectedSourceForJob.columns.length > 0 && (
               <div>
                 <Label className="mb-2 block">Field Mapping</Label>
@@ -814,7 +655,6 @@ export function DataSourceScreen({
                 </div>
               </div>
             )}
-
             {!isConnected && (
               <p className="text-sm text-destructive">
                 ⚠ Connect to a printer before creating a print job
@@ -828,7 +668,7 @@ export function DataSourceScreen({
             <Button
               onClick={() => createJobMutation.mutate()}
               disabled={
-                !jobMessageName || 
+                !jobMessageName ||
                 !isConnected ||
                 Object.values(jobFieldMappings).filter(v => v).length === 0
               }
