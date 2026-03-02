@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Play, Clock, Film, ChevronLeft, X } from 'lucide-react';
+import { Play, Clock, Film, ChevronLeft, X, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -77,11 +77,17 @@ export function TrainingVideosScreen({ onBack }: TrainingVideosScreenProps) {
             className="w-full max-h-[70vh] rounded-lg"
           />
         </div>
-        {selectedVideo.description && (
-          <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border flex items-start justify-between gap-4">
+          {selectedVideo.description ? (
             <p className="text-sm text-muted-foreground">{selectedVideo.description}</p>
-          </div>
-        )}
+          ) : <div />}
+          <a href={selectedVideo.video_url} download={`${selectedVideo.title}.webm`} target="_blank" rel="noopener noreferrer">
+            <Button size="sm" variant="outline" className="gap-2 flex-shrink-0">
+              <Download className="w-4 h-4" />
+              Download
+            </Button>
+          </a>
+        </div>
       </div>
     );
   }
