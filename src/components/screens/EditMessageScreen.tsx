@@ -1282,23 +1282,27 @@ export function EditMessageScreen({
             isConnected={isConnected}
             onLink={(fieldValues) => {
               // Update field data with values from the first data row
-              setMessage((prev) => ({
-                ...prev,
-                fields: prev.fields.map((f, idx) => {
+              // Preserve barcode encoding prefix (e.g. [QR], [CODE128|HR]) for barcode fields
+              setMessage((prev) => {
+                const updatedFields = prev.fields.map((f, idx) => {
                   const fieldNum = idx + 1;
-                  if (fieldValues[fieldNum] != null) {
-                    return { ...f, data: fieldValues[fieldNum] };
+                  if (fieldValues[fieldNum] == null) return f;
+
+                  const newValue = fieldValues[fieldNum];
+                  if (f.type === 'barcode') {
+                    // Extract existing encoding prefix like [QR] or [CODE128|HR]
+                    const prefixMatch = f.data.match(/^(\[[^\]]+\])\s*/);
+                    const prefix = prefixMatch ? prefixMatch[1] : '[QR]';
+                    return { ...f, data: `${prefix} ${newValue}` };
                   }
-                  return f;
-                }),
-                width: autoResizeWidth(prev.fields.map((f, idx) => {
-                  const fieldNum = idx + 1;
-                  if (fieldValues[fieldNum] != null) {
-                    return { ...f, data: fieldValues[fieldNum] };
-                  }
-                  return f;
-                })),
-              }));
+                  return { ...f, data: newValue };
+                });
+                return {
+                  ...prev,
+                  fields: updatedFields,
+                  width: autoResizeWidth(updatedFields),
+                };
+              });
             }}
           />
         </>
