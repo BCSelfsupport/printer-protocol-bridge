@@ -1779,14 +1779,13 @@ export function usePrinterConnection() {
         // ^AC n; x; y; s; c (default to print counter = 0)
         return `^AC${fieldNum};${field.x};${field.y};${fontCode};0`;
       case 'barcode': {
-        // ^AB n; x; y; f; t; m; r; data
+        // ^AB n;x;y;s;type;data  (per v2.6 protocol / ^HN help)
         // Parse the UI encoding prefix e.g. "[QR] data", "[CODE128|HR] data"
         const prefixMatch = field.data.match(/^\[([^\]]+)\]\s*/);
         const rawData = prefixMatch ? field.data.slice(prefixMatch[0].length) : field.data;
         const prefixContent = prefixMatch ? prefixMatch[1] : 'CODE128';
         const parts = prefixContent.split('|');
         const encodingName = parts[0].trim().toUpperCase();
-        const hrFlag = parts.includes('HR') ? 1 : 0;
 
         // Map UI encoding name to v2.6 protocol barcode type code
         const barcodeTypeMap: Record<string, number> = {
@@ -1805,7 +1804,8 @@ export function usePrinterConnection() {
           'DOTCODE': 12,
         };
         const typeCode = barcodeTypeMap[encodingName] ?? 6;
-        return `^AB${fieldNum};${field.x};${field.y};${fontCode};${typeCode};0;${hrFlag};${rawData}`;
+        // Protocol format: ^AB n;x;y;s;type;data (6 params, no mode/HR params)
+        return `^AB${fieldNum};${field.x};${field.y};${fontCode};${typeCode};${rawData}`;
       }
       case 'logo':
         // ^AL n; x; y; logoname
