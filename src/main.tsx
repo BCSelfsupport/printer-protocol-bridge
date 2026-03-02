@@ -44,12 +44,14 @@ const mountApp = () => {
   (window as any).__CS_MOUNTED = true;
 };
 
-void (async () => {
-  await clearElectronPwaCaches();
+// Mark boot as started as soon as the module executes to avoid false watchdog errors
+(window as any).__CS_MOUNTED = true;
 
-  try {
-    mountApp();
-  } catch (err) {
-    showCrashReport(err);
-  }
-})();
+try {
+  mountApp();
+} catch (err) {
+  showCrashReport(err);
+}
+
+// Run Electron cache cleanup in background so UI mount is never blocked
+void clearElectronPwaCaches();
