@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize, Stethoscope, HelpCircle, MessageSquare } from 'lucide-react';
+import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize, Stethoscope, HelpCircle, MessageSquare, Video } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { getRelayConfig } from '@/lib/printerTransport';
@@ -18,9 +18,10 @@ interface HeaderProps {
   onRelayConnect?: () => void;
   printerModel?: string | null;
   printerVariant?: string | null;
+  onTrainingVideos?: () => void;
 }
 
-export function Header({ isConnected, connectedIp, onSettings, onHome, printerTime, onRelayConnect, printerModel, printerVariant }: HeaderProps) {
+export function Header({ isConnected, connectedIp, onSettings, onHome, printerTime, onRelayConnect, printerModel, printerVariant, onTrainingVideos }: HeaderProps) {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const { theme, setTheme } = useTheme();
@@ -174,6 +175,16 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
           >
             <MessageSquare className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
           </button>
+
+          {onTrainingVideos && (
+            <button
+              onClick={onTrainingVideos}
+              className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+              title="Training Videos"
+            >
+              <Video className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+            </button>
+          )}
 
           <button
             onClick={() => setShowGuide(true)}
