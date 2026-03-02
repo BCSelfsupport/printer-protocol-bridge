@@ -1761,9 +1761,35 @@ export function usePrinterConnection() {
       case 'counter':
         // ^AC n; x; y; s; c (default to print counter = 0)
         return `^AC${fieldNum};${field.x};${field.y};${fontCode};0`;
-      case 'barcode':
-        // ^AB n; x; y; f; t; m; r; data (default Code128, auto checksum, human readable)
-        return `^AB${fieldNum};${field.x};${field.y};${fontCode};6;0;1;${field.data}`;
+      case 'barcode': {
+        // ^AB n; x; y; f; t; m; r; data
+        // Parse the UI encoding prefix e.g. "[QR] data", "[CODE128|HR] data"
+        const prefixMatch = field.data.match(/^\[([^\]]+)\]\s*/);
+        const rawData = prefixMatch ? field.data.slice(prefixMatch[0].length) : field.data;
+        const prefixContent = prefixMatch ? prefixMatch[1] : 'CODE128';
+        const parts = prefixContent.split('|');
+        const encodingName = parts[0].trim().toUpperCase();
+        const hrFlag = parts.includes('HR') ? 1 : 0;
+
+        // Map UI encoding name to v2.6 protocol barcode type code
+        const barcodeTypeMap: Record<string, number> = {
+          'I25': 0, 'INTERLEAVED 2 OF 5': 0,
+          'UPCA': 1, 'UPC-A': 1,
+          'UPCE': 2, 'UPC-E': 2,
+          'EAN13': 3, 'EAN-13': 3, 'EAN 13': 3,
+          'EAN8': 4, 'EAN-8': 4, 'EAN 8': 4,
+          'CODE39': 5, 'CODE 39': 5,
+          'CODE128': 6, 'CODE 128': 6,
+          'CODE128_UCC': 7, 'A UCC/EAN-128': 7,
+          'CODE128_SSCC': 8, 'UCC/EAN-128 SSCC': 8,
+          'CODE128_MULTI': 9, 'MULTI-INFORMATION': 9,
+          'DATAMATRIX': 10, 'DATA MATRIX': 10,
+          'QR': 11, 'QRCODE': 11, 'QR CODE': 11,
+          'DOTCODE': 12,
+        };
+        const typeCode = barcodeTypeMap[encodingName] ?? 6;
+        return `^AB${fieldNum};${field.x};${field.y};${fontCode};${typeCode};0;${hrFlag};${rawData}`;
+      }
       case 'logo':
         // ^AL n; x; y; logoname
         return `^AL${fieldNum};${field.x};${field.y};${field.data}`;
