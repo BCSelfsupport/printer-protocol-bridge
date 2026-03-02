@@ -15,6 +15,24 @@ export interface ScreenRecorderActions {
   discardRecording: () => void;
 }
 
+async function getElectronStream(): Promise<MediaStream> {
+  const sources = await window.electronAPI!.app.getScreenSources();
+  if (!sources.length) throw new Error('No screen sources available');
+  // Use the first screen source
+  const sourceId = sources[0].id;
+  return navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: {
+      // @ts-ignore — Electron-specific chromeMediaSource constraint
+      mandatory: {
+        chromeMediaSource: 'desktop',
+        chromeMediaSourceId: sourceId,
+        maxFrameRate: 15,
+      },
+    },
+  });
+}
+
 export function useScreenRecorder(onRecordingStart?: () => void) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
@@ -28,13 +46,20 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
 
   const startRecording = useCallback(async () => {
     try {
-      if (!navigator.mediaDevices?.getDisplayMedia) {
-        throw new Error('Screen recording is not supported in this environment. Use the browser version (not Electron) to record.');
+      let stream: MediaStream;
+
+      if (window.electronAPI?.isElectron) {
+        // Electron: use desktopCapturer via main process
+        stream = await getElectronStream();
+      } else if (navigator.mediaDevices?.getDisplayMedia) {
+        // Browser: use standard getDisplayMedia
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { frameRate: 15 },
+          audio: false,
+        });
+      } else {
+        throw new Error('Screen recording is not supported in this environment.');
       }
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: 15 },
-        audio: false,
-      });
 
       streamRef.current = stream;
       chunksRef.current = [];

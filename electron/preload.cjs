@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     isFullscreen: () => ipcRenderer.invoke('app:is-fullscreen'),
     getUpdateState: () => ipcRenderer.invoke('app:get-update-state'),
     getUpdaterLog: () => ipcRenderer.invoke('app:get-updater-log'),
+    getScreenSources: () => ipcRenderer.invoke('app:get-screen-sources'),
   },
 
   // Update events

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, desktopCapturer } = require('electron');
 const net = require('net');
 const http = require('http');
 const os = require('os');
@@ -556,6 +556,15 @@ ipcMain.handle('app:toggle-fullscreen', () => {
 
 ipcMain.handle('app:is-fullscreen', () => {
   return mainWindow?.isFullScreen() ?? false;
+});
+
+// Screen capture sources for training video recorder
+ipcMain.handle('app:get-screen-sources', async () => {
+  const sources = await desktopCapturer.getSources({
+    types: ['screen'],
+    thumbnailSize: { width: 0, height: 0 },
+  });
+  return sources.map(s => ({ id: s.id, name: s.name }));
 });
 
 // --- Mobile Relay HTTP Server ---

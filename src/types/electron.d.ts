@@ -30,6 +30,7 @@ interface AppAPI {
   isFullscreen: () => Promise<boolean>;
   getUpdateState: () => Promise<{ stage: string; info: { version: string } | null; progress: { percent: number; bytesPerSecond: number } | null }>;
   getUpdaterLog: () => Promise<string>;
+  getScreenSources: () => Promise<{ id: string; name: string }[]>;
 }
 
 interface ElectronAPI {
