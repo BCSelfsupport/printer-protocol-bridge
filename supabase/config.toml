@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.feedback-admin]
 verify_jwt = false
+
+[functions.receive-print-data]
+verify_jwt = false

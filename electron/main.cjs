@@ -923,6 +923,74 @@ ipcMain.handle('relay:get-info', () => {
   return { port: RELAY_PORT, ips: getLocalIPs() };
 });
 
+// ── Hotfolder watcher ──
+let hotfolderInterval = null;
+let hotfolderProcessed = new Set(); // Track already-imported files
+
+function startHotfolderWatcher(config) {
+  stopHotfolderWatcher();
+  if (!config || !config.enabled || !config.path) return;
+
+  const watchDir = config.path;
+  const pollMs = (config.pollingSeconds || 5) * 1000;
+
+  logToFile(`[hotfolder] Starting watcher on "${watchDir}" every ${pollMs}ms`);
+
+  // Initial scan: mark existing files as already processed
+  try {
+    const existing = fs.readdirSync(watchDir).filter(f => /\.(csv|txt)$/i.test(f));
+    existing.forEach(f => hotfolderProcessed.add(f));
+    logToFile(`[hotfolder] Found ${existing.length} existing files (skipped)`);
+  } catch (err) {
+    logToFile(`[hotfolder] Cannot read directory: ${err.message}`);
+  }
+
+  hotfolderInterval = setInterval(() => {
+    try {
+      const files = fs.readdirSync(watchDir).filter(f => /\.(csv|txt)$/i.test(f));
+      for (const fileName of files) {
+        if (hotfolderProcessed.has(fileName)) continue;
+        hotfolderProcessed.add(fileName);
+
+        const filePath = path.join(watchDir, fileName);
+        logToFile(`[hotfolder] New file detected: ${fileName}`);
+
+        try {
+          const csvText = fs.readFileSync(filePath, 'utf8');
+          // Notify renderer to import this CSV
+          mainWindow?.webContents.send('hotfolder:new-file', {
+            fileName,
+            csvText,
+          });
+        } catch (readErr) {
+          logToFile(`[hotfolder] Failed to read ${fileName}: ${readErr.message}`);
+        }
+      }
+    } catch (err) {
+      // Directory might have been removed
+      logToFile(`[hotfolder] Watch error: ${err.message}`);
+    }
+  }, pollMs);
+}
+
+function stopHotfolderWatcher() {
+  if (hotfolderInterval) {
+    clearInterval(hotfolderInterval);
+    hotfolderInterval = null;
+    hotfolderProcessed.clear();
+    logToFile('[hotfolder] Watcher stopped');
+  }
+}
+
+ipcMain.handle('hotfolder:configure', async (event, config) => {
+  if (config.enabled) {
+    startHotfolderWatcher(config);
+  } else {
+    stopHotfolderWatcher();
+  }
+  return { success: true };
+});
+
 app.whenReady().then(() => {
   createWindow();
   startRelayServer();
