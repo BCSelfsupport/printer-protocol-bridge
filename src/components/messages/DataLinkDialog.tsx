@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Database, Link, Unlink, Check, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Database, Link, Unlink, Check, ChevronLeft, ChevronRight, Eye, Sparkles } from 'lucide-react';
+import { detectMetrcCsv } from '@/lib/metrcDetector';
 import {
   Dialog,
   DialogContent,
@@ -102,6 +103,26 @@ export function DataLinkDialog({
   }, [existingJob]);
 
   const selectedSource = dataSources.find(s => s.id === selectedSourceId);
+
+  // Auto-apply METRC suggested mappings when a source is selected and no mappings exist yet
+  useEffect(() => {
+    if (!selectedSource || existingJob) return;
+    if (Object.keys(mappings).length > 0) return;
+    
+    const metrc = detectMetrcCsv(selectedSource.columns);
+    if (metrc.isMetrc && Object.keys(metrc.suggestedMappings).length > 0) {
+      const autoMappings: Record<string, string[]> = {};
+      Object.entries(metrc.suggestedMappings).forEach(([col, info]) => {
+        if (info.fieldIndex <= fieldCount) {
+          autoMappings[col] = [String(info.fieldIndex)];
+        }
+      });
+      if (Object.keys(autoMappings).length > 0) {
+        setMappings(autoMappings);
+        toast.info('🌿 METRC detected — auto-mapped columns to fields');
+      }
+    }
+  }, [selectedSource?.id]);
 
   const handleToggleMapping = (column: string, fieldIndex: string) => {
     setMappings(prev => {
@@ -319,11 +340,17 @@ export function DataLinkDialog({
                 Assign each CSV column to a field number (F1, F2, etc.) shown on the canvas.
               </p>
               <div className="space-y-3">
-                {selectedSource.columns.map(col => {
+              {(() => {
+                const metrc = detectMetrcCsv(selectedSource.columns);
+                return selectedSource.columns.map(col => {
                   const selected = mappings[col] || [];
+                  const isSuggested = metrc.isMetrc && col in metrc.suggestedMappings;
                   return (
                     <div key={col} className="flex items-start gap-3">
-                      <span className="text-sm font-medium min-w-[120px] truncate mt-1">{col}</span>
+                      <span className={`text-sm font-medium min-w-[120px] truncate mt-1 ${isSuggested ? 'text-green-600' : ''}`}>
+                        {col}
+                        {isSuggested && <Sparkles className="w-3 h-3 inline ml-1 -mt-0.5" />}
+                      </span>
                       <span className="text-muted-foreground mt-1">→</span>
                       <div className="flex flex-wrap gap-1.5">
                         {fieldOptions.map(opt => {
@@ -346,7 +373,8 @@ export function DataLinkDialog({
                       </div>
                     </div>
                   );
-                })}
+                });
+              })()}
               </div>
               {rowCount != null && (
                 <p className="text-xs text-muted-foreground mt-2">
