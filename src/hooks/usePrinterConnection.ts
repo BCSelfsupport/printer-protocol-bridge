@@ -79,6 +79,10 @@ const shouldUseEmulator = () => printerEmulator.enabled || multiPrinterEmulator.
 const recentlyDeletedMessages = new Set<string>();
 const DELETION_GUARD_MS = 20000; // ignore deleted names for 20 seconds (polling cycle can take 10s+)
 const DELETE_VERIFY_RETRIES = 3;
+
+// Track recently added message names so ^LM polling doesn't remove them before printer persists
+const recentlyAddedMessages = new Set<string>();
+const ADDITION_GUARD_MS = 15000;
 const DELETE_VERIFY_DELAY_MS = 250;
 const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCODE_AUTO']);
 // ^SV flushes the firmware's queued message writes/deletes to NOR filesystem.
@@ -643,6 +647,12 @@ export function usePrinterConnection() {
         console.log('[handleMessageListResponse] Active delete guards:', [...recentlyDeletedMessages], '| message names:', messageNames);
       }
       const filteredNames = messageNames.filter(n => !recentlyDeletedMessages.has(n));
+      // Merge in recently added messages that the printer hasn't reported yet
+      for (const addedName of recentlyAddedMessages) {
+        if (!filteredNames.some(n => n.toUpperCase() === addedName.toUpperCase())) {
+          filteredNames.push(addedName);
+        }
+      }
       const printerMessages: PrintMessage[] = filteredNames.map((name, idx) => ({ id: idx + 1, name }));
       console.log('[handleMessageListResponse] Parsed messages:', printerMessages.length, 'current:', detectedCurrentMessage);
       setConnectionState((prev) => ({
@@ -1652,6 +1662,12 @@ export function usePrinterConnection() {
 
   // Add a new message to the list (local only) — deduplicates by name
   const addMessage = useCallback((name: string) => {
+    // Guard against ^LM polling removing the message before printer persists
+    recentlyAddedMessages.add(name);
+    setTimeout(() => {
+      recentlyAddedMessages.delete(name);
+    }, ADDITION_GUARD_MS);
+
     setConnectionState((prev) => {
       // Skip if a message with this name already exists (case-insensitive)
       if (prev.messages.some(m => m.name.toUpperCase() === name.toUpperCase())) {
