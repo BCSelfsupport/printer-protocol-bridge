@@ -1787,17 +1787,33 @@ export function usePrinterConnection() {
         // ^AC n; x; y; s; c (default to print counter = 0)
         return `^AC${fieldNum};${field.x};${field.y};${fontCode};0`;
       case 'barcode': {
-        // ^AB n;x;y;s;type;data  (per v2.6 protocol / ^HN help)
+        // ^AB syntax varies by barcode type (per v2.0 protocol section 5.27.2.1):
+        //   1D (non-Code128): ^AB n;x;y;f;t;m;r;data
+        //   Code 128:         ^AB n;x;y;f;t;m;r;c;data
+        //   DataMatrix:       ^AB n;x;y;f;t;r;s;data
+        //   QR Code:          ^AB n;x;y;f;t;s;data
+        //
+        // f = font size (0-8), t = barcode type, m = checksum (0=auto,1=manual),
+        // r = human readable (0/1), c = Code128 start code (0=A,1=B,2=C),
+        // s = size (QR: 0-2, DataMatrix: 0-15)
+
         // Parse UI prefix: [QR], [QRCODE|S=2], [CODE128|HR], etc.
         const prefixMatch = field.data.match(/^\[([^\]]+)\]\s*/);
         const rawData = prefixMatch ? field.data.slice(prefixMatch[0].length) : field.data;
         const prefixContent = prefixMatch ? prefixMatch[1] : 'CODE128';
         const parts = prefixContent.split('|').map((p) => p.trim()).filter(Boolean);
         const encodingName = (parts[0] || 'CODE128').toUpperCase();
+
+        // Parse optional flags from prefix: |HR, |S=n, |C=n, |M=n
+        const hrFlag = parts.some((p) => /^HR$/i.test(p));
         const sizeFlag = parts.find((p) => /^S=\d+$/i.test(p));
         const parsedSize = sizeFlag ? parseInt(sizeFlag.split('=')[1], 10) : NaN;
+        const startCodeFlag = parts.find((p) => /^C=\d$/i.test(p));
+        const startCode = startCodeFlag ? parseInt(startCodeFlag.split('=')[1], 10) : 1; // Default B
+        const checksumFlag = parts.find((p) => /^M=\d$/i.test(p));
+        const checksumMode = checksumFlag ? parseInt(checksumFlag.split('=')[1], 10) : 0; // Default auto
 
-        // Map UI encoding name to v2.6 protocol barcode type code
+        // Map UI encoding name to v2.0 protocol barcode type code
         const barcodeTypeMap: Record<string, number> = {
           'I25': 0, 'INTERLEAVED 2 OF 5': 0,
           'UPCA': 1, 'UPC-A': 1,
@@ -1806,22 +1822,34 @@ export function usePrinterConnection() {
           'EAN8': 4, 'EAN-8': 4, 'EAN 8': 4,
           'CODE39': 5, 'CODE 39': 5,
           'CODE128': 6, 'CODE 128': 6,
-          'CODE128_UCC': 7, 'A UCC/EAN-128': 7,
-          'CODE128_SSCC': 8, 'UCC/EAN-128 SSCC': 8,
-          'CODE128_MULTI': 9, 'MULTI-INFORMATION': 9,
-          'DATAMATRIX': 10, 'DATA MATRIX': 10,
-          'QR': 11, 'QRCODE': 11, 'QR CODE': 11,
-          'DOTCODE': 12,
+          'DATAMATRIX': 7, 'DATA MATRIX': 7,
+          'QR': 8, 'QRCODE': 8, 'QR CODE': 8,
         };
         const typeCode = barcodeTypeMap[encodingName] ?? 6;
 
-        // Barcode "s" is size/scale, not text font code. Keep defaults firmware-safe.
-        const is2D = typeCode === 10 || typeCode === 11 || typeCode === 12;
-        const barcodeSize = Number.isFinite(parsedSize)
-          ? Math.max(0, parsedSize)
-          : (is2D ? 1 : 0);
+        // f = font size code (controls bar height for 1D / overall size for 2D)
+        const f = fontToProtocolCode(field.fontSize);
+        // r = human readable (0/1)
+        const r = hrFlag ? 1 : 0;
 
-        return `^AB${fieldNum};${field.x};${field.y};${barcodeSize};${typeCode};${rawData}`;
+        if (typeCode === 8) {
+          // QR Code: ^AB n;x;y;f;t;s;data
+          // s: 0=21x21, 1=25x25, 2=29x29
+          const qrSize = Number.isFinite(parsedSize) ? Math.min(Math.max(0, parsedSize), 2) : 0;
+          return `^AB${fieldNum};${field.x};${field.y};${f};${typeCode};${qrSize};${rawData}`;
+        } else if (typeCode === 7) {
+          // DataMatrix: ^AB n;x;y;f;t;r;s;data
+          // s: 0-15 (specific matrix sizes)
+          const dmSize = Number.isFinite(parsedSize) ? Math.min(Math.max(0, parsedSize), 15) : 0;
+          return `^AB${fieldNum};${field.x};${field.y};${f};${typeCode};${r};${dmSize};${rawData}`;
+        } else if (typeCode === 6) {
+          // Code 128: ^AB n;x;y;f;t;m;r;c;data
+          // c: start code (0=A, 1=B, 2=C)
+          return `^AB${fieldNum};${field.x};${field.y};${f};${typeCode};${checksumMode};${r};${startCode};${rawData}`;
+        } else {
+          // All other 1D: ^AB n;x;y;f;t;m;r;data
+          return `^AB${fieldNum};${field.x};${field.y};${f};${typeCode};${checksumMode};${r};${rawData}`;
+        }
       }
       case 'logo':
         // ^AL n; x; y; logoname
