@@ -28,6 +28,9 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
 
   const startRecording = useCallback(async () => {
     try {
+      if (!navigator.mediaDevices?.getDisplayMedia) {
+        throw new Error('Screen recording is not supported in this environment. Use the browser version (not Electron) to record.');
+      }
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { frameRate: 15 },
         audio: false,
