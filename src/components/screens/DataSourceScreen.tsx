@@ -28,6 +28,7 @@ import { DataSourceWizard } from '@/components/datasource/DataSourceWizard';
 import { InlineDataGrid } from '@/components/datasource/InlineDataGrid';
 import { IntegrationConfig } from '@/components/datasource/IntegrationConfig';
 import { LiveJobDataRow } from '@/components/datasource/LiveJobDataRow';
+import { PrintMessagePreview } from '@/components/datasource/PrintMessagePreview';
 
 interface DataSource {
   id: string;
@@ -561,6 +562,15 @@ export function DataSourceScreen({
                   : 0
                 }
                 className="mb-3"
+              />
+
+              {/* Visual message preview — shows current vs previous record */}
+              <PrintMessagePreview
+                dataSourceId={activeJob.data_source_id}
+                currentRowIndex={activeJob.current_row_index}
+                fieldMappings={activeJob.field_mappings}
+                messageName={activeJob.message_name}
+                dataSources={dataSources}
               />
 
               {/* Live data row display — shows current record scrolling through */}
