@@ -422,7 +422,7 @@ export function DataSourceScreen({
         </TabsList>
 
         {/* ── Data Sources Tab ── */}
-        <TabsContent value="sources" className="flex-1 flex flex-col gap-3 min-h-0 overflow-hidden">
+        <TabsContent value="sources" className="data-[state=active]:flex-1 data-[state=active]:flex flex-col gap-3 min-h-0 overflow-hidden">
           {/* Source list + drop zone */}
           <div
             onDrop={handleDrop}
@@ -543,7 +543,7 @@ export function DataSourceScreen({
         </TabsContent>
 
         {/* ── Print Jobs Tab ── */}
-        <TabsContent value="jobs" className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <TabsContent value="jobs" className="data-[state=active]:flex-1 data-[state=active]:flex min-h-0 flex-col overflow-hidden">
           {/* Active job panel with live data scrolling */}
           {activeJob && jobRunning && (
             <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-4">
@@ -689,7 +689,7 @@ export function DataSourceScreen({
         </TabsContent>
 
         {/* ── Integrations Tab ── */}
-        <TabsContent value="integrations" className="flex-1 min-h-0 overflow-auto">
+        <TabsContent value="integrations" className="data-[state=active]:flex-1 min-h-0 overflow-auto">
           <IntegrationConfig projectId={import.meta.env.VITE_SUPABASE_PROJECT_ID || ''} />
         </TabsContent>
       </Tabs>
