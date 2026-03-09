@@ -509,8 +509,8 @@ export function usePrinterConnection() {
   const handleDateTimeResponse = useCallback((raw: string) => {
     const cleaned = raw.replace(/[^\x20-\x7E]/g, '').trim();
     if (!cleaned) return;
-    const parsed = new Date(cleaned);
-    if (!isNaN(parsed.getTime())) {
+    const parsed = parsePrinterDateTime(cleaned);
+    if (parsed && !isNaN(parsed.getTime())) {
       setConnectionState((prev) => ({
         ...prev,
         status: prev.status ? { ...prev.status, printerTime: parsed } : null,
