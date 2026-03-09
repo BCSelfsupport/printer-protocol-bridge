@@ -11,6 +11,40 @@ import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
+
+/**
+ * Parse printer ^SD date/time response into a local Date.
+ * Handles ISO strings (may lack timezone → force local), and common formats like "MM/DD/YYYY HH:MM:SS".
+ */
+function parsePrinterDateTime(raw: string): Date | null {
+  if (!raw) return null;
+  
+  // If it looks like an ISO string without timezone suffix, parse components as local time
+  // e.g. "2026-03-09T14:19:04" — new Date() would treat this as local in most browsers,
+  // but "2026-03-09" alone is treated as UTC. Force local for safety.
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+  if (isoMatch) {
+    const [, y, mo, d, h, mi, s] = isoMatch;
+    // If it ends with 'Z' or has +/- offset, let native parser handle it
+    if (/[Zz]$/.test(raw) || /[+-]\d{2}:\d{2}$/.test(raw)) {
+      return new Date(raw);
+    }
+    // No timezone info — treat as local
+    return new Date(+y, +mo - 1, +d, +h, +mi, +s);
+  }
+
+  // Common printer format: "MM/DD/YYYY HH:MM:SS" or "M/D/YYYY H:MM:SS"
+  const usMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})/);
+  if (usMatch) {
+    const [, mo, d, y, h, mi, s] = usMatch;
+    return new Date(+y, +mo - 1, +d, +h, +mi, +s);
+  }
+
+  // Fallback: native parser
+  const fallback = new Date(raw);
+  return isNaN(fallback.getTime()) ? null : fallback;
+}
+
 const defaultSettings: PrintSettings = {
   width: 15,
   height: 8,
@@ -509,8 +543,8 @@ export function usePrinterConnection() {
   const handleDateTimeResponse = useCallback((raw: string) => {
     const cleaned = raw.replace(/[^\x20-\x7E]/g, '').trim();
     if (!cleaned) return;
-    const parsed = new Date(cleaned);
-    if (!isNaN(parsed.getTime())) {
+    const parsed = parsePrinterDateTime(cleaned);
+    if (parsed && !isNaN(parsed.getTime())) {
       setConnectionState((prev) => ({
         ...prev,
         status: prev.status ? { ...prev.status, printerTime: parsed } : null,
@@ -994,8 +1028,8 @@ export function usePrinterConnection() {
         if (sdResult.success && sdResult.response) {
           const raw = sdResult.response.replace(/[^\x20-\x7E]/g, '').trim();
           // Try to parse the date/time string from the printer
-          const parsed_dt = new Date(raw);
-          if (!isNaN(parsed_dt.getTime())) {
+          const parsed_dt = parsePrinterDateTime(raw);
+          if (parsed_dt && !isNaN(parsed_dt.getTime())) {
             setConnectionState((prev) => ({
               ...prev,
               status: prev.status ? { ...prev.status, printerTime: parsed_dt } : null,
@@ -2693,8 +2727,8 @@ export function usePrinterConnection() {
       const tpResult = emulator.processCommand('^TP');
       let pTime: Date | null = null;
       if (sdResult.success && sdResult.response) {
-        const p = new Date(sdResult.response.replace(/[^\x20-\x7E]/g, '').trim());
-        if (!isNaN(p.getTime())) pTime = p;
+        const p = parsePrinterDateTime(sdResult.response.replace(/[^\x20-\x7E]/g, '').trim());
+        if (p && !isNaN(p.getTime())) pTime = p;
       }
       let printheadTemp = 0;
       let electronicsTemp = 0;
@@ -2754,8 +2788,8 @@ export function usePrinterConnection() {
           const sdResult = await printerTransport.sendCommand(printer.id, '^SD');
           if (sdResult.success && sdResult.response) {
             const cleaned = sdResult.response.replace(/[^\x20-\x7E]/g, '').trim();
-            const p = new Date(cleaned);
-            if (!isNaN(p.getTime())) pTime = p;
+            const p = parsePrinterDateTime(cleaned);
+            if (p && !isNaN(p.getTime())) pTime = p;
           }
         } catch (e2) {
           console.error('[queryPrinterMetrics] Failed to query ^SD:', e2);
