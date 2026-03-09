@@ -46,12 +46,15 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
   }, []);
 
   // Calculate offset between printer time and local time for smooth ticking
+  // Only apply offset if it's significant (>5s), meaning the printer clock
+  // genuinely differs from the PC. Small offsets are just polling lag.
   const printerOffsetMs = useRef(0);
   
   useEffect(() => {
     if (isConnected && printerTime) {
-      // Calculate how far the printer clock is from local clock
-      printerOffsetMs.current = printerTime.getTime() - Date.now();
+      const rawOffset = printerTime.getTime() - Date.now();
+      // Only apply offset if the printer clock differs by more than 5 seconds
+      printerOffsetMs.current = Math.abs(rawOffset) > 5000 ? rawOffset : 0;
     } else {
       printerOffsetMs.current = 0;
     }
@@ -59,15 +62,10 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
 
   useEffect(() => {
     const timer = setInterval(() => {
-      // Apply the printer offset to local time for smooth ticking
-      if (isConnected && printerTime) {
-        setCurrentTime(new Date(Date.now() + printerOffsetMs.current));
-      } else {
-        setCurrentTime(new Date());
-      }
+      setCurrentTime(new Date(Date.now() + printerOffsetMs.current));
     }, 1000);
     return () => clearInterval(timer);
-  }, [isConnected, printerTime]);
+  }, []);
 
   const displayTime = currentTime;
 
