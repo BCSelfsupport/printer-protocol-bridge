@@ -2754,8 +2754,8 @@ export function usePrinterConnection() {
           const sdResult = await printerTransport.sendCommand(printer.id, '^SD');
           if (sdResult.success && sdResult.response) {
             const cleaned = sdResult.response.replace(/[^\x20-\x7E]/g, '').trim();
-            const p = new Date(cleaned);
-            if (!isNaN(p.getTime())) pTime = p;
+            const p = parsePrinterDateTime(cleaned);
+            if (p && !isNaN(p.getTime())) pTime = p;
           }
         } catch (e2) {
           console.error('[queryPrinterMetrics] Failed to query ^SD:', e2);
