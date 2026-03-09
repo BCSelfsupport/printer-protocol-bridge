@@ -994,8 +994,8 @@ export function usePrinterConnection() {
         if (sdResult.success && sdResult.response) {
           const raw = sdResult.response.replace(/[^\x20-\x7E]/g, '').trim();
           // Try to parse the date/time string from the printer
-          const parsed_dt = new Date(raw);
-          if (!isNaN(parsed_dt.getTime())) {
+          const parsed_dt = parsePrinterDateTime(raw);
+          if (parsed_dt && !isNaN(parsed_dt.getTime())) {
             setConnectionState((prev) => ({
               ...prev,
               status: prev.status ? { ...prev.status, printerTime: parsed_dt } : null,
