@@ -2693,8 +2693,8 @@ export function usePrinterConnection() {
       const tpResult = emulator.processCommand('^TP');
       let pTime: Date | null = null;
       if (sdResult.success && sdResult.response) {
-        const p = new Date(sdResult.response.replace(/[^\x20-\x7E]/g, '').trim());
-        if (!isNaN(p.getTime())) pTime = p;
+        const p = parsePrinterDateTime(sdResult.response.replace(/[^\x20-\x7E]/g, '').trim());
+        if (p && !isNaN(p.getTime())) pTime = p;
       }
       let printheadTemp = 0;
       let electronicsTemp = 0;
