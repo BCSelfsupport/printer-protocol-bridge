@@ -2814,12 +2814,29 @@ export function usePrinterConnection() {
           electronicsTemp = tempParsed.electronicsTemp;
         }
       }
+      // Parse ^TM for power/stream hours
+      let tmPowerStr = '0:00';
+      let tmStreamStr = '0:00';
+      if (tmResult.success && tmResult.response) {
+        const tmSanitized = tmResult.response.replace(/[^\x20-\x7E\r\n]/g, '');
+        const tmPowerH = parsePowerHours(tmSanitized);
+        const tmPumpH = parsePumpHours(tmSanitized);
+        const fmtH = (h: number | null): string => {
+          if (h == null) return '0:00';
+          const hrs = Math.floor(h);
+          const mins = Math.round((h - hrs) * 60);
+          return `${hrs}:${mins.toString().padStart(2, '0')}`;
+        };
+        tmPowerStr = fmtH(tmPowerH);
+        tmStreamStr = fmtH(tmPumpH);
+      }
+
       if (result.success && result.response) {
         const parsed = parseStatusResponse(result.response);
         if (parsed) {
           return {
-            powerHours: parsed.powerHours ?? '0:00',
-            streamHours: parsed.streamHours ?? '0:00',
+            powerHours: tmPowerStr,
+            streamHours: tmStreamStr,
             modulation: parsed.modulation ?? 0,
             viscosity: parsed.viscosity ?? 0,
             charge: parsed.charge ?? 0,
