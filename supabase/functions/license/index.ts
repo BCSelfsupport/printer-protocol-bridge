@@ -72,19 +72,28 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Deactivate any previous sessions
-      await supabaseAdmin
+      // Check if this machine is already activated
+      const { data: existingActivation } = await supabaseAdmin
         .from("license_activations")
-        .update({ is_current: false })
+        .select("id")
         .eq("license_id", license.id)
-        .eq("is_current", true);
+        .eq("machine_id", machine_id)
+        .maybeSingle();
 
-      // Create new activation
-      await supabaseAdmin.from("license_activations").insert({
-        license_id: license.id,
-        machine_id,
-        is_current: true,
-      });
+      if (existingActivation) {
+        // Re-activate existing record
+        await supabaseAdmin
+          .from("license_activations")
+          .update({ is_current: true, last_seen: new Date().toISOString() })
+          .eq("id", existingActivation.id);
+      } else {
+        // Create new activation (allows multiple devices)
+        await supabaseAdmin.from("license_activations").insert({
+          license_id: license.id,
+          machine_id,
+          is_current: true,
+        });
+      }
 
       return new Response(
         JSON.stringify({ tier: license.tier, license_id: license.id }),
@@ -127,7 +136,7 @@ Deno.serve(async (req) => {
 
       if (!activation) {
         return new Response(
-          JSON.stringify({ valid: false, error: "Session active on another device" }),
+          JSON.stringify({ valid: false, error: "License not activated on this device. Please re-enter your product key." }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
