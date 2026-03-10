@@ -95,10 +95,10 @@ export function PrinterServicePopup({
 
   // Fetch metrics when dialog opens
   useEffect(() => {
-    if (open && printer?.isAvailable) {
+    if (open && printer) {
       fetchMetrics();
     }
-  }, [open, printer?.id, printer?.isAvailable, fetchMetrics]);
+  }, [open, printer?.id, fetchMetrics]);
 
   // Auto-refresh every 3 seconds while open
   useEffect(() => {
