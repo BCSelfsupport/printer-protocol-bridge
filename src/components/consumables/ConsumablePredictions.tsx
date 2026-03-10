@@ -225,12 +225,13 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
 
   const handleSave = useCallback(() => {
     const life = parseFloat(filterLife) || 2000;
-    const pump = parsePumpInput(entryPumpHours);
+    // Use live pump hours if available, otherwise fall back to manual entry
+    const pump = pumpHours ?? parsePumpInput(entryPumpHours);
     const remaining = parseFloat(remainingHours) || life;
     recordFilterInfo(printer.id, pump, remaining, life);
     setConfigOpen(false);
     forceUpdate(n => n + 1);
-  }, [printer.id, filterLife, entryPumpHours, remainingHours]);
+  }, [printer.id, filterLife, entryPumpHours, remainingHours, pumpHours]);
 
   return (
     <>
@@ -335,21 +336,27 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
               </div>
             </div>
 
-            {/* Current pump hours */}
+            {/* Current pump hours — auto-populated from ^TM when connected */}
             <div className="space-y-1.5">
               <Label className="text-xs">Current Pump Hours</Label>
-              <Input
-                type="text"
-                inputMode="decimal"
-                placeholder="e.g. 34:38 or 34.6"
-                value={entryPumpHours}
-                onChange={e => setEntryPumpHours(e.target.value)}
-              />
+              {pumpHours != null ? (
+                <div className="flex h-10 w-full items-center rounded-md border border-input bg-muted/50 px-3 py-2 text-sm font-mono font-bold">
+                  {formatPumpHours(pumpHours)}
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">(live from printer)</span>
+                </div>
+              ) : (
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="e.g. 34:38 or 34.6"
+                  value={entryPumpHours}
+                  onChange={e => setEntryPumpHours(e.target.value)}
+                />
+              )}
               <p className="text-[10px] text-muted-foreground">
-                Read from the printer display or ^TM command.
-                {pumpHours !== undefined && (
-                  <> Live reading: <span className="font-mono font-bold">{pumpHours.toFixed(1)}</span>h</>
-                )}
+                {pumpHours != null
+                  ? 'Automatically read from the printer via ^TM command.'
+                  : 'Read from the printer display (connect for auto-fill).'}
               </p>
             </div>
 
