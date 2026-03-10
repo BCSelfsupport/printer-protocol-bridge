@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageDetails, MessageField } from '@/components/screens/EditMessageScreen';
+import { getHardcodedMessage, isHardcodedMessage } from '@/lib/hardcodedMessages';
 
 const STORAGE_KEY = 'bestcode-messages-v2'; // v2: keyed by printerId:messageName
 const LEGACY_STORAGE_KEY = 'bestcode-messages'; // v1: keyed by messageName only
