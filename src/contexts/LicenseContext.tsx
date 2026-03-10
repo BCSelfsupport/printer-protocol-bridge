@@ -9,11 +9,15 @@ interface LicenseState {
   productKey: string | null;
   error: string | null;
   isLoading: boolean;
+  isCompanion: boolean;
+  companionSessionId: string | null;
 }
 
 interface LicenseContextValue extends LicenseState {
   activate: (productKey: string) => Promise<boolean>;
   deactivate: () => void;
+  pairAsCompanion: (pairingCode: string) => Promise<boolean>;
+  generatePairingCode: () => Promise<{ code: string; expiresAt: string } | null>;
   /** Feature gating helpers */
   canNetwork: boolean;
   canDatabase: boolean;
@@ -23,6 +27,7 @@ interface LicenseContextValue extends LicenseState {
 const LicenseContext = createContext<LicenseContextValue | null>(null);
 
 const LICENSE_STORAGE_KEY = 'codesync-license';
+const COMPANION_STORAGE_KEY = 'codesync-companion';
 const MACHINE_ID_KEY = 'codesync-machine-id';
 const VALIDATE_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -39,21 +44,58 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<LicenseState>(() => {
     // In dev mode, default to full dev access
     if (import.meta.env.DEV) {
-      return { tier: 'dev', isActivated: true, productKey: null, error: null, isLoading: false };
+      return { tier: 'dev', isActivated: true, productKey: null, error: null, isLoading: false, isCompanion: false, companionSessionId: null };
     }
     
+    // Check for companion session first
+    try {
+      const companionSaved = localStorage.getItem(COMPANION_STORAGE_KEY);
+      if (companionSaved) {
+        const { sessionId, tier } = JSON.parse(companionSaved);
+        return { tier, isActivated: true, productKey: null, error: null, isLoading: true, isCompanion: true, companionSessionId: sessionId };
+      }
+    } catch {}
+
     try {
       const saved = localStorage.getItem(LICENSE_STORAGE_KEY);
       if (saved) {
         const { productKey, tier } = JSON.parse(saved);
-        return { tier, isActivated: true, productKey, error: null, isLoading: true };
+        return { tier, isActivated: true, productKey, error: null, isLoading: true, isCompanion: false, companionSessionId: null };
       }
     } catch {}
-    return { tier: 'lite', isActivated: false, productKey: null, error: null, isLoading: false };
+    return { tier: 'lite', isActivated: false, productKey: null, error: null, isLoading: false, isCompanion: false, companionSessionId: null };
   });
 
   const validate = useCallback(async () => {
-    if (!state.productKey || import.meta.env.DEV) return;
+    if (import.meta.env.DEV) return;
+
+    // Companion validation
+    if (state.isCompanion && state.companionSessionId) {
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/license?action=validate-companion`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+            body: JSON.stringify({ session_id: state.companionSessionId, machine_id: getMachineId() }),
+          }
+        );
+        const result = await res.json();
+        if (!result.valid) {
+          setState(prev => ({ ...prev, isActivated: false, tier: 'lite', isCompanion: false, companionSessionId: null, error: result.error || 'Companion session expired', isLoading: false }));
+          localStorage.removeItem(COMPANION_STORAGE_KEY);
+          toast.error('Companion Session Ended', { description: result.error || 'Please re-pair from PC' });
+        } else {
+          setState(prev => ({ ...prev, tier: result.tier, error: null, isLoading: false }));
+        }
+      } catch {
+        setState(prev => ({ ...prev, isLoading: false }));
+      }
+      return;
+    }
+
+    // Standard license validation
+    if (!state.productKey) return;
 
     try {
       const res = await fetch(
@@ -87,16 +129,17 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
       // Offline — allow continued use with cached tier
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [state.productKey]);
+  }, [state.productKey, state.isCompanion, state.companionSessionId]);
 
   // Validate on mount and periodically
   useEffect(() => {
-    if (state.productKey && !import.meta.env.DEV) {
+    if (import.meta.env.DEV) return;
+    if (state.productKey || (state.isCompanion && state.companionSessionId)) {
       validate();
       const interval = setInterval(validate, VALIDATE_INTERVAL_MS);
       return () => clearInterval(interval);
     }
-  }, [state.productKey, validate]);
+  }, [state.productKey, state.isCompanion, state.companionSessionId, validate]);
 
   const activate = async (productKey: string): Promise<boolean> => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
@@ -116,6 +159,8 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
+      // Clear any companion session when activating with a key
+      localStorage.removeItem(COMPANION_STORAGE_KEY);
       localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify({ productKey, tier: result.tier, activatedAt: new Date().toISOString() }));
       setState({
         tier: result.tier,
@@ -123,6 +168,8 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         productKey,
         error: null,
         isLoading: false,
+        isCompanion: false,
+        companionSessionId: null,
       });
       return true;
     } catch (err: any) {
@@ -131,17 +178,77 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const deactivate = () => {
-    localStorage.removeItem(LICENSE_STORAGE_KEY);
-    setState({ tier: 'lite', isActivated: false, productKey: null, error: null, isLoading: false });
+  const pairAsCompanion = async (pairingCode: string): Promise<boolean> => {
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/license?action=pair-companion`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+          body: JSON.stringify({ pairing_code: pairingCode.toUpperCase(), machine_id: getMachineId() }),
+        }
+      );
+      const result = await res.json();
+
+      if (result.error) {
+        setState(prev => ({ ...prev, error: result.error, isLoading: false }));
+        return false;
+      }
+
+      localStorage.removeItem(LICENSE_STORAGE_KEY);
+      localStorage.setItem(COMPANION_STORAGE_KEY, JSON.stringify({ sessionId: result.session_id, tier: result.tier, pairedAt: new Date().toISOString() }));
+      setState({
+        tier: result.tier,
+        isActivated: true,
+        productKey: null,
+        error: null,
+        isLoading: false,
+        isCompanion: true,
+        companionSessionId: result.session_id,
+      });
+      return true;
+    } catch (err: any) {
+      setState(prev => ({ ...prev, error: err.message || 'Pairing failed', isLoading: false }));
+      return false;
+    }
   };
 
-  const canNetwork = state.tier !== 'lite'; // Lite = standalone only, no network
-  const canDatabase = state.tier === 'database' || state.tier === 'dev' || state.tier === 'demo'; // Only database, dev, and demo tiers
+  const generatePairingCode = async (): Promise<{ code: string; expiresAt: string } | null> => {
+    if (!state.productKey) return null;
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/license?action=generate-pair-code`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+          body: JSON.stringify({ product_key: state.productKey, machine_id: getMachineId() }),
+        }
+      );
+      const result = await res.json();
+      if (result.error) {
+        toast.error('Failed to generate pairing code', { description: result.error });
+        return null;
+      }
+      return { code: result.pairing_code, expiresAt: result.expires_at };
+    } catch {
+      toast.error('Failed to generate pairing code');
+      return null;
+    }
+  };
+
+  const deactivate = () => {
+    localStorage.removeItem(LICENSE_STORAGE_KEY);
+    localStorage.removeItem(COMPANION_STORAGE_KEY);
+    setState({ tier: 'lite', isActivated: false, productKey: null, error: null, isLoading: false, isCompanion: false, companionSessionId: null });
+  };
+
+  const canNetwork = state.tier !== 'lite';
+  const canDatabase = state.tier === 'database' || state.tier === 'dev' || state.tier === 'demo';
   const isDemo = state.tier === 'demo';
 
   return (
-    <LicenseContext.Provider value={{ ...state, activate, deactivate, canNetwork, canDatabase, isDemo }}>
+    <LicenseContext.Provider value={{ ...state, activate, deactivate, pairAsCompanion, generatePairingCode, canNetwork, canDatabase, isDemo }}>
       {children}
     </LicenseContext.Provider>
   );
