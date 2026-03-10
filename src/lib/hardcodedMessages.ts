@@ -30,7 +30,7 @@ const BESTCODE_FIELDS: MessageField[] = [
     type: 'time',
     data: 'HH:MM:SS',
     x: 140,
-    y: 0,
+    y: 2,
     width: 56,
     height: 7,
     fontSize: 'Standard7High',
