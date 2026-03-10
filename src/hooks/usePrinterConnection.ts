@@ -844,43 +844,30 @@ export function usePrinterConnection() {
 
   // Stable callback for ^TM (Runtime) polling — extracts Power Hours and Stream Hours
   const handleRuntimeResponse = useCallback((raw: string) => {
-    // Strip command echo, "Success", prompt
-    const cleaned = raw
+    // Strip non-printable chars, command echo, "Success", prompt
+    const sanitized = raw.replace(/[^\x20-\x7E\r\n]/g, '');
+    const cleaned = sanitized
       .split(/[\r\n]+/)
       .map(l => l.trim())
-      .filter(l => l && !/^\^TM$/i.test(l) && !/^success$/i.test(l) && l !== '>')
+      .filter(l => l && !/\^TM/i.test(l) && !/^success$/i.test(l) && l !== '>')
       .join('\n');
-    console.log('[handleRuntimeResponse] RAW ^TM:', JSON.stringify(raw));
+    console.log('[handleRuntimeResponse] RAW ^TM:', JSON.stringify(raw.substring(0, 300)));
     console.log('[handleRuntimeResponse] Cleaned ^TM:', JSON.stringify(cleaned));
 
-    let pumpH = parsePumpHours(cleaned);
-    let powerH = parsePowerHours(cleaned);
+    // Try the structured parsers first on the full sanitized text (not just cleaned lines)
+    let pumpH = parsePumpHours(sanitized);
+    let powerH = parsePowerHours(sanitized);
+    console.log('[handleRuntimeResponse] Direct parse — power:', powerH, 'stream:', pumpH);
 
-    // Fallback: try to find any HH:MM or decimal hour patterns in the cleaned text
-    // Some firmware returns just two lines like "2163:07\n97:08" (power then stream)
+    // Fallback: try to find any HH:MM patterns
     if (pumpH == null && powerH == null) {
-      const hourPatterns = cleaned.match(/(\d+):(\d+)/g);
+      const hourPatterns = sanitized.match(/(\d+):(\d{2})/g);
       if (hourPatterns && hourPatterns.length >= 2) {
-        // First is typically power, second is stream/pump
         const [pH, pM] = hourPatterns[0].split(':').map(Number);
         const [sH, sM] = hourPatterns[1].split(':').map(Number);
         powerH = pH + (pM / 60);
         pumpH = sH + (sM / 60);
         console.log('[handleRuntimeResponse] Fallback HH:MM parse — power:', powerH, 'stream:', pumpH);
-      } else if (hourPatterns && hourPatterns.length === 1) {
-        // Single value — assume power hours
-        const [h, m] = hourPatterns[0].split(':').map(Number);
-        powerH = h + (m / 60);
-      }
-    }
-
-    // Also try comma-separated or space-separated decimal values
-    if (pumpH == null && powerH == null) {
-      const nums = cleaned.match(/[\d.]+/g);
-      if (nums && nums.length >= 2) {
-        powerH = parseFloat(nums[0]);
-        pumpH = parseFloat(nums[1]);
-        console.log('[handleRuntimeResponse] Fallback numeric parse — power:', powerH, 'stream:', pumpH);
       }
     }
 
@@ -903,7 +890,14 @@ export function usePrinterConnection() {
           ...prev.metrics,
           ...(streamStr ? { streamHours: streamStr } : {}),
           ...(powerStr ? { powerHours: powerStr } : {}),
-        } : null,
+        } : {
+          ...mockMetrics,
+          ...(streamStr ? { streamHours: streamStr } : {}),
+          ...(powerStr ? { powerHours: powerStr } : {}),
+        },
+      }));
+    }
+  }, []);
       }));
     }
   }, []);
