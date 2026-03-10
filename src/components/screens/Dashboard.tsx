@@ -606,7 +606,8 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
             const scale = fieldH / bc.height;
             const drawW = bc.width * scale;
             const x = field.x * effectiveDotSize;
-            const clampedYDots = Math.min(field.y, Math.max(0, TOTAL_ROWS - (field.height || TOTAL_ROWS)));
+            const barcodeYWithOffset = field.y + bottomOffsetDots;
+            const clampedYDots = Math.min(barcodeYWithOffset, Math.max(0, TOTAL_ROWS - (field.height || TOTAL_ROWS)));
             const yDots = Math.max(0, clampedYDots - previewYOffsetDots_inner);
             const y = yDots * effectiveDotSize;
             ctx.imageSmoothingEnabled = false;
