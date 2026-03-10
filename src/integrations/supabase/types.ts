@@ -24,6 +24,7 @@ export type Database = {
           license_id: string
           paired_at: string | null
           pairing_code: string
+          printer_config: Json | null
           status: string
         }
         Insert: {
@@ -35,6 +36,7 @@ export type Database = {
           license_id: string
           paired_at?: string | null
           pairing_code: string
+          printer_config?: Json | null
           status?: string
         }
         Update: {
@@ -46,6 +48,7 @@ export type Database = {
           license_id?: string
           paired_at?: string | null
           pairing_code?: string
+          printer_config?: Json | null
           status?: string
         }
         Relationships: [

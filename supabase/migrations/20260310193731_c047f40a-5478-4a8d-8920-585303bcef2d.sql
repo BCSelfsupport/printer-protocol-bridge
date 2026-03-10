@@ -1,0 +1,1 @@
+ALTER TABLE public.companion_sessions ADD COLUMN printer_config jsonb DEFAULT NULL;
