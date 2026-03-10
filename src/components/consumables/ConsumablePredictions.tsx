@@ -225,12 +225,13 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
 
   const handleSave = useCallback(() => {
     const life = parseFloat(filterLife) || 2000;
-    const pump = parsePumpInput(entryPumpHours);
+    // Use live pump hours if available, otherwise fall back to manual entry
+    const pump = pumpHours ?? parsePumpInput(entryPumpHours);
     const remaining = parseFloat(remainingHours) || life;
     recordFilterInfo(printer.id, pump, remaining, life);
     setConfigOpen(false);
     forceUpdate(n => n + 1);
-  }, [printer.id, filterLife, entryPumpHours, remainingHours]);
+  }, [printer.id, filterLife, entryPumpHours, remainingHours, pumpHours]);
 
   return (
     <>
