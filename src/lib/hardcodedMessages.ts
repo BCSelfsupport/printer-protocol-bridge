@@ -68,7 +68,7 @@ const QUANTUM_FIELDS: MessageField[] = [
     id: 2,
     type: 'time',
     data: 'HH:MM:SS',
-    x: 140,
+    x: 80,
     y: 0,
     width: 56,
     height: 7,
