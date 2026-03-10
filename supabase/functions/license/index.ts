@@ -279,6 +279,7 @@ Deno.serve(async (req) => {
           tier: license.tier,
           session_id: session.id,
           companion: true,
+          printer_config: session.printer_config || null,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
