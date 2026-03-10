@@ -208,9 +208,18 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
     setRemainingHours(hours.toString());
   }, []);
 
+  /** Parse pump hours from either "HH:MM" or decimal format */
+  const parsePumpInput = (val: string): number => {
+    const hhmmMatch = val.match(/^(\d+):(\d+)$/);
+    if (hhmmMatch) {
+      return parseInt(hhmmMatch[1], 10) + parseInt(hhmmMatch[2], 10) / 60;
+    }
+    return parseFloat(val) || 0;
+  };
+
   const handleSave = useCallback(() => {
     const life = parseFloat(filterLife) || 2000;
-    const pump = parseFloat(entryPumpHours) || 0;
+    const pump = parsePumpInput(entryPumpHours);
     const remaining = parseFloat(remainingHours) || life;
     recordFilterInfo(printer.id, pump, remaining, life);
     setConfigOpen(false);
