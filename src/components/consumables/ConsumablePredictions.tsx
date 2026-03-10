@@ -194,9 +194,15 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
     return getFilterStatus(printer.id, pumpHours);
   }, [printer.id, pumpHours]);
 
+  const formatPumpHours = (h: number): string => {
+    const hrs = Math.floor(h);
+    const mins = Math.round((h - hrs) * 60);
+    return `${hrs}:${mins.toString().padStart(2, '0')}`;
+  };
+
   const handleOpenDialog = useCallback(() => {
-    // Pre-fill with current pump hours if available
-    setEntryPumpHours(pumpHours?.toFixed(1) || '0');
+    // Pre-fill with current pump hours if available (in HH:MM format)
+    setEntryPumpHours(pumpHours ? formatPumpHours(pumpHours) : '0');
     setFilterLife(config?.filterLifeHours?.toString() || '2000');
     setRemainingHours(config?.remainingHoursAtEntry?.toString() || '2000');
     setConfigOpen(true);
@@ -208,9 +214,18 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
     setRemainingHours(hours.toString());
   }, []);
 
+  /** Parse pump hours from either "HH:MM" or decimal format */
+  const parsePumpInput = (val: string): number => {
+    const hhmmMatch = val.match(/^(\d+):(\d+)$/);
+    if (hhmmMatch) {
+      return parseInt(hhmmMatch[1], 10) + parseInt(hhmmMatch[2], 10) / 60;
+    }
+    return parseFloat(val) || 0;
+  };
+
   const handleSave = useCallback(() => {
     const life = parseFloat(filterLife) || 2000;
-    const pump = parseFloat(entryPumpHours) || 0;
+    const pump = parsePumpInput(entryPumpHours);
     const remaining = parseFloat(remainingHours) || life;
     recordFilterInfo(printer.id, pump, remaining, life);
     setConfigOpen(false);
@@ -324,9 +339,9 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
             <div className="space-y-1.5">
               <Label className="text-xs">Current Pump Hours</Label>
               <Input
-                type="number"
-                min={0}
-                step={0.1}
+                type="text"
+                inputMode="decimal"
+                placeholder="e.g. 34:38 or 34.6"
                 value={entryPumpHours}
                 onChange={e => setEntryPumpHours(e.target.value)}
               />
