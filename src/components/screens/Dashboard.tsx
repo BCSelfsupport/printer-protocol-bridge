@@ -586,6 +586,9 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
 
       // Home preview only: shift everything up by 1 dot row to avoid bottom-row clipping on some devices.
       const previewYOffsetDots = 1;
+      // Offset fields to bottom of 32-row canvas based on message template height
+      const templateHeight = messageContent.height || 16;
+      const bottomOffsetDots = TOTAL_ROWS - templateHeight;
 
       // Calculate total width needed and use dynamic canvas sizing
       let maxXEnd = 0;
