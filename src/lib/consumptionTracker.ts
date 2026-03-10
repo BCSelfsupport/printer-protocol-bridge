@@ -83,7 +83,12 @@ export function getBurnRate(consumableId: string, windowMonths = 3): BurnRate | 
 
   const first = new Date(events[0].timestamp);
   const last = new Date(events[events.length - 1].timestamp);
-  const spanDays = Math.max(1, (last.getTime() - first.getTime()) / (1000 * 60 * 60 * 24));
+  const spanMs = last.getTime() - first.getTime();
+  const spanDays = spanMs / (1000 * 60 * 60 * 24);
+
+  // Need at least 1 day of data for meaningful extrapolation
+  if (spanDays < 1) return null;
+
   const totalQty = events.reduce((sum, e) => sum + e.qty, 0);
   const bottlesPerMonth = (totalQty / spanDays) * 30;
 
