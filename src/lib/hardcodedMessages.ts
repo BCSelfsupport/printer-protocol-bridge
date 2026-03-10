@@ -41,7 +41,7 @@ const BESTCODE_FIELDS: MessageField[] = [
     id: 3,
     type: 'date',
     data: 'MM/DD/YY',
-    x: 80,
+    x: 94,
     y: 9,
     width: 56,
     height: 7,
