@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      companion_sessions: {
+        Row: {
+          companion_machine_id: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          last_seen: string | null
+          license_id: string
+          paired_at: string | null
+          pairing_code: string
+          status: string
+        }
+        Insert: {
+          companion_machine_id?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          last_seen?: string | null
+          license_id: string
+          paired_at?: string | null
+          pairing_code: string
+          status?: string
+        }
+        Update: {
+          companion_machine_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_seen?: string | null
+          license_id?: string
+          paired_at?: string | null
+          pairing_code?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companion_sessions_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           company: string | null
