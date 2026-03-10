@@ -663,7 +663,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
         renderText(ctx, displayData, x, y, fontName, effectiveDotSize);
 
         // Track the rightmost edge of rendered content
-        const textWidth = field.data.length * (fontInfo.charWidth + 1) * effectiveDotSize;
+        const textWidth = displayData.length * (fontInfo.charWidth + 1) * effectiveDotSize;
         maxXEnd = Math.max(maxXEnd, x + textWidth);
       });
       return;
