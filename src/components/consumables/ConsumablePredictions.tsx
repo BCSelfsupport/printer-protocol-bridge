@@ -333,9 +333,9 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
             <div className="space-y-1.5">
               <Label className="text-xs">Current Pump Hours</Label>
               <Input
-                type="number"
-                min={0}
-                step={0.1}
+                type="text"
+                inputMode="decimal"
+                placeholder="e.g. 34:38 or 34.6"
                 value={entryPumpHours}
                 onChange={e => setEntryPumpHours(e.target.value)}
               />
