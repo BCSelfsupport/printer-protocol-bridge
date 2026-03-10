@@ -2799,6 +2799,7 @@ export function usePrinterConnection() {
       const result = emulator.processCommand('^SU');
       const sdResult = emulator.processCommand('^SD');
       const tpResult = emulator.processCommand('^TP');
+      const tmResult = emulator.processCommand('^TM');
       let pTime: Date | null = null;
       if (sdResult.success && sdResult.response) {
         const p = parsePrinterDateTime(sdResult.response.replace(/[^\x20-\x7E]/g, '').trim());
@@ -2813,12 +2814,29 @@ export function usePrinterConnection() {
           electronicsTemp = tempParsed.electronicsTemp;
         }
       }
+      // Parse ^TM for power/stream hours
+      let tmPowerStr = '0:00';
+      let tmStreamStr = '0:00';
+      if (tmResult.success && tmResult.response) {
+        const tmSanitized = tmResult.response.replace(/[^\x20-\x7E\r\n]/g, '');
+        const tmPowerH = parsePowerHours(tmSanitized);
+        const tmPumpH = parsePumpHours(tmSanitized);
+        const fmtH = (h: number | null): string => {
+          if (h == null) return '0:00';
+          const hrs = Math.floor(h);
+          const mins = Math.round((h - hrs) * 60);
+          return `${hrs}:${mins.toString().padStart(2, '0')}`;
+        };
+        tmPowerStr = fmtH(tmPowerH);
+        tmStreamStr = fmtH(tmPumpH);
+      }
+
       if (result.success && result.response) {
         const parsed = parseStatusResponse(result.response);
         if (parsed) {
           return {
-            powerHours: parsed.powerHours ?? '0:00',
-            streamHours: parsed.streamHours ?? '0:00',
+            powerHours: tmPowerStr,
+            streamHours: tmStreamStr,
             modulation: parsed.modulation ?? 0,
             viscosity: parsed.viscosity ?? 0,
             charge: parsed.charge ?? 0,
@@ -2884,13 +2902,34 @@ export function usePrinterConnection() {
         } catch (e3) {
           console.error('[queryPrinterMetrics] Failed to query ^TP:', e3);
         }
+        // Also fetch runtime hours
+        let tmPowerStr = '0:00';
+        let tmStreamStr = '0:00';
+        try {
+          const tmResult = await printerTransport.sendCommand(printer.id, '^TM');
+          if (tmResult.success && tmResult.response) {
+            const tmSanitized = tmResult.response.replace(/[^\x20-\x7E\r\n]/g, '');
+            const tmPowerH = parsePowerHours(tmSanitized);
+            const tmPumpH = parsePumpHours(tmSanitized);
+            const fmtH = (h: number | null): string => {
+              if (h == null) return '0:00';
+              const hrs = Math.floor(h);
+              const mins = Math.round((h - hrs) * 60);
+              return `${hrs}:${mins.toString().padStart(2, '0')}`;
+            };
+            tmPowerStr = fmtH(tmPowerH);
+            tmStreamStr = fmtH(tmPumpH);
+          }
+        } catch (e4) {
+          console.error('[queryPrinterMetrics] Failed to query ^TM:', e4);
+        }
 
         if (result.success && result.response) {
           const parsed = parseStatusResponse(result.response);
           if (parsed) {
             return {
-              powerHours: parsed.powerHours ?? '0:00',
-              streamHours: parsed.streamHours ?? '0:00',
+              powerHours: tmPowerStr,
+              streamHours: tmStreamStr,
               modulation: parsed.modulation ?? 0,
               viscosity: parsed.viscosity ?? 0,
               charge: parsed.charge ?? 0,
