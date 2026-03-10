@@ -79,7 +79,7 @@ export function PrinterServicePopup({
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchMetrics = useCallback(async () => {
-    if (!printer || !printer.isAvailable) return;
+    if (!printer) return;
     
     setIsLoading(true);
     try {
