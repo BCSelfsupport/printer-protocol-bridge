@@ -621,6 +621,7 @@ const Index = () => {
             countdownType={countdownType}
             onNavigate={handleNavigate}
             onTurnOff={handleTurnOff}
+            onHome={isMobile ? () => setCurrentScreen('home') : undefined}
             selectedPrinterId={connectionState.connectedPrinter?.id}
             streamHours={connectionState.metrics?.streamHours}
             printerModel={connectionState.status?.printerModel}
