@@ -282,7 +282,7 @@ export function ConsumablesScreen({
               : (fConfig ? 'bg-primary' : 'bg-muted-foreground/30');
             const quarterHours = fStatus ? fStatus.config.filterLifeHours / 4 : (fConfig ? fConfig.filterLifeHours / 4 : 0);
             const remaining = fStatus ? fStatus.hoursRemaining : (fConfig ? fConfig.remainingHoursAtEntry : 0);
-            const rawSegs = quarterHours > 0 ? Math.min(4, Math.floor(remaining / quarterHours)) : 0;
+            const rawSegs = quarterHours > 0 ? Math.min(4, Math.ceil(remaining / quarterHours)) : 0;
             const filledSegs = remaining > 0 && rawSegs === 0 ? 1 : rawSegs;
             return (
               <div className={`flex-1 h-[70px] rounded-lg flex flex-col items-center justify-center px-3 ${filterBg}`}>
