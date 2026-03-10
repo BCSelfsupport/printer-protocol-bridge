@@ -590,6 +590,8 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
       // Calculate total width needed and use dynamic canvas sizing
       let maxXEnd = 0;
 
+      const now = printerTime ?? new Date();
+
       messageContent.fields.forEach((field) => {
         const previewYOffsetDots_inner = previewYOffsetDots;
 
@@ -622,7 +624,43 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
         const yDots = Math.max(0, clampedYDots - previewYOffsetDots);
         const y = yDots * effectiveDotSize;
 
-        renderText(ctx, field.data, x, y, fontName, effectiveDotSize);
+        // Substitute live time/date for auto-code fields
+        let displayData = field.data;
+        if (field.autoCodeFieldType === 'time' && field.autoCodeFormat) {
+          const h = now.getHours().toString().padStart(2, '0');
+          const m = now.getMinutes().toString().padStart(2, '0');
+          const s = now.getSeconds().toString().padStart(2, '0');
+          switch (field.autoCodeFormat) {
+            case 'HH:MM:SS': displayData = `${h}:${m}:${s}`; break;
+            case 'HH:MM': displayData = `${h}:${m}`; break;
+            case 'HH': displayData = h; break;
+            case 'MM:SS': displayData = `${m}:${s}`; break;
+            case 'MM': displayData = m; break;
+            case 'SS': displayData = s; break;
+            default: displayData = `${h}:${m}:${s}`;
+          }
+        } else if (field.autoCodeFieldType?.startsWith('date_') && field.autoCodeFormat) {
+          const d = new Date(now.getTime());
+          if (field.autoCodeExpiryDays) d.setDate(d.getDate() + field.autoCodeExpiryDays);
+          const day = d.getDate().toString().padStart(2, '0');
+          const month = (d.getMonth() + 1).toString().padStart(2, '0');
+          const yearShort = d.getFullYear().toString().slice(-2);
+          const cleanFmt = field.autoCodeFormat.split('|')[0];
+          switch (cleanFmt) {
+            case 'MM/DD/YY': displayData = `${month}/${day}/${yearShort}`; break;
+            case 'DD/MM/YY': displayData = `${day}/${month}/${yearShort}`; break;
+            case 'YY/MM/DD': displayData = `${yearShort}/${month}/${day}`; break;
+            case 'MM-DD-YY': displayData = `${month}-${day}-${yearShort}`; break;
+            case 'DD-MM-YY': displayData = `${day}-${month}-${yearShort}`; break;
+            case 'YY-MM-DD': displayData = `${yearShort}-${month}-${day}`; break;
+            case 'MMDDYY': displayData = `${month}${day}${yearShort}`; break;
+            case 'DDMMYY': displayData = `${day}${month}${yearShort}`; break;
+            case 'YYMMDD': displayData = `${yearShort}${month}${day}`; break;
+            default: displayData = `${month}/${day}/${yearShort}`;
+          }
+        }
+
+        renderText(ctx, displayData, x, y, fontName, effectiveDotSize);
 
         // Track the rightmost edge of rendered content
         const textWidth = field.data.length * (fontInfo.charWidth + 1) * effectiveDotSize;
