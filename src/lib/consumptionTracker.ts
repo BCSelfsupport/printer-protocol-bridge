@@ -120,8 +120,8 @@ export function getPrinterBurnRate(printerId: number, type: 'ink' | 'makeup', wi
   const spanMs = last.getTime() - first.getTime();
   const spanDays = spanMs / (1000 * 60 * 60 * 24);
 
-  // Need at least 1 day of data for meaningful extrapolation
-  if (spanDays < 1) return null;
+  // Need at least 30 days of data — a bottle typically lasts months
+  if (spanDays < 30) return null;
 
   const totalQty = events.reduce((sum, e) => sum + e.qty, 0);
   return (totalQty / spanDays) * 30;
