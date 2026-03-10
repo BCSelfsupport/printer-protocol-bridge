@@ -79,7 +79,7 @@ export function PrinterServicePopup({
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchMetrics = useCallback(async () => {
-    if (!printer || !printer.isAvailable) return;
+    if (!printer) return;
     
     setIsLoading(true);
     try {
@@ -95,18 +95,18 @@ export function PrinterServicePopup({
 
   // Fetch metrics when dialog opens
   useEffect(() => {
-    if (open && printer?.isAvailable) {
+    if (open && printer) {
       fetchMetrics();
     }
-  }, [open, printer?.id, printer?.isAvailable, fetchMetrics]);
+  }, [open, printer?.id, fetchMetrics]);
 
   // Auto-refresh every 3 seconds while open
   useEffect(() => {
-    if (!open || !printer?.isAvailable) return;
+    if (!open || !printer) return;
 
     const interval = setInterval(fetchMetrics, 3000);
     return () => clearInterval(interval);
-  }, [open, printer?.isAvailable, fetchMetrics]);
+  }, [open, printer?.id, fetchMetrics]);
 
   if (!printer) return null;
 

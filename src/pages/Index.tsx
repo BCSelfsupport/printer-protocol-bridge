@@ -755,6 +755,7 @@ const Index = () => {
               ? { [connectionState.connectedPrinter.id]: connectionState.metrics }
               : {}
             }
+            onQueryPrinterMetrics={queryPrinterMetrics}
             onAddConsumable={consumableStorage.addConsumable}
             onUpdateConsumable={consumableStorage.updateConsumable}
             onRemoveConsumable={consumableStorage.removeConsumable}
