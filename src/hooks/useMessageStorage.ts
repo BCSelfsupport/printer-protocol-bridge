@@ -78,7 +78,12 @@ export function useMessageStorage() {
   }, [printerId]);
 
   // Get a specific message by name (scoped to current printer, with fallback to legacy/printer-0)
+  // Hardcoded messages (BestCode, BestCode auto) are returned from the built-in definitions.
   const getMessage = useCallback((messageName: string, overridePrinterId?: number): MessageDetails | null => {
+    // Return hardcoded message if it matches
+    const hardcoded = getHardcodedMessage(messageName);
+    if (hardcoded) return hardcoded;
+
     const pid = overridePrinterId ?? printerId;
     const key = makeKey(pid, messageName);
     // Try printer-scoped first, then fallback to legacy (printer 0)
