@@ -29,7 +29,7 @@ const BESTCODE_FIELDS: MessageField[] = [
     id: 2,
     type: 'time',
     data: 'HH:MM:SS',
-    x: 80,
+    x: 94,
     y: 0,
     width: 56,
     height: 7,
