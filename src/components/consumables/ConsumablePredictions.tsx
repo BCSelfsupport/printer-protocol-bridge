@@ -271,11 +271,6 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
               <span className="text-[10px] text-muted-foreground">
                 {status.percentUsed}% used
               </span>
-              {status.estimatedDaysRemaining !== null && (
-                <span className="text-[10px] text-muted-foreground">
-                  ~{formatDurationLong(status.estimatedDaysRemaining)}
-                </span>
-              )}
             </div>
             <Button
               size="sm"
