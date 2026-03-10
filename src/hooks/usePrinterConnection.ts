@@ -431,7 +431,7 @@ export function usePrinterConnection() {
         updatePrinterStatus(r.id, {
           isAvailable: true,
           status: hvOn ? 'ready' : 'not_ready',
-          hasActiveErrors: hasErrors || (parsed.errorActive ?? false),
+          hasActiveErrors: hasErrors,
           inkLevel,
           makeupLevel,
           ...(currentMessage !== undefined ? { currentMessage } : {}),
@@ -491,10 +491,10 @@ export function usePrinterConnection() {
       updatePrinterStatus(connectedPrinterId, {
         isAvailable: true,
         status: hvOn ? 'ready' : 'not_ready',
-        hasActiveErrors: parsed.errorActive ?? false,
+        // Do NOT set hasActiveErrors from ^SU errorActive — ^LE is the sole authority
         ...(inkLevelCard ? { inkLevel: inkLevelCard } : {}),
         ...(makeupLevelCard ? { makeupLevel: makeupLevelCard } : {}),
-        ...(suPrintCount !== undefined && !isNaN(suPrintCount) ? { printCount: suPrintCount } : {}),
+        // Do NOT set printCount from ^SU — ^CN is the authoritative source to avoid flipping
       });
     }
 
@@ -987,7 +987,7 @@ export function usePrinterConnection() {
           updatePrinterStatus(printer.id, {
             isAvailable: true,
             status: hvOn ? 'ready' : 'not_ready',
-            hasActiveErrors: parsed.errorActive ?? false,
+            // Do NOT set hasActiveErrors from ^SU errorActive — ^LE is the sole authority
             inkLevel: inkLevelQ,
             makeupLevel: makeupLevelQ,
           });
