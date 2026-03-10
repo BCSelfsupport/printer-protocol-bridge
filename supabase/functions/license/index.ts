@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
 
       if (!activation) {
         return new Response(
-          JSON.stringify({ valid: false, error: "Session active on another device" }),
+          JSON.stringify({ valid: false, error: "License not activated on this device. Please re-enter your product key." }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
