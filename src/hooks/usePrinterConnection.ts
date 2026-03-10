@@ -491,10 +491,10 @@ export function usePrinterConnection() {
       updatePrinterStatus(connectedPrinterId, {
         isAvailable: true,
         status: hvOn ? 'ready' : 'not_ready',
-        hasActiveErrors: parsed.errorActive ?? false,
+        // Do NOT set hasActiveErrors from ^SU errorActive — ^LE is the sole authority
         ...(inkLevelCard ? { inkLevel: inkLevelCard } : {}),
         ...(makeupLevelCard ? { makeupLevel: makeupLevelCard } : {}),
-        ...(suPrintCount !== undefined && !isNaN(suPrintCount) ? { printCount: suPrintCount } : {}),
+        // Do NOT set printCount from ^SU — ^CN is the authoritative source to avoid flipping
       });
     }
 
