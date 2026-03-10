@@ -194,9 +194,15 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
     return getFilterStatus(printer.id, pumpHours);
   }, [printer.id, pumpHours]);
 
+  const formatPumpHours = (h: number): string => {
+    const hrs = Math.floor(h);
+    const mins = Math.round((h - hrs) * 60);
+    return `${hrs}:${mins.toString().padStart(2, '0')}`;
+  };
+
   const handleOpenDialog = useCallback(() => {
-    // Pre-fill with current pump hours if available
-    setEntryPumpHours(pumpHours?.toFixed(1) || '0');
+    // Pre-fill with current pump hours if available (in HH:MM format)
+    setEntryPumpHours(pumpHours ? formatPumpHours(pumpHours) : '0');
     setFilterLife(config?.filterLifeHours?.toString() || '2000');
     setRemainingHours(config?.remainingHoursAtEntry?.toString() || '2000');
     setConfigOpen(true);
