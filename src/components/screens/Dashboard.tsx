@@ -621,7 +621,8 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
         const fontInfo = getFontInfo(fontName);
 
         // Clamp to keep the full font visible within the 32-dot canvas
-        const clampedYDots = Math.min(field.y, Math.max(0, TOTAL_ROWS - fontInfo.height));
+        const fieldYWithOffset = field.y + bottomOffsetDots;
+        const clampedYDots = Math.min(fieldYWithOffset, Math.max(0, TOTAL_ROWS - fontInfo.height));
 
         const x = field.x * effectiveDotSize;
         const yDots = Math.max(0, clampedYDots - previewYOffsetDots);
