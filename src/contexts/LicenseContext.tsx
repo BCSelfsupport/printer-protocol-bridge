@@ -198,6 +198,25 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
 
       localStorage.removeItem(LICENSE_STORAGE_KEY);
       localStorage.setItem(COMPANION_STORAGE_KEY, JSON.stringify({ sessionId: result.session_id, tier: result.tier, pairedAt: new Date().toISOString() }));
+      
+      // Sync printer config from PC if available
+      if (result.printer_config && Array.isArray(result.printer_config)) {
+        // Reset all synced printers to offline (mobile will discover connectivity itself)
+        const syncedPrinters = result.printer_config.map((p: any) => ({
+          ...p,
+          isConnected: false,
+          isAvailable: false,
+          status: 'offline',
+          hasActiveErrors: false,
+          inkLevel: undefined,
+          makeupLevel: undefined,
+          currentMessage: undefined,
+          printCount: undefined,
+        }));
+        localStorage.setItem('codesync-printers', JSON.stringify(syncedPrinters));
+        toast.success('Printer configuration synced from PC');
+      }
+
       setState({
         tier: result.tier,
         isActivated: true,
