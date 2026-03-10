@@ -847,10 +847,39 @@ export function usePrinterConnection() {
       .map(l => l.trim())
       .filter(l => l && !/^\^TM$/i.test(l) && !/^success$/i.test(l) && l !== '>')
       .join('\n');
+    console.log('[handleRuntimeResponse] RAW ^TM:', JSON.stringify(raw));
     console.log('[handleRuntimeResponse] Cleaned ^TM:', JSON.stringify(cleaned));
 
-    const pumpH = parsePumpHours(cleaned);
-    const powerH = parsePowerHours(cleaned);
+    let pumpH = parsePumpHours(cleaned);
+    let powerH = parsePowerHours(cleaned);
+
+    // Fallback: try to find any HH:MM or decimal hour patterns in the cleaned text
+    // Some firmware returns just two lines like "2163:07\n97:08" (power then stream)
+    if (pumpH == null && powerH == null) {
+      const hourPatterns = cleaned.match(/(\d+):(\d+)/g);
+      if (hourPatterns && hourPatterns.length >= 2) {
+        // First is typically power, second is stream/pump
+        const [pH, pM] = hourPatterns[0].split(':').map(Number);
+        const [sH, sM] = hourPatterns[1].split(':').map(Number);
+        powerH = pH + (pM / 60);
+        pumpH = sH + (sM / 60);
+        console.log('[handleRuntimeResponse] Fallback HH:MM parse — power:', powerH, 'stream:', pumpH);
+      } else if (hourPatterns && hourPatterns.length === 1) {
+        // Single value — assume power hours
+        const [h, m] = hourPatterns[0].split(':').map(Number);
+        powerH = h + (m / 60);
+      }
+    }
+
+    // Also try comma-separated or space-separated decimal values
+    if (pumpH == null && powerH == null) {
+      const nums = cleaned.match(/[\d.]+/g);
+      if (nums && nums.length >= 2) {
+        powerH = parseFloat(nums[0]);
+        pumpH = parseFloat(nums[1]);
+        console.log('[handleRuntimeResponse] Fallback numeric parse — power:', powerH, 'stream:', pumpH);
+      }
+    }
 
     // Format as HH:MM strings for metrics
     const formatHours = (h: number | null): string | undefined => {
@@ -862,6 +891,7 @@ export function usePrinterConnection() {
 
     const streamStr = formatHours(pumpH);
     const powerStr = formatHours(powerH);
+    console.log('[handleRuntimeResponse] Result — power:', powerStr, 'stream:', streamStr);
 
     if (streamStr || powerStr) {
       setConnectionState(prev => ({
