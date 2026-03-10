@@ -535,6 +535,9 @@ export function usePrinterConnection() {
           allowErrors: parsed.allowErrors ?? previous.allowErrors,
           errorActive: parsed.errorActive ?? previous.errorActive,
           subsystems: parsed.subsystems ?? previous.subsystems,
+          // Preserve powerHours/streamHours from ^TM handler — ^SU doesn't provide them
+          powerHours: previous.powerHours,
+          streamHours: previous.streamHours,
         },
       };
     });
