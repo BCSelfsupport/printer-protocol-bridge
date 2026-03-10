@@ -102,11 +102,11 @@ export function PrinterServicePopup({
 
   // Auto-refresh every 3 seconds while open
   useEffect(() => {
-    if (!open || !printer?.isAvailable) return;
+    if (!open || !printer) return;
 
     const interval = setInterval(fetchMetrics, 3000);
     return () => clearInterval(interval);
-  }, [open, printer?.isAvailable, fetchMetrics]);
+  }, [open, printer?.id, fetchMetrics]);
 
   if (!printer) return null;
 
