@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
 
     // ── GENERATE PAIRING CODE: PC requests a code to display as QR ──
     if (action === "generate-pair-code") {
-      const { product_key, machine_id } = await req.json();
+      const { product_key, machine_id, printer_config } = await req.json();
       if (!product_key || !machine_id) {
         return new Response(
           JSON.stringify({ error: "product_key and machine_id required" }),
