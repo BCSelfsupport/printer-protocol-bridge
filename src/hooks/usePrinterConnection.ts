@@ -585,6 +585,7 @@ export function usePrinterConnection() {
 
 
   const handleCounterResponse = useCallback((raw: string) => {
+    console.log('[handleCounterResponse] RAW ^CN response:', JSON.stringify(raw));
     let parts: number[] = [];
 
     if (raw.includes('PC[')) {
