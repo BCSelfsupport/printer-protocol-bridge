@@ -198,6 +198,25 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
 
       localStorage.removeItem(LICENSE_STORAGE_KEY);
       localStorage.setItem(COMPANION_STORAGE_KEY, JSON.stringify({ sessionId: result.session_id, tier: result.tier, pairedAt: new Date().toISOString() }));
+      
+      // Sync printer config from PC if available
+      if (result.printer_config && Array.isArray(result.printer_config)) {
+        // Reset all synced printers to offline (mobile will discover connectivity itself)
+        const syncedPrinters = result.printer_config.map((p: any) => ({
+          ...p,
+          isConnected: false,
+          isAvailable: false,
+          status: 'offline',
+          hasActiveErrors: false,
+          inkLevel: undefined,
+          makeupLevel: undefined,
+          currentMessage: undefined,
+          printCount: undefined,
+        }));
+        localStorage.setItem('codesync-printers', JSON.stringify(syncedPrinters));
+        toast.success('Printer configuration synced from PC');
+      }
+
       setState({
         tier: result.tier,
         isActivated: true,
@@ -217,12 +236,16 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   const generatePairingCode = async (): Promise<{ code: string; expiresAt: string } | null> => {
     if (!state.productKey) return null;
     try {
+      // Gather current printer config to sync to companion
+      const printerConfigRaw = localStorage.getItem('codesync-printers');
+      const printerConfig = printerConfigRaw ? JSON.parse(printerConfigRaw) : null;
+
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/license?action=generate-pair-code`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-          body: JSON.stringify({ product_key: state.productKey, machine_id: getMachineId() }),
+          body: JSON.stringify({ product_key: state.productKey, machine_id: getMachineId(), printer_config: printerConfig }),
         }
       );
       const result = await res.json();

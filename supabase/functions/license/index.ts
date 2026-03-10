@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
 
     // ── GENERATE PAIRING CODE: PC requests a code to display as QR ──
     if (action === "generate-pair-code") {
-      const { product_key, machine_id } = await req.json();
+      const { product_key, machine_id, printer_config } = await req.json();
       if (!product_key || !machine_id) {
         return new Response(
           JSON.stringify({ error: "product_key and machine_id required" }),
@@ -203,11 +203,14 @@ Deno.serve(async (req) => {
       const pairingCode = generatePairingCode();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
+      const printerConfig = printer_config || null;
+
       await supabaseAdmin.from("companion_sessions").insert({
         license_id: license.id,
         pairing_code: pairingCode,
         status: "pending",
         expires_at: expiresAt,
+        printer_config: printerConfig,
       });
 
       return new Response(
@@ -275,6 +278,7 @@ Deno.serve(async (req) => {
           tier: license.tier,
           session_id: session.id,
           companion: true,
+          printer_config: session.printer_config || null,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
