@@ -4,7 +4,7 @@
  * so the editor can display them without fetching field data.
  *
  * Model 82/86/88: "BestCode" and "BestCode auto"
- * Quantum (Q/Qx): TBD — not yet defined.
+ * Quantum (Q/Qx): "QUANTUM" and "QUANTUM AUTO"
  */
 
 import type { MessageDetails, MessageField } from '@/components/screens/EditMessageScreen';
@@ -12,7 +12,7 @@ import type { MessageSettings } from '@/components/messages/MessageSettingsDialo
 import type { AdvancedSettings } from '@/components/messages/AdvancedSettingsDialog';
 import { defaultAdvancedSettings } from '@/components/messages/AdvancedSettingsDialog';
 
-// ─── Field definitions ──────────────────────────────────────────────────────
+// ─── BestCode field definitions (82/86/88) ──────────────────────────────────
 
 const BESTCODE_FIELDS: MessageField[] = [
   {
@@ -51,28 +51,67 @@ const BESTCODE_FIELDS: MessageField[] = [
   },
 ];
 
+// ─── Quantum field definitions (Q/Qx) ──────────────────────────────────────
+
+const QUANTUM_FIELDS: MessageField[] = [
+  {
+    id: 1,
+    type: 'text',
+    data: 'QUANTUM',
+    x: 0,
+    y: 0,
+    width: 175,
+    height: 25,
+    fontSize: 'Standard25High',
+  },
+  {
+    id: 2,
+    type: 'time',
+    data: 'HH:MM:SS',
+    x: 185,
+    y: 0,
+    width: 72,
+    height: 9,
+    fontSize: 'Standard9High',
+    autoCodeFormat: 'HH:MM:SS',
+    autoCodeFieldType: 'time',
+  },
+  {
+    id: 3,
+    type: 'date',
+    data: 'MM/DD/YY',
+    x: 185,
+    y: 14,
+    width: 72,
+    height: 9,
+    fontSize: 'Standard9High',
+    autoCodeFormat: 'MM/DD/YY',
+    autoCodeFieldType: 'date_normal',
+  },
+];
+
 // ─── Message-level settings ─────────────────────────────────────────────────
 
-const BESTCODE_SETTINGS: MessageSettings = {
+const NORMAL_SETTINGS: MessageSettings = {
   speed: 'Fast',
   rotation: 'Normal',
   printMode: 'Normal',
 };
 
-const BESTCODE_AUTO_SETTINGS: MessageSettings = {
+const AUTO_SETTINGS: MessageSettings = {
   speed: 'Fast',
   rotation: 'Normal',
   printMode: 'Auto',
 };
 
-const BESTCODE_ADVANCED: AdvancedSettings = {
+const BASE_ADVANCED: AdvancedSettings = {
   ...defaultAdvancedSettings,
   printMode: 0,
   delay: 100,
   pitch: 5000,
 };
 
-const BESTCODE_AUTO_ADVANCED: AdvancedSettings = {
+const AUTO_ADVANCED: AdvancedSettings = {
   ...defaultAdvancedSettings,
   printMode: 1,  // Auto
   delay: 100,
@@ -87,19 +126,43 @@ export const HARDCODED_BESTCODE: MessageDetails = {
   width: 200,
   fields: BESTCODE_FIELDS,
   templateValue: '16',
-  settings: BESTCODE_SETTINGS,
-  advancedSettings: BESTCODE_ADVANCED,
+  settings: NORMAL_SETTINGS,
+  advancedSettings: BASE_ADVANCED,
 };
 
 export const HARDCODED_BESTCODE_AUTO: MessageDetails = {
   name: 'BestCode auto',
   height: 16,
   width: 200,
-  fields: BESTCODE_FIELDS.map(f => ({ ...f })), // independent copy
+  fields: BESTCODE_FIELDS.map(f => ({ ...f })),
   templateValue: '16',
-  settings: BESTCODE_AUTO_SETTINGS,
-  advancedSettings: BESTCODE_AUTO_ADVANCED,
+  settings: AUTO_SETTINGS,
+  advancedSettings: AUTO_ADVANCED,
 };
+
+export const HARDCODED_QUANTUM: MessageDetails = {
+  name: 'QUANTUM',
+  height: 25,
+  width: 260,
+  fields: QUANTUM_FIELDS,
+  templateValue: '25',
+  settings: NORMAL_SETTINGS,
+  advancedSettings: BASE_ADVANCED,
+};
+
+export const HARDCODED_QUANTUM_AUTO: MessageDetails = {
+  name: 'QUANTUM AUTO',
+  height: 25,
+  width: 260,
+  fields: QUANTUM_FIELDS.map(f => ({ ...f })),
+  templateValue: '25',
+  settings: AUTO_SETTINGS,
+  advancedSettings: AUTO_ADVANCED,
+};
+
+// ─── All hardcoded names (for readonly checks) ──────────────────────────────
+
+const HARDCODED_NAMES = ['bestcode', 'bestcode auto', 'quantum', 'quantum auto'];
 
 /**
  * Lookup a hardcoded message by name (case-insensitive match).
@@ -107,19 +170,19 @@ export const HARDCODED_BESTCODE_AUTO: MessageDetails = {
  */
 export function getHardcodedMessage(name: string): MessageDetails | null {
   const lower = name.toLowerCase();
-  if (lower === 'bestcode') {
-    return JSON.parse(JSON.stringify(HARDCODED_BESTCODE));
-  }
-  if (lower === 'bestcode auto') {
-    return JSON.parse(JSON.stringify(HARDCODED_BESTCODE_AUTO));
-  }
-  return null;
+  const map: Record<string, MessageDetails> = {
+    'bestcode': HARDCODED_BESTCODE,
+    'bestcode auto': HARDCODED_BESTCODE_AUTO,
+    'quantum': HARDCODED_QUANTUM,
+    'quantum auto': HARDCODED_QUANTUM_AUTO,
+  };
+  const msg = map[lower];
+  return msg ? JSON.parse(JSON.stringify(msg)) : null;
 }
 
 /**
  * Check whether a message name refers to a hardcoded (non-deletable) message.
  */
 export function isHardcodedMessage(name: string): boolean {
-  const lower = name.toLowerCase();
-  return lower === 'bestcode' || lower === 'bestcode auto';
+  return HARDCODED_NAMES.includes(name.toLowerCase());
 }

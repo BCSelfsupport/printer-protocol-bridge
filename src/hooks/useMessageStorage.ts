@@ -6,7 +6,7 @@ const STORAGE_KEY = 'bestcode-messages-v2'; // v2: keyed by printerId:messageNam
 const LEGACY_STORAGE_KEY = 'bestcode-messages'; // v1: keyed by messageName only
 
 // Hard-coded printer messages that cannot be edited or stored locally
-const READONLY_MESSAGES = ['BestCode', 'BestCode auto'];
+const READONLY_MESSAGES = ['BestCode', 'BestCode auto', 'QUANTUM', 'QUANTUM AUTO'];
 
 export function isReadOnlyMessage(messageName: string): boolean {
   return READONLY_MESSAGES.includes(messageName);
