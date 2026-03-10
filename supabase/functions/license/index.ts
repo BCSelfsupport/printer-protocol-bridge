@@ -203,11 +203,15 @@ Deno.serve(async (req) => {
       const pairingCode = generatePairingCode();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
+      const body = await req.json().catch(() => ({}));
+      const printerConfig = body.printer_config || null;
+
       await supabaseAdmin.from("companion_sessions").insert({
         license_id: license.id,
         pairing_code: pairingCode,
         status: "pending",
         expires_at: expiresAt,
+        printer_config: printerConfig,
       });
 
       return new Response(
