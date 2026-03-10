@@ -898,9 +898,7 @@ export function usePrinterConnection() {
       }));
     }
   }, []);
-      }));
-    }
-  }, []);
+
 
   // Build serialized command list: ^SU, ^LE, ^SM, ^LM, ^CN, ^TP, ^TM, ^SD, ^VV sent sequentially to prevent TCP collisions
   const pollingCommands = useMemo<PollingCommand[]>(() => [
