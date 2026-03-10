@@ -85,6 +85,36 @@ export function ConsumablesScreen({
   const [stockAdjustId, setStockAdjustId] = useState<string | null>(null);
   const [stockAdjustValue, setStockAdjustValue] = useState<string>('');
   const [reorderSettingsOpen, setReorderSettingsOpen] = useState(false);
+  const [fetchedMetrics, setFetchedMetrics] = useState<Record<number, PrinterMetrics>>({});
+  const fetchingRef = useRef(false);
+
+  // Auto-fetch metrics for all printers that aren't already in externalMetricsMap
+  useEffect(() => {
+    if (!onQueryPrinterMetrics || fetchingRef.current) return;
+    const printersToFetch = printers.filter(p => !externalMetricsMap[p.id]);
+    if (printersToFetch.length === 0) return;
+
+    fetchingRef.current = true;
+    Promise.all(
+      printersToFetch.map(async (p) => {
+        try {
+          const m = await onQueryPrinterMetrics(p);
+          return m ? { id: p.id, metrics: m } : null;
+        } catch { return null; }
+      })
+    ).then(results => {
+      const newMap: Record<number, PrinterMetrics> = {};
+      for (const r of results) {
+        if (r) newMap[r.id] = r.metrics;
+      }
+      setFetchedMetrics(prev => ({ ...prev, ...newMap }));
+      fetchingRef.current = false;
+    });
+  }, [printers, onQueryPrinterMetrics, externalMetricsMap]);
+
+  // Merge external (connected printer) metrics with independently fetched ones
+  const metricsMap = { ...fetchedMetrics, ...externalMetricsMap };
+
 
   const inkConsumables = consumables.filter(c => c.type === 'ink');
   const makeupConsumables = consumables.filter(c => c.type === 'makeup');
