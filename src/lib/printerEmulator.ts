@@ -559,7 +559,10 @@ class PrinterEmulator {
   }
 
   private cmdShowRunTime(): string {
-    return `${this.state.powerHours.toFixed(1)} hours`;
+    if (this.state.echoOn) {
+      return `Power Hours: ${this.state.powerHours.toFixed(1)}\r\nStream Hours: ${this.state.streamHours.toFixed(1)}`;
+    }
+    return `PWR[${this.state.powerHours.toFixed(1)}] STR[${this.state.streamHours.toFixed(1)}]`;
   }
 
   private cmdShowTemperature(): string {
