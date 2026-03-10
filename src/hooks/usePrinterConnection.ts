@@ -586,15 +586,25 @@ export function usePrinterConnection() {
 
   const handleCounterResponse = useCallback((raw: string) => {
     console.log('[handleCounterResponse] RAW ^CN response:', JSON.stringify(raw));
+    
+    // Strip command echo (^CN), "Success", prompt (>), and non-printable chars
+    // Real printers echo the command back, e.g. "^CN\r\n13,13,13,13,13,13\r\nSuccess\r\n>"
+    const cleaned = raw
+      .split(/[\r\n]+/)
+      .map(l => l.trim())
+      .filter(l => l && !/^\^CN$/i.test(l) && !/^success$/i.test(l) && l !== '>')
+      .join('\n');
+    console.log('[handleCounterResponse] Cleaned:', JSON.stringify(cleaned));
+    
     let parts: number[] = [];
 
-    if (raw.includes('PC[')) {
-      const pcMatch = raw.match(/PC\[(\d+)\]/);
-      const prcMatch = raw.match(/PrC\[(\d+)\]/);
-      const c1Match = raw.match(/C1\[(\d+)\]/);
-      const c2Match = raw.match(/C2\[(\d+)\]/);
-      const c3Match = raw.match(/C3\[(\d+)\]/);
-      const c4Match = raw.match(/C4\[(\d+)\]/);
+    if (cleaned.includes('PC[')) {
+      const pcMatch = cleaned.match(/PC\[(\d+)\]/);
+      const prcMatch = cleaned.match(/PrC\[(\d+)\]/);
+      const c1Match = cleaned.match(/C1\[(\d+)\]/);
+      const c2Match = cleaned.match(/C2\[(\d+)\]/);
+      const c3Match = cleaned.match(/C3\[(\d+)\]/);
+      const c4Match = cleaned.match(/C4\[(\d+)\]/);
       parts = [
         pcMatch ? parseInt(pcMatch[1], 10) : 0,
         prcMatch ? parseInt(prcMatch[1], 10) : 0,
@@ -603,13 +613,13 @@ export function usePrinterConnection() {
         c3Match ? parseInt(c3Match[1], 10) : 0,
         c4Match ? parseInt(c4Match[1], 10) : 0,
       ];
-    } else if (raw.includes('Product Count:')) {
-      const productMatch = raw.match(/Product Count:\s*(\d+)/);
-      const printMatch = raw.match(/Print Count:\s*(\d+)/);
-      const c1Match = raw.match(/Counter 1:\s*(\d+)/);
-      const c2Match = raw.match(/Counter 2:\s*(\d+)/);
-      const c3Match = raw.match(/Counter 3:\s*(\d+)/);
-      const c4Match = raw.match(/Counter 4:\s*(\d+)/);
+    } else if (cleaned.includes('Product Count:')) {
+      const productMatch = cleaned.match(/Product Count:\s*(\d+)/);
+      const printMatch = cleaned.match(/Print Count:\s*(\d+)/);
+      const c1Match = cleaned.match(/Counter 1:\s*(\d+)/);
+      const c2Match = cleaned.match(/Counter 2:\s*(\d+)/);
+      const c3Match = cleaned.match(/Counter 3:\s*(\d+)/);
+      const c4Match = cleaned.match(/Counter 4:\s*(\d+)/);
       parts = [
         productMatch ? parseInt(productMatch[1], 10) : 0,
         printMatch ? parseInt(printMatch[1], 10) : 0,
@@ -618,13 +628,13 @@ export function usePrinterConnection() {
         c3Match ? parseInt(c3Match[1], 10) : 0,
         c4Match ? parseInt(c4Match[1], 10) : 0,
       ];
-    } else if (raw.includes('Product:')) {
-      const productMatch = raw.match(/Product:(\d+)/);
-      const printMatch = raw.match(/Print:(\d+)/);
-      const custom1Match = raw.match(/Custom1:(\d+)/);
-      const custom2Match = raw.match(/Custom2:(\d+)/);
-      const custom3Match = raw.match(/Custom3:(\d+)/);
-      const custom4Match = raw.match(/Custom4:(\d+)/);
+    } else if (cleaned.includes('Product:')) {
+      const productMatch = cleaned.match(/Product:(\d+)/);
+      const printMatch = cleaned.match(/Print:(\d+)/);
+      const custom1Match = cleaned.match(/Custom1:(\d+)/);
+      const custom2Match = cleaned.match(/Custom2:(\d+)/);
+      const custom3Match = cleaned.match(/Custom3:(\d+)/);
+      const custom4Match = cleaned.match(/Custom4:(\d+)/);
       parts = [
         productMatch ? parseInt(productMatch[1], 10) : 0,
         printMatch ? parseInt(printMatch[1], 10) : 0,
@@ -634,7 +644,7 @@ export function usePrinterConnection() {
         custom4Match ? parseInt(custom4Match[1], 10) : 0,
       ];
     } else {
-      parts = raw.split(',').map((s: string) => { const n = parseInt(s.trim(), 10); return isNaN(n) ? 0 : n; });
+      parts = cleaned.split(',').map((s: string) => { const n = parseInt(s.trim(), 10); return isNaN(n) ? 0 : n; });
     }
 
     if (parts.length >= 2) {
