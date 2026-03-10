@@ -217,12 +217,16 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   const generatePairingCode = async (): Promise<{ code: string; expiresAt: string } | null> => {
     if (!state.productKey) return null;
     try {
+      // Gather current printer config to sync to companion
+      const printerConfigRaw = localStorage.getItem('codesync-printers');
+      const printerConfig = printerConfigRaw ? JSON.parse(printerConfigRaw) : null;
+
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/license?action=generate-pair-code`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-          body: JSON.stringify({ product_key: state.productKey, machine_id: getMachineId() }),
+          body: JSON.stringify({ product_key: state.productKey, machine_id: getMachineId(), printer_config: printerConfig }),
         }
       );
       const result = await res.json();
