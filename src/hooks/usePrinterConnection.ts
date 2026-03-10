@@ -2799,6 +2799,7 @@ export function usePrinterConnection() {
       const result = emulator.processCommand('^SU');
       const sdResult = emulator.processCommand('^SD');
       const tpResult = emulator.processCommand('^TP');
+      const tmResult = emulator.processCommand('^TM');
       let pTime: Date | null = null;
       if (sdResult.success && sdResult.response) {
         const p = parsePrinterDateTime(sdResult.response.replace(/[^\x20-\x7E]/g, '').trim());
