@@ -839,7 +839,43 @@ export function usePrinterConnection() {
     }
   }, [updatePrinter]);
 
-  // Build serialized command list: ^SU, ^LE, ^SM, ^LM, ^CN, ^TP, ^SD, ^VV sent sequentially to prevent TCP collisions
+  // Stable callback for ^TM (Runtime) polling — extracts Power Hours and Stream Hours
+  const handleRuntimeResponse = useCallback((raw: string) => {
+    // Strip command echo, "Success", prompt
+    const cleaned = raw
+      .split(/[\r\n]+/)
+      .map(l => l.trim())
+      .filter(l => l && !/^\^TM$/i.test(l) && !/^success$/i.test(l) && l !== '>')
+      .join('\n');
+    console.log('[handleRuntimeResponse] Cleaned ^TM:', JSON.stringify(cleaned));
+
+    const pumpH = parsePumpHours(cleaned);
+    const powerH = parsePowerHours(cleaned);
+
+    // Format as HH:MM strings for metrics
+    const formatHours = (h: number | null): string | undefined => {
+      if (h == null) return undefined;
+      const hrs = Math.floor(h);
+      const mins = Math.round((h - hrs) * 60);
+      return `${hrs}:${mins.toString().padStart(2, '0')}`;
+    };
+
+    const streamStr = formatHours(pumpH);
+    const powerStr = formatHours(powerH);
+
+    if (streamStr || powerStr) {
+      setConnectionState(prev => ({
+        ...prev,
+        metrics: prev.metrics ? {
+          ...prev.metrics,
+          ...(streamStr ? { streamHours: streamStr } : {}),
+          ...(powerStr ? { powerHours: powerStr } : {}),
+        } : null,
+      }));
+    }
+  }, []);
+
+  // Build serialized command list: ^SU, ^LE, ^SM, ^LM, ^CN, ^TP, ^TM, ^SD, ^VV sent sequentially to prevent TCP collisions
   const pollingCommands = useMemo<PollingCommand[]>(() => [
     { command: '^SU', onResponse: handleServiceResponse },
     { command: '^LE', onResponse: handleErrorListResponse },
@@ -847,9 +883,10 @@ export function usePrinterConnection() {
     { command: '^LM', onResponse: handleMessageListResponse },
     { command: '^CN', onResponse: handleCounterResponse },
     { command: '^TP', onResponse: handleTemperatureResponse },
+    { command: '^TM', onResponse: handleRuntimeResponse },
     { command: '^SD', onResponse: handleDateTimeResponse },
     { command: '^VV', onResponse: handleVersionResponse },
-  ], [handleServiceResponse, handleErrorListResponse, handleSelectedMessageResponse, handleMessageListResponse, handleCounterResponse, handleTemperatureResponse, handleDateTimeResponse, handleVersionResponse]);
+  ], [handleServiceResponse, handleErrorListResponse, handleSelectedMessageResponse, handleMessageListResponse, handleCounterResponse, handleTemperatureResponse, handleRuntimeResponse, handleDateTimeResponse, handleVersionResponse]);
 
   // Track whether the TCP socket is confirmed open — gates polling to avoid
   // sending commands before the socket is ready (prevents 8s timeout storms).
