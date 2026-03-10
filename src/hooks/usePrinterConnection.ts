@@ -586,9 +586,19 @@ export function usePrinterConnection() {
 
   const handleCounterResponse = useCallback((raw: string) => {
     console.log('[handleCounterResponse] RAW ^CN response:', JSON.stringify(raw));
+    
+    // Strip command echo (^CN), "Success", prompt (>), and non-printable chars
+    // Real printers echo the command back, e.g. "^CN\r\n13,13,13,13,13,13\r\nSuccess\r\n>"
+    const cleaned = raw
+      .split(/[\r\n]+/)
+      .map(l => l.trim())
+      .filter(l => l && !/^\^CN$/i.test(l) && !/^success$/i.test(l) && l !== '>')
+      .join('\n');
+    console.log('[handleCounterResponse] Cleaned:', JSON.stringify(cleaned));
+    
     let parts: number[] = [];
 
-    if (raw.includes('PC[')) {
+    if (cleaned.includes('PC[')) {
       const pcMatch = raw.match(/PC\[(\d+)\]/);
       const prcMatch = raw.match(/PrC\[(\d+)\]/);
       const c1Match = raw.match(/C1\[(\d+)\]/);
