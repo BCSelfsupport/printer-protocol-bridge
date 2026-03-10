@@ -26,6 +26,15 @@ function generateKey(): string {
   return parts.join("-");
 }
 
+function generatePairingCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -72,28 +81,19 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Check if this machine is already activated
-      const { data: existingActivation } = await supabaseAdmin
+      // Deactivate any previous sessions (single device only)
+      await supabaseAdmin
         .from("license_activations")
-        .select("id")
+        .update({ is_current: false })
         .eq("license_id", license.id)
-        .eq("machine_id", machine_id)
-        .maybeSingle();
+        .eq("is_current", true);
 
-      if (existingActivation) {
-        // Re-activate existing record
-        await supabaseAdmin
-          .from("license_activations")
-          .update({ is_current: true, last_seen: new Date().toISOString() })
-          .eq("id", existingActivation.id);
-      } else {
-        // Create new activation (allows multiple devices)
-        await supabaseAdmin.from("license_activations").insert({
-          license_id: license.id,
-          machine_id,
-          is_current: true,
-        });
-      }
+      // Create new activation
+      await supabaseAdmin.from("license_activations").insert({
+        license_id: license.id,
+        machine_id,
+        is_current: true,
+      });
 
       return new Response(
         JSON.stringify({ tier: license.tier, license_id: license.id }),
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
 
       if (!activation) {
         return new Response(
-          JSON.stringify({ valid: false, error: "License not activated on this device. Please re-enter your product key." }),
+          JSON.stringify({ valid: false, error: "Session active on another device" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -153,11 +153,183 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ── GENERATE PAIRING CODE: PC requests a code to display as QR ──
+    if (action === "generate-pair-code") {
+      const { product_key, machine_id } = await req.json();
+      if (!product_key || !machine_id) {
+        return new Response(
+          JSON.stringify({ error: "product_key and machine_id required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Validate the license is active on this machine
+      const { data: license } = await supabaseAdmin
+        .from("licenses")
+        .select("id, tier, is_active, expires_at")
+        .eq("product_key", product_key)
+        .maybeSingle();
+
+      if (!license || !license.is_active) {
+        return new Response(
+          JSON.stringify({ error: "License invalid or inactive" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: activation } = await supabaseAdmin
+        .from("license_activations")
+        .select("id")
+        .eq("license_id", license.id)
+        .eq("machine_id", machine_id)
+        .eq("is_current", true)
+        .maybeSingle();
+
+      if (!activation) {
+        return new Response(
+          JSON.stringify({ error: "License not active on this device" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Invalidate any existing pending codes for this license
+      await supabaseAdmin
+        .from("companion_sessions")
+        .update({ status: "expired" })
+        .eq("license_id", license.id)
+        .eq("status", "pending");
+
+      // Generate a 6-char pairing code, valid for 5 minutes
+      const pairingCode = generatePairingCode();
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+      await supabaseAdmin.from("companion_sessions").insert({
+        license_id: license.id,
+        pairing_code: pairingCode,
+        status: "pending",
+        expires_at: expiresAt,
+      });
+
+      return new Response(
+        JSON.stringify({ pairing_code: pairingCode, expires_at: expiresAt }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── PAIR COMPANION: mobile sends pairing code + its machine_id ──
+    if (action === "pair-companion") {
+      const { pairing_code, machine_id } = await req.json();
+      if (!pairing_code || !machine_id) {
+        return new Response(
+          JSON.stringify({ error: "pairing_code and machine_id required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: session } = await supabaseAdmin
+        .from("companion_sessions")
+        .select("*, licenses(tier, is_active, expires_at)")
+        .eq("pairing_code", pairing_code.toUpperCase())
+        .eq("status", "pending")
+        .maybeSingle();
+
+      if (!session) {
+        return new Response(
+          JSON.stringify({ error: "Invalid or expired pairing code" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (new Date(session.expires_at) < new Date()) {
+        await supabaseAdmin
+          .from("companion_sessions")
+          .update({ status: "expired" })
+          .eq("id", session.id);
+        return new Response(
+          JSON.stringify({ error: "Pairing code has expired" }),
+          { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const license = session.licenses as any;
+      if (!license || !license.is_active) {
+        return new Response(
+          JSON.stringify({ error: "Associated license is inactive" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Mark session as paired
+      await supabaseAdmin
+        .from("companion_sessions")
+        .update({
+          status: "active",
+          companion_machine_id: machine_id,
+          paired_at: new Date().toISOString(),
+          last_seen: new Date().toISOString(),
+        })
+        .eq("id", session.id);
+
+      return new Response(
+        JSON.stringify({
+          tier: license.tier,
+          session_id: session.id,
+          companion: true,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── VALIDATE COMPANION: heartbeat from mobile companion ──
+    if (action === "validate-companion") {
+      const { session_id, machine_id } = await req.json();
+
+      const { data: session } = await supabaseAdmin
+        .from("companion_sessions")
+        .select("*, licenses(tier, is_active, expires_at)")
+        .eq("id", session_id)
+        .eq("companion_machine_id", machine_id)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (!session) {
+        return new Response(
+          JSON.stringify({ valid: false, error: "Companion session not found or revoked" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const license = session.licenses as any;
+      if (!license || !license.is_active) {
+        return new Response(
+          JSON.stringify({ valid: false, error: "Parent license deactivated" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (license.expires_at && new Date(license.expires_at) < new Date()) {
+        return new Response(
+          JSON.stringify({ valid: false, error: "Parent license expired" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Update last_seen
+      await supabaseAdmin
+        .from("companion_sessions")
+        .update({ last_seen: new Date().toISOString() })
+        .eq("id", session.id);
+
+      return new Response(
+        JSON.stringify({ valid: true, tier: license.tier }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // ── ADMIN: create license (dev panel) ──
     if (action === "create") {
       const { tier, customer_name, customer_email, customer_company, expires_in_days } = await req.json();
 
-      // Create or find customer
       let customerId: string | null = null;
       if (customer_email) {
         const { data: existing } = await supabaseAdmin
@@ -236,7 +408,13 @@ Deno.serve(async (req) => {
     if (action === "delete") {
       const { license_id } = await req.json();
 
-      // Delete activations first (FK constraint)
+      // Delete companion sessions first
+      await supabaseAdmin
+        .from("companion_sessions")
+        .delete()
+        .eq("license_id", license_id);
+
+      // Delete activations (FK constraint)
       await supabaseAdmin
         .from("license_activations")
         .delete()
