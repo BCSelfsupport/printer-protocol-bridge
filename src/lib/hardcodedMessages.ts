@@ -142,20 +142,20 @@ export const HARDCODED_BESTCODE_AUTO: MessageDetails = {
 
 export const HARDCODED_QUANTUM: MessageDetails = {
   name: 'QUANTUM',
-  height: 25,
-  width: 260,
+  height: 16,
+  width: 200,
   fields: QUANTUM_FIELDS,
-  templateValue: '25',
+  templateValue: '16',
   settings: NORMAL_SETTINGS,
   advancedSettings: BASE_ADVANCED,
 };
 
 export const HARDCODED_QUANTUM_AUTO: MessageDetails = {
   name: 'QUANTUM AUTO',
-  height: 25,
-  width: 260,
+  height: 16,
+  width: 200,
   fields: QUANTUM_FIELDS.map(f => ({ ...f })),
-  templateValue: '25',
+  templateValue: '16',
   settings: AUTO_SETTINGS,
   advancedSettings: AUTO_ADVANCED,
 };
