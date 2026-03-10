@@ -28,6 +28,8 @@ interface ConsumablesScreenProps {
   reorderConfig: ReorderConfig;
   /** Metrics per printer for filter tracking (keyed by printer id) */
   metricsMap?: Record<number, PrinterMetrics>;
+  /** Query metrics for any printer (independent of connection) */
+  onQueryPrinterMetrics?: (printer: Printer) => Promise<PrinterMetrics | null>;
   onUpdateReorderConfig: (updates: Partial<ReorderConfig>) => void;
   onAddConsumable: (consumable: Omit<Consumable, 'id'>) => Consumable;
   onUpdateConsumable: (id: string, updates: Partial<Omit<Consumable, 'id'>>) => void;
