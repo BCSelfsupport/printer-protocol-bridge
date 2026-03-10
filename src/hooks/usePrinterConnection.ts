@@ -431,7 +431,7 @@ export function usePrinterConnection() {
         updatePrinterStatus(r.id, {
           isAvailable: true,
           status: hvOn ? 'ready' : 'not_ready',
-          hasActiveErrors: hasErrors || (parsed.errorActive ?? false),
+          hasActiveErrors: hasErrors,
           inkLevel,
           makeupLevel,
           ...(currentMessage !== undefined ? { currentMessage } : {}),
