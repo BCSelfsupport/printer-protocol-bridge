@@ -15,6 +15,7 @@ function logToFile(msg) {
 }
 
 let mainWindow;
+let pollingPaused = false;
 
 // Handler for Escape key to exit fullscreen
 function handleFullscreenEscape(event, input) {
