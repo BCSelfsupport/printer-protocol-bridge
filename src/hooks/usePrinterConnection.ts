@@ -492,10 +492,10 @@ export function usePrinterConnection() {
       updatePrinterStatus(connectedPrinterId, {
         isAvailable: true,
         status: hvOn ? 'ready' : 'not_ready',
-        // Set hasActiveErrors from ^SU errorActive — catches beacon warnings & other
-        // alerts that appear in ^SU but may not have corresponding ^LE fault lines.
-        // ^LE will also set hasActiveErrors independently when it finds fault codes.
-        hasActiveErrors: parsed.errorActive,
+        // DO NOT set hasActiveErrors from ^SU errorActive here — ^LE is the sole
+        // authoritative source for hasActiveErrors. Some firmware (e.g. Quantum X)
+        // returns Err[1] in ^SU even after faults are cleared, causing false WARNING
+        // badges. The errorActive flag is still stored in metrics for display purposes.
         ...(inkLevelCard ? { inkLevel: inkLevelCard } : {}),
         ...(makeupLevelCard ? { makeupLevel: makeupLevelCard } : {}),
         // Do NOT set printCount from ^SU — ^CN is the authoritative source to avoid flipping
