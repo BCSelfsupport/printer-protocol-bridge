@@ -492,7 +492,10 @@ export function usePrinterConnection() {
       updatePrinterStatus(connectedPrinterId, {
         isAvailable: true,
         status: hvOn ? 'ready' : 'not_ready',
-        // Do NOT set hasActiveErrors from ^SU errorActive — ^LE is the sole authority
+        // Set hasActiveErrors from ^SU errorActive — catches beacon warnings & other
+        // alerts that appear in ^SU but may not have corresponding ^LE fault lines.
+        // ^LE will also set hasActiveErrors independently when it finds fault codes.
+        hasActiveErrors: parsed.errorActive,
         ...(inkLevelCard ? { inkLevel: inkLevelCard } : {}),
         ...(makeupLevelCard ? { makeupLevel: makeupLevelCard } : {}),
         // Do NOT set printCount from ^SU — ^CN is the authoritative source to avoid flipping
