@@ -44,9 +44,15 @@ export function useSerializedPolling(options: {
   });
 
   const inFlightRef = useRef(false);
+  const [isPaused, setIsPaused] = useState(isPollingPaused);
+
+  // Subscribe to global pause state changes
+  useEffect(() => {
+    return onPollingPauseChange(setIsPaused);
+  }, []);
 
   useEffect(() => {
-    if (!enabled || !printerId) return;
+    if (!enabled || !printerId || isPaused) return;
 
     console.log('[useSerializedPolling] Starting for printer', printerId, 'commands:', commands.map(c => c.command));
     let cancelled = false;
