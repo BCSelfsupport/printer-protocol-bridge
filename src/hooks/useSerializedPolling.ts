@@ -139,5 +139,5 @@ export function useSerializedPolling(options: {
       clearTimeout(initialDelay);
       window.clearInterval(id);
     };
-  }, [enabled, printerId, printerIp, printerPort, intervalMs, initialDelayMs]);
+  }, [enabled, printerId, printerIp, printerPort, intervalMs, initialDelayMs, isPaused]);
 }
