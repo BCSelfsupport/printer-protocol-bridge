@@ -1064,7 +1064,8 @@ export function usePrinterConnection() {
           updatePrinterStatus(printer.id, {
             isAvailable: true,
             status: hvOn ? 'ready' : 'not_ready',
-            // Do NOT set hasActiveErrors from ^SU errorActive — ^LE is the sole authority
+            // Also set hasActiveErrors from ^SU errorActive — catches beacon warnings
+            hasActiveErrors: parsed.errorActive,
             inkLevel: inkLevelQ,
             makeupLevel: makeupLevelQ,
           });
