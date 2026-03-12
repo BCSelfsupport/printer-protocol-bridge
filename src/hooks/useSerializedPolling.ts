@@ -23,6 +23,10 @@ export function useSerializedPolling(options: {
   initialDelayMs?: number;
   commands: PollingCommand[];
   onError?: (error: unknown) => void;
+  /** Called when an entire polling cycle completes with zero successful responses */
+  onCycleFailure?: () => void;
+  /** Called when a polling cycle gets at least one successful response */
+  onCycleSuccess?: () => void;
 }) {
   const {
     enabled,
@@ -33,14 +37,20 @@ export function useSerializedPolling(options: {
     initialDelayMs = 1500,
     commands,
     onError,
+    onCycleFailure,
+    onCycleSuccess,
   } = options;
 
   // Store callbacks in refs to avoid effect re-runs
   const commandsRef = useRef(commands);
   const onErrorRef = useRef(onError);
+  const onCycleFailureRef = useRef(onCycleFailure);
+  const onCycleSuccessRef = useRef(onCycleSuccess);
   useEffect(() => {
     commandsRef.current = commands;
     onErrorRef.current = onError;
+    onCycleFailureRef.current = onCycleFailure;
+    onCycleSuccessRef.current = onCycleSuccess;
   });
 
   const inFlightRef = useRef(false);
@@ -79,6 +89,8 @@ export function useSerializedPolling(options: {
 
         if (!isEmulatorEnabled && !hasElectronAPI && !relayMode) return;
 
+        let successCount = 0;
+
         // Send each command sequentially to avoid TCP collisions
         for (const cmd of commandsRef.current) {
           if (cancelled) break;
@@ -108,6 +120,7 @@ export function useSerializedPolling(options: {
 
             if (cancelled) break;
             if (result.success && typeof result.response === "string") {
+              successCount++;
               cmd.onResponse(result.response);
             }
           } catch (e) {
@@ -118,6 +131,15 @@ export function useSerializedPolling(options: {
           // Longer gap between commands to let the printer fully process & respond
           if (!isEmulatorEnabled && !cancelled) {
             await new Promise(r => setTimeout(r, 300));
+          }
+        }
+
+        // Notify caller whether this cycle got any data back
+        if (!cancelled) {
+          if (successCount > 0) {
+            onCycleSuccessRef.current?.();
+          } else {
+            onCycleFailureRef.current?.();
           }
         }
       } catch (e) {

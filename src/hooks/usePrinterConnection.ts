@@ -942,6 +942,30 @@ export function usePrinterConnection() {
     connectedPrinterPortRef.current = connectionState.connectedPrinter?.port;
   }, [connectionState.connectedPrinter?.ipAddress, connectionState.connectedPrinter?.port]);
 
+  // Track consecutive polling cycle failures to detect unreachable printers.
+  // When a connected printer stops responding (e.g. IP changed, network down),
+  // we mark it offline after enough consecutive failed cycles.
+  const pollingFailCountRef = useRef(0);
+  const POLLING_OFFLINE_THRESHOLD = 5; // 5 failed cycles × 3s = ~15s before offline
+
+  const handlePollingCycleFailure = useCallback(() => {
+    pollingFailCountRef.current++;
+    console.warn('[usePrinterConnection] Polling cycle failed, count:', pollingFailCountRef.current);
+    if (pollingFailCountRef.current >= POLLING_OFFLINE_THRESHOLD && connectedPrinterIdRef.current != null) {
+      console.error('[usePrinterConnection] Connected printer unreachable after', POLLING_OFFLINE_THRESHOLD, 'cycles — marking offline');
+      updatePrinterStatus(connectedPrinterIdRef.current, {
+        isAvailable: false,
+        status: 'offline',
+        hasActiveErrors: false,
+      });
+      disconnectRef.current();
+    }
+  }, [updatePrinterStatus]);
+
+  const handlePollingCycleSuccess = useCallback(() => {
+    pollingFailCountRef.current = 0;
+  }, []);
+
   // Single serialized polling loop — sends all commands sequentially on one socket.
   // Active whenever connected AND socketReady (regardless of which screen is open).
   // The pollingCommands include ^SU, ^LM, ^CN, ^TP, ^SD — all the data we need.
@@ -953,6 +977,8 @@ export function usePrinterConnection() {
     intervalMs: 3000,
     initialDelayMs: 250,
     commands: pollingCommands,
+    onCycleFailure: handlePollingCycleFailure,
+    onCycleSuccess: handlePollingCycleSuccess,
   });
 
   // Track whether this connection has ever succeeded (used to decide delay on reconnect)
