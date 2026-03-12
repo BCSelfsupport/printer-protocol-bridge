@@ -51,3 +51,39 @@ export function onPollingPauseChange(listener: PauseListener): () => void {
   _listeners.add(listener);
   return () => { _listeners.delete(listener); };
 }
+
+// --- Electron IPC bridge ---
+// When the PC's relay server receives a pause/resume from mobile,
+// it notifies the renderer via IPC so the polling hook picks it up.
+if (typeof window !== 'undefined' && (window as any).electronAPI?.onPollingPauseChanged) {
+  (window as any).electronAPI.onPollingPauseChanged((paused: boolean) => {
+    console.log('[pollingPause] IPC from main process:', paused ? 'PAUSED' : 'RESUMED');
+    setPollingPaused(paused);
+  });
+}
+
+// --- Relay transport (for mobile PWA) ---
+export async function relaySetPollingPaused(paused: boolean): Promise<boolean> {
+  try {
+    const stored = localStorage.getItem('relay-config');
+    if (!stored) return false;
+    const config = JSON.parse(stored);
+    const base = `http://${config.pcIp}:${config.port || 8766}`;
+    const endpoint = paused ? 'pause-polling' : 'resume-polling';
+    const res = await fetch(`${base}/relay/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+      signal: AbortSignal.timeout(5000),
+    });
+    const data = await res.json();
+    if (data.success) {
+      // Also update local state for immediate UI feedback
+      setPollingPaused(paused);
+    }
+    return !!data.success;
+  } catch (err) {
+    console.error('[pollingPause] Relay request failed:', err);
+    return false;
+  }
+}
