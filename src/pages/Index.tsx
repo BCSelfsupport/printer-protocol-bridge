@@ -1057,6 +1057,9 @@ const Index = () => {
         isConnected={connectionState.isConnected}
         onAcknowledge={() => sendCommand('^CA')}
       />
+
+      {/* Mobile companion: pause/resume polling FAB */}
+      <PausePollingButton />
     </div>
   );
 };
