@@ -57,6 +57,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('relay:info', (event, info) => callback(info));
   },
 
+  // Polling pause events (from mobile companion via relay)
+  onPollingPauseChanged: (callback) => {
+    ipcRenderer.on('polling:pause-changed', (event, paused) => callback(paused));
+  },
+
   // Hotfolder events
   onHotfolderNewFile: (callback) => {
     ipcRenderer.on('hotfolder:new-file', (event, data) => callback(data));

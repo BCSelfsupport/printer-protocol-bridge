@@ -25,6 +25,7 @@ import { WireCableScreen } from '@/components/screens/WireCableScreen';
 import { TrainingVideosScreen } from '@/components/screens/TrainingVideosScreen';
 import { LicenseActivationDialog } from '@/components/license/LicenseActivationDialog';
 import { FaultAlertDialog } from '@/components/alerts/FaultAlertDialog';
+import { PausePollingButton } from '@/components/printers/PausePollingButton';
 
 import { SignInDialog } from '@/components/printers/SignInDialog';
 import { HelpDialog } from '@/components/help/HelpDialog';
@@ -1056,6 +1057,9 @@ const Index = () => {
         isConnected={connectionState.isConnected}
         onAcknowledge={() => sendCommand('^CA')}
       />
+
+      {/* Mobile companion: pause/resume polling FAB */}
+      <PausePollingButton />
     </div>
   );
 };

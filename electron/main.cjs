@@ -15,6 +15,7 @@ function logToFile(msg) {
 }
 
 let mainWindow;
+let pollingPaused = false;
 
 // Handler for Escape key to exit fullscreen
 function handleFullscreenEscape(event, input) {
@@ -746,6 +747,22 @@ function startRelayServer() {
         } catch (err) {
           sendJson(200, { success: false, error: err.message || 'Command failed' });
         }
+
+      } else if (url === '/relay/pause-polling') {
+        pollingPaused = true;
+        logToFile('[relay] Polling PAUSED by mobile companion');
+        // Notify renderer to pause polling
+        mainWindow?.webContents.send('polling:pause-changed', true);
+        sendJson(200, { success: true, paused: true });
+
+      } else if (url === '/relay/resume-polling') {
+        pollingPaused = false;
+        logToFile('[relay] Polling RESUMED by mobile companion');
+        mainWindow?.webContents.send('polling:pause-changed', false);
+        sendJson(200, { success: true, paused: false });
+
+      } else if (url === '/relay/polling-status') {
+        sendJson(200, { paused: pollingPaused });
 
       } else {
         sendJson(404, { error: 'Unknown relay endpoint' });

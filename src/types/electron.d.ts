@@ -43,6 +43,7 @@ interface ElectronAPI {
   onUpdateDownloaded: (callback: (info: { version: string }) => void) => void;
   onPrinterConnectionLost: (callback: (payload: { printerId: number }) => void) => void;
   onRelayInfo: (callback: (info: { port: number; ips: string[] }) => void) => void;
+  onPollingPauseChanged: (callback: (paused: boolean) => void) => void;
 }
 
 declare global {

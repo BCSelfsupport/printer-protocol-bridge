@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { printerEmulator } from "@/lib/printerEmulator";
 import { multiPrinterEmulator } from "@/lib/multiPrinterEmulator";
+import { isPollingPaused, onPollingPauseChange } from "@/lib/pollingPause";
 import { printerTransport, isRelayMode } from "@/lib/printerTransport";
 
 /**
@@ -43,9 +44,15 @@ export function useSerializedPolling(options: {
   });
 
   const inFlightRef = useRef(false);
+  const [isPaused, setIsPaused] = useState(isPollingPaused);
+
+  // Subscribe to global pause state changes
+  useEffect(() => {
+    return onPollingPauseChange(setIsPaused);
+  }, []);
 
   useEffect(() => {
-    if (!enabled || !printerId) return;
+    if (!enabled || !printerId || isPaused) return;
 
     console.log('[useSerializedPolling] Starting for printer', printerId, 'commands:', commands.map(c => c.command));
     let cancelled = false;
@@ -132,5 +139,5 @@ export function useSerializedPolling(options: {
       clearTimeout(initialDelay);
       window.clearInterval(id);
     };
-  }, [enabled, printerId, printerIp, printerPort, intervalMs, initialDelayMs]);
+  }, [enabled, printerId, printerIp, printerPort, intervalMs, initialDelayMs, isPaused]);
 }
