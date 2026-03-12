@@ -44,9 +44,13 @@ export function useSerializedPolling(options: {
   // Store callbacks in refs to avoid effect re-runs
   const commandsRef = useRef(commands);
   const onErrorRef = useRef(onError);
+  const onCycleFailureRef = useRef(onCycleFailure);
+  const onCycleSuccessRef = useRef(onCycleSuccess);
   useEffect(() => {
     commandsRef.current = commands;
     onErrorRef.current = onError;
+    onCycleFailureRef.current = onCycleFailure;
+    onCycleSuccessRef.current = onCycleSuccess;
   });
 
   const inFlightRef = useRef(false);
