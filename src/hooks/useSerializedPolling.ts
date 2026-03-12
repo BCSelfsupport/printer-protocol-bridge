@@ -23,6 +23,10 @@ export function useSerializedPolling(options: {
   initialDelayMs?: number;
   commands: PollingCommand[];
   onError?: (error: unknown) => void;
+  /** Called when an entire polling cycle completes with zero successful responses */
+  onCycleFailure?: () => void;
+  /** Called when a polling cycle gets at least one successful response */
+  onCycleSuccess?: () => void;
 }) {
   const {
     enabled,
@@ -33,6 +37,8 @@ export function useSerializedPolling(options: {
     initialDelayMs = 1500,
     commands,
     onError,
+    onCycleFailure,
+    onCycleSuccess,
   } = options;
 
   // Store callbacks in refs to avoid effect re-runs
