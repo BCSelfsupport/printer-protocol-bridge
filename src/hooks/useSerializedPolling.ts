@@ -89,6 +89,8 @@ export function useSerializedPolling(options: {
 
         if (!isEmulatorEnabled && !hasElectronAPI && !relayMode) return;
 
+        let successCount = 0;
+
         // Send each command sequentially to avoid TCP collisions
         for (const cmd of commandsRef.current) {
           if (cancelled) break;
@@ -118,6 +120,7 @@ export function useSerializedPolling(options: {
 
             if (cancelled) break;
             if (result.success && typeof result.response === "string") {
+              successCount++;
               cmd.onResponse(result.response);
             }
           } catch (e) {
@@ -128,6 +131,15 @@ export function useSerializedPolling(options: {
           // Longer gap between commands to let the printer fully process & respond
           if (!isEmulatorEnabled && !cancelled) {
             await new Promise(r => setTimeout(r, 300));
+          }
+        }
+
+        // Notify caller whether this cycle got any data back
+        if (!cancelled) {
+          if (successCount > 0) {
+            onCycleSuccessRef.current?.();
+          } else {
+            onCycleFailureRef.current?.();
           }
         }
       } catch (e) {
