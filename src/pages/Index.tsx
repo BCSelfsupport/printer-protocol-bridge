@@ -118,6 +118,7 @@ const Index = () => {
     isChecking,
     refreshPolling,
     activeFaults,
+    fetchMessageContent,
   } = usePrinterConnection();
   
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
@@ -136,6 +137,58 @@ const Index = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectedPrinterId]);
+
+  // Auto-sync: fetch message content from printer for any messages not yet in localStorage.
+  // Runs when the message list changes (from ^LM polling) while connected.
+  const syncingRef = useRef(false);
+  const syncedMessagesRef = useRef<Set<string>>(new Set());
+  
+  // Reset synced set when printer changes
+  useEffect(() => {
+    syncedMessagesRef.current = new Set();
+  }, [connectedPrinterId]);
+
+  useEffect(() => {
+    if (!connectionState.isConnected || !connectedPrinterId) return;
+    if (syncingRef.current) return;
+    
+    const messagesToFetch = connectionState.messages.filter(m => {
+      const name = m.name;
+      // Skip if already synced this session
+      if (syncedMessagesRef.current.has(name)) return false;
+      // Skip read-only messages (hardcoded)
+      if (isReadOnlyMessage(name)) return false;
+      // Skip if we already have content in localStorage
+      if (getMessage(name)) return false;
+      return true;
+    });
+
+    if (messagesToFetch.length === 0) return;
+
+    syncingRef.current = true;
+    console.log('[MessageSync] Fetching content for', messagesToFetch.length, 'messages:', messagesToFetch.map(m => m.name));
+
+    (async () => {
+      for (const msg of messagesToFetch) {
+        if (!connectionState.isConnected) break;
+        try {
+          const details = await fetchMessageContent(msg.name);
+          if (details && details.fields.length > 0) {
+            saveMessage(details);
+            console.log('[MessageSync] Saved content for', msg.name, ':', details.fields.length, 'fields');
+          }
+          syncedMessagesRef.current.add(msg.name);
+        } catch (e) {
+          console.error('[MessageSync] Failed to fetch', msg.name, ':', e);
+          syncedMessagesRef.current.add(msg.name); // Don't retry immediately
+        }
+        // Delay between messages to avoid overwhelming the printer
+        await new Promise(r => setTimeout(r, 500));
+      }
+      syncingRef.current = false;
+    })();
+  }, [connectionState.messages, connectionState.isConnected, connectedPrinterId, fetchMessageContent, getMessage, saveMessage]);
+
   const handleCountdownComplete = useCallback((printerId: number, type: CountdownType) => {
     console.log('[handleCountdownComplete] printerId:', printerId, 'type:', type);
     if (type === 'starting') {
@@ -571,6 +624,15 @@ const Index = () => {
             setMessagePreset(undefined);
           }}
           onGetMessageDetails={async (name: string) => {
+            // If connected, always fetch fresh from printer to catch HMI edits
+            if (connectionState.isConnected) {
+              const fetched = await fetchMessageContent(name);
+              if (fetched && fetched.fields.length > 0) {
+                saveMessage(fetched);
+                return fetched;
+              }
+            }
+            // Fallback to local storage
             return getMessage(name);
           }}
         />
@@ -678,6 +740,13 @@ const Index = () => {
               setMessagePreset(undefined);
             }}
             onGetMessageDetails={async (name: string) => {
+              if (connectionState.isConnected) {
+                const fetched = await fetchMessageContent(name);
+                if (fetched && fetched.fields.length > 0) {
+                  saveMessage(fetched);
+                  return fetched;
+                }
+              }
               return getMessage(name);
             }}
           />

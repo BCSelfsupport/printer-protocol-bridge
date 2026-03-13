@@ -4,6 +4,8 @@ import { usePrinterStorage } from '@/hooks/usePrinterStorage';
 import { supabase } from '@/integrations/supabase/client';
 import '@/types/electron.d.ts';
 import { parseStatusResponse, parseTemperatureResponse, parseVersionResponse, parseErrorListResponse, ErrorListResult } from '@/lib/printerProtocol';
+import { parseGmResponse, parseLfResponse, buildMessageDetails } from '@/lib/messageProtocol';
+import type { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { parsePumpHours, parsePowerHours } from '@/lib/filterTracker';
 import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
 import { useSerializedPolling, PollingCommand } from '@/hooks/useSerializedPolling';
@@ -3016,6 +3018,89 @@ export function usePrinterConnection() {
       .catch(e => console.error('[usePrinterConnection] refreshPolling error:', e));
   }, [connectionState.isConnected]);
 
+  // Fetch message content from printer using ^GM and ^LF commands.
+  // Returns MessageDetails if successful, null if not connected or commands fail.
+  const fetchMessageContent = useCallback(async (messageName: string): Promise<MessageDetails | null> => {
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) {
+      console.log('[fetchMessageContent] Not connected');
+      return null;
+    }
+
+    const printer = connectionState.connectedPrinter;
+
+    if (shouldUseEmulator()) {
+      const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
+      
+      // Select message first so ^GM and ^LF operate on it
+      emulator.processCommand(`^SM ${messageName}`);
+      
+      const gmResult = emulator.processCommand('^GM');
+      const lfResult = emulator.processCommand(`^LF ${messageName}`);
+      
+      const gmParsed = gmResult.success && gmResult.response ? parseGmResponse(gmResult.response) : null;
+      const lfParsed = lfResult.success && lfResult.response ? parseLfResponse(lfResult.response, messageName) : [];
+      
+      if (lfParsed.length === 0) {
+        console.log('[fetchMessageContent] No fields parsed for', messageName);
+        return null;
+      }
+
+      return buildMessageDetails(messageName, lfParsed, gmParsed);
+    } else if (isElectron || isRelayMode()) {
+      try {
+        // Send ^GM for the message (some firmware requires selecting first)
+        // Try ^GM <name> first, fall back to ^SM + ^GM
+        let gmRaw: string | null = null;
+        let lfRaw: string | null = null;
+
+        // Query ^GM (get message params)
+        const gmResult = await printerTransport.sendCommand(printer.id, `^GM ${messageName}`);
+        if (gmResult?.success && gmResult.response && !isProtocolCommandFailure(gmResult.response)) {
+          gmRaw = gmResult.response;
+        } else {
+          // Fallback: select message, then query without name
+          await printerTransport.sendCommand(printer.id, `^SM ${messageName}`);
+          await new Promise(r => setTimeout(r, 300));
+          const gmRetry = await printerTransport.sendCommand(printer.id, '^GM');
+          if (gmRetry?.success && gmRetry.response) gmRaw = gmRetry.response;
+        }
+
+        // Query ^LF (list fields)
+        const lfResult = await printerTransport.sendCommand(printer.id, `^LF ${messageName}`);
+        if (lfResult?.success && lfResult.response && !isProtocolCommandFailure(lfResult.response)) {
+          lfRaw = lfResult.response;
+        } else {
+          // Fallback without name param (assumes message already selected above)
+          const lfRetry = await printerTransport.sendCommand(printer.id, '^LF');
+          if (lfRetry?.success && lfRetry.response) lfRaw = lfRetry.response;
+        }
+
+        console.log('[fetchMessageContent] ^GM raw:', gmRaw);
+        console.log('[fetchMessageContent] ^LF raw:', lfRaw);
+
+        if (!lfRaw) {
+          console.log('[fetchMessageContent] No ^LF response for', messageName);
+          return null;
+        }
+
+        const gmParsed = gmRaw ? parseGmResponse(gmRaw) : null;
+        const lfParsed = parseLfResponse(lfRaw, messageName);
+
+        if (lfParsed.length === 0) {
+          console.log('[fetchMessageContent] No fields parsed for', messageName);
+          return null;
+        }
+
+        return buildMessageDetails(messageName, lfParsed, gmParsed);
+      } catch (e) {
+        console.error('[fetchMessageContent] Failed for', messageName, ':', e);
+        return null;
+      }
+    }
+
+    return null;
+  }, [connectionState.isConnected, connectionState.connectedPrinter]);
+
   return {
     printers,
     connectionState,
@@ -3055,5 +3140,6 @@ export function usePrinterConnection() {
     sendCommand,
     queryPrinterMetrics,
     refreshPolling,
+    fetchMessageContent,
   };
 }
