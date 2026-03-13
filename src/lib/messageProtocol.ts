@@ -216,6 +216,20 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
         }
       }
 
+      // Validate font code against H: (actual dot height) — if H is present and
+      // contradicts the derived fontCode, correct it using height-to-code mapping.
+      const parsedH = hMatch ? parseInt(hMatch[1], 10) : 0;
+      if (parsedH > 0) {
+        const expectedHeight = FONT_CODE_TO_HEIGHT[fontCode];
+        if (expectedHeight !== parsedH) {
+          const corrected = HEIGHT_TO_FONT_CODE[parsedH];
+          if (corrected !== undefined) {
+            console.log(`[parseLfResponse] font code ${fontCode} (${expectedHeight}h) contradicts H:${parsedH}, correcting to code ${corrected}`);
+            fontCode = corrected;
+          }
+        }
+      }
+
       currentField = {
         fieldNum,
         fontCode,
