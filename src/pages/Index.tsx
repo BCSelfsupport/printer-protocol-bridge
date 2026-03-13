@@ -740,8 +740,6 @@ const Index = () => {
               setMessagePreset(undefined);
             }}
             onGetMessageDetails={async (name: string) => {
-              const local = getMessage(name);
-              if (local) return local;
               if (connectionState.isConnected) {
                 const fetched = await fetchMessageContent(name);
                 if (fetched && fetched.fields.length > 0) {
@@ -749,7 +747,7 @@ const Index = () => {
                   return fetched;
                 }
               }
-              return null;
+              return getMessage(name);
             }}
           />
         ) : null;
