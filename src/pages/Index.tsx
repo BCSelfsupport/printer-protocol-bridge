@@ -624,10 +624,7 @@ const Index = () => {
             setMessagePreset(undefined);
           }}
           onGetMessageDetails={async (name: string) => {
-            // Try local storage first
-            const local = getMessage(name);
-            if (local) return local;
-            // If connected, try fetching from printer
+            // If connected, always fetch fresh from printer to catch HMI edits
             if (connectionState.isConnected) {
               const fetched = await fetchMessageContent(name);
               if (fetched && fetched.fields.length > 0) {
@@ -635,7 +632,8 @@ const Index = () => {
                 return fetched;
               }
             }
-            return null;
+            // Fallback to local storage
+            return getMessage(name);
           }}
         />
       );
