@@ -34,6 +34,11 @@ const FONT_CODE_TO_HEIGHT: Record<number, number> = {
   0: 5, 1: 7, 2: 7, 3: 9, 4: 12, 5: 16, 6: 19, 7: 25, 8: 32,
 };
 
+// Reverse: dot height → default font code (prefer Standard over Narrow)
+const HEIGHT_TO_FONT_CODE: Record<number, number> = {
+  5: 0, 7: 2, 9: 3, 12: 4, 16: 5, 19: 6, 25: 7, 32: 8,
+};
+
 // Template value → total height in dots
 const TEMPLATE_HEIGHTS: Record<string, number> = {
   '5': 5, '5s': 5, '7': 7, '7s': 7, '9': 9, '12': 12, '16': 16, '19': 19, '25': 25, '32': 32,
