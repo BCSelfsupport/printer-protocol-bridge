@@ -118,6 +118,7 @@ const Index = () => {
     isChecking,
     refreshPolling,
     activeFaults,
+    fetchMessageContent,
   } = usePrinterConnection();
   
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
