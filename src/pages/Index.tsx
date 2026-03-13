@@ -624,7 +624,18 @@ const Index = () => {
             setMessagePreset(undefined);
           }}
           onGetMessageDetails={async (name: string) => {
-            return getMessage(name);
+            // Try local storage first
+            const local = getMessage(name);
+            if (local) return local;
+            // If connected, try fetching from printer
+            if (connectionState.isConnected) {
+              const fetched = await fetchMessageContent(name);
+              if (fetched && fetched.fields.length > 0) {
+                saveMessage(fetched);
+                return fetched;
+              }
+            }
+            return null;
           }}
         />
       );
