@@ -742,7 +742,16 @@ const Index = () => {
               setMessagePreset(undefined);
             }}
             onGetMessageDetails={async (name: string) => {
-              return getMessage(name);
+              const local = getMessage(name);
+              if (local) return local;
+              if (connectionState.isConnected) {
+                const fetched = await fetchMessageContent(name);
+                if (fetched && fetched.fields.length > 0) {
+                  saveMessage(fetched);
+                  return fetched;
+                }
+              }
+              return null;
             }}
           />
         ) : null;
