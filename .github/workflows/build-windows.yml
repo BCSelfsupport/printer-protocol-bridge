@@ -3,13 +3,14 @@ name: Build Windows Installer
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -49,5 +50,5 @@ jobs:
 
       - name: Build and publish installer
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --config electron/electron-builder.json --win --publish always
