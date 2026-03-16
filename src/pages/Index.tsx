@@ -933,9 +933,6 @@ const Index = () => {
     }
     
     // Default / home / desktop messages+editMessage: render PrintersScreen
-    const homeMsgName = connectionState.status?.currentMessage;
-    const homeMsgContent = homeMsgName ? getMessage(homeMsgName) : undefined;
-    
     return (
       <PrintersScreen
         printers={printers}
@@ -979,7 +976,7 @@ const Index = () => {
         isSignedIn={isSignedIn}
         countdownSeconds={countdownSeconds}
         countdownType={countdownType}
-        messageContent={homeMsgContent}
+        messageContent={activeMessageContent}
         onControlMount={() => setControlScreenOpen(true)}
         onControlUnmount={() => setControlScreenOpen(false)}
         onNavigate={handleNavigate}
