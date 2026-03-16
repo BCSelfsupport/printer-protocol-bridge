@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, ChangeEvent } from 'react';
 import { renderText, getFontInfo, PRINTER_FONTS } from '@/lib/dotMatrixFonts';
 import { parseBarcodeLabelData, renderBarcodeToCanvas } from '@/lib/barcodeRenderer';
+import { getValidCanvasYPositions } from '@/lib/messageProtocol';
 
 interface CanvasField {
   id: number;
@@ -21,6 +22,8 @@ interface MultilineTemplate {
 interface MessageCanvasProps {
   /** Total height is always 32 dots */
   templateHeight: number; // 7, 9, 11, 16, 24, or 32
+  /** Template value string for firmware Y snap grid */
+  templateValue?: string;
   /** Width in dots (scrollable) */
   width?: number;
   /** The fields to render on the canvas */
@@ -46,6 +49,7 @@ const DOT_SIZE = 8; // pixels per dot
 
 export function MessageCanvas({
   templateHeight = 16,
+  templateValue = '16',
   width = 200,
   fields = [],
   onCanvasClick,
@@ -521,53 +525,23 @@ export function MessageCanvas({
   /**
    * Snap Y position to a valid grid row for single-line templates.
    * Enforces minimum 2-dot gap between field rows (firmware requirement).
-   * Returns the nearest valid Y that doesn't violate spacing with other fields.
+   * Snaps to the nearest firmware-valid Y position using protocol-defined grid.
    */
   const snapToValidY = (candidateY: number, fontHeight: number, draggedFieldId: number | null): number => {
-    // For multi-line templates, getLineForY handles snapping
-    if (multilineTemplate) return candidateY;
+    // Get firmware-valid Y positions for this template + font height
+    const validPositions = getValidCanvasYPositions(templateValue, templateHeight, fontHeight);
 
-    const minGap = 2; // Firmware-required minimum gap between rows
-
-    // Clamp within template area
-    let y = Math.max(blockedRows, candidateY);
-    y = Math.min(TOTAL_ROWS - fontHeight, y);
-
-    // Gather Y-ranges of OTHER fields (exclude the field being dragged)
-    const otherFields = fields.filter(f => f.id !== draggedFieldId);
-    if (otherFields.length === 0) return y;
-
-    const occupied = otherFields.map(f => {
-      const fh = getFontInfo(f.fontSize).height;
-      return { top: f.y, bottom: f.y + fh };
-    }).sort((a, b) => a.top - b.top);
-
-    // Build list of valid Y positions: scan through the template area in 1-dot steps
-    // and collect positions where the field fits without violating minGap
-    const validPositions: number[] = [];
-    for (let testY = blockedRows; testY <= TOTAL_ROWS - fontHeight; testY++) {
-      const testBottom = testY + fontHeight;
-      let valid = true;
-      for (const occ of occupied) {
-        // Check gap above: if this field is below another, need minGap between them
-        // Check gap below: if this field is above another, need minGap between them
-        // Or they can overlap (same row) which is fine — firmware stacks horizontally
-        const gapAbove = testY - occ.bottom;
-        const gapBelow = occ.top - testBottom;
-        if (gapAbove >= 0 && gapAbove < minGap) { valid = false; break; }
-        if (gapBelow >= 0 && gapBelow < minGap) { valid = false; break; }
-        // Overlapping vertically (same row) is ok — fields share the row
-      }
-      if (valid) validPositions.push(testY);
+    if (validPositions.length === 0) {
+      // Fallback: clamp within template area
+      return Math.max(blockedRows, Math.min(TOTAL_ROWS - fontHeight, candidateY));
     }
 
-    if (validPositions.length === 0) return y; // fallback
-
+    // Allow same-row overlap (horizontal stacking) — only snap to grid positions
     // Snap to nearest valid position
     let best = validPositions[0];
-    let bestDist = Math.abs(y - best);
+    let bestDist = Math.abs(candidateY - best);
     for (const vp of validPositions) {
-      const dist = Math.abs(y - vp);
+      const dist = Math.abs(candidateY - vp);
       if (dist < bestDist) { best = vp; bestDist = dist; }
     }
     return best;
@@ -746,16 +720,8 @@ export function MessageCanvas({
       newY = Math.max(blockedRows, newY);
       newY = Math.min(TOTAL_ROWS - fontInfo.height, newY);
 
-      // Snap to line if multiline template
-      if (multilineTemplate) {
-        const lineInfo = getLineForY(newY);
-        if (lineInfo) {
-          newY = lineInfo.lineY;
-        }
-      } else {
-        // Single-line: snap to valid Y with min 2-dot gap enforcement
-        newY = snapToValidY(newY, fontInfo.height, dragFieldId);
-      }
+      // Snap to firmware-valid Y grid position
+      newY = snapToValidY(newY, fontInfo.height, dragFieldId);
 
       setDragPosition({ x: newX, y: newY });
       e.preventDefault();
@@ -938,16 +904,8 @@ export function MessageCanvas({
       newY = Math.max(blockedRows, newY);
       newY = Math.min(TOTAL_ROWS - fontInfo.height, newY);
 
-      // Snap to line if multiline template
-      if (multilineTemplate) {
-        const lineInfo = getLineForY(newY);
-        if (lineInfo) {
-          newY = lineInfo.lineY;
-        }
-      } else {
-        // Single-line: snap to valid Y with min 2-dot gap enforcement
-        newY = snapToValidY(newY, fontInfo.height, dragFieldId);
-      }
+      // Snap to firmware-valid Y grid position
+      newY = snapToValidY(newY, fontInfo.height, dragFieldId);
 
       setDragPosition({ x: newX, y: newY });
     }
