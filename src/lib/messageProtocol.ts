@@ -227,18 +227,33 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
       // T:4000 in emulator seems to be a combined code; real firmware may use S:n for font
       const fontInField = trimmed.match(/\bT\s*:\s*(\d+)/i);
       const sInField = trimmed.match(/\bS\s*:\s*(\d+)/i);
-      // If T >= 1000 it's likely a combined type+font code (e.g. 4000 = type 4, font 0)
-      // If T < 10 it's likely just a font code
+      // T: encoding in real firmware:
+      //   T:4000 = standard text field (type indicator, NOT barcode)
+      //   T:8009 = barcode field where first digit(s) = barcode subtype (8=QR), remainder = params
+      //   T:7005 = barcode field (7=DataMatrix), etc.
+      // Barcode subtypes > 5 are unambiguously barcodes (ELEMENT_TYPE_MAP only covers 0-5).
       let fontCode = 5; // Default 16-high
       let derivedFieldType: number | undefined;
+      let barcodeSubtypeFromField: number | undefined;
       if (sInField) {
         fontCode = parseInt(sInField[1], 10);
       } else if (fontInField) {
         const tVal = parseInt(fontInField[1], 10);
         if (tVal >= 1000) {
-          // Combined: first digit = field type (0=text, 4=barcode), last digit(s) = font/subtype
-          derivedFieldType = Math.floor(tVal / 1000);
-          fontCode = tVal % 10;
+          const highDigit = Math.floor(tVal / 1000);
+          const remainder = tVal % 1000;
+          // Check if high digit maps to a known barcode subtype beyond the
+          // standard element types (0-5). Subtypes 6+ are unambiguously barcodes.
+          if (highDigit > 5 && BARCODE_SUBTYPE_TO_ENCODING[highDigit] !== undefined) {
+            barcodeSubtypeFromField = highDigit;
+            derivedFieldType = 4; // barcode
+            fontCode = remainder % 10; // lower digit may encode font/param
+            console.log(`[parseLfResponse] T:${tVal} → barcode subtype ${highDigit} (${BARCODE_SUBTYPE_TO_ENCODING[highDigit]})`);
+          } else {
+            // T:4000 etc. — standard field indicator, not barcode
+            derivedFieldType = highDigit;
+            fontCode = tVal % 10;
+          }
         } else if (tVal <= 8) {
           fontCode = tVal;
         }
