@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, ChangeEvent } from 'react';
 import { renderText, getFontInfo, PRINTER_FONTS } from '@/lib/dotMatrixFonts';
 import { parseBarcodeLabelData, renderBarcodeToCanvas } from '@/lib/barcodeRenderer';
+import { getValidCanvasYPositions } from '@/lib/messageProtocol';
 
 interface CanvasField {
   id: number;
