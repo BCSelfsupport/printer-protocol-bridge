@@ -380,9 +380,9 @@ export function buildMessageDetails(
     const fontName = PROTOCOL_CODE_TO_FONT[pf.fontCode] ?? 'Standard16High';
     const fontHeight = FONT_CODE_TO_HEIGHT[pf.fontCode] ?? 16;
     
-    // Determine field type: prefer derivedFieldType from Field line T: over Element T:
+    // Determine field type: barcode if barcodeSubtype was detected (from Field T: or Element T:)
     let fieldType: MessageField['type'];
-    if (pf.derivedFieldType === 4) {
+    if (pf.barcodeSubtype !== undefined) {
       fieldType = 'barcode';
     } else {
       fieldType = ELEMENT_TYPE_MAP[pf.elementType] ?? 'text';
