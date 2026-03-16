@@ -683,13 +683,30 @@ export function EditMessageScreen({
     let newY = blockedRows; // default: top of template area
     
     if (multiTemplate) {
-      // For multi-line templates, distribute fields across lines round-robin
+      // For multi-line templates, distribute fields across lines round-robin.
+      // Use firmware-defined Y positions from the protocol spec (printer coords,
+      // 0=bottom) converted to canvas coords (0=top).
+      const firmwareYs = TEMPLATE_LINE_Y_POSITIONS[message.templateValue ?? ''] ?? null;
       const { lines: numLines, dotsPerLine } = multiTemplate;
+      const templateHeight = multiTemplate.height;
+
       const linePositions: number[] = [];
-      let cy = blockedRows;
-      for (let i = 0; i < numLines; i++) {
-        linePositions.push(cy);
-        cy += dotsPerLine + 1; // +1 for 1-dot gap
+      if (firmwareYs && firmwareYs.length === numLines) {
+        // Convert firmware Y (0=bottom) to canvas Y (0=top) for each line slot.
+        // Firmware lines are bottom-to-top; canvas lines should be top-to-bottom.
+        for (let i = numLines - 1; i >= 0; i--) {
+          const printerY = firmwareYs[i];
+          const templateRelativeY = templateHeight - printerY - dotsPerLine;
+          const canvasY = Math.max(0, templateRelativeY + blockedRows);
+          linePositions.push(canvasY);
+        }
+      } else {
+        // Fallback: compute with 1-dot gap
+        let cy = blockedRows;
+        for (let i = 0; i < numLines; i++) {
+          linePositions.push(cy);
+          cy += dotsPerLine + 1;
+        }
       }
       const lineIndex = message.fields.length % numLines;
       newY = linePositions[lineIndex];
