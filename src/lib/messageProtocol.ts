@@ -305,8 +305,12 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
 
         // Some firmware reports barcode type only on the Element line.
         // In that case T: can be the barcode subtype directly (e.g. 8 = QR).
+        // BUT: don't overwrite barcodeSubtype if it was already derived from
+        // the Field line's T: value (e.g. T:8009 already set subtype=8).
         if (currentField.derivedFieldType === 4 || (looksLikeBarcodeSubtype && etVal > 5)) {
-          currentField.barcodeSubtype = etVal;
+          if (currentField.barcodeSubtype === undefined) {
+            currentField.barcodeSubtype = etVal;
+          }
           currentField.elementType = 4; // force element type to barcode
         }
       }
