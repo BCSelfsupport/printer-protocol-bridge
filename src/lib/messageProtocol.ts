@@ -60,6 +60,23 @@ const ELEMENT_TYPE_MAP: Record<number, MessageField['type']> = {
   5: 'logo',
 };
 
+// Barcode subtype → encoding key (matches ^AB type parameter)
+const BARCODE_SUBTYPE_TO_ENCODING: Record<number, string> = {
+  0: 'i25',
+  1: 'upca',
+  2: 'upce',
+  3: 'ean13',
+  4: 'ean8',
+  5: 'code39',
+  6: 'code128',
+  7: 'datamatrix',
+  8: 'qrcode',
+  9: 'code128_ucc',
+  10: 'code128_sscc',
+  11: 'code128_multi',
+  12: 'dotcode',
+};
+
 interface ParsedField {
   fieldNum: number;
   fontCode: number;
@@ -72,6 +89,10 @@ interface ParsedField {
   rotation: number;
   elementType: number;
   elementData: string;
+  /** Field type derived from Field line T: (e.g., 4 = barcode) */
+  derivedFieldType?: number;
+  /** Barcode encoding subtype from Element T: when field is barcode */
+  barcodeSubtype?: number;
 }
 
 /**
