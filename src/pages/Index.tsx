@@ -192,6 +192,47 @@ const Index = () => {
     })();
   }, [connectionState.messages, connectionState.isConnected, connectedPrinterId, fetchMessageContent, getMessage, saveMessage]);
 
+  const [activeMessageContent, setActiveMessageContent] = useState<MessageDetails | undefined>(undefined);
+
+  useEffect(() => {
+    const currentMessageName = connectionState.status?.currentMessage;
+    const isPreviewScreen = currentScreen === 'home' || currentScreen === 'control';
+
+    if (!currentMessageName) {
+      setActiveMessageContent(undefined);
+      return;
+    }
+
+    const cached = getMessage(currentMessageName) ?? undefined;
+    setActiveMessageContent(cached);
+
+    if (!isPreviewScreen || !connectionState.isConnected || !connectedPrinterId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const fetched = await Promise.race([
+          fetchMessageContent(currentMessageName),
+          new Promise<null>(r => setTimeout(() => r(null), 10000)),
+        ]);
+
+        if (!cancelled && fetched && fetched.fields.length > 0) {
+          saveMessage(fetched);
+          setActiveMessageContent(fetched);
+        }
+      } catch (e) {
+        console.error('[CurrentMessagePreview] fetch failed:', e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentScreen, connectionState.status?.currentMessage, connectionState.isConnected, connectedPrinterId, fetchMessageContent, getMessage, saveMessage]);
+
   const handleCountdownComplete = useCallback((printerId: number, type: CountdownType) => {
     console.log('[handleCountdownComplete] printerId:', printerId, 'type:', type);
     if (type === 'starting') {
