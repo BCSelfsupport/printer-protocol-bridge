@@ -1,11 +1,15 @@
 /**
  * Parser utilities for BestCode message-related protocol responses (^LF, ^GM).
  * Converts raw printer responses into MessageDetails for the PC editor.
+ * 
+ * Reference: BestCode Remote Communications Protocol v2.6, sections 4.2.1, 4.2.5, 5.20, 5.24.
  */
 
 import type { MessageField, MessageDetails } from '@/components/screens/EditMessageScreen';
 
-// Reverse mapping: protocol font code → font size name
+// ── Font mappings (protocol v2.6 §4.2.5) ────────────────────────────────────
+
+/** Protocol font code → font size name */
 const PROTOCOL_CODE_TO_FONT: Record<number, string> = {
   0: 'Standard5High',
   1: 'Narrow7High',
@@ -18,64 +22,122 @@ const PROTOCOL_CODE_TO_FONT: Record<number, string> = {
   8: 'Standard32High',
 };
 
-// Reverse mapping: protocol template code → template value
+/** Font code → dot height */
+const FONT_CODE_TO_HEIGHT: Record<number, number> = {
+  0: 5, 1: 7, 2: 7, 3: 9, 4: 12, 5: 16, 6: 19, 7: 25, 8: 32,
+};
+
+/** Dot height → default font code (prefer Standard over Narrow) */
+const HEIGHT_TO_FONT_CODE: Record<number, number> = {
+  5: 0, 7: 2, 9: 3, 12: 4, 16: 5, 19: 6, 25: 7, 32: 8,
+};
+
+// ── Template mappings (protocol v2.6 §4.2.1) ────────────────────────────────
+
+/** Protocol template code → template value */
 const PROTOCOL_CODE_TO_TEMPLATE: Record<number, string> = {
   0: '5', 1: '7', 2: '9', 3: '12', 4: '16', 5: '19', 6: '25', 7: '32',
   8: 'multi-2x7', 9: 'multi-2x9', 10: 'multi-2x12',
   12: 'multi-3x7', 13: 'multi-3x9',
   14: 'multi-4x7', 15: 'multi-4x5',
+  16: '3',  // 1x3 per protocol
   17: 'multi-2x5',
   20: '5s', 21: '7s',
   23: 'multi-2x7s',
 };
 
-// Font code → dot height
-const FONT_CODE_TO_HEIGHT: Record<number, number> = {
-  0: 5, 1: 7, 2: 7, 3: 9, 4: 12, 5: 16, 6: 19, 7: 25, 8: 32,
-};
-
-// Reverse: dot height → default font code (prefer Standard over Narrow)
-const HEIGHT_TO_FONT_CODE: Record<number, number> = {
-  5: 0, 7: 2, 9: 3, 12: 4, 16: 5, 19: 6, 25: 7, 32: 8,
-};
-
-// Template value → total height in dots
+/** Template value → total height in dots.
+ * Multi-line heights = (lines × dotsPerLine) + ((lines - 1) × gap).
+ * Gap is 1 dot for all templates EXCEPT 2x7 and 2x7s which use 2-dot gap
+ * (7 + 2 + 7 = 16). This is confirmed by the ^LF example in the protocol doc
+ * (BESTCODE message: H:16, Field 2 at Y:9, Field 3 at Y:0, both H:7).
+ */
 const TEMPLATE_HEIGHTS: Record<string, number> = {
-  '5': 5, '5s': 5, '7': 7, '7s': 7, '9': 9, '12': 12, '16': 16, '19': 19, '25': 25, '32': 32,
-  'multi-5x5': 29, 'multi-4x7': 31, 'multi-4x5': 23,
-  'multi-3x9': 29, 'multi-3x7': 23,
-  'multi-2x12': 25, 'multi-2x9': 19, 'multi-2x7': 16, 'multi-2x7s': 16, 'multi-2x5': 11,
+  '3': 3,
+  '5': 5, '5s': 5,
+  '7': 7, '7s': 7,
+  '9': 9, '12': 12, '16': 16, '19': 19, '25': 25, '32': 32,
+  'multi-5x5': 29,   // 5×5 + 4×1 = 29
+  'multi-4x7': 31,   // 4×7 + 3×1 = 31
+  'multi-4x5': 23,   // 4×5 + 3×1 = 23
+  'multi-3x9': 29,   // 3×9 + 2×1 = 29
+  'multi-3x7': 23,   // 3×7 + 2×1 = 23
+  'multi-2x12': 25,  // 2×12 + 1×1 = 25
+  'multi-2x9': 19,   // 2×9 + 1×1 = 19
+  'multi-2x7': 16,   // 2×7 + 1×2 = 16  (2-dot gap)
+  'multi-2x7s': 16,  // 2×7 + 1×2 = 16  (2-dot gap)
+  'multi-2x5': 11,   // 2×5 + 1×1 = 11
 };
 
 /**
- * Element/field type codes from ^LF response.
- * These correspond to the ^AT, ^AD, ^AH, ^AC, ^AB, ^AG subcommands used in ^NM.
+ * Firmware-defined Y positions (printer coords, 0=bottom) for each line slot
+ * in multi-line templates. Derived from protocol doc §4.2.1 template definitions
+ * and confirmed by ^LF output (section 5.24 example).
+ *
+ * Lines are ordered bottom-to-top (line 1 = bottom row at Y=0).
  */
-const ELEMENT_TYPE_MAP: Record<number, MessageField['type']> = {
-  0: 'text',
-  1: 'date',
-  2: 'time',
-  3: 'counter',
-  4: 'barcode',
-  5: 'logo',
+export const TEMPLATE_LINE_Y_POSITIONS: Record<string, number[]> = {
+  // 2×7: gap=2 → Y=0, Y=9   (7+2=9)
+  'multi-2x7':  [0, 9],
+  'multi-2x7s': [0, 9],
+  // 2×9: gap=1 → Y=0, Y=10  (9+1=10)
+  'multi-2x9':  [0, 10],
+  // 2×12: gap=1 → Y=0, Y=13 (12+1=13)
+  'multi-2x12': [0, 13],
+  // 2×5: gap=1 → Y=0, Y=6   (5+1=6)
+  'multi-2x5':  [0, 6],
+  // 3×7: gap=1 → Y=0, Y=8, Y=16   (7+1=8)
+  'multi-3x7':  [0, 8, 16],
+  // 3×9: gap=1 → Y=0, Y=10, Y=20  (9+1=10)
+  'multi-3x9':  [0, 10, 20],
+  // 4×7: gap=1 → Y=0, Y=8, Y=16, Y=24
+  'multi-4x7':  [0, 8, 16, 24],
+  // 4×5: gap=1 → Y=0, Y=6, Y=12, Y=18
+  'multi-4x5':  [0, 6, 12, 18],
+  // 5×5: gap=1 → Y=0, Y=6, Y=12, Y=18, Y=24
+  'multi-5x5':  [0, 6, 12, 18, 24],
 };
 
-// Barcode subtype → encoding key (matches ^AB type parameter)
-const BARCODE_SUBTYPE_TO_ENCODING: Record<number, string> = {
-  0: 'i25',
-  1: 'upca',
-  2: 'upce',
-  3: 'ean13',
-  4: 'ean8',
-  5: 'code39',
-  6: 'code128',
-  7: 'datamatrix',
-  8: 'qrcode',
-  9: 'code128_ucc',
-  10: 'code128_sscc',
-  11: 'code128_multi',
-  12: 'dotcode',
+// ── ^LF Field type codes (protocol v2.6 §5.24) ──────────────────────────────
+// The T: value on a Field line is in HEXADECIMAL notation per the spec.
+
+/** Hex field-type code → high-level field type for the editor */
+const HEX_FIELD_TYPE_MAP: Record<number, { type: MessageField['type']; barcodeEncoding?: string }> = {
+  0x0001: { type: 'logo' },     // Graphic
+  0x0002: { type: 'text' },     // Block
+  0x4000: { type: 'text' },     // Text
+  0x8001: { type: 'barcode', barcodeEncoding: 'i25' },
+  0x8002: { type: 'barcode', barcodeEncoding: 'upca' },
+  0x8003: { type: 'barcode', barcodeEncoding: 'upce' },
+  0x8004: { type: 'barcode', barcodeEncoding: 'ean13' },
+  0x8005: { type: 'barcode', barcodeEncoding: 'ean8' },
+  0x8006: { type: 'barcode', barcodeEncoding: 'code39' },
+  0x8007: { type: 'barcode', barcodeEncoding: 'code128' },
+  0x8008: { type: 'barcode', barcodeEncoding: 'datamatrix' },
+  0x8009: { type: 'barcode', barcodeEncoding: 'qrcode' },
+  0x800A: { type: 'barcode', barcodeEncoding: 'dotcode' },
 };
+
+/** Element line T: codes (protocol v2.6 §5.24) */
+const ELEMENT_TYPE_MAP: Record<number, MessageField['type']> = {
+  0: 'text',       // Static element
+  1: 'userdefine', // User defined element
+  2: 'time',       // Time element
+  3: 'date',       // Date element
+  4: 'date',       // Programmed element (program date/time)
+  5: 'counter',    // Counter element
+  6: 'text',       // Shift element (treat as text)
+  7: 'text',       // Block element
+};
+
+/** Barcode subtype → encoding key (for ^AB type parameter) */
+const BARCODE_SUBTYPE_TO_ENCODING: Record<number, string> = {
+  0: 'i25', 1: 'upca', 2: 'upce', 3: 'ean13', 4: 'ean8',
+  5: 'code39', 6: 'code128', 7: 'datamatrix', 8: 'qrcode',
+  9: 'code128_ucc', 10: 'code128_sscc', 11: 'code128_multi', 12: 'dotcode',
+};
+
+// ── Parser types ─────────────────────────────────────────────────────────────
 
 interface ParsedField {
   fieldNum: number;
@@ -89,11 +151,13 @@ interface ParsedField {
   rotation: number;
   elementType: number;
   elementData: string;
-  /** Field type derived from Field line T: (e.g., 4 = barcode) */
-  derivedFieldType?: number;
-  /** Barcode encoding subtype from Element T: when field is barcode */
-  barcodeSubtype?: number;
+  /** Field type hex code from ^LF Field line T: */
+  hexFieldType?: number;
+  /** Barcode encoding string derived from hex field type */
+  barcodeEncoding?: string;
 }
+
+// ── ^GM parser ───────────────────────────────────────────────────────────────
 
 /**
  * Parse ^GM (Get Message params) response.
@@ -102,8 +166,6 @@ interface ParsedField {
  *   Verbose: "T:4 S:0 O:0 P:0"
  *   Terse:   "4;0;0;0"
  *   Extended: "Template:4 Speed:0 Orientation:0 PrintMode:0"
- * 
- * Returns the template code and other message-level params.
  */
 export function parseGmResponse(response: string): {
   templateCode: number;
@@ -166,21 +228,34 @@ export function parseGmResponse(response: string): {
   return { templateCode, templateValue, templateHeight, speed, orientation, printMode };
 }
 
+// ── ^LF parser ───────────────────────────────────────────────────────────────
+
+/**
+ * Parse the hex T: value from a Field line in ^LF response.
+ * Protocol v2.6 §5.24 states T: is in hexadecimal notation.
+ * Values like "4000" and "8009" are hex.
+ * Also handles the T: regex matching hex digits (e.g. "800A").
+ */
+function parseFieldTypeHex(tRaw: string): number {
+  // The firmware outputs values like 4000, 8009, 800A — parse as hex
+  return parseInt(tRaw, 16);
+}
+
 /**
  * Parse ^LF (List Fields) response into an array of field descriptors.
  * 
- * Example response (from emulator):
+ * Example response (from protocol doc §5.24):
  *   BESTCODE: H:16 L:1 W:135 S:0 R:0 P:0
- *   Fields (1):
+ *   Fields (3):
  *   Field 1: T:4000 (0, 0) W:87 H:16 B:0 G:1, R:0
- *   Element: T:0 D:BESTCODE
+ *   Element: T:0 D:BC-GEN2
+ *   Field 2: T:4000 (88, 9) W:47 H:7 B:0 G:1, R:0
+ *   Element: T:2 D:14:18:36
+ *   Field 3: T:4000 (88, 0) W:47 H:7 B:0 G:1, R:0
+ *   Element: T:3 D:06/15/18
  * 
- * Real firmware may vary — parser is designed to be flexible.
- * 
- * Field line tokens:
- *   T:fontCodeOrType (x, y) W:width H:height B:bold G:gap R:rotation
- * Element line tokens:
- *   T:elementType D:data
+ * T: on Field line = hex field type (4000=text, 8009=QR, etc.)
+ * T: on Element line = element type (0=static, 2=time, 3=date, 5=counter)
  */
 export function parseLfResponse(response: string, messageName: string): ParsedField[] {
   console.log('[parseLfResponse] raw:', response);
@@ -199,12 +274,11 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
     if (upper.startsWith('^') || upper === '//EOL' || upper === '>' 
         || upper.includes('COMMAND SUCCESSFUL') || upper === 'SUCCESS' || upper === 'OK') continue;
 
-    // Parse "Field N:" line
+    // ── Parse "Field N:" line ──
     // Field 1: T:4000 (0, 0) W:87 H:16 B:0 G:1, R:0
-    // Also handle: Field 1: (0, 0) W:87 H:16 B:0 G:1 R:0 S:5
     const fieldMatch = trimmed.match(/Field\s+(\d+)\s*:/i);
     if (fieldMatch) {
-      // Save previous field if exists
+      // Save previous field
       if (currentField && currentField.fieldNum != null) {
         fields.push(currentField as ParsedField);
       }
@@ -223,54 +297,41 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
       const gMatch = trimmed.match(/\bG\s*:\s*(\d+)/i);
       const rMatch = trimmed.match(/\bR\s*:\s*(\d+)/i);
       
-      // Font code: may appear as T:n or S:n in the Field line
-      // T:4000 in emulator seems to be a combined code; real firmware may use S:n for font
-      const fontInField = trimmed.match(/\bT\s*:\s*(\d+)/i);
-      const sInField = trimmed.match(/\bS\s*:\s*(\d+)/i);
-      // T: encoding in real firmware:
-      //   T:4000 = standard text field wrapper (NOT barcode)
-      //   T:8009 = QR barcode field
-      //   T:7005 = DataMatrix barcode field
-      // Only treat T:#### as barcode when the leading digit is an unambiguous
-      // barcode subtype (6+). Values like 4000 are common for plain text.
+      // T: on Field line is a HEX field-type code per protocol v2.6 §5.24.
+      // Match hex digits including A-F (e.g. "800A" for DotCode).
+      const tHexMatch = trimmed.match(/\bT\s*:\s*([0-9A-Fa-f]+)/i);
+      
       let fontCode = 5; // Default 16-high
-      let derivedFieldType: number | undefined;
-      let barcodeSubtypeFromField: number | undefined;
-      if (sInField) {
-        fontCode = parseInt(sInField[1], 10);
-      } else if (fontInField) {
-        const tVal = parseInt(fontInField[1], 10);
-        if (tVal >= 1000) {
-          const highDigit = Math.floor(tVal / 1000);
-          const remainder = tVal % 1000;
+      let hexFieldType: number | undefined;
+      let barcodeEncoding: string | undefined;
 
-          if (highDigit > 5 && BARCODE_SUBTYPE_TO_ENCODING[highDigit] !== undefined) {
-            barcodeSubtypeFromField = highDigit;
-            derivedFieldType = 4; // barcode
-            fontCode = remainder % 10; // lower digit may encode font/param
-            console.log(`[parseLfResponse] T:${tVal} → barcode subtype ${highDigit} (${BARCODE_SUBTYPE_TO_ENCODING[highDigit]})`);
-          } else {
-            // Do not infer barcode from wrapper codes like 4000.
-            // Leave final type resolution to the Element line.
-            derivedFieldType = undefined;
-            fontCode = remainder % 10;
-          }
-        } else if (tVal <= 8) {
-          fontCode = tVal;
+      if (tHexMatch) {
+        const hexVal = parseFieldTypeHex(tHexMatch[1]);
+        const lookup = HEX_FIELD_TYPE_MAP[hexVal];
+        if (lookup) {
+          hexFieldType = hexVal;
+          barcodeEncoding = lookup.barcodeEncoding;
+          console.log(`[parseLfResponse] T:${tHexMatch[1]} (0x${hexVal.toString(16)}) → ${lookup.type}${barcodeEncoding ? ` [${barcodeEncoding}]` : ''}`);
+        } else {
+          console.log(`[parseLfResponse] T:${tHexMatch[1]} (0x${hexVal.toString(16)}) → unknown hex type, defaulting to text`);
         }
       }
 
-      // Validate font code against H: (actual dot height) — if H is present and
-      // contradicts the derived fontCode, correct it using height-to-code mapping.
+      // Font code: derive from H: (actual dot height) which is always reliable
       const parsedH = hMatch ? parseInt(hMatch[1], 10) : 0;
       if (parsedH > 0) {
-        const expectedHeight = FONT_CODE_TO_HEIGHT[fontCode];
-        if (expectedHeight !== parsedH) {
-          const corrected = HEIGHT_TO_FONT_CODE[parsedH];
-          if (corrected !== undefined) {
-            console.log(`[parseLfResponse] font code ${fontCode} (${expectedHeight}h) contradicts H:${parsedH}, correcting to code ${corrected}`);
-            fontCode = corrected;
-          }
+        const derived = HEIGHT_TO_FONT_CODE[parsedH];
+        if (derived !== undefined) {
+          fontCode = derived;
+        }
+      }
+
+      // Also check S: if present (some firmware versions include font code as S:)
+      const sInField = trimmed.match(/\bS\s*:\s*(\d+)/i);
+      if (sInField) {
+        const sVal = parseInt(sInField[1], 10);
+        if (sVal >= 0 && sVal <= 8) {
+          fontCode = sVal;
         }
       }
 
@@ -280,47 +341,32 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
         x,
         y,
         width: wMatch ? parseInt(wMatch[1], 10) : 0,
-        height: hMatch ? parseInt(hMatch[1], 10) : 0,
+        height: parsedH || FONT_CODE_TO_HEIGHT[fontCode] || 16,
         bold: bMatch ? parseInt(bMatch[1], 10) : 0,
         gap: gMatch ? parseInt(gMatch[1], 10) : 1,
         rotation: rMatch ? parseInt(rMatch[1], 10) : 0,
         elementType: 0,
         elementData: '',
-        derivedFieldType,
-        barcodeSubtype: barcodeSubtypeFromField,
+        hexFieldType,
+        barcodeEncoding,
       };
       continue;
     }
 
-    // Parse "Element:" line
+    // ── Parse "Element:" line ──
     // Element: T:0 D:BESTCODE
     const elementMatch = trimmed.match(/Element\s*:/i);
     if (elementMatch && currentField) {
       const etMatch = trimmed.match(/\bT\s*:\s*(\d+)/i);
       const edMatch = trimmed.match(/\bD\s*:\s*(.+)/i);
       if (etMatch) {
-        const etVal = parseInt(etMatch[1], 10);
-        const looksLikeBarcodeSubtype = BARCODE_SUBTYPE_TO_ENCODING[etVal] !== undefined;
-
-        currentField.elementType = etVal;
-
-        // Some firmware reports barcode type only on the Element line.
-        // In that case T: can be the barcode subtype directly (e.g. 8 = QR).
-        // BUT: don't overwrite barcodeSubtype if it was already derived from
-        // the Field line's T: value (e.g. T:8009 already set subtype=8).
-        if (currentField.derivedFieldType === 4 || (looksLikeBarcodeSubtype && etVal > 5)) {
-          if (currentField.barcodeSubtype === undefined) {
-            currentField.barcodeSubtype = etVal;
-          }
-          currentField.elementType = 4; // force element type to barcode
-        }
+        currentField.elementType = parseInt(etMatch[1], 10);
       }
       if (edMatch) currentField.elementData = edMatch[1].trim();
       continue;
     }
 
-    // Some firmware may use a flat format per field:
-    // 1: T:0 (10, 5) W:60 H:16 S:5 B:0 G:1 R:0 D:HELLO
+    // ── Flat format: "1: T:0 (10, 5) W:60 H:16 S:5 B:0 G:1 R:0 D:HELLO" ──
     const flatMatch = trimmed.match(/^(\d+)\s*:\s*/);
     if (flatMatch) {
       if (currentField && currentField.fieldNum != null) {
@@ -337,16 +383,25 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
       const bMatch = trimmed.match(/\bB\s*:\s*(\d+)/i);
       const gMatch = trimmed.match(/\bG\s*:\s*(\d+)/i);
       const rMatch = trimmed.match(/\bR\s*:\s*(\d+)/i);
-      const tMatch = trimmed.match(/\bT\s*:\s*(\d+)/i);
+      const tMatch = trimmed.match(/\bT\s*:\s*([0-9A-Fa-f]+)/i);
       const dMatch = trimmed.match(/\bD\s*:\s*(.+)/i);
+
+      const parsedH = hMatch ? parseInt(hMatch[1], 10) : 0;
+      let fontCode = 5;
+      if (sMatch) {
+        fontCode = parseInt(sMatch[1], 10);
+      } else if (parsedH > 0) {
+        const derived = HEIGHT_TO_FONT_CODE[parsedH];
+        if (derived !== undefined) fontCode = derived;
+      }
 
       currentField = {
         fieldNum,
-        fontCode: sMatch ? parseInt(sMatch[1], 10) : (tMatch ? Math.min(parseInt(tMatch[1], 10), 8) : 5),
+        fontCode,
         x,
         y,
         width: wMatch ? parseInt(wMatch[1], 10) : 0,
-        height: hMatch ? parseInt(hMatch[1], 10) : 0,
+        height: parsedH || FONT_CODE_TO_HEIGHT[fontCode] || 16,
         bold: bMatch ? parseInt(bMatch[1], 10) : 0,
         gap: gMatch ? parseInt(gMatch[1], 10) : 1,
         rotation: rMatch ? parseInt(rMatch[1], 10) : 0,
@@ -365,6 +420,8 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
   console.log('[parseLfResponse] parsed fields:', fields.length, fields);
   return fields;
 }
+
+// ── Message builder ──────────────────────────────────────────────────────────
 
 /**
  * Convert parsed ^LF fields + ^GM template info into a full MessageDetails
@@ -385,12 +442,32 @@ export function buildMessageDetails(
     const fontName = PROTOCOL_CODE_TO_FONT[pf.fontCode] ?? 'Standard16High';
     const fontHeight = FONT_CODE_TO_HEIGHT[pf.fontCode] ?? 16;
     
-    // Determine field type: barcode if barcodeSubtype was detected (from Field T: or Element T:)
+    // Determine field type from hex field-type code (primary) or element type (fallback)
     let fieldType: MessageField['type'];
-    if (pf.barcodeSubtype !== undefined) {
+    let barcodeEncoding: string | undefined;
+
+    if (pf.hexFieldType !== undefined) {
+      const lookup = HEX_FIELD_TYPE_MAP[pf.hexFieldType];
+      if (lookup) {
+        fieldType = lookup.type;
+        barcodeEncoding = lookup.barcodeEncoding;
+      } else {
+        fieldType = ELEMENT_TYPE_MAP[pf.elementType] ?? 'text';
+      }
+    } else if (pf.barcodeEncoding) {
       fieldType = 'barcode';
+      barcodeEncoding = pf.barcodeEncoding;
     } else {
       fieldType = ELEMENT_TYPE_MAP[pf.elementType] ?? 'text';
+    }
+
+    // For non-barcode hex field types, refine using element type
+    // e.g. T:4000 (text) + Element T:2 (time) → type should be 'time'
+    if (fieldType === 'text' && pf.elementType > 0) {
+      const elementDerived = ELEMENT_TYPE_MAP[pf.elementType];
+      if (elementDerived) {
+        fieldType = elementDerived;
+      }
     }
 
     // Invert Y: printer Y (0=bottom) → canvas Y (0=top)
@@ -398,17 +475,14 @@ export function buildMessageDetails(
     const templateRelativeY = templateHeight - pf.y - fieldHeight;
     const canvasY = Math.max(0, templateRelativeY + blockedRows);
 
-    // For barcode fields, wrap data with [ENCODING] prefix so the canvas renderer
-    // can identify the barcode type and render it properly
+    // For barcode fields, wrap data with [ENCODING] prefix
     let fieldData = pf.elementData || messageName;
-    if (fieldType === 'barcode') {
-      const encodingKey = BARCODE_SUBTYPE_TO_ENCODING[pf.barcodeSubtype ?? 0] ?? 'code128';
-      const encodingLabel = encodingKey.toUpperCase();
-      // Only add prefix if not already present
+    if (fieldType === 'barcode' && barcodeEncoding) {
+      const encodingLabel = barcodeEncoding.toUpperCase();
       if (!fieldData.startsWith('[')) {
         fieldData = `[${encodingLabel}] ${fieldData}`;
       }
-      console.log(`[buildMessageDetails] barcode field ${idx + 1}: subtype=${pf.barcodeSubtype}, encoding=${encodingKey}, data="${fieldData}"`);
+      console.log(`[buildMessageDetails] barcode field ${idx + 1}: encoding=${barcodeEncoding}, data="${fieldData}"`);
     }
 
     return {
