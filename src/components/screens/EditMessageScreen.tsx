@@ -683,64 +683,28 @@ export function EditMessageScreen({
     
     let newY = blockedRows; // default: top of template area
     
-    if (multiTemplate) {
-      // For multi-line templates, distribute fields across lines round-robin.
-      // Use firmware-defined Y positions from the protocol spec (printer coords,
-      // 0=bottom) converted to canvas coords (0=top).
-      const firmwareYs = TEMPLATE_LINE_Y_POSITIONS[message.templateValue ?? ''] ?? null;
-      const { lines: numLines, dotsPerLine } = multiTemplate;
-      const templateHeight = multiTemplate.height;
+    // Use firmware-defined Y grid positions for ALL templates
+    const validYPositions = getValidCanvasYPositions(
+      message.templateValue ?? String(message.height),
+      message.height,
+      fontHeight,
+    );
 
-      const linePositions: number[] = [];
-      if (firmwareYs && firmwareYs.length === numLines) {
-        // Convert firmware Y (0=bottom) to canvas Y (0=top) for each line slot.
-        // Firmware lines are bottom-to-top; canvas lines should be top-to-bottom.
-        for (let i = numLines - 1; i >= 0; i--) {
-          const printerY = firmwareYs[i];
-          const templateRelativeY = templateHeight - printerY - dotsPerLine;
-          const canvasY = Math.max(0, templateRelativeY + blockedRows);
-          linePositions.push(canvasY);
-        }
-      } else {
-        // Fallback: compute with 1-dot gap
-        let cy = blockedRows;
-        for (let i = 0; i < numLines; i++) {
-          linePositions.push(cy);
-          cy += dotsPerLine + 1;
-        }
-      }
-      const lineIndex = message.fields.length % numLines;
-      newY = linePositions[lineIndex];
-    } else if (message.fields.length > 0) {
-      // For single-line templates, try to stack fields vertically if font is shorter than template.
-      // Use 1-dot gap to match firmware inter-line spacing (verified via ^LF round-trip).
-      const MIN_GAP = 1;
-      const existingYRanges = message.fields.map(f => ({ y: f.y, bottom: f.y + f.height }));
-      existingYRanges.sort((a, b) => a.y - b.y);
+    if (validYPositions.length > 0) {
+      // Find occupied Y positions from existing fields
+      const occupiedYs = new Set(message.fields.map(f => f.y));
       
-      // Try to place below existing fields first, respecting min gap
-      let placed = false;
-      for (const range of existingYRanges) {
-        const candidateY = range.bottom + MIN_GAP;
-        if (candidateY + fontHeight <= 32) {
-          // Check no overlap and no gap violation with other fields
-          const violates = existingYRanges.some(r => {
-            const gapAbove = candidateY - r.bottom;
-            const gapBelow = r.y - (candidateY + fontHeight);
-            if (gapAbove >= 0 && gapAbove < MIN_GAP) return true;
-            if (gapBelow >= 0 && gapBelow < MIN_GAP) return true;
-            return false;
-          });
-          if (!violates) {
-            newY = candidateY;
-            placed = true;
-            break;
-          }
+      // Round-robin: place on the next available grid position
+      const lineIndex = message.fields.length % validYPositions.length;
+      newY = validYPositions[lineIndex];
+      
+      // If that position is already taken, find the first unoccupied one
+      if (occupiedYs.has(newY)) {
+        const unoccupied = validYPositions.find(y => !occupiedYs.has(y));
+        if (unoccupied !== undefined) {
+          newY = unoccupied;
         }
-      }
-      if (!placed) {
-        // Fall back to same row as first field (horizontal stacking)
-        newY = message.fields[0]?.y ?? blockedRows;
+        // If all positions are occupied, stack horizontally on the same row
       }
     }
     
