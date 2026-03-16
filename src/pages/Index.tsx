@@ -699,15 +699,11 @@ const Index = () => {
     switch (currentScreen) {
       // 'network' case removed - now handled in DevPanel Network tab
       case 'control':
-        // Get the current message content from local storage
-        const currentMsgName = connectionState.status?.currentMessage;
-        const currentMsgContent = currentMsgName ? getMessage(currentMsgName) : undefined;
-
         return (
           <Dashboard
             status={connectionState.status}
             isConnected={connectionState.isConnected}
-            messageContent={currentMsgContent}
+            messageContent={activeMessageContent}
             onStart={handleStartPrint}
             onStop={stopPrint}
             onJetStop={handleJetStop}
