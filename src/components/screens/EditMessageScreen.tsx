@@ -1206,7 +1206,11 @@ export function EditMessageScreen({
                       }));
                       if (positionsChanged) {
                         toast.info('Field positions adjusted by printer firmware');
+                      } else {
+                        toast.success('Message saved');
                       }
+                    } else {
+                      toast.success('Message saved');
                     }
                   }}
                   className="industrial-button-success text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
