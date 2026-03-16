@@ -1048,6 +1048,7 @@ export function EditMessageScreen({
             >
               <MessageCanvas
                 templateHeight={message.height}
+                templateValue={message.templateValue}
                 width={message.width}
                 fields={message.fields}
                 onCanvasClick={handleCanvasClick}
