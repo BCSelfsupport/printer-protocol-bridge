@@ -283,10 +283,13 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
       const edMatch = trimmed.match(/\bD\s*:\s*(.+)/i);
       if (etMatch) {
         const etVal = parseInt(etMatch[1], 10);
+        const looksLikeBarcodeSubtype = BARCODE_SUBTYPE_TO_ENCODING[etVal] !== undefined;
+
         currentField.elementType = etVal;
-        // If field was identified as barcode from Field line T: (derivedFieldType=4),
-        // then Element T: is the barcode encoding subtype, not field type
-        if (currentField.derivedFieldType === 4) {
+
+        // Some firmware reports barcode type only on the Element line.
+        // In that case T: can be the barcode subtype directly (e.g. 8 = QR).
+        if (currentField.derivedFieldType === 4 || (looksLikeBarcodeSubtype && etVal > 5)) {
           currentField.barcodeSubtype = etVal;
           currentField.elementType = 4; // force element type to barcode
         }
