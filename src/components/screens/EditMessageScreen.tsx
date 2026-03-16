@@ -1360,10 +1360,18 @@ export function EditMessageScreen({
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => {
+                  onClick={async () => {
                     if (validateMessageName(saveAsName).valid) {
-                      onSave({ ...message, name: saveAsName.trim().toUpperCase() }, true);
+                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase() }, true);
                       setSaveAsDialogOpen(false);
+                      if (result && result.fields.length > 0) {
+                        setMessage(prev => ({
+                          ...prev,
+                          fields: result.fields,
+                          templateValue: result.templateValue ?? prev.templateValue,
+                          height: result.height ?? prev.height,
+                        }));
+                      }
                     }
                   }}
                   disabled={!validateMessageName(saveAsName).valid}
