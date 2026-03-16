@@ -172,7 +172,10 @@ const Index = () => {
       for (const msg of messagesToFetch) {
         if (!connectionState.isConnected) break;
         try {
-          const details = await fetchMessageContent(msg.name);
+          const details = await Promise.race([
+            fetchMessageContent(msg.name),
+            new Promise<null>(r => setTimeout(() => r(null), 10000)),
+          ]);
           if (details && details.fields.length > 0) {
             saveMessage(details);
             console.log('[MessageSync] Saved content for', msg.name, ':', details.fields.length, 'fields');
@@ -626,10 +629,18 @@ const Index = () => {
           onGetMessageDetails={async (name: string) => {
             // If connected, always fetch fresh from printer to catch HMI edits
             if (connectionState.isConnected) {
-              const fetched = await fetchMessageContent(name);
-              if (fetched && fetched.fields.length > 0) {
-                saveMessage(fetched);
-                return fetched;
+              try {
+                // Timeout after 10s to prevent editor from hanging
+                const fetched = await Promise.race([
+                  fetchMessageContent(name),
+                  new Promise<null>(r => setTimeout(() => r(null), 10000)),
+                ]);
+                if (fetched && fetched.fields.length > 0) {
+                  saveMessage(fetched);
+                  return fetched;
+                }
+              } catch (e) {
+                console.error('[onGetMessageDetails] fetch failed:', e);
               }
             }
             // Fallback to local storage
@@ -741,10 +752,17 @@ const Index = () => {
             }}
             onGetMessageDetails={async (name: string) => {
               if (connectionState.isConnected) {
-                const fetched = await fetchMessageContent(name);
-                if (fetched && fetched.fields.length > 0) {
-                  saveMessage(fetched);
-                  return fetched;
+                try {
+                  const fetched = await Promise.race([
+                    fetchMessageContent(name),
+                    new Promise<null>(r => setTimeout(() => r(null), 10000)),
+                  ]);
+                  if (fetched && fetched.fields.length > 0) {
+                    saveMessage(fetched);
+                    return fetched;
+                  }
+                } catch (e) {
+                  console.error('[onGetMessageDetails] fetch failed:', e);
                 }
               }
               return getMessage(name);
