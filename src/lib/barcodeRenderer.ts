@@ -263,11 +263,15 @@ export async function renderBarcodeToCanvas(
         (options as any).paddingwidth = 0;
         (options as any).paddingheight = 0;
         // Force QR version based on sizeFlag (1=V1 21x21, 2=V2 25x25, 3=V3 29x29)
-        if (encoding === 'qrcode' && sizeFlag) {
-          (options as any).version = parseInt(sizeFlag, 10);
-          // Let bwip-js determine module size from version; just set scale
+        if (encoding === 'qrcode') {
+          if (sizeFlag) {
+            (options as any).version = parseInt(sizeFlag, 10);
+          }
+          // Let bwip-js auto-detect version from data length when no sizeFlag
           // QR V1=21, V2=25, V3=29 modules. Scale so output ≈ targetBarPx
-          const modules = [0, 21, 25, 29][parseInt(sizeFlag, 10)] || 25;
+          const modules = sizeFlag
+            ? ([0, 21, 25, 29][parseInt(sizeFlag, 10)] || 25)
+            : 25; // default estimate; actual size adapts via bwip-js
           options.scale = Math.max(1, Math.floor(targetBarPx / modules));
         } else {
           options.height = size;
