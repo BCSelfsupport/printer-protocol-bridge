@@ -230,12 +230,14 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
       // If T >= 1000 it's likely a combined type+font code (e.g. 4000 = type 4, font 0)
       // If T < 10 it's likely just a font code
       let fontCode = 5; // Default 16-high
+      let derivedFieldType: number | undefined;
       if (sInField) {
         fontCode = parseInt(sInField[1], 10);
       } else if (fontInField) {
         const tVal = parseInt(fontInField[1], 10);
         if (tVal >= 1000) {
-          // Combined: last digit(s) might be font, first digit(s) might be type
+          // Combined: first digit = field type (0=text, 4=barcode), last digit(s) = font/subtype
+          derivedFieldType = Math.floor(tVal / 1000);
           fontCode = tVal % 10;
         } else if (tVal <= 8) {
           fontCode = tVal;
