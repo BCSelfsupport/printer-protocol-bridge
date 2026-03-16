@@ -729,8 +729,9 @@ const Index = () => {
                 isNew,
               );
               if (!success) {
-                console.error('Failed to save message on printer');
-                toast.error('Printer rejected message save. Check barcode settings and try again.');
+                const reason = (saveMessageContent as any).__lastError || '';
+                console.error('Failed to save message on printer:', reason);
+                toast.error(`Printer rejected message save: ${reason || 'Check settings and try again.'}`);
                 return;
               }
               if (!isNew) {
