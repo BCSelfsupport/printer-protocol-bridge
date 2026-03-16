@@ -904,16 +904,8 @@ export function MessageCanvas({
       newY = Math.max(blockedRows, newY);
       newY = Math.min(TOTAL_ROWS - fontInfo.height, newY);
 
-      // Snap to line if multiline template
-      if (multilineTemplate) {
-        const lineInfo = getLineForY(newY);
-        if (lineInfo) {
-          newY = lineInfo.lineY;
-        }
-      } else {
-        // Single-line: snap to valid Y with min 2-dot gap enforcement
-        newY = snapToValidY(newY, fontInfo.height, dragFieldId);
-      }
+      // Snap to firmware-valid Y grid position
+      newY = snapToValidY(newY, fontInfo.height, dragFieldId);
 
       setDragPosition({ x: newX, y: newY });
     }
