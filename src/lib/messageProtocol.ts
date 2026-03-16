@@ -360,20 +360,37 @@ export function buildMessageDetails(
   const fields: MessageField[] = parsedFields.map((pf, idx) => {
     const fontName = PROTOCOL_CODE_TO_FONT[pf.fontCode] ?? 'Standard16High';
     const fontHeight = FONT_CODE_TO_HEIGHT[pf.fontCode] ?? 16;
-    const fieldType = ELEMENT_TYPE_MAP[pf.elementType] ?? 'text';
+    
+    // Determine field type: prefer derivedFieldType from Field line T: over Element T:
+    let fieldType: MessageField['type'];
+    if (pf.derivedFieldType === 4) {
+      fieldType = 'barcode';
+    } else {
+      fieldType = ELEMENT_TYPE_MAP[pf.elementType] ?? 'text';
+    }
 
     // Invert Y: printer Y (0=bottom) → canvas Y (0=top)
-    // printerY = templateHeight - templateRelativeY - fieldHeight
-    // => templateRelativeY = templateHeight - printerY - fieldHeight
-    // canvasY = templateRelativeY + blockedRows
     const fieldHeight = pf.height || fontHeight;
     const templateRelativeY = templateHeight - pf.y - fieldHeight;
     const canvasY = Math.max(0, templateRelativeY + blockedRows);
 
+    // For barcode fields, wrap data with [ENCODING] prefix so the canvas renderer
+    // can identify the barcode type and render it properly
+    let fieldData = pf.elementData || messageName;
+    if (fieldType === 'barcode') {
+      const encodingKey = BARCODE_SUBTYPE_TO_ENCODING[pf.barcodeSubtype ?? 0] ?? 'code128';
+      const encodingLabel = encodingKey.toUpperCase();
+      // Only add prefix if not already present
+      if (!fieldData.startsWith('[')) {
+        fieldData = `[${encodingLabel}] ${fieldData}`;
+      }
+      console.log(`[buildMessageDetails] barcode field ${idx + 1}: subtype=${pf.barcodeSubtype}, encoding=${encodingKey}, data="${fieldData}"`);
+    }
+
     return {
       id: idx + 1,
       type: fieldType,
-      data: pf.elementData || messageName,
+      data: fieldData,
       x: pf.x,
       y: canvasY,
       width: pf.width || 60,
@@ -381,7 +398,7 @@ export function buildMessageDetails(
       fontSize: fontName,
       bold: pf.bold,
       gap: pf.gap,
-      rotation: pf.rotation === 0 ? 'Normal' as const : 'Normal' as const, // TODO: map rotation codes
+      rotation: pf.rotation === 0 ? 'Normal' as const : 'Normal' as const,
       autoNumerals: 0,
     };
   });
