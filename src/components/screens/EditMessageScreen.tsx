@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database } from 'lucide-react';
+import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -111,7 +112,7 @@ type TemplateValue = SingleTemplateValue | MultilineTemplateValue;
 
 interface EditMessageScreenProps {
   messageName: string;
-  onSave: (message: MessageDetails, isNew?: boolean) => void;
+  onSave: (message: MessageDetails, isNew?: boolean) => Promise<MessageDetails | null> | void;
   onCancel: () => void;
   onGetMessageDetails?: (name: string) => Promise<MessageDetails | null>;
   printerTime?: Date | null;
@@ -1189,7 +1190,29 @@ export function EditMessageScreen({
                 </button>
 
                 <button
-                  onClick={() => onSave(message, false)}
+                  onClick={async () => {
+                    const result = await onSave(message, false);
+                    if (result && result.fields.length > 0) {
+                      // Check if printer adjusted any positions
+                      const positionsChanged = result.fields.some((rf, i) => {
+                        const ef = message.fields[i];
+                        return ef && (rf.y !== ef.y || rf.x !== ef.x);
+                      });
+                      setMessage(prev => ({
+                        ...prev,
+                        fields: result.fields,
+                        templateValue: result.templateValue ?? prev.templateValue,
+                        height: result.height ?? prev.height,
+                      }));
+                      if (positionsChanged) {
+                        toast.info('Field positions adjusted by printer firmware');
+                      } else {
+                        toast.success('Message saved');
+                      }
+                    } else {
+                      toast.success('Message saved');
+                    }
+                  }}
                   className="industrial-button-success text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
                 >
                   <Save className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
@@ -1342,10 +1365,18 @@ export function EditMessageScreen({
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => {
+                  onClick={async () => {
                     if (validateMessageName(saveAsName).valid) {
-                      onSave({ ...message, name: saveAsName.trim().toUpperCase() }, true);
+                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase() }, true);
                       setSaveAsDialogOpen(false);
+                      if (result && result.fields.length > 0) {
+                        setMessage(prev => ({
+                          ...prev,
+                          fields: result.fields,
+                          templateValue: result.templateValue ?? prev.templateValue,
+                          height: result.height ?? prev.height,
+                        }));
+                      }
                     }
                   }}
                   disabled={!validateMessageName(saveAsName).valid}

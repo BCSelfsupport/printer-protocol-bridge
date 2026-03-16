@@ -648,7 +648,7 @@ const Index = () => {
           connectedPrinterId={connectionState.connectedPrinter?.id ?? null}
           isConnected={connectionState.isConnected}
           printerModel={connectionState.status?.printerModel}
-          onSave={async (details: MessageDetails, isNew?: boolean) => {
+          onSave={async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
             const targetName = isNew ? details.name : editingMessage.name;
             const success = await saveMessageContent(
               targetName,
@@ -660,7 +660,7 @@ const Index = () => {
               const reason = (saveMessageContent as any).__lastError || '';
               console.error('Failed to save message on printer:', reason);
               toast.error(`Printer rejected message save: ${reason || 'Check settings and try again.'}`);
-              return;
+              return null;
             }
             if (!isNew) {
               updateMessage(editingMessage.id, details.name);
@@ -672,10 +672,22 @@ const Index = () => {
             // Mark as recently saved so auto-sync won't overwrite with printer version
             recentlySavedRef.current.set(targetName, Date.now());
             syncedMessagesRef.current.add(targetName);
-            setCurrentScreen('messages');
-            setEditingMessage(null);
-            setIsCreatingNewMessage(false);
-            setMessagePreset(undefined);
+            // Reload from printer to get actual field positions
+            if (connectionState.isConnected) {
+              try {
+                const refreshed = await Promise.race([
+                  fetchMessageContent(targetName),
+                  new Promise<null>(r => setTimeout(() => r(null), 5000)),
+                ]);
+                if (refreshed && refreshed.fields.length > 0) {
+                  saveMessage(refreshed);
+                  return refreshed;
+                }
+              } catch (e) {
+                console.error('[onSave] post-save reload failed:', e);
+              }
+            }
+            return null;
           }}
           onCancel={() => {
             setCurrentScreen('messages');
@@ -772,7 +784,7 @@ const Index = () => {
             connectedPrinterId={connectionState.connectedPrinter?.id ?? null}
             isConnected={connectionState.isConnected}
             printerModel={connectionState.status?.printerModel}
-            onSave={async (details: MessageDetails, isNew?: boolean) => {
+            onSave={async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
               const targetName = isNew ? details.name : editingMessage.name;
               const success = await saveMessageContent(
                 targetName,
@@ -784,7 +796,7 @@ const Index = () => {
                 const reason = (saveMessageContent as any).__lastError || '';
                 console.error('Failed to save message on printer:', reason);
                 toast.error(`Printer rejected message save: ${reason || 'Check settings and try again.'}`);
-                return;
+                return null;
               }
               if (!isNew) {
                 updateMessage(editingMessage.id, details.name);
@@ -793,13 +805,24 @@ const Index = () => {
                 ...details,
                 name: targetName,
               });
-              // Mark as recently saved so auto-sync won't overwrite with printer version
               recentlySavedRef.current.set(targetName, Date.now());
               syncedMessagesRef.current.add(targetName);
-              setCurrentScreen('messages');
-              setEditingMessage(null);
-              setIsCreatingNewMessage(false);
-              setMessagePreset(undefined);
+              // Reload from printer to get actual field positions
+              if (connectionState.isConnected) {
+                try {
+                  const refreshed = await Promise.race([
+                    fetchMessageContent(targetName),
+                    new Promise<null>(r => setTimeout(() => r(null), 5000)),
+                  ]);
+                  if (refreshed && refreshed.fields.length > 0) {
+                    saveMessage(refreshed);
+                    return refreshed;
+                  }
+                } catch (e) {
+                  console.error('[onSave] post-save reload failed:', e);
+                }
+              }
+              return null;
             }}
             onCancel={() => {
               setCurrentScreen('messages');
