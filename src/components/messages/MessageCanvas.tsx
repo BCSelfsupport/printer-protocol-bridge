@@ -49,6 +49,7 @@ const DOT_SIZE = 8; // pixels per dot
 
 export function MessageCanvas({
   templateHeight = 16,
+  templateValue = '16',
   width = 200,
   fields = [],
   onCanvasClick,
