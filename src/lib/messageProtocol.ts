@@ -60,6 +60,23 @@ const ELEMENT_TYPE_MAP: Record<number, MessageField['type']> = {
   5: 'logo',
 };
 
+// Barcode subtype → encoding key (matches ^AB type parameter)
+const BARCODE_SUBTYPE_TO_ENCODING: Record<number, string> = {
+  0: 'i25',
+  1: 'upca',
+  2: 'upce',
+  3: 'ean13',
+  4: 'ean8',
+  5: 'code39',
+  6: 'code128',
+  7: 'datamatrix',
+  8: 'qrcode',
+  9: 'code128_ucc',
+  10: 'code128_sscc',
+  11: 'code128_multi',
+  12: 'dotcode',
+};
+
 interface ParsedField {
   fieldNum: number;
   fontCode: number;
@@ -72,6 +89,10 @@ interface ParsedField {
   rotation: number;
   elementType: number;
   elementData: string;
+  /** Field type derived from Field line T: (e.g., 4 = barcode) */
+  derivedFieldType?: number;
+  /** Barcode encoding subtype from Element T: when field is barcode */
+  barcodeSubtype?: number;
 }
 
 /**
@@ -209,12 +230,14 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
       // If T >= 1000 it's likely a combined type+font code (e.g. 4000 = type 4, font 0)
       // If T < 10 it's likely just a font code
       let fontCode = 5; // Default 16-high
+      let derivedFieldType: number | undefined;
       if (sInField) {
         fontCode = parseInt(sInField[1], 10);
       } else if (fontInField) {
         const tVal = parseInt(fontInField[1], 10);
         if (tVal >= 1000) {
-          // Combined: last digit(s) might be font, first digit(s) might be type
+          // Combined: first digit = field type (0=text, 4=barcode), last digit(s) = font/subtype
+          derivedFieldType = Math.floor(tVal / 1000);
           fontCode = tVal % 10;
         } else if (tVal <= 8) {
           fontCode = tVal;
@@ -247,6 +270,7 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
         rotation: rMatch ? parseInt(rMatch[1], 10) : 0,
         elementType: 0,
         elementData: '',
+        derivedFieldType,
       };
       continue;
     }
@@ -257,7 +281,16 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
     if (elementMatch && currentField) {
       const etMatch = trimmed.match(/\bT\s*:\s*(\d+)/i);
       const edMatch = trimmed.match(/\bD\s*:\s*(.+)/i);
-      if (etMatch) currentField.elementType = parseInt(etMatch[1], 10);
+      if (etMatch) {
+        const etVal = parseInt(etMatch[1], 10);
+        currentField.elementType = etVal;
+        // If field was identified as barcode from Field line T: (derivedFieldType=4),
+        // then Element T: is the barcode encoding subtype, not field type
+        if (currentField.derivedFieldType === 4) {
+          currentField.barcodeSubtype = etVal;
+          currentField.elementType = 4; // force element type to barcode
+        }
+      }
       if (edMatch) currentField.elementData = edMatch[1].trim();
       continue;
     }
@@ -327,20 +360,37 @@ export function buildMessageDetails(
   const fields: MessageField[] = parsedFields.map((pf, idx) => {
     const fontName = PROTOCOL_CODE_TO_FONT[pf.fontCode] ?? 'Standard16High';
     const fontHeight = FONT_CODE_TO_HEIGHT[pf.fontCode] ?? 16;
-    const fieldType = ELEMENT_TYPE_MAP[pf.elementType] ?? 'text';
+    
+    // Determine field type: prefer derivedFieldType from Field line T: over Element T:
+    let fieldType: MessageField['type'];
+    if (pf.derivedFieldType === 4) {
+      fieldType = 'barcode';
+    } else {
+      fieldType = ELEMENT_TYPE_MAP[pf.elementType] ?? 'text';
+    }
 
     // Invert Y: printer Y (0=bottom) → canvas Y (0=top)
-    // printerY = templateHeight - templateRelativeY - fieldHeight
-    // => templateRelativeY = templateHeight - printerY - fieldHeight
-    // canvasY = templateRelativeY + blockedRows
     const fieldHeight = pf.height || fontHeight;
     const templateRelativeY = templateHeight - pf.y - fieldHeight;
     const canvasY = Math.max(0, templateRelativeY + blockedRows);
 
+    // For barcode fields, wrap data with [ENCODING] prefix so the canvas renderer
+    // can identify the barcode type and render it properly
+    let fieldData = pf.elementData || messageName;
+    if (fieldType === 'barcode') {
+      const encodingKey = BARCODE_SUBTYPE_TO_ENCODING[pf.barcodeSubtype ?? 0] ?? 'code128';
+      const encodingLabel = encodingKey.toUpperCase();
+      // Only add prefix if not already present
+      if (!fieldData.startsWith('[')) {
+        fieldData = `[${encodingLabel}] ${fieldData}`;
+      }
+      console.log(`[buildMessageDetails] barcode field ${idx + 1}: subtype=${pf.barcodeSubtype}, encoding=${encodingKey}, data="${fieldData}"`);
+    }
+
     return {
       id: idx + 1,
       type: fieldType,
-      data: pf.elementData || messageName,
+      data: fieldData,
       x: pf.x,
       y: canvasY,
       width: pf.width || 60,
@@ -348,7 +398,7 @@ export function buildMessageDetails(
       fontSize: fontName,
       bold: pf.bold,
       gap: pf.gap,
-      rotation: pf.rotation === 0 ? 'Normal' as const : 'Normal' as const, // TODO: map rotation codes
+      rotation: pf.rotation === 0 ? 'Normal' as const : 'Normal' as const,
       autoNumerals: 0,
     };
   });
