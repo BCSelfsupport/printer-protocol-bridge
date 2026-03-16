@@ -142,10 +142,13 @@ const Index = () => {
   // Runs when the message list changes (from ^LM polling) while connected.
   const syncingRef = useRef(false);
   const syncedMessagesRef = useRef<Set<string>>(new Set());
+  // Track messages recently saved from the editor — skip auto-sync overwrite for these
+  const recentlySavedRef = useRef<Map<string, number>>(new Map());
   
   // Reset synced set when printer changes
   useEffect(() => {
     syncedMessagesRef.current = new Set();
+    recentlySavedRef.current = new Map();
   }, [connectedPrinterId]);
 
   useEffect(() => {

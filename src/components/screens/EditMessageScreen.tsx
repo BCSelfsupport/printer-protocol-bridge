@@ -190,19 +190,24 @@ export function EditMessageScreen({
   const [graphicDialogOpen, setGraphicDialogOpen] = useState(false);
   const [dataLinkDialogOpen, setDataLinkDialogOpen] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const fetchStartedRef = useRef(false); // Guard against duplicate fetches from unstable callback refs
 
   // Mobile: lock the parent horizontal scroller while long-press dragging fields
   const [isCanvasScrollLocked, setIsCanvasScrollLocked] = useState(false);
   const canvasScrollerRef = useRef<HTMLDivElement>(null);
 
   // Load message details when component mounts (only once)
+  // Uses a ref guard because onGetMessageDetails may be an unstable inline function
+  // that changes reference every parent render (from polling), which would re-trigger
+  // this effect before the first fetch completes.
   useEffect(() => {
     if (startEmpty) {
       setInitialLoadDone(true);
       return;
     }
 
-    if (onGetMessageDetails && !initialLoadDone) {
+    if (onGetMessageDetails && !initialLoadDone && !fetchStartedRef.current) {
+      fetchStartedRef.current = true;
       setLoading(true);
       onGetMessageDetails(messageName)
         .then((details) => {
