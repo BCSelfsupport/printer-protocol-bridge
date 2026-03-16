@@ -22,6 +22,8 @@ interface MultilineTemplate {
 interface MessageCanvasProps {
   /** Total height is always 32 dots */
   templateHeight: number; // 7, 9, 11, 16, 24, or 32
+  /** Template value string for firmware Y snap grid */
+  templateValue?: string;
   /** Width in dots (scrollable) */
   width?: number;
   /** The fields to render on the canvas */
