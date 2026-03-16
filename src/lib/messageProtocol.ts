@@ -98,6 +98,60 @@ export const TEMPLATE_LINE_Y_POSITIONS: Record<string, number[]> = {
   'multi-5x5':  [0, 6, 12, 18, 24],
 };
 
+/**
+ * Compute firmware-valid canvas Y positions for a given template and font height.
+ * 
+ * For multi-line templates, returns positions derived from TEMPLATE_LINE_Y_POSITIONS.
+ * For single-line templates, computes how many rows of `fontHeight` fit with the
+ * standard 1-dot gap, starting from the bottom (printer Y=0) — exactly as the
+ * firmware lays out fields.
+ * 
+ * Returns canvas Y positions (0=top of 32-dot grid), sorted top-to-bottom.
+ */
+export function getValidCanvasYPositions(
+  templateValue: string,
+  templateHeight: number,
+  fontHeight: number,
+): number[] {
+  const blockedRows = 32 - templateHeight;
+  const canvasPositions: number[] = [];
+
+  // Multi-line templates: use the firmware-defined positions
+  if (templateValue.startsWith('multi-')) {
+    const firmwareYs = TEMPLATE_LINE_Y_POSITIONS[templateValue];
+    if (firmwareYs) {
+      const match = templateValue.match(/multi-\d+x(\d+)/);
+      const lineHeight = match ? parseInt(match[1], 10) : fontHeight;
+
+      for (let i = firmwareYs.length - 1; i >= 0; i--) {
+        if (fontHeight <= lineHeight) {
+          const printerY = firmwareYs[i];
+          const canvasY = templateHeight - printerY - lineHeight + blockedRows;
+          canvasPositions.push(Math.max(blockedRows, canvasY));
+        }
+      }
+      if (canvasPositions.length > 0) return canvasPositions.sort((a, b) => a - b);
+    }
+  }
+
+  // Single-line templates: compute positions using 1-dot gap (firmware standard)
+  // Fields are laid out from the bottom (printer Y=0) upward.
+  const gap = 1;
+  const stride = fontHeight + gap;
+  const maxLines = Math.floor((templateHeight + gap) / stride);
+
+  for (let line = maxLines - 1; line >= 0; line--) {
+    const printerY = line * stride;
+    const canvasY = templateHeight - printerY - fontHeight + blockedRows;
+    if (canvasY >= blockedRows && canvasY + fontHeight <= 32) {
+      canvasPositions.push(canvasY);
+    }
+  }
+
+  // Deduplicate and sort top-to-bottom
+  return [...new Set(canvasPositions)].sort((a, b) => a - b);
+}
+
 // ── ^LF Field type codes (protocol v2.6 §5.24) ──────────────────────────────
 // The T: value on a Field line is in HEXADECIMAL notation per the spec.
 
