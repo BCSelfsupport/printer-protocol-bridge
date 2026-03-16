@@ -669,6 +669,9 @@ const Index = () => {
               ...details,
               name: targetName,
             });
+            // Mark as recently saved so auto-sync won't overwrite with printer version
+            recentlySavedRef.current.set(targetName, Date.now());
+            syncedMessagesRef.current.add(targetName);
             setCurrentScreen('messages');
             setEditingMessage(null);
             setIsCreatingNewMessage(false);
