@@ -2193,7 +2193,10 @@ export function usePrinterConnection() {
           const rejectedByPrinter = isProtocolCommandFailure(responseText);
           // Don't fail on ^DM error (message might not exist yet)
           if ((!result?.success || rejectedByPrinter) && !cmd.startsWith('^DM')) {
-            console.error('[saveMessageContent] Command rejected:', cmd, responseText || result?.error);
+            const reason = responseText || result?.error || 'Unknown error';
+            console.error('[saveMessageContent] Command rejected:', cmd, reason);
+            // Store rejection reason so callers can display it
+            (saveMessageContent as any).__lastError = reason;
             return false;
           }
         }
