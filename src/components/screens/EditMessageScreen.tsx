@@ -111,7 +111,7 @@ type TemplateValue = SingleTemplateValue | MultilineTemplateValue;
 
 interface EditMessageScreenProps {
   messageName: string;
-  onSave: (message: MessageDetails, isNew?: boolean) => void;
+  onSave: (message: MessageDetails, isNew?: boolean) => Promise<MessageDetails | null> | void;
   onCancel: () => void;
   onGetMessageDetails?: (name: string) => Promise<MessageDetails | null>;
   printerTime?: Date | null;
