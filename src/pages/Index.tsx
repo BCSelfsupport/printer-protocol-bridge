@@ -142,10 +142,13 @@ const Index = () => {
   // Runs when the message list changes (from ^LM polling) while connected.
   const syncingRef = useRef(false);
   const syncedMessagesRef = useRef<Set<string>>(new Set());
+  // Track messages recently saved from the editor — skip auto-sync overwrite for these
+  const recentlySavedRef = useRef<Map<string, number>>(new Map());
   
   // Reset synced set when printer changes
   useEffect(() => {
     syncedMessagesRef.current = new Set();
+    recentlySavedRef.current = new Map();
   }, [connectedPrinterId]);
 
   useEffect(() => {
@@ -207,6 +210,15 @@ const Index = () => {
     setActiveMessageContent(cached);
 
     if (!isPreviewScreen || !connectionState.isConnected || !connectedPrinterId) {
+      return;
+    }
+
+    // Skip re-fetching from printer if this message was recently saved from the editor.
+    // The localStorage version is authoritative for 30s after a save to prevent
+    // the printer's (potentially stale/filtered) version from overwriting user edits.
+    const savedAt = recentlySavedRef.current.get(currentMessageName);
+    if (savedAt && Date.now() - savedAt < 30_000) {
+      console.log('[CurrentMessagePreview] skipping fetch — recently saved:', currentMessageName);
       return;
     }
 
@@ -657,6 +669,9 @@ const Index = () => {
               ...details,
               name: targetName,
             });
+            // Mark as recently saved so auto-sync won't overwrite with printer version
+            recentlySavedRef.current.set(targetName, Date.now());
+            syncedMessagesRef.current.add(targetName);
             setCurrentScreen('messages');
             setEditingMessage(null);
             setIsCreatingNewMessage(false);
@@ -778,6 +793,9 @@ const Index = () => {
                 ...details,
                 name: targetName,
               });
+              // Mark as recently saved so auto-sync won't overwrite with printer version
+              recentlySavedRef.current.set(targetName, Date.now());
+              syncedMessagesRef.current.add(targetName);
               setCurrentScreen('messages');
               setEditingMessage(null);
               setIsCreatingNewMessage(false);
