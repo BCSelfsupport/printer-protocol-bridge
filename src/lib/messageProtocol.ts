@@ -286,6 +286,7 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
         elementType: 0,
         elementData: '',
         derivedFieldType,
+        barcodeSubtype: barcodeSubtypeFromField,
       };
       continue;
     }
