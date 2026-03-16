@@ -693,16 +693,16 @@ export function EditMessageScreen({
       const lineIndex = message.fields.length % numLines;
       newY = linePositions[lineIndex];
     } else if (message.fields.length > 0) {
-      // For single-line templates, try to stack fields vertically if font is shorter than template
-      // Enforce minimum 2-dot gap between rows (firmware requirement)
-      const MIN_GAP = 2;
+      // For single-line templates, try to stack fields vertically if font is shorter than template.
+      // Use 1-dot gap to match firmware inter-line spacing (verified via ^LF round-trip).
+      const MIN_GAP = 1;
       const existingYRanges = message.fields.map(f => ({ y: f.y, bottom: f.y + f.height }));
       existingYRanges.sort((a, b) => a.y - b.y);
       
       // Try to place below existing fields first, respecting min gap
       let placed = false;
       for (const range of existingYRanges) {
-        const candidateY = range.bottom + MIN_GAP; // 2-dot gap after previous field
+        const candidateY = range.bottom + MIN_GAP;
         if (candidateY + fontHeight <= 32) {
           // Check no overlap and no gap violation with other fields
           const violates = existingYRanges.some(r => {
@@ -710,7 +710,6 @@ export function EditMessageScreen({
             const gapBelow = r.y - (candidateY + fontHeight);
             if (gapAbove >= 0 && gapAbove < MIN_GAP) return true;
             if (gapBelow >= 0 && gapBelow < MIN_GAP) return true;
-            // Overlapping (same row) is fine
             return false;
           });
           if (!violates) {
