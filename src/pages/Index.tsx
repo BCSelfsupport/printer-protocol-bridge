@@ -172,7 +172,10 @@ const Index = () => {
       for (const msg of messagesToFetch) {
         if (!connectionState.isConnected) break;
         try {
-          const details = await fetchMessageContent(msg.name);
+          const details = await Promise.race([
+            fetchMessageContent(msg.name),
+            new Promise<null>(r => setTimeout(() => r(null), 10000)),
+          ]);
           if (details && details.fields.length > 0) {
             saveMessage(details);
             console.log('[MessageSync] Saved content for', msg.name, ':', details.fields.length, 'fields');
