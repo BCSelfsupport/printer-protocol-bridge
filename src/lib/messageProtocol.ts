@@ -270,6 +270,7 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
         rotation: rMatch ? parseInt(rMatch[1], 10) : 0,
         elementType: 0,
         elementData: '',
+        derivedFieldType,
       };
       continue;
     }
