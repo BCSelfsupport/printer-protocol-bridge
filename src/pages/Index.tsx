@@ -213,6 +213,15 @@ const Index = () => {
       return;
     }
 
+    // Skip re-fetching from printer if this message was recently saved from the editor.
+    // The localStorage version is authoritative for 30s after a save to prevent
+    // the printer's (potentially stale/filtered) version from overwriting user edits.
+    const savedAt = recentlySavedRef.current.get(currentMessageName);
+    if (savedAt && Date.now() - savedAt < 30_000) {
+      console.log('[CurrentMessagePreview] skipping fetch — recently saved:', currentMessageName);
+      return;
+    }
+
     let cancelled = false;
 
     (async () => {
