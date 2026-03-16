@@ -281,7 +281,16 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
     if (elementMatch && currentField) {
       const etMatch = trimmed.match(/\bT\s*:\s*(\d+)/i);
       const edMatch = trimmed.match(/\bD\s*:\s*(.+)/i);
-      if (etMatch) currentField.elementType = parseInt(etMatch[1], 10);
+      if (etMatch) {
+        const etVal = parseInt(etMatch[1], 10);
+        currentField.elementType = etVal;
+        // If field was identified as barcode from Field line T: (derivedFieldType=4),
+        // then Element T: is the barcode encoding subtype, not field type
+        if (currentField.derivedFieldType === 4) {
+          currentField.barcodeSubtype = etVal;
+          currentField.elementType = 4; // force element type to barcode
+        }
+      }
       if (edMatch) currentField.elementData = edMatch[1].trim();
       continue;
     }
