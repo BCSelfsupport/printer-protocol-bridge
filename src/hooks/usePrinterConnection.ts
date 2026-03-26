@@ -6,6 +6,7 @@ import '@/types/electron.d.ts';
 import { parseStatusResponse, parseTemperatureResponse, parseVersionResponse, parseErrorListResponse, ErrorListResult } from '@/lib/printerProtocol';
 import { parseGmResponse, parseLfResponse, buildMessageDetails } from '@/lib/messageProtocol';
 import type { MessageDetails } from '@/components/screens/EditMessageScreen';
+import { getProtocolFieldInfo } from '@/lib/autoCodeProtocol';
 import { parsePumpHours, parsePowerHours } from '@/lib/filterTracker';
 import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
 import { useSerializedPolling, PollingCommand } from '@/hooks/useSerializedPolling';

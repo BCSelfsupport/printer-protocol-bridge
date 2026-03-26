@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MessageCanvas } from '@/components/messages/MessageCanvas';
 import { loadTemplate, templateToMultilineConfig, type ParsedTemplate } from '@/lib/templateParser';
 import { TEMPLATE_LINE_Y_POSITIONS, getValidCanvasYPositions } from '@/lib/messageProtocol';
+import { computeAutoCodeValue } from '@/lib/autoCodeProtocol';
 import { NewFieldDialog } from '@/components/messages/NewFieldDialog';
 import { AutoCodeFieldDialog } from '@/components/messages/AutoCodeFieldDialog';
 import { TimeCodesDialog } from '@/components/messages/TimeCodesDialog';
