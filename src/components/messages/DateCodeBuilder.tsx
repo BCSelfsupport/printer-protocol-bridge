@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ArrowLeft, Plus, X, Trash2, Space, Type } from 'lucide-react';
+import { ArrowLeft, Plus, X, Trash2, Calendar, Clock } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -8,6 +8,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { computeAutoCodeValue } from '@/lib/autoCodeProtocol';
 
 // ── Token definitions ──────────────────────────────────────────────────────
@@ -15,11 +16,8 @@ import { computeAutoCodeValue } from '@/lib/autoCodeProtocol';
 interface TokenDef {
   id: string;
   label: string;
-  /** Short label shown in the composed preview strip */
   chip: string;
-  /** 'date' = ^AD code, 'time' = ^AH code, 'program' = ^AP code, 'literal' = static text */
   category: 'date' | 'time' | 'program' | 'literal';
-  /** If literal, the fixed text value */
   literalValue?: string;
 }
 
@@ -66,10 +64,38 @@ const SEPARATOR_TOKENS: TokenDef[] = [
 // ── Composed token instance ────────────────────────────────────────────────
 
 interface ComposedToken {
-  key: number; // unique key for React
+  key: number;
   def: TokenDef;
-  /** For 'literal_custom', the user-entered text */
   customText?: string;
+}
+
+// ── Offset types ───────────────────────────────────────────────────────────
+
+type OffsetUnit = 'days' | 'weeks' | 'months' | 'years';
+type DateMode = 'manufacturing' | 'expiration';
+
+interface DateOffset {
+  value: number;
+  unit: OffsetUnit;
+}
+
+function applyOffset(date: Date, offset: DateOffset): Date {
+  const result = new Date(date);
+  switch (offset.unit) {
+    case 'days':
+      result.setDate(result.getDate() + offset.value);
+      break;
+    case 'weeks':
+      result.setDate(result.getDate() + offset.value * 7);
+      break;
+    case 'months':
+      result.setMonth(result.getMonth() + offset.value);
+      break;
+    case 'years':
+      result.setFullYear(result.getFullYear() + offset.value);
+      break;
+  }
+  return result;
 }
 
 // ── Quick presets ──────────────────────────────────────────────────────────
@@ -143,6 +169,8 @@ for (const t of [...DATE_TOKENS, ...TIME_TOKENS, ...PROGRAM_TOKENS, ...SEPARATOR
 
 export interface DateCodeBuilderResult {
   tokens: ComposedToken[];
+  dateMode: DateMode;
+  offset?: DateOffset;
 }
 
 interface DateCodeBuilderProps {
@@ -162,11 +190,9 @@ export function DateCodeBuilder({
   const [keyCounter, setKeyCounter] = useState(0);
   const [customText, setCustomText] = useState('');
   const [activeTab, setActiveTab] = useState('presets');
-
-  const nextKey = () => {
-    setKeyCounter((k) => k + 1);
-    return keyCounter;
-  };
+  const [dateMode, setDateMode] = useState<DateMode>('manufacturing');
+  const [offsetValue, setOffsetValue] = useState(0);
+  const [offsetUnit, setOffsetUnit] = useState<OffsetUnit>('days');
 
   const addToken = (def: TokenDef, custom?: string) => {
     const k = keyCounter;
@@ -213,35 +239,51 @@ export function DateCodeBuilder({
     setCustomText('');
   };
 
-  // Live preview using current date/time
-  const preview = useMemo(() => {
+  // Compute the effective date (with offset applied for expiration)
+  const effectiveDate = useMemo(() => {
     const now = new Date();
+    if (dateMode === 'expiration' && offsetValue > 0) {
+      return applyOffset(now, { value: offsetValue, unit: offsetUnit });
+    }
+    return now;
+  }, [dateMode, offsetValue, offsetUnit]);
+
+  // Live preview using effective date
+  const preview = useMemo(() => {
     return tokens.map((t) => {
       if (t.def.category === 'literal') {
         return t.def.literalValue ?? t.customText ?? '';
       }
-      // Compute live value
       if (t.def.category === 'time') {
-        const h = now.getHours().toString().padStart(2, '0');
-        const m = now.getMinutes().toString().padStart(2, '0');
-        const s = now.getSeconds().toString().padStart(2, '0');
+        const h = effectiveDate.getHours().toString().padStart(2, '0');
+        const m = effectiveDate.getMinutes().toString().padStart(2, '0');
+        const s = effectiveDate.getSeconds().toString().padStart(2, '0');
         if (t.def.id === 'HH') return h;
         if (t.def.id === 'MIN') return m;
         if (t.def.id === 'SEC') return s;
         return '';
       }
-      // Date and program tokens: use computeAutoCodeValue
       const fieldType = `date_normal_${t.def.id}`;
-      return computeAutoCodeValue(fieldType, undefined, now) ?? t.def.chip;
+      return computeAutoCodeValue(fieldType, undefined, effectiveDate) ?? t.def.chip;
     }).join('');
-  }, [tokens]);
+  }, [tokens, effectiveDate]);
 
   const handleDone = () => {
     if (tokens.length === 0) return;
-    onAddFields({ tokens });
+    const result: DateCodeBuilderResult = {
+      tokens,
+      dateMode,
+      offset: dateMode === 'expiration' && offsetValue > 0
+        ? { value: offsetValue, unit: offsetUnit }
+        : undefined,
+    };
+    onAddFields(result);
     onOpenChange(false);
     setTokens([]);
     setActiveTab('presets');
+    setDateMode('manufacturing');
+    setOffsetValue(0);
+    setOffsetUnit('days');
   };
 
   const handleBack = () => {
@@ -253,9 +295,18 @@ export function DateCodeBuilder({
     if (!isOpen) {
       setTokens([]);
       setActiveTab('presets');
+      setDateMode('manufacturing');
+      setOffsetValue(0);
+      setOffsetUnit('days');
     }
     onOpenChange(isOpen);
   };
+
+  // Format offset description for preview label
+  const offsetLabel = useMemo(() => {
+    if (dateMode !== 'expiration' || offsetValue <= 0) return null;
+    return `+${offsetValue} ${offsetUnit}`;
+  }, [dateMode, offsetValue, offsetUnit]);
 
   const renderTokenButton = (def: TokenDef) => (
     <button
@@ -281,9 +332,73 @@ export function DateCodeBuilder({
           </DialogTitle>
         </div>
 
-        {/* Live preview strip */}
+        {/* Date Mode Toggle */}
         <div className="px-4 pt-3">
-          <Label className="text-xs text-muted-foreground mb-1 block">Preview</Label>
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            <button
+              onClick={() => setDateMode('manufacturing')}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+                dateMode === 'manufacturing'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted/50 text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              Manufacturing Date
+            </button>
+            <button
+              onClick={() => setDateMode('expiration')}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+                dateMode === 'expiration'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted/50 text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Clock className="w-4 h-4" />
+              Expiration Date
+            </button>
+          </div>
+
+          {/* Offset controls (only for expiration) */}
+          {dateMode === 'expiration' && (
+            <div className="mt-3 flex items-center gap-3 bg-muted/30 border border-border rounded-lg p-3">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">Offset:</Label>
+              <Input
+                type="number"
+                min={0}
+                max={9999}
+                value={offsetValue}
+                onChange={(e) => setOffsetValue(Math.max(0, parseInt(e.target.value) || 0))}
+                className="w-20 h-8 text-center text-sm"
+              />
+              <Select value={offsetUnit} onValueChange={(v) => setOffsetUnit(v as OffsetUnit)}>
+                <SelectTrigger className="w-28 h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="days">Days</SelectItem>
+                  <SelectItem value="weeks">Weeks</SelectItem>
+                  <SelectItem value="months">Months</SelectItem>
+                  <SelectItem value="years">Years</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+
+        {/* Live preview strip */}
+        <div className="px-4 pt-2">
+          <div className="flex items-center gap-2 mb-1">
+            <Label className="text-xs text-muted-foreground">Preview</Label>
+            {dateMode === 'expiration' && (
+              <span className="text-xs text-amber-400 font-medium">
+                {offsetLabel ? `EXP ${offsetLabel}` : 'EXP (set offset above)'}
+              </span>
+            )}
+            {dateMode === 'manufacturing' && (
+              <span className="text-xs text-primary font-medium">MFG (Today)</span>
+            )}
+          </div>
           <div className="bg-black rounded-lg p-3 min-h-[44px] flex items-center overflow-x-auto">
             {tokens.length === 0 ? (
               <span className="text-muted-foreground/50 text-sm italic">
@@ -322,7 +437,7 @@ export function DateCodeBuilder({
         </div>
 
         {/* Tabs: Presets / Build */}
-        <div className="px-4 pb-4 overflow-y-auto" style={{ maxHeight: 'calc(85vh - 200px)' }}>
+        <div className="px-4 pb-4 overflow-y-auto" style={{ maxHeight: 'calc(85vh - 280px)' }}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
             <TabsList className="grid w-full grid-cols-2 mb-3">
               <TabsTrigger value="presets">Quick Presets</TabsTrigger>
