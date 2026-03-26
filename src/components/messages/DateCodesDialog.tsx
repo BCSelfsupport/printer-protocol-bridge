@@ -53,20 +53,20 @@ const YEAR_CODES = [
 
 // Month code options
 const MONTH_CODES = [
-  { id: 'mm', label: 'Numeric Month (MM)' },
-  { id: 'alpha_month', label: 'Alpha Month (JAN, FEB...)' },
-  { id: 'dom', label: 'Day of Month' },
-  { id: 'program_month', label: 'Program Month' },
-  { id: 'program_dom', label: 'Program Day of Month' },
+  { id: 'mm', label: 'Numeric Month (MM)', protocolCode: 6 },
+  { id: 'alpha_month', label: 'Alpha Month (JAN, FEB...)', protocolCode: 7 },
+  { id: 'dom', label: 'Day of Month', protocolCode: 3 },
+  { id: 'program_month', label: 'Program Month', protocolCode: 6 },
+  { id: 'program_dom', label: 'Program Day of Month', protocolCode: 3 },
 ];
 
 // Week code options
 const WEEK_CODES = [
-  { id: 'ww', label: 'Numeric Week (WW)' },
-  { id: 'dow_num', label: 'Numeric Week Day (1-7)' },
-  { id: 'dow_alpha', label: 'Alpha Week Day (MON, TUE...)' },
-  { id: 'program_week', label: 'Program Week' },
-  { id: 'program_dow', label: 'Program Day of Week' },
+  { id: 'ww', label: 'Numeric Week (WW)', protocolCode: 5 },
+  { id: 'dow_num', label: 'Numeric Week Day (1-7)', protocolCode: 1 },
+  { id: 'dow_alpha', label: 'Alpha Week Day (MON, TUE...)', protocolCode: 2 },
+  { id: 'program_week', label: 'Program Week', protocolCode: 5 },
+  { id: 'program_dow', label: 'Program Day of Week', protocolCode: 1 },
 ];
 
 interface DateCodesDialogProps {
