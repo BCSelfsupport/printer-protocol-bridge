@@ -185,6 +185,7 @@ export function EditMessageScreen({
   const [autoCodeDialogOpen, setAutoCodeDialogOpen] = useState(false);
   const [timeCodesDialogOpen, setTimeCodesDialogOpen] = useState(false);
   const [dateCodesDialogOpen, setDateCodesDialogOpen] = useState(false);
+  const [dateBuilderOpen, setDateBuilderOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [advancedSettingsDialogOpen, setAdvancedSettingsDialogOpen] = useState(false);
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
