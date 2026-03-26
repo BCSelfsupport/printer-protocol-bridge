@@ -1144,12 +1144,20 @@ export function EditMessageScreen({
             onAddField={handleAddField}
           />
 
-          {/* Date Codes Dialog */}
+          {/* Date Codes Dialog (legacy — kept for individual code access) */}
           <DateCodesDialog
             open={dateCodesDialogOpen}
             onOpenChange={setDateCodesDialogOpen}
             onBack={() => setAutoCodeDialogOpen(true)}
             onAddField={handleAddField}
+          />
+
+          {/* Date/Time Code Builder (new streamlined flow) */}
+          <DateCodeBuilder
+            open={dateBuilderOpen}
+            onOpenChange={setDateBuilderOpen}
+            onBack={() => setAutoCodeDialogOpen(true)}
+            onAddFields={handleAddDateCodeBuilderFields}
           />
 
           {/* Counter Dialog */}
