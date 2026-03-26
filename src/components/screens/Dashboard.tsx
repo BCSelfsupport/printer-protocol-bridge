@@ -644,25 +644,9 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
             case 'SS': displayData = s; break;
             default: displayData = `${h}:${m}:${s}`;
           }
-        } else if (field.autoCodeFieldType?.startsWith('date_') && field.autoCodeFormat) {
-          const d = new Date(now.getTime());
-          if (field.autoCodeExpiryDays) d.setDate(d.getDate() + field.autoCodeExpiryDays);
-          const day = d.getDate().toString().padStart(2, '0');
-          const month = (d.getMonth() + 1).toString().padStart(2, '0');
-          const yearShort = d.getFullYear().toString().slice(-2);
-          const cleanFmt = field.autoCodeFormat.split('|')[0];
-          switch (cleanFmt) {
-            case 'MM/DD/YY': displayData = `${month}/${day}/${yearShort}`; break;
-            case 'DD/MM/YY': displayData = `${day}/${month}/${yearShort}`; break;
-            case 'YY/MM/DD': displayData = `${yearShort}/${month}/${day}`; break;
-            case 'MM-DD-YY': displayData = `${month}-${day}-${yearShort}`; break;
-            case 'DD-MM-YY': displayData = `${day}-${month}-${yearShort}`; break;
-            case 'YY-MM-DD': displayData = `${yearShort}-${month}-${day}`; break;
-            case 'MMDDYY': displayData = `${month}${day}${yearShort}`; break;
-            case 'DDMMYY': displayData = `${day}${month}${yearShort}`; break;
-            case 'YYMMDD': displayData = `${yearShort}${month}${day}`; break;
-            default: displayData = `${month}/${day}/${yearShort}`;
-          }
+        } else if (field.autoCodeFieldType?.startsWith('date_') || field.autoCodeFieldType?.startsWith('program_')) {
+          const computed = computeAutoCodeValue(field.autoCodeFieldType, field.autoCodeFormat, now, field.autoCodeExpiryDays);
+          if (computed !== null) displayData = computed;
         }
 
         renderText(ctx, displayData, x, y, fontName, effectiveDotSize);

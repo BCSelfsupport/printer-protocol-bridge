@@ -327,25 +327,9 @@ export function EditMessageScreen({
             newData = now.getMinutes().toString().padStart(2, '0');
           } else if (f.autoCodeFieldType === 'program_second') {
             newData = now.getSeconds().toString().padStart(2, '0');
-          } else if (f.autoCodeFieldType.startsWith('date_') && f.autoCodeFormat) {
-            const d = new Date(now.getTime());
-            if (f.autoCodeExpiryDays) d.setDate(d.getDate() + f.autoCodeExpiryDays);
-            const day = d.getDate().toString().padStart(2, '0');
-            const month = (d.getMonth() + 1).toString().padStart(2, '0');
-            const yearShort = d.getFullYear().toString().slice(-2);
-            const cleanFmt = f.autoCodeFormat.split('|')[0];
-            switch (cleanFmt) {
-              case 'MM/DD/YY': newData = `${month}/${day}/${yearShort}`; break;
-              case 'DD/MM/YY': newData = `${day}/${month}/${yearShort}`; break;
-              case 'YY/MM/DD': newData = `${yearShort}/${month}/${day}`; break;
-              case 'MM-DD-YY': newData = `${month}-${day}-${yearShort}`; break;
-              case 'DD-MM-YY': newData = `${day}-${month}-${yearShort}`; break;
-              case 'YY-MM-DD': newData = `${yearShort}-${month}-${day}`; break;
-              case 'MMDDYY': newData = `${month}${day}${yearShort}`; break;
-              case 'DDMMYY': newData = `${day}${month}${yearShort}`; break;
-              case 'YYMMDD': newData = `${yearShort}${month}${day}`; break;
-              default: newData = `${month}/${day}/${yearShort}`;
-            }
+          } else if (f.autoCodeFieldType?.startsWith('date_') || f.autoCodeFieldType === 'program_hour' || f.autoCodeFieldType === 'program_minute' || f.autoCodeFieldType === 'program_second') {
+            const computed = computeAutoCodeValue(f.autoCodeFieldType, f.autoCodeFormat, now, f.autoCodeExpiryDays);
+            if (computed !== null) newData = computed;
           } else if (f.autoCodeFieldType?.startsWith('counter_')) {
             const ctrId = parseInt(f.autoCodeFieldType.split('_')[1]) || 1;
             // Use live counter value if available, otherwise show from advanced settings

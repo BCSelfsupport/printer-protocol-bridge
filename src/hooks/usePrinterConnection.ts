@@ -1943,6 +1943,9 @@ export function usePrinterConnection() {
     bold?: number;
     gap?: number;
     height?: number;
+    autoCodeFieldType?: string;
+    autoCodeFormat?: string;
+    autoCodeExpiryDays?: number;
   }, fieldNum: number, fieldTemplateHeight?: number): string => {
     const fontCode = fontToProtocolCode(field.fontSize);
     
@@ -1951,12 +1954,29 @@ export function usePrinterConnection() {
       case 'userdefine':
         // ^AT n; x; y; s; data
         return `^AT${fieldNum};${field.x};${field.y};${fontCode};${field.data}`;
-      case 'date':
-        // ^AD n; x; y; s; d (default to date type 12 = MM/DD/YY with delimiters)
+      case 'date': {
+        // Use protocol mapping from autoCodeFieldType for correct ^AD/^AE/^AP + type code
+        const info = field.autoCodeFieldType 
+          ? getProtocolFieldInfo(field.autoCodeFieldType, field.autoCodeFormat, field.autoCodeExpiryDays)
+          : null;
+        if (info) {
+          const ext = info.extParams || '';
+          return `^A${info.command.slice(1)}${fieldNum};${field.x};${field.y};${fontCode};${info.typeCode}${ext}`;
+        }
+        // Fallback: ^AD with type 12 (MM/DD/YY with delimiters)
         return `^AD${fieldNum};${field.x};${field.y};${fontCode};12`;
-      case 'time':
-        // ^AH n; x; y; s; t (default to time type 7 = HH:MM:SS with delimiters)
+      }
+      case 'time': {
+        // Use protocol mapping for correct ^AH/^AP + type code
+        const info = field.autoCodeFieldType
+          ? getProtocolFieldInfo(field.autoCodeFieldType, field.autoCodeFormat)
+          : null;
+        if (info) {
+          return `^A${info.command.slice(1)}${fieldNum};${field.x};${field.y};${fontCode};${info.typeCode}`;
+        }
+        // Fallback: ^AH with type 7 (HH:MM:SS with delimiters)
         return `^AH${fieldNum};${field.x};${field.y};${fontCode};7`;
+      }
       case 'counter':
         // ^AC n; x; y; s; c (default to print counter = 0)
         return `^AC${fieldNum};${field.x};${field.y};${fontCode};0`;
