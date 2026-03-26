@@ -520,80 +520,12 @@ export function EditMessageScreen({
     }
   };
 
-  // Helper to format date based on format string
-  const formatDateValue = (format: string, expiryDays: number = 0): string => {
+  // Helper to format date/time values — delegates to shared autoCodeProtocol utility
+  const getAutoCodeDisplayValue = (fieldType: string, format?: string, expiryDays?: number): string => {
     const now = getCurrentTime();
-    // Add expiry days if specified
-    if (expiryDays > 0) {
-      now.setDate(now.getDate() + expiryDays);
-    }
-    
-    const day = now.getDate().toString().padStart(2, '0');
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const yearFull = now.getFullYear().toString();
-    const yearShort = yearFull.slice(-2);
-    
-    // Parse the format - strip any expiry/rollover metadata
-    const cleanFormat = format.split('|')[0];
-    
-    switch (cleanFormat) {
-      case 'MMDDYY': return `${month}${day}${yearShort}`;
-      case 'DDMMYY': return `${day}${month}${yearShort}`;
-      case 'YYMMDD': return `${yearShort}${month}${day}`;
-      case 'MM/DD/YY': return `${month}/${day}/${yearShort}`;
-      case 'DD/MM/YY': return `${day}/${month}/${yearShort}`;
-      case 'YY/MM/DD': return `${yearShort}/${month}/${day}`;
-      case 'MM-DD-YY': return `${month}-${day}-${yearShort}`;
-      case 'DD-MM-YY': return `${day}-${month}-${yearShort}`;
-      case 'YY-MM-DD': return `${yearShort}-${month}-${day}`;
-      case 'MM.DD.YY': return `${month}.${day}.${yearShort}`;
-      case 'DD.MM.YY': return `${day}.${month}.${yearShort}`;
-      default: return `${month}/${day}/${yearShort}`;
-    }
+    const computed = computeAutoCodeValue(fieldType, format, now, expiryDays);
+    return computed ?? fieldType.toUpperCase();
   };
-
-  // Helper to get specific date code value
-  const getDateCodeValue = (codeType: string, expiryDays: number = 0): string => {
-    const now = getCurrentTime();
-    if (expiryDays > 0) {
-      now.setDate(now.getDate() + expiryDays);
-    }
-    
-    const day = now.getDate();
-    const month = now.getMonth() + 1;
-    const year = now.getFullYear();
-    const dayOfYear = Math.floor((now.getTime() - new Date(year, 0, 0).getTime()) / 86400000);
-    const weekNum = Math.ceil(dayOfYear / 7);
-    const dayOfWeek = now.getDay() || 7; // 1-7, Sunday=7
-    const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-    const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-    
-    switch (codeType) {
-      // Year codes
-      case 'yyyy': return year.toString();
-      case 'yy': return year.toString().slice(-2);
-      case 'y': return year.toString().slice(-1);
-      case 'doy': return dayOfYear.toString().padStart(3, '0');
-      case 'julian': return `${year.toString().slice(-2)}${dayOfYear.toString().padStart(3, '0')}`;
-      case 'program_year': return year.toString().slice(-2);
-      case 'program_doy': return dayOfYear.toString().padStart(3, '0');
-      // Month codes
-      case 'mm': return month.toString().padStart(2, '0');
-      case 'alpha_month': return monthNames[month - 1];
-      case 'dom': return day.toString().padStart(2, '0');
-      case 'program_month': return month.toString().padStart(2, '0');
-      case 'program_dom': return day.toString().padStart(2, '0');
-      // Week codes
-      case 'ww': return weekNum.toString().padStart(2, '0');
-      case 'dow_num': return dayOfWeek.toString();
-      case 'dow_alpha': return dayNames[now.getDay()];
-      case 'program_week': return weekNum.toString().padStart(2, '0');
-      case 'program_dow': return dayOfWeek.toString();
-      default: return codeType.toUpperCase();
-    }
-  };
-
-  const handleAddField = (fieldType: string, format?: string) => {
     const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
     
     // Determine field data based on type
