@@ -1315,6 +1315,8 @@ export function EditMessageScreen({
             onOpenChange={setDateBuilderOpen}
             onBack={() => setAutoCodeDialogOpen(true)}
             onAddFields={handleAddDateCodeBuilderFields}
+            allowedFonts={getAllowedFonts().map(f => ({ value: f.value, label: f.label, height: f.height }))}
+            defaultFont={getAllowedFonts()[getAllowedFonts().length - 1]?.value}
           />
 
           {/* Counter Dialog */}
