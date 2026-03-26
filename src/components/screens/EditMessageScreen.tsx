@@ -526,6 +526,8 @@ export function EditMessageScreen({
     const computed = computeAutoCodeValue(fieldType, format, now, expiryDays);
     return computed ?? fieldType.toUpperCase();
   };
+
+  const handleAddField = (fieldType: string, format?: string) => {
     const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
     
     // Determine field data based on type
@@ -541,23 +543,10 @@ export function EditMessageScreen({
     
     if (fieldType === 'time' && format) {
       fieldData = formatTimeValue(format);
-    } else if (fieldType === 'program_hour') {
-      fieldData = getCurrentTime().getHours().toString().padStart(2, '0');
-    } else if (fieldType === 'program_minute') {
-      fieldData = getCurrentTime().getMinutes().toString().padStart(2, '0');
-    } else if (fieldType === 'program_second') {
-      fieldData = getCurrentTime().getSeconds().toString().padStart(2, '0');
+    } else if (fieldType === 'program_hour' || fieldType === 'program_minute' || fieldType === 'program_second') {
+      fieldData = getAutoCodeDisplayValue(fieldType);
     } else if (fieldType.startsWith('date_')) {
-      // Parse date field type: date_normal, date_expiry, date_normal_yyyy, etc.
-      const parts = fieldType.split('_');
-      const dateType = parts[1]; // normal, expiry, rollover, expiry_rollover
-      const codeType = parts.slice(2).join('_'); // yyyy, mm, doy, etc. or empty
-      
-      if (codeType) {
-        // Specific code type (year, month, week codes)
-        fieldData = getDateCodeValue(codeType, expiryDays);
-      } else if (format) {
-        // Full date format
+      fieldData = getAutoCodeDisplayValue(fieldType, format, expiryDays);
         fieldData = formatDateValue(format, expiryDays);
       }
     } else if (fieldType.startsWith('counter_')) {
