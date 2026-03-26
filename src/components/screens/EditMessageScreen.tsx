@@ -547,8 +547,6 @@ export function EditMessageScreen({
       fieldData = getAutoCodeDisplayValue(fieldType);
     } else if (fieldType.startsWith('date_')) {
       fieldData = getAutoCodeDisplayValue(fieldType, format, expiryDays);
-        fieldData = formatDateValue(format, expiryDays);
-      }
     } else if (fieldType.startsWith('counter_')) {
       counterId = parseInt(fieldType.split('_')[1]) || 1;
       const ctrConfig = message.advancedSettings?.counters?.find(c => c.id === counterId);
