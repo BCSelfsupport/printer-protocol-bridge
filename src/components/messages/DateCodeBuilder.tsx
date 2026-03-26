@@ -38,6 +38,8 @@ const TIME_TOKENS: TokenDef[] = [
   { id: 'HH', label: 'Hours (HH)', chip: 'HH', category: 'time' },
   { id: 'MIN', label: 'Minutes (MM)', chip: 'MM', category: 'time' },
   { id: 'SEC', label: 'Seconds (SS)', chip: 'SS', category: 'time' },
+  { id: 'HHMM', label: 'HH:MM', chip: 'HH:MM', category: 'time' },
+  { id: 'HHMMSS', label: 'HH:MM:SS', chip: 'HH:MM:SS', category: 'time' },
 ];
 
 const PROGRAM_TOKENS: TokenDef[] = [
