@@ -140,6 +140,12 @@ export function getProtocolFieldInfo(
     // Individual code type (year, month, week codes)
     const prog = isProgram(codeType);
     const base = baseCodeType(codeType);
+
+    // "julian" (YDDD) is a composite not in the protocol — send as text with computed value
+    if (base === 'julian') {
+      return null; // Caller should fall back to ^AT (text field)
+    }
+
     const typeCode = DATE_CODE_TO_PROTOCOL[base];
     if (typeCode === undefined) return null;
 
