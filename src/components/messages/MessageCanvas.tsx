@@ -316,7 +316,8 @@ export function MessageCanvas({
     // Draw each field with its font size
     fields.forEach((field) => {
       const isSelected = field.id === selectedFieldId;
-      const isBeingDragged = isDragging && field.id === dragFieldId;
+      const isMultiSelected = selectedFieldIds.has(field.id);
+      const isBeingDragged = isDragging && (field.id === dragFieldId || (isMultiSelected && dragFieldId !== null && selectedFieldIds.has(dragFieldId)));
       const isBeingEdited = isEditing && field.id === editingFieldId;
       const fontInfo = getFontInfo(field.fontSize);
       const isBarcode = field.type === 'barcode';
