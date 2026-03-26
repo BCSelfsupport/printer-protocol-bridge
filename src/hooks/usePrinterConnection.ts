@@ -1964,6 +1964,10 @@ export function usePrinterConnection() {
           const ext = info.extParams || '';
           return `^A${info.command.slice(1)}${fieldNum};${field.x};${field.y};${fontCode};${info.typeCode}${ext}`;
         }
+        // Julian Date (YDDD) is a composite not in the protocol — send as text with live data
+        if (field.autoCodeFieldType?.includes('julian')) {
+          return `^AT${fieldNum};${field.x};${field.y};${fontCode};${field.data}`;
+        }
         // Fallback: ^AD with type 12 (MM/DD/YY with delimiters)
         return `^AD${fieldNum};${field.x};${field.y};${fontCode};12`;
       }
