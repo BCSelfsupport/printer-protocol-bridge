@@ -853,6 +853,7 @@ export function EditMessageScreen({
     setSelectedFieldId(newFields[0].id);
   };
 
+  const handleAddUserDefine = (config: UserDefineConfig) => {
     const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
     
     // Create user define field representation
