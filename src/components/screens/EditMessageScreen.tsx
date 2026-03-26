@@ -1132,7 +1132,7 @@ export function EditMessageScreen({
             onBack={() => setNewFieldDialogOpen(true)}
             onSelectType={handleAddField}
             onOpenTimeCodes={() => setTimeCodesDialogOpen(true)}
-            onOpenDateCodes={() => setDateCodesDialogOpen(true)}
+            onOpenDateCodes={() => setDateBuilderOpen(true)}
             onOpenCounter={() => setCounterDialogOpen(true)}
           />
 
