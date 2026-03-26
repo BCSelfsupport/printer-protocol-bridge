@@ -839,6 +839,7 @@ export function EditMessageScreen({
         autoCodeFormat: def.category === 'time'
           ? (def.id === 'HH' ? 'HH' : def.id === 'MIN' ? 'MM' : 'SS')
           : undefined,
+        autoCodeExpiryDays: expiryDays > 0 ? expiryDays : undefined,
         autoNumerals: 0,
       });
       currentX += width;
