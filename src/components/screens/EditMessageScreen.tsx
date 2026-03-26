@@ -13,6 +13,7 @@ import { NewFieldDialog } from '@/components/messages/NewFieldDialog';
 import { AutoCodeFieldDialog } from '@/components/messages/AutoCodeFieldDialog';
 import { TimeCodesDialog } from '@/components/messages/TimeCodesDialog';
 import { DateCodesDialog } from '@/components/messages/DateCodesDialog';
+import { DateCodeBuilder, DateCodeBuilderResult } from '@/components/messages/DateCodeBuilder';
 import { CounterDialog } from '@/components/messages/CounterDialog';
 import { UserDefineDialog, UserDefineConfig } from '@/components/messages/UserDefineDialog';
 import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
@@ -184,6 +185,7 @@ export function EditMessageScreen({
   const [autoCodeDialogOpen, setAutoCodeDialogOpen] = useState(false);
   const [timeCodesDialogOpen, setTimeCodesDialogOpen] = useState(false);
   const [dateCodesDialogOpen, setDateCodesDialogOpen] = useState(false);
+  const [dateBuilderOpen, setDateBuilderOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [advancedSettingsDialogOpen, setAdvancedSettingsDialogOpen] = useState(false);
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
@@ -703,6 +705,154 @@ export function EditMessageScreen({
   };
 
 
+  // Handle Date/Time Code Builder output: create multiple fields from composed tokens
+  // Groups consecutive literal tokens together with their adjacent auto-code tokens,
+  // and creates one field per auto-code token (date/time/program).
+  const handleAddDateCodeBuilderFields = (result: DateCodeBuilderResult) => {
+    const { tokens } = result;
+    if (tokens.length === 0) return;
+
+    const now = new Date();
+    const blockedRows = 32 - message.height;
+    const multiTemplate = message.templateValue?.startsWith('multi-')
+      ? MULTILINE_TEMPLATES.find(t => t.value === message.templateValue)
+      : null;
+
+    // Determine font size
+    let fontHeight: number;
+    let fontSize: string;
+    if (multiTemplate) {
+      const maxH = multiTemplate.dotsPerLine;
+      const fittingFonts = availableFontSizes.filter(fs => fs.height <= maxH);
+      const bestFont = fittingFonts.length > 0 ? fittingFonts[fittingFonts.length - 1] : availableFontSizes[0];
+      fontHeight = bestFont.height;
+      fontSize = bestFont.value;
+    } else {
+      const fittingFonts = availableFontSizes.filter(fs => fs.height <= message.height);
+      const bestFont = fittingFonts.length > 0 ? fittingFonts[fittingFonts.length - 1] : availableFontSizes[0];
+      fontHeight = bestFont.height;
+      fontSize = bestFont.value;
+    }
+
+    // Get valid Y position
+    const validYPositions = getValidCanvasYPositions(
+      message.templateValue ?? String(message.height),
+      message.height,
+      fontHeight,
+    );
+    const occupiedYs = new Set(message.fields.map(f => f.y));
+    let newY = blockedRows;
+    if (validYPositions.length > 0) {
+      const lineIndex = message.fields.length % validYPositions.length;
+      newY = validYPositions[lineIndex];
+      if (occupiedYs.has(newY)) {
+        const unoccupied = validYPositions.find(y => !occupiedYs.has(y));
+        if (unoccupied !== undefined) newY = unoccupied;
+      }
+    }
+
+    // Group tokens into fields: each auto-code token becomes its own field,
+    // consecutive literals get merged with their nearest auto-code token.
+    // For simplicity, generate one field per token group where separators
+    // attach to the preceding auto-code field as a suffix.
+    const newFields: MessageField[] = [];
+    let nextId = Math.max(0, ...message.fields.map(f => f.id)) + 1;
+    let currentX = message.fields.length > 0
+      ? Math.max(...message.fields.filter(f => Math.abs(f.y - newY) < fontHeight).map(f => f.x + f.width), 0)
+      : 0;
+
+    // Build all tokens into individual fields
+    for (const token of tokens) {
+      const def = token.def;
+
+      if (def.category === 'literal') {
+        // Literal/separator → text field
+        const data = def.literalValue ?? token.customText ?? '';
+        const charWidth = fontHeight <= 7 ? 5 : fontHeight <= 9 ? 7 : fontHeight <= 12 ? 8 : 10;
+        const width = data.length * (charWidth + 1);
+        newFields.push({
+          id: nextId++,
+          type: 'text',
+          data,
+          x: currentX,
+          y: newY,
+          width: Math.max(width, 5),
+          height: fontHeight,
+          fontSize,
+          autoNumerals: 0,
+        });
+        currentX += width;
+        continue;
+      }
+
+      // Date/Time/Program token → auto-code field
+      let fieldType: string;
+      let autoCodeFieldType: string;
+      let fieldTypeTag: MessageField['type'];
+
+      if (def.category === 'time') {
+        fieldTypeTag = 'time';
+        if (def.id === 'HH') {
+          autoCodeFieldType = 'program_hour'; // We use AH for live, but store as specific
+          // Actually for a simple time code builder, use time field type
+          autoCodeFieldType = 'time';
+        }
+        // Map time tokens: HH, MIN, SEC
+        const timeFormatMap: Record<string, string> = { 'HH': 'HH', 'MIN': 'MM', 'SEC': 'SS' };
+        autoCodeFieldType = 'time';
+        fieldType = 'time';
+      } else if (def.category === 'program') {
+        fieldTypeTag = 'time'; // program_hour etc are stored as 'time' type
+        if (def.id.includes('hour') || def.id.includes('minute') || def.id.includes('second')) {
+          fieldTypeTag = 'time';
+        } else {
+          fieldTypeTag = 'date';
+        }
+        autoCodeFieldType = def.id;
+        fieldType = def.id;
+      } else {
+        // date category
+        fieldTypeTag = 'date';
+        autoCodeFieldType = `date_normal_${def.id}`;
+        fieldType = `date_normal_${def.id}`;
+      }
+
+      // Compute live preview value
+      const liveValue = computeAutoCodeValue(autoCodeFieldType, undefined, now) ?? def.chip;
+      const charWidth = fontHeight <= 7 ? 5 : fontHeight <= 9 ? 7 : fontHeight <= 12 ? 8 : 10;
+      const width = liveValue.length * (charWidth + 1);
+
+      newFields.push({
+        id: nextId++,
+        type: fieldTypeTag,
+        data: liveValue,
+        x: currentX,
+        y: newY,
+        width: Math.max(width, 10),
+        height: fontHeight,
+        fontSize,
+        autoCodeFieldType,
+        autoCodeFormat: def.category === 'time'
+          ? (def.id === 'HH' ? 'HH' : def.id === 'MIN' ? 'MM' : 'SS')
+          : undefined,
+        autoNumerals: 0,
+      });
+      currentX += width;
+    }
+
+    if (newFields.length === 0) return;
+
+    setMessage((prev) => {
+      const updatedFields = [...prev.fields, ...newFields];
+      return {
+        ...prev,
+        fields: updatedFields,
+        width: autoResizeWidth(updatedFields),
+      };
+    });
+    setSelectedFieldId(newFields[0].id);
+  };
+
   const handleAddUserDefine = (config: UserDefineConfig) => {
     const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
     
@@ -1130,7 +1280,7 @@ export function EditMessageScreen({
             onBack={() => setNewFieldDialogOpen(true)}
             onSelectType={handleAddField}
             onOpenTimeCodes={() => setTimeCodesDialogOpen(true)}
-            onOpenDateCodes={() => setDateCodesDialogOpen(true)}
+            onOpenDateCodes={() => setDateBuilderOpen(true)}
             onOpenCounter={() => setCounterDialogOpen(true)}
           />
 
@@ -1142,12 +1292,20 @@ export function EditMessageScreen({
             onAddField={handleAddField}
           />
 
-          {/* Date Codes Dialog */}
+          {/* Date Codes Dialog (legacy — kept for individual code access) */}
           <DateCodesDialog
             open={dateCodesDialogOpen}
             onOpenChange={setDateCodesDialogOpen}
             onBack={() => setAutoCodeDialogOpen(true)}
             onAddField={handleAddField}
+          />
+
+          {/* Date/Time Code Builder (new streamlined flow) */}
+          <DateCodeBuilder
+            open={dateBuilderOpen}
+            onOpenChange={setDateBuilderOpen}
+            onBack={() => setAutoCodeDialogOpen(true)}
+            onAddFields={handleAddDateCodeBuilderFields}
           />
 
           {/* Counter Dialog */}
