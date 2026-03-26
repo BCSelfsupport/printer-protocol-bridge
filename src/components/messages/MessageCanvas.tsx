@@ -496,7 +496,22 @@ export function MessageCanvas({
         ctx.stroke();
       }
     });
-  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, canvasWidth, multilineTemplate, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible, barcodeImages]);
+
+    // Draw marquee selection rectangle
+    if (isMarquee) {
+      const mx = Math.min(marqueeStart.x, marqueeEnd.x) * DOT_SIZE;
+      const my = Math.min(marqueeStart.y, marqueeEnd.y) * DOT_SIZE;
+      const mw = Math.abs(marqueeEnd.x - marqueeStart.x) * DOT_SIZE;
+      const mh = Math.abs(marqueeEnd.y - marqueeStart.y) * DOT_SIZE;
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.15)';
+      ctx.fillRect(mx, my, mw, mh);
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(mx, my, mw, mh);
+      ctx.setLineDash([]);
+    }
+  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, selectedFieldIds, canvasWidth, multilineTemplate, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible, barcodeImages, isMarquee, marqueeStart, marqueeEnd]);
   
   const getMousePosition = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current?.getBoundingClientRect();
