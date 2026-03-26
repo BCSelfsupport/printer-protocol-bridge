@@ -1041,6 +1041,22 @@ export function EditMessageScreen({
     setFieldError(null);
   };
 
+  const handleFieldsMove = (moves: { fieldId: number; newX: number; newY: number }[]) => {
+    setMessage((prev) => {
+      const moveMap = new Map(moves.map(m => [m.fieldId, m]));
+      const updatedFields = prev.fields.map((f) => {
+        const move = moveMap.get(f.id);
+        return move ? { ...f, x: move.newX, y: move.newY } : f;
+      });
+      return {
+        ...prev,
+        fields: updatedFields,
+        width: autoResizeWidth(updatedFields),
+      };
+    });
+    setFieldError(null);
+  };
+
   const handleFieldError = (fieldId: number, error: string | null) => {
     setFieldError(error);
   };
