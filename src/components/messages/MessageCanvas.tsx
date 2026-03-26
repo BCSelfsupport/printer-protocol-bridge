@@ -747,9 +747,17 @@ export function MessageCanvas({
     return { x, y };
   }, []);
 
-  // Document-level mouse move/up for reliable desktop drag
+  // Document-level mouse move/up for reliable desktop drag + marquee
   useEffect(() => {
     const handleDocMouseMove = (e: MouseEvent) => {
+      // Marquee selection mode
+      if (isMarquee) {
+        const pos = getMousePositionFromEvent(e);
+        setMarqueeEnd(pos);
+        e.preventDefault();
+        return;
+      }
+
       if (!isDragging || dragFieldId === null || isLongPressActive) return;
 
       const draggedField = fields.find(f => f.id === dragFieldId);
@@ -774,34 +782,91 @@ export function MessageCanvas({
     };
 
     const handleDocMouseUp = (e: MouseEvent) => {
+      // Marquee selection complete
+      if (isMarquee) {
+        const pos = getMousePositionFromEvent(e);
+        const x1 = Math.min(marqueeStart.x, pos.x);
+        const y1 = Math.min(marqueeStart.y, pos.y);
+        const x2 = Math.max(marqueeStart.x, pos.x);
+        const y2 = Math.max(marqueeStart.y, pos.y);
+
+        // Find all fields within the marquee rectangle
+        const selected = new Set<number>();
+        fields.forEach((field) => {
+          const fontInfo = getFontInfo(field.fontSize);
+          const isBarcode = field.type === 'barcode';
+          const fw = isBarcode ? field.width : Math.max(field.data.length, 3) * (fontInfo.charWidth + 1);
+          const fh = isBarcode ? (field.height || templateHeight) : fontInfo.height;
+          // Check if field overlaps with marquee
+          if (field.x < x2 && field.x + fw > x1 && field.y < y2 && field.y + fh > y1) {
+            selected.add(field.id);
+          }
+        });
+
+        if (selected.size > 0) {
+          onSelectionChange?.(selected);
+          // Set the first selected field as primary
+          const firstId = [...selected][0];
+          onCanvasClick?.(0, 0, firstId);
+        }
+
+        setIsMarquee(false);
+        return;
+      }
+
       if (!isDragging || dragFieldId === null || isLongPressActive) return;
 
       if (mouseDragMovedRef.current) {
-        const draggedField = fields.find(f => f.id === dragFieldId);
-        if (draggedField && onFieldMove) {
-          const fontInfo = getFontInfo(draggedField.fontSize);
-
-          if (multilineTemplate) {
-            const lineInfo = getLineForY(dragPosition.y);
-            if (lineInfo && fontInfo.height > lineInfo.lineHeight) {
-              onFieldError?.(dragFieldId, `Font "${fontInfo.height}px" is too tall for this line (max ${lineInfo.lineHeight}px)`);
+        const isGroupDrag = selectedFieldIds.size > 1 && selectedFieldIds.has(dragFieldId);
+        
+        if (isGroupDrag && onFieldsMove) {
+          // Group drag — move all selected fields
+          const draggedField = fields.find(f => f.id === dragFieldId);
+          if (draggedField) {
+            const moves: { fieldId: number; newX: number; newY: number }[] = [];
+            moves.push({ fieldId: dragFieldId, newX: dragPosition.x, newY: dragPosition.y });
+            
+            for (const fid of selectedFieldIds) {
+              if (fid === dragFieldId) continue;
+              const offset = groupDragOffsetsRef.current.get(fid);
+              if (offset) {
+                moves.push({ 
+                  fieldId: fid, 
+                  newX: dragPosition.x + offset.dx, 
+                  newY: dragPosition.y + offset.dy 
+                });
+              }
+            }
+            onFieldsMove(moves);
+          }
+        } else {
+          // Single field drag
+          const draggedField = fields.find(f => f.id === dragFieldId);
+          if (draggedField && onFieldMove) {
+            const fontInfo = getFontInfo(draggedField.fontSize);
+            if (multilineTemplate) {
+              const lineInfo = getLineForY(dragPosition.y);
+              if (lineInfo && fontInfo.height > lineInfo.lineHeight) {
+                onFieldError?.(dragFieldId, `Font "${fontInfo.height}px" is too tall for this line (max ${lineInfo.lineHeight}px)`);
+              } else {
+                onFieldError?.(dragFieldId, null);
+                onFieldMove(dragFieldId, dragPosition.x, dragPosition.y);
+              }
             } else {
-              onFieldError?.(dragFieldId, null);
               onFieldMove(dragFieldId, dragPosition.x, dragPosition.y);
             }
-          } else {
-            onFieldMove(dragFieldId, dragPosition.x, dragPosition.y);
           }
         }
       }
 
       setIsDragging(false);
       setDragFieldId(null);
+      groupDragOffsetsRef.current.clear();
       mouseDragMovedRef.current = false;
       mouseDragFieldRef.current = null;
     };
 
-    if (isDragging && !isLongPressActive) {
+    if (isDragging && !isLongPressActive || isMarquee) {
       document.addEventListener('mousemove', handleDocMouseMove);
       document.addEventListener('mouseup', handleDocMouseUp);
     }
@@ -810,7 +875,7 @@ export function MessageCanvas({
       document.removeEventListener('mousemove', handleDocMouseMove);
       document.removeEventListener('mouseup', handleDocMouseUp);
     };
-  }, [isDragging, dragFieldId, isLongPressActive, fields, blockedRows, multilineTemplate, dragPosition, onFieldMove, onFieldError, getMousePositionFromEvent]);
+  }, [isDragging, dragFieldId, isLongPressActive, fields, blockedRows, multilineTemplate, dragPosition, onFieldMove, onFieldsMove, onFieldError, getMousePositionFromEvent, isMarquee, marqueeStart, selectedFieldIds, onSelectionChange, onCanvasClick, templateHeight]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // If currently editing, stop editing on click elsewhere
@@ -841,8 +906,9 @@ export function MessageCanvas({
     const pos = getMousePosition(e);
     const field = findFieldAtPosition(pos.x, pos.y);
     
-    
     if (field) {
+      const isGroupDrag = selectedFieldIds.size > 1 && selectedFieldIds.has(field.id);
+      
       mouseDragMovedRef.current = false;
       mouseDragFieldRef.current = field.id;
       mouseDragOffsetRef.current = { x: pos.x - field.x, y: pos.y - field.y };
@@ -850,10 +916,34 @@ export function MessageCanvas({
       setDragFieldId(field.id);
       setDragOffset({ x: pos.x - field.x, y: pos.y - field.y });
       setDragPosition({ x: field.x, y: field.y });
-      onCanvasClick?.(pos.x, pos.y, field.id); // Also select the field
+      
+      // Compute group drag offsets (other selected fields relative to dragged field)
+      if (isGroupDrag) {
+        const offsets = new Map<number, { dx: number; dy: number }>();
+        for (const fid of selectedFieldIds) {
+          if (fid === field.id) continue;
+          const f = fields.find(ff => ff.id === fid);
+          if (f) {
+            offsets.set(fid, { dx: f.x - field.x, dy: f.y - field.y });
+          }
+        }
+        groupDragOffsetsRef.current = offsets;
+      } else {
+        groupDragOffsetsRef.current.clear();
+        // Single click on a field — clear multi-selection
+        onSelectionChange?.(new Set([field.id]));
+      }
+      
+      onCanvasClick?.(pos.x, pos.y, field.id);
       e.preventDefault();
     } else {
+      // Click on empty space — start marquee selection
+      onSelectionChange?.(new Set());
+      setIsMarquee(true);
+      setMarqueeStart(pos);
+      setMarqueeEnd(pos);
       onCanvasClick?.(pos.x, pos.y);
+      e.preventDefault();
     }
   };
 
