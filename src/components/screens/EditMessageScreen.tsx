@@ -709,10 +709,19 @@ export function EditMessageScreen({
   // Groups consecutive literal tokens together with their adjacent auto-code tokens,
   // and creates one field per auto-code token (date/time/program).
   const handleAddDateCodeBuilderFields = (result: DateCodeBuilderResult) => {
-    const { tokens } = result;
+    const { tokens, dateMode, offset } = result;
     if (tokens.length === 0) return;
 
-    const now = new Date();
+    // Apply offset for expiration dates
+    let now = new Date();
+    if (dateMode === 'expiration' && offset) {
+      switch (offset.unit) {
+        case 'days': now.setDate(now.getDate() + offset.value); break;
+        case 'weeks': now.setDate(now.getDate() + offset.value * 7); break;
+        case 'months': now.setMonth(now.getMonth() + offset.value); break;
+        case 'years': now.setFullYear(now.getFullYear() + offset.value); break;
+      }
+    }
     const blockedRows = 32 - message.height;
     const multiTemplate = message.templateValue?.startsWith('multi-')
       ? MULTILINE_TEMPLATES.find(t => t.value === message.templateValue)
