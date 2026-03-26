@@ -294,6 +294,8 @@ export function DateCodeBuilder({
         if (t.def.id === 'HH') return h;
         if (t.def.id === 'MIN') return m;
         if (t.def.id === 'SEC') return s;
+        if (t.def.id === 'HHMM') return `${h}:${m}`;
+        if (t.def.id === 'HHMMSS') return `${h}:${m}:${s}`;
         return '';
       }
       const fieldType = `date_normal_${t.def.id}`;
