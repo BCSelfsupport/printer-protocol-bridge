@@ -1093,6 +1093,7 @@ export function EditMessageScreen({
                 fields={message.fields}
                 onCanvasClick={handleCanvasClick}
                 onFieldMove={handleFieldMove}
+                onFieldsMove={handleFieldsMove}
                 onFieldDataChange={(fieldId, newData) => {
                   setMessage((prev) => ({
                     ...prev,
@@ -1103,6 +1104,8 @@ export function EditMessageScreen({
                 }}
                 onFieldError={handleFieldError}
                 selectedFieldId={selectedFieldId}
+                selectedFieldIds={selectedFieldIds}
+                onSelectionChange={setSelectedFieldIds}
                 multilineTemplate={currentMultilineTemplate ? {
                   lines: currentMultilineTemplate.lines,
                   dotsPerLine: currentMultilineTemplate.dotsPerLine,
