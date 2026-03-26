@@ -838,7 +838,7 @@ export function EditMessageScreen({
         fontSize,
         autoCodeFieldType,
         autoCodeFormat: def.category === 'time'
-          ? (def.id === 'HH' ? 'HH' : def.id === 'MIN' ? 'MM' : 'SS')
+          ? ({ 'HH': 'HH', 'MIN': 'MM', 'SEC': 'SS', 'HHMM': 'HH:MM', 'HHMMSS': 'HH:MM:SS' }[def.id] ?? 'HH:MM:SS')
           : undefined,
         autoCodeExpiryDays: expiryDays > 0 ? expiryDays : undefined,
         autoNumerals: 0,
