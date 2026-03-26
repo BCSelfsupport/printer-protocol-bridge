@@ -712,15 +712,21 @@ export function EditMessageScreen({
     const { tokens, dateMode, offset, selectedFont } = result;
     if (tokens.length === 0) return;
 
-    // Apply offset for expiration dates
-    let now = new Date();
-    if (dateMode === 'expiration' && offset) {
+    // Convert offset to days for autoCodeExpiryDays storage
+    let expiryDays = 0;
+    if (dateMode === 'expiration' && offset && offset.value > 0) {
       switch (offset.unit) {
-        case 'days': now.setDate(now.getDate() + offset.value); break;
-        case 'weeks': now.setDate(now.getDate() + offset.value * 7); break;
-        case 'months': now.setMonth(now.getMonth() + offset.value); break;
-        case 'years': now.setFullYear(now.getFullYear() + offset.value); break;
+        case 'days': expiryDays = offset.value; break;
+        case 'weeks': expiryDays = offset.value * 7; break;
+        case 'months': expiryDays = offset.value * 30; break;  // approximate
+        case 'years': expiryDays = offset.value * 365; break;  // approximate
       }
+    }
+
+    // Apply offset for initial preview computation
+    const now = new Date();
+    if (expiryDays > 0) {
+      now.setDate(now.getDate() + expiryDays);
     }
     const blockedRows = 32 - message.height;
     const multiTemplate = message.templateValue?.startsWith('multi-')
@@ -833,6 +839,7 @@ export function EditMessageScreen({
         autoCodeFormat: def.category === 'time'
           ? (def.id === 'HH' ? 'HH' : def.id === 'MIN' ? 'MM' : 'SS')
           : undefined,
+        autoCodeExpiryDays: expiryDays > 0 ? expiryDays : undefined,
         autoNumerals: 0,
       });
       currentX += width;
