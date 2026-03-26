@@ -178,6 +178,7 @@ export function EditMessageScreen({
   const [loading, setLoading] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(startEmpty && !preset ? null : 1);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [selectedFieldIds, setSelectedFieldIds] = useState<Set<number>>(new Set());
   const [loadedTemplate, setLoadedTemplate] = useState<ParsedTemplate | null>(null);
   const [saveAsDialogOpen, setSaveAsDialogOpen] = useState(false);
   const [saveAsName, setSaveAsName] = useState('');
@@ -1040,6 +1041,22 @@ export function EditMessageScreen({
     setFieldError(null);
   };
 
+  const handleFieldsMove = (moves: { fieldId: number; newX: number; newY: number }[]) => {
+    setMessage((prev) => {
+      const moveMap = new Map(moves.map(m => [m.fieldId, m]));
+      const updatedFields = prev.fields.map((f) => {
+        const move = moveMap.get(f.id);
+        return move ? { ...f, x: move.newX, y: move.newY } : f;
+      });
+      return {
+        ...prev,
+        fields: updatedFields,
+        width: autoResizeWidth(updatedFields),
+      };
+    });
+    setFieldError(null);
+  };
+
   const handleFieldError = (fieldId: number, error: string | null) => {
     setFieldError(error);
   };
@@ -1076,6 +1093,7 @@ export function EditMessageScreen({
                 fields={message.fields}
                 onCanvasClick={handleCanvasClick}
                 onFieldMove={handleFieldMove}
+                onFieldsMove={handleFieldsMove}
                 onFieldDataChange={(fieldId, newData) => {
                   setMessage((prev) => ({
                     ...prev,
@@ -1086,13 +1104,15 @@ export function EditMessageScreen({
                 }}
                 onFieldError={handleFieldError}
                 selectedFieldId={selectedFieldId}
+                selectedFieldIds={selectedFieldIds}
+                onSelectionChange={setSelectedFieldIds}
                 multilineTemplate={currentMultilineTemplate ? {
                   lines: currentMultilineTemplate.lines,
                   dotsPerLine: currentMultilineTemplate.dotsPerLine,
                 } : null}
                 onScrollLockChange={setIsCanvasScrollLocked}
               />
-              <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click a field to edit text inline</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click to edit • Click+drag empty space to select multiple fields</p>
             </div>
 
             {/* Field Settings Panel - Per-field settings like manual page 49-50 */}

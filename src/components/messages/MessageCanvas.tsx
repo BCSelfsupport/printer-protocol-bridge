@@ -32,10 +32,16 @@ interface MessageCanvasProps {
   onCanvasClick?: (x: number, y: number, fieldId?: number) => void;
   /** Callback when a field is moved */
   onFieldMove?: (fieldId: number, newX: number, newY: number) => void;
+  /** Callback when multiple fields are moved together (group drag) */
+  onFieldsMove?: (moves: { fieldId: number; newX: number; newY: number }[]) => void;
   /** Callback when field text is changed */
   onFieldDataChange?: (fieldId: number, newData: string) => void;
-  /** Selected field ID */
+  /** Selected field ID (primary selection for settings panel) */
   selectedFieldId?: number | null;
+  /** Set of all selected field IDs (for multi-select) */
+  selectedFieldIds?: Set<number>;
+  /** Callback when multi-selection changes */
+  onSelectionChange?: (fieldIds: Set<number>) => void;
   /** Multi-line template info (if applicable) */
   multilineTemplate?: MultilineTemplate | null;
   /** Callback for field errors */
@@ -54,8 +60,11 @@ export function MessageCanvas({
   fields = [],
   onCanvasClick,
   onFieldMove,
+  onFieldsMove,
   onFieldDataChange,
   selectedFieldId,
+  selectedFieldIds = new Set(),
+  onSelectionChange,
   multilineTemplate,
   onFieldError,
   onScrollLockChange,
@@ -75,6 +84,13 @@ export function MessageCanvas({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   
+  // Marquee selection state
+  const [isMarquee, setIsMarquee] = useState(false);
+  const [marqueeStart, setMarqueeStart] = useState({ x: 0, y: 0 });
+  const [marqueeEnd, setMarqueeEnd] = useState({ x: 0, y: 0 });
+  
+  // Group drag offsets (delta from primary drag field)
+  const groupDragOffsetsRef = useRef<Map<number, { dx: number; dy: number }>>(new Map());
   // Horizontal scroll container (native swipe-to-scroll on mobile)
   const scrollerRef = useRef<HTMLDivElement>(null);
   const scrollLeftDotsRef = useRef(0);
@@ -300,15 +316,24 @@ export function MessageCanvas({
     // Draw each field with its font size
     fields.forEach((field) => {
       const isSelected = field.id === selectedFieldId;
-      const isBeingDragged = isDragging && field.id === dragFieldId;
+      const isMultiSelected = selectedFieldIds.has(field.id);
+      const isBeingDragged = isDragging && (field.id === dragFieldId || (isMultiSelected && dragFieldId !== null && selectedFieldIds.has(dragFieldId)));
       const isBeingEdited = isEditing && field.id === editingFieldId;
       const fontInfo = getFontInfo(field.fontSize);
       const isBarcode = field.type === 'barcode';
       
 
       // Use drag position if being dragged, otherwise use field position
-      const displayX = isBeingDragged ? dragPosition.x : field.x;
-      const displayY = isBeingDragged ? dragPosition.y : field.y;
+      let displayX = field.x;
+      let displayY = field.y;
+      if (isBeingDragged && field.id === dragFieldId) {
+        displayX = dragPosition.x;
+        displayY = dragPosition.y;
+      } else if (isBeingDragged && groupDragOffsetsRef.current.has(field.id)) {
+        const offset = groupDragOffsetsRef.current.get(field.id)!;
+        displayX = dragPosition.x + offset.dx;
+        displayY = dragPosition.y + offset.dy;
+      }
 
       // Canvas is physically wide and is clipped by the scroll container, so don't offset drawing.
       let fieldX = displayX * DOT_SIZE;
@@ -361,17 +386,23 @@ export function MessageCanvas({
         ctx.setLineDash([]);
       }
       // Draw selection highlight (including when editing) - always show for empty fields
-      else if (isSelected || isBeingEdited || field.data.length === 0) {
+      else if (isSelected || isMultiSelected || isBeingEdited || field.data.length === 0) {
         const highlightColor =
           isBeingEdited
             ? 'rgba(255, 220, 100, 0.4)'
             : field.data.length === 0
               ? 'rgba(200, 200, 200, 0.5)'
-               : isBarcode
-                ? 'rgba(100, 200, 255, 0.3)'
-                : 'rgba(255, 193, 7, 0.3)';
+              : isMultiSelected && !isSelected
+                ? 'rgba(100, 200, 100, 0.25)'
+                : isBarcode
+                  ? 'rgba(100, 200, 255, 0.3)'
+                  : 'rgba(255, 193, 7, 0.3)';
         const borderColor =
-          isBeingEdited ? '#ff6600' : field.data.length === 0 ? '#999999' : isBarcode ? '#0088cc' : '#ffc107';
+          isBeingEdited ? '#ff6600' 
+          : field.data.length === 0 ? '#999999' 
+          : isMultiSelected && !isSelected ? '#22c55e'
+          : isBarcode ? '#0088cc' 
+          : '#ffc107';
         ctx.fillStyle = highlightColor;
         ctx.fillRect(fieldX, fieldY, fieldW, fieldH);
         ctx.strokeStyle = borderColor;
@@ -465,7 +496,22 @@ export function MessageCanvas({
         ctx.stroke();
       }
     });
-  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, canvasWidth, multilineTemplate, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible, barcodeImages]);
+
+    // Draw marquee selection rectangle
+    if (isMarquee) {
+      const mx = Math.min(marqueeStart.x, marqueeEnd.x) * DOT_SIZE;
+      const my = Math.min(marqueeStart.y, marqueeEnd.y) * DOT_SIZE;
+      const mw = Math.abs(marqueeEnd.x - marqueeStart.x) * DOT_SIZE;
+      const mh = Math.abs(marqueeEnd.y - marqueeStart.y) * DOT_SIZE;
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.15)';
+      ctx.fillRect(mx, my, mw, mh);
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(mx, my, mw, mh);
+      ctx.setLineDash([]);
+    }
+  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, selectedFieldIds, canvasWidth, multilineTemplate, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible, barcodeImages, isMarquee, marqueeStart, marqueeEnd]);
   
   const getMousePosition = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -701,9 +747,17 @@ export function MessageCanvas({
     return { x, y };
   }, []);
 
-  // Document-level mouse move/up for reliable desktop drag
+  // Document-level mouse move/up for reliable desktop drag + marquee
   useEffect(() => {
     const handleDocMouseMove = (e: MouseEvent) => {
+      // Marquee selection mode
+      if (isMarquee) {
+        const pos = getMousePositionFromEvent(e);
+        setMarqueeEnd(pos);
+        e.preventDefault();
+        return;
+      }
+
       if (!isDragging || dragFieldId === null || isLongPressActive) return;
 
       const draggedField = fields.find(f => f.id === dragFieldId);
@@ -728,34 +782,91 @@ export function MessageCanvas({
     };
 
     const handleDocMouseUp = (e: MouseEvent) => {
+      // Marquee selection complete
+      if (isMarquee) {
+        const pos = getMousePositionFromEvent(e);
+        const x1 = Math.min(marqueeStart.x, pos.x);
+        const y1 = Math.min(marqueeStart.y, pos.y);
+        const x2 = Math.max(marqueeStart.x, pos.x);
+        const y2 = Math.max(marqueeStart.y, pos.y);
+
+        // Find all fields within the marquee rectangle
+        const selected = new Set<number>();
+        fields.forEach((field) => {
+          const fontInfo = getFontInfo(field.fontSize);
+          const isBarcode = field.type === 'barcode';
+          const fw = isBarcode ? field.width : Math.max(field.data.length, 3) * (fontInfo.charWidth + 1);
+          const fh = isBarcode ? (field.height || templateHeight) : fontInfo.height;
+          // Check if field overlaps with marquee
+          if (field.x < x2 && field.x + fw > x1 && field.y < y2 && field.y + fh > y1) {
+            selected.add(field.id);
+          }
+        });
+
+        if (selected.size > 0) {
+          onSelectionChange?.(selected);
+          // Set the first selected field as primary
+          const firstId = [...selected][0];
+          onCanvasClick?.(0, 0, firstId);
+        }
+
+        setIsMarquee(false);
+        return;
+      }
+
       if (!isDragging || dragFieldId === null || isLongPressActive) return;
 
       if (mouseDragMovedRef.current) {
-        const draggedField = fields.find(f => f.id === dragFieldId);
-        if (draggedField && onFieldMove) {
-          const fontInfo = getFontInfo(draggedField.fontSize);
-
-          if (multilineTemplate) {
-            const lineInfo = getLineForY(dragPosition.y);
-            if (lineInfo && fontInfo.height > lineInfo.lineHeight) {
-              onFieldError?.(dragFieldId, `Font "${fontInfo.height}px" is too tall for this line (max ${lineInfo.lineHeight}px)`);
+        const isGroupDrag = selectedFieldIds.size > 1 && selectedFieldIds.has(dragFieldId);
+        
+        if (isGroupDrag && onFieldsMove) {
+          // Group drag — move all selected fields
+          const draggedField = fields.find(f => f.id === dragFieldId);
+          if (draggedField) {
+            const moves: { fieldId: number; newX: number; newY: number }[] = [];
+            moves.push({ fieldId: dragFieldId, newX: dragPosition.x, newY: dragPosition.y });
+            
+            for (const fid of selectedFieldIds) {
+              if (fid === dragFieldId) continue;
+              const offset = groupDragOffsetsRef.current.get(fid);
+              if (offset) {
+                moves.push({ 
+                  fieldId: fid, 
+                  newX: dragPosition.x + offset.dx, 
+                  newY: dragPosition.y + offset.dy 
+                });
+              }
+            }
+            onFieldsMove(moves);
+          }
+        } else {
+          // Single field drag
+          const draggedField = fields.find(f => f.id === dragFieldId);
+          if (draggedField && onFieldMove) {
+            const fontInfo = getFontInfo(draggedField.fontSize);
+            if (multilineTemplate) {
+              const lineInfo = getLineForY(dragPosition.y);
+              if (lineInfo && fontInfo.height > lineInfo.lineHeight) {
+                onFieldError?.(dragFieldId, `Font "${fontInfo.height}px" is too tall for this line (max ${lineInfo.lineHeight}px)`);
+              } else {
+                onFieldError?.(dragFieldId, null);
+                onFieldMove(dragFieldId, dragPosition.x, dragPosition.y);
+              }
             } else {
-              onFieldError?.(dragFieldId, null);
               onFieldMove(dragFieldId, dragPosition.x, dragPosition.y);
             }
-          } else {
-            onFieldMove(dragFieldId, dragPosition.x, dragPosition.y);
           }
         }
       }
 
       setIsDragging(false);
       setDragFieldId(null);
+      groupDragOffsetsRef.current.clear();
       mouseDragMovedRef.current = false;
       mouseDragFieldRef.current = null;
     };
 
-    if (isDragging && !isLongPressActive) {
+    if (isDragging && !isLongPressActive || isMarquee) {
       document.addEventListener('mousemove', handleDocMouseMove);
       document.addEventListener('mouseup', handleDocMouseUp);
     }
@@ -764,7 +875,7 @@ export function MessageCanvas({
       document.removeEventListener('mousemove', handleDocMouseMove);
       document.removeEventListener('mouseup', handleDocMouseUp);
     };
-  }, [isDragging, dragFieldId, isLongPressActive, fields, blockedRows, multilineTemplate, dragPosition, onFieldMove, onFieldError, getMousePositionFromEvent]);
+  }, [isDragging, dragFieldId, isLongPressActive, fields, blockedRows, multilineTemplate, dragPosition, onFieldMove, onFieldsMove, onFieldError, getMousePositionFromEvent, isMarquee, marqueeStart, selectedFieldIds, onSelectionChange, onCanvasClick, templateHeight]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     // If currently editing, stop editing on click elsewhere
@@ -795,8 +906,9 @@ export function MessageCanvas({
     const pos = getMousePosition(e);
     const field = findFieldAtPosition(pos.x, pos.y);
     
-    
     if (field) {
+      const isGroupDrag = selectedFieldIds.size > 1 && selectedFieldIds.has(field.id);
+      
       mouseDragMovedRef.current = false;
       mouseDragFieldRef.current = field.id;
       mouseDragOffsetRef.current = { x: pos.x - field.x, y: pos.y - field.y };
@@ -804,10 +916,34 @@ export function MessageCanvas({
       setDragFieldId(field.id);
       setDragOffset({ x: pos.x - field.x, y: pos.y - field.y });
       setDragPosition({ x: field.x, y: field.y });
-      onCanvasClick?.(pos.x, pos.y, field.id); // Also select the field
+      
+      // Compute group drag offsets (other selected fields relative to dragged field)
+      if (isGroupDrag) {
+        const offsets = new Map<number, { dx: number; dy: number }>();
+        for (const fid of selectedFieldIds) {
+          if (fid === field.id) continue;
+          const f = fields.find(ff => ff.id === fid);
+          if (f) {
+            offsets.set(fid, { dx: f.x - field.x, dy: f.y - field.y });
+          }
+        }
+        groupDragOffsetsRef.current = offsets;
+      } else {
+        groupDragOffsetsRef.current.clear();
+        // Single click on a field — clear multi-selection
+        onSelectionChange?.(new Set([field.id]));
+      }
+      
+      onCanvasClick?.(pos.x, pos.y, field.id);
       e.preventDefault();
     } else {
+      // Click on empty space — start marquee selection
+      onSelectionChange?.(new Set());
+      setIsMarquee(true);
+      setMarqueeStart(pos);
+      setMarqueeEnd(pos);
       onCanvasClick?.(pos.x, pos.y);
+      e.preventDefault();
     }
   };
 
