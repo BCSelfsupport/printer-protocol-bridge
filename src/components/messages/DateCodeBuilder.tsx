@@ -79,6 +79,14 @@ interface DateOffset {
   unit: OffsetUnit;
 }
 
+// ── Font option type ───────────────────────────────────────────────────────
+
+export interface FontOption {
+  value: string;
+  label: string;
+  height: number;
+}
+
 function applyOffset(date: Date, offset: DateOffset): Date {
   const result = new Date(date);
   switch (offset.unit) {
@@ -171,6 +179,7 @@ export interface DateCodeBuilderResult {
   tokens: ComposedToken[];
   dateMode: DateMode;
   offset?: DateOffset;
+  selectedFont: string;
 }
 
 interface DateCodeBuilderProps {
@@ -178,6 +187,10 @@ interface DateCodeBuilderProps {
   onOpenChange: (open: boolean) => void;
   onBack: () => void;
   onAddFields: (result: DateCodeBuilderResult) => void;
+  /** Available fonts filtered for current template */
+  allowedFonts: FontOption[];
+  /** Default font to pre-select */
+  defaultFont?: string;
 }
 
 export function DateCodeBuilder({
@@ -185,6 +198,8 @@ export function DateCodeBuilder({
   onOpenChange,
   onBack,
   onAddFields,
+  allowedFonts,
+  defaultFont,
 }: DateCodeBuilderProps) {
   const [tokens, setTokens] = useState<ComposedToken[]>([]);
   const [keyCounter, setKeyCounter] = useState(0);
@@ -193,6 +208,24 @@ export function DateCodeBuilder({
   const [dateMode, setDateMode] = useState<DateMode>('manufacturing');
   const [offsetValue, setOffsetValue] = useState(0);
   const [offsetUnit, setOffsetUnit] = useState<OffsetUnit>('days');
+  const [selectedFont, setSelectedFont] = useState(defaultFont || allowedFonts[allowedFonts.length - 1]?.value || '');
+
+  // Reset selected font when dialog opens with new defaults
+  const handleOpen = (isOpen: boolean) => {
+    if (isOpen && defaultFont) {
+      setSelectedFont(defaultFont);
+    }
+    if (!isOpen) {
+      setTokens([]);
+      setActiveTab('presets');
+      setDateMode('manufacturing');
+      setOffsetValue(0);
+      setOffsetUnit('days');
+    }
+    onOpenChange(isOpen);
+  };
+
+  const selectedFontInfo = allowedFonts.find(f => f.value === selectedFont);
 
   const addToken = (def: TokenDef, custom?: string) => {
     const k = keyCounter;
@@ -239,7 +272,6 @@ export function DateCodeBuilder({
     setCustomText('');
   };
 
-  // Compute the effective date (with offset applied for expiration)
   const effectiveDate = useMemo(() => {
     const now = new Date();
     if (dateMode === 'expiration' && offsetValue > 0) {
@@ -248,7 +280,6 @@ export function DateCodeBuilder({
     return now;
   }, [dateMode, offsetValue, offsetUnit]);
 
-  // Live preview using effective date
   const preview = useMemo(() => {
     return tokens.map((t) => {
       if (t.def.category === 'literal') {
@@ -276,14 +307,10 @@ export function DateCodeBuilder({
       offset: dateMode === 'expiration' && offsetValue > 0
         ? { value: offsetValue, unit: offsetUnit }
         : undefined,
+      selectedFont,
     };
     onAddFields(result);
-    onOpenChange(false);
-    setTokens([]);
-    setActiveTab('presets');
-    setDateMode('manufacturing');
-    setOffsetValue(0);
-    setOffsetUnit('days');
+    handleOpen(false);
   };
 
   const handleBack = () => {
@@ -291,18 +318,6 @@ export function DateCodeBuilder({
     onBack();
   };
 
-  const handleClose = (isOpen: boolean) => {
-    if (!isOpen) {
-      setTokens([]);
-      setActiveTab('presets');
-      setDateMode('manufacturing');
-      setOffsetValue(0);
-      setOffsetUnit('days');
-    }
-    onOpenChange(isOpen);
-  };
-
-  // Format offset description for preview label
   const offsetLabel = useMemo(() => {
     if (dateMode !== 'expiration' || offsetValue <= 0) return null;
     return `+${offsetValue} ${offsetUnit}`;
@@ -320,7 +335,7 @@ export function DateCodeBuilder({
   );
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleOpen}>
       <DialogContent className="sm:max-w-xl p-0 overflow-hidden max-h-[85vh]">
         {/* Header */}
         <div className="bg-gradient-to-b from-muted to-muted/80 px-4 py-3 flex items-center gap-3 border-b">
@@ -332,37 +347,53 @@ export function DateCodeBuilder({
           </DialogTitle>
         </div>
 
-        {/* Date Mode Toggle */}
-        <div className="px-4 pt-3">
+        {/* Font selector + Date Mode — compact top section */}
+        <div className="px-4 pt-3 space-y-3">
+          {/* Font selector */}
+          <div className="flex items-center gap-3">
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">Font:</Label>
+            <Select value={selectedFont} onValueChange={setSelectedFont}>
+              <SelectTrigger className="flex-1 h-9 text-sm">
+                <SelectValue placeholder="Select font" />
+              </SelectTrigger>
+              <SelectContent>
+                {allowedFonts.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Date Mode Toggle */}
           <div className="flex rounded-lg border border-border overflow-hidden">
             <button
               onClick={() => setDateMode('manufacturing')}
-              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium transition-colors ${
                 dateMode === 'manufacturing'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted/50 text-muted-foreground hover:text-foreground'
               }`}
             >
               <Calendar className="w-4 h-4" />
-              Manufacturing Date
+              MFG Date
             </button>
             <button
               onClick={() => setDateMode('expiration')}
-              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium transition-colors ${
                 dateMode === 'expiration'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted/50 text-muted-foreground hover:text-foreground'
               }`}
             >
               <Clock className="w-4 h-4" />
-              Expiration Date
+              EXP Date
             </button>
           </div>
 
           {/* Offset controls (only for expiration) */}
           {dateMode === 'expiration' && (
-            <div className="mt-3 flex items-center gap-3 bg-muted/30 border border-border rounded-lg p-3">
-              <Label className="text-xs text-muted-foreground whitespace-nowrap">Offset:</Label>
+            <div className="flex items-center gap-3 bg-muted/30 border border-border rounded-lg p-3">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">Expires in:</Label>
               <Input
                 type="number"
                 min={0}
@@ -387,7 +418,7 @@ export function DateCodeBuilder({
         </div>
 
         {/* Live preview strip */}
-        <div className="px-4 pt-2">
+        <div className="px-4 pt-1">
           <div className="flex items-center gap-2 mb-1">
             <Label className="text-xs text-muted-foreground">Preview</Label>
             {dateMode === 'expiration' && (
@@ -397,6 +428,9 @@ export function DateCodeBuilder({
             )}
             {dateMode === 'manufacturing' && (
               <span className="text-xs text-primary font-medium">MFG (Today)</span>
+            )}
+            {selectedFontInfo && (
+              <span className="text-xs text-muted-foreground ml-auto">{selectedFontInfo.label}</span>
             )}
           </div>
           <div className="bg-black rounded-lg p-3 min-h-[44px] flex items-center overflow-x-auto">
@@ -437,7 +471,7 @@ export function DateCodeBuilder({
         </div>
 
         {/* Tabs: Presets / Build */}
-        <div className="px-4 pb-4 overflow-y-auto" style={{ maxHeight: 'calc(85vh - 280px)' }}>
+        <div className="px-4 pb-4 overflow-y-auto" style={{ maxHeight: 'calc(85vh - 340px)' }}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
             <TabsList className="grid w-full grid-cols-2 mb-3">
               <TabsTrigger value="presets">Quick Presets</TabsTrigger>
@@ -461,39 +495,30 @@ export function DateCodeBuilder({
             </TabsContent>
 
             <TabsContent value="build" className="space-y-4 mt-0">
-              {/* Date tokens */}
               <div>
                 <Label className="text-xs text-muted-foreground mb-2 block">Date</Label>
                 <div className="flex flex-wrap gap-2">
                   {DATE_TOKENS.map(renderTokenButton)}
                 </div>
               </div>
-
-              {/* Time tokens */}
               <div>
                 <Label className="text-xs text-muted-foreground mb-2 block">Time</Label>
                 <div className="flex flex-wrap gap-2">
                   {TIME_TOKENS.map(renderTokenButton)}
                 </div>
               </div>
-
-              {/* Program tokens */}
               <div>
                 <Label className="text-xs text-muted-foreground mb-2 block">Program (Programmable Codes)</Label>
                 <div className="flex flex-wrap gap-2">
                   {PROGRAM_TOKENS.map(renderTokenButton)}
                 </div>
               </div>
-
-              {/* Separators */}
               <div>
                 <Label className="text-xs text-muted-foreground mb-2 block">Separators</Label>
                 <div className="flex flex-wrap gap-2">
                   {SEPARATOR_TOKENS.map(renderTokenButton)}
                 </div>
               </div>
-
-              {/* Custom text */}
               <div>
                 <Label className="text-xs text-muted-foreground mb-2 block">Custom Text</Label>
                 <div className="flex gap-2">
