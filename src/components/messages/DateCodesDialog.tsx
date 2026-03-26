@@ -40,33 +40,33 @@ const DATE_TYPE_OPTIONS: DateTypeOption[] = [
   { id: 'expiry_rollover', label: 'Expiry Rollover Date', hasExpiry: true, hasRollover: true },
 ];
 
-// Year code options
+// Year code options — mapped to v2.6 protocol §5.33.2.3 date type codes
 const YEAR_CODES = [
-  { id: 'yyyy', label: 'Four Digit Year (YYYY)' },
-  { id: 'yy', label: 'Two-Digit Year (YY)' },
-  { id: 'y', label: 'One-Digit Year (Y)' },
-  { id: 'doy', label: 'Day of Year' },
-  { id: 'julian', label: 'Julian Date' },
-  { id: 'program_year', label: 'Program Year' },
-  { id: 'program_doy', label: 'Program Day of Year' },
+  { id: 'yyyy', label: 'Four Digit Year (YYYY)', protocolCode: 10 },
+  { id: 'yy', label: 'Two-Digit Year (YY)', protocolCode: 9 },
+  { id: 'y', label: 'One-Digit Year (Y)', protocolCode: 8 },
+  { id: 'doy', label: 'Day of Year (DDD)', protocolCode: 4 },
+  { id: 'julian', label: 'Julian Date (YDDD)', protocolCode: null }, // Composite: 1-digit year + day-of-year
+  { id: 'program_year', label: 'Program Year', protocolCode: 9 },   // Uses ^AP
+  { id: 'program_doy', label: 'Program Day of Year', protocolCode: 4 }, // Uses ^AP
 ];
 
 // Month code options
 const MONTH_CODES = [
-  { id: 'mm', label: 'Numeric Month (MM)' },
-  { id: 'alpha_month', label: 'Alpha Month (JAN, FEB...)' },
-  { id: 'dom', label: 'Day of Month' },
-  { id: 'program_month', label: 'Program Month' },
-  { id: 'program_dom', label: 'Program Day of Month' },
+  { id: 'mm', label: 'Numeric Month (MM)', protocolCode: 6 },
+  { id: 'alpha_month', label: 'Alpha Month (JAN, FEB...)', protocolCode: 7 },
+  { id: 'dom', label: 'Day of Month', protocolCode: 3 },
+  { id: 'program_month', label: 'Program Month', protocolCode: 6 },
+  { id: 'program_dom', label: 'Program Day of Month', protocolCode: 3 },
 ];
 
 // Week code options
 const WEEK_CODES = [
-  { id: 'ww', label: 'Numeric Week (WW)' },
-  { id: 'dow_num', label: 'Numeric Week Day (1-7)' },
-  { id: 'dow_alpha', label: 'Alpha Week Day (MON, TUE...)' },
-  { id: 'program_week', label: 'Program Week' },
-  { id: 'program_dow', label: 'Program Day of Week' },
+  { id: 'ww', label: 'Numeric Week (WW)', protocolCode: 5 },
+  { id: 'dow_num', label: 'Numeric Week Day (1-7)', protocolCode: 1 },
+  { id: 'dow_alpha', label: 'Alpha Week Day (MON, TUE...)', protocolCode: 2 },
+  { id: 'program_week', label: 'Program Week', protocolCode: 5 },
+  { id: 'program_dow', label: 'Program Day of Week', protocolCode: 1 },
 ];
 
 interface DateCodesDialogProps {
@@ -153,7 +153,7 @@ export function DateCodesDialog({
   };
 
   const renderSubMenuItems = () => {
-    let items: typeof YEAR_CODES = [];
+    let items: { id: string; label: string; protocolCode: number | null }[] = [];
     if (subMenu === 'year') items = YEAR_CODES;
     if (subMenu === 'month') items = MONTH_CODES;
     if (subMenu === 'week') items = WEEK_CODES;

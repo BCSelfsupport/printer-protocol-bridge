@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MessageCanvas } from '@/components/messages/MessageCanvas';
 import { loadTemplate, templateToMultilineConfig, type ParsedTemplate } from '@/lib/templateParser';
 import { TEMPLATE_LINE_Y_POSITIONS, getValidCanvasYPositions } from '@/lib/messageProtocol';
+import { computeAutoCodeValue } from '@/lib/autoCodeProtocol';
 import { NewFieldDialog } from '@/components/messages/NewFieldDialog';
 import { AutoCodeFieldDialog } from '@/components/messages/AutoCodeFieldDialog';
 import { TimeCodesDialog } from '@/components/messages/TimeCodesDialog';
@@ -327,25 +328,9 @@ export function EditMessageScreen({
             newData = now.getMinutes().toString().padStart(2, '0');
           } else if (f.autoCodeFieldType === 'program_second') {
             newData = now.getSeconds().toString().padStart(2, '0');
-          } else if (f.autoCodeFieldType.startsWith('date_') && f.autoCodeFormat) {
-            const d = new Date(now.getTime());
-            if (f.autoCodeExpiryDays) d.setDate(d.getDate() + f.autoCodeExpiryDays);
-            const day = d.getDate().toString().padStart(2, '0');
-            const month = (d.getMonth() + 1).toString().padStart(2, '0');
-            const yearShort = d.getFullYear().toString().slice(-2);
-            const cleanFmt = f.autoCodeFormat.split('|')[0];
-            switch (cleanFmt) {
-              case 'MM/DD/YY': newData = `${month}/${day}/${yearShort}`; break;
-              case 'DD/MM/YY': newData = `${day}/${month}/${yearShort}`; break;
-              case 'YY/MM/DD': newData = `${yearShort}/${month}/${day}`; break;
-              case 'MM-DD-YY': newData = `${month}-${day}-${yearShort}`; break;
-              case 'DD-MM-YY': newData = `${day}-${month}-${yearShort}`; break;
-              case 'YY-MM-DD': newData = `${yearShort}-${month}-${day}`; break;
-              case 'MMDDYY': newData = `${month}${day}${yearShort}`; break;
-              case 'DDMMYY': newData = `${day}${month}${yearShort}`; break;
-              case 'YYMMDD': newData = `${yearShort}${month}${day}`; break;
-              default: newData = `${month}/${day}/${yearShort}`;
-            }
+          } else if (f.autoCodeFieldType?.startsWith('date_') || f.autoCodeFieldType === 'program_hour' || f.autoCodeFieldType === 'program_minute' || f.autoCodeFieldType === 'program_second') {
+            const computed = computeAutoCodeValue(f.autoCodeFieldType, f.autoCodeFormat, now, f.autoCodeExpiryDays);
+            if (computed !== null) newData = computed;
           } else if (f.autoCodeFieldType?.startsWith('counter_')) {
             const ctrId = parseInt(f.autoCodeFieldType.split('_')[1]) || 1;
             // Use live counter value if available, otherwise show from advanced settings
@@ -535,77 +520,11 @@ export function EditMessageScreen({
     }
   };
 
-  // Helper to format date based on format string
-  const formatDateValue = (format: string, expiryDays: number = 0): string => {
+  // Helper to format date/time values — delegates to shared autoCodeProtocol utility
+  const getAutoCodeDisplayValue = (fieldType: string, format?: string, expiryDays?: number): string => {
     const now = getCurrentTime();
-    // Add expiry days if specified
-    if (expiryDays > 0) {
-      now.setDate(now.getDate() + expiryDays);
-    }
-    
-    const day = now.getDate().toString().padStart(2, '0');
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const yearFull = now.getFullYear().toString();
-    const yearShort = yearFull.slice(-2);
-    
-    // Parse the format - strip any expiry/rollover metadata
-    const cleanFormat = format.split('|')[0];
-    
-    switch (cleanFormat) {
-      case 'MMDDYY': return `${month}${day}${yearShort}`;
-      case 'DDMMYY': return `${day}${month}${yearShort}`;
-      case 'YYMMDD': return `${yearShort}${month}${day}`;
-      case 'MM/DD/YY': return `${month}/${day}/${yearShort}`;
-      case 'DD/MM/YY': return `${day}/${month}/${yearShort}`;
-      case 'YY/MM/DD': return `${yearShort}/${month}/${day}`;
-      case 'MM-DD-YY': return `${month}-${day}-${yearShort}`;
-      case 'DD-MM-YY': return `${day}-${month}-${yearShort}`;
-      case 'YY-MM-DD': return `${yearShort}-${month}-${day}`;
-      case 'MM.DD.YY': return `${month}.${day}.${yearShort}`;
-      case 'DD.MM.YY': return `${day}.${month}.${yearShort}`;
-      default: return `${month}/${day}/${yearShort}`;
-    }
-  };
-
-  // Helper to get specific date code value
-  const getDateCodeValue = (codeType: string, expiryDays: number = 0): string => {
-    const now = getCurrentTime();
-    if (expiryDays > 0) {
-      now.setDate(now.getDate() + expiryDays);
-    }
-    
-    const day = now.getDate();
-    const month = now.getMonth() + 1;
-    const year = now.getFullYear();
-    const dayOfYear = Math.floor((now.getTime() - new Date(year, 0, 0).getTime()) / 86400000);
-    const weekNum = Math.ceil(dayOfYear / 7);
-    const dayOfWeek = now.getDay() || 7; // 1-7, Sunday=7
-    const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-    const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-    
-    switch (codeType) {
-      // Year codes
-      case 'yyyy': return year.toString();
-      case 'yy': return year.toString().slice(-2);
-      case 'y': return year.toString().slice(-1);
-      case 'doy': return dayOfYear.toString().padStart(3, '0');
-      case 'julian': return `${year.toString().slice(-2)}${dayOfYear.toString().padStart(3, '0')}`;
-      case 'program_year': return year.toString().slice(-2);
-      case 'program_doy': return dayOfYear.toString().padStart(3, '0');
-      // Month codes
-      case 'mm': return month.toString().padStart(2, '0');
-      case 'alpha_month': return monthNames[month - 1];
-      case 'dom': return day.toString().padStart(2, '0');
-      case 'program_month': return month.toString().padStart(2, '0');
-      case 'program_dom': return day.toString().padStart(2, '0');
-      // Week codes
-      case 'ww': return weekNum.toString().padStart(2, '0');
-      case 'dow_num': return dayOfWeek.toString();
-      case 'dow_alpha': return dayNames[now.getDay()];
-      case 'program_week': return weekNum.toString().padStart(2, '0');
-      case 'program_dow': return dayOfWeek.toString();
-      default: return codeType.toUpperCase();
-    }
+    const computed = computeAutoCodeValue(fieldType, format, now, expiryDays);
+    return computed ?? fieldType.toUpperCase();
   };
 
   const handleAddField = (fieldType: string, format?: string) => {
@@ -624,25 +543,10 @@ export function EditMessageScreen({
     
     if (fieldType === 'time' && format) {
       fieldData = formatTimeValue(format);
-    } else if (fieldType === 'program_hour') {
-      fieldData = getCurrentTime().getHours().toString().padStart(2, '0');
-    } else if (fieldType === 'program_minute') {
-      fieldData = getCurrentTime().getMinutes().toString().padStart(2, '0');
-    } else if (fieldType === 'program_second') {
-      fieldData = getCurrentTime().getSeconds().toString().padStart(2, '0');
+    } else if (fieldType === 'program_hour' || fieldType === 'program_minute' || fieldType === 'program_second') {
+      fieldData = getAutoCodeDisplayValue(fieldType);
     } else if (fieldType.startsWith('date_')) {
-      // Parse date field type: date_normal, date_expiry, date_normal_yyyy, etc.
-      const parts = fieldType.split('_');
-      const dateType = parts[1]; // normal, expiry, rollover, expiry_rollover
-      const codeType = parts.slice(2).join('_'); // yyyy, mm, doy, etc. or empty
-      
-      if (codeType) {
-        // Specific code type (year, month, week codes)
-        fieldData = getDateCodeValue(codeType, expiryDays);
-      } else if (format) {
-        // Full date format
-        fieldData = formatDateValue(format, expiryDays);
-      }
+      fieldData = getAutoCodeDisplayValue(fieldType, format, expiryDays);
     } else if (fieldType.startsWith('counter_')) {
       counterId = parseInt(fieldType.split('_')[1]) || 1;
       const ctrConfig = message.advancedSettings?.counters?.find(c => c.id === counterId);
