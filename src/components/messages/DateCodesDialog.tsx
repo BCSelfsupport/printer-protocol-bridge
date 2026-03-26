@@ -153,7 +153,7 @@ export function DateCodesDialog({
   };
 
   const renderSubMenuItems = () => {
-    let items: typeof YEAR_CODES = [];
+    let items: { id: string; label: string; protocolCode: number | null }[] = [];
     if (subMenu === 'year') items = YEAR_CODES;
     if (subMenu === 'month') items = MONTH_CODES;
     if (subMenu === 'week') items = WEEK_CODES;
