@@ -2121,6 +2121,9 @@ export function usePrinterConnection() {
       bold?: number;
       gap?: number;
       height?: number;
+      autoCodeFieldType?: string;
+      autoCodeFormat?: string;
+      autoCodeExpiryDays?: number;
     }>,
     templateValue?: string,
     isNew?: boolean,
