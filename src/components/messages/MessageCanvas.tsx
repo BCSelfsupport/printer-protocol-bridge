@@ -386,17 +386,23 @@ export function MessageCanvas({
         ctx.setLineDash([]);
       }
       // Draw selection highlight (including when editing) - always show for empty fields
-      else if (isSelected || isBeingEdited || field.data.length === 0) {
+      else if (isSelected || isMultiSelected || isBeingEdited || field.data.length === 0) {
         const highlightColor =
           isBeingEdited
             ? 'rgba(255, 220, 100, 0.4)'
             : field.data.length === 0
               ? 'rgba(200, 200, 200, 0.5)'
-               : isBarcode
-                ? 'rgba(100, 200, 255, 0.3)'
-                : 'rgba(255, 193, 7, 0.3)';
+              : isMultiSelected && !isSelected
+                ? 'rgba(100, 200, 100, 0.25)'
+                : isBarcode
+                  ? 'rgba(100, 200, 255, 0.3)'
+                  : 'rgba(255, 193, 7, 0.3)';
         const borderColor =
-          isBeingEdited ? '#ff6600' : field.data.length === 0 ? '#999999' : isBarcode ? '#0088cc' : '#ffc107';
+          isBeingEdited ? '#ff6600' 
+          : field.data.length === 0 ? '#999999' 
+          : isMultiSelected && !isSelected ? '#22c55e'
+          : isBarcode ? '#0088cc' 
+          : '#ffc107';
         ctx.fillStyle = highlightColor;
         ctx.fillRect(fieldX, fieldY, fieldW, fieldH);
         ctx.strokeStyle = borderColor;
