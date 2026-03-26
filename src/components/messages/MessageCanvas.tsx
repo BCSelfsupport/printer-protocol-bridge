@@ -32,10 +32,16 @@ interface MessageCanvasProps {
   onCanvasClick?: (x: number, y: number, fieldId?: number) => void;
   /** Callback when a field is moved */
   onFieldMove?: (fieldId: number, newX: number, newY: number) => void;
+  /** Callback when multiple fields are moved together (group drag) */
+  onFieldsMove?: (moves: { fieldId: number; newX: number; newY: number }[]) => void;
   /** Callback when field text is changed */
   onFieldDataChange?: (fieldId: number, newData: string) => void;
-  /** Selected field ID */
+  /** Selected field ID (primary selection for settings panel) */
   selectedFieldId?: number | null;
+  /** Set of all selected field IDs (for multi-select) */
+  selectedFieldIds?: Set<number>;
+  /** Callback when multi-selection changes */
+  onSelectionChange?: (fieldIds: Set<number>) => void;
   /** Multi-line template info (if applicable) */
   multilineTemplate?: MultilineTemplate | null;
   /** Callback for field errors */
