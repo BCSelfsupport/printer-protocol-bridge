@@ -40,15 +40,15 @@ const DATE_TYPE_OPTIONS: DateTypeOption[] = [
   { id: 'expiry_rollover', label: 'Expiry Rollover Date', hasExpiry: true, hasRollover: true },
 ];
 
-// Year code options
+// Year code options — mapped to v2.6 protocol §5.33.2.3 date type codes
 const YEAR_CODES = [
-  { id: 'yyyy', label: 'Four Digit Year (YYYY)' },
-  { id: 'yy', label: 'Two-Digit Year (YY)' },
-  { id: 'y', label: 'One-Digit Year (Y)' },
-  { id: 'doy', label: 'Day of Year' },
-  { id: 'julian', label: 'Julian Date' },
-  { id: 'program_year', label: 'Program Year' },
-  { id: 'program_doy', label: 'Program Day of Year' },
+  { id: 'yyyy', label: 'Four Digit Year (YYYY)', protocolCode: 10 },
+  { id: 'yy', label: 'Two-Digit Year (YY)', protocolCode: 9 },
+  { id: 'y', label: 'One-Digit Year (Y)', protocolCode: 8 },
+  { id: 'doy', label: 'Day of Year (DDD)', protocolCode: 4 },
+  { id: 'julian', label: 'Julian Date (YDDD)', protocolCode: null }, // Composite: 1-digit year + day-of-year
+  { id: 'program_year', label: 'Program Year', protocolCode: 9 },   // Uses ^AP
+  { id: 'program_doy', label: 'Program Day of Year', protocolCode: 4 }, // Uses ^AP
 ];
 
 // Month code options
