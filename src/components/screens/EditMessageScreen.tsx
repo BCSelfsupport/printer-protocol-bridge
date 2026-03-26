@@ -709,7 +709,7 @@ export function EditMessageScreen({
   // Groups consecutive literal tokens together with their adjacent auto-code tokens,
   // and creates one field per auto-code token (date/time/program).
   const handleAddDateCodeBuilderFields = (result: DateCodeBuilderResult) => {
-    const { tokens, dateMode, offset } = result;
+    const { tokens, dateMode, offset, selectedFont } = result;
     if (tokens.length === 0) return;
 
     // Apply offset for expiration dates
@@ -727,21 +727,10 @@ export function EditMessageScreen({
       ? MULTILINE_TEMPLATES.find(t => t.value === message.templateValue)
       : null;
 
-    // Determine font size
-    let fontHeight: number;
-    let fontSize: string;
-    if (multiTemplate) {
-      const maxH = multiTemplate.dotsPerLine;
-      const fittingFonts = availableFontSizes.filter(fs => fs.height <= maxH);
-      const bestFont = fittingFonts.length > 0 ? fittingFonts[fittingFonts.length - 1] : availableFontSizes[0];
-      fontHeight = bestFont.height;
-      fontSize = bestFont.value;
-    } else {
-      const fittingFonts = availableFontSizes.filter(fs => fs.height <= message.height);
-      const bestFont = fittingFonts.length > 0 ? fittingFonts[fittingFonts.length - 1] : availableFontSizes[0];
-      fontHeight = bestFont.height;
-      fontSize = bestFont.value;
-    }
+    // Use the font selected in the builder
+    const chosenFont = FONT_SIZES.find(f => f.value === selectedFont);
+    const fontHeight = chosenFont?.height ?? 16;
+    const fontSize = chosenFont?.value ?? 'Standard16High';
 
     // Get valid Y position
     const validYPositions = getValidCanvasYPositions(
