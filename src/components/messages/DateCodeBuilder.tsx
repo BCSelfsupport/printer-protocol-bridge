@@ -116,11 +116,11 @@ interface Preset {
 
 const PRESETS: Preset[] = [
   {
-    label: 'MAY 07.2026',
-    example: 'Alpha Month + Day.Year',
+    label: 'MAY 07,2026',
+    example: 'Alpha Month + Day,Year',
     tokens: [
       { id: 'alpha_month' }, { id: 'sep_space' }, { id: 'dom' },
-      { id: 'sep_dot' }, { id: 'yyyy' },
+      { id: 'sep_comma' }, { id: 'yyyy' },
     ],
   },
   {
@@ -156,11 +156,11 @@ const PRESETS: Preset[] = [
     ],
   },
   {
-    label: 'MAY 07.2026 11:42',
+    label: 'MAY 07,2026 11:42',
     example: 'Date + Time',
     tokens: [
       { id: 'alpha_month' }, { id: 'sep_space' }, { id: 'dom' },
-      { id: 'sep_dot' }, { id: 'yyyy' }, { id: 'sep_space' },
+      { id: 'sep_comma' }, { id: 'yyyy' }, { id: 'sep_space' },
       { id: 'HH' }, { id: 'sep_colon' }, { id: 'MIN' },
     ],
   },
