@@ -324,8 +324,16 @@ export function MessageCanvas({
       
 
       // Use drag position if being dragged, otherwise use field position
-      const displayX = isBeingDragged ? dragPosition.x : field.x;
-      const displayY = isBeingDragged ? dragPosition.y : field.y;
+      let displayX = field.x;
+      let displayY = field.y;
+      if (isBeingDragged && field.id === dragFieldId) {
+        displayX = dragPosition.x;
+        displayY = dragPosition.y;
+      } else if (isBeingDragged && groupDragOffsetsRef.current.has(field.id)) {
+        const offset = groupDragOffsetsRef.current.get(field.id)!;
+        displayX = dragPosition.x + offset.dx;
+        displayY = dragPosition.y + offset.dy;
+      }
 
       // Canvas is physically wide and is clipped by the scroll container, so don't offset drawing.
       let fieldX = displayX * DOT_SIZE;
