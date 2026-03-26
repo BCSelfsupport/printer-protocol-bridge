@@ -1112,7 +1112,7 @@ export function EditMessageScreen({
                 } : null}
                 onScrollLockChange={setIsCanvasScrollLocked}
               />
-              <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click a field to edit text inline</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click to edit • Click+drag empty space to select multiple fields</p>
             </div>
 
             {/* Field Settings Panel - Per-field settings like manual page 49-50 */}
