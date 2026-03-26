@@ -84,6 +84,13 @@ export function MessageCanvas({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   
+  // Marquee selection state
+  const [isMarquee, setIsMarquee] = useState(false);
+  const [marqueeStart, setMarqueeStart] = useState({ x: 0, y: 0 });
+  const [marqueeEnd, setMarqueeEnd] = useState({ x: 0, y: 0 });
+  
+  // Group drag offsets (delta from primary drag field)
+  const groupDragOffsetsRef = useRef<Map<number, { dx: number; dy: number }>>(new Map());
   // Horizontal scroll container (native swipe-to-scroll on mobile)
   const scrollerRef = useRef<HTMLDivElement>(null);
   const scrollLeftDotsRef = useRef(0);
