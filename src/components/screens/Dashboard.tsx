@@ -596,7 +596,6 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
       const now = printerTime ?? new Date();
 
       messageContent.fields.forEach((field) => {
-        const previewYOffsetDots_inner = previewYOffsetDots;
 
         // Handle barcode fields
         if (field.type === 'barcode') {
