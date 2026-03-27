@@ -585,11 +585,10 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     if (messageContent && messageContent.fields.length > 0) {
       ctx.fillStyle = '#1a1a1a';
 
-      // Home preview only: shift everything up by 1 dot row to avoid bottom-row clipping on some devices.
-      const previewYOffsetDots = 1;
-      // Offset fields to bottom of 32-row canvas based on message template height
-      const templateHeight = messageContent.height || 16;
-      const bottomOffsetDots = TOTAL_ROWS - templateHeight;
+      // Render fields at their stored Y positions (matching the editor canvas).
+      // The editor already stores Y in absolute 32-row canvas coordinates,
+      // so no vertical offset is needed.
+      const previewYOffsetDots = 0;
 
       // Calculate total width needed and use dynamic canvas sizing
       let maxXEnd = 0;
