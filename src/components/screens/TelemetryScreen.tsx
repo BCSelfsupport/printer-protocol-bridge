@@ -926,6 +926,47 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                   Add Company
                 </Button>
               </div>
+
+              {/* Add Company Form */}
+              {showAddSite && (
+                <div className="bg-card border border-primary/20 rounded-2xl p-6 space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground">Add New Customer Site</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                      placeholder="Site name (e.g. Sunrise Eggs Ltd) *"
+                      value={newSiteName}
+                      onChange={e => setNewSiteName(e.target.value)}
+                    />
+                    <input
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                      placeholder="Company name"
+                      value={newSiteCompany}
+                      onChange={e => setNewSiteCompany(e.target.value)}
+                    />
+                    <input
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                      placeholder="Location (e.g. Cork, Ireland)"
+                      value={newSiteLocation}
+                      onChange={e => setNewSiteLocation(e.target.value)}
+                    />
+                    <input
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                      placeholder="Contact email"
+                      value={newSiteEmail}
+                      onChange={e => setNewSiteEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <Button size="sm" onClick={handleAddSite} disabled={formLoading || !newSiteName.trim()} className="gap-1.5">
+                      {formLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                      Add Site
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setShowAddSite(false)}>Cancel</Button>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {sites.map(site => {
                   const online = site.fleet_printers.filter(p => p.status === 'online').length;
