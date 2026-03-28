@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
         const { data, error } = await supabase
           .from("fleet_sites")
-          .select("*, fleet_printers(id, name, ip_address, port, firmware_version, serial_number, last_seen, status)")
+          .select("*, fleet_printers(id, name, ip_address, port, firmware_version, serial_number, last_seen, status), licenses(product_key, tier)")
           .order("name");
         if (error) throw error;
         return new Response(JSON.stringify({ sites: data }), {

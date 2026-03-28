@@ -5,7 +5,7 @@ import {
   Droplets, Gauge, Zap, Clock, Upload, 
   CheckCircle2, XCircle, Loader2, Database,
   ArrowUpCircle, History, Wifi, WifiOff, MapPin,
-  Mail, Server, Cpu, BarChart3, Signal,
+  Mail, Server, Cpu, BarChart3, Signal, Key,
   Home, ArrowLeft, Radio, Sun, Moon, Trash2, Plus
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -24,6 +24,8 @@ interface FleetSite {
   company: string | null;
   location: string | null;
   contact_email: string | null;
+  license_id: string | null;
+  licenses: { product_key: string; tier: string } | null;
   fleet_printers: FleetPrinter[];
 }
 
@@ -868,6 +870,17 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                     </div>
                   </div>
                 )}
+                {selectedSite.licenses && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                      <Key className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-widest">License ({selectedSite.licenses.tier})</div>
+                      <div className="text-sm font-medium font-mono text-foreground">{selectedSite.licenses.product_key}</div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1108,7 +1121,12 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                               <span className="text-xs text-muted-foreground">{site.location || site.company || '—'}</span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
+                            {site.licenses && (
+                              <Badge variant="outline" className="text-[10px] font-semibold uppercase px-2 py-0.5">
+                                {site.licenses.tier}
+                              </Badge>
+                            )}
                             <button
                               onClick={(e) => { e.stopPropagation(); handleDeleteSite(site.id, e); }}
                               className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
@@ -1132,8 +1150,11 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                           ))}
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs text-muted-foreground">{total} printer{total !== 1 ? 's' : ''}</span>
+                          {site.licenses && (
+                            <span className="text-[10px] font-mono text-muted-foreground/70">{site.licenses.product_key}</span>
+                          )}
                           <div className="flex-1" />
                           {online > 0 && (
                             <Badge variant="outline" className="text-[10px] bg-emerald-500/5 text-emerald-600 border-emerald-500/20 px-2 py-0.5">
