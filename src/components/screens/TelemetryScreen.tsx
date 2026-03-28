@@ -6,7 +6,7 @@ import {
   CheckCircle2, XCircle, Loader2, Database,
   ArrowUpCircle, History, Wifi, WifiOff, MapPin,
   Mail, Server, Cpu, BarChart3, Signal, Key,
-  Home, ArrowLeft, Radio, Sun, Moon, Trash2, Plus
+  Home, ArrowLeft, Radio, Sun, Moon, Trash2, Plus, Pencil, Check, X
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
@@ -433,10 +433,19 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
   const [newSiteCompany, setNewSiteCompany] = useState('');
   const [newSiteLocation, setNewSiteLocation] = useState('');
   const [newSiteEmail, setNewSiteEmail] = useState('');
+  const [newSiteLicenseKey, setNewSiteLicenseKey] = useState('');
   const [showAddPrinter, setShowAddPrinter] = useState(false);
   const [newPrinterName, setNewPrinterName] = useState('');
   const [newPrinterIp, setNewPrinterIp] = useState('');
   const [newPrinterPort, setNewPrinterPort] = useState('23');
+  // Edit site state
+  const [editingSiteId, setEditingSiteId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editCompany, setEditCompany] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editLicenseKey, setEditLicenseKey] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
 
   const fleetCall = useCallback(async (action: string, params?: Record<string, string>, body?: any) => {
     const query = new URLSearchParams({ action, ...(params || {}) }).toString();
@@ -533,16 +542,54 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
         company: newSiteName.trim(),
         location: newSiteLocation.trim() || undefined,
         contact_email: newSiteEmail.trim() || undefined,
+        license_key: newSiteLicenseKey.trim() || undefined,
       });
       setShowAddSite(false);
-      setNewSiteName(''); setNewSiteCompany(''); setNewSiteLocation(''); setNewSiteEmail('');
+      setNewSiteName(''); setNewSiteCompany(''); setNewSiteLocation(''); setNewSiteEmail(''); setNewSiteLicenseKey('');
       await fetchSites();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Add site error:', err);
+      alert(err?.message || 'Failed to add site');
     } finally {
       setFormLoading(false);
     }
-  }, [fleetCall, fetchSites, newSiteName, newSiteCompany, newSiteLocation, newSiteEmail]);
+  }, [fleetCall, fetchSites, newSiteName, newSiteCompany, newSiteLocation, newSiteEmail, newSiteLicenseKey]);
+
+  const startEditSite = (site: FleetSite, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingSiteId(site.id);
+    setEditName(site.name);
+    setEditCompany(site.company || '');
+    setEditLocation(site.location || '');
+    setEditEmail(site.contact_email || '');
+    setEditLicenseKey(site.licenses?.product_key || '');
+  };
+
+  const handleEditSite = useCallback(async () => {
+    if (!editingSiteId || !editName.trim()) return;
+    setEditLoading(true);
+    try {
+      const result = await fleetCall('edit-site', undefined, {
+        site_id: editingSiteId,
+        name: editName.trim(),
+        company: editCompany.trim() || null,
+        location: editLocation.trim() || null,
+        contact_email: editEmail.trim() || null,
+        license_key: editLicenseKey.trim() || '',
+      });
+      setEditingSiteId(null);
+      await fetchSites();
+      // If we're inside a site detail, update selectedSite
+      if (selectedSite?.id === editingSiteId && result.site) {
+        setSelectedSite(result.site);
+      }
+    } catch (err: any) {
+      console.error('Edit site error:', err);
+      alert(err?.message || 'Failed to update site');
+    } finally {
+      setEditLoading(false);
+    }
+  }, [fleetCall, fetchSites, editingSiteId, editName, editCompany, editLocation, editEmail, editLicenseKey, selectedSite]);
 
   const handleAddPrinter = useCallback(async () => {
     if (!selectedSite || !newPrinterName.trim() || !newPrinterIp.trim()) return;
@@ -1043,6 +1090,12 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                     value={newSiteEmail}
                     onChange={e => setNewSiteEmail(e.target.value)}
                   />
+                  <input
+                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground font-mono"
+                    placeholder="License key (e.g. XXXXX-XXXXX-XXXXX-XXXXX)"
+                    value={newSiteLicenseKey}
+                    onChange={e => setNewSiteLicenseKey(e.target.value)}
+                  />
                 </div>
                 <Button onClick={handleAddSite} disabled={!newSiteName.trim()} size="sm" className="w-full gap-1.5">
                   <Plus className="w-4 h-4" />
@@ -1085,6 +1138,12 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                       value={newSiteEmail}
                       onChange={e => setNewSiteEmail(e.target.value)}
                     />
+                    <input
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground font-mono"
+                      placeholder="License key (e.g. XXXXX-XXXXX-XXXXX-XXXXX)"
+                      value={newSiteLicenseKey}
+                      onChange={e => setNewSiteLicenseKey(e.target.value)}
+                    />
                   </div>
                   <div className="flex gap-3">
                     <Button size="sm" onClick={handleAddSite} disabled={formLoading || !newSiteName.trim()} className="gap-1.5">
@@ -1107,67 +1166,121 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                       key={site.id}
                       className="text-left bg-card border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-xl transition-all group"
                     >
-                      <button
-                        onClick={() => setSelectedSite(site)}
-                        className="w-full text-left"
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-emerald-500/20 flex items-center justify-center">
-                              <Building2 className="w-6 h-6 text-primary" />
+                      {editingSiteId === site.id ? (
+                        /* ── Inline Edit Form ── */
+                        <div className="space-y-3" onClick={e => e.stopPropagation()}>
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Edit Site</h4>
+                          <input
+                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                            placeholder="Site name *"
+                            value={editName}
+                            onChange={e => setEditName(e.target.value)}
+                          />
+                          <input
+                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                            placeholder="Company"
+                            value={editCompany}
+                            onChange={e => setEditCompany(e.target.value)}
+                          />
+                          <input
+                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                            placeholder="Location"
+                            value={editLocation}
+                            onChange={e => setEditLocation(e.target.value)}
+                          />
+                          <input
+                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                            placeholder="Contact email"
+                            value={editEmail}
+                            onChange={e => setEditEmail(e.target.value)}
+                          />
+                          <input
+                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground font-mono"
+                            placeholder="License key (XXXXX-XXXXX-XXXXX-XXXXX)"
+                            value={editLicenseKey}
+                            onChange={e => setEditLicenseKey(e.target.value)}
+                          />
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={handleEditSite} disabled={editLoading || !editName.trim()} className="gap-1.5">
+                              {editLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                              Save
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setEditingSiteId(null)}>
+                              <X className="w-3 h-3 mr-1" />Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* ── Normal Card View ── */
+                        <button
+                          onClick={() => setSelectedSite(site)}
+                          className="w-full text-left"
+                        >
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-emerald-500/20 flex items-center justify-center">
+                                <Building2 className="w-6 h-6 text-primary" />
+                              </div>
+                              <div>
+                                <span className="text-base font-bold text-foreground block">{site.name}</span>
+                                <span className="text-xs text-muted-foreground">{site.location || site.company || '—'}</span>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-base font-bold text-foreground block">{site.name}</span>
-                              <span className="text-xs text-muted-foreground">{site.location || site.company || '—'}</span>
+                            <div className="flex items-center gap-1.5">
+                              {site.licenses && (
+                                <Badge variant="outline" className="text-[10px] font-semibold uppercase px-2 py-0.5">
+                                  {site.licenses.tier}
+                                </Badge>
+                              )}
+                              <button
+                                onClick={(e) => startEditSite(site, e)}
+                                className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
+                                title="Edit site"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeleteSite(site.id, e); }}
+                                className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                                title="Delete site"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          
+                          {/* Mini printer status bar */}
+                          <div className="flex items-center gap-1 mb-3">
+                            {site.fleet_printers.map(p => (
+                              <div key={p.id} className={cn(
+                                "h-1.5 flex-1 rounded-full",
+                                p.status === 'online' && "bg-emerald-500",
+                                p.status === 'offline' && "bg-muted-foreground/20",
+                                p.status === 'error' && "bg-red-500"
+                              )} />
+                            ))}
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs text-muted-foreground">{total} printer{total !== 1 ? 's' : ''}</span>
                             {site.licenses && (
-                              <Badge variant="outline" className="text-[10px] font-semibold uppercase px-2 py-0.5">
-                                {site.licenses.tier}
+                              <span className="text-[10px] font-mono text-muted-foreground/70">{site.licenses.product_key}</span>
+                            )}
+                            <div className="flex-1" />
+                            {online > 0 && (
+                              <Badge variant="outline" className="text-[10px] bg-emerald-500/5 text-emerald-600 border-emerald-500/20 px-2 py-0.5">
+                                {online} online
                               </Badge>
                             )}
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteSite(site.id, e); }}
-                              className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                              title="Delete site"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                            {errors > 0 && (
+                              <Badge variant="outline" className="text-[10px] bg-red-500/5 text-red-500 border-red-500/20 px-2 py-0.5">
+                                {errors} error
+                              </Badge>
+                            )}
                           </div>
-                        </div>
-                        
-                        {/* Mini printer status bar */}
-                        <div className="flex items-center gap-1 mb-3">
-                          {site.fleet_printers.map(p => (
-                            <div key={p.id} className={cn(
-                              "h-1.5 flex-1 rounded-full",
-                              p.status === 'online' && "bg-emerald-500",
-                              p.status === 'offline' && "bg-muted-foreground/20",
-                              p.status === 'error' && "bg-red-500"
-                            )} />
-                          ))}
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs text-muted-foreground">{total} printer{total !== 1 ? 's' : ''}</span>
-                          {site.licenses && (
-                            <span className="text-[10px] font-mono text-muted-foreground/70">{site.licenses.product_key}</span>
-                          )}
-                          <div className="flex-1" />
-                          {online > 0 && (
-                            <Badge variant="outline" className="text-[10px] bg-emerald-500/5 text-emerald-600 border-emerald-500/20 px-2 py-0.5">
-                              {online} online
-                            </Badge>
-                          )}
-                          {errors > 0 && (
-                            <Badge variant="outline" className="text-[10px] bg-red-500/5 text-red-500 border-red-500/20 px-2 py-0.5">
-                              {errors} error
-                            </Badge>
-                          )}
-                        </div>
-                      </button>
+                        </button>
+                      )}
                     </div>
                   );
                 })}
