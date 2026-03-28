@@ -960,14 +960,6 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                           )}
                         </div>
                       </button>
-                      {/* Delete button */}
-                      <button
-                        onClick={(e) => handleDeleteSite(site.id, e)}
-                        className="absolute top-3 right-3 p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                        title="Delete site"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </div>
                   );
                 })}
