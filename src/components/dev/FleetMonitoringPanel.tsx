@@ -303,8 +303,23 @@ export function FleetMonitoringPanel() {
   const [firmware, setFirmware] = useState<Firmware[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [showAddSite, setShowAddSite] = useState(false);
+  const [showAddPrinter, setShowAddPrinter] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
 
-  const fleetCall = useCallback(async (action: string, params?: Record<string, string>) => {
+  // Add Site form state
+  const [newSiteName, setNewSiteName] = useState('');
+  const [newSiteCompany, setNewSiteCompany] = useState('');
+  const [newSiteLocation, setNewSiteLocation] = useState('');
+  const [newSiteEmail, setNewSiteEmail] = useState('');
+
+  // Add Printer form state
+  const [newPrinterName, setNewPrinterName] = useState('');
+  const [newPrinterIp, setNewPrinterIp] = useState('');
+  const [newPrinterPort, setNewPrinterPort] = useState('23');
+  const [newPrinterSerial, setNewPrinterSerial] = useState('');
+
+  const fleetCall = useCallback(async (action: string, params?: Record<string, string>, body?: any) => {
     const query = new URLSearchParams({ action, ...params }).toString();
     const res = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fleet-monitoring?${query}`,
@@ -315,7 +330,7 @@ export function FleetMonitoringPanel() {
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: '{}',
+        body: JSON.stringify(body || {}),
       }
     );
     return res.json();
