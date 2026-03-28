@@ -231,7 +231,86 @@ Deno.serve(async (req) => {
         });
       }
 
-      case "seed-demo": {
+      case "register-printer": {
+        // Auto-register: customer's app phones home with license key + printer config
+        const body = await req.json();
+        const { product_key, printer_name, ip_address, port, serial_number, firmware_version } = body;
+        if (!product_key || !ip_address) throw new Error("product_key and ip_address are required");
+
+        // Find the license
+        const { data: license, error: licErr } = await supabase
+          .from("licenses")
+          .select("id")
+          .eq("product_key", product_key)
+          .eq("is_active", true)
+          .single();
+        if (licErr || !license) throw new Error("Invalid or inactive license key");
+
+        // Find site linked to this license
+        let { data: site } = await supabase
+          .from("fleet_sites")
+          .select("id, name")
+          .eq("license_id", license.id)
+          .single();
+
+        // If no site exists for this license, auto-create one
+        if (!site) {
+          const { data: newSite, error: sErr } = await supabase
+            .from("fleet_sites")
+            .insert({ name: `Site - ${product_key.substring(0, 8)}`, license_id: license.id })
+            .select()
+            .single();
+          if (sErr) throw sErr;
+          site = newSite;
+        }
+
+        // Check if printer already registered (by IP + site)
+        const { data: existing } = await supabase
+          .from("fleet_printers")
+          .select("id")
+          .eq("site_id", site!.id)
+          .eq("ip_address", ip_address)
+          .maybeSingle();
+
+        if (existing) {
+          // Update existing printer
+          await supabase
+            .from("fleet_printers")
+            .update({
+              name: printer_name || existing.id,
+              firmware_version: firmware_version || null,
+              serial_number: serial_number || null,
+              status: "online",
+              last_seen: new Date().toISOString(),
+            })
+            .eq("id", existing.id);
+
+          return new Response(JSON.stringify({ success: true, action: "updated", printer_id: existing.id }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Register new printer
+        const { data: printer, error: pErr } = await supabase
+          .from("fleet_printers")
+          .insert({
+            site_id: site!.id,
+            name: printer_name || `Printer @ ${ip_address}`,
+            ip_address,
+            port: port || 23,
+            serial_number: serial_number || null,
+            firmware_version: firmware_version || null,
+            status: "online",
+            last_seen: new Date().toISOString(),
+          })
+          .select()
+          .single();
+        if (pErr) throw pErr;
+
+        return new Response(JSON.stringify({ success: true, action: "registered", printer_id: printer.id }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
         // Seed demo data for exhibition
         // Create demo sites
         const sites = [
