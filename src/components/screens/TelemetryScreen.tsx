@@ -513,6 +513,26 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
     }
   }, [fleetCall, fetchSites]);
 
+  const handleAddSite = useCallback(async () => {
+    if (!newSiteName.trim()) return;
+    setFormLoading(true);
+    try {
+      await fleetCall('add-site', undefined, {
+        name: newSiteName.trim(),
+        company: newSiteCompany.trim() || undefined,
+        location: newSiteLocation.trim() || undefined,
+        contact_email: newSiteEmail.trim() || undefined,
+      });
+      setShowAddSite(false);
+      setNewSiteName(''); setNewSiteCompany(''); setNewSiteLocation(''); setNewSiteEmail('');
+      await fetchSites();
+    } catch (err) {
+      console.error('Add site error:', err);
+    } finally {
+      setFormLoading(false);
+    }
+  }, [fleetCall, fetchSites, newSiteName, newSiteCompany, newSiteLocation, newSiteEmail]);
+
   useEffect(() => { fetchSites(); }, [fetchSites]);
 
   const handleSelectPrinter = (printer: FleetPrinter) => {
