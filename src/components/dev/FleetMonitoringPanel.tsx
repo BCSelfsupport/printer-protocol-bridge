@@ -379,6 +379,81 @@ export function FleetMonitoringPanel() {
     }
   }, [fleetCall, fetchSites]);
 
+  const handleAddSite = useCallback(async () => {
+    if (!newSiteName.trim()) return;
+    setFormLoading(true);
+    try {
+      const json = await fleetCall('add-site', undefined, {
+        name: newSiteName.trim(),
+        company: newSiteCompany.trim() || undefined,
+        location: newSiteLocation.trim() || undefined,
+        contact_email: newSiteEmail.trim() || undefined,
+      });
+      if (json.success) {
+        setShowAddSite(false);
+        setNewSiteName(''); setNewSiteCompany(''); setNewSiteLocation(''); setNewSiteEmail('');
+        await fetchSites();
+      }
+    } catch (err) {
+      console.error('Add site error:', err);
+    } finally {
+      setFormLoading(false);
+    }
+  }, [fleetCall, fetchSites, newSiteName, newSiteCompany, newSiteLocation, newSiteEmail]);
+
+  const handleAddPrinter = useCallback(async () => {
+    if (!selectedSite || !newPrinterName.trim() || !newPrinterIp.trim()) return;
+    setFormLoading(true);
+    try {
+      const json = await fleetCall('add-printer', undefined, {
+        site_id: selectedSite.id,
+        name: newPrinterName.trim(),
+        ip_address: newPrinterIp.trim(),
+        port: parseInt(newPrinterPort) || 23,
+        serial_number: newPrinterSerial.trim() || undefined,
+      });
+      if (json.success) {
+        setShowAddPrinter(false);
+        setNewPrinterName(''); setNewPrinterIp(''); setNewPrinterPort('23'); setNewPrinterSerial('');
+        await fetchSites();
+        // Refresh selected site
+        const updated = (await fleetCall('sites')).sites || [];
+        const refreshed = updated.find((s: FleetSite) => s.id === selectedSite.id);
+        if (refreshed) setSelectedSite(refreshed);
+      }
+    } catch (err) {
+      console.error('Add printer error:', err);
+    } finally {
+      setFormLoading(false);
+    }
+  }, [fleetCall, fetchSites, selectedSite, newPrinterName, newPrinterIp, newPrinterPort, newPrinterSerial]);
+
+  const handleDeleteSite = useCallback(async (siteId: string) => {
+    if (!confirm('Delete this site and all its printers? This cannot be undone.')) return;
+    try {
+      await fleetCall('delete-site', undefined, { site_id: siteId });
+      await fetchSites();
+    } catch (err) {
+      console.error('Delete site error:', err);
+    }
+  }, [fleetCall, fetchSites]);
+
+  const handleDeletePrinter = useCallback(async (printerId: string) => {
+    if (!confirm('Delete this printer and all its data? This cannot be undone.')) return;
+    try {
+      await fleetCall('delete-printer', undefined, { printer_id: printerId });
+      await fetchSites();
+      if (selectedSite) {
+        const updated = (await fleetCall('sites')).sites || [];
+        const refreshed = updated.find((s: FleetSite) => s.id === selectedSite.id);
+        if (refreshed) setSelectedSite(refreshed);
+        else setSelectedSite(null);
+      }
+    } catch (err) {
+      console.error('Delete printer error:', err);
+    }
+  }, [fleetCall, fetchSites, selectedSite]);
+
   useEffect(() => {
     fetchSites();
   }, [fetchSites]);
