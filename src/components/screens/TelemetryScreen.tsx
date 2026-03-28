@@ -542,16 +542,54 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
         company: newSiteName.trim(),
         location: newSiteLocation.trim() || undefined,
         contact_email: newSiteEmail.trim() || undefined,
+        license_key: newSiteLicenseKey.trim() || undefined,
       });
       setShowAddSite(false);
-      setNewSiteName(''); setNewSiteCompany(''); setNewSiteLocation(''); setNewSiteEmail('');
+      setNewSiteName(''); setNewSiteCompany(''); setNewSiteLocation(''); setNewSiteEmail(''); setNewSiteLicenseKey('');
       await fetchSites();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Add site error:', err);
+      alert(err?.message || 'Failed to add site');
     } finally {
       setFormLoading(false);
     }
-  }, [fleetCall, fetchSites, newSiteName, newSiteCompany, newSiteLocation, newSiteEmail]);
+  }, [fleetCall, fetchSites, newSiteName, newSiteCompany, newSiteLocation, newSiteEmail, newSiteLicenseKey]);
+
+  const startEditSite = (site: FleetSite, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingSiteId(site.id);
+    setEditName(site.name);
+    setEditCompany(site.company || '');
+    setEditLocation(site.location || '');
+    setEditEmail(site.contact_email || '');
+    setEditLicenseKey(site.licenses?.product_key || '');
+  };
+
+  const handleEditSite = useCallback(async () => {
+    if (!editingSiteId || !editName.trim()) return;
+    setEditLoading(true);
+    try {
+      const result = await fleetCall('edit-site', undefined, {
+        site_id: editingSiteId,
+        name: editName.trim(),
+        company: editCompany.trim() || null,
+        location: editLocation.trim() || null,
+        contact_email: editEmail.trim() || null,
+        license_key: editLicenseKey.trim() || '',
+      });
+      setEditingSiteId(null);
+      await fetchSites();
+      // If we're inside a site detail, update selectedSite
+      if (selectedSite?.id === editingSiteId && result.site) {
+        setSelectedSite(result.site);
+      }
+    } catch (err: any) {
+      console.error('Edit site error:', err);
+      alert(err?.message || 'Failed to update site');
+    } finally {
+      setEditLoading(false);
+    }
+  }, [fleetCall, fetchSites, editingSiteId, editName, editCompany, editLocation, editEmail, editLicenseKey, selectedSite]);
 
   const handleAddPrinter = useCallback(async () => {
     if (!selectedSite || !newPrinterName.trim() || !newPrinterIp.trim()) return;
