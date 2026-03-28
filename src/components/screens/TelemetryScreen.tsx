@@ -496,6 +496,17 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
     }
   }, [fleetCall, fetchSites]);
 
+  const handleDeleteSite = useCallback(async (siteId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Delete this site and all its printers/data? This cannot be undone.')) return;
+    try {
+      await fleetCall('delete-site', undefined, { site_id: siteId });
+      await fetchSites();
+    } catch (err) {
+      console.error('Delete site error:', err);
+    }
+  }, [fleetCall, fetchSites]);
+
   useEffect(() => { fetchSites(); }, [fetchSites]);
 
   const handleSelectPrinter = (printer: FleetPrinter) => {
