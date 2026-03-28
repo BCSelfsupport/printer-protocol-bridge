@@ -1141,8 +1141,11 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                           ))}
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs text-muted-foreground">{total} printer{total !== 1 ? 's' : ''}</span>
+                          {site.licenses && (
+                            <span className="text-[10px] font-mono text-muted-foreground/70">{site.licenses.product_key}</span>
+                          )}
                           <div className="flex-1" />
                           {online > 0 && (
                             <Badge variant="outline" className="text-[10px] bg-emerald-500/5 text-emerald-600 border-emerald-500/20 px-2 py-0.5">
