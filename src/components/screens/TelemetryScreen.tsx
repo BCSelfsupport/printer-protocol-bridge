@@ -1110,14 +1110,12 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                               <span className="text-xs text-muted-foreground">{site.location || site.company || '—'}</span>
                             </div>
                           </div>
-                          {site.licenses && (
-                            <Badge variant="outline" className="text-[10px] font-semibold uppercase px-2 py-0.5">
-                              {site.licenses.tier}
-                            </Badge>
-                          )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
+                            {site.licenses && (
+                              <Badge variant="outline" className="text-[10px] font-semibold uppercase px-2 py-0.5">
+                                {site.licenses.tier}
+                              </Badge>
+                            )}
                             <button
                               onClick={(e) => { e.stopPropagation(); handleDeleteSite(site.id, e); }}
                               className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
