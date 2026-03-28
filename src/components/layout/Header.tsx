@@ -118,7 +118,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
            )}
         </div>
 
-        <div className="flex items-center gap-1 md:gap-4 flex-shrink-0 ml-2 md:ml-4">
+        <div className="flex items-center gap-1 md:gap-4 flex-shrink-0 ml-2 md:ml-4 overflow-x-auto">
           {/* Relay mode indicator for mobile PWA */}
           {!window.electronAPI && onRelayConnect && (
             <button
