@@ -437,20 +437,25 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
   const [newPrinterPort, setNewPrinterPort] = useState('23');
 
   const fleetCall = useCallback(async (action: string, params?: Record<string, string>, body?: any) => {
-    const query = new URLSearchParams({ action, ...params }).toString();
+    const query = new URLSearchParams({ action, ...(params || {}) }).toString();
     const res = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fleet-monitoring?${query}`,
-      { 
+      {
         method: 'POST',
-        headers: { 
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, 
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body || {}),
       }
     );
-    return res.json();
+
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json?.error || `Fleet request failed (${res.status})`);
+    }
+    return json;
   }, []);
 
   const fetchSites = useCallback(async () => {
