@@ -976,7 +976,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                   return (
                     <div
                       key={site.id}
-                      className="text-left bg-card border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-xl transition-all group relative"
+                      className="text-left bg-card border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-xl transition-all group"
                     >
                       <button
                         onClick={() => setSelectedSite(site)}
