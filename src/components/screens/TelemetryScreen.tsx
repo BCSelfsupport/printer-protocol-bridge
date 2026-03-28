@@ -865,9 +865,49 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
 
             {/* Printers Grid */}
             <div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-4">
-                {selectedSite.fleet_printers.length} Printer{selectedSite.fleet_printers.length !== 1 ? 's' : ''} Installed
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                  {selectedSite.fleet_printers.length} Printer{selectedSite.fleet_printers.length !== 1 ? 's' : ''} Installed
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setShowAddPrinter(true)} className="text-xs gap-1.5">
+                  <Plus className="w-4 h-4" />
+                  Add Printer
+                </Button>
               </div>
+
+              {showAddPrinter && (
+                <div className="bg-card border border-primary/20 rounded-2xl p-5 space-y-3 mb-4">
+                  <h3 className="text-sm font-semibold text-foreground">Add Printer</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <input
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                      placeholder="Printer name (e.g. Line 1 Coder) *"
+                      value={newPrinterName}
+                      onChange={e => setNewPrinterName(e.target.value)}
+                    />
+                    <input
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground font-mono"
+                      placeholder="IP address (e.g. 192.168.1.10) *"
+                      value={newPrinterIp}
+                      onChange={e => setNewPrinterIp(e.target.value)}
+                    />
+                    <input
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground font-mono"
+                      placeholder="Port (default 23)"
+                      value={newPrinterPort}
+                      onChange={e => setNewPrinterPort(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <Button size="sm" onClick={handleAddPrinter} disabled={formLoading || !newPrinterName.trim() || !newPrinterIp.trim()} className="gap-1.5">
+                      {formLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                      Add Printer
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setShowAddPrinter(false)}>Cancel</Button>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {selectedSite.fleet_printers.map(printer => (
                   <button
@@ -880,7 +920,16 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                         <StatusDot status={printer.status} />
                         <span className="text-base font-semibold text-foreground">{printer.name}</span>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => handleDeletePrinter(printer.id, e)}
+                          className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                          title="Delete printer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-y-2 text-sm">
                       <span className="text-muted-foreground">IP</span>
