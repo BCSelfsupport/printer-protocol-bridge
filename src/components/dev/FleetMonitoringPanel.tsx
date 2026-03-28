@@ -661,9 +661,18 @@ export function FleetMonitoringPanel() {
           </button>
 
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Building2 className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-semibold text-gray-800">{selectedSite.name}</span>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-semibold text-gray-800">{selectedSite.name}</span>
+              </div>
+              <button
+                onClick={() => handleDeleteSite(selectedSite.id)}
+                className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
+                title="Delete site"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
             <div className="text-[10px] text-gray-500 space-y-0.5">
               {selectedSite.company && <div>Company: {selectedSite.company}</div>}
