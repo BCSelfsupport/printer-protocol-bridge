@@ -25,7 +25,7 @@ interface FleetSite {
   location: string | null;
   contact_email: string | null;
   license_id: string | null;
-  licenses: { product_key: string; tier: string } | null;
+  licenses: { product_key: string; tier: string; created_at: string } | null;
   fleet_printers: FleetPrinter[];
 }
 
