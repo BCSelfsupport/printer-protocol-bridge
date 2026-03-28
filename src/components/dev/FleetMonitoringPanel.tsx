@@ -4,7 +4,7 @@ import {
   ChevronRight, ChevronLeft, RefreshCw, Cpu, Thermometer, 
   Droplets, Gauge, Zap, Clock, FileText, Upload, 
   CheckCircle2, XCircle, Loader2, Radio, Database,
-  ArrowUpCircle, History, Eye
+  ArrowUpCircle, History, Eye, Plus, Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
