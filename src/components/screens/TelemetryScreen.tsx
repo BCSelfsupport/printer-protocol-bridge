@@ -537,7 +537,46 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
     }
   }, [fleetCall, fetchSites, newSiteName, newSiteCompany, newSiteLocation, newSiteEmail]);
 
-  useEffect(() => { fetchSites(); }, [fetchSites]);
+  const handleAddPrinter = useCallback(async () => {
+    if (!selectedSite || !newPrinterName.trim() || !newPrinterIp.trim()) return;
+    setFormLoading(true);
+    try {
+      await fleetCall('add-printer', undefined, {
+        site_id: selectedSite.id,
+        name: newPrinterName.trim(),
+        ip_address: newPrinterIp.trim(),
+        port: parseInt(newPrinterPort) || 23,
+      });
+      setShowAddPrinter(false);
+      setNewPrinterName(''); setNewPrinterIp(''); setNewPrinterPort('23');
+      await fetchSites();
+      // Refresh selectedSite from updated sites
+      const freshSites = await fleetCall('sites').then(r => r.json()).then(d => d.sites);
+      const freshSite = freshSites.find((s: any) => s.id === selectedSite.id);
+      if (freshSite) setSelectedSite(freshSite);
+    } catch (err) {
+      console.error('Add printer error:', err);
+    } finally {
+      setFormLoading(false);
+    }
+  }, [fleetCall, fetchSites, selectedSite, newPrinterName, newPrinterIp, newPrinterPort]);
+
+  const handleDeletePrinter = useCallback(async (printerId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Delete this printer and all its telemetry data?')) return;
+    try {
+      await fleetCall('delete-printer', undefined, { printer_id: printerId });
+      await fetchSites();
+      if (selectedSite) {
+        const freshSites = await fleetCall('sites').then(r => r.json()).then(d => d.sites);
+        const freshSite = freshSites.find((s: any) => s.id === selectedSite.id);
+        if (freshSite) setSelectedSite(freshSite);
+      }
+    } catch (err) {
+      console.error('Delete printer error:', err);
+    }
+  }, [fleetCall, fetchSites, selectedSite]);
+
 
   const handleSelectPrinter = (printer: FleetPrinter) => {
     setSelectedPrinter(printer);
