@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Play, Clock, Film, ChevronLeft, X, Download } from 'lucide-react';
+import { Play, Clock, Film, ChevronLeft, X, Download, Link2, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -81,12 +82,26 @@ export function TrainingVideosScreen({ onBack }: TrainingVideosScreenProps) {
           {selectedVideo.description ? (
             <p className="text-sm text-muted-foreground">{selectedVideo.description}</p>
           ) : <div />}
-          <a href={selectedVideo.video_url} download={`${selectedVideo.title}.webm`} target="_blank" rel="noopener noreferrer">
-            <Button size="sm" variant="outline" className="gap-2 flex-shrink-0">
-              <Download className="w-4 h-4" />
-              Download
+          <div className="flex gap-2 flex-shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={() => {
+                navigator.clipboard.writeText(selectedVideo.video_url);
+                toast.success('Link copied to clipboard');
+              }}
+            >
+              <Link2 className="w-4 h-4" />
+              Copy Link
             </Button>
-          </a>
+            <a href={selectedVideo.video_url} download={`${selectedVideo.title}.webm`} target="_blank" rel="noopener noreferrer">
+              <Button size="sm" variant="outline" className="gap-2">
+                <Download className="w-4 h-4" />
+                Download
+              </Button>
+            </a>
+          </div>
         </div>
       </div>
     );
