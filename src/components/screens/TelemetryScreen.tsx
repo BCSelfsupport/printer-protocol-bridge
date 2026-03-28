@@ -6,7 +6,7 @@ import {
   CheckCircle2, XCircle, Loader2, Database,
   ArrowUpCircle, History, Wifi, WifiOff, MapPin,
   Mail, Server, Cpu, BarChart3, Signal,
-  Home, ArrowLeft, Radio, Sun, Moon
+  Home, ArrowLeft, Radio, Sun, Moon, Trash2
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
