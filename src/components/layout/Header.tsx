@@ -99,9 +99,8 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
 
   return (
     <header className="bg-muted">
-      <div className="flex items-center justify-between px-2 md:px-4 py-2">
-        <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
-          
+      <div className="flex items-center gap-2 px-2 md:px-4 py-2 w-full">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <div className="flex items-start">
             <span className="text-xl md:text-3xl font-bold italic text-blue-600">
               Code
@@ -115,100 +114,103 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
             <span className="text-[10px] text-muted-foreground font-mono ml-1 self-end mb-0.5">
               v{appVersion}
             </span>
-           )}
+          )}
         </div>
 
-        <div className="flex flex-nowrap items-center gap-1 md:gap-4 flex-shrink-0 ml-2 md:ml-4 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {/* Relay mode indicator for mobile PWA */}
-          {!window.electronAPI && onRelayConnect && (
-            <button
-              onClick={onRelayConnect}
-              className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
-                getRelayConfig() 
-                  ? 'bg-green-600 hover:bg-green-700' 
-                  : 'bg-muted-foreground/50 hover:bg-muted-foreground/70'
-              }`}
-              title={getRelayConfig() ? `Relay: ${getRelayConfig()?.pcIp}` : 'Connect via PC'}
-            >
-              <Smartphone className={`w-3.5 h-3.5 md:w-5 md:h-5 ${getRelayConfig() ? 'text-white' : 'text-card'}`} />
-            </button>
-          )}
-
-          {isConnected && (
-            <div className="px-1.5 md:px-4 py-1 md:py-2 rounded bg-success text-white text-[9px] md:text-sm font-medium flex-shrink-0">
-              <div className="text-[8px] md:text-xs">Connected</div>
-              <div className="text-[9px] md:text-sm">{connectedIp}</div>
-            </div>
-          )}
-
-          {mounted && (
-            <button 
-              onClick={toggleTheme}
-              className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
-            >
-              {theme === 'dark' ? (
-                <Sun className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
-              ) : (
-                <Moon className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+        <div className="flex items-center min-w-0 flex-1 justify-end gap-2">
+          <div className="flex-1 min-w-0 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex w-max flex-nowrap items-center gap-1 md:gap-4 pl-2">
+              {/* Relay mode indicator for mobile PWA */}
+              {!window.electronAPI && onRelayConnect && (
+                <button
+                  onClick={onRelayConnect}
+                  className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
+                    getRelayConfig()
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-muted-foreground/50 hover:bg-muted-foreground/70'
+                  }`}
+                  title={getRelayConfig() ? `Relay: ${getRelayConfig()?.pcIp}` : 'Connect via PC'}
+                >
+                  <Smartphone className={`w-3.5 h-3.5 md:w-5 md:h-5 ${getRelayConfig() ? 'text-white' : 'text-card'}`} />
+                </button>
               )}
-            </button>
-          )}
 
-          <button 
-            onClick={toggleFullscreen}
-            className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
-            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-          >
-            {isFullscreen ? (
-              <Minimize className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
-            ) : (
-              <Maximize className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
-            )}
-          </button>
+              {isConnected && (
+                <div className="px-1.5 md:px-4 py-1 md:py-2 rounded bg-success text-white text-[9px] md:text-sm font-medium flex-shrink-0">
+                  <div className="text-[8px] md:text-xs">Connected</div>
+                  <div className="text-[9px] md:text-sm">{connectedIp}</div>
+                </div>
+              )}
 
-          <button
-            onClick={() => setShowFeedback(true)}
-            className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
-            title="Send Feedback"
-          >
-            <MessageSquare className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
-          </button>
+              {mounted && (
+                <button
+                  onClick={toggleTheme}
+                  className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+                >
+                  {theme === 'dark' ? (
+                    <Sun className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+                  ) : (
+                    <Moon className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+                  )}
+                </button>
+              )}
 
-          {onTrainingVideos && (
-            <button
-              onClick={onTrainingVideos}
-              className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
-              title="Training Videos"
-            >
-              <Video className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
-            </button>
-          )}
+              <button
+                onClick={toggleFullscreen}
+                className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+                title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+              >
+                {isFullscreen ? (
+                  <Minimize className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+                ) : (
+                  <Maximize className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+                )}
+              </button>
 
-          <button
-            onClick={() => setShowGuide(true)}
-            className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
-            title="Connection Setup Guide"
-          >
-            <HelpCircle className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
-          </button>
+              <button
+                onClick={() => setShowFeedback(true)}
+                className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+                title="Send Feedback"
+              >
+                <MessageSquare className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+              </button>
 
-          <button
-            onClick={() => navigate('/diagnostics')}
-            className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
-            title="Telnet Diagnostics"
-          >
-            <Stethoscope className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
-          </button>
+              {onTrainingVideos && (
+                <button
+                  onClick={onTrainingVideos}
+                  className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+                  title="Training Videos"
+                >
+                  <Video className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+                </button>
+              )}
 
-          {onHome && (
-            <button 
-              onClick={onHome}
-              className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 transition-colors flex-shrink-0"
-            >
-              <Home className="w-4 h-4 md:w-6 md:h-6 text-primary-foreground" />
-            </button>
-          )}
+              <button
+                onClick={() => setShowGuide(true)}
+                className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+                title="Connection Setup Guide"
+              >
+                <HelpCircle className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+              </button>
 
+              <button
+                onClick={() => navigate('/diagnostics')}
+                className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+                title="Telnet Diagnostics"
+              >
+                <Stethoscope className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+              </button>
+
+              {onHome && (
+                <button
+                  onClick={onHome}
+                  className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 transition-colors flex-shrink-0"
+                >
+                  <Home className="w-4 h-4 md:w-6 md:h-6 text-primary-foreground" />
+                </button>
+              )}
+            </div>
+          </div>
 
           <div className="text-right text-foreground min-w-[70px] md:min-w-[120px] flex-shrink-0">
             <div className="text-sm md:text-lg font-medium tabular-nums">
