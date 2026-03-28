@@ -909,11 +909,39 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                   Remote monitoring, diagnostics, and over-the-air firmware updates for your entire printer network — from anywhere.
                 </p>
               </div>
-              <Button onClick={seedDemoData} disabled={seeding} size="lg" className="h-12 px-8 text-sm font-semibold">
-                {seeding ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Database className="w-4 h-4 mr-2" />}
-                Load Exhibition Demo Data
-              </Button>
-              <p className="text-[11px] text-muted-foreground">Creates sample customer sites with printers for demonstration</p>
+              <div className="bg-card border border-primary/20 rounded-2xl p-6 space-y-4 w-full max-w-lg">
+                <h3 className="text-sm font-semibold text-foreground">Add Company Site</h3>
+                <div className="grid grid-cols-1 gap-3">
+                  <input
+                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                    placeholder="Site name (e.g. Sunrise Eggs Ltd) *"
+                    value={newSiteName}
+                    onChange={e => setNewSiteName(e.target.value)}
+                  />
+                  <input
+                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                    placeholder="Company name"
+                    value={newSiteCompany}
+                    onChange={e => setNewSiteCompany(e.target.value)}
+                  />
+                  <input
+                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                    placeholder="Location (e.g. Cork, Ireland)"
+                    value={newSiteLocation}
+                    onChange={e => setNewSiteLocation(e.target.value)}
+                  />
+                  <input
+                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                    placeholder="Contact email"
+                    value={newSiteEmail}
+                    onChange={e => setNewSiteEmail(e.target.value)}
+                  />
+                </div>
+                <Button onClick={handleAddSite} disabled={!newSiteName.trim()} size="sm" className="w-full gap-1.5">
+                  <Plus className="w-4 h-4" />
+                  Add Site
+                </Button>
+              </div>
             </div>
           ) : (
             <>
