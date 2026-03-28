@@ -921,7 +921,16 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                               <span className="text-xs text-muted-foreground">{site.location || site.company || '—'}</span>
                             </div>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteSite(site.id, e); }}
+                              className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                              title="Delete site"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                          </div>
                         </div>
                         
                         {/* Mini printer status bar */}
