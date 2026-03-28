@@ -473,7 +473,13 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
     setLoading(true);
     try {
       const json = await fleetCall('sites');
-      setSites(json.sites || []);
+      const allSites = (json.sites || []) as FleetSite[];
+      allSites.sort((a, b) => {
+        const da = a.licenses?.created_at ? new Date(a.licenses.created_at).getTime() : Infinity;
+        const db = b.licenses?.created_at ? new Date(b.licenses.created_at).getTime() : Infinity;
+        return da - db;
+      });
+      setSites(allSites);
     } catch (err) {
       console.error('Fleet fetch error:', err);
     } finally {
