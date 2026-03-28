@@ -140,6 +140,97 @@ Deno.serve(async (req) => {
         });
       }
 
+      case "add-site": {
+        const body = await req.json();
+        const { name, company, location, contact_email, license_id } = body;
+        if (!name) throw new Error("name is required");
+
+        const insertData: any = { name };
+        if (company) insertData.company = company;
+        if (location) insertData.location = location;
+        if (contact_email) insertData.contact_email = contact_email;
+        if (license_id) insertData.license_id = license_id;
+
+        const { data, error } = await supabase
+          .from("fleet_sites")
+          .insert(insertData)
+          .select()
+          .single();
+        if (error) throw error;
+
+        return new Response(JSON.stringify({ success: true, site: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "add-printer": {
+        const body = await req.json();
+        const { site_id, name, ip_address, port, serial_number, firmware_version } = body;
+        if (!site_id || !name || !ip_address) throw new Error("site_id, name, and ip_address are required");
+
+        const { data, error } = await supabase
+          .from("fleet_printers")
+          .insert({
+            site_id,
+            name,
+            ip_address,
+            port: port || 23,
+            serial_number: serial_number || null,
+            firmware_version: firmware_version || null,
+            status: "offline",
+          })
+          .select()
+          .single();
+        if (error) throw error;
+
+        return new Response(JSON.stringify({ success: true, printer: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "delete-site": {
+        const body = await req.json();
+        const { site_id } = body;
+        if (!site_id) throw new Error("site_id required");
+
+        // Delete printers first (and their telemetry/events)
+        const { data: printers } = await supabase
+          .from("fleet_printers")
+          .select("id")
+          .eq("site_id", site_id);
+        
+        if (printers && printers.length > 0) {
+          const printerIds = printers.map((p: any) => p.id);
+          await supabase.from("fleet_telemetry").delete().in("printer_id", printerIds);
+          await supabase.from("fleet_events").delete().in("printer_id", printerIds);
+          await supabase.from("fleet_firmware_updates").delete().in("printer_id", printerIds);
+          await supabase.from("fleet_printers").delete().eq("site_id", site_id);
+        }
+
+        const { error } = await supabase.from("fleet_sites").delete().eq("id", site_id);
+        if (error) throw error;
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "delete-printer": {
+        const body = await req.json();
+        const { printer_id } = body;
+        if (!printer_id) throw new Error("printer_id required");
+
+        await supabase.from("fleet_telemetry").delete().eq("printer_id", printer_id);
+        await supabase.from("fleet_events").delete().eq("printer_id", printer_id);
+        await supabase.from("fleet_firmware_updates").delete().eq("printer_id", printer_id);
+        const { error } = await supabase.from("fleet_printers").delete().eq("id", printer_id);
+        if (error) throw error;
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       case "seed-demo": {
         // Seed demo data for exhibition
         // Create demo sites
