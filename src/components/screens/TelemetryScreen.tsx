@@ -1090,6 +1090,12 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                     value={newSiteEmail}
                     onChange={e => setNewSiteEmail(e.target.value)}
                   />
+                  <input
+                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground font-mono"
+                    placeholder="License key (e.g. XXXXX-XXXXX-XXXXX-XXXXX)"
+                    value={newSiteLicenseKey}
+                    onChange={e => setNewSiteLicenseKey(e.target.value)}
+                  />
                 </div>
                 <Button onClick={handleAddSite} disabled={!newSiteName.trim()} size="sm" className="w-full gap-1.5">
                   <Plus className="w-4 h-4" />
