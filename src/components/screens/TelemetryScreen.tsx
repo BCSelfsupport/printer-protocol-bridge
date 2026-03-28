@@ -895,6 +895,10 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                 <h2 className="text-sm text-muted-foreground uppercase tracking-widest font-medium">
                   {sites.length} Customer Site{sites.length !== 1 ? 's' : ''}
                 </h2>
+                <Button variant="outline" size="sm" onClick={() => setShowAddSite(true)} className="text-xs gap-1.5">
+                  <Plus className="w-4 h-4" />
+                  Add Company
+                </Button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {sites.map(site => {
