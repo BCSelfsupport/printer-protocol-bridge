@@ -580,10 +580,11 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
     } catch (err) {
       console.error('Delete printer error:', err);
     }
-  }, [fleetCall, fetchSites, selectedSite]);
 
+  useEffect(() => {
+    void fetchSites();
+  }, [fetchSites]);
 
-  const handleSelectPrinter = (printer: FleetPrinter) => {
     setSelectedPrinter(printer);
     fetchPrinterDetail(printer);
   };
