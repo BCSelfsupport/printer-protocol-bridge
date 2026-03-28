@@ -163,6 +163,62 @@ Deno.serve(async (req) => {
         });
       }
 
+      case "edit-site": {
+        const body = await req.json();
+        const { site_id, name, company, location, contact_email, license_key } = body;
+        if (!site_id) throw new Error("site_id required");
+
+        const updateData: any = {};
+        if (name !== undefined) updateData.name = name;
+        if (company !== undefined) updateData.company = company;
+        if (location !== undefined) updateData.location = location;
+        if (contact_email !== undefined) updateData.contact_email = contact_email;
+
+        // Resolve license_key to license_id
+        if (license_key !== undefined) {
+          if (license_key === '') {
+            updateData.license_id = null;
+          } else {
+            const { data: lic, error: licErr } = await supabase
+              .from("licenses")
+              .select("id")
+              .eq("product_key", license_key)
+              .single();
+            if (licErr || !lic) throw new Error(`License key not found: ${license_key}`);
+            updateData.license_id = lic.id;
+          }
+        }
+
+        const { data, error } = await supabase
+          .from("fleet_sites")
+          .update(updateData)
+          .eq("id", site_id)
+          .select("*, fleet_printers(id, name, ip_address, port, firmware_version, serial_number, last_seen, status), licenses(product_key, tier)")
+          .single();
+        if (error) throw error;
+
+        return new Response(JSON.stringify({ success: true, site: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "resolve-license-key": {
+        const body = await req.json();
+        const { product_key } = body;
+        if (!product_key) throw new Error("product_key required");
+
+        const { data, error } = await supabase
+          .from("licenses")
+          .select("id, product_key, tier, is_active")
+          .eq("product_key", product_key)
+          .single();
+        if (error) throw new Error(`License key not found`);
+
+        return new Response(JSON.stringify({ license: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       case "add-printer": {
         const body = await req.json();
         const { site_id, name, ip_address, port, serial_number, firmware_version } = body;
