@@ -142,14 +142,24 @@ Deno.serve(async (req) => {
 
       case "add-site": {
         const body = await req.json();
-        const { name, company, location, contact_email, license_id } = body;
+        const { name, company, location, contact_email, license_id, license_key } = body;
         if (!name) throw new Error("name is required");
 
         const insertData: any = { name };
         if (company) insertData.company = company;
         if (location) insertData.location = location;
         if (contact_email) insertData.contact_email = contact_email;
-        if (license_id) insertData.license_id = license_id;
+        if (license_id) {
+          insertData.license_id = license_id;
+        } else if (license_key) {
+          const { data: lic, error: licErr } = await supabase
+            .from("licenses")
+            .select("id")
+            .eq("product_key", license_key)
+            .single();
+          if (licErr || !lic) throw new Error(`License key not found: ${license_key}`);
+          insertData.license_id = lic.id;
+        }
 
         const { data, error } = await supabase
           .from("fleet_sites")
