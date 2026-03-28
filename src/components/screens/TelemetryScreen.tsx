@@ -6,7 +6,7 @@ import {
   CheckCircle2, XCircle, Loader2, Database,
   ArrowUpCircle, History, Wifi, WifiOff, MapPin,
   Mail, Server, Cpu, BarChart3, Signal,
-  Home, ArrowLeft, Radio, Sun, Moon
+  Home, ArrowLeft, Radio, Sun, Moon, Trash2
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
@@ -426,7 +426,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [seeding, setSeeding] = useState(false);
 
-  const fleetCall = useCallback(async (action: string, params?: Record<string, string>) => {
+  const fleetCall = useCallback(async (action: string, params?: Record<string, string>, body?: any) => {
     const query = new URLSearchParams({ action, ...params }).toString();
     const res = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fleet-monitoring?${query}`,
@@ -437,7 +437,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: '{}',
+        body: JSON.stringify(body || {}),
       }
     );
     return res.json();
@@ -493,6 +493,17 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
       console.error('Seed error:', err);
     } finally {
       setSeeding(false);
+    }
+  }, [fleetCall, fetchSites]);
+
+  const handleDeleteSite = useCallback(async (siteId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Delete this site and all its printers/data? This cannot be undone.')) return;
+    try {
+      await fleetCall('delete-site', undefined, { site_id: siteId });
+      await fetchSites();
+    } catch (err) {
+      console.error('Delete site error:', err);
     }
   }, [fleetCall, fetchSites]);
 
@@ -892,51 +903,63 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                   const total = site.fleet_printers.length;
 
                   return (
-                    <button
+                    <div
                       key={site.id}
-                      onClick={() => setSelectedSite(site)}
-                      className="text-left bg-card border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-xl transition-all group"
+                      className="text-left bg-card border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-xl transition-all group relative"
                     >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-emerald-500/20 flex items-center justify-center">
-                            <Building2 className="w-6 h-6 text-primary" />
+                      <button
+                        onClick={() => setSelectedSite(site)}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-emerald-500/20 flex items-center justify-center">
+                              <Building2 className="w-6 h-6 text-primary" />
+                            </div>
+                            <div>
+                              <span className="text-base font-bold text-foreground block">{site.name}</span>
+                              <span className="text-xs text-muted-foreground">{site.location || site.company || '—'}</span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-base font-bold text-foreground block">{site.name}</span>
-                            <span className="text-xs text-muted-foreground">{site.location || site.company || '—'}</span>
-                          </div>
+                          <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
                         </div>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
-                      </div>
-                      
-                      {/* Mini printer status bar */}
-                      <div className="flex items-center gap-1 mb-3">
-                        {site.fleet_printers.map(p => (
-                          <div key={p.id} className={cn(
-                            "h-1.5 flex-1 rounded-full",
-                            p.status === 'online' && "bg-emerald-500",
-                            p.status === 'offline' && "bg-muted-foreground/20",
-                            p.status === 'error' && "bg-red-500"
-                          )} />
-                        ))}
-                      </div>
+                        
+                        {/* Mini printer status bar */}
+                        <div className="flex items-center gap-1 mb-3">
+                          {site.fleet_printers.map(p => (
+                            <div key={p.id} className={cn(
+                              "h-1.5 flex-1 rounded-full",
+                              p.status === 'online' && "bg-emerald-500",
+                              p.status === 'offline' && "bg-muted-foreground/20",
+                              p.status === 'error' && "bg-red-500"
+                            )} />
+                          ))}
+                        </div>
 
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">{total} printer{total !== 1 ? 's' : ''}</span>
-                        <div className="flex-1" />
-                        {online > 0 && (
-                          <Badge variant="outline" className="text-[10px] bg-emerald-500/5 text-emerald-600 border-emerald-500/20 px-2 py-0.5">
-                            {online} online
-                          </Badge>
-                        )}
-                        {errors > 0 && (
-                          <Badge variant="outline" className="text-[10px] bg-red-500/5 text-red-500 border-red-500/20 px-2 py-0.5">
-                            {errors} error
-                          </Badge>
-                        )}
-                      </div>
-                    </button>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">{total} printer{total !== 1 ? 's' : ''}</span>
+                          <div className="flex-1" />
+                          {online > 0 && (
+                            <Badge variant="outline" className="text-[10px] bg-emerald-500/5 text-emerald-600 border-emerald-500/20 px-2 py-0.5">
+                              {online} online
+                            </Badge>
+                          )}
+                          {errors > 0 && (
+                            <Badge variant="outline" className="text-[10px] bg-red-500/5 text-red-500 border-red-500/20 px-2 py-0.5">
+                              {errors} error
+                            </Badge>
+                          )}
+                        </div>
+                      </button>
+                      {/* Delete button */}
+                      <button
+                        onClick={(e) => handleDeleteSite(site.id, e)}
+                        className="absolute top-3 right-3 p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                        title="Delete site"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   );
                 })}
               </div>
