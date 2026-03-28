@@ -4,7 +4,7 @@ import {
   ChevronRight, ChevronLeft, RefreshCw, Cpu, Thermometer, 
   Droplets, Gauge, Zap, Clock, FileText, Upload, 
   CheckCircle2, XCircle, Loader2, Radio, Database,
-  ArrowUpCircle, History, Eye
+  ArrowUpCircle, History, Eye, Plus, Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -303,8 +303,23 @@ export function FleetMonitoringPanel() {
   const [firmware, setFirmware] = useState<Firmware[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [showAddSite, setShowAddSite] = useState(false);
+  const [showAddPrinter, setShowAddPrinter] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
 
-  const fleetCall = useCallback(async (action: string, params?: Record<string, string>) => {
+  // Add Site form state
+  const [newSiteName, setNewSiteName] = useState('');
+  const [newSiteCompany, setNewSiteCompany] = useState('');
+  const [newSiteLocation, setNewSiteLocation] = useState('');
+  const [newSiteEmail, setNewSiteEmail] = useState('');
+
+  // Add Printer form state
+  const [newPrinterName, setNewPrinterName] = useState('');
+  const [newPrinterIp, setNewPrinterIp] = useState('');
+  const [newPrinterPort, setNewPrinterPort] = useState('23');
+  const [newPrinterSerial, setNewPrinterSerial] = useState('');
+
+  const fleetCall = useCallback(async (action: string, params?: Record<string, string>, body?: any) => {
     const query = new URLSearchParams({ action, ...params }).toString();
     const res = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fleet-monitoring?${query}`,
@@ -315,7 +330,7 @@ export function FleetMonitoringPanel() {
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: '{}',
+        body: JSON.stringify(body || {}),
       }
     );
     return res.json();
@@ -363,6 +378,81 @@ export function FleetMonitoringPanel() {
       setSeeding(false);
     }
   }, [fleetCall, fetchSites]);
+
+  const handleAddSite = useCallback(async () => {
+    if (!newSiteName.trim()) return;
+    setFormLoading(true);
+    try {
+      const json = await fleetCall('add-site', undefined, {
+        name: newSiteName.trim(),
+        company: newSiteCompany.trim() || undefined,
+        location: newSiteLocation.trim() || undefined,
+        contact_email: newSiteEmail.trim() || undefined,
+      });
+      if (json.success) {
+        setShowAddSite(false);
+        setNewSiteName(''); setNewSiteCompany(''); setNewSiteLocation(''); setNewSiteEmail('');
+        await fetchSites();
+      }
+    } catch (err) {
+      console.error('Add site error:', err);
+    } finally {
+      setFormLoading(false);
+    }
+  }, [fleetCall, fetchSites, newSiteName, newSiteCompany, newSiteLocation, newSiteEmail]);
+
+  const handleAddPrinter = useCallback(async () => {
+    if (!selectedSite || !newPrinterName.trim() || !newPrinterIp.trim()) return;
+    setFormLoading(true);
+    try {
+      const json = await fleetCall('add-printer', undefined, {
+        site_id: selectedSite.id,
+        name: newPrinterName.trim(),
+        ip_address: newPrinterIp.trim(),
+        port: parseInt(newPrinterPort) || 23,
+        serial_number: newPrinterSerial.trim() || undefined,
+      });
+      if (json.success) {
+        setShowAddPrinter(false);
+        setNewPrinterName(''); setNewPrinterIp(''); setNewPrinterPort('23'); setNewPrinterSerial('');
+        await fetchSites();
+        // Refresh selected site
+        const updated = (await fleetCall('sites')).sites || [];
+        const refreshed = updated.find((s: FleetSite) => s.id === selectedSite.id);
+        if (refreshed) setSelectedSite(refreshed);
+      }
+    } catch (err) {
+      console.error('Add printer error:', err);
+    } finally {
+      setFormLoading(false);
+    }
+  }, [fleetCall, fetchSites, selectedSite, newPrinterName, newPrinterIp, newPrinterPort, newPrinterSerial]);
+
+  const handleDeleteSite = useCallback(async (siteId: string) => {
+    if (!confirm('Delete this site and all its printers? This cannot be undone.')) return;
+    try {
+      await fleetCall('delete-site', undefined, { site_id: siteId });
+      await fetchSites();
+    } catch (err) {
+      console.error('Delete site error:', err);
+    }
+  }, [fleetCall, fetchSites]);
+
+  const handleDeletePrinter = useCallback(async (printerId: string) => {
+    if (!confirm('Delete this printer and all its data? This cannot be undone.')) return;
+    try {
+      await fleetCall('delete-printer', undefined, { printer_id: printerId });
+      await fetchSites();
+      if (selectedSite) {
+        const updated = (await fleetCall('sites')).sites || [];
+        const refreshed = updated.find((s: FleetSite) => s.id === selectedSite.id);
+        if (refreshed) setSelectedSite(refreshed);
+        else setSelectedSite(null);
+      }
+    } catch (err) {
+      console.error('Delete printer error:', err);
+    }
+  }, [fleetCall, fetchSites, selectedSite]);
 
   useEffect(() => {
     fetchSites();
@@ -571,9 +661,18 @@ export function FleetMonitoringPanel() {
           </button>
 
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Building2 className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-semibold text-gray-800">{selectedSite.name}</span>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-gray-600" />
+                <span className="text-sm font-semibold text-gray-800">{selectedSite.name}</span>
+              </div>
+              <button
+                onClick={() => handleDeleteSite(selectedSite.id)}
+                className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
+                title="Delete site"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
             <div className="text-[10px] text-gray-500 space-y-0.5">
               {selectedSite.company && <div>Company: {selectedSite.company}</div>}
@@ -582,31 +681,87 @@ export function FleetMonitoringPanel() {
             </div>
           </div>
 
-          <div className="text-[10px] font-semibold text-gray-500 uppercase">
-            Printers ({selectedSite.fleet_printers.length})
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] font-semibold text-gray-500 uppercase">
+              Printers ({selectedSite.fleet_printers.length})
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setShowAddPrinter(true)} className="h-6 px-2 text-[10px]">
+              <Plus className="w-3 h-3 mr-1" />Add Printer
+            </Button>
           </div>
+
+          {/* Add Printer Form */}
+          {showAddPrinter && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+              <div className="text-[10px] font-semibold text-blue-700 uppercase">New Printer</div>
+              <input
+                className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-white"
+                placeholder="Printer name (e.g. Line 1 - Egg Coder) *"
+                value={newPrinterName}
+                onChange={e => setNewPrinterName(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 text-xs border border-gray-300 rounded px-2 py-1.5 bg-white font-mono"
+                  placeholder="IP address *"
+                  value={newPrinterIp}
+                  onChange={e => setNewPrinterIp(e.target.value)}
+                />
+                <input
+                  className="w-16 text-xs border border-gray-300 rounded px-2 py-1.5 bg-white font-mono"
+                  placeholder="Port"
+                  value={newPrinterPort}
+                  onChange={e => setNewPrinterPort(e.target.value)}
+                />
+              </div>
+              <input
+                className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-white"
+                placeholder="Serial number (optional)"
+                value={newPrinterSerial}
+                onChange={e => setNewPrinterSerial(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Button size="sm" className="text-[10px] h-7 flex-1" onClick={handleAddPrinter} disabled={formLoading || !newPrinterName.trim() || !newPrinterIp.trim()}>
+                  {formLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Add Printer'}
+                </Button>
+                <Button size="sm" variant="outline" className="text-[10px] h-7" onClick={() => setShowAddPrinter(false)}>Cancel</Button>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             {selectedSite.fleet_printers.map(printer => (
-              <button
+              <div
                 key={printer.id}
-                onClick={() => handleSelectPrinter(printer)}
-                className="w-full text-left bg-white border border-gray-200 rounded-lg p-3 hover:border-blue-300 hover:bg-blue-50/30 transition-all"
+                className="bg-white border border-gray-200 rounded-lg p-3 hover:border-blue-300 hover:bg-blue-50/30 transition-all"
               >
                 <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
+                  <button onClick={() => handleSelectPrinter(printer)} className="flex items-center gap-2 text-left flex-1">
                     <StatusDot status={printer.status} />
                     <span className="text-xs font-semibold text-gray-800">{printer.name}</span>
+                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeletePrinter(printer.id); }}
+                      className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
+                      title="Delete printer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                    <button onClick={() => handleSelectPrinter(printer)} className="p-1">
+                      <ChevronRight className="w-3 h-3 text-gray-400" />
+                    </button>
                   </div>
-                  <ChevronRight className="w-3 h-3 text-gray-400" />
                 </div>
-                <div className="grid grid-cols-2 gap-1 text-[10px] text-gray-500">
-                  <span className="font-mono">{printer.ip_address}</span>
-                  <span>FW: <span className="font-mono">{printer.firmware_version || '?'}</span></span>
-                  <span>S/N: {printer.serial_number || 'N/A'}</span>
-                  <span>{printer.last_seen ? getRelativeTime(printer.last_seen) : 'Never seen'}</span>
-                </div>
-              </button>
+                <button onClick={() => handleSelectPrinter(printer)} className="w-full text-left">
+                  <div className="grid grid-cols-2 gap-1 text-[10px] text-gray-500">
+                    <span className="font-mono">{printer.ip_address}</span>
+                    <span>FW: <span className="font-mono">{printer.firmware_version || '?'}</span></span>
+                    <span>S/N: {printer.serial_number || 'N/A'}</span>
+                    <span>{printer.last_seen ? getRelativeTime(printer.last_seen) : 'Never seen'}</span>
+                  </div>
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -624,10 +779,52 @@ export function FleetMonitoringPanel() {
             <Globe className="w-4 h-4 text-blue-600" />
             <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Fleet Monitoring</span>
           </div>
-          <Button variant="ghost" size="sm" onClick={fetchSites} className="h-6 w-6 p-0">
-            <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setShowAddSite(true)} className="h-6 px-2 text-[10px]">
+              <Plus className="w-3 h-3 mr-1" />Add Site
+            </Button>
+            <Button variant="ghost" size="sm" onClick={fetchSites} className="h-6 w-6 p-0">
+              <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
+            </Button>
+          </div>
         </div>
+
+        {/* Add Site Form */}
+        {showAddSite && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+            <div className="text-[10px] font-semibold text-blue-700 uppercase">New Customer Site</div>
+            <input
+              className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-white"
+              placeholder="Site name (e.g. Sunrise Eggs Ltd) *"
+              value={newSiteName}
+              onChange={e => setNewSiteName(e.target.value)}
+            />
+            <input
+              className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-white"
+              placeholder="Company"
+              value={newSiteCompany}
+              onChange={e => setNewSiteCompany(e.target.value)}
+            />
+            <input
+              className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-white"
+              placeholder="Location (e.g. Cork, Ireland)"
+              value={newSiteLocation}
+              onChange={e => setNewSiteLocation(e.target.value)}
+            />
+            <input
+              className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-white"
+              placeholder="Contact email"
+              value={newSiteEmail}
+              onChange={e => setNewSiteEmail(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Button size="sm" className="text-[10px] h-7 flex-1" onClick={handleAddSite} disabled={formLoading || !newSiteName.trim()}>
+                {formLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Add Site'}
+              </Button>
+              <Button size="sm" variant="outline" className="text-[10px] h-7" onClick={() => setShowAddSite(false)}>Cancel</Button>
+            </div>
+          </div>
+        )}
 
         {/* Summary cards */}
         <div className="grid grid-cols-3 gap-2">
