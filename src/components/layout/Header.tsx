@@ -100,7 +100,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
   return (
     <header className="bg-muted">
       <div className="flex items-center justify-between px-2 md:px-4 py-2">
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
           
           <div className="flex items-start">
             <span className="text-xl md:text-3xl font-bold italic text-blue-600">
@@ -118,7 +118,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
            )}
         </div>
 
-        <div className="flex items-center gap-1 md:gap-4 flex-shrink-0 ml-2 md:ml-4 overflow-x-auto">
+        <div className="flex flex-nowrap items-center gap-1 md:gap-4 flex-shrink-0 ml-2 md:ml-4 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* Relay mode indicator for mobile PWA */}
           {!window.electronAPI && onRelayConnect && (
             <button
