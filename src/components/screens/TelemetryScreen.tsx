@@ -433,10 +433,19 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
   const [newSiteCompany, setNewSiteCompany] = useState('');
   const [newSiteLocation, setNewSiteLocation] = useState('');
   const [newSiteEmail, setNewSiteEmail] = useState('');
+  const [newSiteLicenseKey, setNewSiteLicenseKey] = useState('');
   const [showAddPrinter, setShowAddPrinter] = useState(false);
   const [newPrinterName, setNewPrinterName] = useState('');
   const [newPrinterIp, setNewPrinterIp] = useState('');
   const [newPrinterPort, setNewPrinterPort] = useState('23');
+  // Edit site state
+  const [editingSiteId, setEditingSiteId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editCompany, setEditCompany] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editLicenseKey, setEditLicenseKey] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
 
   const fleetCall = useCallback(async (action: string, params?: Record<string, string>, body?: any) => {
     const query = new URLSearchParams({ action, ...(params || {}) }).toString();
