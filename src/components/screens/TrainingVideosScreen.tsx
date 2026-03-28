@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Play, Clock, Film, ChevronLeft, X, Download } from 'lucide-react';
+import { Play, Clock, Film, ChevronLeft, X, Download, Link2, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
