@@ -870,6 +870,17 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                     </div>
                   </div>
                 )}
+                {selectedSite.licenses && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                      <Key className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-widest">License ({selectedSite.licenses.tier})</div>
+                      <div className="text-sm font-medium font-mono text-foreground">{selectedSite.licenses.product_key}</div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
