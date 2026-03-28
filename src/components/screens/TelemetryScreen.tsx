@@ -556,8 +556,8 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
       setNewPrinterName(''); setNewPrinterIp(''); setNewPrinterPort('23');
       await fetchSites();
       // Refresh selectedSite from updated sites
-      const freshSites = await fleetCall('sites').then(r => r.json()).then(d => d.sites);
-      const freshSite = freshSites.find((s: any) => s.id === selectedSite.id);
+      const freshSites = await fleetCall('sites');
+      const freshSite = freshSites.sites?.find((s: FleetSite) => s.id === selectedSite.id);
       if (freshSite) setSelectedSite(freshSite);
     } catch (err) {
       console.error('Add printer error:', err);
