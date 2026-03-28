@@ -6,7 +6,7 @@ import {
   CheckCircle2, XCircle, Loader2, Database,
   ArrowUpCircle, History, Wifi, WifiOff, MapPin,
   Mail, Server, Cpu, BarChart3, Signal,
-  Home, ArrowLeft, Radio, Sun, Moon, Trash2
+  Home, ArrowLeft, Radio, Sun, Moon, Trash2, Plus
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
@@ -425,6 +425,12 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
   const [firmware, setFirmware] = useState<Firmware[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [showAddSite, setShowAddSite] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [newSiteName, setNewSiteName] = useState('');
+  const [newSiteCompany, setNewSiteCompany] = useState('');
+  const [newSiteLocation, setNewSiteLocation] = useState('');
+  const [newSiteEmail, setNewSiteEmail] = useState('');
 
   const fleetCall = useCallback(async (action: string, params?: Record<string, string>, body?: any) => {
     const query = new URLSearchParams({ action, ...params }).toString();
@@ -506,6 +512,26 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
       console.error('Delete site error:', err);
     }
   }, [fleetCall, fetchSites]);
+
+  const handleAddSite = useCallback(async () => {
+    if (!newSiteName.trim()) return;
+    setFormLoading(true);
+    try {
+      await fleetCall('add-site', undefined, {
+        name: newSiteName.trim(),
+        company: newSiteCompany.trim() || undefined,
+        location: newSiteLocation.trim() || undefined,
+        contact_email: newSiteEmail.trim() || undefined,
+      });
+      setShowAddSite(false);
+      setNewSiteName(''); setNewSiteCompany(''); setNewSiteLocation(''); setNewSiteEmail('');
+      await fetchSites();
+    } catch (err) {
+      console.error('Add site error:', err);
+    } finally {
+      setFormLoading(false);
+    }
+  }, [fleetCall, fetchSites, newSiteName, newSiteCompany, newSiteLocation, newSiteEmail]);
 
   useEffect(() => { fetchSites(); }, [fetchSites]);
 
@@ -895,7 +921,52 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                 <h2 className="text-sm text-muted-foreground uppercase tracking-widest font-medium">
                   {sites.length} Customer Site{sites.length !== 1 ? 's' : ''}
                 </h2>
+                <Button variant="outline" size="sm" onClick={() => setShowAddSite(true)} className="text-xs gap-1.5">
+                  <Plus className="w-4 h-4" />
+                  Add Company
+                </Button>
               </div>
+
+              {/* Add Company Form */}
+              {showAddSite && (
+                <div className="bg-card border border-primary/20 rounded-2xl p-6 space-y-4">
+                  <h3 className="text-sm font-semibold text-foreground">Add New Customer Site</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                      placeholder="Site name (e.g. Sunrise Eggs Ltd) *"
+                      value={newSiteName}
+                      onChange={e => setNewSiteName(e.target.value)}
+                    />
+                    <input
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                      placeholder="Company name"
+                      value={newSiteCompany}
+                      onChange={e => setNewSiteCompany(e.target.value)}
+                    />
+                    <input
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                      placeholder="Location (e.g. Cork, Ireland)"
+                      value={newSiteLocation}
+                      onChange={e => setNewSiteLocation(e.target.value)}
+                    />
+                    <input
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                      placeholder="Contact email"
+                      value={newSiteEmail}
+                      onChange={e => setNewSiteEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <Button size="sm" onClick={handleAddSite} disabled={formLoading || !newSiteName.trim()} className="gap-1.5">
+                      {formLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                      Add Site
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setShowAddSite(false)}>Cancel</Button>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {sites.map(site => {
                   const online = site.fleet_printers.filter(p => p.status === 'online').length;
@@ -905,7 +976,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                   return (
                     <div
                       key={site.id}
-                      className="text-left bg-card border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-xl transition-all group relative"
+                      className="text-left bg-card border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-xl transition-all group"
                     >
                       <button
                         onClick={() => setSelectedSite(site)}
@@ -921,7 +992,16 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                               <span className="text-xs text-muted-foreground">{site.location || site.company || '—'}</span>
                             </div>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteSite(site.id, e); }}
+                              className="p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                              title="Delete site"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                          </div>
                         </div>
                         
                         {/* Mini printer status bar */}
@@ -950,14 +1030,6 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                             </Badge>
                           )}
                         </div>
-                      </button>
-                      {/* Delete button */}
-                      <button
-                        onClick={(e) => handleDeleteSite(site.id, e)}
-                        className="absolute top-3 right-3 p-2 rounded-xl opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                        title="Delete site"
-                      >
-                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   );
