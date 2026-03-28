@@ -426,7 +426,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [seeding, setSeeding] = useState(false);
 
-  const fleetCall = useCallback(async (action: string, params?: Record<string, string>) => {
+  const fleetCall = useCallback(async (action: string, params?: Record<string, string>, body?: any) => {
     const query = new URLSearchParams({ action, ...params }).toString();
     const res = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fleet-monitoring?${query}`,
@@ -437,7 +437,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: '{}',
+        body: JSON.stringify(body || {}),
       }
     );
     return res.json();
