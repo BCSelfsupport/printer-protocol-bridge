@@ -1265,7 +1265,10 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-xs text-muted-foreground">{total} printer{total !== 1 ? 's' : ''}</span>
                             {site.licenses && (
-                              <span className="text-[10px] font-mono text-muted-foreground/70">{site.licenses.product_key}</span>
+                              <>
+                                <span className="text-[10px] font-mono text-muted-foreground/70">{site.licenses.product_key}</span>
+                                <span className="text-[10px] text-muted-foreground/50">Issued {new Date(site.licenses.created_at).toLocaleDateString()}</span>
+                              </>
                             )}
                             <div className="flex-1" />
                             {online > 0 && (
