@@ -311,6 +311,8 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      case "seed-demo": {
         // Seed demo data for exhibition
         // Create demo sites
         const sites = [
