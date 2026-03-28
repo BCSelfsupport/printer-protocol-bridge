@@ -519,7 +519,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
     try {
       await fleetCall('add-site', undefined, {
         name: newSiteName.trim(),
-        company: newSiteCompany.trim() || undefined,
+        company: newSiteName.trim(),
         location: newSiteLocation.trim() || undefined,
         contact_email: newSiteEmail.trim() || undefined,
       });
@@ -914,15 +914,9 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                 <div className="grid grid-cols-1 gap-3">
                   <input
                     className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
-                    placeholder="Site name (e.g. Sunrise Eggs Ltd) *"
+                    placeholder="Company / Site name (e.g. Sunrise Eggs Ltd) *"
                     value={newSiteName}
                     onChange={e => setNewSiteName(e.target.value)}
-                  />
-                  <input
-                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
-                    placeholder="Company name"
-                    value={newSiteCompany}
-                    onChange={e => setNewSiteCompany(e.target.value)}
                   />
                   <input
                     className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
@@ -962,15 +956,9 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <input
                       className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
-                      placeholder="Site name (e.g. Sunrise Eggs Ltd) *"
+                      placeholder="Company / Site name (e.g. Sunrise Eggs Ltd) *"
                       value={newSiteName}
                       onChange={e => setNewSiteName(e.target.value)}
-                    />
-                    <input
-                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
-                      placeholder="Company name"
-                      value={newSiteCompany}
-                      onChange={e => setNewSiteCompany(e.target.value)}
                     />
                     <input
                       className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
