@@ -573,8 +573,8 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
       await fleetCall('delete-printer', undefined, { printer_id: printerId });
       await fetchSites();
       if (selectedSite) {
-        const freshSites = await fleetCall('sites').then(r => r.json()).then(d => d.sites);
-        const freshSite = freshSites.find((s: any) => s.id === selectedSite.id);
+        const freshSites = await fleetCall('sites');
+        const freshSite = freshSites.sites?.find((s: FleetSite) => s.id === selectedSite.id);
         if (freshSite) setSelectedSite(freshSite);
       }
     } catch (err) {
