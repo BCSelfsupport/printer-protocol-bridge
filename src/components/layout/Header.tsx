@@ -100,7 +100,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
   return (
     <header className="bg-muted">
       <div className="flex items-center justify-between px-2 md:px-4 py-2">
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
           
           <div className="flex items-start">
             <span className="text-xl md:text-3xl font-bold italic text-blue-600">
