@@ -714,10 +714,52 @@ export function FleetMonitoringPanel() {
             <Globe className="w-4 h-4 text-blue-600" />
             <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Fleet Monitoring</span>
           </div>
-          <Button variant="ghost" size="sm" onClick={fetchSites} className="h-6 w-6 p-0">
-            <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={() => setShowAddSite(true)} className="h-6 px-2 text-[10px]">
+              <Plus className="w-3 h-3 mr-1" />Add Site
+            </Button>
+            <Button variant="ghost" size="sm" onClick={fetchSites} className="h-6 w-6 p-0">
+              <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
+            </Button>
+          </div>
         </div>
+
+        {/* Add Site Form */}
+        {showAddSite && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+            <div className="text-[10px] font-semibold text-blue-700 uppercase">New Customer Site</div>
+            <input
+              className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-white"
+              placeholder="Site name (e.g. Sunrise Eggs Ltd) *"
+              value={newSiteName}
+              onChange={e => setNewSiteName(e.target.value)}
+            />
+            <input
+              className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-white"
+              placeholder="Company"
+              value={newSiteCompany}
+              onChange={e => setNewSiteCompany(e.target.value)}
+            />
+            <input
+              className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-white"
+              placeholder="Location (e.g. Cork, Ireland)"
+              value={newSiteLocation}
+              onChange={e => setNewSiteLocation(e.target.value)}
+            />
+            <input
+              className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-white"
+              placeholder="Contact email"
+              value={newSiteEmail}
+              onChange={e => setNewSiteEmail(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Button size="sm" className="text-[10px] h-7 flex-1" onClick={handleAddSite} disabled={formLoading || !newSiteName.trim()}>
+                {formLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Add Site'}
+              </Button>
+              <Button size="sm" variant="outline" className="text-[10px] h-7" onClick={() => setShowAddSite(false)}>Cancel</Button>
+            </div>
+          </div>
+        )}
 
         {/* Summary cards */}
         <div className="grid grid-cols-3 gap-2">
