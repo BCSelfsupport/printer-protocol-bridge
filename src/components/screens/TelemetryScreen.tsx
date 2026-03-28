@@ -5,7 +5,7 @@ import {
   Droplets, Gauge, Zap, Clock, Upload, 
   CheckCircle2, XCircle, Loader2, Database,
   ArrowUpCircle, History, Wifi, WifiOff, MapPin,
-  Mail, Server, Cpu, BarChart3, Signal,
+  Mail, Server, Cpu, BarChart3, Signal, Key,
   Home, ArrowLeft, Radio, Sun, Moon, Trash2, Plus
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
