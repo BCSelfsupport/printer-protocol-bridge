@@ -425,6 +425,12 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
   const [firmware, setFirmware] = useState<Firmware[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [showAddSite, setShowAddSite] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [newSiteName, setNewSiteName] = useState('');
+  const [newSiteCompany, setNewSiteCompany] = useState('');
+  const [newSiteLocation, setNewSiteLocation] = useState('');
+  const [newSiteEmail, setNewSiteEmail] = useState('');
 
   const fleetCall = useCallback(async (action: string, params?: Record<string, string>, body?: any) => {
     const query = new URLSearchParams({ action, ...params }).toString();
