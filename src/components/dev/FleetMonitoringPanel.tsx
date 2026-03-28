@@ -672,31 +672,87 @@ export function FleetMonitoringPanel() {
             </div>
           </div>
 
-          <div className="text-[10px] font-semibold text-gray-500 uppercase">
-            Printers ({selectedSite.fleet_printers.length})
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] font-semibold text-gray-500 uppercase">
+              Printers ({selectedSite.fleet_printers.length})
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setShowAddPrinter(true)} className="h-6 px-2 text-[10px]">
+              <Plus className="w-3 h-3 mr-1" />Add Printer
+            </Button>
           </div>
+
+          {/* Add Printer Form */}
+          {showAddPrinter && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+              <div className="text-[10px] font-semibold text-blue-700 uppercase">New Printer</div>
+              <input
+                className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-white"
+                placeholder="Printer name (e.g. Line 1 - Egg Coder) *"
+                value={newPrinterName}
+                onChange={e => setNewPrinterName(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 text-xs border border-gray-300 rounded px-2 py-1.5 bg-white font-mono"
+                  placeholder="IP address *"
+                  value={newPrinterIp}
+                  onChange={e => setNewPrinterIp(e.target.value)}
+                />
+                <input
+                  className="w-16 text-xs border border-gray-300 rounded px-2 py-1.5 bg-white font-mono"
+                  placeholder="Port"
+                  value={newPrinterPort}
+                  onChange={e => setNewPrinterPort(e.target.value)}
+                />
+              </div>
+              <input
+                className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 bg-white"
+                placeholder="Serial number (optional)"
+                value={newPrinterSerial}
+                onChange={e => setNewPrinterSerial(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Button size="sm" className="text-[10px] h-7 flex-1" onClick={handleAddPrinter} disabled={formLoading || !newPrinterName.trim() || !newPrinterIp.trim()}>
+                  {formLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Add Printer'}
+                </Button>
+                <Button size="sm" variant="outline" className="text-[10px] h-7" onClick={() => setShowAddPrinter(false)}>Cancel</Button>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             {selectedSite.fleet_printers.map(printer => (
-              <button
+              <div
                 key={printer.id}
-                onClick={() => handleSelectPrinter(printer)}
-                className="w-full text-left bg-white border border-gray-200 rounded-lg p-3 hover:border-blue-300 hover:bg-blue-50/30 transition-all"
+                className="bg-white border border-gray-200 rounded-lg p-3 hover:border-blue-300 hover:bg-blue-50/30 transition-all"
               >
                 <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
+                  <button onClick={() => handleSelectPrinter(printer)} className="flex items-center gap-2 text-left flex-1">
                     <StatusDot status={printer.status} />
                     <span className="text-xs font-semibold text-gray-800">{printer.name}</span>
+                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeletePrinter(printer.id); }}
+                      className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
+                      title="Delete printer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                    <button onClick={() => handleSelectPrinter(printer)} className="p-1">
+                      <ChevronRight className="w-3 h-3 text-gray-400" />
+                    </button>
                   </div>
-                  <ChevronRight className="w-3 h-3 text-gray-400" />
                 </div>
-                <div className="grid grid-cols-2 gap-1 text-[10px] text-gray-500">
-                  <span className="font-mono">{printer.ip_address}</span>
-                  <span>FW: <span className="font-mono">{printer.firmware_version || '?'}</span></span>
-                  <span>S/N: {printer.serial_number || 'N/A'}</span>
-                  <span>{printer.last_seen ? getRelativeTime(printer.last_seen) : 'Never seen'}</span>
-                </div>
-              </button>
+                <button onClick={() => handleSelectPrinter(printer)} className="w-full text-left">
+                  <div className="grid grid-cols-2 gap-1 text-[10px] text-gray-500">
+                    <span className="font-mono">{printer.ip_address}</span>
+                    <span>FW: <span className="font-mono">{printer.firmware_version || '?'}</span></span>
+                    <span>S/N: {printer.serial_number || 'N/A'}</span>
+                    <span>{printer.last_seen ? getRelativeTime(printer.last_seen) : 'Never seen'}</span>
+                  </div>
+                </button>
+              </div>
             ))}
           </div>
         </div>
