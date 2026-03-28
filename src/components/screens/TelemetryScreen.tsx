@@ -25,7 +25,7 @@ interface FleetSite {
   location: string | null;
   contact_email: string | null;
   license_id: string | null;
-  licenses: { product_key: string; tier: string } | null;
+  licenses: { product_key: string; tier: string; created_at: string } | null;
   fleet_printers: FleetPrinter[];
 }
 
@@ -473,7 +473,13 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
     setLoading(true);
     try {
       const json = await fleetCall('sites');
-      setSites(json.sites || []);
+      const allSites = (json.sites || []) as FleetSite[];
+      allSites.sort((a, b) => {
+        const da = a.licenses?.created_at ? new Date(a.licenses.created_at).getTime() : Infinity;
+        const db = b.licenses?.created_at ? new Date(b.licenses.created_at).getTime() : Infinity;
+        return da - db;
+      });
+      setSites(allSites);
     } catch (err) {
       console.error('Fleet fetch error:', err);
     } finally {
@@ -1265,7 +1271,10 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-xs text-muted-foreground">{total} printer{total !== 1 ? 's' : ''}</span>
                             {site.licenses && (
-                              <span className="text-[10px] font-mono text-muted-foreground/70">{site.licenses.product_key}</span>
+                              <>
+                                <span className="text-[10px] font-mono text-muted-foreground/70">{site.licenses.product_key}</span>
+                                <span className="text-[10px] text-muted-foreground/50">Issued {new Date(site.licenses.created_at).toLocaleDateString()}</span>
+                              </>
                             )}
                             <div className="flex-1" />
                             {online > 0 && (

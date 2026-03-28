@@ -30,8 +30,8 @@ Deno.serve(async (req) => {
 
         const { data, error } = await supabase
           .from("fleet_sites")
-          .select("*, fleet_printers(id, name, ip_address, port, firmware_version, serial_number, last_seen, status), licenses(product_key, tier)")
-          .order("name");
+          .select("*, fleet_printers(id, name, ip_address, port, firmware_version, serial_number, last_seen, status), licenses(product_key, tier, created_at)")
+          .order("created_at", { referencedTable: "licenses", ascending: true });
         if (error) throw error;
         return new Response(JSON.stringify({ sites: data }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
