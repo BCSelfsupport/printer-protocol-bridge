@@ -519,7 +519,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
     try {
       await fleetCall('add-site', undefined, {
         name: newSiteName.trim(),
-        company: newSiteCompany.trim() || undefined,
+        company: newSiteName.trim(),
         location: newSiteLocation.trim() || undefined,
         contact_email: newSiteEmail.trim() || undefined,
       });
