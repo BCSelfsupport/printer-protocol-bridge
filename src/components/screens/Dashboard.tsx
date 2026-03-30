@@ -492,14 +492,20 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
   const [zoomIndex, setZoomIndex] = useState(2); // Default to 2x zoom
   const [barcodeImages, setBarcodeImages] = useState<Map<string, HTMLCanvasElement>>(new Map());
 
-  // Smooth-ticking time synced to printer clock (same approach as Header)
+  // Smooth-ticking time synced to printer clock
   const printerOffsetMs = useRef(0);
-  const [tickingTime, setTickingTime] = useState<Date>(new Date());
+  const lastPrinterTimeMs = useRef(0);
+  const [nowMs, setNowMs] = useState(Date.now());
 
   useEffect(() => {
     if (printerTime) {
-      const rawOffset = printerTime.getTime() - Date.now();
-      printerOffsetMs.current = Math.abs(rawOffset) > 5000 ? rawOffset : 0;
+      const ptMs = printerTime.getTime();
+      // Only recalculate offset if the printer reported a meaningfully different time
+      if (Math.abs(ptMs - lastPrinterTimeMs.current) > 2000) {
+        lastPrinterTimeMs.current = ptMs;
+        const rawOffset = ptMs - Date.now();
+        printerOffsetMs.current = Math.abs(rawOffset) > 5000 ? rawOffset : 0;
+      }
     } else {
       printerOffsetMs.current = 0;
     }
@@ -507,8 +513,8 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTickingTime(new Date(Date.now() + printerOffsetMs.current));
-    }, 1000);
+      setNowMs(Date.now());
+    }, 500); // tick twice per second for snappier updates
     return () => clearInterval(timer);
   }, []);
 
