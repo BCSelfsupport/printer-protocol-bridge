@@ -585,10 +585,13 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     if (messageContent && messageContent.fields.length > 0) {
       ctx.fillStyle = '#1a1a1a';
 
-      // Render fields at their stored Y positions (matching the editor canvas).
-      // The editor already stores Y in absolute 32-row canvas coordinates,
-      // so no vertical offset is needed.
-      const previewYOffsetDots = 0;
+      // Fields are stored in editor coordinates where y=0 is the top of the
+      // usable template area. On the physical printer the usable area starts
+      // after the blocked rows (32 - templateHeight). Shift content down by
+      // the blocked rows so the dashboard preview matches the printer HMI.
+      const templateH = messageContent.height || TOTAL_ROWS;
+      const blockedRows = TOTAL_ROWS - templateH;
+      const previewYOffsetDots = -blockedRows; // negative = shift DOWN
 
       // Calculate total width needed and use dynamic canvas sizing
       let maxXEnd = 0;
