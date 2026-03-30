@@ -696,7 +696,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
 
       renderText(ctx, displayText, padding, mainY, mainFontName, effectiveDotSize);
 
-      const time = printerTime ?? new Date();
+      const time = tickingTime;
       const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
       const dateStr = time.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
 
