@@ -195,6 +195,8 @@ export function computeAutoCodeValue(
     switch (autoCodeFormat) {
       case 'HH:MM:SS': return `${h}:${m}:${s}`;
       case 'HH:MM': return `${h}:${m}`;
+      case 'HHMMSS': return `${h}${m}${s}`;
+      case 'HHMM': return `${h}${m}`;
       case 'HH': return h;
       case 'MM:SS': return `${m}:${s}`;
       case 'MM': return m;
