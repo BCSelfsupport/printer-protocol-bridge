@@ -613,7 +613,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
       // Calculate total width needed and use dynamic canvas sizing
       let maxXEnd = 0;
 
-      const now = printerTime ?? new Date();
+      const now = tickingTime;
 
       messageContent.fields.forEach((field) => {
 
