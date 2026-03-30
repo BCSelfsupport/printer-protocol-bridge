@@ -486,6 +486,38 @@ function calculateRequiredWidth(messageContent: MessageDetails | undefined, mess
 // Zoom levels to cycle through on each click
 const ZOOM_LEVELS = [1, 1.5, 2];
 
+function inferFetchedAutoCode(field: MessageField): { autoCodeFieldType: string; autoCodeFormat?: string } | null {
+  if (field.autoCodeFieldType) {
+    return {
+      autoCodeFieldType: field.autoCodeFieldType,
+      autoCodeFormat: field.autoCodeFormat,
+    };
+  }
+
+  if (field.type === 'time') {
+    const value = field.data.trim();
+    if (/^\d{2}:\d{2}:\d{2}$/.test(value)) return { autoCodeFieldType: 'time', autoCodeFormat: 'HH:MM:SS' };
+    if (/^\d{2}:\d{2}$/.test(value)) return { autoCodeFieldType: 'time', autoCodeFormat: 'HH:MM' };
+    if (/^\d{6}$/.test(value)) return { autoCodeFieldType: 'time', autoCodeFormat: 'HHMMSS' };
+    if (/^\d{4}$/.test(value)) return { autoCodeFieldType: 'time', autoCodeFormat: 'HHMM' };
+    if (/^\d{2}$/.test(value)) return { autoCodeFieldType: 'time', autoCodeFormat: 'HH' };
+  }
+
+  if (field.type === 'date') {
+    const value = field.data.trim();
+    if (/^\d{2}\/\d{2}\/\d{2}$/.test(value)) return { autoCodeFieldType: 'date_normal', autoCodeFormat: 'MM/DD/YY' };
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) return { autoCodeFieldType: 'date_normal', autoCodeFormat: 'MM/DD/YYYY' };
+    if (/^\d{4}\/\d{2}\/\d{2}$/.test(value)) return { autoCodeFieldType: 'date_normal', autoCodeFormat: 'YYYY/MM/DD' };
+    if (/^\d{2}-\d{2}-\d{2}$/.test(value)) return { autoCodeFieldType: 'date_normal', autoCodeFormat: 'MM-DD-YY' };
+    if (/^\d{2}-\d{2}-\d{4}$/.test(value)) return { autoCodeFieldType: 'date_normal', autoCodeFormat: 'MM-DD-YYYY' };
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return { autoCodeFieldType: 'date_normal', autoCodeFormat: 'YYYY-MM-DD' };
+    if (/^\d{2}\.\d{2}\.\d{2}$/.test(value)) return { autoCodeFieldType: 'date_normal', autoCodeFormat: 'MM.DD.YY' };
+    if (/^\d{2}\.\d{2}\.\d{4}$/.test(value)) return { autoCodeFieldType: 'date_normal', autoCodeFormat: 'MM.DD.YYYY' };
+  }
+
+  return null;
+}
+
 function MessagePreviewCanvas({ message, printerTime, messageContent }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dotSize, setDotSize] = useState<number>(DOT_SIZE_DESKTOP);
@@ -658,21 +690,14 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
 
         // Substitute live time/date for auto-code fields
         let displayData = field.data;
-        if (field.autoCodeFieldType === 'time' && field.autoCodeFormat) {
-          const h = now.getHours().toString().padStart(2, '0');
-          const m = now.getMinutes().toString().padStart(2, '0');
-          const s = now.getSeconds().toString().padStart(2, '0');
-          switch (field.autoCodeFormat) {
-            case 'HH:MM:SS': displayData = `${h}:${m}:${s}`; break;
-            case 'HH:MM': displayData = `${h}:${m}`; break;
-            case 'HH': displayData = h; break;
-            case 'MM:SS': displayData = `${m}:${s}`; break;
-            case 'MM': displayData = m; break;
-            case 'SS': displayData = s; break;
-            default: displayData = `${h}:${m}:${s}`;
-          }
-        } else if (field.autoCodeFieldType?.startsWith('date_') || field.autoCodeFieldType?.startsWith('program_')) {
-          const computed = computeAutoCodeValue(field.autoCodeFieldType, field.autoCodeFormat, now, field.autoCodeExpiryDays);
+        const liveAutoCode = inferFetchedAutoCode(field);
+        if (liveAutoCode) {
+          const computed = computeAutoCodeValue(
+            liveAutoCode.autoCodeFieldType,
+            liveAutoCode.autoCodeFormat,
+            now,
+            field.autoCodeExpiryDays,
+          );
           if (computed !== null) displayData = computed;
         }
 
