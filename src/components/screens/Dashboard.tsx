@@ -492,6 +492,26 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
   const [zoomIndex, setZoomIndex] = useState(2); // Default to 2x zoom
   const [barcodeImages, setBarcodeImages] = useState<Map<string, HTMLCanvasElement>>(new Map());
 
+  // Smooth-ticking time synced to printer clock (same approach as Header)
+  const printerOffsetMs = useRef(0);
+  const [tickingTime, setTickingTime] = useState<Date>(new Date());
+
+  useEffect(() => {
+    if (printerTime) {
+      const rawOffset = printerTime.getTime() - Date.now();
+      printerOffsetMs.current = Math.abs(rawOffset) > 5000 ? rawOffset : 0;
+    } else {
+      printerOffsetMs.current = 0;
+    }
+  }, [printerTime]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTickingTime(new Date(Date.now() + printerOffsetMs.current));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Load barcode images for barcode-type fields
   useEffect(() => {
     if (!messageContent) return;
