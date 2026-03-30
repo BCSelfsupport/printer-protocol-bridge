@@ -518,6 +518,9 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     return () => clearInterval(timer);
   }, []);
 
+  const tickingTime = useMemo(() => new Date(nowMs + printerOffsetMs.current), [nowMs]);
+
+
   // Load barcode images for barcode-type fields
   useEffect(() => {
     if (!messageContent) return;
