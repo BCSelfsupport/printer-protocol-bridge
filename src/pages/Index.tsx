@@ -207,11 +207,21 @@ const Index = () => {
     }
 
     const cached = getMessage(currentMessageName) ?? undefined;
-    setActiveMessageContent(cached);
 
     if (!isPreviewScreen || !connectionState.isConnected || !connectedPrinterId) {
+      // Not going to fetch — use cached/hardcoded version as-is
+      setActiveMessageContent(cached);
       return;
     }
+
+    // If we already have active content for this message, keep showing it
+    // while the fetch runs (stale-while-revalidate). Otherwise show cached
+    // only if it came from a previous fetch (has fields with non-default coords).
+    // This avoids flashing hardcoded X positions that differ from ^LF results.
+    setActiveMessageContent(prev => {
+      if (prev && prev.name === currentMessageName) return prev; // keep current
+      return cached;
+    });
 
     // Skip re-fetching from printer if this message was recently saved from the editor.
     // The localStorage version is authoritative for 30s after a save to prevent
