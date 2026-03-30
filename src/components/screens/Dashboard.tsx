@@ -492,6 +492,26 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
   const [zoomIndex, setZoomIndex] = useState(2); // Default to 2x zoom
   const [barcodeImages, setBarcodeImages] = useState<Map<string, HTMLCanvasElement>>(new Map());
 
+  // Smooth-ticking time synced to printer clock (same approach as Header)
+  const printerOffsetMs = useRef(0);
+  const [tickingTime, setTickingTime] = useState<Date>(new Date());
+
+  useEffect(() => {
+    if (printerTime) {
+      const rawOffset = printerTime.getTime() - Date.now();
+      printerOffsetMs.current = Math.abs(rawOffset) > 5000 ? rawOffset : 0;
+    } else {
+      printerOffsetMs.current = 0;
+    }
+  }, [printerTime]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTickingTime(new Date(Date.now() + printerOffsetMs.current));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Load barcode images for barcode-type fields
   useEffect(() => {
     if (!messageContent) return;
@@ -593,7 +613,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
       // Calculate total width needed and use dynamic canvas sizing
       let maxXEnd = 0;
 
-      const now = printerTime ?? new Date();
+      const now = tickingTime;
 
       messageContent.fields.forEach((field) => {
 
@@ -676,7 +696,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
 
       renderText(ctx, displayText, padding, mainY, mainFontName, effectiveDotSize);
 
-      const time = printerTime ?? new Date();
+      const time = tickingTime;
       const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
       const dateStr = time.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
 
@@ -702,7 +722,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     ctx.font = '16px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('No message selected', width / 2, height / 2 + 5);
-  }, [message, printerTime, messageContent, renderWidth, effectiveDotSize, barcodeImages]);
+  }, [message, tickingTime, messageContent, renderWidth, effectiveDotSize, barcodeImages]);
 
   const canvasHeight = TOTAL_ROWS * effectiveDotSize + 1;
 
