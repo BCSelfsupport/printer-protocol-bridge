@@ -722,7 +722,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     ctx.font = '16px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('No message selected', width / 2, height / 2 + 5);
-  }, [message, printerTime, messageContent, renderWidth, effectiveDotSize, barcodeImages]);
+  }, [message, tickingTime, messageContent, renderWidth, effectiveDotSize, barcodeImages]);
 
   const canvasHeight = TOTAL_ROWS * effectiveDotSize + 1;
 
