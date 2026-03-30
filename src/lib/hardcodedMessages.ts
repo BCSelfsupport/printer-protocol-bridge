@@ -59,7 +59,7 @@ const QUANTUM_FIELDS: MessageField[] = [
     type: 'text',
     data: 'QUANTUM',
     x: 0,
-    y: 0,
+    y: 16,  // 32 - 16 = 16 (bottom of 32-dot canvas for 16-high template)
     width: 128,
     height: 16,
     fontSize: 'Standard16High',
@@ -69,7 +69,7 @@ const QUANTUM_FIELDS: MessageField[] = [
     type: 'time',
     data: 'HH:MM:SS',
     x: 94,
-    y: 0,
+    y: 16,  // Top of usable area (row 16)
     width: 56,
     height: 7,
     fontSize: 'Standard7High',
@@ -81,7 +81,7 @@ const QUANTUM_FIELDS: MessageField[] = [
     type: 'date',
     data: 'MM/DD/YY',
     x: 94,
-    y: 10,
+    y: 25,  // Row 16 + 7 + 2 = 25
     width: 56,
     height: 7,
     fontSize: 'Standard7High',
