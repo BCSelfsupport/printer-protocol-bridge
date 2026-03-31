@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Printer as PrinterIcon, Save, Trash2, Crown, Link } from 'lucide-react';
+import { Printer as PrinterIcon, Save, Trash2, Crown, Link, Hash } from 'lucide-react';
 
 interface EditPrinterDialogProps {
   open: boolean;
