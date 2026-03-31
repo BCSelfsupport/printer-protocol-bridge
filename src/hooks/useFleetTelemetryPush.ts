@@ -126,6 +126,12 @@ export function useFleetTelemetryPush(options: {
         payload.firmware_version = fwParts.join(' ');
       }
 
+      // Include serial number from local printer config
+      const connectedPrinter = printers.find(p => p.id === connectedPrinterId);
+      if (connectedPrinter?.serialNumber) {
+        payload.serial_number = connectedPrinter.serialNumber;
+      }
+
       // Add metrics if available
       if (metrics) {
         payload.pressure = metrics.pressure ?? null;
@@ -175,5 +181,5 @@ export function useFleetTelemetryPush(options: {
     pushTelemetry();
     const interval = setInterval(pushTelemetry, PUSH_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [isActivated, productKey, tier, connectedPrinterId, status, metrics, fleetUrl, apiKey]);
+  }, [isActivated, productKey, tier, connectedPrinterId, status, metrics, printers, fleetUrl, apiKey]);
 }
