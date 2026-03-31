@@ -181,5 +181,5 @@ export function useFleetTelemetryPush(options: {
     pushTelemetry();
     const interval = setInterval(pushTelemetry, PUSH_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [isActivated, productKey, tier, connectedPrinterId, status, metrics, fleetUrl, apiKey]);
+  }, [isActivated, productKey, tier, connectedPrinterId, status, metrics, printers, fleetUrl, apiKey]);
 }
