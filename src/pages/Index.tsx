@@ -124,6 +124,14 @@ const Index = () => {
   
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
 
+  // Push telemetry to Fleet Telemetry cloud when license is active
+  useFleetTelemetryPush({
+    printers,
+    connectedPrinterId,
+    status: connectionState.status,
+    metrics: connectionState.metrics,
+  });
+
   // Keep message storage scoped to the connected printer
   // Exit edit mode when switching printers so we don't appear to edit
   // a message belonging to a different printer.
