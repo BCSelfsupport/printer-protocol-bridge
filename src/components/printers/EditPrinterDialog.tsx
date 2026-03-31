@@ -33,6 +33,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
   const [port, setPort] = useState('23');
   const [role, setRole] = useState<PrinterRole>('none');
   const [masterId, setMasterId] = useState<string>('');
+  const [serialNumber, setSerialNumber] = useState('');
   const [ipError, setIpError] = useState('');
   // Sync form when printer changes
   useEffect(() => {
