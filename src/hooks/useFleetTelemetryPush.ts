@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useLicense } from '@/contexts/LicenseContext';
+import { getFilterStatus } from '@/lib/filterTracker';
 import type { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 
 const PUSH_INTERVAL_MS = 30_000; // Push every 30 seconds
