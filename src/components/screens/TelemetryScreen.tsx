@@ -67,6 +67,7 @@ interface FleetEvent {
   severity: string;
   message: string;
   occurred_at: string;
+  metadata: { previous?: number; current?: number } | null;
 }
 
 interface Firmware {
