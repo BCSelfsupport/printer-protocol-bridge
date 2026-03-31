@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
             .select("*")
             .eq("printer_id", printerId)
             .order("occurred_at", { ascending: false })
-            .limit(50),
+            .limit(200),
         ]);
 
         if (telemetry.error) throw telemetry.error;
