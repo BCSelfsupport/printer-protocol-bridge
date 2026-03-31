@@ -67,6 +67,7 @@ interface FleetEvent {
   severity: string;
   message: string;
   occurred_at: string;
+  metadata: { previous?: number; current?: number } | null;
 }
 
 interface Firmware {
@@ -200,26 +201,141 @@ function MetricRow({ label, value, unit, status }: { label: string; value: strin
   );
 }
 
-function EventRow({ event }: { event: FleetEvent }) {
-  const styles: Record<string, { icon: React.ReactNode; ring: string }> = {
-    info: { icon: <Activity className="w-4 h-4 text-blue-500" />, ring: 'ring-blue-500/20' },
-    warning: { icon: <AlertTriangle className="w-4 h-4 text-amber-500" />, ring: 'ring-amber-500/20' },
-    error: { icon: <XCircle className="w-4 h-4 text-red-500" />, ring: 'ring-red-500/20' },
+// ════════════════════════════════════ Event Log Table ════════════════════════════════════
+
+type EventCategory = 'all' | 'viscosity' | 'phase' | 'pressure' | 'system';
+
+const EVENT_CATEGORIES: { key: EventCategory; label: string; types: string[] }[] = [
+  { key: 'all', label: 'All Events', types: [] },
+  { key: 'viscosity', label: 'Viscosity', types: ['viscosity_drift'] },
+  { key: 'phase', label: 'Phase', types: ['phase_quality_low'] },
+  { key: 'pressure', label: 'Pressure', types: ['pressure_drift'] },
+  { key: 'system', label: 'System', types: ['jet_start', 'jet_stop', 'hv_on', 'hv_off', 'ink_level_change', 'makeup_level_change', 'modulation_drift'] },
+];
+
+function EventLogTable({ events }: { events: FleetEvent[] }) {
+  const [category, setCategory] = useState<EventCategory>('all');
+  
+  const filtered = category === 'all' 
+    ? events 
+    : events.filter(e => EVENT_CATEGORIES.find(c => c.key === category)?.types.includes(e.event_type));
+
+  const severityColor = (s: string) => {
+    if (s === 'warning') return 'text-amber-500';
+    if (s === 'error') return 'text-red-500';
+    return 'text-blue-500';
   };
-  const s = styles[event.severity] || styles.info;
+
+  const severityBg = (s: string) => {
+    if (s === 'warning') return 'bg-amber-500/10';
+    if (s === 'error') return 'bg-red-500/10';
+    return 'bg-blue-500/5';
+  };
 
   return (
-    <div className={cn("flex items-start gap-3 p-3.5 rounded-xl bg-card border border-border/50 hover:border-border transition-colors")}>
-      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center ring-2 flex-shrink-0", s.ring, "bg-card")}>
-        {s.icon}
+    <div className="space-y-4">
+      {/* Category tabs — styled like the printer's bottom nav */}
+      <div className="flex gap-1 bg-muted/50 rounded-xl p-1 overflow-x-auto">
+        {EVENT_CATEGORIES.map(cat => {
+          const count = cat.key === 'all' ? events.length : events.filter(e => cat.types.includes(e.event_type)).length;
+          return (
+            <button
+              key={cat.key}
+              onClick={() => setCategory(cat.key)}
+              className={cn(
+                "px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5",
+                category === cat.key
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              )}
+            >
+              {cat.label}
+              {count > 0 && (
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.5 rounded-full font-mono",
+                  category === cat.key ? "bg-primary-foreground/20" : "bg-muted-foreground/15"
+                )}>{count}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-foreground leading-relaxed">{event.message}</p>
-        <div className="flex items-center gap-2 mt-1.5">
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-mono">{event.event_type}</Badge>
-          <span className="text-[11px] text-muted-foreground">{getRelativeTime(event.occurred_at)}</span>
+
+      {/* Table */}
+      {filtered.length > 0 ? (
+        <div className="border border-border rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/60 border-b border-border">
+                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Date</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Time</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Type</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Previous</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Current</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Trend</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Severity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((evt, i) => {
+                  const d = new Date(evt.occurred_at);
+                  const date = d.toLocaleDateString('en-CA'); // YYYY-MM-DD
+                  const time = d.toLocaleTimeString('en-US', { hour12: false });
+                  const prev = evt.metadata?.previous;
+                  const curr = evt.metadata?.current;
+                  let trend = '—';
+                  if (prev != null && curr != null) {
+                    if (curr > prev) trend = '↑ Rising';
+                    else if (curr < prev) trend = '↓ Falling';
+                    else trend = '→ Steady';
+                  }
+
+                  const typeLabel = evt.event_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+                  return (
+                    <tr key={evt.id} className={cn(
+                      "border-b border-border/40 last:border-0 transition-colors hover:bg-muted/30",
+                      i % 2 === 0 ? 'bg-card' : 'bg-card/60'
+                    )}>
+                      <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{date}</td>
+                      <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{time}</td>
+                      <td className="px-4 py-2">
+                        <span className="text-xs font-medium text-foreground">{typeLabel}</span>
+                      </td>
+                      <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
+                        {prev != null ? prev.toFixed(1) : '—'}
+                      </td>
+                      <td className="px-4 py-2 font-mono text-xs text-foreground font-semibold">
+                        {curr != null ? curr.toFixed(1) : '—'}
+                      </td>
+                      <td className="px-4 py-2">
+                        <span className={cn("text-xs font-medium", 
+                          trend.includes('Rising') ? 'text-red-500' : 
+                          trend.includes('Falling') ? 'text-blue-500' : 'text-muted-foreground'
+                        )}>{trend}</span>
+                      </td>
+                      <td className="px-4 py-2">
+                        <Badge className={cn(
+                          "text-[10px] font-semibold border-0",
+                          severityBg(evt.severity),
+                          severityColor(evt.severity)
+                        )}>
+                          {evt.severity.toUpperCase()}
+                        </Badge>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="text-sm text-muted-foreground text-center py-16 bg-card border border-border rounded-xl">
+          No {category === 'all' ? '' : category + ' '}events recorded
+        </div>
+      )}
     </div>
   );
 }
@@ -832,14 +948,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                 </TabsContent>
 
                 <TabsContent value="events" className="mt-6">
-                  {events.length > 0 ? (
-                    <div className="space-y-2 max-w-3xl">
-                      <div className="text-xs text-muted-foreground uppercase tracking-widest mb-4">{events.length} Events</div>
-                      {events.map(evt => <EventRow key={evt.id} event={evt} />)}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground text-center py-16">No events recorded</div>
-                  )}
+                  <EventLogTable events={events} />
                 </TabsContent>
 
                 <TabsContent value="firmware" className="mt-6">
