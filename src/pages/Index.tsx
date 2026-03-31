@@ -41,6 +41,7 @@ import { PrintMessage } from '@/types/printer';
 import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
 import { useProductionStorage } from '@/hooks/useProductionStorage';
 import { logConsumption } from '@/lib/consumptionTracker';
+import { useFleetTelemetryPush } from '@/hooks/useFleetTelemetryPush';
 
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
@@ -122,6 +123,14 @@ const Index = () => {
   } = usePrinterConnection();
   
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
+
+  // Push telemetry to Fleet Telemetry cloud when license is active
+  useFleetTelemetryPush({
+    printers,
+    connectedPrinterId,
+    status: connectionState.status,
+    metrics: connectionState.metrics,
+  });
 
   // Keep message storage scoped to the connected printer
   // Exit edit mode when switching printers so we don't appear to edit
