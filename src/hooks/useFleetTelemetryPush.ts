@@ -127,6 +127,15 @@ export function useFleetTelemetryPush(options: {
         payload.electronics_temp = metrics.electronicsTemp ?? null;
         payload.power_hours = metrics.powerHours ?? null;
         payload.stream_hours = metrics.streamHours ?? null;
+
+        // Calculate filter hours remaining from local filter config + stream hours
+        const streamHoursNum = parseFloat(metrics.streamHours);
+        if (!isNaN(streamHoursNum)) {
+          const filterStatus = getFilterStatus(connectedPrinterId, streamHoursNum);
+          if (filterStatus) {
+            payload.filter_hours_remaining = filterStatus.hoursRemaining;
+          }
+        }
       }
 
       try {
