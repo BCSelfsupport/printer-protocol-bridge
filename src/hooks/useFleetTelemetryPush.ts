@@ -43,6 +43,18 @@ export function useFleetTelemetryPush(options: {
         // Only register printers that are available or connected
         if (!printer.isAvailable && !printer.isConnected) continue;
 
+        // Build firmware version string from status if this is the connected printer
+        let firmwareVersion: string | null = null;
+        const currentStatus = statusRef.current;
+        if (printer.id === connectedPrinterId && currentStatus) {
+          const parts = [
+            currentStatus.printerModel ? `Model ${currentStatus.printerModel}` : null,
+            currentStatus.printerVariant || null,
+            currentStatus.printerVersion || null,
+          ].filter(Boolean);
+          firmwareVersion = parts.length > 0 ? parts.join(' ') : null;
+        }
+
         try {
           const res = await fetch(`${fleetUrl}?action=register-printer`, {
             method: 'POST',
@@ -56,6 +68,7 @@ export function useFleetTelemetryPush(options: {
               printer_name: printer.name,
               ip_address: printer.ipAddress,
               port: printer.port,
+              firmware_version: firmwareVersion,
             }),
           });
 
