@@ -43,6 +43,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       setPort(printer.port.toString());
       setRole(printer.role ?? 'none');
       setMasterId(printer.masterId?.toString() ?? '');
+      setSerialNumber(printer.serialNumber ?? '');
     }
   }, [printer]);
 
