@@ -20,6 +20,8 @@ export function useFleetTelemetryPush(options: {
   metrics: PrinterMetrics | null;
 }) {
   const { printers, connectedPrinterId, status, metrics } = options;
+  const statusRef = useRef(status);
+  statusRef.current = status;
   const { productKey, isActivated, tier } = useLicense();
 
   // Track registered printer IDs (fleet DB UUID) so we can push telemetry
