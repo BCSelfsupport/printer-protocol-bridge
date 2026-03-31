@@ -74,11 +74,133 @@ Deno.serve(async (req) => {
         const { printer_id, firmware_version, serial_number, ...metrics } = body;
         if (!printer_id) throw new Error("printer_id required");
 
+        // Fetch previous telemetry for event detection
+        const { data: prevRows } = await supabase
+          .from("fleet_telemetry")
+          .select("jet_running, hv_on, ink_level, makeup_level, viscosity, pressure, phase_qual, modulation")
+          .eq("printer_id", printer_id)
+          .order("recorded_at", { ascending: false })
+          .limit(1);
+        const prev = prevRows?.[0] || null;
+
         // Insert telemetry
         const { error: telError } = await supabase
           .from("fleet_telemetry")
           .insert({ printer_id, ...metrics });
         if (telError) throw telError;
+
+        // ── Event Detection ──────────────────────────────────────────────
+        const events: any[] = [];
+        const now = new Date().toISOString();
+
+        // Jet start / stop
+        if (prev && prev.jet_running !== metrics.jet_running) {
+          events.push({
+            printer_id,
+            event_type: metrics.jet_running ? "jet_start" : "jet_stop",
+            severity: "info",
+            message: metrics.jet_running ? "Ink jet started" : "Ink jet stopped",
+            occurred_at: now,
+          });
+        }
+
+        // HV on / off
+        if (prev && prev.hv_on !== metrics.hv_on) {
+          events.push({
+            printer_id,
+            event_type: metrics.hv_on ? "hv_on" : "hv_off",
+            severity: "info",
+            message: metrics.hv_on ? "High Voltage enabled — printing active" : "High Voltage disabled — printing paused",
+            occurred_at: now,
+          });
+        }
+
+        // Ink level change
+        if (prev && prev.ink_level !== metrics.ink_level && metrics.ink_level) {
+          const sev = (metrics.ink_level === "LOW" || metrics.ink_level === "EMPTY") ? "warning" : "info";
+          events.push({
+            printer_id,
+            event_type: "ink_level_change",
+            severity: sev,
+            message: `Ink level changed: ${prev.ink_level} → ${metrics.ink_level}`,
+            occurred_at: now,
+          });
+        }
+
+        // Makeup level change
+        if (prev && prev.makeup_level !== metrics.makeup_level && metrics.makeup_level) {
+          const sev = (metrics.makeup_level === "LOW" || metrics.makeup_level === "EMPTY") ? "warning" : "info";
+          events.push({
+            printer_id,
+            event_type: "makeup_level_change",
+            severity: sev,
+            message: `Makeup level changed: ${prev.makeup_level} → ${metrics.makeup_level}`,
+            occurred_at: now,
+          });
+        }
+
+        // Viscosity drift (>10% change)
+        if (prev?.viscosity != null && metrics.viscosity != null && prev.viscosity > 0) {
+          const pctChange = Math.abs(metrics.viscosity - prev.viscosity) / prev.viscosity;
+          if (pctChange > 0.10) {
+            events.push({
+              printer_id,
+              event_type: "viscosity_drift",
+              severity: pctChange > 0.20 ? "warning" : "info",
+              message: `Viscosity changed ${(pctChange * 100).toFixed(0)}%: ${prev.viscosity} → ${metrics.viscosity}`,
+              occurred_at: now,
+              metadata: { previous: prev.viscosity, current: metrics.viscosity },
+            });
+          }
+        }
+
+        // Pressure drift (>10% change)
+        if (prev?.pressure != null && metrics.pressure != null && prev.pressure > 0) {
+          const pctChange = Math.abs(metrics.pressure - prev.pressure) / prev.pressure;
+          if (pctChange > 0.10) {
+            events.push({
+              printer_id,
+              event_type: "pressure_drift",
+              severity: pctChange > 0.20 ? "warning" : "info",
+              message: `Pressure changed ${(pctChange * 100).toFixed(0)}%: ${prev.pressure} → ${metrics.pressure}`,
+              occurred_at: now,
+              metadata: { previous: prev.pressure, current: metrics.pressure },
+            });
+          }
+        }
+
+        // Phase quality drop
+        if (prev?.phase_qual != null && metrics.phase_qual != null) {
+          if (prev.phase_qual >= 70 && metrics.phase_qual < 70) {
+            events.push({
+              printer_id,
+              event_type: "phase_quality_low",
+              severity: "warning",
+              message: `Phase quality dropped below threshold: ${prev.phase_qual} → ${metrics.phase_qual}`,
+              occurred_at: now,
+            });
+          }
+        }
+
+        // Modulation drift (>15% change)
+        if (prev?.modulation != null && metrics.modulation != null && prev.modulation > 0) {
+          const pctChange = Math.abs(metrics.modulation - prev.modulation) / prev.modulation;
+          if (pctChange > 0.15) {
+            events.push({
+              printer_id,
+              event_type: "modulation_drift",
+              severity: pctChange > 0.25 ? "warning" : "info",
+              message: `Modulation changed ${(pctChange * 100).toFixed(0)}%: ${prev.modulation} → ${metrics.modulation}`,
+              occurred_at: now,
+              metadata: { previous: prev.modulation, current: metrics.modulation },
+            });
+          }
+        }
+
+        // Insert any detected events
+        if (events.length > 0) {
+          await supabase.from("fleet_events").insert(events);
+        }
 
         // Update printer last_seen, status, firmware, and serial number if provided
         const printerUpdate: any = { last_seen: new Date().toISOString(), status: "online" };
@@ -90,7 +212,7 @@ Deno.serve(async (req) => {
           .eq("id", printer_id);
         if (prError) throw prError;
 
-        return new Response(JSON.stringify({ success: true }), {
+        return new Response(JSON.stringify({ success: true, events_generated: events.length }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
