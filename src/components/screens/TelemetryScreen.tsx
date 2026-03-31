@@ -948,14 +948,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                 </TabsContent>
 
                 <TabsContent value="events" className="mt-6">
-                  {events.length > 0 ? (
-                    <div className="space-y-2 max-w-3xl">
-                      <div className="text-xs text-muted-foreground uppercase tracking-widest mb-4">{events.length} Events</div>
-                      {events.map(evt => <EventRow key={evt.id} event={evt} />)}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground text-center py-16">No events recorded</div>
-                  )}
+                  <EventLogTable events={events} />
                 </TabsContent>
 
                 <TabsContent value="firmware" className="mt-6">
