@@ -147,6 +147,24 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
             />
           </div>
 
+          {/* Serial Number */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-serial" className="text-slate-300 flex items-center gap-1.5">
+              <Hash className="w-3.5 h-3.5" />
+              Serial Number
+            </Label>
+            <Input
+              id="edit-serial"
+              value={serialNumber}
+              onChange={(e) => setSerialNumber(e.target.value)}
+              placeholder="e.g., BC-2024-001234"
+              className="bg-slate-800 border-slate-600 text-white font-mono"
+            />
+            <p className="text-[10px] text-slate-500">
+              Optional. Used for Fleet Telemetry™ tracking.
+            </p>
+          </div>
+
           {/* Master/Slave Role */}
           <div className="space-y-2">
             <Label className="text-slate-300 flex items-center gap-1.5">
