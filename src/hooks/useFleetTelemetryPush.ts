@@ -115,6 +115,16 @@ export function useFleetTelemetryPush(options: {
         hv_on: status.printOn ?? false,
       };
 
+      // Include firmware version in every telemetry push so the printer record stays up to date
+      const fwParts = [
+        status.printerModel ? `Model ${status.printerModel}` : null,
+        status.printerVariant || null,
+        status.printerVersion || null,
+      ].filter(Boolean);
+      if (fwParts.length > 0) {
+        payload.firmware_version = fwParts.join(' ');
+      }
+
       // Add metrics if available
       if (metrics) {
         payload.pressure = metrics.pressure ?? null;

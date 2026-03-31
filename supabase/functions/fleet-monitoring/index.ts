@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
 
       case "push-telemetry": {
         const body = await req.json();
-        const { printer_id, ...metrics } = body;
+        const { printer_id, firmware_version, ...metrics } = body;
         if (!printer_id) throw new Error("printer_id required");
 
         // Insert telemetry
@@ -80,10 +80,12 @@ Deno.serve(async (req) => {
           .insert({ printer_id, ...metrics });
         if (telError) throw telError;
 
-        // Update printer last_seen and status
+        // Update printer last_seen, status, and firmware if provided
+        const printerUpdate: any = { last_seen: new Date().toISOString(), status: "online" };
+        if (firmware_version) printerUpdate.firmware_version = firmware_version;
         const { error: prError } = await supabase
           .from("fleet_printers")
-          .update({ last_seen: new Date().toISOString(), status: "online" })
+          .update(printerUpdate)
           .eq("id", printer_id);
         if (prError) throw prError;
 
