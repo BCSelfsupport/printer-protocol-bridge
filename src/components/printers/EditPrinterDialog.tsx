@@ -78,6 +78,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       port: portNum,
       role,
       masterId: role === 'slave' && masterId ? parseInt(masterId, 10) : undefined,
+      serialNumber: serialNumber.trim() || undefined,
     });
     onOpenChange(false);
   };
