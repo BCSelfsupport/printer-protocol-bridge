@@ -17,6 +17,7 @@ export interface Printer {
   // Master/Slave configuration
   role?: PrinterRole;
   masterId?: number; // ID of the master printer (when role === 'slave')
+  serialNumber?: string; // User-entered serial number for fleet tracking
 }
 
 export interface PrinterStatus {

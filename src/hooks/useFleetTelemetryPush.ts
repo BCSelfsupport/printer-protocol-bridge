@@ -70,6 +70,7 @@ export function useFleetTelemetryPush(options: {
               ip_address: printer.ipAddress,
               port: printer.port,
               firmware_version: firmwareVersion,
+              serial_number: printer.serialNumber || null,
             }),
           });
 

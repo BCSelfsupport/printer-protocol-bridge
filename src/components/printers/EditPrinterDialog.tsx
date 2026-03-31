@@ -16,13 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Printer as PrinterIcon, Save, Trash2, Crown, Link } from 'lucide-react';
+import { Printer as PrinterIcon, Save, Trash2, Crown, Link, Hash } from 'lucide-react';
 
 interface EditPrinterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   printer: Printer | null;
-  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number }) => void;
+  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string }) => void;
   onDelete?: (printerId: number) => void;
   allPrinters?: Printer[];
 }
@@ -33,6 +33,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
   const [port, setPort] = useState('23');
   const [role, setRole] = useState<PrinterRole>('none');
   const [masterId, setMasterId] = useState<string>('');
+  const [serialNumber, setSerialNumber] = useState('');
   const [ipError, setIpError] = useState('');
   // Sync form when printer changes
   useEffect(() => {
@@ -42,6 +43,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       setPort(printer.port.toString());
       setRole(printer.role ?? 'none');
       setMasterId(printer.masterId?.toString() ?? '');
+      setSerialNumber(printer.serialNumber ?? '');
     }
   }, [printer]);
 
@@ -76,6 +78,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       port: portNum,
       role,
       masterId: role === 'slave' && masterId ? parseInt(masterId, 10) : undefined,
+      serialNumber: serialNumber.trim() || undefined,
     });
     onOpenChange(false);
   };
@@ -142,6 +145,24 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
               max={65535}
               className="bg-slate-800 border-slate-600 text-white font-mono w-24"
             />
+          </div>
+
+          {/* Serial Number */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-serial" className="text-slate-300 flex items-center gap-1.5">
+              <Hash className="w-3.5 h-3.5" />
+              Serial Number
+            </Label>
+            <Input
+              id="edit-serial"
+              value={serialNumber}
+              onChange={(e) => setSerialNumber(e.target.value)}
+              placeholder="e.g., BC-2024-001234"
+              className="bg-slate-800 border-slate-600 text-white font-mono"
+            />
+            <p className="text-[10px] text-slate-500">
+              Optional. Used for Fleet Telemetry™ tracking.
+            </p>
           </div>
 
           {/* Master/Slave Role */}
