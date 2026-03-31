@@ -90,7 +90,7 @@ export function useFleetTelemetryPush(options: {
     registerAll();
     const interval = setInterval(registerAll, REGISTER_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [isActivated, productKey, tier, printers, fleetUrl, apiKey]);
+  }, [isActivated, productKey, tier, printers, connectedPrinterId, fleetUrl, apiKey]);
 
   // Push telemetry for the connected printer
   useEffect(() => {
