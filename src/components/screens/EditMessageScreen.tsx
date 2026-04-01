@@ -17,7 +17,7 @@ import { DateCodeBuilder, DateCodeBuilderResult } from '@/components/messages/Da
 import { CounterDialog } from '@/components/messages/CounterDialog';
 import { UserDefineDialog, UserDefineConfig } from '@/components/messages/UserDefineDialog';
 import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
-import { estimateBarcodeWidthDots } from '@/lib/barcodeRenderer';
+import { estimateBarcodeWidthDots, parseBarcodeLabelData } from '@/lib/barcodeRenderer';
 
 import { GraphicFieldDialog, GraphicFieldConfig } from '@/components/messages/GraphicFieldDialog';
 import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
