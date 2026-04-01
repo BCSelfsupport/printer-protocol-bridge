@@ -972,12 +972,33 @@ export function EditMessageScreen({
   // Update field settings (bold, gap, rotation, autoNumerals)
   const handleUpdateFieldSetting = (key: keyof MessageField, value: any) => {
     if (!selectedFieldId) return;
-    setMessage((prev) => ({
-      ...prev,
-      fields: prev.fields.map((f) =>
-        f.id === selectedFieldId ? { ...f, [key]: value } : f
-      ),
-    }));
+    setMessage((prev) => {
+      const updatedFields = prev.fields.map((f) => {
+        if (f.id !== selectedFieldId) return f;
+
+        const updatedField: MessageField = { ...f, [key]: value };
+
+        if (f.type === 'barcode' && key === 'bold') {
+          const parsed = parseBarcodeLabelData(f.data);
+          if (parsed) {
+            updatedField.width = estimateBarcodeWidthDots(
+              parsed.encoding,
+              parsed.data,
+              parsed.humanReadable,
+              value
+            );
+          }
+        }
+
+        return updatedField;
+      });
+
+      return {
+        ...prev,
+        fields: updatedFields,
+        width: autoResizeWidth(updatedFields),
+      };
+    });
   };
 
   /**
