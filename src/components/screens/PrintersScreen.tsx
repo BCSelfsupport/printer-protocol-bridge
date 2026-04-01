@@ -405,18 +405,20 @@ export function PrintersScreen({
             <Button
               onClick={() => {
                 const isLiteMaxed = tier === 'lite' && printers.length >= 1;
-                if (canNetwork && !isLiteMaxed) setAddDialogOpen(true);
+                const isBlocked = !canNetwork || isLiteMaxed || tier === 'demo';
+                if (!isBlocked) setAddDialogOpen(true);
               }}
               size="sm"
               className="flex-1 bg-primary hover:bg-primary/90 h-8 text-xs"
-              disabled={!canNetwork || (tier === 'lite' && visiblePrinters.length >= 1)}
+              disabled={!canNetwork || (tier === 'lite' && visiblePrinters.length >= 1) || tier === 'demo'}
               title={
-                !canNetwork ? 'Network access requires FULL or DATABASE license' 
+                tier === 'demo' ? 'Adding printers is not available in DEMO mode'
+                : !canNetwork ? 'Network access requires FULL or DATABASE license' 
                 : tier === 'lite' && visiblePrinters.length >= 1 ? 'LITE license supports 1 printer only'
                 : undefined
               }
             >
-              {!canNetwork || (tier === 'lite' && visiblePrinters.length >= 1) ? <Lock className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+              {!canNetwork || (tier === 'lite' && visiblePrinters.length >= 1) || tier === 'demo' ? <Lock className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
               Add
             </Button>
             {onRefreshNetwork && (
