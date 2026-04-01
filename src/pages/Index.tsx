@@ -934,25 +934,27 @@ const Index = () => {
           connectedPrinterId ? p.id === connectedPrinterId : p.id === printers[0]?.id
         );
         return (
-          <ConsumablesScreen
-            reorderConfig={consumableStorage.reorderConfig}
-            onUpdateReorderConfig={consumableStorage.updateReorderConfig}
-            consumables={consumableStorage.consumables}
-            assignments={consumableStorage.assignments}
-            printers={consumablePrinters}
-            metricsMap={connectionState.connectedPrinter && connectionState.metrics
-              ? { [connectionState.connectedPrinter.id]: connectionState.metrics }
-              : {}
-            }
-            onQueryPrinterMetrics={queryPrinterMetrics}
-            onAddConsumable={consumableStorage.addConsumable}
-            onUpdateConsumable={consumableStorage.updateConsumable}
-            onRemoveConsumable={consumableStorage.removeConsumable}
-            onSetStock={consumableStorage.setStock}
-            onAdjustStock={consumableStorage.adjustStock}
-            onAssignConsumable={consumableStorage.assignConsumable}
-            onHome={handleHome}
-          />
+          <Suspense fallback={<div className="flex-1 bg-background" />}>
+            <ConsumablesScreen
+              reorderConfig={consumableStorage.reorderConfig}
+              onUpdateReorderConfig={consumableStorage.updateReorderConfig}
+              consumables={consumableStorage.consumables}
+              assignments={consumableStorage.assignments}
+              printers={consumablePrinters}
+              metricsMap={connectionState.connectedPrinter && connectionState.metrics
+                ? { [connectionState.connectedPrinter.id]: connectionState.metrics }
+                : {}
+              }
+              onQueryPrinterMetrics={queryPrinterMetrics}
+              onAddConsumable={consumableStorage.addConsumable}
+              onUpdateConsumable={consumableStorage.updateConsumable}
+              onRemoveConsumable={consumableStorage.removeConsumable}
+              onSetStock={consumableStorage.setStock}
+              onAdjustStock={consumableStorage.adjustStock}
+              onAssignConsumable={consumableStorage.assignConsumable}
+              onHome={handleHome}
+            />
+          </Suspense>
         );
       }
       case 'reports': {
