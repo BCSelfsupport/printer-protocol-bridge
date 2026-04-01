@@ -51,7 +51,6 @@ interface MessageCanvasProps {
 }
 
 const TOTAL_ROWS = 32;
-const PREVIEW_BOTTOM_PADDING_ROWS = 1;
 const DOT_SIZE = 8; // pixels per dot
 
 export function MessageCanvas({
@@ -220,7 +219,7 @@ export function MessageCanvas({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const totalHeight = (TOTAL_ROWS + PREVIEW_BOTTOM_PADDING_ROWS) * DOT_SIZE;
+    const totalHeight = TOTAL_ROWS * DOT_SIZE;
     const totalCols = Math.floor(canvas.width / DOT_SIZE);
     const viewLeftPx = scrollX * DOT_SIZE;
     const viewRightPx = viewLeftPx + canvasWidth;
@@ -245,7 +244,7 @@ export function MessageCanvas({
     }
 
     // Horizontal lines
-    for (let y = 0; y <= TOTAL_ROWS + PREVIEW_BOTTOM_PADDING_ROWS; y++) {
+    for (let y = 0; y <= TOTAL_ROWS; y++) {
       ctx.beginPath();
       ctx.moveTo(0, y * DOT_SIZE);
       ctx.lineTo(canvas.width, y * DOT_SIZE);
@@ -1141,7 +1140,7 @@ export function MessageCanvas({
           <canvas
             ref={canvasRef}
             width={canvasPixelWidth}
-            height={(TOTAL_ROWS + PREVIEW_BOTTOM_PADDING_ROWS) * DOT_SIZE}
+            height={TOTAL_ROWS * DOT_SIZE}
             tabIndex={0}
             onMouseDown={handleMouseDown}
             onDoubleClick={handleDoubleClick}
