@@ -30,8 +30,10 @@
       </div>
     </noscript>
     <script>
-      // HTML-level crash catcher – if React fails to mount within 8s, show diagnostics
+      // HTML-level crash catcher – Electron packaged launches can take longer before the renderer bundle executes
       window.__CS_MOUNTED = false;
+      const isElectronRuntime = navigator.userAgent.includes('Electron');
+      const startupTimeoutMs = isElectronRuntime ? 20000 : 5000;
       setTimeout(function() {
         if (!window.__CS_MOUNTED) {
           var root = document.getElementById('root');
@@ -41,11 +43,11 @@
               '<p>The application failed to start. Open DevTools (Ctrl+Shift+I) to see errors.</p>' +
               '<p>Check the Console tab for details.</p>' +
               '<pre id="cs-error" style="background:#222;padding:16px;border-radius:8px;overflow:auto;max-height:400px;white-space:pre-wrap"></pre>' +
-              '<p style="color:#9ca3af;margin-top:12px">If you see a blank error box, press Ctrl+Shift+I → Console tab for the full stack trace.</p>' +
+              '<p style="color:#9ca3af;margin-top:12px">Startup watchdog timeout after ' + Math.round(startupTimeoutMs / 1000) + 's. If this happens repeatedly, open DevTools for the full stack trace.</p>' +
               '</div>';
           }
         }
-      }, 5000);
+      }, startupTimeoutMs);
       window.addEventListener('error', function(e) {
         console.error('[global-error]', e.message, e.filename, e.lineno);
         var el = document.getElementById('cs-error');
