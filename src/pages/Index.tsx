@@ -46,6 +46,9 @@ import { useFleetTelemetryPush } from '@/hooks/useFleetTelemetryPush';
 
 type ScreenType = NavItem | 'network' | 'control' | 'editMessage' | 'consumables' | 'reports' | 'datasource' | 'wirecable' | 'training';
 
+const SetupScreen = lazy(() => import('@/components/screens/SetupScreen').then((module) => ({ default: module.SetupScreen })));
+const ConsumablesScreen = lazy(() => import('@/components/screens/ConsumablesScreen').then((module) => ({ default: module.ConsumablesScreen })));
+
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
   const [devPanelOpen, setDevPanelOpen] = useState(false);
