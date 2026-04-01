@@ -1,14 +1,7 @@
 /**
  * Printer model badge — displays the official Bestcode printer model logo.
- * Uses pre-generated badge images for each model.
+ * Uses stable public asset URLs so startup does not depend on image module transforms.
  */
-
-import badge82 from '@/assets/badge-82.png';
-import badge86 from '@/assets/badge-86.png';
-import badge88 from '@/assets/badge-88.png';
-import badge88s from '@/assets/badge-88s.png';
-import badgeQ from '@/assets/badge-q.png';
-import badgeQx from '@/assets/badge-qx.png';
 
 interface ModelBadgeProps {
   model: string | null | undefined;
@@ -17,13 +10,13 @@ interface ModelBadgeProps {
 }
 
 const BADGE_MAP: Record<string, string> = {
-  '82': badge82,
-  '86': badge86,
-  '87': badge86, // Discontinued, same class
-  '88': badge88,
-  '88S': badge88s,
-  'Q': badgeQ,
-  'Qx': badgeQx,
+  '82': '/badge-82.png',
+  '86': '/badge-86.png',
+  '87': '/badge-86.png', // Discontinued, same class
+  '88': '/badge-88.png',
+  '88S': '/badge-88s.png',
+  'Q': '/badge-q.png',
+  'Qx': '/badge-qx.png',
 };
 
 export function ModelBadge({ model, variant, className = '' }: ModelBadgeProps) {
