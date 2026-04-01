@@ -11,6 +11,7 @@ import { computeAutoCodeValue } from '@/lib/autoCodeProtocol';
 import { CountersDialog } from '@/components/counters/CountersDialog';
 import { NavItem } from '@/components/layout/BottomNav';
 import { ModelBadge } from '@/components/branding/ModelBadge';
+import { useLicense } from '@/contexts/LicenseContext';
 
 interface DashboardProps {
   status: PrinterStatus | null;
