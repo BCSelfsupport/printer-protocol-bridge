@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import App from "./App";
 
 const showCrashReport = (err: unknown) => {
   console.error("[main.tsx] Fatal render error:", err);
@@ -40,27 +41,12 @@ const clearElectronPwaCaches = async () => {
 const rootElement = document.getElementById("root");
 const root = rootElement ? createRoot(rootElement) : null;
 
-// Mark boot as started immediately, before loading the full app graph.
-(window as any).__CS_MOUNTED = true;
-
-if (root) {
-  root.render(
-    <div style={{ padding: 24, color: '#e5e7eb', background: '#111', minHeight: '100vh', fontFamily: 'monospace' }}>
-      Loading CodeSync…
-    </div>
-  );
+try {
+  root?.render(<App />);
+  (window as any).__CS_MOUNTED = true;
+} catch (err) {
+  showCrashReport(err);
 }
-
-const mountApp = async () => {
-  try {
-    const { default: App } = await import("./App.tsx");
-    root?.render(<App />);
-  } catch (err) {
-    showCrashReport(err);
-  }
-};
-
-void mountApp();
 
 // Run Electron cache cleanup in background so UI mount is never blocked
 void clearElectronPwaCaches();
