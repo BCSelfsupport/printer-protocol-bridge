@@ -216,6 +216,7 @@ export function BarcodeFieldDialog({
     setDotcodeHeight(9);
     setDotcodeWidth(36);
     setDotcodeMask('auto');
+    setMagnification(1);
     onOpenChange(false);
   };
 
