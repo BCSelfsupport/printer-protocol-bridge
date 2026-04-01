@@ -692,6 +692,7 @@ export function EditMessageScreen({
       width: widthDots,
       height: barcodeHeight,
       fontSize: 'Standard16High',
+      bold: config.magnification ? config.magnification - 1 : 0,
     };
     
     setMessage((prev) => {
