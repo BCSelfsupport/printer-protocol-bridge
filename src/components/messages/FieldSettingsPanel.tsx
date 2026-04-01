@@ -214,10 +214,10 @@ export function FieldSettingsPanel({
           disabled={disabled || !onTemplateChange}
         />
         
-        {/* Bold */}
+        {/* Bold / Magnification */}
         <SettingCard
-          label="Bold"
-          value={bold}
+          label={fieldType === 'barcode' ? 'Mag' : 'Bold'}
+          value={fieldType === 'barcode' ? `${bold + 1}×` : bold}
           onIncrease={() => onBoldChange(Math.min(9, bold + 1))}
           onDecrease={() => onBoldChange(Math.max(0, bold - 1))}
           disabled={disabled}
