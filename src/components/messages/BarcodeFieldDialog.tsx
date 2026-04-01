@@ -155,6 +155,7 @@ export function BarcodeFieldDialog({
   const [dotcodeHeight, setDotcodeHeight] = useState(9);
   const [dotcodeWidth, setDotcodeWidth] = useState(36);
   const [dotcodeMask, setDotcodeMask] = useState<'auto' | 'manual'>('auto');
+  const [magnification, setMagnification] = useState(1);
   const [showAutoCodePanel, setShowAutoCodePanel] = useState(false);
   const [showUserDefinePanel, setShowUserDefinePanel] = useState(false);
   const [userDefineId, setUserDefineId] = useState('USER1');
