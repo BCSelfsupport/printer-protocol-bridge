@@ -1,5 +1,4 @@
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
 import "./index.css";
 
 const showCrashReport = (err: unknown) => {
@@ -38,20 +37,30 @@ const clearElectronPwaCaches = async () => {
   }
 };
 
-const mountApp = () => {
-  const root = createRoot(document.getElementById("root")!);
-  root.render(<App />);
-  (window as any).__CS_MOUNTED = true;
-};
+const rootElement = document.getElementById("root");
+const root = rootElement ? createRoot(rootElement) : null;
 
-// Mark boot as started as soon as the module executes to avoid false watchdog errors
+// Mark boot as started immediately, before loading the full app graph.
 (window as any).__CS_MOUNTED = true;
 
-try {
-  mountApp();
-} catch (err) {
-  showCrashReport(err);
+if (root) {
+  root.render(
+    <div style={{ padding: 24, color: '#e5e7eb', background: '#111', minHeight: '100vh', fontFamily: 'monospace' }}>
+      Loading CodeSync…
+    </div>
+  );
 }
+
+const mountApp = async () => {
+  try {
+    const { default: App } = await import("./App.tsx");
+    root?.render(<App />);
+  } catch (err) {
+    showCrashReport(err);
+  }
+};
+
+void mountApp();
 
 // Run Electron cache cleanup in background so UI mount is never blocked
 void clearElectronPwaCaches();
