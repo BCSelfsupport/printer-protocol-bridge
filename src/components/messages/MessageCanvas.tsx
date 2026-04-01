@@ -12,6 +12,7 @@ interface CanvasField {
   width: number;
   height: number;
   fontSize: string;
+  bold?: number;
 }
 
 interface MultilineTemplate {
