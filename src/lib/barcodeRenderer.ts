@@ -279,11 +279,9 @@ export async function renderBarcodeToCanvas(
           options.scale = Math.max(1, Math.floor(targetBarPx / (size * 2)));
         }
     } else {
+      // 1D barcodes: bold controls bar width magnification (bold+1 multiplier)
+      const moduleScale = Math.max(1, (bold + 1));
       // bwip-js height is in mm at 72dpi. 1mm ≈ 2.835 pixels at 72dpi.
-      // With scale=S, pixel height ≈ height_mm * 2.835 * S
-      // We want pixel height ≈ targetBarPx, so pick scale first then solve height.
-      const moduleScale = 2;
-      // height_mm = targetBarPx / (2.835 * scale)
       const heightMm = Math.max(5, Math.round(targetBarPx / (2.835 * moduleScale)));
       options.scale = moduleScale;
       options.height = heightMm;
