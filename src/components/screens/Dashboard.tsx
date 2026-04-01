@@ -568,7 +568,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
         if (!parsed || !parsed.data) continue;
         const h = field.height || messageContent.height || TOTAL_ROWS;
         try {
-          const bc = await renderBarcodeToCanvas(parsed.encoding, parsed.data, h, parsed.humanReadable, parsed.sizeFlag);
+          const bc = await renderBarcodeToCanvas(parsed.encoding, parsed.data, h, parsed.humanReadable, parsed.sizeFlag, field.bold ?? 0);
           if (bc && !cancelled) imgs.set(`${field.id}`, bc);
         } catch {}
       }
