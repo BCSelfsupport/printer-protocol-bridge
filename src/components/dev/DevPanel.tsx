@@ -1049,7 +1049,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
               </div>
             )}
             <div className="text-[10px] text-muted-foreground text-center">
-              GitHub token status is validated when build actions run.
+              GitHub token status is checked when build actions run.
             </div>
             <div className="text-[10px] text-muted-foreground text-center">
               Printer Emulator v2.0 • Bestcode Protocol • Dev Mode Only
