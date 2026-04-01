@@ -442,6 +442,7 @@ interface MessagePreviewCanvasProps {
 const DOT_SIZE_MOBILE = 3; // Smaller dots on mobile
 const DOT_SIZE_DESKTOP = 4; // Pixels per dot on desktop
 const TOTAL_ROWS = 32; // Total printable height in dots
+const PREVIEW_BOTTOM_PADDING_ROWS = 1;
 const MIN_CANVAS_WIDTH = 420; // Minimum width to prevent any layout squeezing
 
 // Calculate required canvas width based on message content
@@ -601,8 +602,9 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     if (!ctx) return;
 
     const width = renderWidth;
+    const previewRows = TOTAL_ROWS + PREVIEW_BOTTOM_PADDING_ROWS;
     // Add 1 CSS pixel safety margin to avoid bottom-edge clipping on some DPR/rounding combos
-    const height = TOTAL_ROWS * effectiveDotSize + 1;
+    const height = previewRows * effectiveDotSize + 1;
 
     // HiDPI: scale backing store to devicePixelRatio while keeping CSS size
     // Use ceil + derive the actual scale factors to avoid clipping on non-integer DPRs (e.g. 2.625)
@@ -635,7 +637,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
       ctx.lineTo(x, height);
       ctx.stroke();
     }
-    for (let y = 0; y <= TOTAL_ROWS; y++) {
+    for (let y = 0; y <= previewRows; y++) {
       ctx.beginPath();
       ctx.moveTo(0, y * effectiveDotSize);
       ctx.lineTo(width, y * effectiveDotSize);
@@ -713,8 +715,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     if (message) {
       ctx.fillStyle = '#1a1a1a';
 
-      // Home preview only: shift everything up by 1 dot row to avoid bottom-row clipping on some devices.
-      const previewYOffsetDots = 1;
+      const previewYOffsetDots = 0;
 
       // System messages use known default content from the printer
       const upperMessage = message.toUpperCase();
@@ -758,7 +759,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     ctx.fillText('No message selected', width / 2, height / 2 + 5);
   }, [message, tickingTime, messageContent, renderWidth, effectiveDotSize, barcodeImages]);
 
-  const canvasHeight = TOTAL_ROWS * effectiveDotSize + 1;
+  const canvasHeight = (TOTAL_ROWS + PREVIEW_BOTTOM_PADDING_ROWS) * effectiveDotSize + 1;
 
   const handleClick = () => {
     // Cycle to next zoom level, wrap back to 0 at the end
