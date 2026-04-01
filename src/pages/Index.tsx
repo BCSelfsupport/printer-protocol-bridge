@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { CountdownType } from '@/hooks/useJetCountdown';
@@ -12,10 +12,12 @@ import { PrintersScreen } from '@/components/screens/PrintersScreen';
 import { MessagesScreen } from '@/components/screens/MessagesScreen';
 import { EditMessageScreen, MessageDetails } from '@/components/screens/EditMessageScreen';
 import { AdjustDialog } from '@/components/adjust/AdjustDialog';
+import { SetupScreen } from '@/components/screens/SetupScreen';
 import { ServiceScreen } from '@/components/screens/ServiceScreen';
 import { CleanScreen } from '@/components/screens/CleanScreen';
 import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
 import { RelayConnectDialog } from '@/components/relay/RelayConnectDialog';
+import { ConsumablesScreen } from '@/components/screens/ConsumablesScreen';
 import { ReportsScreen } from '@/components/screens/ReportsScreen';
 import { DataSourceScreen } from '@/components/screens/DataSourceScreen';
 import { LowStockAlert, LowStockAlertData } from '@/components/consumables/LowStockAlert';
@@ -45,9 +47,6 @@ import { useFleetTelemetryPush } from '@/hooks/useFleetTelemetryPush';
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
 
 type ScreenType = NavItem | 'network' | 'control' | 'editMessage' | 'consumables' | 'reports' | 'datasource' | 'wirecable' | 'training';
-
-const SetupScreen = lazy(() => import('@/components/screens/SetupScreen').then((module) => ({ default: module.SetupScreen })));
-const ConsumablesScreen = lazy(() => import('@/components/screens/ConsumablesScreen').then((module) => ({ default: module.ConsumablesScreen })));
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
@@ -934,27 +933,25 @@ const Index = () => {
           connectedPrinterId ? p.id === connectedPrinterId : p.id === printers[0]?.id
         );
         return (
-          <Suspense fallback={<div className="flex-1 bg-background" />}>
-            <ConsumablesScreen
-              reorderConfig={consumableStorage.reorderConfig}
-              onUpdateReorderConfig={consumableStorage.updateReorderConfig}
-              consumables={consumableStorage.consumables}
-              assignments={consumableStorage.assignments}
-              printers={consumablePrinters}
-              metricsMap={connectionState.connectedPrinter && connectionState.metrics
-                ? { [connectionState.connectedPrinter.id]: connectionState.metrics }
-                : {}
-              }
-              onQueryPrinterMetrics={queryPrinterMetrics}
-              onAddConsumable={consumableStorage.addConsumable}
-              onUpdateConsumable={consumableStorage.updateConsumable}
-              onRemoveConsumable={consumableStorage.removeConsumable}
-              onSetStock={consumableStorage.setStock}
-              onAdjustStock={consumableStorage.adjustStock}
-              onAssignConsumable={consumableStorage.assignConsumable}
-              onHome={handleHome}
-            />
-          </Suspense>
+          <ConsumablesScreen
+            reorderConfig={consumableStorage.reorderConfig}
+            onUpdateReorderConfig={consumableStorage.updateReorderConfig}
+            consumables={consumableStorage.consumables}
+            assignments={consumableStorage.assignments}
+            printers={consumablePrinters}
+            metricsMap={connectionState.connectedPrinter && connectionState.metrics
+              ? { [connectionState.connectedPrinter.id]: connectionState.metrics }
+              : {}
+            }
+            onQueryPrinterMetrics={queryPrinterMetrics}
+            onAddConsumable={consumableStorage.addConsumable}
+            onUpdateConsumable={consumableStorage.updateConsumable}
+            onRemoveConsumable={consumableStorage.removeConsumable}
+            onSetStock={consumableStorage.setStock}
+            onAdjustStock={consumableStorage.adjustStock}
+            onAssignConsumable={consumableStorage.assignConsumable}
+            onHome={handleHome}
+          />
         );
       }
       case 'reports': {
@@ -1197,13 +1194,11 @@ const Index = () => {
       />
 
       {/* Setup Dialog */}
-      <Suspense fallback={null}>
-        <SetupScreen
-          open={setupDialogOpen}
-          onOpenChange={setSetupDialogOpen}
-          onSendCommand={sendCommand}
-        />
-      </Suspense>
+      <SetupScreen
+        open={setupDialogOpen}
+        onOpenChange={setSetupDialogOpen}
+        onSendCommand={sendCommand}
+      />
 
       {/* Service Dialog */}
       <ServiceScreen

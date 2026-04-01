@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
 import "./index.css";
-import App from "./App";
 
 const showCrashReport = (err: unknown) => {
   console.error("[main.tsx] Fatal render error:", err);
@@ -38,12 +38,17 @@ const clearElectronPwaCaches = async () => {
   }
 };
 
-const rootElement = document.getElementById("root");
-const root = rootElement ? createRoot(rootElement) : null;
+const mountApp = () => {
+  const root = createRoot(document.getElementById("root")!);
+  root.render(<App />);
+  (window as any).__CS_MOUNTED = true;
+};
+
+// Mark boot as started as soon as the module executes to avoid false watchdog errors
+(window as any).__CS_MOUNTED = true;
 
 try {
-  root?.render(<App />);
-  (window as any).__CS_MOUNTED = true;
+  mountApp();
 } catch (err) {
   showCrashReport(err);
 }

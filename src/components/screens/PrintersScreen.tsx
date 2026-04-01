@@ -231,7 +231,7 @@ export function PrintersScreen({
   const [devTaps, setDevTaps] = useState<number[]>([]);
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
-  const { canNetwork, canDatabase, tier, isActivated, isDemo } = useLicense();
+  const { canNetwork, canDatabase, tier, isActivated } = useLicense();
 
   // Lite tier: only show the first printer
   const visiblePrinters = tier === 'lite' ? printers.slice(0, 1) : printers;
@@ -405,19 +405,18 @@ export function PrintersScreen({
             <Button
               onClick={() => {
                 const isLiteMaxed = tier === 'lite' && printers.length >= 1;
-                if (canNetwork && !isLiteMaxed && !isDemo) setAddDialogOpen(true);
+                if (canNetwork && !isLiteMaxed) setAddDialogOpen(true);
               }}
               size="sm"
               className="flex-1 bg-primary hover:bg-primary/90 h-8 text-xs"
-              disabled={!canNetwork || isDemo || (tier === 'lite' && visiblePrinters.length >= 1)}
+              disabled={!canNetwork || (tier === 'lite' && visiblePrinters.length >= 1)}
               title={
                 !canNetwork ? 'Network access requires FULL or DATABASE license' 
-                : isDemo ? 'Adding printers is not available in DEMO mode'
                 : tier === 'lite' && visiblePrinters.length >= 1 ? 'LITE license supports 1 printer only'
                 : undefined
               }
             >
-              {!canNetwork || isDemo || (tier === 'lite' && visiblePrinters.length >= 1) ? <Lock className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+              {!canNetwork || (tier === 'lite' && visiblePrinters.length >= 1) ? <Lock className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
               Add
             </Button>
             {onRefreshNetwork && (
