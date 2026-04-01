@@ -1142,6 +1142,7 @@ export function EditMessageScreen({
                 disabled={!selectedFieldId}
                 allowedFonts={getAllowedFonts()}
                 currentFontIndex={getAllowedFonts().findIndex(f => f.value === selectedField.fontSize)}
+                fieldType={selectedField.type}
               />
             )}
 
