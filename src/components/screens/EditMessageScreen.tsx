@@ -683,6 +683,10 @@ export function EditMessageScreen({
       if (dmMatch) barcodeHeight = parseInt(dmMatch[2], 10);
     }
 
+    // Pick the largest font that fits the barcode height (or template height)
+    const allowedFonts = getAllowedFonts();
+    const bestFont = allowedFonts.length > 0 ? allowedFonts[allowedFonts.length - 1].value : 'Standard16High';
+
     const newField: MessageField = {
       id: newId,
       type: 'barcode',
@@ -691,7 +695,7 @@ export function EditMessageScreen({
       y: 32 - barcodeHeight,
       width: widthDots,
       height: barcodeHeight,
-      fontSize: 'Standard16High',
+      fontSize: bestFont,
       bold: config.magnification ? config.magnification - 1 : 0,
     };
     

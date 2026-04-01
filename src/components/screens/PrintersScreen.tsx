@@ -405,11 +405,11 @@ export function PrintersScreen({
             <Button
               onClick={() => {
                 const isLiteMaxed = tier === 'lite' && printers.length >= 1;
-                if (canNetwork && !isLiteMaxed) setAddDialogOpen(true);
+                if (canNetwork && !isLiteMaxed && !isDemo) setAddDialogOpen(true);
               }}
               size="sm"
               className="flex-1 bg-primary hover:bg-primary/90 h-8 text-xs"
-              disabled={!canNetwork || (tier === 'lite' && visiblePrinters.length >= 1)}
+              disabled={!canNetwork || isDemo || (tier === 'lite' && visiblePrinters.length >= 1)}
               title={
                 !canNetwork ? 'Network access requires FULL or DATABASE license' 
                 : tier === 'lite' && visiblePrinters.length >= 1 ? 'LITE license supports 1 printer only'
