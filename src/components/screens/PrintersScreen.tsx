@@ -412,11 +412,12 @@ export function PrintersScreen({
               disabled={!canNetwork || isDemo || (tier === 'lite' && visiblePrinters.length >= 1)}
               title={
                 !canNetwork ? 'Network access requires FULL or DATABASE license' 
+                : isDemo ? 'Adding printers is not available in DEMO mode'
                 : tier === 'lite' && visiblePrinters.length >= 1 ? 'LITE license supports 1 printer only'
                 : undefined
               }
             >
-              {!canNetwork || (tier === 'lite' && visiblePrinters.length >= 1) ? <Lock className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+              {!canNetwork || isDemo || (tier === 'lite' && visiblePrinters.length >= 1) ? <Lock className="w-3 h-3 mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
               Add
             </Button>
             {onRefreshNetwork && (
