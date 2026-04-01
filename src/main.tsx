@@ -44,6 +44,13 @@ const mountApp = () => {
   (window as any).__CS_MOUNTED = true;
 };
 
+// Clear stale Vite HMR state on full reloads to prevent "startup error" false positives
+if (import.meta.hot) {
+  import.meta.hot.on('vite:beforeFullReload', () => {
+    sessionStorage.clear();
+  });
+}
+
 // Mark boot as started as soon as the module executes to avoid false watchdog errors
 (window as any).__CS_MOUNTED = true;
 
