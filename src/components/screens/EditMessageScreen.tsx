@@ -1132,13 +1132,29 @@ export function EditMessageScreen({
                   const fonts = getAllowedFonts();
                   if (fonts.length === 0) return;
                   const currentIdx = fonts.findIndex(f => f.value === selectedField.fontSize);
-                  // If current font isn't in allowed list, snap to largest allowed font
+                  let newFont;
                   if (currentIdx === -1) {
-                    handleUpdateFieldSetting('fontSize', fonts[fonts.length - 1].value);
-                    return;
+                    newFont = fonts[fonts.length - 1];
+                  } else {
+                    const newIdx = Math.max(0, Math.min(fonts.length - 1, currentIdx + delta));
+                    newFont = fonts[newIdx];
                   }
-                  const newIdx = Math.max(0, Math.min(fonts.length - 1, currentIdx + delta));
-                  handleUpdateFieldSetting('fontSize', fonts[newIdx].value);
+                  const isBarcode = selectedField.type === 'barcode';
+                  const is2DCode = isBarcode && selectedField.data && /^\[(QR|QRCODE|DATAMATRIX|DM|DATA MATRIX|DOTCODE)/i.test(selectedField.data);
+                  const newHeight = is2DCode ? selectedField.height : isBarcode ? message.height : newFont.height;
+                  const blockedRows = 32 - message.height;
+                  // For single-line: anchor to bottom of canvas; for multi-line: keep current line position
+                  const newY = currentMultilineTemplate
+                    ? selectedField.y
+                    : Math.max(blockedRows, 32 - newHeight);
+                  setMessage((prev) => ({
+                    ...prev,
+                    fields: prev.fields.map((f) =>
+                      f.id === selectedFieldId
+                        ? { ...f, fontSize: newFont.value, height: newHeight, y: newY }
+                        : f
+                    ),
+                  }));
                 }}
                 onBoldChange={(v) => handleUpdateFieldSetting('bold', v)}
                 onGapChange={(v) => handleUpdateFieldSetting('gap', v)}
