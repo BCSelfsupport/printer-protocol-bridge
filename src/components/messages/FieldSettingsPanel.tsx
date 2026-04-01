@@ -178,6 +178,7 @@ export function FieldSettingsPanel({
   disabled = false,
   allowedFonts,
   currentFontIndex,
+  fieldType,
 }: FieldSettingsPanelProps) {
   const fontLabel = allowedFonts.find(f => f.value === fontSize)?.label || fontSize;
 
