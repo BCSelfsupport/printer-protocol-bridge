@@ -279,14 +279,15 @@ export async function renderBarcodeToCanvas(
           options.scale = Math.max(1, Math.floor(targetBarPx / (size * 2)));
         }
     } else {
-      // 1D barcodes: bold controls bar width magnification (bold+1 multiplier)
-      // Base scale of 2 gives reasonable default width; magnification multiplies on top
+      // 1D barcodes: bold controls bar WIDTH magnification only (bold+1 multiplier)
+      // Per v2.6 protocol §4.2.7, width = formula × (bold + 1), height stays constant
       const baseScale = 2;
-      const moduleScale = baseScale * Math.max(1, (bold + 1));
+      const widthScale = baseScale * Math.max(1, (bold + 1));
+      // Use separate scaleX/scaleY so bold only widens bars, not height
+      (options as any).scaleX = widthScale;
+      (options as any).scaleY = baseScale;
       // bwip-js height is in mm at 72dpi. 1mm ≈ 2.835 pixels at 72dpi.
-      // Height stays constant regardless of magnification
       const heightMm = Math.max(5, Math.round(targetBarPx / (2.835 * baseScale)));
-      options.scale = moduleScale;
       options.height = heightMm;
     }
     
