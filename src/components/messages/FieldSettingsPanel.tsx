@@ -159,6 +159,7 @@ interface FieldSettingsPanelProps {
   disabled?: boolean;
   allowedFonts: { value: string; label: string; height: number }[];
   currentFontIndex: number;
+  fieldType?: string;
 }
 
 export function FieldSettingsPanel({
