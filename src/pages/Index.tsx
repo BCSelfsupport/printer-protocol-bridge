@@ -1197,11 +1197,13 @@ const Index = () => {
       />
 
       {/* Setup Dialog */}
-      <SetupScreen
-        open={setupDialogOpen}
-        onOpenChange={setSetupDialogOpen}
-        onSendCommand={sendCommand}
-      />
+      <Suspense fallback={null}>
+        <SetupScreen
+          open={setupDialogOpen}
+          onOpenChange={setSetupDialogOpen}
+          onSendCommand={sendCommand}
+        />
+      </Suspense>
 
       {/* Service Dialog */}
       <ServiceScreen
