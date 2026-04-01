@@ -1049,7 +1049,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
               </div>
             )}
             {(() => {
-              const expiry = new Date('2027-03-01');
+              const expiry = new Date('2026-05-12');
               const now = new Date();
               const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
               const isExpired = daysLeft <= 0;
