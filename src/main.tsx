@@ -2,6 +2,17 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
+declare const __APP_VERSION__: string;
+
+const APP_VERSION_STORAGE_KEY = "codesync-app-version";
+const STALE_GITHUB_STORAGE_KEYS = [
+  "github_token",
+  "github_token_expires_at",
+  "github_auth",
+  "githubAuth",
+  "githubAuthExpired",
+];
+
 const showCrashReport = (err: unknown) => {
   console.error("[main.tsx] Fatal render error:", err);
   const el = document.getElementById("root");
@@ -38,13 +49,51 @@ const clearElectronPwaCaches = async () => {
   }
 };
 
+const clearStaleWebPublishState = async (): Promise<boolean> => {
+  if (typeof window === "undefined" || window.electronAPI) return false;
+
+  try {
+    STALE_GITHUB_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+
+    const currentVersion =
+      typeof __APP_VERSION__ !== "undefined" && __APP_VERSION__ !== "undefined"
+        ? __APP_VERSION__
+        : "";
+
+    if (!currentVersion) return false;
+
+    const previousVersion = localStorage.getItem(APP_VERSION_STORAGE_KEY);
+    if (previousVersion === currentVersion) return false;
+
+    const registrations = "serviceWorker" in navigator
+      ? await navigator.serviceWorker.getRegistrations()
+      : [];
+    const cacheKeys = "caches" in window ? await caches.keys() : [];
+    const hadCachedState = previousVersion !== null || registrations.length > 0 || cacheKeys.length > 0;
+
+    localStorage.setItem(APP_VERSION_STORAGE_KEY, currentVersion);
+    sessionStorage.clear();
+
+    await Promise.all(registrations.map((registration) => registration.unregister()));
+    await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+
+    if (hadCachedState) {
+      location.reload();
+      return true;
+    }
+  } catch (error) {
+    console.warn("[main.tsx] Failed to clear stale published cache state:", error);
+  }
+
+  return false;
+};
+
 const mountApp = () => {
   const root = createRoot(document.getElementById("root")!);
   root.render(<App />);
   (window as any).__CS_MOUNTED = true;
 };
 
-// Clear stale Vite HMR state on full reloads to prevent "startup error" false positives
 if (import.meta.hot) {
   import.meta.hot.on('vite:beforeFullReload', () => {
     sessionStorage.clear();
@@ -54,11 +103,18 @@ if (import.meta.hot) {
 // Mark boot as started as soon as the module executes to avoid false watchdog errors
 (window as any).__CS_MOUNTED = true;
 
-try {
-  mountApp();
-} catch (err) {
-  showCrashReport(err);
-}
+const bootstrap = async () => {
+  const reloadingAfterCacheReset = await clearStaleWebPublishState();
+  if (reloadingAfterCacheReset) return;
 
-// Run Electron cache cleanup in background so UI mount is never blocked
-void clearElectronPwaCaches();
+  try {
+    mountApp();
+  } catch (err) {
+    showCrashReport(err);
+  }
+
+  // Run Electron cache cleanup in background so UI mount is never blocked
+  void clearElectronPwaCaches();
+};
+
+void bootstrap();
