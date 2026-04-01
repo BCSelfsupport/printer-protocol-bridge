@@ -209,8 +209,8 @@ export function FieldSettingsPanel({
         <SettingCard
           label="Template"
           value={templateLabel}
-          onIncrease={() => onTemplateChange?.(1)}
-          onDecrease={() => onTemplateChange?.(-1)}
+          onIncrease={() => onTemplateChange?.(-1)}
+          onDecrease={() => onTemplateChange?.(1)}
           disabled={disabled || !onTemplateChange}
         />
         
