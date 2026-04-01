@@ -127,6 +127,7 @@ export interface BarcodeFieldConfig {
   dotcodeHeight?: number;
   dotcodeWidth?: number;
   dotcodeMask?: 'auto' | 'manual';
+  magnification?: number; // 1-10, controls bar width for 1D barcodes (maps to bold parameter)
 }
 
 interface BarcodeFieldDialogProps {
