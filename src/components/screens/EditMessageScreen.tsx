@@ -458,7 +458,7 @@ export function EditMessageScreen({
 
         return {
           ...f,
-          fontSize: isBarcode ? f.fontSize : newFontSize,
+          fontSize: newFontSize,
           height: effectiveHeight,
           y: newY,
         };
