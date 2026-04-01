@@ -127,6 +127,7 @@ export interface BarcodeFieldConfig {
   dotcodeHeight?: number;
   dotcodeWidth?: number;
   dotcodeMask?: 'auto' | 'manual';
+  magnification?: number; // 1-10, controls bar width for 1D barcodes (maps to bold parameter)
 }
 
 interface BarcodeFieldDialogProps {
@@ -154,6 +155,7 @@ export function BarcodeFieldDialog({
   const [dotcodeHeight, setDotcodeHeight] = useState(9);
   const [dotcodeWidth, setDotcodeWidth] = useState(36);
   const [dotcodeMask, setDotcodeMask] = useState<'auto' | 'manual'>('auto');
+  const [magnification, setMagnification] = useState(1);
   const [showAutoCodePanel, setShowAutoCodePanel] = useState(false);
   const [showUserDefinePanel, setShowUserDefinePanel] = useState(false);
   const [userDefineId, setUserDefineId] = useState('USER1');
@@ -198,6 +200,7 @@ export function BarcodeFieldDialog({
       dotcodeHeight: isDotCode ? dotcodeHeight : undefined,
       dotcodeWidth: isDotCode ? dotcodeWidth : undefined,
       dotcodeMask: isDotCode ? dotcodeMask : undefined,
+      magnification: !is2D ? magnification : undefined,
     });
     
     // Reset form
@@ -213,6 +216,7 @@ export function BarcodeFieldDialog({
     setDotcodeHeight(9);
     setDotcodeWidth(36);
     setDotcodeMask('auto');
+    setMagnification(1);
     onOpenChange(false);
   };
 
@@ -387,7 +391,25 @@ export function BarcodeFieldDialog({
                 </div>
               )}
 
-              {/* Application Identifier (UCC/EAN-128 variants) */}
+              {/* Magnification (1D barcodes only) */}
+              {!is2D && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Magnification</Label>
+                  <Select value={magnification.toString()} onValueChange={(v) => setMagnification(parseInt(v, 10))}>
+                    <SelectTrigger className="bg-gradient-to-b from-muted to-muted/60 border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((m) => (
+                        <SelectItem key={m} value={m.toString()}>
+                          {m}× {m === 1 ? '(Standard)' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {isUCC && (
                 <div className="space-y-1.5 col-span-2">
                   <Label className="text-xs text-muted-foreground">Application Identifier (AI)</Label>

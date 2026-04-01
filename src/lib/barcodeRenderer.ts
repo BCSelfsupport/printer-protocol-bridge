@@ -151,10 +151,9 @@ export function parseBarcodeLabelData(label: string): { encoding: string; data: 
 }
 
 // ── Width estimation per encoding (in dots) ────────────────────────────
-// Based on v2.6 protocol width formulas; bold=0 (standard weight)
-export function estimateBarcodeWidthDots(encoding: string, data: string, humanReadable: boolean): number {
+// Based on v2.6 protocol width formulas; bold controls bar width magnification
+export function estimateBarcodeWidthDots(encoding: string, data: string, humanReadable: boolean, bold: number = 0): number {
   const n = data.length;
-  const bold = 0; // standard weight
 
   switch (encoding) {
     case 'upce':
@@ -220,7 +219,8 @@ export async function renderBarcodeToCanvas(
   data: string,
   targetHeight: number, // in dots
   humanReadable: boolean = false,
-  sizeFlag?: string
+  sizeFlag?: string,
+  bold: number = 0
 ): Promise<HTMLCanvasElement | null> {
   if (!data || data.trim() === '') return null;
   
@@ -231,7 +231,7 @@ export async function renderBarcodeToCanvas(
     return null;
   }
   
-   const cacheKey = `${encoding}:${data}:${targetHeight}:${humanReadable}:${sizeFlag ?? ''}`;
+   const cacheKey = `${encoding}:${data}:${targetHeight}:${humanReadable}:${sizeFlag ?? ''}:${bold}`;
     if (barcodeCache.has(cacheKey)) {
       return barcodeCache.get(cacheKey)!;
     }
@@ -279,11 +279,9 @@ export async function renderBarcodeToCanvas(
           options.scale = Math.max(1, Math.floor(targetBarPx / (size * 2)));
         }
     } else {
+      // 1D barcodes: bold controls bar width magnification (bold+1 multiplier)
+      const moduleScale = Math.max(1, (bold + 1));
       // bwip-js height is in mm at 72dpi. 1mm ≈ 2.835 pixels at 72dpi.
-      // With scale=S, pixel height ≈ height_mm * 2.835 * S
-      // We want pixel height ≈ targetBarPx, so pick scale first then solve height.
-      const moduleScale = 2;
-      // height_mm = targetBarPx / (2.835 * scale)
       const heightMm = Math.max(5, Math.round(targetBarPx / (2.835 * moduleScale)));
       options.scale = moduleScale;
       options.height = heightMm;

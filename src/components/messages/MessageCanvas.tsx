@@ -12,6 +12,7 @@ interface CanvasField {
   width: number;
   height: number;
   fontSize: string;
+  bold?: number;
 }
 
 interface MultilineTemplate {
@@ -179,7 +180,8 @@ export function MessageCanvas({
         if (!parsed) continue;
         
         const barcodeHeight = field.height || templateHeight;
-        const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeHeight}:${parsed.humanReadable}:${parsed.sizeFlag ?? ''}`;
+        const fieldBold = field.bold ?? 0;
+        const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeHeight}:${parsed.humanReadable}:${parsed.sizeFlag ?? ''}:${fieldBold}`;
         if (newImages.has(cacheKey)) continue;
         
         try {
@@ -188,7 +190,8 @@ export function MessageCanvas({
             parsed.data,
             barcodeHeight,
             parsed.humanReadable,
-            parsed.sizeFlag
+            parsed.sizeFlag,
+            fieldBold
           );
           if (barcodeCanvas && !cancelled) {
             newImages.set(cacheKey, barcodeCanvas);
@@ -350,7 +353,7 @@ export function MessageCanvas({
       if (isBarcode) {
         const parsed = parseBarcodeLabelData(field.data);
         const barcodeFieldHeight = field.height || templateHeight;
-        const cacheKey = parsed ? `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeFieldHeight}:${parsed.humanReadable}:${parsed.sizeFlag ?? ''}` : '';
+        const cacheKey = parsed ? `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeFieldHeight}:${parsed.humanReadable}:${parsed.sizeFlag ?? ''}:${field.bold ?? 0}` : '';
         const barcodeCanvas = parsed ? barcodeImages.get(cacheKey) : null;
         const quietZoneDots = 10; // 10-dot quiet zone on each side
         quietZonePx = quietZoneDots * DOT_SIZE;
@@ -416,7 +419,7 @@ export function MessageCanvas({
         const parsed = parseBarcodeLabelData(field.data);
         if (parsed) {
           const barcodeRenderHeight = field.height || templateHeight;
-          const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeRenderHeight}:${parsed.humanReadable}:${parsed.sizeFlag ?? ''}`;
+          const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeRenderHeight}:${parsed.humanReadable}:${parsed.sizeFlag ?? ''}:${field.bold ?? 0}`;
           const barcodeCanvas = barcodeImages.get(cacheKey);
           
           if (barcodeCanvas) {
