@@ -185,14 +185,15 @@ export function PrinterFilterStatus({ printer, pumpHours }: PrinterFilterStatusP
   const [filterLife, setFilterLife] = useState(config?.filterLifeHours?.toString() || '2000');
   const [entryPumpHours, setEntryPumpHours] = useState(pumpHours?.toFixed(1) || '0');
   const [remainingHours, setRemainingHours] = useState(config?.remainingHoursAtEntry?.toString() || '2000');
-  const [, forceUpdate] = useState(0);
+  const [configVersion, forceUpdate] = useState(0);
 
   const FILTER_PRESETS = [2000, 5000, 10000];
 
   const status = useMemo(() => {
     if (pumpHours === undefined || pumpHours === null) return null;
     return getFilterStatus(printer.id, pumpHours);
-  }, [printer.id, pumpHours]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [printer.id, pumpHours, configVersion]);
 
   const formatPumpHours = (h: number): string => {
     const hrs = Math.floor(h);
