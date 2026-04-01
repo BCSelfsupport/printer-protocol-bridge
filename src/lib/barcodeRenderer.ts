@@ -231,7 +231,7 @@ export async function renderBarcodeToCanvas(
     return null;
   }
   
-   const cacheKey = `${encoding}:${data}:${targetHeight}:${humanReadable}:${sizeFlag ?? ''}`;
+   const cacheKey = `${encoding}:${data}:${targetHeight}:${humanReadable}:${sizeFlag ?? ''}:${bold}`;
     if (barcodeCache.has(cacheKey)) {
       return barcodeCache.get(cacheKey)!;
     }
