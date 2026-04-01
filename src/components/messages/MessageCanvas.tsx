@@ -353,7 +353,7 @@ export function MessageCanvas({
       if (isBarcode) {
         const parsed = parseBarcodeLabelData(field.data);
         const barcodeFieldHeight = field.height || templateHeight;
-        const cacheKey = parsed ? `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeFieldHeight}:${parsed.humanReadable}:${parsed.sizeFlag ?? ''}` : '';
+        const cacheKey = parsed ? `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeFieldHeight}:${parsed.humanReadable}:${parsed.sizeFlag ?? ''}:${field.bold ?? 0}` : '';
         const barcodeCanvas = parsed ? barcodeImages.get(cacheKey) : null;
         const quietZoneDots = 10; // 10-dot quiet zone on each side
         quietZonePx = quietZoneDots * DOT_SIZE;
