@@ -419,7 +419,7 @@ export function MessageCanvas({
         const parsed = parseBarcodeLabelData(field.data);
         if (parsed) {
           const barcodeRenderHeight = field.height || templateHeight;
-          const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeRenderHeight}:${parsed.humanReadable}:${parsed.sizeFlag ?? ''}`;
+          const cacheKey = `${field.id}:${parsed.encoding}:${parsed.data}:${barcodeRenderHeight}:${parsed.humanReadable}:${parsed.sizeFlag ?? ''}:${field.bold ?? 0}`;
           const barcodeCanvas = barcodeImages.get(cacheKey);
           
           if (barcodeCanvas) {
