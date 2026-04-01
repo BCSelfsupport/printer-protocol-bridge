@@ -30,13 +30,6 @@
       </div>
     </noscript>
     <script>
-      // One-time storage clear to fix stale state after revert
-      if (!sessionStorage.getItem('__cs_cleared_v1')) {
-        localStorage.clear();
-        sessionStorage.clear();
-        sessionStorage.setItem('__cs_cleared_v1', '1');
-        location.reload();
-      }
       // HTML-level crash catcher – if React fails to mount within 8s, show diagnostics
       window.__CS_MOUNTED = false;
       setTimeout(function() {
