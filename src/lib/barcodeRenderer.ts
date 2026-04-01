@@ -151,10 +151,9 @@ export function parseBarcodeLabelData(label: string): { encoding: string; data: 
 }
 
 // ── Width estimation per encoding (in dots) ────────────────────────────
-// Based on v2.6 protocol width formulas; bold=0 (standard weight)
-export function estimateBarcodeWidthDots(encoding: string, data: string, humanReadable: boolean): number {
+// Based on v2.6 protocol width formulas; bold controls bar width magnification
+export function estimateBarcodeWidthDots(encoding: string, data: string, humanReadable: boolean, bold: number = 0): number {
   const n = data.length;
-  const bold = 0; // standard weight
 
   switch (encoding) {
     case 'upce':

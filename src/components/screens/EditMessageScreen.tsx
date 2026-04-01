@@ -667,7 +667,7 @@ export function EditMessageScreen({
     const barcodeLabel = `[${encodingWithFlags}] ${config.data}`;
     
     // Estimate barcode width in dots based on encoding type and data
-    const widthDots = estimateBarcodeWidthDots(config.encoding, config.data, config.humanReadable);
+    const widthDots = estimateBarcodeWidthDots(config.encoding, config.data, config.humanReadable, config.magnification ? config.magnification - 1 : 0);
     
     // For QR codes, height = version dot size (V1=21, V2=25, V3=29)
     // For DataMatrix, derive from selected matrix size (e.g. "12x12" → 12)
