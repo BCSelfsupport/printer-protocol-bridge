@@ -200,6 +200,7 @@ export function BarcodeFieldDialog({
       dotcodeHeight: isDotCode ? dotcodeHeight : undefined,
       dotcodeWidth: isDotCode ? dotcodeWidth : undefined,
       dotcodeMask: isDotCode ? dotcodeMask : undefined,
+      magnification: !is2D ? magnification : undefined,
     });
     
     // Reset form
