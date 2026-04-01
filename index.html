@@ -30,10 +30,11 @@
       </div>
     </noscript>
     <script>
-      // HTML-level crash catcher – Electron packaged launches can take longer before the renderer bundle executes
+      // HTML-level crash catcher – keep this conservative in preview and Electron to avoid false timeouts on cold loads
       window.__CS_MOUNTED = false;
       const isElectronRuntime = navigator.userAgent.includes('Electron');
-      const startupTimeoutMs = isElectronRuntime ? 20000 : 5000;
+      const isPreviewRuntime = location.hostname.includes('lovableproject.com') || location.hostname.includes('lovable.app');
+      const startupTimeoutMs = isElectronRuntime ? 20000 : (isPreviewRuntime ? 15000 : 8000);
       setTimeout(function() {
         if (!window.__CS_MOUNTED) {
           var root = document.getElementById('root');
