@@ -458,7 +458,7 @@ export function EditMessageScreen({
 
         return {
           ...f,
-          fontSize: isBarcode ? f.fontSize : newFontSize,
+          fontSize: newFontSize,
           height: effectiveHeight,
           y: newY,
         };
@@ -1130,7 +1130,13 @@ export function EditMessageScreen({
                 }
                 onFontSizeChange={(delta) => {
                   const fonts = getAllowedFonts();
+                  if (fonts.length === 0) return;
                   const currentIdx = fonts.findIndex(f => f.value === selectedField.fontSize);
+                  // If current font isn't in allowed list, snap to largest allowed font
+                  if (currentIdx === -1) {
+                    handleUpdateFieldSetting('fontSize', fonts[fonts.length - 1].value);
+                    return;
+                  }
                   const newIdx = Math.max(0, Math.min(fonts.length - 1, currentIdx + delta));
                   handleUpdateFieldSetting('fontSize', fonts[newIdx].value);
                 }}
