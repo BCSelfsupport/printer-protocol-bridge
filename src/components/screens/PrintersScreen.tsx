@@ -231,7 +231,7 @@ export function PrintersScreen({
   const [devTaps, setDevTaps] = useState<number[]>([]);
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
-  const { canNetwork, canDatabase, tier, isActivated } = useLicense();
+  const { canNetwork, canDatabase, tier, isActivated, isDemo } = useLicense();
 
   // Lite tier: only show the first printer
   const visiblePrinters = tier === 'lite' ? printers.slice(0, 1) : printers;
