@@ -1048,21 +1048,9 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                 {buildResult.message}
               </div>
             )}
-            {(() => {
-              const expiry = new Date('2026-05-12');
-              const now = new Date();
-              const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-              const isExpired = daysLeft <= 0;
-              const isWarning = daysLeft <= 30 && daysLeft > 0;
-              return (isExpired || isWarning) ? (
-                <div className={cn(
-                  "text-[10px] text-center py-1 px-2 rounded",
-                  isExpired ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-warning"
-                )}>
-                  {isExpired ? '⚠️ GitHub token expired! Renew it.' : `⚠️ GitHub token expires in ${daysLeft} days`}
-                </div>
-              ) : null;
-            })()}
+            <div className="text-[10px] text-muted-foreground text-center">
+              GitHub token status is validated when build actions run.
+            </div>
             <div className="text-[10px] text-muted-foreground text-center">
               Printer Emulator v2.0 • Bestcode Protocol • Dev Mode Only
             </div>
