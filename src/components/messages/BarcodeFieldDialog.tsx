@@ -391,7 +391,25 @@ export function BarcodeFieldDialog({
                 </div>
               )}
 
-              {/* Application Identifier (UCC/EAN-128 variants) */}
+              {/* Magnification (1D barcodes only) */}
+              {!is2D && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Magnification</Label>
+                  <Select value={magnification.toString()} onValueChange={(v) => setMagnification(parseInt(v, 10))}>
+                    <SelectTrigger className="bg-gradient-to-b from-muted to-muted/60 border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((m) => (
+                        <SelectItem key={m} value={m.toString()}>
+                          {m}× {m === 1 ? '(Standard)' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {isUCC && (
                 <div className="space-y-1.5 col-span-2">
                   <Label className="text-xs text-muted-foreground">Application Identifier (AI)</Label>
