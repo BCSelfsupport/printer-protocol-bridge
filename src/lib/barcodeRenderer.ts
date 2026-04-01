@@ -219,7 +219,8 @@ export async function renderBarcodeToCanvas(
   data: string,
   targetHeight: number, // in dots
   humanReadable: boolean = false,
-  sizeFlag?: string
+  sizeFlag?: string,
+  bold: number = 0
 ): Promise<HTMLCanvasElement | null> {
   if (!data || data.trim() === '') return null;
   
