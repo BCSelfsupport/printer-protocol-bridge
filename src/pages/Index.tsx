@@ -325,7 +325,7 @@ const Index = () => {
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown, getCountdown } = useJetCountdown(connectedPrinterId, handleCountdownComplete);
 
   // Master/Slave sync: auto-syncs messages and selections from master to slaves
-  const { isMaster, slaveCount, syncAllMessages, syncMaster, broadcastMessage, getSlavesForMaster } = useMasterSlaveSync({
+  const { isMaster, slaveCount, syncAllMessages, syncMaster, broadcastMessage, getSlavesForMaster, sendCommandToPrinter } = useMasterSlaveSync({
     printers,
     connectedPrinterId: connectionState.connectedPrinter?.id,
     currentMessage: connectionState.status?.currentMessage,
