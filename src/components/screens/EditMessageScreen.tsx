@@ -665,7 +665,7 @@ export function EditMessageScreen({
             : fieldType.startsWith('date_') ? 'date'
             : fieldType as MessageField['type'],
       data: lineIdValue ? lineIdValue : (promptOptions?.promptBeforePrint ? 'X'.repeat(promptOptions.promptLength || 3) : fieldData),
-      x: message.fields.length * 50,
+      x: 0,
       y: newY,
       width: 50,
       height: fontHeight,
@@ -735,7 +735,7 @@ export function EditMessageScreen({
       id: newId,
       type: 'barcode',
       data: barcodeLabel,
-      x: message.fields.length * 50,
+      x: 0,
       y: 32 - barcodeHeight,
       width: widthDots,
       height: barcodeHeight,
@@ -918,7 +918,7 @@ export function EditMessageScreen({
       id: newId,
       type: 'userdefine',
       data: userDefineLabel,
-      x: message.fields.length * 50,
+      x: 0,
       y: 32 - message.height,
       width: config.length * 8 + 16, // Estimate width based on length
       height: Math.min(16, message.height),
@@ -946,7 +946,7 @@ export function EditMessageScreen({
       id: newId,
       type: 'logo',
       data: graphicLabel,
-      x: message.fields.length * 50,
+      x: 0,
       y: 32 - message.height,
       width: 32, // Fixed width for graphic placeholder
       height: Math.min(message.height, 32),
