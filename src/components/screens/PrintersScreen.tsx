@@ -304,6 +304,7 @@ export function PrintersScreen({
   }, [messageContent]);
 
 
+  const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
