@@ -56,6 +56,10 @@ export interface MessageField {
   autoCodeFormat?: string;       // e.g. 'HH:MM:SS', 'MM/DD/YY'
   autoCodeFieldType?: string;    // e.g. 'time', 'date_normal', 'program_hour'
   autoCodeExpiryDays?: number;   // expiry offset
+  // Prompt before print: text field that asks operator for input before message selection
+  promptBeforePrint?: boolean;
+  promptLabel?: string;          // Display label for the prompt (e.g. "LOT CODE")
+  promptLength?: number;         // Max characters allowed
 }
 
 export interface MessageDetails {
@@ -1198,6 +1202,71 @@ export function EditMessageScreen({
                 currentFontIndex={getAllowedFonts().findIndex(f => f.value === selectedField.fontSize)}
                 fieldType={selectedField.type}
               />
+            )}
+
+            {/* Prompt Before Print toggle for text fields */}
+            {selectedField && selectedField.type === 'text' && (
+              <div className="bg-card rounded-lg p-3 border border-border mt-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Prompt Before Print</p>
+                    <p className="text-xs text-muted-foreground">
+                      Ask operator for input when this message is selected
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const current = selectedField.promptBeforePrint ?? false;
+                      setMessage((prev) => ({
+                        ...prev,
+                        fields: prev.fields.map((f) =>
+                          f.id === selectedFieldId
+                            ? {
+                                ...f,
+                                promptBeforePrint: !current,
+                                promptLabel: !current ? (f.promptLabel || f.data || 'ENTER VALUE') : f.promptLabel,
+                                promptLength: !current ? (f.promptLength || Math.max(f.data?.length || 3, 3)) : f.promptLength,
+                              }
+                            : f
+                        ),
+                      }));
+                    }}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${
+                      selectedField.promptBeforePrint ? 'bg-primary' : 'bg-muted-foreground/30'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                        selectedField.promptBeforePrint ? 'translate-x-6' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {selectedField.promptBeforePrint && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-muted-foreground w-16">Label:</label>
+                      <Input
+                        value={selectedField.promptLabel || ''}
+                        onChange={(e) => handleUpdateFieldSetting('promptLabel', e.target.value.toUpperCase())}
+                        className="h-7 text-xs"
+                        placeholder="LOT CODE"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-muted-foreground w-16">Max chars:</label>
+                      <Input
+                        type="number"
+                        value={selectedField.promptLength || 3}
+                        onChange={(e) => handleUpdateFieldSetting('promptLength', Math.max(1, Math.min(99, parseInt(e.target.value) || 3)))}
+                        className="h-7 text-xs w-20"
+                        min={1}
+                        max={99}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
           </div>

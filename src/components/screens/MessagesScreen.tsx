@@ -41,6 +41,15 @@ interface MessagesScreenProps {
   onFetchMessageDetails?: (name: string) => Promise<MessageDetails | null>;
   /** Send a raw command to the connected printer */
   onSendCommand?: (command: string) => Promise<any>;
+  /** Get locally stored message details (includes promptBeforePrint metadata) */
+  onGetStoredMessage?: (name: string) => MessageDetails | null;
+  /** Save message content to printer (^DM + ^NM + ^SV) — used to write prompted field values */
+  onSaveMessageContent?: (
+    messageName: string,
+    fields: MessageDetails['fields'],
+    templateValue?: string,
+    isNew?: boolean,
+  ) => Promise<boolean>;
 }
 
 export function MessagesScreen({ 
@@ -55,6 +64,8 @@ export function MessagesScreen({
   onNewDialogOpened,
   onFetchMessageDetails,
   onSendCommand,
+  onGetStoredMessage,
+  onSaveMessageContent,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -63,6 +74,8 @@ export function MessagesScreen({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
   const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
+  // Store the full message details + pending prompts for rewriting after entry
+  const [pendingMessageDetails, setPendingMessageDetails] = useState<MessageDetails | null>(null);
 
   // Auto-open the new dialog when navigating from Dashboard "New" button
   useEffect(() => {
@@ -82,9 +95,29 @@ export function MessagesScreen({
     
     setIsSelecting(true);
     try {
+      // Before selecting, check for prompted fields
+      // First get stored message (has promptBeforePrint metadata)
+      const stored = onGetStoredMessage?.(selectedMessage.name);
+      const promptedFields = stored?.fields.filter(f => f.promptBeforePrint) ?? [];
+
+      if (promptedFields.length > 0 && stored) {
+        // Show prompt dialog BEFORE selecting message on printer
+        const prompts: UserDefinePrompt[] = promptedFields.map(f => ({
+          fieldId: f.id,
+          label: f.promptLabel || f.data || 'ENTER VALUE',
+          length: f.promptLength || Math.max(f.data?.length || 3, 3),
+        }));
+        setPendingMessageDetails(stored);
+        setUserDefinePrompts(prompts);
+        setUserDefineEntryOpen(true);
+        // Don't proceed — wait for user entry, then we'll save + select
+        return;
+      }
+
+      // No prompted fields — select normally
       const success = await onSelect(selectedMessage);
       if (success) {
-        // After selecting, check if the message has user define fields
+        // Legacy: check for native userdefine fields from printer
         if (onFetchMessageDetails) {
           try {
             const details = await Promise.race([
@@ -101,9 +134,9 @@ export function MessagesScreen({
                   const estimatedLen = f.width > 0 ? Math.max(1, Math.round(f.width / (fontWidth + gap))) : (f.data?.length || 3);
                   return { fieldId: f.id, label, length: estimatedLen };
                 });
+                setPendingMessageDetails(null); // Legacy mode — no rewrite
                 setUserDefinePrompts(prompts);
                 setUserDefineEntryOpen(true);
-                // Don't navigate home yet — wait for user define entry
                 return;
               }
             }
@@ -297,20 +330,47 @@ export function MessagesScreen({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* User Define Entry Dialog (shown after selecting a message with user define fields) */}
+      {/* User Define / Prompt Before Print Entry Dialog */}
       <UserDefineEntryDialog
         open={userDefineEntryOpen}
         onOpenChange={(open) => {
           setUserDefineEntryOpen(open);
           if (!open) {
-            // User dismissed without entering — navigate home anyway
+            setPendingMessageDetails(null);
             onHome();
           }
         }}
         prompts={userDefinePrompts}
         onConfirm={async (entries) => {
-          // Send ^TD for each user define value
-          if (onSendCommand) {
+          if (pendingMessageDetails && onSaveMessageContent && selectedMessage) {
+            // Prompted text fields: write entered values into the fields and save to printer
+            const updatedFields = pendingMessageDetails.fields.map(f => {
+              if (entries[f.id] !== undefined) {
+                return { ...f, data: entries[f.id] };
+              }
+              return f;
+            });
+            try {
+              toast.loading('Writing field data to printer...', { id: 'prompt-save' });
+              const saved = await onSaveMessageContent(
+                selectedMessage.name,
+                updatedFields,
+                pendingMessageDetails.templateValue,
+                false,
+              );
+              if (saved) {
+                // Now select the message on the printer
+                await onSelect(selectedMessage);
+                toast.success('Message loaded with entered values', { id: 'prompt-save' });
+              } else {
+                toast.error('Failed to write field data to printer', { id: 'prompt-save' });
+              }
+            } catch (e) {
+              console.error('[MessagesScreen] Failed to save prompted fields:', e);
+              toast.error('Failed to write field data', { id: 'prompt-save' });
+            }
+          } else if (onSendCommand) {
+            // Legacy: send ^TD for native userdefine fields
             for (const [, value] of Object.entries(entries)) {
               if (value.trim()) {
                 try {
@@ -322,6 +382,7 @@ export function MessagesScreen({
             }
           }
           setUserDefineEntryOpen(false);
+          setPendingMessageDetails(null);
           onHome();
         }}
       />
