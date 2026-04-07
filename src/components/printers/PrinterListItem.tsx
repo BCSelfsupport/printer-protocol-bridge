@@ -80,8 +80,8 @@ export function PrinterListItem({
   messageExpiryDays,
 }: PrinterListItemProps) {
   // Effective expiry: per-printer override if set, otherwise message default
-  const effectiveExpiry = printer.expiryOffsetDays ?? messageExpiryDays ?? 0;
-  const isOverridden = printer.expiryOffsetDays !== undefined && printer.expiryOffsetDays !== null;
+  const effectiveExpiry = (printer.expiryOffsetDays != null) ? printer.expiryOffsetDays : (messageExpiryDays ?? 0);
+  const isOverridden = printer.expiryOffsetDays != null;
   const [editingOffset, setEditingOffset] = useState(false);
   const [offsetValue, setOffsetValue] = useState(String(effectiveExpiry));
   
@@ -276,11 +276,11 @@ export function PrinterListItem({
                       setEditingOffset(true);
                     }}
                     className="text-[10px] text-primary/70 hover:text-primary font-medium"
-                    title={isOverridden ? "Custom override — click to edit" : "From message — click to override"}
+                    title={isOverridden ? `Custom: ${effectiveExpiry} days (message default: ${messageExpiryDays ?? 0})` : "From selected message — click to change for this printer"}
                   >
                     Expiry: <span className={cn("font-bold", isOverridden ? "text-amber-400" : "")}>
-                      {effectiveExpiry ? `+${effectiveExpiry}` : '0'}
-                    </span> days
+                      {effectiveExpiry} days
+                    </span>
                     {isOverridden && <span className="ml-1 text-amber-400/60">(custom)</span>}
                   </button>
                 )}
