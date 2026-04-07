@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft, MessageSquare } from 'lucide-react';
+import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
