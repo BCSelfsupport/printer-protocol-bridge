@@ -54,7 +54,7 @@ export function BroadcastMessageDialog({
           printerId: s.id,
           printerName: s.name,
           ipAddress: s.ipAddress,
-          userDefineValue: '',
+          userDefineValue: s.expiryOffsetDays ? `+${s.expiryOffsetDays}` : '',
         }))
       );
     }
