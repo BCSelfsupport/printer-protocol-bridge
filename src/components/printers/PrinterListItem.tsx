@@ -42,6 +42,8 @@ interface PrinterListItemProps {
   onUpdateExpiryOffset?: (printerId: number, days: number) => void;
   /** Default expiry days from the currently selected message */
   messageExpiryDays?: number;
+  /** Master's current message name — slaves display this instead of their own */
+  masterMessage?: string;
 }
 
 // Helper to get color for fluid levels
