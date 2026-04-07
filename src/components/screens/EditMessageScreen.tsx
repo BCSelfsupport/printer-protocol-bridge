@@ -16,6 +16,7 @@ import { DateCodesDialog } from '@/components/messages/DateCodesDialog';
 import { DateCodeBuilder, DateCodeBuilderResult } from '@/components/messages/DateCodeBuilder';
 import { CounterDialog } from '@/components/messages/CounterDialog';
 import { UserDefineDialog, UserDefineConfig } from '@/components/messages/UserDefineDialog';
+import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
 import { estimateBarcodeWidthDots } from '@/lib/barcodeRenderer';
 
@@ -196,6 +197,8 @@ export function EditMessageScreen({
   const [graphicDialogOpen, setGraphicDialogOpen] = useState(false);
   const [dataLinkDialogOpen, setDataLinkDialogOpen] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
+  const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
   const fetchStartedRef = useRef(false); // Guard against duplicate fetches from unstable callback refs
 
   // Mobile: lock the parent horizontal scroller while long-press dragging fields
@@ -221,6 +224,27 @@ export function EditMessageScreen({
             setMessage(details);
             if (details.fields.length > 0) {
               setSelectedFieldId(details.fields[0].id);
+            }
+            // Detect user define fields and prompt for entry
+            const udFields = details.fields.filter(f => f.type === 'userdefine');
+            if (udFields.length > 0) {
+              const prompts: UserDefinePrompt[] = udFields.map(f => {
+                // Extract label and length from field data
+                // Format from ^LF: Element D: contains the ID/label
+                // The field width gives us a hint about character count
+                const label = f.data || 'USER';
+                // Estimate length from width and font, fallback to data length or 3
+                const fontWidth = f.fontSize?.includes('5High') ? 4 : f.fontSize?.includes('7') ? 5 : f.fontSize?.includes('9') ? 7 : f.fontSize?.includes('12') ? 8 : f.fontSize?.includes('16') ? 10 : f.fontSize?.includes('19') ? 12 : f.fontSize?.includes('25') ? 18 : 20;
+                const gap = f.gap ?? 1;
+                const estimatedLen = f.width > 0 ? Math.max(1, Math.round(f.width / (fontWidth + gap))) : (f.data?.length || 3);
+                return {
+                  fieldId: f.id,
+                  label,
+                  length: estimatedLen,
+                };
+              });
+              setUserDefinePrompts(prompts);
+              setUserDefineEntryOpen(true);
             }
           }
         })
@@ -1382,6 +1406,25 @@ export function EditMessageScreen({
             onOpenChange={setUserDefineDialogOpen}
             onBack={() => setNewFieldDialogOpen(true)}
             onAddField={handleAddUserDefine}
+          />
+
+          {/* User Define Entry Prompt (shown when fetched message has user define fields) */}
+          <UserDefineEntryDialog
+            open={userDefineEntryOpen}
+            onOpenChange={setUserDefineEntryOpen}
+            prompts={userDefinePrompts}
+            onConfirm={(entries) => {
+              setMessage((prev) => {
+                const updatedFields = prev.fields.map(f => {
+                  if (entries[f.id] !== undefined) {
+                    return { ...f, data: entries[f.id] };
+                  }
+                  return f;
+                });
+                return { ...prev, fields: updatedFields, width: autoResizeWidth(updatedFields) };
+              });
+              toast.success('User define data entered');
+            }}
           />
 
           {/* Graphic Field Dialog */}
