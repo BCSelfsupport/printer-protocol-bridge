@@ -24,6 +24,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
+import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
+import { MessageDetails } from '@/components/screens/EditMessageScreen';
 
 interface MessagesScreenProps {
   messages: PrintMessage[];
@@ -35,6 +37,10 @@ interface MessagesScreenProps {
   onHome: () => void;
   openNewDialogOnMount?: boolean;
   onNewDialogOpened?: () => void;
+  /** Fetch message details (fields) from printer after selecting */
+  onFetchMessageDetails?: (name: string) => Promise<MessageDetails | null>;
+  /** Send a raw command to the connected printer */
+  onSendCommand?: (command: string) => Promise<any>;
 }
 
 export function MessagesScreen({ 
@@ -47,12 +53,16 @@ export function MessagesScreen({
   onHome,
   openNewDialogOnMount,
   onNewDialogOpened,
+  onFetchMessageDetails,
+  onSendCommand,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [newMessageName, setNewMessageName] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
+  const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
 
   // Auto-open the new dialog when navigating from Dashboard "New" button
   useEffect(() => {
