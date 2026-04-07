@@ -1152,61 +1152,9 @@ export function EditMessageScreen({
               <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click to edit • Click+drag empty space to select multiple fields</p>
             </div>
 
-            {/* Field Settings Panel - Per-field settings like manual page 49-50 */}
-            {selectedField && (
-              <FieldSettingsPanel
-                fontSize={selectedField.fontSize}
-                bold={selectedField.bold ?? 0}
-                gap={selectedField.gap ?? 1}
-                rotation={selectedField.rotation ?? 'Normal'}
-                autoNumerals={selectedField.autoNumerals ?? 0}
-                templateLabel={getCurrentTemplateValue().startsWith('multi-') 
-                  ? MULTILINE_TEMPLATES.find(t => t.value === getCurrentTemplateValue())?.label || getCurrentTemplateValue()
-                  : `${message.height}`
-                }
-                onFontSizeChange={(delta) => {
-                  const fonts = getAllowedFonts();
-                  if (fonts.length === 0) return;
-                  const currentIdx = fonts.findIndex(f => f.value === selectedField.fontSize);
-                  let newFont;
-                  if (currentIdx === -1) {
-                    newFont = fonts[fonts.length - 1];
-                  } else {
-                    const newIdx = Math.max(0, Math.min(fonts.length - 1, currentIdx + delta));
-                    newFont = fonts[newIdx];
-                  }
-                  const isBarcode = selectedField.type === 'barcode';
-                  const is2DCode = isBarcode && selectedField.data && /^\[(QR|QRCODE|DATAMATRIX|DM|DATA MATRIX|DOTCODE)/i.test(selectedField.data);
-                  const newHeight = is2DCode ? selectedField.height : isBarcode ? message.height : newFont.height;
-                  const blockedRows = 32 - message.height;
-                  // For single-line: anchor to bottom of canvas; for multi-line: keep current line position
-                  const newY = currentMultilineTemplate
-                    ? selectedField.y
-                    : Math.max(blockedRows, 32 - newHeight);
-                  setMessage((prev) => ({
-                    ...prev,
-                    fields: prev.fields.map((f) =>
-                      f.id === selectedFieldId
-                        ? { ...f, fontSize: newFont.value, height: newHeight, y: newY }
-                        : f
-                    ),
-                  }));
-                }}
-                onBoldChange={(v) => handleUpdateFieldSetting('bold', v)}
-                onGapChange={(v) => handleUpdateFieldSetting('gap', v)}
-                onRotationChange={(v) => handleUpdateFieldSetting('rotation', v)}
-                onAutoNumeralsChange={(v) => handleUpdateFieldSetting('autoNumerals', v)}
-                onTemplateChange={handleTemplateNavigate}
-                disabled={!selectedFieldId}
-                allowedFonts={getAllowedFonts()}
-                currentFontIndex={getAllowedFonts().findIndex(f => f.value === selectedField.fontSize)}
-                fieldType={selectedField.type}
-              />
-            )}
-
-            {/* Prompt Before Print toggle for text fields */}
+            {/* Prompt Before Print toggle for text fields — shown above field settings for visibility */}
             {selectedField && selectedField.type === 'text' && (
-              <div className="bg-card rounded-lg p-3 border border-border mt-2">
+              <div className="bg-card rounded-lg p-3 border border-border mb-2">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-foreground">Prompt Before Print</p>
@@ -1267,6 +1215,57 @@ export function EditMessageScreen({
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Field Settings Panel - Per-field settings like manual page 49-50 */}
+            {selectedField && (
+              <FieldSettingsPanel
+                fontSize={selectedField.fontSize}
+                bold={selectedField.bold ?? 0}
+                gap={selectedField.gap ?? 1}
+                rotation={selectedField.rotation ?? 'Normal'}
+                autoNumerals={selectedField.autoNumerals ?? 0}
+                templateLabel={getCurrentTemplateValue().startsWith('multi-') 
+                  ? MULTILINE_TEMPLATES.find(t => t.value === getCurrentTemplateValue())?.label || getCurrentTemplateValue()
+                  : `${message.height}`
+                }
+                onFontSizeChange={(delta) => {
+                  const fonts = getAllowedFonts();
+                  if (fonts.length === 0) return;
+                  const currentIdx = fonts.findIndex(f => f.value === selectedField.fontSize);
+                  let newFont;
+                  if (currentIdx === -1) {
+                    newFont = fonts[fonts.length - 1];
+                  } else {
+                    const newIdx = Math.max(0, Math.min(fonts.length - 1, currentIdx + delta));
+                    newFont = fonts[newIdx];
+                  }
+                  const isBarcode = selectedField.type === 'barcode';
+                  const is2DCode = isBarcode && selectedField.data && /^\[(QR|QRCODE|DATAMATRIX|DM|DATA MATRIX|DOTCODE)/i.test(selectedField.data);
+                  const newHeight = is2DCode ? selectedField.height : isBarcode ? message.height : newFont.height;
+                  const blockedRows = 32 - message.height;
+                  const newY = currentMultilineTemplate
+                    ? selectedField.y
+                    : Math.max(blockedRows, 32 - newHeight);
+                  setMessage((prev) => ({
+                    ...prev,
+                    fields: prev.fields.map((f) =>
+                      f.id === selectedFieldId
+                        ? { ...f, fontSize: newFont.value, height: newHeight, y: newY }
+                        : f
+                    ),
+                  }));
+                }}
+                onBoldChange={(v) => handleUpdateFieldSetting('bold', v)}
+                onGapChange={(v) => handleUpdateFieldSetting('gap', v)}
+                onRotationChange={(v) => handleUpdateFieldSetting('rotation', v)}
+                onAutoNumeralsChange={(v) => handleUpdateFieldSetting('autoNumerals', v)}
+                onTemplateChange={handleTemplateNavigate}
+                disabled={!selectedFieldId}
+                allowedFonts={getAllowedFonts()}
+                currentFontIndex={getAllowedFonts().findIndex(f => f.value === selectedField.fontSize)}
+                fieldType={selectedField.type}
+              />
             )}
 
           </div>
