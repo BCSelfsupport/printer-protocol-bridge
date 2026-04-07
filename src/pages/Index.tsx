@@ -166,6 +166,7 @@ const Index = () => {
         autoCodeExpiryDays: f.autoCodeExpiryDays ?? cachedField.autoCodeExpiryDays,
         autoCodeFieldType: f.autoCodeFieldType ?? cachedField.autoCodeFieldType,
         autoCodeFormat: f.autoCodeFormat ?? cachedField.autoCodeFormat,
+        dynamicSource: f.dynamicSource ?? cachedField.dynamicSource,
       };
     })};
     return merged;
@@ -657,6 +658,7 @@ const Index = () => {
           onGetStoredMessage={getMessage}
           onSaveMessageContent={saveMessageContent}
           onSaveStoredMessage={saveMessage}
+          connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
           onPromptSaved={(details) => {
             setActiveMessageContent(details);
             recentlySavedRef.current.set(details.name, Date.now());
@@ -924,6 +926,7 @@ const Index = () => {
             onGetStoredMessage={getMessage}
             onSaveMessageContent={saveMessageContent}
             onSaveStoredMessage={saveMessage}
+            connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
             onPromptSaved={(details) => {
               setActiveMessageContent(details);
               recentlySavedRef.current.set(details.name, Date.now());

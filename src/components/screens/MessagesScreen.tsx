@@ -52,9 +52,9 @@ interface MessagesScreenProps {
   ) => Promise<boolean>;
   /** Save updated message details to local storage */
   onSaveStoredMessage?: (details: MessageDetails) => void;
-  /** Called after prompted field values are saved — updates active preview immediately */
+  /** Called after dynamic field values are saved — updates active preview immediately */
   onPromptSaved?: (details: MessageDetails) => void;
-}
+  connectedPrinterLineId?: string;
 
 export function MessagesScreen({ 
   messages, 
@@ -72,6 +72,7 @@ export function MessagesScreen({
   onSaveMessageContent,
   onSaveStoredMessage,
   onPromptSaved,
+  connectedPrinterLineId,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -101,23 +102,51 @@ export function MessagesScreen({
     
     setIsSelecting(true);
     try {
-      // Before selecting, check for prompted fields
-      // First get stored message (has promptBeforePrint metadata)
+      // Before selecting, resolve any printer-driven fields from current printer config
       const stored = onGetStoredMessage?.(selectedMessage.name);
-      const promptedFields = stored?.fields.filter(f => f.promptBeforePrint) ?? [];
+      const resolvedLineId = connectedPrinterLineId?.trim();
+      const resolvedStored = stored
+        ? {
+            ...stored,
+            fields: stored.fields.map((field) =>
+              field.dynamicSource === 'lineId'
+                ? { ...field, data: resolvedLineId || field.data || 'LINE ID' }
+                : field
+            ),
+          }
+        : null;
+      const lineIdWasResolved = !!stored && !!resolvedStored && resolvedStored.fields.some((field, index) => field.data !== stored.fields[index]?.data);
+      const promptedFields = resolvedStored?.fields.filter(f => f.promptBeforePrint) ?? [];
 
-      if (promptedFields.length > 0 && stored) {
+      if (promptedFields.length > 0 && resolvedStored) {
         // Show prompt dialog BEFORE selecting message on printer
         const prompts: UserDefinePrompt[] = promptedFields.map(f => ({
           fieldId: f.id,
           label: f.promptLabel || f.data || 'ENTER VALUE',
           length: f.promptLength || Math.max(f.data?.length || 3, 3),
         }));
-        setPendingMessageDetails(stored);
+        setPendingMessageDetails(resolvedStored);
         setUserDefinePrompts(prompts);
         setUserDefineEntryOpen(true);
         // Don't proceed — wait for user entry, then we'll save + select
         return;
+      }
+
+      if (lineIdWasResolved && resolvedStored && onSaveMessageContent) {
+        const saved = await onSaveMessageContent(
+          selectedMessage.name,
+          resolvedStored.fields,
+          resolvedStored.templateValue,
+          false,
+        );
+
+        if (!saved) {
+          toast.error('Failed to update Line ID on the printer');
+          return;
+        }
+
+        onSaveStoredMessage?.(resolvedStored);
+        onPromptSaved?.(resolvedStored);
       }
 
       // No prompted fields — select normally
