@@ -243,7 +243,7 @@ export function PrinterListItem({
             )}
 
             {/* Expiry offset for grouped printers */}
-            {(printer.role === 'slave' || printer.role === 'master') && onUpdateExpiryOffset && (messageExpiryDays != null || printer.expiryOffsetDays != null) && (
+            {(printer.role === 'slave' || printer.role === 'master') && onUpdateExpiryOffset && messageExpiryDays != null && (
               <div className="flex items-center gap-1.5 mt-1">
                 <CalendarDays className="w-3.5 h-3.5 text-primary/70" />
                 {editingOffset ? (
