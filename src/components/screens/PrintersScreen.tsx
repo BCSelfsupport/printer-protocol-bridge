@@ -92,6 +92,8 @@ interface PrintersScreenProps {
   onRefreshNetwork?: () => void;
   /** Whether a network check is in progress */
   isCheckingNetwork?: boolean;
+  /** Called when a slave printer's expiry is changed — resends the message with new expiry */
+  onSlaveExpiryChange?: (printerId: number, days: number) => void;
 }
 
 // Sortable wrapper for PrinterListItem
@@ -241,6 +243,7 @@ export function PrintersScreen({
   onLicense,
   onRefreshNetwork,
   isCheckingNetwork = false,
+  onSlaveExpiryChange,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -540,7 +543,13 @@ export function PrintersScreen({
                       } : undefined}
                       streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
                       onUpdateExpiryOffset={(printer.role === 'master' || printer.role === 'slave') && onUpdatePrinter
-                        ? (id, days) => onUpdatePrinter(id, { expiryOffsetDays: days })
+                        ? (id, days) => {
+                            onUpdatePrinter(id, { expiryOffsetDays: days });
+                            // If this is a slave, resend the message with the new expiry
+                            if (printer.role === 'slave' && onSlaveExpiryChange) {
+                              onSlaveExpiryChange(id, days);
+                            }
+                          }
                         : undefined
                       }
                       messageExpiryDays={messageExpiryDays}
