@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft, MessageSquare } from 'lucide-react';
+import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -9,9 +9,8 @@ import { Input } from '@/components/ui/input';
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Text Field', icon: FileText, action: 'add' },
-  { value: 'prompttext', label: 'Prompted Text', icon: MessageSquare, action: 'expand' },
+  { value: 'userdefine', label: 'User Define', icon: User, action: 'expand' },
   { value: 'autocode', label: 'AutoCode Field', icon: Hash, action: 'submenu' },
-  { value: 'userdefine', label: 'User Define', icon: User, action: 'submenu' },
   { value: 'barcode', label: 'Barcode Field', icon: Barcode, action: 'submenu' },
   { value: 'logo', label: 'Graphic Field', icon: Image, action: 'submenu' },
 ] as const;
@@ -51,17 +50,12 @@ export function NewFieldDialog({
       return;
     }
     if (fieldType.value === 'userdefine') {
-      onOpenChange(false);
-      onOpenUserDefine();
+      setShowPromptConfig(true);
       return;
     }
     if (fieldType.value === 'logo') {
       onOpenChange(false);
       onOpenGraphic();
-      return;
-    }
-    if (fieldType.value === 'prompttext') {
-      setShowPromptConfig(true);
       return;
     }
     onSelectFieldType(fieldType.value);
@@ -108,7 +102,7 @@ export function NewFieldDialog({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <DialogTitle className="flex-1 text-center text-lg font-semibold pr-10">
-            {showPromptConfig ? 'Prompted Text Field' : 'New Field'}
+            {showPromptConfig ? 'User Define' : 'New Field'}
           </DialogTitle>
         </div>
 
