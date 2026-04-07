@@ -82,6 +82,8 @@ export function PrinterListItem({
   messageExpiryDays,
   masterMessage,
 }: PrinterListItemProps) {
+  // For slaves, show the master's message if available
+  const displayMessage = (printer.role === 'slave' && masterMessage) ? masterMessage : printer.currentMessage;
   // Effective expiry: per-printer override if set, otherwise message default
   const effectiveExpiry = (printer.expiryOffsetDays != null) ? printer.expiryOffsetDays : (messageExpiryDays ?? 0);
   const isOverridden = printer.expiryOffsetDays != null;
