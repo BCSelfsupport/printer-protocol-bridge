@@ -918,7 +918,7 @@ export function EditMessageScreen({
       id: newId,
       type: 'userdefine',
       data: userDefineLabel,
-      x: message.fields.length * 50,
+      x: 0,
       y: 32 - message.height,
       width: config.length * 8 + 16, // Estimate width based on length
       height: Math.min(16, message.height),
@@ -946,7 +946,7 @@ export function EditMessageScreen({
       id: newId,
       type: 'logo',
       data: graphicLabel,
-      x: message.fields.length * 50,
+      x: 0,
       y: 32 - message.height,
       width: 32, // Fixed width for graphic placeholder
       height: Math.min(message.height, 32),
