@@ -336,7 +336,41 @@ const Index = () => {
     messages: connectionState.messages,
   });
 
-  // Low-stock alerts: auto-deduct and show popup when printer signals LOW/EMPTY
+  // After saving a message on the master, duplicate the full content to all slaves
+  const syncMessageToSlaves = useCallback(async (
+    messageName: string,
+    details: MessageDetails,
+    isNew?: boolean,
+  ) => {
+    if (!isMaster || !connectionState.connectedPrinter) return;
+    const slaves = getSlavesForMaster(connectionState.connectedPrinter.id);
+    const availableSlaves = slaves.filter(s => s.isAvailable);
+    if (availableSlaves.length === 0) return;
+
+    const commands = buildMessageCommands(
+      messageName,
+      details.fields,
+      details.templateValue,
+      isNew,
+    );
+    if (!commands || commands.length === 0) return;
+
+    console.log(`[MasterSlaveSync] Pushing message "${messageName}" content to ${availableSlaves.length} slave(s)`);
+    for (const slave of availableSlaves) {
+      let allOk = true;
+      for (const cmd of commands) {
+        const ok = await sendCommandToPrinter(slave, cmd);
+        if (!ok) {
+          allOk = false;
+          console.warn(`[MasterSlaveSync] Command failed on ${slave.name}: ${cmd.substring(0, 40)}...`);
+        }
+      }
+      // Also select the message on the slave
+      await sendCommandToPrinter(slave, `^SM ${messageName}`);
+      console.log(`[MasterSlaveSync] Message "${messageName}" → ${slave.name}: ${allOk ? 'OK' : 'PARTIAL'}`);
+    }
+  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildMessageCommands, sendCommandToPrinter]);
+
   // Delay alerts on startup so update notification can appear first
   const [lowStockAlertQueue, setLowStockAlertQueue] = useState<LowStockAlertData[]>([]);
 
