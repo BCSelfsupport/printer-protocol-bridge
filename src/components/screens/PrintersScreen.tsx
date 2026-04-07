@@ -495,6 +495,10 @@ export function PrintersScreen({
                       syncGroupIndex={syncGroupMap.get(printer.id)}
                       slaveCount={printer.role === 'master' ? slaveCountMap.get(printer.id) ?? 0 : undefined}
                       onSync={printer.role === 'master' && onSyncMaster ? () => onSyncMaster(printer.id) : undefined}
+                      onBroadcast={printer.role === 'master' && onBroadcastMessage ? () => {
+                        setBroadcastMaster(printer);
+                        setBroadcastDialogOpen(true);
+                      } : undefined}
                       streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
                     />
                   ))}
