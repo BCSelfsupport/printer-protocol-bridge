@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Printer } from '@/types/printer';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerEmulator } from '@/lib/printerEmulator';
+import type { MessageDetails } from '@/components/screens/EditMessageScreen';
 
 const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
 const shouldUseEmulator = () => printerEmulator.enabled || multiPrinterEmulator.enabled;
@@ -11,6 +12,8 @@ interface UseMasterSlaveSyncOptions {
   connectedPrinterId?: number | null;
   currentMessage?: string | null;
   messages?: { id: number; name: string }[];
+  getMessageContent?: (messageName: string) => MessageDetails | null;
+  buildMessageCommands?: (messageName: string, fields: MessageDetails['fields'], templateValue?: string, isNew?: boolean) => string[] | null;
 }
 
 /**
@@ -26,6 +29,8 @@ export function useMasterSlaveSync({
   connectedPrinterId,
   currentMessage,
   messages = [],
+  getMessageContent,
+  buildMessageCommands,
 }: UseMasterSlaveSyncOptions) {
   const prevMessageRef = useRef<string | null>(null);
   const prevMessageListRef = useRef<string[]>([]);
@@ -80,7 +85,7 @@ export function useMasterSlaveSync({
     return false;
   }, []);
 
-  // Sync message selection: when master's currentMessage changes, ^SM on all slaves
+  // Sync message selection: when master's currentMessage changes, push full content to slaves first, then ^SM
   useEffect(() => {
     if (!isMaster || !currentMessage || syncingRef.current) return;
     if (currentMessage === prevMessageRef.current) return;
@@ -92,17 +97,27 @@ export function useMasterSlaveSync({
     syncingRef.current = true;
     console.log(`[MasterSlaveSync] Syncing message selection "${currentMessage}" to ${slaves.length} slave(s)`);
 
-    Promise.all(
-      slaves.map(slave =>
-        sendCommandToPrinter(slave, `^SM ${currentMessage}`)
-          .then(ok => {
-            console.log(`[MasterSlaveSync] ^SM ${currentMessage} → ${slave.name}: ${ok ? 'OK' : 'FAIL'}`);
-          })
-      )
-    ).finally(() => {
+    const masterDetails = getMessageContent?.(currentMessage) ?? null;
+    const commands = masterDetails && buildMessageCommands
+      ? buildMessageCommands(currentMessage, masterDetails.fields, masterDetails.templateValue, false)
+      : null;
+
+    (async () => {
+      for (const slave of slaves) {
+        if (commands && commands.length > 0) {
+          for (const cmd of commands) {
+            const ok = await sendCommandToPrinter(slave, cmd);
+            console.log(`[MasterSlaveSync] ${cmd.split(' ')[0]} ${currentMessage} → ${slave.name}: ${ok ? 'OK' : 'FAIL'}`);
+          }
+        }
+
+        const ok = await sendCommandToPrinter(slave, `^SM ${currentMessage}`);
+        console.log(`[MasterSlaveSync] ^SM ${currentMessage} → ${slave.name}: ${ok ? 'OK' : 'FAIL'}`);
+      }
+    })().finally(() => {
       syncingRef.current = false;
     });
-  }, [isMaster, currentMessage, getSlaves, sendCommandToPrinter]);
+  }, [isMaster, currentMessage, getSlaves, sendCommandToPrinter, getMessageContent, buildMessageCommands]);
 
   // Sync message list: when master gets new messages, push them to slaves via ^NM
   useEffect(() => {
