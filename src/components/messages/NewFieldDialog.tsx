@@ -57,7 +57,7 @@ export function NewFieldDialog({
       onOpenChange(false);
       onOpenGraphic();
       return;
-
+    }
     onSelectFieldType(fieldType.value);
     onOpenChange(false);
   };
