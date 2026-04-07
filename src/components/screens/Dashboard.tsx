@@ -525,7 +525,14 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
   const [zoomIndex, setZoomIndex] = useState(2); // Default to 2x zoom
   const [barcodeImages, setBarcodeImages] = useState<Map<string, HTMLCanvasElement>>(new Map());
 
-  // Use PC local time for date/time code rendering — matches user's timezone
+  // Compute offset between printer clock (^SD) and local PC clock so that
+  // date/time rendering matches the printer HMI regardless of the browser's
+  // timezone (e.g. UTC in a web preview vs the user's local timezone).
+  const printerOffsetMs = useMemo(() => {
+    if (!printerTime) return 0;
+    return printerTime.getTime() - Date.now();
+  }, [printerTime]);
+
   const [nowMs, setNowMs] = useState(Date.now());
 
   useEffect(() => {
@@ -535,7 +542,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     return () => clearInterval(timer);
   }, []);
 
-  const tickingTime = useMemo(() => new Date(nowMs), [nowMs]);
+  const tickingTime = useMemo(() => new Date(nowMs + printerOffsetMs), [nowMs, printerOffsetMs]);
 
 
   // Load barcode images for barcode-type fields

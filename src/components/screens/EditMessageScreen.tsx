@@ -526,8 +526,15 @@ export function EditMessageScreen({
     return availableFontSizes.filter(fs => fs.height <= message.height);
   };
 
-  // Helper to get current time source (printer time if synced, otherwise local)
-  const getCurrentTime = () => new Date();
+  // Use printer time (^SD) to stay in sync with the printer HMI.
+  // Falls back to local PC time when not connected.
+  const getCurrentTime = () => {
+    if (printerTime) {
+      const offsetMs = printerTime.getTime() - Date.now();
+      return new Date(Date.now() + offsetMs);
+    }
+    return new Date();
+  };
 
   // Helper to format time based on format string
   const formatTimeValue = (format: string): string => {
