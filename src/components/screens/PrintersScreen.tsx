@@ -95,6 +95,8 @@ interface PrintersScreenProps {
   /** Called when a slave printer's expiry is changed — resends the message with new expiry */
   onSlaveExpiryChange?: (printerId: number, days: number) => void;
   onSelectedPrinterChange?: (printer: Printer | null) => void;
+  /** Look up stored/hardcoded message content by name */
+  getMessageContent?: (name: string) => MessageDetails | null;
 }
 
 // Sortable wrapper for PrinterListItem
