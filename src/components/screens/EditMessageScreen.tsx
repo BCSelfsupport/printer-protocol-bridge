@@ -333,7 +333,7 @@ export function EditMessageScreen({
         ...prev,
         fields: prev.fields.map((f) => {
           if (!f.autoCodeFieldType) return f;
-          const now = printerTime ?? new Date();
+          const now = new Date();
           let newData = f.data;
 
           if (f.autoCodeFieldType === 'time' && f.autoCodeFormat) {
