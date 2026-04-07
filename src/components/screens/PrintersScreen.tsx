@@ -95,8 +95,8 @@ interface PrintersScreenProps {
   /** Called when a slave printer's expiry is changed — resends the message with new expiry */
   onSlaveExpiryChange?: (printerId: number, days: number) => void;
   onSelectedPrinterChange?: (printer: Printer | null) => void;
-  /** Look up stored/hardcoded message content by name */
-  getMessageContent?: (name: string) => MessageDetails | null;
+  /** Look up stored/hardcoded message content by name for a specific printer */
+  getMessageContent?: (name: string, printerId?: number) => MessageDetails | null;
 }
 
 // Sortable wrapper for PrinterListItem
@@ -302,30 +302,26 @@ export function PrintersScreen({
     return map;
   }, [printers]);
 
-  // Determine if the selected printer belongs to the connected master's sync group
-  const selectedPrinterInSyncGroup = useMemo(() => {
-    if (!selectedPrinter || !connectedPrinter) return false;
-    // The selected printer IS the connected printer
-    if (selectedPrinter.id === connectedPrinter.id) return true;
-    // Connected is master and selected is its slave
-    if (connectedPrinter.role === 'master' && selectedPrinter.role === 'slave' && selectedPrinter.masterId === connectedPrinter.id) return true;
-    // Connected is slave, selected is its master
-    if (connectedPrinter.role === 'slave' && selectedPrinter.role === 'master' && connectedPrinter.masterId === selectedPrinter.id) return true;
-    // Connected is slave, selected is sibling slave of same master
-    if (connectedPrinter.role === 'slave' && selectedPrinter.role === 'slave' && connectedPrinter.masterId === selectedPrinter.masterId) return true;
-    return false;
-  }, [selectedPrinter, connectedPrinter]);
-
-  // Show the connected printer's message content if selected printer is in the sync group,
-  // otherwise look up the standalone printer's own current message from storage
   const effectiveMessageContent = useMemo(() => {
-    if (selectedPrinterInSyncGroup) return messageContent;
-    // For standalone printers, look up their own current message
-    if (selectedPrinter?.currentMessage && getMessageContent) {
-      return getMessageContent(selectedPrinter.currentMessage) ?? undefined;
+    if (selectedPrinter?.id === connectedPrinter?.id) {
+      return messageContent;
     }
-    return undefined;
-  }, [selectedPrinterInSyncGroup, messageContent, selectedPrinter?.currentMessage, getMessageContent]);
+
+    if (selectedPrinter?.currentMessage && getMessageContent) {
+      return getMessageContent(selectedPrinter.currentMessage, selectedPrinter.id) ?? undefined;
+    }
+
+    return messageContent;
+  }, [selectedPrinter?.id, selectedPrinter?.currentMessage, connectedPrinter?.id, messageContent, getMessageContent]);
+
+  const effectiveDashboardStatus = useMemo(() => {
+    if (!selectedPrinter || !status) return status ?? null;
+
+    return {
+      ...status,
+      currentMessage: selectedPrinter.currentMessage ?? status.currentMessage,
+    };
+  }, [selectedPrinter, status]);
 
   // Extract the max expiry offset from the currently selected message's fields
   const messageExpiryDays = useMemo(() => {
@@ -656,7 +652,7 @@ export function PrintersScreen({
         ) : showDashboardInPanel ? (
           <div className="flex-1 flex flex-col bg-background rounded-xl border border-slate-700 overflow-hidden">
             <Dashboard
-              status={status ?? null}
+              status={effectiveDashboardStatus}
               isConnected={isConnected}
               onStart={onStart ?? (() => {})}
               onStop={onStop ?? (() => {})}
