@@ -5,6 +5,7 @@ import { PrinterListItem } from '@/components/printers/PrinterListItem';
 import { AddPrinterDialog } from '@/components/printers/AddPrinterDialog';
 import { EditPrinterDialog } from '@/components/printers/EditPrinterDialog';
 import { PrinterServicePopup } from '@/components/printers/PrinterServicePopup';
+import { BroadcastMessageDialog } from '@/components/printers/BroadcastMessageDialog';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dashboard } from '@/components/screens/Dashboard';
@@ -216,6 +217,9 @@ export function PrintersScreen({
   onNavigate,
   onTurnOff,
   onSyncMaster,
+  onBroadcastMessage,
+  getSlavesForMaster,
+  connectedMessages = [],
   rightPanelContent,
   getCountdown,
   onConsumables,
@@ -232,6 +236,8 @@ export function PrintersScreen({
   const [printerToEdit, setPrinterToEdit] = useState<Printer | null>(null);
   const [servicePopupOpen, setServicePopupOpen] = useState(false);
   const [servicePrinter, setServicePrinter] = useState<Printer | null>(null);
+  const [broadcastDialogOpen, setBroadcastDialogOpen] = useState(false);
+  const [broadcastMaster, setBroadcastMaster] = useState<Printer | null>(null);
   const [devTaps, setDevTaps] = useState<number[]>([]);
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
@@ -618,6 +624,23 @@ export function PrintersScreen({
         printer={servicePrinter}
         onQueryMetrics={onQueryPrinterMetrics ?? (async () => null)}
       />
+
+      {/* Broadcast Message Dialog */}
+      {broadcastMaster && (
+        <BroadcastMessageDialog
+          open={broadcastDialogOpen}
+          onOpenChange={setBroadcastDialogOpen}
+          master={broadcastMaster}
+          slaves={getSlavesForMaster ? getSlavesForMaster(broadcastMaster.id) : []}
+          messages={connectedMessages}
+          currentMessage={status?.currentMessage}
+          onBroadcast={async (messageName, slaveValues) => {
+            if (onBroadcastMessage) {
+              await onBroadcastMessage(broadcastMaster.id, messageName, slaveValues);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
