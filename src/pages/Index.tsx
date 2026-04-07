@@ -1095,6 +1095,48 @@ const Index = () => {
         onLicense={() => setLicenseDialogOpen(true)}
         onRefreshNetwork={checkPrinterStatus}
         isCheckingNetwork={isChecking}
+        onSlaveExpiryChange={async (slavePrinterId, days) => {
+          // Get the current message details from storage
+          const currentMsg = connectionState.status?.currentMessage;
+          if (!currentMsg) return;
+          const stored = getMessage(currentMsg);
+          if (!stored || stored.fields.length === 0) return;
+
+          // Clone fields with the updated expiry days
+          const updatedFields = stored.fields.map(f => {
+            if (f.autoCodeExpiryDays != null && f.autoCodeExpiryDays > 0) {
+              return { ...f, autoCodeExpiryDays: days };
+            }
+            return f;
+          });
+
+          // Build the protocol commands
+          const commands = buildMessageCommands(currentMsg, updatedFields, stored.templateValue, false);
+          if (!commands) return;
+
+          // Find the slave printer and send commands
+          const slave = printers.find(p => p.id === slavePrinterId);
+          if (!slave) return;
+
+          console.log(`[SlaveExpiryChange] Resending "${currentMsg}" to ${slave.name} with ${days}-day expiry`);
+          toast.loading(`Updating expiry on ${slave.name}...`, { id: 'slave-expiry' });
+
+          try {
+            for (const cmd of commands) {
+              const ok = await sendCommandToPrinter(slave, cmd);
+              if (!ok && !cmd.startsWith('^DM')) {
+                toast.error(`Failed to update ${slave.name}`, { id: 'slave-expiry' });
+                return;
+              }
+            }
+            // Re-select the message on the slave
+            await sendCommandToPrinter(slave, `^SM ${currentMsg}`);
+            toast.success(`${slave.name}: expiry set to ${days} days`, { id: 'slave-expiry' });
+          } catch (e) {
+            console.error('[SlaveExpiryChange] Failed:', e);
+            toast.error(`Failed to update ${slave.name}`, { id: 'slave-expiry' });
+          }
+        }}
       />
     );
   };
