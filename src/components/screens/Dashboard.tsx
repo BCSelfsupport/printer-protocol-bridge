@@ -46,6 +46,7 @@ interface DashboardProps {
   selectedPrinterId?: number;
   streamHours?: string;
   printerExpiryOffsetDays?: number;
+  selectedPrinterLineId?: string;
 }
 
 export function Dashboard({
@@ -685,8 +686,10 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, printerExp
         const yDots = Math.max(0, clampedYDots - previewYOffsetDots);
         const y = yDots * effectiveDotSize;
 
-        // Substitute live time/date for auto-code fields
-        let displayData = field.data;
+        // Substitute live time/date for auto-code fields, and resolve dynamic lineId
+        let displayData = (field as any).dynamicSource === 'lineId' && selectedPrinterLineId
+          ? selectedPrinterLineId
+          : field.data;
         const liveAutoCode = inferFetchedAutoCode(field);
         if (liveAutoCode) {
           const effectiveExpiry = printerExpiryOffsetDays != null && printerExpiryOffsetDays > 0
