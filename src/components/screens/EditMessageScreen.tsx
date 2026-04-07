@@ -197,6 +197,8 @@ export function EditMessageScreen({
   const [graphicDialogOpen, setGraphicDialogOpen] = useState(false);
   const [dataLinkDialogOpen, setDataLinkDialogOpen] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
+  const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
   const fetchStartedRef = useRef(false); // Guard against duplicate fetches from unstable callback refs
 
   // Mobile: lock the parent horizontal scroller while long-press dragging fields
