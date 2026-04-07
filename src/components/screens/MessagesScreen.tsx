@@ -296,6 +296,35 @@ export function MessagesScreen({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* User Define Entry Dialog (shown after selecting a message with user define fields) */}
+      <UserDefineEntryDialog
+        open={userDefineEntryOpen}
+        onOpenChange={(open) => {
+          setUserDefineEntryOpen(open);
+          if (!open) {
+            // User dismissed without entering — navigate home anyway
+            onHome();
+          }
+        }}
+        prompts={userDefinePrompts}
+        onConfirm={async (entries) => {
+          // Send ^TD for each user define value
+          if (onSendCommand) {
+            for (const [, value] of Object.entries(entries)) {
+              if (value.trim()) {
+                try {
+                  await onSendCommand(`^TD ${value.trim()}`);
+                } catch (e) {
+                  console.error('[MessagesScreen] Failed to send ^TD:', e);
+                }
+              }
+            }
+          }
+          setUserDefineEntryOpen(false);
+          onHome();
+        }}
+      />
     </div>
   );
 }

@@ -631,6 +631,8 @@ const Index = () => {
             }
             return success;
           }}
+          onFetchMessageDetails={fetchMessageContent}
+          onSendCommand={async (cmd) => sendCommand(cmd)}
           onEdit={(message) => {
             setIsCreatingNewMessage(false);
             setEditingMessage(message);
@@ -884,6 +886,8 @@ const Index = () => {
               }
               return success;
             }}
+            onFetchMessageDetails={fetchMessageContent}
+            onSendCommand={async (cmd) => sendCommand(cmd)}
             onEdit={(message) => {
               setIsCreatingNewMessage(false);
               setEditingMessage(message);
