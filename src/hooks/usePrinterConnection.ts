@@ -2245,6 +2245,72 @@ export function usePrinterConnection() {
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter, addMessage]);
 
+  // Build the raw protocol commands for a message (without sending).
+  // Used by master/slave sync to send messages to non-connected printers.
+  const buildMessageCommands = useCallback((
+    messageName: string,
+    fields: Array<{
+      id: number;
+      type: string;
+      data: string;
+      x: number;
+      y: number;
+      fontSize: string;
+      bold?: number;
+      gap?: number;
+      height?: number;
+      autoCodeFieldType?: string;
+      autoCodeFormat?: string;
+      autoCodeExpiryDays?: number;
+    }>,
+    templateValue?: string,
+    isNew?: boolean,
+  ): string[] | null => {
+    if (fields.length === 0) return null;
+
+    const templateCode = templateToProtocolCode(templateValue);
+    const templateHeight = (() => {
+      if (!templateValue) return 32;
+      const parsed = parseInt(templateValue);
+      if (!isNaN(parsed)) return parsed;
+      const multiHeightMap: Record<string, number> = {
+        'multi-5x5': 29, 'multi-4x7': 31, 'multi-4x5': 23,
+        'multi-3x9': 29, 'multi-3x7': 23,
+        'multi-2x12': 25, 'multi-2x9': 19, 'multi-2x7': 16, 'multi-2x5': 11,
+      };
+      return multiHeightMap[templateValue] ?? 32;
+    })();
+    const blockedRows = 32 - templateHeight;
+
+    const validFields = fields.filter(field => {
+      if (field.type === 'text' || field.type === 'userdefine') {
+        return field.data && field.data.trim().length > 0;
+      }
+      return true;
+    });
+
+    const fieldSubcommands = validFields.map((field, index) => {
+      const fieldHeight = field.type === 'barcode' && field.height 
+        ? field.height 
+        : fontToDotHeight(field.fontSize);
+      const templateRelativeY = field.y - blockedRows;
+      const printerY = templateHeight - templateRelativeY - fieldHeight;
+      return buildFieldSubcommand({
+        ...field,
+        y: Math.max(0, printerY),
+      }, index + 1, templateHeight);
+    }).join('');
+
+    const nmCommand = `^NM ${templateCode};0;0;0;${messageName}${fieldSubcommands}`;
+    const commands: string[] = [];
+    if (!isNew) {
+      commands.push(`^DM ${messageName}`);
+    }
+    commands.push(nmCommand);
+    commands.push(FLUSH_COMMAND);
+    return commands;
+  }, []);
+
   // Update an existing message
   const updateMessage = useCallback((id: number, name: string) => {
     setConnectionState((prev) => ({
