@@ -40,6 +40,8 @@ interface PrinterListItemProps {
   streamHours?: string;
   /** Callback to update the expiry offset days for this printer */
   onUpdateExpiryOffset?: (printerId: number, days: number) => void;
+  /** Default expiry days from the currently selected message */
+  messageExpiryDays?: number;
 }
 
 // Helper to get color for fluid levels
@@ -75,9 +77,13 @@ export function PrinterListItem({
   onBroadcast,
   streamHours,
   onUpdateExpiryOffset,
+  messageExpiryDays,
 }: PrinterListItemProps) {
+  // Effective expiry: per-printer override if set, otherwise message default
+  const effectiveExpiry = printer.expiryOffsetDays ?? messageExpiryDays ?? 0;
+  const isOverridden = printer.expiryOffsetDays !== undefined && printer.expiryOffsetDays !== null;
   const [editingOffset, setEditingOffset] = useState(false);
-  const [offsetValue, setOffsetValue] = useState(String(printer.expiryOffsetDays ?? 0));
+  const [offsetValue, setOffsetValue] = useState(String(effectiveExpiry));
   
   // Filter status for this printer
   const pumpHours = streamHours ? parseStreamHoursToNumber(streamHours) : null;
@@ -253,7 +259,7 @@ export function PrinterListItem({
                           setEditingOffset(false);
                         }
                         if (e.key === 'Escape') {
-                          setOffsetValue(String(printer.expiryOffsetDays ?? 0));
+                          setOffsetValue(String(effectiveExpiry));
                           setEditingOffset(false);
                         }
                       }}
@@ -266,13 +272,16 @@ export function PrinterListItem({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setOffsetValue(String(printer.expiryOffsetDays ?? 0));
+                      setOffsetValue(String(effectiveExpiry));
                       setEditingOffset(true);
                     }}
                     className="text-[10px] text-primary/70 hover:text-primary font-medium"
-                    title="Click to edit expiry date offset"
+                    title={isOverridden ? "Custom override — click to edit" : "From message — click to override"}
                   >
-                    Expiry: <span className="font-bold">{printer.expiryOffsetDays ? `+${printer.expiryOffsetDays}` : '0'}</span> days
+                    Expiry: <span className={cn("font-bold", isOverridden ? "text-amber-400" : "")}>
+                      {effectiveExpiry ? `+${effectiveExpiry}` : '0'}
+                    </span> days
+                    {isOverridden && <span className="ml-1 text-amber-400/60">(custom)</span>}
                   </button>
                 )}
               </div>
