@@ -526,6 +526,7 @@ export function PrintersScreen({
                         ? (id, days) => onUpdatePrinter(id, { expiryOffsetDays: days })
                         : undefined
                       }
+                      messageExpiryDays={messageExpiryDays}
                     />
                   ))}
                 </SortableContext>
