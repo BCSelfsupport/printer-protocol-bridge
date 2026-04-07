@@ -45,6 +45,7 @@ interface DashboardProps {
   // Filter gauge props
   selectedPrinterId?: number;
   streamHours?: string;
+  printerExpiryOffsetDays?: number;
 }
 
 export function Dashboard({
@@ -73,6 +74,7 @@ export function Dashboard({
   onHome,
   selectedPrinterId,
   streamHours,
+  printerExpiryOffsetDays,
   printerModel,
   printerVariant,
 }: DashboardProps) {
@@ -360,6 +362,7 @@ export function Dashboard({
           message={status?.currentMessage}
           printerTime={status?.printerTime}
           messageContent={messageContent}
+          printerExpiryOffsetDays={printerExpiryOffsetDays}
         />
       </div>
     </div>
@@ -437,6 +440,7 @@ interface MessagePreviewCanvasProps {
   message?: string;
   printerTime?: Date;
   messageContent?: MessageDetails;
+  printerExpiryOffsetDays?: number;
 }
 
 const DOT_SIZE_MOBILE = 3; // Smaller dots on mobile
@@ -519,7 +523,7 @@ function inferFetchedAutoCode(field: MessageField): { autoCodeFieldType: string;
   return null;
 }
 
-function MessagePreviewCanvas({ message, printerTime, messageContent }: MessagePreviewCanvasProps) {
+function MessagePreviewCanvas({ message, printerTime, messageContent, printerExpiryOffsetDays }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dotSize, setDotSize] = useState<number>(DOT_SIZE_DESKTOP);
   const [zoomIndex, setZoomIndex] = useState(2); // Default to 2x zoom
@@ -685,11 +689,14 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
         let displayData = field.data;
         const liveAutoCode = inferFetchedAutoCode(field);
         if (liveAutoCode) {
+          const effectiveExpiry = printerExpiryOffsetDays != null && printerExpiryOffsetDays > 0
+            ? printerExpiryOffsetDays
+            : field.autoCodeExpiryDays;
           const computed = computeAutoCodeValue(
             liveAutoCode.autoCodeFieldType,
             liveAutoCode.autoCodeFormat,
             now,
-            field.autoCodeExpiryDays,
+            effectiveExpiry,
           );
           if (computed !== null) displayData = computed;
         }
@@ -748,7 +755,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
     ctx.font = '16px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('No message selected', width / 2, height / 2 + 5);
-  }, [message, tickingTime, messageContent, renderWidth, effectiveDotSize, barcodeImages]);
+  }, [message, tickingTime, messageContent, renderWidth, effectiveDotSize, barcodeImages, printerExpiryOffsetDays]);
 
   const canvasHeight = (TOTAL_ROWS + PREVIEW_BOTTOM_PADDING_ROWS) * effectiveDotSize + 1;
 
