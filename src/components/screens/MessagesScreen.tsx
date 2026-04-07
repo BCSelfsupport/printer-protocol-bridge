@@ -84,7 +84,33 @@ export function MessagesScreen({
     try {
       const success = await onSelect(selectedMessage);
       if (success) {
-        // Navigate to home screen after successful selection
+        // After selecting, check if the message has user define fields
+        if (onFetchMessageDetails) {
+          try {
+            const details = await Promise.race([
+              onFetchMessageDetails(selectedMessage.name),
+              new Promise<null>(r => setTimeout(() => r(null), 10000)),
+            ]);
+            if (details) {
+              const udFields = details.fields.filter(f => f.type === 'userdefine');
+              if (udFields.length > 0) {
+                const prompts: UserDefinePrompt[] = udFields.map(f => {
+                  const label = f.data || 'USER';
+                  const fontWidth = f.fontSize?.includes('5High') ? 4 : f.fontSize?.includes('7') ? 5 : f.fontSize?.includes('9') ? 7 : f.fontSize?.includes('12') ? 8 : f.fontSize?.includes('16') ? 10 : f.fontSize?.includes('19') ? 12 : f.fontSize?.includes('25') ? 18 : 20;
+                  const gap = f.gap ?? 1;
+                  const estimatedLen = f.width > 0 ? Math.max(1, Math.round(f.width / (fontWidth + gap))) : (f.data?.length || 3);
+                  return { fieldId: f.id, label, length: estimatedLen };
+                });
+                setUserDefinePrompts(prompts);
+                setUserDefineEntryOpen(true);
+                // Don't navigate home yet — wait for user define entry
+                return;
+              }
+            }
+          } catch (e) {
+            console.error('[MessagesScreen] Failed to check user define fields:', e);
+          }
+        }
         onHome();
       }
     } finally {
