@@ -275,6 +275,7 @@ export function PrinterListItem({
                       setOffsetValue(String(effectiveExpiry));
                       setEditingOffset(true);
                     }}
+                    onMouseDown={(e) => e.stopPropagation()}
                     className="text-[10px] text-primary/70 hover:text-primary font-medium"
                     title={isOverridden ? `Custom: ${effectiveExpiry} days (message default: ${messageExpiryDays ?? 0})` : "From selected message — click to change for this printer"}
                   >
