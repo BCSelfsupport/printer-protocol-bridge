@@ -1,10 +1,11 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio } from 'lucide-react';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
 import { AddPrinterDialog } from '@/components/printers/AddPrinterDialog';
 import { EditPrinterDialog } from '@/components/printers/EditPrinterDialog';
 import { PrinterServicePopup } from '@/components/printers/PrinterServicePopup';
+import { BroadcastMessageDialog } from '@/components/printers/BroadcastMessageDialog';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dashboard } from '@/components/screens/Dashboard';
@@ -71,6 +72,10 @@ interface PrintersScreenProps {
   onTurnOff?: () => void;
   // Master/Slave sync - per master
   onSyncMaster?: (masterId: number) => void;
+  // Broadcast message to all slaves
+  onBroadcastMessage?: (masterId: number, messageName: string, slaveValues: { printerId: number; userDefineValue: string }[]) => Promise<void>;
+  getSlavesForMaster?: (masterId: number) => Printer[];
+  connectedMessages?: { id: number; name: string }[];
   // Optional content to render in the right panel instead of Dashboard
   rightPanelContent?: React.ReactNode;
   // Per-printer countdown lookup
@@ -106,6 +111,7 @@ function SortablePrinterItem({
   syncGroupIndex,
   slaveCount,
   onSync,
+  onBroadcast,
   streamHours,
 }: {
   printer: Printer;
@@ -123,6 +129,7 @@ function SortablePrinterItem({
   syncGroupIndex?: number;
   slaveCount?: number;
   onSync?: () => void;
+  onBroadcast?: () => void;
   streamHours?: string;
 }) {
   const {
@@ -169,6 +176,7 @@ function SortablePrinterItem({
         syncGroupIndex={syncGroupIndex}
         slaveCount={slaveCount}
         onSync={onSync}
+        onBroadcast={onBroadcast}
         streamHours={streamHours}
       />
     </div>
@@ -212,6 +220,9 @@ export function PrintersScreen({
   onNavigate,
   onTurnOff,
   onSyncMaster,
+  onBroadcastMessage,
+  getSlavesForMaster,
+  connectedMessages = [],
   rightPanelContent,
   getCountdown,
   onConsumables,
@@ -228,6 +239,8 @@ export function PrintersScreen({
   const [printerToEdit, setPrinterToEdit] = useState<Printer | null>(null);
   const [servicePopupOpen, setServicePopupOpen] = useState(false);
   const [servicePrinter, setServicePrinter] = useState<Printer | null>(null);
+  const [broadcastDialogOpen, setBroadcastDialogOpen] = useState(false);
+  const [broadcastMaster, setBroadcastMaster] = useState<Printer | null>(null);
   const [devTaps, setDevTaps] = useState<number[]>([]);
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
@@ -485,6 +498,10 @@ export function PrintersScreen({
                       syncGroupIndex={syncGroupMap.get(printer.id)}
                       slaveCount={printer.role === 'master' ? slaveCountMap.get(printer.id) ?? 0 : undefined}
                       onSync={printer.role === 'master' && onSyncMaster ? () => onSyncMaster(printer.id) : undefined}
+                      onBroadcast={printer.role === 'master' && onBroadcastMessage ? () => {
+                        setBroadcastMaster(printer);
+                        setBroadcastDialogOpen(true);
+                      } : undefined}
                       streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
                     />
                   ))}
@@ -614,6 +631,23 @@ export function PrintersScreen({
         printer={servicePrinter}
         onQueryMetrics={onQueryPrinterMetrics ?? (async () => null)}
       />
+
+      {/* Broadcast Message Dialog */}
+      {broadcastMaster && (
+        <BroadcastMessageDialog
+          open={broadcastDialogOpen}
+          onOpenChange={setBroadcastDialogOpen}
+          master={broadcastMaster}
+          slaves={getSlavesForMaster ? getSlavesForMaster(broadcastMaster.id) : []}
+          messages={connectedMessages}
+          currentMessage={status?.currentMessage}
+          onBroadcast={async (messageName, slaveValues) => {
+            if (onBroadcastMessage) {
+              await onBroadcastMessage(broadcastMaster.id, messageName, slaveValues);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

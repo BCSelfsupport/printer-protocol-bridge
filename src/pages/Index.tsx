@@ -301,7 +301,7 @@ const Index = () => {
   const { countdownSeconds, countdownType, startCountdown, cancelCountdown, getCountdown } = useJetCountdown(connectedPrinterId, handleCountdownComplete);
 
   // Master/Slave sync: auto-syncs messages and selections from master to slaves
-  const { isMaster, slaveCount, syncAllMessages, syncMaster } = useMasterSlaveSync({
+  const { isMaster, slaveCount, syncAllMessages, syncMaster, broadcastMessage, getSlavesForMaster } = useMasterSlaveSync({
     printers,
     connectedPrinterId: connectionState.connectedPrinter?.id,
     currentMessage: connectionState.status?.currentMessage,
@@ -1042,6 +1042,9 @@ const Index = () => {
         onNavigate={handleNavigate}
         onTurnOff={handleTurnOff}
         onSyncMaster={syncMaster}
+        onBroadcastMessage={broadcastMessage}
+        getSlavesForMaster={getSlavesForMaster}
+        connectedMessages={connectionState.messages}
         rightPanelContent={getRightPanelContent()}
         getCountdown={getCountdown}
         onConsumables={() => setCurrentScreen('consumables')}

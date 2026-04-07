@@ -219,5 +219,46 @@ export function useMasterSlaveSync({
       syncingRef.current = false;
       console.log(`[MasterSlaveSync] Master "${master.name}" sync complete`);
     }, [printers, connectedPrinterId, messages, currentMessage, sendCommandToPrinter]),
+
+    // Broadcast a specific message to all slaves with optional per-printer User Define values
+    broadcastMessage: useCallback(async (
+      masterId: number,
+      messageName: string,
+      slaveValues: { printerId: number; userDefineValue: string }[]
+    ) => {
+      const master = printers.find(p => p.id === masterId && p.role === 'master');
+      if (!master) throw new Error('Master not found');
+
+      const slaves = printers.filter(
+        p => p.role === 'slave' && p.masterId === masterId && p.isAvailable
+      );
+      if (slaves.length === 0) throw new Error('No online slaves');
+
+      console.log(`[MasterSlaveSync] Broadcasting "${messageName}" to ${slaves.length} slave(s)`);
+      syncingRef.current = true;
+
+      for (const slave of slaves) {
+        // Select the message on this slave
+        const smOk = await sendCommandToPrinter(slave, `^SM ${messageName}`);
+        console.log(`[Broadcast] ^SM ${messageName} → ${slave.name}: ${smOk ? 'OK' : 'FAIL'}`);
+
+        // Send User Define value if provided
+        const slaveVal = slaveValues.find(v => v.printerId === slave.id);
+        if (slaveVal && slaveVal.userDefineValue.trim()) {
+          const tdOk = await sendCommandToPrinter(slave, `^TD ${slaveVal.userDefineValue.trim()}`);
+          console.log(`[Broadcast] ^TD "${slaveVal.userDefineValue}" → ${slave.name}: ${tdOk ? 'OK' : 'FAIL'}`);
+        }
+      }
+
+      syncingRef.current = false;
+      console.log(`[MasterSlaveSync] Broadcast complete`);
+    }, [printers, sendCommandToPrinter]),
+
+    // Get slaves for a specific master (utility for UI)
+    getSlavesForMaster: useCallback((masterId: number) => {
+      return printers.filter(
+        p => p.role === 'slave' && p.masterId === masterId
+      );
+    }, [printers]),
   };
 }

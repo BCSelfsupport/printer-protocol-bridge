@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, RefreshCcw, Filter } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, RefreshCcw, Filter, Radio } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
@@ -33,6 +33,8 @@ interface PrinterListItemProps {
   slaveCount?: number;
   /** Callback to trigger sync for this master */
   onSync?: () => void;
+  /** Callback to open broadcast dialog for this master */
+  onBroadcast?: () => void;
   /** Stream hours string from metrics for filter gauge */
   streamHours?: string;
 }
@@ -67,6 +69,7 @@ export function PrinterListItem({
   syncGroupIndex,
   slaveCount = 0,
   onSync,
+  onBroadcast,
   streamHours,
 }: PrinterListItemProps) {
   
@@ -270,6 +273,22 @@ export function PrinterListItem({
                 Sync {slaveCount}
               </Button>
             )}
+            {/* Broadcast button for masters */}
+            {printer.role === 'master' && slaveCount > 0 && onBroadcast && (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBroadcast();
+                }}
+                size="sm"
+                variant="ghost"
+                className={`h-6 text-[10px] px-2 hover:bg-slate-600 text-primary`}
+                title={`Broadcast message to all slaves`}
+              >
+                <Radio className="w-3 h-3 mr-1" />
+                Broadcast
+              </Button>
+            )}
           </div>
         </div>
       </button>
@@ -429,6 +448,20 @@ export function PrinterListItem({
                 title={`Sync messages to ${slaveCount} slave(s)`}
               >
                 <RefreshCcw className="w-3 h-3" />
+              </Button>
+            )}
+            {printer.role === 'master' && slaveCount > 0 && onBroadcast && (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBroadcast();
+                }}
+                size="sm"
+                variant="ghost"
+                className="h-6 text-[10px] px-1.5 hover:bg-slate-600 text-primary"
+                title="Broadcast message to all slaves"
+              >
+                <Radio className="w-3 h-3" />
               </Button>
             )}
             {showConnectButton && printer.isAvailable && onConnect && (
