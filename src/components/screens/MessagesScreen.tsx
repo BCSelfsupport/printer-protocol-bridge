@@ -55,6 +55,7 @@ interface MessagesScreenProps {
   /** Called after dynamic field values are saved — updates active preview immediately */
   onPromptSaved?: (details: MessageDetails) => void;
   connectedPrinterLineId?: string;
+}
 
 export function MessagesScreen({ 
   messages, 
