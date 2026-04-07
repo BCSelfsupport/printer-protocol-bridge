@@ -80,6 +80,7 @@ export function PrinterListItem({
   streamHours,
   onUpdateExpiryOffset,
   messageExpiryDays,
+  masterMessage,
 }: PrinterListItemProps) {
   // Effective expiry: per-printer override if set, otherwise message default
   const effectiveExpiry = (printer.expiryOffsetDays != null) ? printer.expiryOffsetDays : (messageExpiryDays ?? 0);
