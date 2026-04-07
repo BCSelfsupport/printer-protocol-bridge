@@ -114,6 +114,7 @@ function SortablePrinterItem({
   onBroadcast,
   streamHours,
   onUpdateExpiryOffset,
+  messageExpiryDays,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -133,6 +134,7 @@ function SortablePrinterItem({
   onBroadcast?: () => void;
   streamHours?: string;
   onUpdateExpiryOffset?: (printerId: number, days: number) => void;
+  messageExpiryDays?: number;
 }) {
   const {
     attributes,
@@ -181,6 +183,7 @@ function SortablePrinterItem({
         onBroadcast={onBroadcast}
         streamHours={streamHours}
         onUpdateExpiryOffset={onUpdateExpiryOffset}
+        messageExpiryDays={messageExpiryDays}
       />
     </div>
   );
@@ -287,6 +290,19 @@ export function PrintersScreen({
     });
     return map;
   }, [printers]);
+
+  // Extract the max expiry offset from the currently selected message's fields
+  const messageExpiryDays = useMemo(() => {
+    if (!messageContent?.fields) return 0;
+    let maxExpiry = 0;
+    for (const field of messageContent.fields) {
+      if (field.autoCodeExpiryDays && field.autoCodeExpiryDays > maxExpiry) {
+        maxExpiry = field.autoCodeExpiryDays;
+      }
+    }
+    return maxExpiry;
+  }, [messageContent]);
+
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -510,6 +526,7 @@ export function PrintersScreen({
                         ? (id, days) => onUpdatePrinter(id, { expiryOffsetDays: days })
                         : undefined
                       }
+                      messageExpiryDays={messageExpiryDays}
                     />
                   ))}
                 </SortableContext>
