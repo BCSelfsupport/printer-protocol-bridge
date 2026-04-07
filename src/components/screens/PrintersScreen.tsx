@@ -506,6 +506,10 @@ export function PrintersScreen({
                         setBroadcastDialogOpen(true);
                       } : undefined}
                       streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
+                      onUpdateExpiryOffset={(printer.role === 'master' || printer.role === 'slave') && onUpdatePrinter
+                        ? (id, days) => onUpdatePrinter(id, { expiryOffsetDays: days })
+                        : undefined
+                      }
                     />
                   ))}
                 </SortableContext>
