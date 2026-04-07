@@ -333,7 +333,7 @@ export function EditMessageScreen({
         ...prev,
         fields: prev.fields.map((f) => {
           if (!f.autoCodeFieldType) return f;
-          const now = printerTime ?? new Date();
+          const now = new Date();
           let newData = f.data;
 
           if (f.autoCodeFieldType === 'time' && f.autoCodeFormat) {
@@ -527,7 +527,7 @@ export function EditMessageScreen({
   };
 
   // Helper to get current time source (printer time if synced, otherwise local)
-  const getCurrentTime = () => printerTime ?? new Date();
+  const getCurrentTime = () => new Date();
 
   // Helper to format time based on format string
   const formatTimeValue = (format: string): string => {
