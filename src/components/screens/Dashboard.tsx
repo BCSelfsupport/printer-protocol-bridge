@@ -74,6 +74,7 @@ export function Dashboard({
   onHome,
   selectedPrinterId,
   streamHours,
+  printerExpiryOffsetDays,
   printerModel,
   printerVariant,
 }: DashboardProps) {
