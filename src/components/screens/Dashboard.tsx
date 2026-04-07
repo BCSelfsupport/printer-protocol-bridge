@@ -695,9 +695,15 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, printerExp
           : field.data;
         const liveAutoCode = inferFetchedAutoCode(field);
         if (liveAutoCode) {
-          const effectiveExpiry = printerExpiryOffsetDays != null && printerExpiryOffsetDays > 0
-            ? printerExpiryOffsetDays
-            : field.autoCodeExpiryDays;
+          // Only apply expiry offset to fields that were created as expiration dates
+          // (i.e., they have autoCodeExpiryDays set). Manufacturing date fields (doy, julian, etc.)
+          // should always show today's date.
+          const fieldHasExpiry = field.autoCodeExpiryDays != null && field.autoCodeExpiryDays > 0;
+          const effectiveExpiry = fieldHasExpiry
+            ? (printerExpiryOffsetDays != null && printerExpiryOffsetDays > 0
+                ? printerExpiryOffsetDays
+                : field.autoCodeExpiryDays)
+            : undefined;
           const computed = computeAutoCodeValue(
             liveAutoCode.autoCodeFieldType,
             liveAutoCode.autoCodeFormat,
