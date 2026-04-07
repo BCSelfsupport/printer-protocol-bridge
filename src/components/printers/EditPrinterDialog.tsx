@@ -22,7 +22,7 @@ interface EditPrinterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   printer: Printer | null;
-  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string; expiryOffsetDays?: number }) => void;
+  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string; expiryOffsetDays?: number; lineId?: string }) => void;
   onDelete?: (printerId: number) => void;
   allPrinters?: Printer[];
 }
@@ -35,6 +35,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
   const [masterId, setMasterId] = useState<string>('');
   const [serialNumber, setSerialNumber] = useState('');
   const [expiryOffsetDays, setExpiryOffsetDays] = useState('0');
+  const [lineId, setLineId] = useState('');
   const [ipError, setIpError] = useState('');
   // Sync form when printer changes
   useEffect(() => {
@@ -46,6 +47,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       setMasterId(printer.masterId?.toString() ?? '');
       setSerialNumber(printer.serialNumber ?? '');
       setExpiryOffsetDays(String(printer.expiryOffsetDays ?? 0));
+      setLineId(printer.lineId ?? '');
     }
   }, [printer]);
 
@@ -82,6 +84,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       masterId: role === 'slave' && masterId ? parseInt(masterId, 10) : undefined,
       serialNumber: serialNumber.trim() || undefined,
       expiryOffsetDays: expiryOffsetDays.trim() !== '' && parseInt(expiryOffsetDays, 10) !== 0 ? parseInt(expiryOffsetDays, 10) : undefined,
+      lineId: lineId.trim() || undefined,
     });
     onOpenChange(false);
   };
