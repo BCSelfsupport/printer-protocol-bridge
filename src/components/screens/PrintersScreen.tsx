@@ -137,7 +137,7 @@ function SortablePrinterItem({
   onBroadcast?: () => void;
   streamHours?: string;
   onUpdateExpiryOffset?: (printerId: number, days: number) => void;
-  messageExpiryDays?: number;
+  messageExpiryDays?: number | null;
   masterMessage?: string;
 }) {
   const {

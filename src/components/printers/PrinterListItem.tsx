@@ -41,7 +41,7 @@ interface PrinterListItemProps {
   /** Callback to update the expiry offset days for this printer */
   onUpdateExpiryOffset?: (printerId: number, days: number) => void;
   /** Default expiry days from the currently selected message */
-  messageExpiryDays?: number;
+  messageExpiryDays?: number | null;
   /** Master's current message name — slaves display this instead of their own */
   masterMessage?: string;
 }
