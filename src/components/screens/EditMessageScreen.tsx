@@ -200,6 +200,11 @@ export function EditMessageScreen({
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
   const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
   const fetchStartedRef = useRef(false); // Guard against duplicate fetches from unstable callback refs
+  const printerOffsetMsRef = useRef(0);
+
+  useEffect(() => {
+    printerOffsetMsRef.current = printerTime ? printerTime.getTime() - Date.now() : 0;
+  }, [printerTime]);
 
   // Mobile: lock the parent horizontal scroller while long-press dragging fields
   const [isCanvasScrollLocked, setIsCanvasScrollLocked] = useState(false);
@@ -333,7 +338,7 @@ export function EditMessageScreen({
         ...prev,
         fields: prev.fields.map((f) => {
           if (!f.autoCodeFieldType) return f;
-          const now = new Date();
+          const now = new Date(Date.now() + printerOffsetMsRef.current);
           let newData = f.data;
 
           if (f.autoCodeFieldType === 'time' && f.autoCodeFormat) {
@@ -529,11 +534,7 @@ export function EditMessageScreen({
   // Use printer time (^SD) to stay in sync with the printer HMI.
   // Falls back to local PC time when not connected.
   const getCurrentTime = () => {
-    if (printerTime) {
-      const offsetMs = printerTime.getTime() - Date.now();
-      return new Date(Date.now() + offsetMs);
-    }
-    return new Date();
+    return new Date(Date.now() + printerOffsetMsRef.current);
   };
 
   // Helper to format time based on format string

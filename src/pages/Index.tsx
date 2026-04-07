@@ -704,10 +704,11 @@ const Index = () => {
             if (!isNew) {
               updateMessage(editingMessage.id, details.name);
             }
-            saveMessage({
+            const localDetails = {
               ...details,
               name: targetName,
-            });
+            };
+            saveMessage(localDetails);
             // Mark as recently saved so auto-sync won't overwrite with printer version
             recentlySavedRef.current.set(targetName, Date.now());
             syncedMessagesRef.current.add(targetName);
@@ -719,8 +720,9 @@ const Index = () => {
                   new Promise<null>(r => setTimeout(() => r(null), 5000)),
                 ]);
                 if (refreshed && refreshed.fields.length > 0) {
-                  saveMessage(refreshed);
-                  return refreshed;
+                  const merged = mergeAutoCodeMeta(refreshed, localDetails);
+                  saveMessage(merged);
+                  return merged;
                 }
               } catch (e) {
                 console.error('[onSave] post-save reload failed:', e);
@@ -744,8 +746,9 @@ const Index = () => {
                   new Promise<null>(r => setTimeout(() => r(null), 10000)),
                 ]);
                 if (fetched && fetched.fields.length > 0) {
-                  saveMessage(fetched);
-                  return fetched;
+                  const merged = mergeAutoCodeMeta(fetched, getMessage(name) ?? null);
+                  saveMessage(merged);
+                  return merged;
                 }
               } catch (e) {
                 console.error('[onGetMessageDetails] fetch failed:', e);
@@ -840,10 +843,11 @@ const Index = () => {
               if (!isNew) {
                 updateMessage(editingMessage.id, details.name);
               }
-              saveMessage({
+              const localDetails = {
                 ...details,
                 name: targetName,
-              });
+              };
+              saveMessage(localDetails);
               recentlySavedRef.current.set(targetName, Date.now());
               syncedMessagesRef.current.add(targetName);
               // Reload from printer to get actual field positions
@@ -854,8 +858,9 @@ const Index = () => {
                     new Promise<null>(r => setTimeout(() => r(null), 5000)),
                   ]);
                   if (refreshed && refreshed.fields.length > 0) {
-                    saveMessage(refreshed);
-                    return refreshed;
+                    const merged = mergeAutoCodeMeta(refreshed, localDetails);
+                    saveMessage(merged);
+                    return merged;
                   }
                 } catch (e) {
                   console.error('[onSave] post-save reload failed:', e);
@@ -877,8 +882,9 @@ const Index = () => {
                     new Promise<null>(r => setTimeout(() => r(null), 10000)),
                   ]);
                   if (fetched && fetched.fields.length > 0) {
-                    saveMessage(fetched);
-                    return fetched;
+                    const merged = mergeAutoCodeMeta(fetched, getMessage(name) ?? null);
+                    saveMessage(merged);
+                    return merged;
                   }
                 } catch (e) {
                   console.error('[onGetMessageDetails] fetch failed:', e);
