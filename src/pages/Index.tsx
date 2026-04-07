@@ -334,6 +334,8 @@ const Index = () => {
     connectedPrinterId: connectionState.connectedPrinter?.id,
     currentMessage: connectionState.status?.currentMessage,
     messages: connectionState.messages,
+    getMessageContent: (messageName) => getMessage(messageName),
+    buildMessageCommands,
   });
 
   // After saving a message on the master, duplicate the full content to all slaves
