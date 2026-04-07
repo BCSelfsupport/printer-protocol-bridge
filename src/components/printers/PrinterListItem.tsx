@@ -242,7 +242,7 @@ export function PrinterListItem({
               <div className="flex items-center gap-1.5 mt-1">
                 <CalendarDays className="w-3.5 h-3.5 text-primary/70" />
                 {editingOffset ? (
-                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                     <input
                       type="number"
                       value={offsetValue}
