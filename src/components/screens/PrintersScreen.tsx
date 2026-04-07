@@ -111,6 +111,7 @@ function SortablePrinterItem({
   syncGroupIndex,
   slaveCount,
   onSync,
+  onBroadcast,
   streamHours,
 }: {
   printer: Printer;
@@ -128,6 +129,7 @@ function SortablePrinterItem({
   syncGroupIndex?: number;
   slaveCount?: number;
   onSync?: () => void;
+  onBroadcast?: () => void;
   streamHours?: string;
 }) {
   const {
@@ -174,6 +176,7 @@ function SortablePrinterItem({
         syncGroupIndex={syncGroupIndex}
         slaveCount={slaveCount}
         onSync={onSync}
+        onBroadcast={onBroadcast}
         streamHours={streamHours}
       />
     </div>
