@@ -658,7 +658,7 @@ const Index = () => {
           onSelect={async (message) => {
             if (!messageTargetPrinter) return false;
             if (isConnectedMessageTarget) return await selectMessage(message);
-            const ok = await sendCommandToPrinter(messageTargetPrinter, message.name, []);
+            const ok = await sendCommandToPrinter(messageTargetPrinter, `^SM ${message.name}`);
             if (ok) {
               updatePrinter(messageTargetPrinter.id, { currentMessage: message.name });
             }
@@ -934,7 +934,7 @@ const Index = () => {
               const messageTargetPrinter = selectedPrinter ?? connectionState.connectedPrinter ?? null;
               if (!messageTargetPrinter) return false;
               if (messageTargetPrinter.id === connectionState.connectedPrinter?.id) return await selectMessage(message);
-              const ok = await sendCommandToPrinter(messageTargetPrinter, message.name, []);
+              const ok = await sendCommandToPrinter(messageTargetPrinter, `^SM ${message.name}`);
               if (ok) {
                 updatePrinter(messageTargetPrinter.id, { currentMessage: message.name });
               }
