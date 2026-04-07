@@ -542,11 +542,11 @@ export function PrintersScreen({
                         setBroadcastDialogOpen(true);
                       } : undefined}
                       streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
-                      onUpdateExpiryOffset={(printer.role === 'master' || printer.role === 'slave') && onUpdatePrinter
+                      onUpdateExpiryOffset={onUpdatePrinter
                         ? (id, days) => {
                             onUpdatePrinter(id, { expiryOffsetDays: days });
-                            // If this is a slave, resend the message with the new expiry
-                            if (printer.role === 'slave' && onSlaveExpiryChange) {
+                            // Resend the message with the new expiry to this printer
+                            if (onSlaveExpiryChange) {
                               onSlaveExpiryChange(id, days);
                             }
                           }

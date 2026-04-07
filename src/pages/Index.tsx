@@ -1095,7 +1095,7 @@ const Index = () => {
         onLicense={() => setLicenseDialogOpen(true)}
         onRefreshNetwork={checkPrinterStatus}
         isCheckingNetwork={isChecking}
-        onSlaveExpiryChange={async (slavePrinterId, days) => {
+        onSlaveExpiryChange={async (printerId, days) => {
           // Get the current message details from storage
           const currentMsg = connectionState.status?.currentMessage;
           if (!currentMsg) return;
@@ -1114,27 +1114,27 @@ const Index = () => {
           const commands = buildMessageCommands(currentMsg, updatedFields, stored.templateValue, false);
           if (!commands) return;
 
-          // Find the slave printer and send commands
-          const slave = printers.find(p => p.id === slavePrinterId);
-          if (!slave) return;
+          // Find the target printer and send commands
+          const targetPrinter = printers.find(p => p.id === printerId);
+          if (!targetPrinter) return;
 
-          console.log(`[SlaveExpiryChange] Resending "${currentMsg}" to ${slave.name} with ${days}-day expiry`);
-          toast.loading(`Updating expiry on ${slave.name}...`, { id: 'slave-expiry' });
+          console.log(`[ExpiryChange] Resending "${currentMsg}" to ${targetPrinter.name} with ${days}-day expiry`);
+          toast.loading(`Updating expiry on ${targetPrinter.name}...`, { id: 'printer-expiry' });
 
           try {
             for (const cmd of commands) {
-              const ok = await sendCommandToPrinter(slave, cmd);
+              const ok = await sendCommandToPrinter(targetPrinter, cmd);
               if (!ok && !cmd.startsWith('^DM')) {
-                toast.error(`Failed to update ${slave.name}`, { id: 'slave-expiry' });
+                toast.error(`Failed to update ${targetPrinter.name}`, { id: 'printer-expiry' });
                 return;
               }
             }
-            // Re-select the message on the slave
-            await sendCommandToPrinter(slave, `^SM ${currentMsg}`);
-            toast.success(`${slave.name}: expiry set to ${days} days`, { id: 'slave-expiry' });
+            // Re-select the message on the printer
+            await sendCommandToPrinter(targetPrinter, `^SM ${currentMsg}`);
+            toast.success(`${targetPrinter.name}: expiry set to ${days} days`, { id: 'printer-expiry' });
           } catch (e) {
-            console.error('[SlaveExpiryChange] Failed:', e);
-            toast.error(`Failed to update ${slave.name}`, { id: 'slave-expiry' });
+            console.error('[ExpiryChange] Failed:', e);
+            toast.error(`Failed to update ${targetPrinter.name}`, { id: 'printer-expiry' });
           }
         }}
       />
