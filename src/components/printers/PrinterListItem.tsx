@@ -242,7 +242,7 @@ export function PrinterListItem({
               <div className="flex items-center gap-1.5 mt-1">
                 <CalendarDays className="w-3.5 h-3.5 text-primary/70" />
                 {editingOffset ? (
-                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                     <input
                       type="number"
                       value={offsetValue}
@@ -275,6 +275,7 @@ export function PrinterListItem({
                       setOffsetValue(String(effectiveExpiry));
                       setEditingOffset(true);
                     }}
+                    onMouseDown={(e) => e.stopPropagation()}
                     className="text-[10px] text-primary/70 hover:text-primary font-medium"
                     title={isOverridden ? `Custom: ${effectiveExpiry} days (message default: ${messageExpiryDays ?? 0})` : "From selected message — click to change for this printer"}
                   >
