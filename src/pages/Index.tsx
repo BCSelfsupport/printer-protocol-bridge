@@ -695,6 +695,7 @@ const Index = () => {
           printerTime={connectionState.status?.printerTime}
           customCounters={connectionState.status?.customCounters}
           connectedPrinterId={connectionState.connectedPrinter?.id ?? null}
+          connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
           isConnected={connectionState.isConnected}
           printerModel={connectionState.status?.printerModel}
           onSave={async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
@@ -835,6 +836,7 @@ const Index = () => {
             printerTime={connectionState.status?.printerTime}
             customCounters={connectionState.status?.customCounters}
             connectedPrinterId={connectionState.connectedPrinter?.id ?? null}
+            connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
             isConnected={connectionState.isConnected}
             printerModel={connectionState.status?.printerModel}
             onSave={async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {

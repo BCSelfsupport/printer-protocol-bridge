@@ -125,6 +125,7 @@ interface EditMessageScreenProps {
   printerTime?: Date | null;
   customCounters?: number[];
   connectedPrinterId?: number | null;
+  connectedPrinterLineId?: string;
   isConnected?: boolean;
   startEmpty?: boolean;
   printerModel?: string | null;
@@ -139,6 +140,7 @@ export function EditMessageScreen({
   printerTime,
   customCounters,
   connectedPrinterId,
+  connectedPrinterLineId,
   isConnected = false,
   startEmpty = false,
   printerModel,
@@ -566,14 +568,15 @@ export function EditMessageScreen({
     return computed ?? fieldType.toUpperCase();
   };
 
-  const handleAddField = (fieldType: string, formatOrOptions?: string | { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number }) => {
+  const handleAddField = (fieldType: string, formatOrOptions?: string | { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number; lineIdValue?: string }) => {
     // Extract prompt options if provided as object
     const promptOptions = typeof formatOrOptions === 'object' ? formatOrOptions : undefined;
     const format = typeof formatOrOptions === 'string' ? formatOrOptions : undefined;
     const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
     
     // Determine field data based on type
-    let fieldData = fieldType === 'text' ? '' : fieldType.toUpperCase();
+    const lineIdValue = promptOptions?.lineIdValue;
+    let fieldData = lineIdValue ? lineIdValue : (fieldType === 'text' ? '' : fieldType.toUpperCase());
     let counterId: number | undefined;
     
     // Parse expiry days from format if present
@@ -1363,6 +1366,7 @@ export function EditMessageScreen({
             
             onOpenUserDefine={() => setUserDefineDialogOpen(true)}
             onOpenGraphic={() => setGraphicDialogOpen(true)}
+            connectedPrinterLineId={connectedPrinterLineId}
           />
 
           {/* AutoCode Field Dialog */}
