@@ -50,6 +50,8 @@ interface MessagesScreenProps {
     templateValue?: string,
     isNew?: boolean,
   ) => Promise<boolean>;
+  /** Save updated message details to local storage */
+  onSaveStoredMessage?: (details: MessageDetails) => void;
 }
 
 export function MessagesScreen({ 
