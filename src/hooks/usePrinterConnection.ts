@@ -3242,5 +3242,6 @@ export function usePrinterConnection() {
     queryPrinterMetrics,
     refreshPolling,
     fetchMessageContent,
+    buildMessageCommands,
   };
 }
