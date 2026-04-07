@@ -362,6 +362,7 @@ export function Dashboard({
           message={status?.currentMessage}
           printerTime={status?.printerTime}
           messageContent={messageContent}
+          printerExpiryOffsetDays={printerExpiryOffsetDays}
         />
       </div>
     </div>
