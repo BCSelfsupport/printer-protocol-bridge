@@ -450,6 +450,20 @@ export function PrinterListItem({
                 <RefreshCcw className="w-3 h-3" />
               </Button>
             )}
+            {printer.role === 'master' && slaveCount > 0 && onBroadcast && (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBroadcast();
+                }}
+                size="sm"
+                variant="ghost"
+                className="h-6 text-[10px] px-1.5 hover:bg-slate-600 text-primary"
+                title="Broadcast message to all slaves"
+              >
+                <Radio className="w-3 h-3" />
+              </Button>
+            )}
             {showConnectButton && printer.isAvailable && onConnect && (
               <Button
                 onClick={(e) => {
