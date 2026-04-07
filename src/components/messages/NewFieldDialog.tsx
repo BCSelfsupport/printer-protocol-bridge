@@ -50,19 +50,10 @@ export function NewFieldDialog({
       return;
     }
     if (fieldType.value === 'userdefine') {
-      onOpenChange(false);
-      onOpenUserDefine();
-      return;
-    }
-    if (fieldType.value === 'logo') {
-      onOpenChange(false);
-      onOpenGraphic();
-      return;
-    }
-    if (fieldType.value === 'prompttext') {
       setShowPromptConfig(true);
       return;
     }
+
     onSelectFieldType(fieldType.value);
     onOpenChange(false);
   };
