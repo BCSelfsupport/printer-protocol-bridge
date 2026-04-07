@@ -258,6 +258,8 @@ const Index = () => {
     const savedAt = recentlySavedRef.current.get(currentMessageName);
     if (savedAt && Date.now() - savedAt < 30_000) {
       console.log('[CurrentMessagePreview] skipping fetch — recently saved:', currentMessageName);
+      // Use the cached (localStorage) version which has the latest metadata (e.g. autoCodeExpiryDays)
+      if (cached) setActiveMessageContent(cached);
       return;
     }
 
