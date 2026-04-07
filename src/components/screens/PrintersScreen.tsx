@@ -243,6 +243,7 @@ export function PrintersScreen({
   onLicense,
   onRefreshNetwork,
   isCheckingNetwork = false,
+  onSlaveExpiryChange,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
