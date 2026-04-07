@@ -45,6 +45,7 @@ interface DashboardProps {
   // Filter gauge props
   selectedPrinterId?: number;
   streamHours?: string;
+  printerExpiryOffsetDays?: number;
 }
 
 export function Dashboard({
@@ -685,11 +686,14 @@ function MessagePreviewCanvas({ message, printerTime, messageContent }: MessageP
         let displayData = field.data;
         const liveAutoCode = inferFetchedAutoCode(field);
         if (liveAutoCode) {
+          const effectiveExpiry = printerExpiryOffsetDays != null && printerExpiryOffsetDays > 0
+            ? printerExpiryOffsetDays
+            : field.autoCodeExpiryDays;
           const computed = computeAutoCodeValue(
             liveAutoCode.autoCodeFieldType,
             liveAutoCode.autoCodeFormat,
             now,
-            field.autoCodeExpiryDays,
+            effectiveExpiry,
           );
           if (computed !== null) displayData = computed;
         }
