@@ -53,6 +53,10 @@ export function NewFieldDialog({
       setShowPromptConfig(true);
       return;
     }
+    if (fieldType.value === 'logo') {
+      onOpenChange(false);
+      onOpenGraphic();
+      return;
 
     onSelectFieldType(fieldType.value);
     onOpenChange(false);
