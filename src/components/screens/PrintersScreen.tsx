@@ -297,6 +297,23 @@ export function PrintersScreen({
     return map;
   }, [printers]);
 
+  // Determine if the selected printer belongs to the connected master's sync group
+  const selectedPrinterInSyncGroup = useMemo(() => {
+    if (!selectedPrinter || !connectedPrinter) return false;
+    // The selected printer IS the connected printer
+    if (selectedPrinter.id === connectedPrinter.id) return true;
+    // Connected is master and selected is its slave
+    if (connectedPrinter.role === 'master' && selectedPrinter.role === 'slave' && selectedPrinter.masterId === connectedPrinter.id) return true;
+    // Connected is slave, selected is its master
+    if (connectedPrinter.role === 'slave' && selectedPrinter.role === 'master' && connectedPrinter.masterId === selectedPrinter.id) return true;
+    // Connected is slave, selected is sibling slave of same master
+    if (connectedPrinter.role === 'slave' && selectedPrinter.role === 'slave' && connectedPrinter.masterId === selectedPrinter.masterId) return true;
+    return false;
+  }, [selectedPrinter, connectedPrinter]);
+
+  // Only show the connected printer's message content if selected printer is in the sync group
+  const effectiveMessageContent = selectedPrinterInSyncGroup ? messageContent : undefined;
+
   // Extract the max expiry offset from the currently selected message's fields
   const messageExpiryDays = useMemo(() => {
     if (!messageContent?.fields) return null;
@@ -639,7 +656,7 @@ export function PrintersScreen({
               isSignedIn={isSignedIn}
               countdownSeconds={countdownSeconds}
               countdownType={countdownType}
-              messageContent={messageContent}
+              messageContent={effectiveMessageContent}
               onMount={onControlMount}
               onUnmount={onControlUnmount}
               onNavigate={onNavigate}
