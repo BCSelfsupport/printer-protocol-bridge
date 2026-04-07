@@ -18,6 +18,7 @@ export interface Printer {
   role?: PrinterRole;
   masterId?: number; // ID of the master printer (when role === 'slave')
   serialNumber?: string; // User-entered serial number for fleet tracking
+  expiryOffsetDays?: number; // Per-printer expiration date offset in days (e.g., +1, +2, +7)
 }
 
 export interface PrinterStatus {
