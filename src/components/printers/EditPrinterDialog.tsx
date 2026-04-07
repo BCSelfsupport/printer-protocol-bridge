@@ -169,7 +169,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
           </div>
 
           {/* Expiry Offset Days (shown for master/slave roles) */}
-          {true && (
+          {(
             <div className="space-y-2">
               <Label htmlFor="edit-expiry-offset" className="text-slate-300 flex items-center gap-1.5">
                 <CalendarDays className="w-3.5 h-3.5" />
