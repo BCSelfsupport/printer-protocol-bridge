@@ -137,7 +137,7 @@ function SortablePrinterItem({
   onBroadcast?: () => void;
   streamHours?: string;
   onUpdateExpiryOffset?: (printerId: number, days: number) => void;
-  messageExpiryDays?: number;
+  messageExpiryDays?: number | null;
   masterMessage?: string;
 }) {
   const {
@@ -299,14 +299,18 @@ export function PrintersScreen({
 
   // Extract the max expiry offset from the currently selected message's fields
   const messageExpiryDays = useMemo(() => {
-    if (!messageContent?.fields) return 0;
+    if (!messageContent?.fields) return null;
     let maxExpiry = 0;
+    let hasExpiry = false;
     for (const field of messageContent.fields) {
-      if (field.autoCodeExpiryDays && field.autoCodeExpiryDays > maxExpiry) {
-        maxExpiry = field.autoCodeExpiryDays;
+      if (field.autoCodeExpiryDays != null && field.autoCodeExpiryDays > 0) {
+        hasExpiry = true;
+        if (field.autoCodeExpiryDays > maxExpiry) {
+          maxExpiry = field.autoCodeExpiryDays;
+        }
       }
     }
-    return maxExpiry;
+    return hasExpiry ? maxExpiry : null;
   }, [messageContent]);
 
   // Build a map: slavePrinterId -> master's currentMessage

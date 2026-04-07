@@ -41,7 +41,7 @@ interface PrinterListItemProps {
   /** Callback to update the expiry offset days for this printer */
   onUpdateExpiryOffset?: (printerId: number, days: number) => void;
   /** Default expiry days from the currently selected message */
-  messageExpiryDays?: number;
+  messageExpiryDays?: number | null;
   /** Master's current message name — slaves display this instead of their own */
   masterMessage?: string;
 }
@@ -243,7 +243,7 @@ export function PrinterListItem({
             )}
 
             {/* Expiry offset for grouped printers */}
-            {(printer.role === 'slave' || printer.role === 'master') && onUpdateExpiryOffset && (
+            {(printer.role === 'slave' || printer.role === 'master') && onUpdateExpiryOffset && (messageExpiryDays != null || printer.expiryOffsetDays != null) && (
               <div className="flex items-center gap-1.5 mt-1">
                 <CalendarDays className="w-3.5 h-3.5 text-primary/70" />
                 {editingOffset ? (
