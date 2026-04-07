@@ -80,8 +80,8 @@ export function PrinterListItem({
   messageExpiryDays,
 }: PrinterListItemProps) {
   // Effective expiry: per-printer override if set, otherwise message default
-  const effectiveExpiry = printer.expiryOffsetDays ?? messageExpiryDays ?? 0;
-  const isOverridden = printer.expiryOffsetDays !== undefined && printer.expiryOffsetDays !== null;
+  const effectiveExpiry = (printer.expiryOffsetDays != null) ? printer.expiryOffsetDays : (messageExpiryDays ?? 0);
+  const isOverridden = printer.expiryOffsetDays != null;
   const [editingOffset, setEditingOffset] = useState(false);
   const [offsetValue, setOffsetValue] = useState(String(effectiveExpiry));
   

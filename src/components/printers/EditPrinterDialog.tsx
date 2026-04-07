@@ -81,7 +81,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       role,
       masterId: role === 'slave' && masterId ? parseInt(masterId, 10) : undefined,
       serialNumber: serialNumber.trim() || undefined,
-      expiryOffsetDays: parseInt(expiryOffsetDays, 10) || 0,
+      expiryOffsetDays: expiryOffsetDays.trim() !== '' && parseInt(expiryOffsetDays, 10) !== 0 ? parseInt(expiryOffsetDays, 10) : undefined,
     });
     onOpenChange(false);
   };
