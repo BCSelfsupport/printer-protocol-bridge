@@ -1042,6 +1042,9 @@ const Index = () => {
         onNavigate={handleNavigate}
         onTurnOff={handleTurnOff}
         onSyncMaster={syncMaster}
+        onBroadcastMessage={broadcastMessage}
+        getSlavesForMaster={getSlavesForMaster}
+        connectedMessages={connectionState.messages}
         rightPanelContent={getRightPanelContent()}
         getCountdown={getCountdown}
         onConsumables={() => setCurrentScreen('consumables')}
