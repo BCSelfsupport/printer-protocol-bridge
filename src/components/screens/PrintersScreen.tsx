@@ -186,6 +186,7 @@ function SortablePrinterItem({
         streamHours={streamHours}
         onUpdateExpiryOffset={onUpdateExpiryOffset}
         messageExpiryDays={messageExpiryDays}
+        masterMessage={masterMessage}
       />
     </div>
   );
