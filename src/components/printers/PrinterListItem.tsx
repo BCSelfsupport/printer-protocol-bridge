@@ -42,6 +42,8 @@ interface PrinterListItemProps {
   onUpdateExpiryOffset?: (printerId: number, days: number) => void;
   /** Default expiry days from the currently selected message */
   messageExpiryDays?: number;
+  /** Master's current message name — slaves display this instead of their own */
+  masterMessage?: string;
 }
 
 // Helper to get color for fluid levels
@@ -78,7 +80,10 @@ export function PrinterListItem({
   streamHours,
   onUpdateExpiryOffset,
   messageExpiryDays,
+  masterMessage,
 }: PrinterListItemProps) {
+  // For slaves, show the master's message if available
+  const displayMessage = (printer.role === 'slave' && masterMessage) ? masterMessage : printer.currentMessage;
   // Effective expiry: per-printer override if set, otherwise message default
   const effectiveExpiry = (printer.expiryOffsetDays != null) ? printer.expiryOffsetDays : (messageExpiryDays ?? 0);
   const isOverridden = printer.expiryOffsetDays != null;
@@ -197,11 +202,11 @@ export function PrinterListItem({
             </div>
             
             {/* Message name with print count */}
-            {printer.currentMessage && (
+            {displayMessage && (
               <div className={`mt-1 text-xs ${subTextColor}`}>
                 <div className="flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="font-medium truncate">{printer.currentMessage}</span>
+                  <span className="font-medium truncate">{displayMessage}</span>
                 </div>
                 {printer.printCount !== undefined && (
                   <div className="ml-6 mt-0.5">
@@ -407,11 +412,11 @@ export function PrinterListItem({
       </div>
 
       {/* Message + print count row */}
-      {printer.currentMessage && (
+      {displayMessage && (
         <div className={`mt-1.5 ml-12 text-xs ${subTextColor}`}>
           <div className="flex items-center gap-1.5">
             <FileText className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="font-medium truncate">{printer.currentMessage}</span>
+            <span className="font-medium truncate">{displayMessage}</span>
           </div>
           {printer.printCount !== undefined && (
             <div className="ml-5 mt-0.5">

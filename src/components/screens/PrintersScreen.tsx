@@ -115,6 +115,7 @@ function SortablePrinterItem({
   streamHours,
   onUpdateExpiryOffset,
   messageExpiryDays,
+  masterMessage,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -135,6 +136,7 @@ function SortablePrinterItem({
   streamHours?: string;
   onUpdateExpiryOffset?: (printerId: number, days: number) => void;
   messageExpiryDays?: number;
+  masterMessage?: string;
 }) {
   const {
     attributes,
@@ -184,6 +186,7 @@ function SortablePrinterItem({
         streamHours={streamHours}
         onUpdateExpiryOffset={onUpdateExpiryOffset}
         messageExpiryDays={messageExpiryDays}
+        masterMessage={masterMessage}
       />
     </div>
   );
@@ -303,6 +306,22 @@ export function PrintersScreen({
     return maxExpiry;
   }, [messageContent]);
 
+  // Build a map: slavePrinterId -> master's currentMessage
+  const masterMessageMap = useMemo(() => {
+    const map = new Map<number, string>();
+    const masters = printers.filter(p => p.role === 'master');
+    masters.forEach(master => {
+      if (master.currentMessage) {
+        // All slaves of this master get the master's message
+        printers.forEach(p => {
+          if (p.role === 'slave' && p.masterId === master.id) {
+            map.set(p.id, master.currentMessage!);
+          }
+        });
+      }
+    });
+    return map;
+  }, [printers]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -525,6 +544,7 @@ export function PrintersScreen({
                         : undefined
                       }
                       messageExpiryDays={messageExpiryDays}
+                      masterMessage={masterMessageMap.get(printer.id)}
                     />
                   ))}
                 </SortableContext>
