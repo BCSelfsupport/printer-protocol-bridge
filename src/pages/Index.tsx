@@ -770,6 +770,8 @@ const Index = () => {
             // Mark as recently saved so auto-sync won't overwrite with printer version
             recentlySavedRef.current.set(targetName, Date.now());
             syncedMessagesRef.current.add(targetName);
+            // Sync full message content to slaves if this is a master
+            syncMessageToSlaves(targetName, localDetails, isNew);
             // Reload from printer to get actual field positions
             if (connectionState.isConnected) {
               try {
@@ -911,6 +913,8 @@ const Index = () => {
               saveMessage(localDetails);
               recentlySavedRef.current.set(targetName, Date.now());
               syncedMessagesRef.current.add(targetName);
+              // Sync full message content to slaves if this is a master
+              syncMessageToSlaves(targetName, localDetails, isNew);
               // Reload from printer to get actual field positions
               if (connectionState.isConnected) {
                 try {
