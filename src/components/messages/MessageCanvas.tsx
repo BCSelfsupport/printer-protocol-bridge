@@ -672,8 +672,8 @@ export function MessageCanvas({
       setCursorPosition(text.length);
       e.preventDefault();
     } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-      // Regular character input - convert to uppercase for printer
-      const char = e.key.toUpperCase();
+      // Regular character input - preserve case
+      const char = e.key;
       const newText = text.slice(0, cursorPosition) + char + text.slice(cursorPosition);
       onFieldDataChange(editingFieldId, newText);
       setCursorPosition(cursorPosition + 1);
@@ -688,7 +688,7 @@ export function MessageCanvas({
     const field = fields.find(f => f.id === editingFieldId);
     if (!field) return;
     
-    const newText = e.target.value.toUpperCase();
+    const newText = e.target.value;
     const oldText = field.data;
     
     // Determine cursor position based on what changed
