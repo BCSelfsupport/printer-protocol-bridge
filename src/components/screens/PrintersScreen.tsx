@@ -544,6 +544,7 @@ export function PrintersScreen({
                         : undefined
                       }
                       messageExpiryDays={messageExpiryDays}
+                      masterMessage={masterMessageMap.get(printer.id)}
                     />
                   ))}
                 </SortableContext>
