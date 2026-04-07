@@ -660,7 +660,7 @@ export function EditMessageScreen({
             : fieldType.startsWith('counter_') ? 'counter'
             : fieldType.startsWith('date_') ? 'date'
             : fieldType as MessageField['type'],
-      data: fieldData,
+      data: promptOptions ? (promptOptions.promptLabel || 'ENTER VALUE') : fieldData,
       x: message.fields.length * 50,
       y: newY,
       width: 50,
@@ -670,6 +670,10 @@ export function EditMessageScreen({
       autoCodeFormat: format,
       autoCodeFieldType: fieldType,
       autoCodeExpiryDays: expiryDays || undefined,
+      // Prompt before print metadata
+      promptBeforePrint: promptOptions?.promptBeforePrint,
+      promptLabel: promptOptions?.promptLabel,
+      promptLength: promptOptions?.promptLength,
     };
     setMessage((prev) => {
       const updatedFields = [...prev.fields, newField];
