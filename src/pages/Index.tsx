@@ -1113,6 +1113,7 @@ const Index = () => {
         connectedMessages={connectionState.messages}
         rightPanelContent={getRightPanelContent()}
         onSelectedPrinterChange={(printer) => setSelectedPrinterId(printer?.id ?? null)}
+        getMessageContent={getMessage}
         getCountdown={getCountdown}
         onConsumables={() => setCurrentScreen('consumables')}
         onReports={() => setCurrentScreen('reports')}
