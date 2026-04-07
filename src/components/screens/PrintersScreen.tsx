@@ -316,8 +316,16 @@ export function PrintersScreen({
     return false;
   }, [selectedPrinter, connectedPrinter]);
 
-  // Only show the connected printer's message content if selected printer is in the sync group
-  const effectiveMessageContent = selectedPrinterInSyncGroup ? messageContent : undefined;
+  // Show the connected printer's message content if selected printer is in the sync group,
+  // otherwise look up the standalone printer's own current message from storage
+  const effectiveMessageContent = useMemo(() => {
+    if (selectedPrinterInSyncGroup) return messageContent;
+    // For standalone printers, look up their own current message
+    if (selectedPrinter?.currentMessage && getMessageContent) {
+      return getMessageContent(selectedPrinter.currentMessage) ?? undefined;
+    }
+    return undefined;
+  }, [selectedPrinterInSyncGroup, messageContent, selectedPrinter?.currentMessage, getMessageContent]);
 
   // Extract the max expiry offset from the currently selected message's fields
   const messageExpiryDays = useMemo(() => {
