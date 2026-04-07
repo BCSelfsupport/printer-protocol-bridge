@@ -330,20 +330,47 @@ export function MessagesScreen({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* User Define Entry Dialog (shown after selecting a message with user define fields) */}
+      {/* User Define / Prompt Before Print Entry Dialog */}
       <UserDefineEntryDialog
         open={userDefineEntryOpen}
         onOpenChange={(open) => {
           setUserDefineEntryOpen(open);
           if (!open) {
-            // User dismissed without entering — navigate home anyway
+            setPendingMessageDetails(null);
             onHome();
           }
         }}
         prompts={userDefinePrompts}
         onConfirm={async (entries) => {
-          // Send ^TD for each user define value
-          if (onSendCommand) {
+          if (pendingMessageDetails && onSaveMessageContent && selectedMessage) {
+            // Prompted text fields: write entered values into the fields and save to printer
+            const updatedFields = pendingMessageDetails.fields.map(f => {
+              if (entries[f.id] !== undefined) {
+                return { ...f, data: entries[f.id] };
+              }
+              return f;
+            });
+            try {
+              toast.loading('Writing field data to printer...', { id: 'prompt-save' });
+              const saved = await onSaveMessageContent(
+                selectedMessage.name,
+                updatedFields,
+                pendingMessageDetails.templateValue,
+                false,
+              );
+              if (saved) {
+                // Now select the message on the printer
+                await onSelect(selectedMessage);
+                toast.success('Message loaded with entered values', { id: 'prompt-save' });
+              } else {
+                toast.error('Failed to write field data to printer', { id: 'prompt-save' });
+              }
+            } catch (e) {
+              console.error('[MessagesScreen] Failed to save prompted fields:', e);
+              toast.error('Failed to write field data', { id: 'prompt-save' });
+            }
+          } else if (onSendCommand) {
+            // Legacy: send ^TD for native userdefine fields
             for (const [, value] of Object.entries(entries)) {
               if (value.trim()) {
                 try {
@@ -355,6 +382,7 @@ export function MessagesScreen({
             }
           }
           setUserDefineEntryOpen(false);
+          setPendingMessageDetails(null);
           onHome();
         }}
       />
