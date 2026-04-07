@@ -16,13 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Printer as PrinterIcon, Save, Trash2, Crown, Link, Hash, CalendarDays } from 'lucide-react';
+import { Printer as PrinterIcon, Save, Trash2, Crown, Link, Hash, CalendarDays, Tag } from 'lucide-react';
 
 interface EditPrinterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   printer: Printer | null;
-  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string; expiryOffsetDays?: number }) => void;
+  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string; expiryOffsetDays?: number; lineId?: string }) => void;
   onDelete?: (printerId: number) => void;
   allPrinters?: Printer[];
 }
@@ -35,6 +35,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
   const [masterId, setMasterId] = useState<string>('');
   const [serialNumber, setSerialNumber] = useState('');
   const [expiryOffsetDays, setExpiryOffsetDays] = useState('0');
+  const [lineId, setLineId] = useState('');
   const [ipError, setIpError] = useState('');
   // Sync form when printer changes
   useEffect(() => {
@@ -46,6 +47,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       setMasterId(printer.masterId?.toString() ?? '');
       setSerialNumber(printer.serialNumber ?? '');
       setExpiryOffsetDays(String(printer.expiryOffsetDays ?? 0));
+      setLineId(printer.lineId ?? '');
     }
   }, [printer]);
 
@@ -82,6 +84,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       masterId: role === 'slave' && masterId ? parseInt(masterId, 10) : undefined,
       serialNumber: serialNumber.trim() || undefined,
       expiryOffsetDays: expiryOffsetDays.trim() !== '' && parseInt(expiryOffsetDays, 10) !== 0 ? parseInt(expiryOffsetDays, 10) : undefined,
+      lineId: lineId.trim() || undefined,
     });
     onOpenChange(false);
   };
@@ -165,6 +168,24 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
             />
             <p className="text-[10px] text-slate-500">
               Optional. Used for Fleet Telemetry™ tracking.
+            </p>
+          </div>
+
+          {/* Line ID */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-line-id" className="text-slate-300 flex items-center gap-1.5">
+              <Tag className="w-3.5 h-3.5" />
+              Line ID
+            </Label>
+            <Input
+              id="edit-line-id"
+              value={lineId}
+              onChange={(e) => setLineId(e.target.value)}
+              placeholder="e.g., Line A, Packaging 1"
+              className="bg-slate-800 border-slate-600 text-white"
+            />
+            <p className="text-[10px] text-slate-500">
+              Optional. Used as the value for Line ID fields in messages.
             </p>
           </div>
 
