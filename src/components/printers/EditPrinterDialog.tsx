@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Printer as PrinterIcon, Save, Trash2, Crown, Link, Hash, CalendarDays } from 'lucide-react';
+import { Printer as PrinterIcon, Save, Trash2, Crown, Link, Hash, CalendarDays, Tag } from 'lucide-react';
 
 interface EditPrinterDialogProps {
   open: boolean;
@@ -168,6 +168,24 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
             />
             <p className="text-[10px] text-slate-500">
               Optional. Used for Fleet Telemetry™ tracking.
+            </p>
+          </div>
+
+          {/* Line ID */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-line-id" className="text-slate-300 flex items-center gap-1.5">
+              <Tag className="w-3.5 h-3.5" />
+              Line ID
+            </Label>
+            <Input
+              id="edit-line-id"
+              value={lineId}
+              onChange={(e) => setLineId(e.target.value)}
+              placeholder="e.g., Line A, Packaging 1"
+              className="bg-slate-800 border-slate-600 text-white"
+            />
+            <p className="text-[10px] text-slate-500">
+              Optional. Used as the value for Line ID fields in messages.
             </p>
           </div>
 
