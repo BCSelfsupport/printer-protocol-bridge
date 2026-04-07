@@ -102,7 +102,7 @@ export function NewFieldDialog({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <DialogTitle className="flex-1 text-center text-lg font-semibold pr-10">
-            {showPromptConfig ? 'Prompted Text Field' : 'New Field'}
+            {showPromptConfig ? 'User Define' : 'New Field'}
           </DialogTitle>
         </div>
 
