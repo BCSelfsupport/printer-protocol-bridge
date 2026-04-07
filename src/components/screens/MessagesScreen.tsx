@@ -71,6 +71,7 @@ export function MessagesScreen({
   onGetStoredMessage,
   onSaveMessageContent,
   onSaveStoredMessage,
+  onPromptSaved,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
