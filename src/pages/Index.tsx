@@ -1098,9 +1098,28 @@ const Index = () => {
         onSlaveExpiryChange={async (printerId, days) => {
           // Get the current message details from storage
           const currentMsg = connectionState.status?.currentMessage;
-          if (!currentMsg) return;
+          if (!currentMsg) {
+            toast.info('No message currently selected');
+            return;
+          }
           const stored = getMessage(currentMsg);
-          if (!stored || stored.fields.length === 0) return;
+          if (!stored || stored.fields.length === 0) {
+            toast.info('No message fields to update');
+            return;
+          }
+
+          // Check if there are any autoCode expiry fields to update
+          const hasExpiryFields = stored.fields.some(f => f.autoCodeExpiryDays != null && f.autoCodeExpiryDays > 0);
+          
+          // Find the target printer
+          const targetPrinter = printers.find(p => p.id === printerId);
+          if (!targetPrinter) return;
+
+          if (!hasExpiryFields) {
+            // No expiry fields — just save the offset setting, no need to resend
+            toast.success(`${targetPrinter.name}: expiry offset saved (${days} days)`);
+            return;
+          }
 
           // Clone fields with the updated expiry days
           const updatedFields = stored.fields.map(f => {
@@ -1112,26 +1131,32 @@ const Index = () => {
 
           // Build the protocol commands
           const commands = buildMessageCommands(currentMsg, updatedFields, stored.templateValue, false);
-          if (!commands) return;
+          if (!commands || commands.length === 0) {
+            toast.success(`${targetPrinter.name}: expiry offset saved (${days} days)`);
+            return;
+          }
 
-          // Find the target printer and send commands
-          const targetPrinter = printers.find(p => p.id === printerId);
-          if (!targetPrinter) return;
-
-          console.log(`[ExpiryChange] Resending "${currentMsg}" to ${targetPrinter.name} with ${days}-day expiry`);
+          console.log(`[ExpiryChange] Resending "${currentMsg}" to ${targetPrinter.name} with ${days}-day expiry, ${commands.length} commands`);
           toast.loading(`Updating expiry on ${targetPrinter.name}...`, { id: 'printer-expiry' });
 
           try {
+            let anyFailed = false;
             for (const cmd of commands) {
               const ok = await sendCommandToPrinter(targetPrinter, cmd);
-              if (!ok && !cmd.startsWith('^DM')) {
-                toast.error(`Failed to update ${targetPrinter.name}`, { id: 'printer-expiry' });
-                return;
+              if (!ok) {
+                console.warn(`[ExpiryChange] Command failed: ${cmd.substring(0, 30)}...`);
+                // ^DM failures are expected (message may not exist yet), skip them
+                if (!cmd.startsWith('^DM')) anyFailed = true;
               }
             }
             // Re-select the message on the printer
             await sendCommandToPrinter(targetPrinter, `^SM ${currentMsg}`);
-            toast.success(`${targetPrinter.name}: expiry set to ${days} days`, { id: 'printer-expiry' });
+            
+            if (anyFailed) {
+              toast.warning(`${targetPrinter.name}: expiry updated but some commands failed`, { id: 'printer-expiry' });
+            } else {
+              toast.success(`${targetPrinter.name}: expiry set to ${days} days`, { id: 'printer-expiry' });
+            }
           } catch (e) {
             console.error('[ExpiryChange] Failed:', e);
             toast.error(`Failed to update ${targetPrinter.name}`, { id: 'printer-expiry' });
