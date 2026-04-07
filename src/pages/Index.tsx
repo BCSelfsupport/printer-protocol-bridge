@@ -817,6 +817,7 @@ const Index = () => {
             streamHours={connectionState.metrics?.streamHours}
             printerModel={connectionState.status?.printerModel}
             printerVariant={connectionState.status?.printerVariant}
+            printerExpiryOffsetDays={connectionState.connectedPrinter?.expiryOffsetDays}
           />
         );
       case 'editMessage':
