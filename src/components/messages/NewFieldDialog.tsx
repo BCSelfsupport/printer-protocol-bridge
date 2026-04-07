@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft } from 'lucide-react';
+import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft, Tag } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Text Field', icon: FileText, action: 'add' },
+  { value: 'lineid', label: 'Line ID', icon: Tag, action: 'add' },
   { value: 'userdefine', label: 'User Define', icon: User, action: 'expand' },
   { value: 'autocode', label: 'AutoCode Field', icon: Hash, action: 'submenu' },
   { value: 'barcode', label: 'Barcode Field', icon: Barcode, action: 'submenu' },
@@ -18,11 +19,12 @@ const FIELD_TYPES = [
 interface NewFieldDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectFieldType: (type: string, options?: { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number }) => void;
+  onSelectFieldType: (type: string, options?: { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number; lineIdValue?: string }) => void;
   onOpenAutoCode: () => void;
   onOpenBarcode: () => void;
   onOpenUserDefine: () => void;
   onOpenGraphic: () => void;
+  connectedPrinterLineId?: string;
 }
 
 export function NewFieldDialog({ 
@@ -33,6 +35,7 @@ export function NewFieldDialog({
   onOpenBarcode,
   onOpenUserDefine,
   onOpenGraphic,
+  connectedPrinterLineId,
 }: NewFieldDialogProps) {
   const [showPromptConfig, setShowPromptConfig] = useState(false);
   const [promptLabel, setPromptLabel] = useState('');
@@ -56,6 +59,11 @@ export function NewFieldDialog({
     if (fieldType.value === 'logo') {
       onOpenChange(false);
       onOpenGraphic();
+      return;
+    }
+    if (fieldType.value === 'lineid') {
+      onSelectFieldType('text', { lineIdValue: connectedPrinterLineId || 'LINE ID' });
+      onOpenChange(false);
       return;
     }
     onSelectFieldType(fieldType.value);
