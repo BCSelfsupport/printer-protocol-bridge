@@ -24,6 +24,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
+import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
+import { MessageDetails } from '@/components/screens/EditMessageScreen';
 
 interface MessagesScreenProps {
   messages: PrintMessage[];
@@ -35,6 +37,10 @@ interface MessagesScreenProps {
   onHome: () => void;
   openNewDialogOnMount?: boolean;
   onNewDialogOpened?: () => void;
+  /** Fetch message details (fields) from printer after selecting */
+  onFetchMessageDetails?: (name: string) => Promise<MessageDetails | null>;
+  /** Send a raw command to the connected printer */
+  onSendCommand?: (command: string) => Promise<any>;
 }
 
 export function MessagesScreen({ 
@@ -47,12 +53,16 @@ export function MessagesScreen({
   onHome,
   openNewDialogOnMount,
   onNewDialogOpened,
+  onFetchMessageDetails,
+  onSendCommand,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [newMessageName, setNewMessageName] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
+  const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
 
   // Auto-open the new dialog when navigating from Dashboard "New" button
   useEffect(() => {
@@ -74,7 +84,33 @@ export function MessagesScreen({
     try {
       const success = await onSelect(selectedMessage);
       if (success) {
-        // Navigate to home screen after successful selection
+        // After selecting, check if the message has user define fields
+        if (onFetchMessageDetails) {
+          try {
+            const details = await Promise.race([
+              onFetchMessageDetails(selectedMessage.name),
+              new Promise<null>(r => setTimeout(() => r(null), 10000)),
+            ]);
+            if (details) {
+              const udFields = details.fields.filter(f => f.type === 'userdefine');
+              if (udFields.length > 0) {
+                const prompts: UserDefinePrompt[] = udFields.map(f => {
+                  const label = f.data || 'USER';
+                  const fontWidth = f.fontSize?.includes('5High') ? 4 : f.fontSize?.includes('7') ? 5 : f.fontSize?.includes('9') ? 7 : f.fontSize?.includes('12') ? 8 : f.fontSize?.includes('16') ? 10 : f.fontSize?.includes('19') ? 12 : f.fontSize?.includes('25') ? 18 : 20;
+                  const gap = f.gap ?? 1;
+                  const estimatedLen = f.width > 0 ? Math.max(1, Math.round(f.width / (fontWidth + gap))) : (f.data?.length || 3);
+                  return { fieldId: f.id, label, length: estimatedLen };
+                });
+                setUserDefinePrompts(prompts);
+                setUserDefineEntryOpen(true);
+                // Don't navigate home yet — wait for user define entry
+                return;
+              }
+            }
+          } catch (e) {
+            console.error('[MessagesScreen] Failed to check user define fields:', e);
+          }
+        }
         onHome();
       }
     } finally {
@@ -260,6 +296,35 @@ export function MessagesScreen({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* User Define Entry Dialog (shown after selecting a message with user define fields) */}
+      <UserDefineEntryDialog
+        open={userDefineEntryOpen}
+        onOpenChange={(open) => {
+          setUserDefineEntryOpen(open);
+          if (!open) {
+            // User dismissed without entering — navigate home anyway
+            onHome();
+          }
+        }}
+        prompts={userDefinePrompts}
+        onConfirm={async (entries) => {
+          // Send ^TD for each user define value
+          if (onSendCommand) {
+            for (const [, value] of Object.entries(entries)) {
+              if (value.trim()) {
+                try {
+                  await onSendCommand(`^TD ${value.trim()}`);
+                } catch (e) {
+                  console.error('[MessagesScreen] Failed to send ^TD:', e);
+                }
+              }
+            }
+          }
+          setUserDefineEntryOpen(false);
+          onHome();
+        }}
+      />
     </div>
   );
 }
