@@ -656,7 +656,7 @@ export function PrintersScreen({
               isSignedIn={isSignedIn}
               countdownSeconds={countdownSeconds}
               countdownType={countdownType}
-              messageContent={messageContent}
+              messageContent={effectiveMessageContent}
               onMount={onControlMount}
               onUnmount={onControlUnmount}
               onNavigate={onNavigate}
