@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, RefreshCcw, Filter } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, RefreshCcw, Filter, Radio } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
@@ -33,6 +33,8 @@ interface PrinterListItemProps {
   slaveCount?: number;
   /** Callback to trigger sync for this master */
   onSync?: () => void;
+  /** Callback to open broadcast dialog for this master */
+  onBroadcast?: () => void;
   /** Stream hours string from metrics for filter gauge */
   streamHours?: string;
 }
@@ -67,6 +69,7 @@ export function PrinterListItem({
   syncGroupIndex,
   slaveCount = 0,
   onSync,
+  onBroadcast,
   streamHours,
 }: PrinterListItemProps) {
   
