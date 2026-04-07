@@ -225,6 +225,27 @@ export function EditMessageScreen({
             if (details.fields.length > 0) {
               setSelectedFieldId(details.fields[0].id);
             }
+            // Detect user define fields and prompt for entry
+            const udFields = details.fields.filter(f => f.type === 'userdefine');
+            if (udFields.length > 0) {
+              const prompts: UserDefinePrompt[] = udFields.map(f => {
+                // Extract label and length from field data
+                // Format from ^LF: Element D: contains the ID/label
+                // The field width gives us a hint about character count
+                const label = f.data || 'USER';
+                // Estimate length from width and font, fallback to data length or 3
+                const fontWidth = f.fontSize?.includes('5High') ? 4 : f.fontSize?.includes('7') ? 5 : f.fontSize?.includes('9') ? 7 : f.fontSize?.includes('12') ? 8 : f.fontSize?.includes('16') ? 10 : f.fontSize?.includes('19') ? 12 : f.fontSize?.includes('25') ? 18 : 20;
+                const gap = f.gap ?? 1;
+                const estimatedLen = f.width > 0 ? Math.max(1, Math.round(f.width / (fontWidth + gap))) : (f.data?.length || 3);
+                return {
+                  fieldId: f.id,
+                  label,
+                  length: estimatedLen,
+                };
+              });
+              setUserDefinePrompts(prompts);
+              setUserDefineEntryOpen(true);
+            }
           }
         })
         .finally(() => {
