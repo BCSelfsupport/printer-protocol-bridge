@@ -113,6 +113,7 @@ function SortablePrinterItem({
   onSync,
   onBroadcast,
   streamHours,
+  onUpdateExpiryOffset,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -131,6 +132,7 @@ function SortablePrinterItem({
   onSync?: () => void;
   onBroadcast?: () => void;
   streamHours?: string;
+  onUpdateExpiryOffset?: (printerId: number, days: number) => void;
 }) {
   const {
     attributes,
@@ -178,6 +180,7 @@ function SortablePrinterItem({
         onSync={onSync}
         onBroadcast={onBroadcast}
         streamHours={streamHours}
+        onUpdateExpiryOffset={onUpdateExpiryOffset}
       />
     </div>
   );
@@ -503,6 +506,10 @@ export function PrintersScreen({
                         setBroadcastDialogOpen(true);
                       } : undefined}
                       streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
+                      onUpdateExpiryOffset={(printer.role === 'master' || printer.role === 'slave') && onUpdatePrinter
+                        ? (id, days) => onUpdatePrinter(id, { expiryOffsetDays: days })
+                        : undefined
+                      }
                     />
                   ))}
                 </SortableContext>

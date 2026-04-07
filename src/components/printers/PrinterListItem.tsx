@@ -1,4 +1,5 @@
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, RefreshCcw, Filter, Radio } from 'lucide-react';
+import { useState } from 'react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, RefreshCcw, Filter, Radio, CalendarDays } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
@@ -37,6 +38,8 @@ interface PrinterListItemProps {
   onBroadcast?: () => void;
   /** Stream hours string from metrics for filter gauge */
   streamHours?: string;
+  /** Callback to update the expiry offset days for this printer */
+  onUpdateExpiryOffset?: (printerId: number, days: number) => void;
 }
 
 // Helper to get color for fluid levels
@@ -71,7 +74,10 @@ export function PrinterListItem({
   onSync,
   onBroadcast,
   streamHours,
+  onUpdateExpiryOffset,
 }: PrinterListItemProps) {
+  const [editingOffset, setEditingOffset] = useState(false);
+  const [offsetValue, setOffsetValue] = useState(String(printer.expiryOffsetDays ?? 0));
   
   // Filter status for this printer
   const pumpHours = streamHours ? parseStreamHoursToNumber(streamHours) : null;
@@ -221,6 +227,53 @@ export function PrinterListItem({
                       {filterLabel}
                     </span>
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* Expiry offset for grouped printers */}
+            {(printer.role === 'slave' || printer.role === 'master') && onUpdateExpiryOffset && (
+              <div className="flex items-center gap-1.5 mt-1">
+                <CalendarDays className="w-3.5 h-3.5 text-primary/70" />
+                {editingOffset ? (
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="number"
+                      value={offsetValue}
+                      onChange={(e) => setOffsetValue(e.target.value)}
+                      onBlur={() => {
+                        const days = parseInt(offsetValue, 10) || 0;
+                        onUpdateExpiryOffset(printer.id, days);
+                        setEditingOffset(false);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const days = parseInt(offsetValue, 10) || 0;
+                          onUpdateExpiryOffset(printer.id, days);
+                          setEditingOffset(false);
+                        }
+                        if (e.key === 'Escape') {
+                          setOffsetValue(String(printer.expiryOffsetDays ?? 0));
+                          setEditingOffset(false);
+                        }
+                      }}
+                      autoFocus
+                      className="w-12 h-5 text-[10px] text-center bg-slate-700 border border-primary/50 rounded text-white font-mono px-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <span className="text-[10px] text-slate-400">days</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOffsetValue(String(printer.expiryOffsetDays ?? 0));
+                      setEditingOffset(true);
+                    }}
+                    className="text-[10px] text-primary/70 hover:text-primary font-medium"
+                    title="Click to edit expiry date offset"
+                  >
+                    Expiry: <span className="font-bold">{printer.expiryOffsetDays ? `+${printer.expiryOffsetDays}` : '0'}</span> days
+                  </button>
                 )}
               </div>
             )}
