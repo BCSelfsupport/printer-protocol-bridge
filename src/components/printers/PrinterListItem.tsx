@@ -1,4 +1,5 @@
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, RefreshCcw, Filter, Radio } from 'lucide-react';
+import { useState } from 'react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, RefreshCcw, Filter, Radio, CalendarDays } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
@@ -37,6 +38,8 @@ interface PrinterListItemProps {
   onBroadcast?: () => void;
   /** Stream hours string from metrics for filter gauge */
   streamHours?: string;
+  /** Callback to update the expiry offset days for this printer */
+  onUpdateExpiryOffset?: (printerId: number, days: number) => void;
 }
 
 // Helper to get color for fluid levels
@@ -71,7 +74,10 @@ export function PrinterListItem({
   onSync,
   onBroadcast,
   streamHours,
+  onUpdateExpiryOffset,
 }: PrinterListItemProps) {
+  const [editingOffset, setEditingOffset] = useState(false);
+  const [offsetValue, setOffsetValue] = useState(String(printer.expiryOffsetDays ?? 0));
   
   // Filter status for this printer
   const pumpHours = streamHours ? parseStreamHoursToNumber(streamHours) : null;
