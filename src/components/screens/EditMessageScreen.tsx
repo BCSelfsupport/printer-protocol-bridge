@@ -566,7 +566,10 @@ export function EditMessageScreen({
     return computed ?? fieldType.toUpperCase();
   };
 
-  const handleAddField = (fieldType: string, format?: string) => {
+  const handleAddField = (fieldType: string, formatOrOptions?: string | { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number }) => {
+    // Extract prompt options if provided as object
+    const promptOptions = typeof formatOrOptions === 'object' ? formatOrOptions : undefined;
+    const format = typeof formatOrOptions === 'string' ? formatOrOptions : undefined;
     const newId = Math.max(0, ...message.fields.map((f) => f.id)) + 1;
     
     // Determine field data based on type
