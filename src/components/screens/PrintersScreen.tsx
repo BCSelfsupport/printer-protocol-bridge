@@ -94,6 +94,7 @@ interface PrintersScreenProps {
   isCheckingNetwork?: boolean;
   /** Called when a slave printer's expiry is changed — resends the message with new expiry */
   onSlaveExpiryChange?: (printerId: number, days: number) => void;
+  onSelectedPrinterChange?: (printer: Printer | null) => void;
 }
 
 // Sortable wrapper for PrinterListItem
@@ -244,6 +245,7 @@ export function PrintersScreen({
   onRefreshNetwork,
   isCheckingNetwork = false,
   onSlaveExpiryChange,
+  onSelectedPrinterChange,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -385,6 +387,10 @@ export function PrintersScreen({
       setSelectedPrinter(connectedPrinter);
     }
   }, [connectedPrinter?.id]);
+
+  useEffect(() => {
+    onSelectedPrinterChange?.(selectedPrinter);
+  }, [selectedPrinter, onSelectedPrinterChange]);
 
   const handlePrinterClick = (printer: Printer) => {
     setSelectedPrinter(printer);
@@ -661,7 +667,7 @@ export function PrintersScreen({
               onUnmount={onControlUnmount}
               onNavigate={onNavigate}
               onTurnOff={onTurnOff}
-              selectedPrinterId={connectedPrinter?.id}
+              selectedPrinterId={selectedPrinter?.id ?? connectedPrinter?.id}
               streamHours={connectedMetrics?.streamHours}
               printerModel={status?.printerModel}
               printerVariant={status?.printerVariant}
