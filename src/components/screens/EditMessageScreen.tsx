@@ -665,7 +665,7 @@ export function EditMessageScreen({
             : fieldType.startsWith('date_') ? 'date'
             : fieldType as MessageField['type'],
       data: lineIdValue ? lineIdValue : (promptOptions?.promptBeforePrint ? 'X'.repeat(promptOptions.promptLength || 3) : fieldData),
-      x: message.fields.length * 50,
+      x: 0,
       y: newY,
       width: 50,
       height: fontHeight,
@@ -735,7 +735,7 @@ export function EditMessageScreen({
       id: newId,
       type: 'barcode',
       data: barcodeLabel,
-      x: message.fields.length * 50,
+      x: 0,
       y: 32 - barcodeHeight,
       width: widthDots,
       height: barcodeHeight,
