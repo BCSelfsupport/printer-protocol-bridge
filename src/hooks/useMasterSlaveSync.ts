@@ -146,6 +146,7 @@ export function useMasterSlaveSync({
     isMaster,
     slaveCount: isMaster ? getSlaves().length : 0,
     getSlaves,
+    sendCommandToPrinter,
     // Manual sync for the connected master
     syncAllMessages: useCallback(async () => {
       if (!isMaster) return;
