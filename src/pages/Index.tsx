@@ -653,6 +653,7 @@ const Index = () => {
           onSendCommand={async (cmd) => sendCommand(cmd)}
           onGetStoredMessage={getMessage}
           onSaveMessageContent={saveMessageContent}
+          onSaveStoredMessage={saveMessage}
           onEdit={(message) => {
             setIsCreatingNewMessage(false);
             setEditingMessage(message);
@@ -912,6 +913,7 @@ const Index = () => {
             onSendCommand={async (cmd) => sendCommand(cmd)}
             onGetStoredMessage={getMessage}
             onSaveMessageContent={saveMessageContent}
+            onSaveStoredMessage={saveMessage}
             onEdit={(message) => {
               setIsCreatingNewMessage(false);
               setEditingMessage(message);
