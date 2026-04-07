@@ -168,7 +168,27 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
             </p>
           </div>
 
-          {/* Master/Slave Role */}
+          {/* Expiry Offset Days (shown for master/slave roles) */}
+          {(role === 'master' || role === 'slave') && (
+            <div className="space-y-2">
+              <Label htmlFor="edit-expiry-offset" className="text-slate-300 flex items-center gap-1.5">
+                <CalendarDays className="w-3.5 h-3.5" />
+                Expiry Date Offset (Days)
+              </Label>
+              <Input
+                id="edit-expiry-offset"
+                type="number"
+                value={expiryOffsetDays}
+                onChange={(e) => setExpiryOffsetDays(e.target.value)}
+                placeholder="0"
+                className="bg-slate-800 border-slate-600 text-white font-mono w-24"
+              />
+              <p className="text-[10px] text-slate-500">
+                Days to offset the expiration date for this printer (e.g., +1, +2, +7).
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label className="text-slate-300 flex items-center gap-1.5">
               <Crown className="w-3.5 h-3.5" />
