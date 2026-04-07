@@ -115,6 +115,7 @@ function SortablePrinterItem({
   streamHours,
   onUpdateExpiryOffset,
   messageExpiryDays,
+  masterMessage,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -135,6 +136,7 @@ function SortablePrinterItem({
   streamHours?: string;
   onUpdateExpiryOffset?: (printerId: number, days: number) => void;
   messageExpiryDays?: number;
+  masterMessage?: string;
 }) {
   const {
     attributes,
