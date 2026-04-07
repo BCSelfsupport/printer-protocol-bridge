@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, RefreshCcw, Filter, Radio, CalendarDays } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, CalendarDays } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
@@ -320,38 +320,6 @@ export function PrinterListItem({
                 Service
               </Button>
             )}
-            {/* Sync button for masters */}
-            {printer.role === 'master' && slaveCount > 0 && onSync && (
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSync();
-                }}
-                size="sm"
-                variant="ghost"
-                className={`h-6 text-[10px] px-2 hover:bg-slate-600 ${groupColor?.badge?.split(' ')[1] ?? 'text-amber-400'}`}
-                title={`Sync messages to ${slaveCount} slave(s)`}
-              >
-                <RefreshCcw className="w-3 h-3 mr-1" />
-                Sync {slaveCount}
-              </Button>
-            )}
-            {/* Broadcast button for masters */}
-            {printer.role === 'master' && slaveCount > 0 && onBroadcast && (
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onBroadcast();
-                }}
-                size="sm"
-                variant="ghost"
-                className={`h-6 text-[10px] px-2 hover:bg-slate-600 text-primary`}
-                title={`Broadcast message to all slaves`}
-              >
-                <Radio className="w-3 h-3 mr-1" />
-                Broadcast
-              </Button>
-            )}
           </div>
         </div>
       </button>
@@ -497,34 +465,6 @@ export function PrinterListItem({
                 title="View service metrics"
               >
                 <Settings2 className="w-3 h-3" />
-              </Button>
-            )}
-            {printer.role === 'master' && slaveCount > 0 && onSync && (
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSync();
-                }}
-                size="sm"
-                variant="ghost"
-                className={`h-6 text-[10px] px-1.5 hover:bg-slate-600 ${groupColor?.badge?.split(' ')[1] ?? 'text-amber-400'}`}
-                title={`Sync messages to ${slaveCount} slave(s)`}
-              >
-                <RefreshCcw className="w-3 h-3" />
-              </Button>
-            )}
-            {printer.role === 'master' && slaveCount > 0 && onBroadcast && (
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onBroadcast();
-                }}
-                size="sm"
-                variant="ghost"
-                className="h-6 text-[10px] px-1.5 hover:bg-slate-600 text-primary"
-                title="Broadcast message to all slaves"
-              >
-                <Radio className="w-3 h-3" />
               </Button>
             )}
             {showConnectButton && printer.isAvailable && onConnect && (
