@@ -306,6 +306,22 @@ export function PrintersScreen({
     return maxExpiry;
   }, [messageContent]);
 
+  // Build a map: slavePrinterId -> master's currentMessage
+  const masterMessageMap = useMemo(() => {
+    const map = new Map<number, string>();
+    const masters = printers.filter(p => p.role === 'master');
+    masters.forEach(master => {
+      if (master.currentMessage) {
+        // All slaves of this master get the master's message
+        printers.forEach(p => {
+          if (p.role === 'slave' && p.masterId === master.id) {
+            map.set(p.id, master.currentMessage!);
+          }
+        });
+      }
+    });
+    return map;
+  }, [printers]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
