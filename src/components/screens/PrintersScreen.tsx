@@ -345,10 +345,8 @@ export function PrintersScreen({
 
   const handlePrinterClick = (printer: Printer) => {
     setSelectedPrinter(printer);
-    // On desktop, clicking connects immediately if printer is available
-    if (!isMobile && printer.isAvailable) {
-      onConnect(printer);
-    }
+    // Don't auto-connect on click — user can connect via the Connect button
+    // This prevents accidentally switching away from the master printer
   };
 
   const handleRemoveSelected = () => {
