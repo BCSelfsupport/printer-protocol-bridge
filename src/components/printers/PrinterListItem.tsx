@@ -412,11 +412,11 @@ export function PrinterListItem({
       </div>
 
       {/* Message + print count row */}
-      {printer.currentMessage && (
+      {displayMessage && (
         <div className={`mt-1.5 ml-12 text-xs ${subTextColor}`}>
           <div className="flex items-center gap-1.5">
             <FileText className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="font-medium truncate">{printer.currentMessage}</span>
+            <span className="font-medium truncate">{displayMessage}</span>
           </div>
           {printer.printCount !== undefined && (
             <div className="ml-5 mt-0.5">
