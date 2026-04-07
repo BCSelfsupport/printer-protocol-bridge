@@ -644,6 +644,7 @@ export function PrintersScreen({
               streamHours={connectedMetrics?.streamHours}
               printerModel={status?.printerModel}
               printerVariant={status?.printerVariant}
+              printerExpiryOffsetDays={selectedPrinter?.expiryOffsetDays ?? connectedPrinter?.expiryOffsetDays}
             />
           </div>
         ) : (
