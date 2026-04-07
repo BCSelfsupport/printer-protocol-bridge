@@ -56,6 +56,7 @@ export interface MessageField {
   autoCodeFormat?: string;       // e.g. 'HH:MM:SS', 'MM/DD/YY'
   autoCodeFieldType?: string;    // e.g. 'time', 'date_normal', 'program_hour'
   autoCodeExpiryDays?: number;   // expiry offset
+  dynamicSource?: 'lineId';      // printer-driven dynamic text source
   // Prompt before print: text field that asks operator for input before message selection
   promptBeforePrint?: boolean;
   promptLabel?: string;          // Display label for the prompt (e.g. "LOT CODE")
@@ -673,6 +674,7 @@ export function EditMessageScreen({
       autoCodeFormat: format,
       autoCodeFieldType: fieldType,
       autoCodeExpiryDays: expiryDays || undefined,
+      dynamicSource: lineIdValue ? 'lineId' : undefined,
       // Prompt before print metadata
       promptBeforePrint: promptOptions?.promptBeforePrint,
       promptLabel: promptOptions?.promptLabel,
