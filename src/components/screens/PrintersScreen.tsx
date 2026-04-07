@@ -71,6 +71,10 @@ interface PrintersScreenProps {
   onTurnOff?: () => void;
   // Master/Slave sync - per master
   onSyncMaster?: (masterId: number) => void;
+  // Broadcast message to all slaves
+  onBroadcastMessage?: (masterId: number, messageName: string, slaveValues: { printerId: number; userDefineValue: string }[]) => Promise<void>;
+  getSlavesForMaster?: (masterId: number) => Printer[];
+  connectedMessages?: { id: number; name: string }[];
   // Optional content to render in the right panel instead of Dashboard
   rightPanelContent?: React.ReactNode;
   // Per-printer countdown lookup
