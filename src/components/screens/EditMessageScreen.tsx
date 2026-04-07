@@ -1174,28 +1174,29 @@ export function EditMessageScreen({
                 onFontSizeChange={(delta) => {
                   const fonts = getAllowedFonts();
                   if (fonts.length === 0) return;
-                  const currentIdx = fonts.findIndex(f => f.value === selectedField.fontSize);
-                  let newFont;
-                  if (currentIdx === -1) {
-                    newFont = fonts[fonts.length - 1];
-                  } else {
-                    const newIdx = Math.max(0, Math.min(fonts.length - 1, currentIdx + delta));
-                    newFont = fonts[newIdx];
-                  }
-                  const isBarcode = selectedField.type === 'barcode';
-                  const is2DCode = isBarcode && selectedField.data && /^\[(QR|QRCODE|DATAMATRIX|DM|DATA MATRIX|DOTCODE)/i.test(selectedField.data);
-                  const newHeight = is2DCode ? selectedField.height : isBarcode ? message.height : newFont.height;
-                  const blockedRows = 32 - message.height;
-                  const newY = currentMultilineTemplate
-                    ? selectedField.y
-                    : Math.max(blockedRows, 32 - newHeight);
+                  // Determine which fields to update: multi-selected or just the active one
+                  const targetIds = selectedFieldIds.size > 0 ? selectedFieldIds : new Set([selectedFieldId!]);
                   setMessage((prev) => ({
                     ...prev,
-                    fields: prev.fields.map((f) =>
-                      f.id === selectedFieldId
-                        ? { ...f, fontSize: newFont.value, height: newHeight, y: newY }
-                        : f
-                    ),
+                    fields: prev.fields.map((f) => {
+                      if (!targetIds.has(f.id)) return f;
+                      const currentIdx = fonts.findIndex(fs => fs.value === f.fontSize);
+                      let newFont;
+                      if (currentIdx === -1) {
+                        newFont = fonts[fonts.length - 1];
+                      } else {
+                        const newIdx = Math.max(0, Math.min(fonts.length - 1, currentIdx + delta));
+                        newFont = fonts[newIdx];
+                      }
+                      const isBarcode = f.type === 'barcode';
+                      const is2DCode = isBarcode && f.data && /^\[(QR|QRCODE|DATAMATRIX|DM|DATA MATRIX|DOTCODE)/i.test(f.data);
+                      const newHeight = is2DCode ? f.height : isBarcode ? message.height : newFont.height;
+                      const blockedRows = 32 - message.height;
+                      const newY = currentMultilineTemplate
+                        ? f.y
+                        : Math.max(blockedRows, 32 - newHeight);
+                      return { ...f, fontSize: newFont.value, height: newHeight, y: newY };
+                    }),
                   }));
                 }}
                 onBoldChange={(v) => handleUpdateFieldSetting('bold', v)}
