@@ -152,6 +152,24 @@ const Index = () => {
   const syncingRef = useRef(false);
   const syncedMessagesRef = useRef<Set<string>>(new Set());
   // Track messages recently saved from the editor — skip auto-sync overwrite for these
+  // Merge autoCode metadata (expiryDays, fieldType, format) from a cached
+  // message into a freshly-fetched one. The printer's ^LF response doesn't
+  // include this metadata, so we preserve it from the locally stored version.
+  const mergeAutoCodeMeta = useCallback((fetched: MessageDetails, cached: MessageDetails | null): MessageDetails => {
+    if (!cached) return fetched;
+    const merged = { ...fetched, fields: fetched.fields.map((f, i) => {
+      const cachedField = cached.fields.find(cf => cf.id === f.id) ?? cached.fields[i];
+      if (!cachedField) return f;
+      return {
+        ...f,
+        autoCodeExpiryDays: f.autoCodeExpiryDays ?? cachedField.autoCodeExpiryDays,
+        autoCodeFieldType: f.autoCodeFieldType ?? cachedField.autoCodeFieldType,
+        autoCodeFormat: f.autoCodeFormat ?? cachedField.autoCodeFormat,
+      };
+    })};
+    return merged;
+  }, []);
+
   const recentlySavedRef = useRef<Map<string, number>>(new Map());
   
   // Reset synced set when printer changes
