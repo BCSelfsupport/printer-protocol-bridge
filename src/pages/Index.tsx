@@ -625,11 +625,7 @@ const Index = () => {
           messages={connectionState.messages}
           currentMessageName={connectionState.status?.currentMessage ?? null}
           onSelect={async (message) => {
-            const success = await selectMessage(message);
-            if (success) {
-              setCurrentScreen('home');
-            }
-            return success;
+            return await selectMessage(message);
           }}
           onFetchMessageDetails={fetchMessageContent}
           onSendCommand={async (cmd) => sendCommand(cmd)}
@@ -880,11 +876,7 @@ const Index = () => {
             messages={connectionState.messages}
             currentMessageName={connectionState.status?.currentMessage ?? null}
             onSelect={async (message) => {
-              const success = await selectMessage(message);
-              if (success) {
-                setCurrentScreen('control');
-              }
-              return success;
+              return await selectMessage(message);
             }}
             onFetchMessageDetails={fetchMessageContent}
             onSendCommand={async (cmd) => sendCommand(cmd)}
