@@ -303,16 +303,35 @@ export function PrintersScreen({
   }, [printers]);
 
   const effectiveMessageContent = useMemo(() => {
+    // If the selected printer is the connected printer, use the live message content
     if (selectedPrinter?.id === connectedPrinter?.id) {
       return messageContent;
     }
 
+    // For slaves of the connected master, use the master's message content
+    if (
+      selectedPrinter?.role === 'slave' &&
+      connectedPrinter?.role === 'master' &&
+      selectedPrinter.masterId === connectedPrinter.id
+    ) {
+      // The master's content is what we have — the slave should show the same
+      return messageContent;
+    }
+
+    // For other printers, look up from the connected printer's storage first
+    // (since the master pushes content there), then fall back to the printer's own
     if (selectedPrinter?.currentMessage && getMessageContent) {
-      return getMessageContent(selectedPrinter.currentMessage, selectedPrinter.id) ?? undefined;
+      // Try connected printer's storage (master's copy)
+      const masterCopy = connectedPrinter
+        ? getMessageContent(selectedPrinter.currentMessage, connectedPrinter.id) ?? undefined
+        : undefined;
+      if (masterCopy) return masterCopy;
+      // Fall back to printer's own storage or hardcoded
+      return getMessageContent(selectedPrinter.currentMessage) ?? undefined;
     }
 
     return messageContent;
-  }, [selectedPrinter?.id, selectedPrinter?.currentMessage, connectedPrinter?.id, messageContent, getMessageContent]);
+  }, [selectedPrinter?.id, selectedPrinter?.currentMessage, selectedPrinter?.role, selectedPrinter?.masterId, connectedPrinter?.id, connectedPrinter?.role, messageContent, getMessageContent]);
 
   const effectiveDashboardStatus = useMemo(() => {
     if (!selectedPrinter || !status) return status ?? null;
