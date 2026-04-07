@@ -555,10 +555,14 @@ export function usePrinterConnection() {
     if (!cleaned) return;
     const parsed = parsePrinterDateTime(cleaned);
     if (parsed && !isNaN(parsed.getTime())) {
+      const offsetMs = parsed.getTime() - Date.now();
+      console.log(`[^SD] raw="${cleaned}" parsed=${parsed.toISOString()} local=${new Date().toISOString()} offsetMs=${offsetMs}`);
       setConnectionState((prev) => ({
         ...prev,
         status: prev.status ? { ...prev.status, printerTime: parsed } : null,
       }));
+    } else {
+      console.warn(`[^SD] Failed to parse: "${cleaned}"`);
     }
   }, []);
 
