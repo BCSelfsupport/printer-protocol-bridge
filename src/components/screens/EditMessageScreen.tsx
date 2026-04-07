@@ -660,7 +660,7 @@ export function EditMessageScreen({
             : fieldType.startsWith('counter_') ? 'counter'
             : fieldType.startsWith('date_') ? 'date'
             : fieldType as MessageField['type'],
-      data: promptOptions ? (promptOptions.promptLabel || 'ENTER VALUE') : fieldData,
+      data: promptOptions ? 'X'.repeat(promptOptions.promptLength || 3) : fieldData,
       x: message.fields.length * 50,
       y: newY,
       width: 50,
