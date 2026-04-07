@@ -910,6 +910,8 @@ const Index = () => {
             }}
             onFetchMessageDetails={fetchMessageContent}
             onSendCommand={async (cmd) => sendCommand(cmd)}
+            onGetStoredMessage={getMessage}
+            onSaveMessageContent={saveMessageContent}
             onEdit={(message) => {
               setIsCreatingNewMessage(false);
               setEditingMessage(message);
