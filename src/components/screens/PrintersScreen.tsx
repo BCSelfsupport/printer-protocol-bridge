@@ -291,7 +291,19 @@ export function PrintersScreen({
     return map;
   }, [printers]);
 
-  const sensors = useSensors(
+  // Extract the max expiry offset from the currently selected message's fields
+  const messageExpiryDays = useMemo(() => {
+    if (!messageContent?.fields) return 0;
+    let maxExpiry = 0;
+    for (const field of messageContent.fields) {
+      if (field.autoCodeExpiryDays && field.autoCodeExpiryDays > maxExpiry) {
+        maxExpiry = field.autoCodeExpiryDays;
+      }
+    }
+    return maxExpiry;
+  }, [messageContent]);
+
+
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
