@@ -207,8 +207,10 @@ const Index = () => {
             new Promise<null>(r => setTimeout(() => r(null), 10000)),
           ]);
           if (details && details.fields.length > 0) {
-            saveMessage(details);
-            console.log('[MessageSync] Saved content for', msg.name, ':', details.fields.length, 'fields');
+            const cached = getMessage(msg.name) ?? null;
+            const merged = mergeAutoCodeMeta(details, cached);
+            saveMessage(merged);
+            console.log('[MessageSync] Saved content for', msg.name, ':', merged.fields.length, 'fields');
           }
           syncedMessagesRef.current.add(msg.name);
         } catch (e) {
@@ -269,8 +271,10 @@ const Index = () => {
         ]);
 
         if (!cancelled && fetched && fetched.fields.length > 0) {
-          saveMessage(fetched);
-          setActiveMessageContent(fetched);
+          const cached = getMessage(currentMessageName) ?? null;
+          const merged = mergeAutoCodeMeta(fetched, cached);
+          saveMessage(merged);
+          setActiveMessageContent(merged);
         }
       } catch (e) {
         console.error('[CurrentMessagePreview] fetch failed:', e);
