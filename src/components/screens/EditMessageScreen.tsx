@@ -1408,6 +1408,25 @@ export function EditMessageScreen({
             onAddField={handleAddUserDefine}
           />
 
+          {/* User Define Entry Prompt (shown when fetched message has user define fields) */}
+          <UserDefineEntryDialog
+            open={userDefineEntryOpen}
+            onOpenChange={setUserDefineEntryOpen}
+            prompts={userDefinePrompts}
+            onConfirm={(entries) => {
+              setMessage((prev) => {
+                const updatedFields = prev.fields.map(f => {
+                  if (entries[f.id] !== undefined) {
+                    return { ...f, data: entries[f.id] };
+                  }
+                  return f;
+                });
+                return { ...prev, fields: updatedFields, width: autoResizeWidth(updatedFields) };
+              });
+              toast.success('User define data entered');
+            }}
+          />
+
           {/* Graphic Field Dialog */}
           <GraphicFieldDialog
             open={graphicDialogOpen}
