@@ -66,6 +66,7 @@ const Index = () => {
   const [messagePreset, setMessagePreset] = useState<'metrc-retail-id' | undefined>(undefined);
   // Control whether to auto-open the new message dialog
   const [openNewDialogOnMount, setOpenNewDialogOnMount] = useState(false);
+  const [selectedPrinterId, setSelectedPrinterId] = useState<number | null>(null);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
@@ -124,6 +125,7 @@ const Index = () => {
   } = usePrinterConnection();
   
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
+  const selectedPrinter = selectedPrinterId != null ? printers.find((printer) => printer.id === selectedPrinterId) ?? null : null;
 
   // Push telemetry to Fleet Telemetry cloud when license is active
   useFleetTelemetryPush({
@@ -645,20 +647,29 @@ const Index = () => {
   const getRightPanelContent = (): React.ReactNode | undefined => {
     if (isMobile) return undefined;
 
+    const messageTargetPrinter = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+    const isConnectedMessageTarget = messageTargetPrinter?.id === connectionState.connectedPrinter?.id;
+
     if (currentScreen === 'messages') {
       return (
         <MessagesScreen
           messages={connectionState.messages}
-          currentMessageName={connectionState.status?.currentMessage ?? null}
+          currentMessageName={messageTargetPrinter?.currentMessage ?? connectionState.status?.currentMessage ?? null}
           onSelect={async (message) => {
-            return await selectMessage(message);
+            if (!messageTargetPrinter) return false;
+            if (isConnectedMessageTarget) return await selectMessage(message);
+            const ok = await sendCommandToPrinter(messageTargetPrinter, `^SM ${message.name}`);
+            if (ok) {
+              updatePrinter(messageTargetPrinter.id, { currentMessage: message.name });
+            }
+            return ok;
           }}
-          onFetchMessageDetails={fetchMessageContent}
-          onSendCommand={async (cmd) => sendCommand(cmd)}
+          onFetchMessageDetails={isConnectedMessageTarget ? fetchMessageContent : undefined}
+          onSendCommand={isConnectedMessageTarget ? async (cmd) => sendCommand(cmd) : undefined}
           onGetStoredMessage={getMessage}
-          onSaveMessageContent={saveMessageContent}
+          onSaveMessageContent={isConnectedMessageTarget ? saveMessageContent : undefined}
           onSaveStoredMessage={saveMessage}
-          connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
+          connectedPrinterLineId={messageTargetPrinter?.lineId}
           onPromptSaved={(details) => {
             setActiveMessageContent(details);
             recentlySavedRef.current.set(details.name, Date.now());
@@ -918,16 +929,23 @@ const Index = () => {
         return (
           <MessagesScreen
             messages={connectionState.messages}
-            currentMessageName={connectionState.status?.currentMessage ?? null}
+            currentMessageName={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.currentMessage ?? connectionState.status?.currentMessage ?? null}
             onSelect={async (message) => {
-              return await selectMessage(message);
+              const messageTargetPrinter = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+              if (!messageTargetPrinter) return false;
+              if (messageTargetPrinter.id === connectionState.connectedPrinter?.id) return await selectMessage(message);
+              const ok = await sendCommandToPrinter(messageTargetPrinter, `^SM ${message.name}`);
+              if (ok) {
+                updatePrinter(messageTargetPrinter.id, { currentMessage: message.name });
+              }
+              return ok;
             }}
-            onFetchMessageDetails={fetchMessageContent}
-            onSendCommand={async (cmd) => sendCommand(cmd)}
+            onFetchMessageDetails={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id === connectionState.connectedPrinter?.id ? fetchMessageContent : undefined}
+            onSendCommand={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id === connectionState.connectedPrinter?.id ? async (cmd) => sendCommand(cmd) : undefined}
             onGetStoredMessage={getMessage}
-            onSaveMessageContent={saveMessageContent}
+            onSaveMessageContent={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id === connectionState.connectedPrinter?.id ? saveMessageContent : undefined}
             onSaveStoredMessage={saveMessage}
-            connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
+            connectedPrinterLineId={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.lineId}
             onPromptSaved={(details) => {
               setActiveMessageContent(details);
               recentlySavedRef.current.set(details.name, Date.now());
@@ -1094,6 +1112,7 @@ const Index = () => {
         getSlavesForMaster={getSlavesForMaster}
         connectedMessages={connectionState.messages}
         rightPanelContent={getRightPanelContent()}
+        onSelectedPrinterChange={(printer) => setSelectedPrinterId(printer?.id ?? null)}
         getCountdown={getCountdown}
         onConsumables={() => setCurrentScreen('consumables')}
         onReports={() => setCurrentScreen('reports')}
