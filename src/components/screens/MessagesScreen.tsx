@@ -52,6 +52,8 @@ interface MessagesScreenProps {
   ) => Promise<boolean>;
   /** Save updated message details to local storage */
   onSaveStoredMessage?: (details: MessageDetails) => void;
+  /** Called after prompted field values are saved — updates active preview immediately */
+  onPromptSaved?: (details: MessageDetails) => void;
 }
 
 export function MessagesScreen({ 
@@ -69,6 +71,7 @@ export function MessagesScreen({
   onGetStoredMessage,
   onSaveMessageContent,
   onSaveStoredMessage,
+  onPromptSaved,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -362,8 +365,11 @@ export function MessagesScreen({
                 false,
               );
               if (saved) {
+                const updatedDetails = { ...pendingMessageDetails, fields: updatedFields };
                 // Save updated message locally so Dashboard preview shows entered values
-                onSaveStoredMessage?.({ ...pendingMessageDetails, fields: updatedFields });
+                onSaveStoredMessage?.(updatedDetails);
+                // Update active preview immediately so Dashboard shows new values
+                onPromptSaved?.(updatedDetails);
                 // Now select the message on the printer
                 await onSelect(selectedMessage);
                 toast.success('Message loaded with entered values', { id: 'prompt-save' });

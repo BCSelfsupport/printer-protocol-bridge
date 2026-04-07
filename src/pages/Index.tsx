@@ -654,6 +654,10 @@ const Index = () => {
           onGetStoredMessage={getMessage}
           onSaveMessageContent={saveMessageContent}
           onSaveStoredMessage={saveMessage}
+          onPromptSaved={(details) => {
+            setActiveMessageContent(details);
+            recentlySavedRef.current.set(details.name, Date.now());
+          }}
           onEdit={(message) => {
             setIsCreatingNewMessage(false);
             setEditingMessage(message);
@@ -914,6 +918,10 @@ const Index = () => {
             onGetStoredMessage={getMessage}
             onSaveMessageContent={saveMessageContent}
             onSaveStoredMessage={saveMessage}
+            onPromptSaved={(details) => {
+              setActiveMessageContent(details);
+              recentlySavedRef.current.set(details.name, Date.now());
+            }}
             onEdit={(message) => {
               setIsCreatingNewMessage(false);
               setEditingMessage(message);
