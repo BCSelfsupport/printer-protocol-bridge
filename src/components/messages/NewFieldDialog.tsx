@@ -9,9 +9,8 @@ import { Input } from '@/components/ui/input';
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Text Field', icon: FileText, action: 'add' },
-  { value: 'prompttext', label: 'Prompted Text', icon: MessageSquare, action: 'expand' },
+  { value: 'userdefine', label: 'User Define', icon: User, action: 'expand' },
   { value: 'autocode', label: 'AutoCode Field', icon: Hash, action: 'submenu' },
-  { value: 'userdefine', label: 'User Define', icon: User, action: 'submenu' },
   { value: 'barcode', label: 'Barcode Field', icon: Barcode, action: 'submenu' },
   { value: 'logo', label: 'Graphic Field', icon: Image, action: 'submenu' },
 ] as const;
