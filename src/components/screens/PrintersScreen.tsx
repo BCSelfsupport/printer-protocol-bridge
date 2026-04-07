@@ -248,6 +248,7 @@ export function PrintersScreen({
   isCheckingNetwork = false,
   onSlaveExpiryChange,
   onSelectedPrinterChange,
+  getMessageContent,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
