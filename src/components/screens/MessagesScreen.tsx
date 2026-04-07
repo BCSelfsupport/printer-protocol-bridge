@@ -362,6 +362,8 @@ export function MessagesScreen({
                 false,
               );
               if (saved) {
+                // Save updated message locally so Dashboard preview shows entered values
+                onSaveStoredMessage?.({ ...pendingMessageDetails, fields: updatedFields });
                 // Now select the message on the printer
                 await onSelect(selectedMessage);
                 toast.success('Message loaded with entered values', { id: 'prompt-save' });
