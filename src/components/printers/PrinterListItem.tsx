@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, CalendarDays } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, CalendarDays, RotateCcw } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
@@ -44,6 +44,8 @@ interface PrinterListItemProps {
   messageExpiryDays?: number | null;
   /** Master's current message name — slaves display this instead of their own */
   masterMessage?: string;
+  /** Callback to reset all group expiry offsets back to message default (master only) */
+  onResetGroupExpiry?: () => void;
 }
 
 // Helper to get color for fluid levels
@@ -81,6 +83,7 @@ export function PrinterListItem({
   onUpdateExpiryOffset,
   messageExpiryDays,
   masterMessage,
+  onResetGroupExpiry,
 }: PrinterListItemProps) {
   // Prefer the printer's own current message; only fall back to master's message for slaves with no local value
   const displayMessage = printer.currentMessage ?? ((printer.role === 'slave' && masterMessage) ? masterMessage : undefined);
@@ -274,21 +277,37 @@ export function PrinterListItem({
                     <span className="text-xs text-slate-400">days</span>
                   </div>
                 ) : (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setOffsetValue(String(effectiveExpiry));
-                      setEditingOffset(true);
-                    }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    className="text-xs text-primary/70 hover:text-primary font-medium py-0.5 px-1.5 rounded hover:bg-primary/10 transition-colors"
-                    title={isOverridden ? `Custom: ${effectiveExpiry} days (message default: ${messageExpiryDays ?? 0})` : "From selected message — click to change for this printer"}
-                  >
-                    Expiry: <span className={cn("font-bold", isOverridden ? "text-amber-400" : "")}>
-                      {effectiveExpiry} days
-                    </span>
-                    {isOverridden && <span className="ml-1 text-amber-400/60">(custom)</span>}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOffsetValue(String(effectiveExpiry));
+                        setEditingOffset(true);
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      className="text-xs text-primary/70 hover:text-primary font-medium py-0.5 px-1.5 rounded hover:bg-primary/10 transition-colors"
+                      title={isOverridden ? `Custom: ${effectiveExpiry} days (message default: ${messageExpiryDays ?? 0})` : "From selected message — click to change for this printer"}
+                    >
+                      Expiry: <span className={cn("font-bold", isOverridden ? "text-amber-400" : "")}>
+                        {effectiveExpiry} days
+                      </span>
+                      {isOverridden && <span className="ml-1 text-amber-400/60">(custom)</span>}
+                    </button>
+                    {printer.role === 'master' && onResetGroupExpiry && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onResetGroupExpiry();
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary/80 hover:bg-primary/20 hover:text-primary transition-colors flex items-center gap-0.5"
+                        title={`Reset all group expiry offsets to message default (${messageExpiryDays} days)`}
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        Reset Group
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
