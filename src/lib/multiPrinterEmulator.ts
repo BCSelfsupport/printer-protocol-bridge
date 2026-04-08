@@ -64,6 +64,7 @@ export interface EmulatedPrinterConfig {
   name: string;
   ipAddress: string;
   port: number;
+  model?: string;   // e.g. 'N-88 STD', 'N-86 STD' — defaults to 'N-86 STD'
   initialState: Partial<EmulatorState>;
 }
 
