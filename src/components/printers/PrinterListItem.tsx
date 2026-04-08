@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, CalendarDays, RotateCcw } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, CalendarDays, RotateCcw, Minus, Plus, Check, X } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
@@ -247,66 +247,117 @@ export function PrinterListItem({
 
             {/* Expiry offset for grouped printers */}
             {(printer.role === 'slave' || printer.role === 'master') && onUpdateExpiryOffset && messageExpiryDays != null && (
-              <div className="flex items-center gap-2 mt-1.5">
-                <CalendarDays className="w-4 h-4 text-primary/70" />
+              <div className="mt-2 rounded-lg bg-slate-800/80 border border-slate-700/60 p-2" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                 {editingOffset ? (
-                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
-                    <input
-                      type="number"
-                      value={offsetValue}
-                      onChange={(e) => setOffsetValue(e.target.value)}
-                      onBlur={() => {
-                        const days = parseInt(offsetValue, 10) || 0;
-                        onUpdateExpiryOffset(printer.id, days);
-                        setEditingOffset(false);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1">
+                      <CalendarDays className="w-3.5 h-3.5 text-primary/60" />
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Expiry Offset</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setOffsetValue(String(Math.max(0, (parseInt(offsetValue, 10) || 0) - 1)))}
+                        className="w-7 h-7 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white flex items-center justify-center transition-colors"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <input
+                        type="number"
+                        value={offsetValue}
+                        onChange={(e) => setOffsetValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const days = parseInt(offsetValue, 10) || 0;
+                            onUpdateExpiryOffset(printer.id, days);
+                            setEditingOffset(false);
+                          }
+                          if (e.key === 'Escape') {
+                            setOffsetValue(String(effectiveExpiry));
+                            setEditingOffset(false);
+                          }
+                        }}
+                        autoFocus
+                        className="w-14 h-7 text-sm text-center bg-slate-900 border border-primary/40 rounded-md text-white font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                      <button
+                        onClick={() => setOffsetValue(String((parseInt(offsetValue, 10) || 0) + 1))}
+                        className="w-7 h-7 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white flex items-center justify-center transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="text-xs text-slate-400 ml-0.5">days</span>
+                      <button
+                        onClick={() => {
                           const days = parseInt(offsetValue, 10) || 0;
                           onUpdateExpiryOffset(printer.id, days);
                           setEditingOffset(false);
-                        }
-                        if (e.key === 'Escape') {
+                        }}
+                        className="w-7 h-7 rounded-md bg-success/20 hover:bg-success/30 text-success flex items-center justify-center transition-colors ml-1"
+                        title="Apply"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => {
                           setOffsetValue(String(effectiveExpiry));
                           setEditingOffset(false);
-                        }
-                      }}
-                      autoFocus
-                      className="w-16 h-7 text-sm text-center bg-slate-700 border-2 border-primary/60 rounded-md text-white font-mono px-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    <span className="text-xs text-slate-400">days</span>
+                        }}
+                        className="w-7 h-7 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+                        title="Cancel"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOffsetValue(String(effectiveExpiry));
-                        setEditingOffset(true);
-                      }}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      className="text-xs text-primary/70 hover:text-primary font-medium py-0.5 px-1.5 rounded hover:bg-primary/10 transition-colors"
-                      title={isOverridden ? `Custom: ${effectiveExpiry} days (message default: ${messageExpiryDays ?? 0})` : "From selected message — click to change for this printer"}
-                    >
-                      Expiry: <span className={cn("font-bold", isOverridden ? "text-amber-400" : "")}>
-                        {effectiveExpiry} days
-                      </span>
-                      {isOverridden && <span className="ml-1 text-amber-400/60">(custom)</span>}
-                    </button>
-                    {printer.role === 'master' && onResetGroupExpiry && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <CalendarDays className="w-3.5 h-3.5 text-primary/60" />
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Expiry</span>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onResetGroupExpiry();
+                        onClick={() => {
+                          setOffsetValue(String(effectiveExpiry));
+                          setEditingOffset(true);
                         }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary/80 hover:bg-primary/20 hover:text-primary transition-colors flex items-center gap-0.5"
-                        title={`Reset all group expiry offsets to message default (${messageExpiryDays} days)`}
+                        className={cn(
+                          "flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-colors",
+                          isOverridden
+                            ? "bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30"
+                            : "bg-slate-700/60 hover:bg-slate-600/60 border border-slate-600/40"
+                        )}
+                        title={isOverridden ? `Custom: ${effectiveExpiry} days (message default: ${messageExpiryDays})` : "Click to adjust expiry offset"}
                       >
-                        <RotateCcw className="w-3 h-3" />
-                        Reset Group
+                        <span className={cn(
+                          "text-lg font-bold font-mono leading-none",
+                          isOverridden ? "text-amber-400" : "text-white"
+                        )}>
+                          {effectiveExpiry}
+                        </span>
+                        <span className={cn(
+                          "text-[10px] font-medium",
+                          isOverridden ? "text-amber-400/70" : "text-slate-400"
+                        )}>
+                          days
+                        </span>
+                        {isOverridden && (
+                          <span className="text-[8px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400/80 font-semibold uppercase tracking-wider ml-0.5">
+                            custom
+                          </span>
+                        )}
                       </button>
-                    )}
+                      {printer.role === 'master' && onResetGroupExpiry && (
+                        <button
+                          onClick={() => onResetGroupExpiry()}
+                          className="flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary/80 hover:text-primary transition-colors"
+                          title={`Reset all group expiry offsets to message default (${messageExpiryDays} days)`}
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          <span className="text-[10px] font-semibold uppercase tracking-wider">Reset</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
