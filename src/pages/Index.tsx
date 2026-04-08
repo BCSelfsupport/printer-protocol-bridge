@@ -349,7 +349,7 @@ const Index = () => {
     const availableSlaves = slaves.filter(s => s.isAvailable);
     if (availableSlaves.length === 0) return;
 
-    const commands = buildMessageCommands(
+    const commands = await buildMessageCommands(
       messageName,
       details.fields,
       details.templateValue,
@@ -1197,7 +1197,7 @@ const Index = () => {
           });
 
           // Build the protocol commands
-          const commands = buildMessageCommands(currentMsg, updatedFields, stored.templateValue, false);
+          const commands = await buildMessageCommands(currentMsg, updatedFields, stored.templateValue, false);
           if (!commands || commands.length === 0) {
             toast.success(`${targetPrinter.name}: expiry offset saved (${days} days)`);
             return;

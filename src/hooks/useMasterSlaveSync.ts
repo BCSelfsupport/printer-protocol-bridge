@@ -13,7 +13,7 @@ interface UseMasterSlaveSyncOptions {
   currentMessage?: string | null;
   messages?: { id: number; name: string }[];
   getMessageContent?: (messageName: string) => MessageDetails | null;
-  buildMessageCommands?: (messageName: string, fields: MessageDetails['fields'], templateValue?: string, isNew?: boolean) => string[] | null;
+  buildMessageCommands?: (messageName: string, fields: MessageDetails['fields'], templateValue?: string, isNew?: boolean) => Promise<string[] | null> | string[] | null;
 }
 
 /**
@@ -98,11 +98,12 @@ export function useMasterSlaveSync({
     console.log(`[MasterSlaveSync] Syncing message selection "${currentMessage}" to ${slaves.length} slave(s)`);
 
     const masterDetails = getMessageContent?.(currentMessage) ?? null;
-    const commands = masterDetails && buildMessageCommands
-      ? buildMessageCommands(currentMessage, masterDetails.fields, masterDetails.templateValue, false)
-      : null;
 
     (async () => {
+      const commands = masterDetails && buildMessageCommands
+        ? await Promise.resolve(buildMessageCommands(currentMessage, masterDetails.fields, masterDetails.templateValue, false))
+        : null;
+
       for (const slave of slaves) {
         if (commands && commands.length > 0) {
           for (const cmd of commands) {

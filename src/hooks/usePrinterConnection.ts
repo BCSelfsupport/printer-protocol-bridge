@@ -7,6 +7,7 @@ import { parseStatusResponse, parseTemperatureResponse, parseVersionResponse, pa
 import { parseGmResponse, parseLfResponse, buildMessageDetails } from '@/lib/messageProtocol';
 import type { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { getProtocolFieldInfo } from '@/lib/autoCodeProtocol';
+import { generateDataMatrixCommands, isDataMatrixField, extractDataMatrixData, generateDataMatrixBitmap } from '@/lib/dataMatrixGenerator';
 import { parsePumpHours, parsePowerHours } from '@/lib/filterTracker';
 import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
 import { useSerializedPolling, PollingCommand } from '@/hooks/useSerializedPolling';
@@ -1938,6 +1939,7 @@ export function usePrinterConnection() {
   };
 
   // Build field subcommand for ^NM (per v2.6 spec section 5.33.2)
+  // graphicMap: optional mapping of field ID → DataMatrix bitmap result (for ECC200 software barcodes)
   const buildFieldSubcommand = (field: {
     id: number;
     type: string;
@@ -1951,8 +1953,15 @@ export function usePrinterConnection() {
     autoCodeFieldType?: string;
     autoCodeFormat?: string;
     autoCodeExpiryDays?: number;
-  }, fieldNum: number, fieldTemplateHeight?: number): string => {
+  }, fieldNum: number, fieldTemplateHeight?: number, graphicMap?: Map<number, { graphicName: string; width: number; height: number }>): string => {
     const fontCode = fontToProtocolCode(field.fontSize);
+
+    // DataMatrix ECC200 (software-generated): use ^AL logo reference instead of ^AB
+    if (field.type === 'barcode' && isDataMatrixField(field.data) && graphicMap?.has(field.id)) {
+      const dm = graphicMap.get(field.id)!;
+      return `^AL${fieldNum};${field.x};${field.y};${dm.graphicName}`;
+    }
+    
     
     switch (field.type) {
       case 'text':
@@ -2176,6 +2185,9 @@ export function usePrinterConnection() {
       return true;
     });
 
+    // Generate DataMatrix ECC200 bitmap upload commands for any DataMatrix barcode fields
+    const { uploadCommands: dmUploadCmds, graphicMap: dmGraphicMap } = await generateDataMatrixCommands(validFields, templateHeight);
+
     // Build field subcommands with inverted Y coordinates
     // Canvas Y (top-origin) → template-relative → printer Y (bottom-origin)
     const fieldSubcommands = validFields.map((field, index) => {
@@ -2188,7 +2200,7 @@ export function usePrinterConnection() {
       return buildFieldSubcommand({
         ...field,
         y: Math.max(0, printerY),
-      }, index + 1, templateHeight);
+      }, index + 1, templateHeight, dmGraphicMap);
     }).join('');
 
     // Build the full ^NM command: ^NM t;s;o;p;name^AT1;...^AT2;...
@@ -2196,12 +2208,18 @@ export function usePrinterConnection() {
     const nmCommand = `^NM ${templateCode};0;0;0;${messageName}${fieldSubcommands}`;
     
     console.log('[saveMessageContent] ^NM command:', nmCommand);
+    if (dmUploadCmds.length > 0) {
+      console.log(`[saveMessageContent] DataMatrix ECC200: ${dmUploadCmds.length} ^NG upload command(s)`);
+    }
 
     // For existing messages, delete first then recreate
+    // DataMatrix bitmap uploads must happen before the ^NM command
     const commands: string[] = [];
     if (!isNew) {
       commands.push(`^DM ${messageName}`);
     }
+    // Insert ^NG (graphic upload) commands before ^NM
+    commands.push(...dmUploadCmds);
     commands.push(nmCommand);
     commands.push(FLUSH_COMMAND);
 
@@ -2247,7 +2265,8 @@ export function usePrinterConnection() {
 
   // Build the raw protocol commands for a message (without sending).
   // Used by master/slave sync to send messages to non-connected printers.
-  const buildMessageCommands = useCallback((
+  // Now async to support DataMatrix ECC200 bitmap generation.
+  const buildMessageCommands = useCallback(async (
     messageName: string,
     fields: Array<{
       id: number;
@@ -2265,7 +2284,7 @@ export function usePrinterConnection() {
     }>,
     templateValue?: string,
     isNew?: boolean,
-  ): string[] | null => {
+  ): Promise<string[] | null> => {
     if (fields.length === 0) return null;
 
     const templateCode = templateToProtocolCode(templateValue);
@@ -2289,6 +2308,9 @@ export function usePrinterConnection() {
       return true;
     });
 
+    // Generate DataMatrix ECC200 bitmap upload commands
+    const { uploadCommands: dmUploadCmds, graphicMap: dmGraphicMap } = await generateDataMatrixCommands(validFields, templateHeight);
+
     const fieldSubcommands = validFields.map((field, index) => {
       const fieldHeight = field.type === 'barcode' && field.height 
         ? field.height 
@@ -2298,7 +2320,7 @@ export function usePrinterConnection() {
       return buildFieldSubcommand({
         ...field,
         y: Math.max(0, printerY),
-      }, index + 1, templateHeight);
+      }, index + 1, templateHeight, dmGraphicMap);
     }).join('');
 
     const nmCommand = `^NM ${templateCode};0;0;0;${messageName}${fieldSubcommands}`;
@@ -2306,6 +2328,8 @@ export function usePrinterConnection() {
     if (!isNew) {
       commands.push(`^DM ${messageName}`);
     }
+    // Insert ^NG commands before ^NM
+    commands.push(...dmUploadCmds);
     commands.push(nmCommand);
     commands.push(FLUSH_COMMAND);
     return commands;

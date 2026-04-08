@@ -409,6 +409,8 @@ class PrinterEmulator {
         response = this.cmdAlignFields(trimmedCommand);
       } else if (trimmedCommand.startsWith('^AO')) {
         response = this.cmdAutoOutput(trimmedCommand);
+      } else if (trimmedCommand.startsWith('^NG')) {
+        response = this.cmdNewGraphic(trimmedCommand);
       } else if (trimmedCommand.startsWith('^LE')) {
         response = this.cmdListErrors();
       } else {
@@ -816,6 +818,34 @@ class PrinterEmulator {
       this.state.messages.push(msgName);
     }
     return this.formatSuccess();
+  }
+
+  /**
+   * ^NG - New Graphic: Upload a bitmap graphic to the printer
+   * Format: ^NG name;width;height;hex_bitmap_data
+   * Used by CodeSync to upload software-generated DataMatrix ECC200 bitmaps
+   */
+  private cmdNewGraphic(cmd: string): string {
+    const match = cmd.match(/\^NG\s+([^;]+);(\d+);(\d+);([0-9A-Fa-f]+)/);
+    if (match) {
+      const name = match[1].trim();
+      // Add to logos list if not already present
+      if (!this.state.logos.includes(name)) {
+        this.state.logos.push(name);
+      }
+      console.log(`[Emulator] ^NG: Uploaded graphic "${name}" (${match[2]}×${match[3]} dots, ${match[4].length} hex chars)`);
+      return this.formatSuccess();
+    }
+    // Also accept minimal format for updates: ^NG name
+    const simpleMatch = cmd.match(/\^NG\s+(\S+)/);
+    if (simpleMatch) {
+      const name = simpleMatch[1].trim();
+      if (!this.state.logos.includes(name)) {
+        this.state.logos.push(name);
+      }
+      return this.formatSuccess();
+    }
+    return this.formatError(2, 'CmdFormat', 'Usage: ^NG name;width;height;hexdata');
   }
 
   private cmdChangeMessage(_cmd: string): string {
