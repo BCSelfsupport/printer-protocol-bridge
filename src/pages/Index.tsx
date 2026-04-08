@@ -1255,6 +1255,39 @@ const Index = () => {
             toast.error(`Failed to update ${targetPrinter.name}`, { id: 'printer-expiry' });
           }
         }}
+        onResetGroupExpiry={async (masterId) => {
+          const currentMsg = connectionState.status?.currentMessage;
+          if (!currentMsg) return;
+          const stored = getMessage(currentMsg);
+          if (!stored || stored.fields.length === 0) return;
+
+          // Clear expiry overrides on master and all its slaves
+          const master = printers.find(p => p.id === masterId);
+          if (!master) return;
+          if (master.expiryOffsetDays != null) {
+            updatePrinter(master.id, { expiryOffsetDays: undefined });
+          }
+          const slaves = getSlavesForMaster(masterId).filter(s => s.isAvailable);
+          slaves.forEach(s => {
+            if (s.expiryOffsetDays != null) {
+              updatePrinter(s.id, { expiryOffsetDays: undefined });
+            }
+          });
+
+          // Re-sync the original message (with master's default expiry) to all slaves
+          if (slaves.length > 0) {
+            toast.loading('Resetting group expiry...', { id: 'reset-expiry' });
+            try {
+              await syncMessageToSlaves(currentMsg, stored);
+              toast.success(`Group expiry reset to message default`, { id: 'reset-expiry' });
+            } catch (e) {
+              console.error('[ResetGroupExpiry] Failed:', e);
+              toast.error('Failed to reset group expiry', { id: 'reset-expiry' });
+            }
+          } else {
+            toast.success('Group expiry reset to message default');
+          }
+        }}
       />
     );
   };

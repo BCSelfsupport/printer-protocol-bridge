@@ -97,6 +97,8 @@ interface PrintersScreenProps {
   onSelectedPrinterChange?: (printer: Printer | null) => void;
   /** Look up stored/hardcoded message content by name for a specific printer */
   getMessageContent?: (name: string, printerId?: number) => MessageDetails | null;
+  /** Reset all group expiry offsets back to message default and re-sync */
+  onResetGroupExpiry?: (masterId: number) => void;
 }
 
 // Sortable wrapper for PrinterListItem
@@ -121,6 +123,7 @@ function SortablePrinterItem({
   onUpdateExpiryOffset,
   messageExpiryDays,
   masterMessage,
+  onResetGroupExpiry,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -142,6 +145,7 @@ function SortablePrinterItem({
   onUpdateExpiryOffset?: (printerId: number, days: number) => void;
   messageExpiryDays?: number | null;
   masterMessage?: string;
+  onResetGroupExpiry?: () => void;
 }) {
   const {
     attributes,
@@ -192,6 +196,7 @@ function SortablePrinterItem({
         onUpdateExpiryOffset={onUpdateExpiryOffset}
         messageExpiryDays={messageExpiryDays}
         masterMessage={masterMessage}
+        onResetGroupExpiry={onResetGroupExpiry}
       />
     </div>
   );
@@ -249,6 +254,7 @@ export function PrintersScreen({
   onSlaveExpiryChange,
   onSelectedPrinterChange,
   getMessageContent,
+  onResetGroupExpiry,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -616,6 +622,10 @@ export function PrintersScreen({
                       }
                       messageExpiryDays={messageExpiryDays}
                       masterMessage={masterMessageMap.get(printer.id)}
+                      onResetGroupExpiry={printer.role === 'master' && onResetGroupExpiry && messageExpiryDays != null
+                        ? () => onResetGroupExpiry(printer.id)
+                        : undefined
+                      }
                     />
                   ))}
                 </SortableContext>
