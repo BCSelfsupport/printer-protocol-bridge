@@ -1165,56 +1165,54 @@ export function EditMessageScreen({
             </div>
 
             {/* Field Settings Panel - Per-field settings like manual page 49-50 */}
-            {selectedField && (
-              <FieldSettingsPanel
-                fontSize={selectedField.fontSize}
-                bold={selectedField.bold ?? 0}
-                gap={selectedField.gap ?? 1}
-                rotation={selectedField.rotation ?? 'Normal'}
-                autoNumerals={selectedField.autoNumerals ?? 0}
-                templateLabel={getCurrentTemplateValue().startsWith('multi-') 
-                  ? MULTILINE_TEMPLATES.find(t => t.value === getCurrentTemplateValue())?.label || getCurrentTemplateValue()
-                  : `${message.height}`
-                }
-                onFontSizeChange={(delta) => {
-                  const fonts = getAllowedFonts();
-                  if (fonts.length === 0) return;
-                  // Determine which fields to update: multi-selected or just the active one
-                  const targetIds = selectedFieldIds.size > 0 ? selectedFieldIds : new Set([selectedFieldId!]);
-                  setMessage((prev) => ({
-                    ...prev,
-                    fields: prev.fields.map((f) => {
-                      if (!targetIds.has(f.id)) return f;
-                      const currentIdx = fonts.findIndex(fs => fs.value === f.fontSize);
-                      let newFont;
-                      if (currentIdx === -1) {
-                        newFont = fonts[fonts.length - 1];
-                      } else {
-                        const newIdx = Math.max(0, Math.min(fonts.length - 1, currentIdx + delta));
-                        newFont = fonts[newIdx];
-                      }
-                      const isBarcode = f.type === 'barcode';
-                      const is2DCode = isBarcode && f.data && /^\[(QR|QRCODE|DATAMATRIX|DM|DATA MATRIX|DOTCODE)/i.test(f.data);
-                      const newHeight = is2DCode ? f.height : isBarcode ? message.height : newFont.height;
-                      const blockedRows = 32 - message.height;
-                      const newY = currentMultilineTemplate
-                        ? f.y
-                        : Math.max(blockedRows, 32 - newHeight);
-                      return { ...f, fontSize: newFont.value, height: newHeight, y: newY };
-                    }),
-                  }));
-                }}
-                onBoldChange={(v) => handleUpdateFieldSetting('bold', v)}
-                onGapChange={(v) => handleUpdateFieldSetting('gap', v)}
-                onRotationChange={(v) => handleUpdateFieldSetting('rotation', v)}
-                onAutoNumeralsChange={(v) => handleUpdateFieldSetting('autoNumerals', v)}
-                onTemplateChange={handleTemplateNavigate}
-                disabled={!selectedFieldId}
-                allowedFonts={getAllowedFonts()}
-                currentFontIndex={getAllowedFonts().findIndex(f => f.value === selectedField.fontSize)}
-                fieldType={selectedField.type}
-              />
-            )}
+            <FieldSettingsPanel
+              fontSize={selectedField?.fontSize ?? defaultFieldSettings.fontSize}
+              bold={selectedField?.bold ?? 0}
+              gap={selectedField?.gap ?? 1}
+              rotation={selectedField?.rotation ?? 'Normal'}
+              autoNumerals={selectedField?.autoNumerals ?? 0}
+              templateLabel={getCurrentTemplateValue().startsWith('multi-') 
+                ? MULTILINE_TEMPLATES.find(t => t.value === getCurrentTemplateValue())?.label || getCurrentTemplateValue()
+                : `${message.height}`
+              }
+              onFontSizeChange={(delta) => {
+                if (!selectedField) return;
+                const fonts = getAllowedFonts();
+                if (fonts.length === 0) return;
+                const targetIds = selectedFieldIds.size > 0 ? selectedFieldIds : new Set([selectedFieldId!]);
+                setMessage((prev) => ({
+                  ...prev,
+                  fields: prev.fields.map((f) => {
+                    if (!targetIds.has(f.id)) return f;
+                    const currentIdx = fonts.findIndex(fs => fs.value === f.fontSize);
+                    let newFont;
+                    if (currentIdx === -1) {
+                      newFont = fonts[fonts.length - 1];
+                    } else {
+                      const newIdx = Math.max(0, Math.min(fonts.length - 1, currentIdx + delta));
+                      newFont = fonts[newIdx];
+                    }
+                    const isBarcode = f.type === 'barcode';
+                    const is2DCode = isBarcode && f.data && /^\[(QR|QRCODE|DATAMATRIX|DM|DATA MATRIX|DOTCODE)/i.test(f.data);
+                    const newHeight = is2DCode ? f.height : isBarcode ? message.height : newFont.height;
+                    const blockedRows = 32 - message.height;
+                    const newY = currentMultilineTemplate
+                      ? f.y
+                      : Math.max(blockedRows, 32 - newHeight);
+                    return { ...f, fontSize: newFont.value, height: newHeight, y: newY };
+                  }),
+                }));
+              }}
+              onBoldChange={(v) => handleUpdateFieldSetting('bold', v)}
+              onGapChange={(v) => handleUpdateFieldSetting('gap', v)}
+              onRotationChange={(v) => handleUpdateFieldSetting('rotation', v)}
+              onAutoNumeralsChange={(v) => handleUpdateFieldSetting('autoNumerals', v)}
+              onTemplateChange={handleTemplateNavigate}
+              disabled={!selectedFieldId}
+              allowedFonts={getAllowedFonts()}
+              currentFontIndex={selectedField ? getAllowedFonts().findIndex(f => f.value === selectedField.fontSize) : -1}
+              fieldType={selectedField?.type ?? 'text'}
+            />
 
           </div>
 
