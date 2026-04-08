@@ -1165,7 +1165,7 @@ export function EditMessageScreen({
             </div>
 
             {/* Field Settings Panel - Per-field settings like manual page 49-50 */}
-            {selectedField && (
+            {selectedField ? (
               <FieldSettingsPanel
                 fontSize={selectedField.fontSize}
                 bold={selectedField.bold ?? 0}
@@ -1214,6 +1214,24 @@ export function EditMessageScreen({
                 currentFontIndex={getAllowedFonts().findIndex(f => f.value === selectedField.fontSize)}
                 fieldType={selectedField.type}
               />
+            ) : (
+              /* Template-only controls when no field is selected (e.g. startEmpty) */
+              <div className="bg-card rounded-lg p-2 border border-border">
+                <div className="grid grid-cols-2 gap-2">
+                  <SettingCardSimple
+                    label="Template"
+                    value={getCurrentTemplateValue().startsWith('multi-') 
+                      ? MULTILINE_TEMPLATES.find(t => t.value === getCurrentTemplateValue())?.label || getCurrentTemplateValue()
+                      : `${message.height} dots`
+                    }
+                    onIncrease={() => handleTemplateNavigate(-1)}
+                    onDecrease={() => handleTemplateNavigate(1)}
+                  />
+                  <div className="flex items-center justify-center text-xs text-muted-foreground">
+                    Select a template, then add fields
+                  </div>
+                </div>
+              </div>
             )}
 
           </div>
