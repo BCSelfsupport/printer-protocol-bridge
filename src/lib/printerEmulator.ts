@@ -409,6 +409,8 @@ class PrinterEmulator {
         response = this.cmdAlignFields(trimmedCommand);
       } else if (trimmedCommand.startsWith('^AO')) {
         response = this.cmdAutoOutput(trimmedCommand);
+      } else if (trimmedCommand.startsWith('^NG')) {
+        response = this.cmdNewGraphic(trimmedCommand);
       } else if (trimmedCommand.startsWith('^LE')) {
         response = this.cmdListErrors();
       } else {

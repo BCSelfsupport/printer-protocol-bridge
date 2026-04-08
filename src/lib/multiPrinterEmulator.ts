@@ -312,6 +312,8 @@ class PrinterEmulatorInstance {
         response = this.cmdForcePhotoEye(false);
       } else if (trimmedCommand.startsWith('^LE')) {
         response = this.cmdListErrors();
+      } else if (trimmedCommand.startsWith('^NG')) {
+        response = this.cmdNewGraphic(trimmedCommand);
       } else {
         response = this.formatError(3, 'CmdNotRec', 'Command not recognized');
         success = false;
