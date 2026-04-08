@@ -64,6 +64,7 @@ export interface EmulatedPrinterConfig {
   name: string;
   ipAddress: string;
   port: number;
+  model?: string;   // e.g. 'N-88 STD', 'N-86 STD' — defaults to 'N-86 STD'
   initialState: Partial<EmulatorState>;
 }
 
@@ -73,6 +74,7 @@ const EMULATED_PRINTERS: EmulatedPrinterConfig[] = [
     name: 'Printer 1',
     ipAddress: '192.168.1.55',
     port: 23,
+    model: 'N-88 STD',
     initialState: {
       currentMessage: 'BESTCODE',
       printCount: 1247,
@@ -352,7 +354,8 @@ class PrinterEmulatorInstance {
   }
 
   private cmdViewVersion(): string {
-    return `Remote Server N-86 STD ${this.VERSION} NB X.602 built ${this.BUILD_DATE}`;
+    const model = this.config.model || 'N-86 STD';
+    return `Remote Server ${model} ${this.VERSION} NB X.602 built ${this.BUILD_DATE}`;
   }
 
   private cmdEchoOn(): string {
