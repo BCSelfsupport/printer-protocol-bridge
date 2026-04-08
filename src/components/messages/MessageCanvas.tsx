@@ -768,6 +768,7 @@ export function MessageCanvas({
 
       mouseDragMovedRef.current = true;
       const fontInfo = getFontInfo(draggedField.fontSize);
+      const fieldHeight = draggedField.height || fontInfo.height;
       const pos = getMousePositionFromEvent(e);
       let newX = pos.x - mouseDragOffsetRef.current.x;
       let newY = pos.y - mouseDragOffsetRef.current.y;
@@ -775,10 +776,10 @@ export function MessageCanvas({
       // Clamp to valid area
       newX = Math.max(0, newX);
       newY = Math.max(blockedRows, newY);
-      newY = Math.min(TOTAL_ROWS - fontInfo.height, newY);
+      newY = Math.min(TOTAL_ROWS - fieldHeight, newY);
 
       // Snap to firmware-valid Y grid position
-      newY = snapToValidY(newY, fontInfo.height, dragFieldId);
+      newY = snapToValidY(newY, fieldHeight, dragFieldId);
 
       setDragPosition({ x: newX, y: newY });
       e.preventDefault();
