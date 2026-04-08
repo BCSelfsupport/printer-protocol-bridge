@@ -2265,7 +2265,8 @@ export function usePrinterConnection() {
 
   // Build the raw protocol commands for a message (without sending).
   // Used by master/slave sync to send messages to non-connected printers.
-  const buildMessageCommands = useCallback((
+  // Now async to support DataMatrix ECC200 bitmap generation.
+  const buildMessageCommands = useCallback(async (
     messageName: string,
     fields: Array<{
       id: number;
@@ -2283,7 +2284,7 @@ export function usePrinterConnection() {
     }>,
     templateValue?: string,
     isNew?: boolean,
-  ): string[] | null => {
+  ): Promise<string[] | null> => {
     if (fields.length === 0) return null;
 
     const templateCode = templateToProtocolCode(templateValue);
@@ -2307,6 +2308,9 @@ export function usePrinterConnection() {
       return true;
     });
 
+    // Generate DataMatrix ECC200 bitmap upload commands
+    const { uploadCommands: dmUploadCmds, graphicMap: dmGraphicMap } = await generateDataMatrixCommands(validFields, templateHeight);
+
     const fieldSubcommands = validFields.map((field, index) => {
       const fieldHeight = field.type === 'barcode' && field.height 
         ? field.height 
@@ -2316,7 +2320,7 @@ export function usePrinterConnection() {
       return buildFieldSubcommand({
         ...field,
         y: Math.max(0, printerY),
-      }, index + 1, templateHeight);
+      }, index + 1, templateHeight, dmGraphicMap);
     }).join('');
 
     const nmCommand = `^NM ${templateCode};0;0;0;${messageName}${fieldSubcommands}`;
@@ -2324,6 +2328,8 @@ export function usePrinterConnection() {
     if (!isNew) {
       commands.push(`^DM ${messageName}`);
     }
+    // Insert ^NG commands before ^NM
+    commands.push(...dmUploadCmds);
     commands.push(nmCommand);
     commands.push(FLUSH_COMMAND);
     return commands;
