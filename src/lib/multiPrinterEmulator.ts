@@ -64,7 +64,6 @@ export interface EmulatedPrinterConfig {
   name: string;
   ipAddress: string;
   port: number;
-  model?: string; // e.g. '86', '88' — used in ^VV response
   initialState: Partial<EmulatorState>;
 }
 
@@ -74,7 +73,6 @@ const EMULATED_PRINTERS: EmulatedPrinterConfig[] = [
     name: 'Printer 1',
     ipAddress: '192.168.1.55',
     port: 23,
-    model: '88',
     initialState: {
       currentMessage: 'BESTCODE',
       printCount: 1247,
@@ -354,8 +352,7 @@ class PrinterEmulatorInstance {
   }
 
   private cmdViewVersion(): string {
-    const model = this.config.model || '86';
-    return `Remote Server N-${model} STD ${this.VERSION} NB X.602 built ${this.BUILD_DATE}`;
+    return `Remote Server N-86 STD ${this.VERSION} NB X.602 built ${this.BUILD_DATE}`;
   }
 
   private cmdEchoOn(): string {

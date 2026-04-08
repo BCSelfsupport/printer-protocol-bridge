@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database } from 'lucide-react';
 import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
@@ -37,28 +36,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
-
-/** Minimal template-only setting card for empty canvas */
-function SettingCardSimple({ label, value, onIncrease, onDecrease }: { label: string; value: string; onIncrease: () => void; onDecrease: () => void }) {
-  return (
-    <div className="bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between">
-          <div className="text-[10px] text-muted-foreground font-medium">{label}</div>
-        </div>
-        <div className="text-sm font-bold text-center text-foreground truncate">{value}</div>
-        <div className="flex gap-1">
-          <button onClick={onDecrease} className="industrial-button text-white p-2 rounded flex-1 flex items-center justify-center">
-            <ChevronLeftIcon className="w-5 h-5" />
-          </button>
-          <button onClick={onIncrease} className="industrial-button text-white p-2 rounded flex-1 flex items-center justify-center">
-            <ChevronRightIcon className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 
 export interface MessageField {
@@ -1188,7 +1165,7 @@ export function EditMessageScreen({
             </div>
 
             {/* Field Settings Panel - Per-field settings like manual page 49-50 */}
-            {selectedField ? (
+            {selectedField && (
               <FieldSettingsPanel
                 fontSize={selectedField.fontSize}
                 bold={selectedField.bold ?? 0}
@@ -1237,24 +1214,6 @@ export function EditMessageScreen({
                 currentFontIndex={getAllowedFonts().findIndex(f => f.value === selectedField.fontSize)}
                 fieldType={selectedField.type}
               />
-            ) : (
-              /* Template-only controls when no field is selected (e.g. startEmpty) */
-              <div className="bg-card rounded-lg p-2 border border-border">
-                <div className="grid grid-cols-2 gap-2">
-                  <SettingCardSimple
-                    label="Template"
-                    value={getCurrentTemplateValue().startsWith('multi-') 
-                      ? MULTILINE_TEMPLATES.find(t => t.value === getCurrentTemplateValue())?.label || getCurrentTemplateValue()
-                      : `${message.height} dots`
-                    }
-                    onIncrease={() => handleTemplateNavigate(-1)}
-                    onDecrease={() => handleTemplateNavigate(1)}
-                  />
-                  <div className="flex items-center justify-center text-xs text-muted-foreground">
-                    Select a template, then add fields
-                  </div>
-                </div>
-              </div>
             )}
 
           </div>
