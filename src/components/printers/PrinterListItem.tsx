@@ -244,10 +244,10 @@ export function PrinterListItem({
 
             {/* Expiry offset for grouped printers */}
             {(printer.role === 'slave' || printer.role === 'master') && onUpdateExpiryOffset && messageExpiryDays != null && (
-              <div className="flex items-center gap-1.5 mt-1">
-                <CalendarDays className="w-3.5 h-3.5 text-primary/70" />
+              <div className="flex items-center gap-2 mt-1.5">
+                <CalendarDays className="w-4 h-4 text-primary/70" />
                 {editingOffset ? (
-                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                     <input
                       type="number"
                       value={offsetValue}
@@ -269,9 +269,9 @@ export function PrinterListItem({
                         }
                       }}
                       autoFocus
-                      className="w-12 h-5 text-[10px] text-center bg-slate-700 border border-primary/50 rounded text-white font-mono px-1 focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="w-16 h-7 text-sm text-center bg-slate-700 border-2 border-primary/60 rounded-md text-white font-mono px-2 focus:outline-none focus:ring-2 focus:ring-primary"
                     />
-                    <span className="text-[10px] text-slate-400">days</span>
+                    <span className="text-xs text-slate-400">days</span>
                   </div>
                 ) : (
                   <button
@@ -281,7 +281,7 @@ export function PrinterListItem({
                       setEditingOffset(true);
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
-                    className="text-[10px] text-primary/70 hover:text-primary font-medium"
+                    className="text-xs text-primary/70 hover:text-primary font-medium py-0.5 px-1.5 rounded hover:bg-primary/10 transition-colors"
                     title={isOverridden ? `Custom: ${effectiveExpiry} days (message default: ${messageExpiryDays ?? 0})` : "From selected message — click to change for this printer"}
                   >
                     Expiry: <span className={cn("font-bold", isOverridden ? "text-amber-400" : "")}>
