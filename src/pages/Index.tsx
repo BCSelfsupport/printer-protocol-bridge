@@ -150,6 +150,24 @@ const Index = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectedPrinterId]);
 
+  // Clear per-printer expiry overrides when the selected message changes.
+  // The printer card should always default to the message's autoCodeExpiryDays;
+  // per-printer overrides are only meaningful while the same message is active.
+  const prevMessageRef = useRef<string | null>(null);
+  useEffect(() => {
+    const currentMsg = connectionState.status?.currentMessage ?? null;
+    if (prevMessageRef.current !== null && currentMsg !== null && currentMsg !== prevMessageRef.current) {
+      // Message changed — clear expiryOffsetDays on all printers
+      printers.forEach(p => {
+        if (p.expiryOffsetDays != null) {
+          updatePrinter(p.id, { expiryOffsetDays: undefined });
+        }
+      });
+    }
+    prevMessageRef.current = currentMsg;
+  }, [connectionState.status?.currentMessage]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   // Auto-sync: fetch message content from printer for any messages not yet in localStorage.
   // Runs when the message list changes (from ^LM polling) while connected.
   const syncingRef = useRef(false);
