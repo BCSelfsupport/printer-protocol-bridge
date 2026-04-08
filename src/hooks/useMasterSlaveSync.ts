@@ -98,9 +98,10 @@ export function useMasterSlaveSync({
     console.log(`[MasterSlaveSync] Syncing message selection "${currentMessage}" to ${slaves.length} slave(s)`);
 
     const masterDetails = getMessageContent?.(currentMessage) ?? null;
-    const commands = masterDetails && buildMessageCommands
-      ? buildMessageCommands(currentMessage, masterDetails.fields, masterDetails.templateValue, false)
+    const commandsResult = masterDetails && buildMessageCommands
+      ? await Promise.resolve(buildMessageCommands(currentMessage, masterDetails.fields, masterDetails.templateValue, false))
       : null;
+    const commands = commandsResult;
 
     (async () => {
       for (const slave of slaves) {
