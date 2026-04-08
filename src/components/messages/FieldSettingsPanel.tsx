@@ -211,7 +211,7 @@ export function FieldSettingsPanel({
           value={templateLabel}
           onIncrease={() => onTemplateChange?.(-1)}
           onDecrease={() => onTemplateChange?.(1)}
-          disabled={disabled || !onTemplateChange}
+          disabled={!onTemplateChange}
         />
         
         {/* Bold / Magnification */}
