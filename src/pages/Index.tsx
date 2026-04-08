@@ -716,6 +716,14 @@ const Index = () => {
           currentMessageName={messageTargetPrinter?.currentMessage ?? connectionState.status?.currentMessage ?? null}
           onSelect={async (message) => {
             if (!messageTargetPrinter) return false;
+            // Slaves follow the master's selection — block independent message changes
+            if (messageTargetPrinter.role === 'slave') {
+              toast.info(
+                `${messageTargetPrinter.name} is a slave printer and follows the master's message selection. To select a different message, remove it from the sync group first.`,
+                { duration: 5000 }
+              );
+              return false;
+            }
             if (isConnectedMessageTarget) return await selectMessage(message);
             const ok = await sendCommandToPrinter(messageTargetPrinter, `^SM ${message.name}`);
             if (ok) {
@@ -999,6 +1007,14 @@ const Index = () => {
             onSelect={async (message) => {
               const messageTargetPrinter = selectedPrinter ?? connectionState.connectedPrinter ?? null;
               if (!messageTargetPrinter) return false;
+              // Slaves follow the master's selection — block independent message changes
+              if (messageTargetPrinter.role === 'slave') {
+                toast.info(
+                  `${messageTargetPrinter.name} is a slave printer and follows the master's message selection. To select a different message, remove it from the sync group first.`,
+                  { duration: 5000 }
+                );
+                return false;
+              }
               if (messageTargetPrinter.id === connectionState.connectedPrinter?.id) return await selectMessage(message);
               const ok = await sendCommandToPrinter(messageTargetPrinter, `^SM ${message.name}`);
               if (ok) {
