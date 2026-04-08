@@ -75,6 +75,7 @@ const EMULATED_PRINTERS: EmulatedPrinterConfig[] = [
     ipAddress: '192.168.1.55',
     port: 23,
     model: 'N-88 STD',
+    initialState: {
       currentMessage: 'BESTCODE',
       printCount: 1247,
       productCount: 5832,
