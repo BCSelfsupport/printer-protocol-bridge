@@ -338,6 +338,19 @@ export function PrintersScreen({
     };
   }, [selectedPrinter, status]);
 
+  const effectivePreviewExpiryOffsetDays = useMemo(() => {
+    if (selectedPrinter) {
+      return selectedPrinter.expiryOffsetDays;
+    }
+
+    if (!connectedPrinter) {
+      return undefined;
+    }
+
+    return printers.find(p => p.id === connectedPrinter.id)?.expiryOffsetDays
+      ?? connectedPrinter.expiryOffsetDays;
+  }, [selectedPrinter, connectedPrinter, printers]);
+
   // Extract the max expiry offset from the currently selected message's fields
   const messageExpiryDays = useMemo(() => {
     if (!messageContent?.fields) return null;
@@ -693,7 +706,7 @@ export function PrintersScreen({
               streamHours={connectedMetrics?.streamHours}
               printerModel={status?.printerModel}
               printerVariant={status?.printerVariant}
-              printerExpiryOffsetDays={selectedPrinter?.expiryOffsetDays ?? connectedPrinter?.expiryOffsetDays}
+              printerExpiryOffsetDays={effectivePreviewExpiryOffsetDays}
               selectedPrinterLineId={selectedPrinter?.lineId ?? connectedPrinter?.lineId}
             />
           </div>
