@@ -562,6 +562,31 @@ class PrinterEmulatorInstance {
     return this.state.echoOn ? 'Command Successful!\r\nLogged out' : 'Logout OK';
   }
 
+  /**
+   * ^NG - New Graphic: Upload a software-generated bitmap (e.g. DataMatrix ECC200)
+   * Format: ^NG name;width;height;hex_bitmap_data
+   */
+  private cmdNewGraphic(cmd: string): string {
+    const match = cmd.match(/\^NG\s+([^;]+);(\d+);(\d+);([0-9A-Fa-f]+)/i);
+    if (match) {
+      const name = match[1].trim();
+      if (!this.state.logos.includes(name)) {
+        this.state.logos.push(name);
+      }
+      console.log(`[MultiEmulator:${this.config.name}] ^NG: Uploaded graphic "${name}" (${match[2]}×${match[3]})`);
+      return this.state.echoOn ? 'Command Successful!' : '>';
+    }
+    const simpleMatch = cmd.match(/\^NG\s+(\S+)/);
+    if (simpleMatch) {
+      const name = simpleMatch[1].trim();
+      if (!this.state.logos.includes(name)) {
+        this.state.logos.push(name);
+      }
+      return this.state.echoOn ? 'Command Successful!' : '>';
+    }
+    return this.formatError(2, 'CmdFormat', 'Usage: ^NG name;width;height;hexdata');
+  }
+
   private cmdChangeCounter(cmd: string): string {
     // ^CC C;V - Set counter C to value V
     // Counter IDs: 0 = Print, 1-4 = Custom, 6 = Product
