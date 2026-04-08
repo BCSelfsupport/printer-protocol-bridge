@@ -28,7 +28,7 @@ const BARCODE_ENCODINGS = [
   { value: 'code128_ucc', label: 'A UCC/EAN-128', group: '1D' },
   { value: 'code128_sscc', label: 'UCC/EAN-128 SSCC', group: '1D' },
   { value: 'code128_multi', label: 'Multi-Information', group: '1D' },
-  { value: 'datamatrix', label: 'Data Matrix', group: '2D' },
+  { value: 'datamatrix', label: 'Data Matrix ECC200', group: '2D' },
   { value: 'qrcode', label: 'QR Code', group: '2D' },
   { value: 'dotcode', label: 'DotCode', group: '2D' },
 ] as const;
