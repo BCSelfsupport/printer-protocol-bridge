@@ -26,6 +26,15 @@ import { TrainingVideosScreen } from '@/components/screens/TrainingVideosScreen'
 import { LicenseActivationDialog } from '@/components/license/LicenseActivationDialog';
 import { FaultAlertDialog } from '@/components/alerts/FaultAlertDialog';
 import { PausePollingButton } from '@/components/printers/PausePollingButton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 import { SignInDialog } from '@/components/printers/SignInDialog';
 import { HelpDialog } from '@/components/help/HelpDialog';
@@ -73,6 +82,8 @@ const Index = () => {
   const [helpDialogOpen, setHelpDialogOpen] = useState(false);
   const [relayDialogOpen, setRelayDialogOpen] = useState(false);
   const [licenseDialogOpen, setLicenseDialogOpen] = useState(false);
+  const [slaveBlockDialogOpen, setSlaveBlockDialogOpen] = useState(false);
+  const [slaveBlockPrinterName, setSlaveBlockPrinterName] = useState('');
   
   // Local message storage (persists to localStorage, scoped by printer ID)
   const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId } = useMessageStorage();
@@ -718,10 +729,8 @@ const Index = () => {
             if (!messageTargetPrinter) return false;
             // Slaves follow the master's selection — block independent message changes
             if (messageTargetPrinter.role === 'slave') {
-              toast.info(
-                `${messageTargetPrinter.name} is a slave printer and follows the master's message selection. To select a different message, remove it from the sync group first.`,
-                { duration: 5000 }
-              );
+              setSlaveBlockPrinterName(messageTargetPrinter.name);
+              setSlaveBlockDialogOpen(true);
               return false;
             }
             if (isConnectedMessageTarget) return await selectMessage(message);
@@ -1009,10 +1018,8 @@ const Index = () => {
               if (!messageTargetPrinter) return false;
               // Slaves follow the master's selection — block independent message changes
               if (messageTargetPrinter.role === 'slave') {
-                toast.info(
-                  `${messageTargetPrinter.name} is a slave printer and follows the master's message selection. To select a different message, remove it from the sync group first.`,
-                  { duration: 5000 }
-                );
+                setSlaveBlockPrinterName(messageTargetPrinter.name);
+                setSlaveBlockDialogOpen(true);
                 return false;
               }
               if (messageTargetPrinter.id === connectionState.connectedPrinter?.id) return await selectMessage(message);
@@ -1508,6 +1515,23 @@ const Index = () => {
 
       {/* Mobile companion: pause/resume polling FAB */}
       <PausePollingButton />
+
+      {/* Slave message selection block dialog */}
+      <AlertDialog open={slaveBlockDialogOpen} onOpenChange={setSlaveBlockDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Slave Printer</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm leading-relaxed">
+              <strong>{slaveBlockPrinterName}</strong> is a slave printer and automatically follows the master's message selection.
+              <br /><br />
+              To select a different message on this printer, remove it from the sync group first by editing the printer and setting its role to <strong>Standalone</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
