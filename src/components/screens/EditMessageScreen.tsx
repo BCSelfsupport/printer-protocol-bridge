@@ -38,6 +38,28 @@ import {
 import { Button } from '@/components/ui/button';
 import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
 
+/** Minimal template-only setting card for empty canvas */
+function SettingCardSimple({ label, value, onIncrease, onDecrease }: { label: string; value: string; onIncrease: () => void; onDecrease: () => void }) {
+  return (
+    <div className="bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] text-muted-foreground font-medium">{label}</div>
+        </div>
+        <div className="text-sm font-bold text-center text-foreground truncate">{value}</div>
+        <div className="flex gap-1">
+          <button onClick={onDecrease} className="industrial-button text-white p-2 rounded flex-1 flex items-center justify-center">
+            <ChevronLeftIcon className="w-5 h-5" />
+          </button>
+          <button onClick={onIncrease} className="industrial-button text-white p-2 rounded flex-1 flex items-center justify-center">
+            <ChevronRightIcon className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 export interface MessageField {
   id: number;
