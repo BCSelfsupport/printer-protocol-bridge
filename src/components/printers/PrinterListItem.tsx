@@ -262,9 +262,14 @@ export function PrinterListItem({
                         <Minus className="w-3.5 h-3.5" />
                       </button>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={offsetValue}
-                        onChange={(e) => setOffsetValue(e.target.value)}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/[^0-9]/g, '');
+                          setOffsetValue(v);
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             const days = parseInt(offsetValue, 10) || 0;
