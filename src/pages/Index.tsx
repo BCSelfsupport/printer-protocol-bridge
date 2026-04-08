@@ -387,9 +387,14 @@ const Index = () => {
       }
       // Also select the message on the slave
       await sendCommandToPrinter(slave, `^SM ${messageName}`);
+      // Reset the slave's per-printer expiry override since the master's
+      // default expiry is now stored on the printer again
+      if (slave.expiryOffsetDays != null) {
+        updatePrinter(slave.id, { expiryOffsetDays: undefined });
+      }
       console.log(`[MasterSlaveSync] Message "${messageName}" → ${slave.name}: ${allOk ? 'OK' : 'PARTIAL'}`);
     }
-  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildMessageCommands, sendCommandToPrinter]);
+  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildMessageCommands, sendCommandToPrinter, updatePrinter]);
 
   // Delay alerts on startup so update notification can appear first
   const [lowStockAlertQueue, setLowStockAlertQueue] = useState<LowStockAlertData[]>([]);
