@@ -1939,6 +1939,7 @@ export function usePrinterConnection() {
   };
 
   // Build field subcommand for ^NM (per v2.6 spec section 5.33.2)
+  // graphicMap: optional mapping of field ID → DataMatrix bitmap result (for ECC200 software barcodes)
   const buildFieldSubcommand = (field: {
     id: number;
     type: string;
@@ -1952,8 +1953,15 @@ export function usePrinterConnection() {
     autoCodeFieldType?: string;
     autoCodeFormat?: string;
     autoCodeExpiryDays?: number;
-  }, fieldNum: number, fieldTemplateHeight?: number): string => {
+  }, fieldNum: number, fieldTemplateHeight?: number, graphicMap?: Map<number, { graphicName: string; width: number; height: number }>): string => {
     const fontCode = fontToProtocolCode(field.fontSize);
+
+    // DataMatrix ECC200 (software-generated): use ^AL logo reference instead of ^AB
+    if (field.type === 'barcode' && isDataMatrixField(field.data) && graphicMap?.has(field.id)) {
+      const dm = graphicMap.get(field.id)!;
+      return `^AL${fieldNum};${field.x};${field.y};${dm.graphicName}`;
+    }
+    
     
     switch (field.type) {
       case 'text':
