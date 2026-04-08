@@ -1275,17 +1275,29 @@ const Index = () => {
           });
 
           // Re-sync the original message (with master's default expiry) to all slaves
-          if (slaves.length > 0) {
-            toast.loading('Resetting group expiry...', { id: 'reset-expiry' });
-            try {
-              await syncMessageToSlaves(currentMsg, stored);
-              toast.success(`Group expiry reset to message default`, { id: 'reset-expiry' });
-            } catch (e) {
-              console.error('[ResetGroupExpiry] Failed:', e);
-              toast.error('Failed to reset group expiry', { id: 'reset-expiry' });
+          const allTargets = [master, ...slaves];
+          toast.loading('Resetting group expiry...', { id: 'reset-expiry' });
+          try {
+            const commands = await buildMessageCommands(currentMsg, stored.fields, stored.templateValue, false);
+            if (commands && commands.length > 0) {
+              for (const target of allTargets) {
+                let anyFailed = false;
+                for (const cmd of commands) {
+                  const ok = await sendCommandToPrinter(target, cmd);
+                  if (!ok && !cmd.startsWith('^DM')) anyFailed = true;
+                }
+                await sendCommandToPrinter(target, `^SM ${currentMsg}`);
+                if (anyFailed) {
+                  console.warn(`[ResetGroupExpiry] Some commands failed on ${target.name}`);
+                }
+              }
             }
-          } else {
-            toast.success('Group expiry reset to message default');
+            const maxExpiry = stored.fields.reduce((max, f) => 
+              (f.autoCodeExpiryDays != null && f.autoCodeExpiryDays > max) ? f.autoCodeExpiryDays : max, 0);
+            toast.success(`Group expiry reset to ${maxExpiry} days`, { id: 'reset-expiry' });
+          } catch (e) {
+            console.error('[ResetGroupExpiry] Failed:', e);
+            toast.error('Failed to reset group expiry', { id: 'reset-expiry' });
           }
         }}
       />
