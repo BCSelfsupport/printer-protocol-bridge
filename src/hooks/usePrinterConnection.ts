@@ -2185,6 +2185,9 @@ export function usePrinterConnection() {
       return true;
     });
 
+    // Generate DataMatrix ECC200 bitmap upload commands for any DataMatrix barcode fields
+    const { uploadCommands: dmUploadCmds, graphicMap: dmGraphicMap } = await generateDataMatrixCommands(validFields, templateHeight);
+
     // Build field subcommands with inverted Y coordinates
     // Canvas Y (top-origin) → template-relative → printer Y (bottom-origin)
     const fieldSubcommands = validFields.map((field, index) => {
@@ -2197,7 +2200,7 @@ export function usePrinterConnection() {
       return buildFieldSubcommand({
         ...field,
         y: Math.max(0, printerY),
-      }, index + 1, templateHeight);
+      }, index + 1, templateHeight, dmGraphicMap);
     }).join('');
 
     // Build the full ^NM command: ^NM t;s;o;p;name^AT1;...^AT2;...
@@ -2205,12 +2208,18 @@ export function usePrinterConnection() {
     const nmCommand = `^NM ${templateCode};0;0;0;${messageName}${fieldSubcommands}`;
     
     console.log('[saveMessageContent] ^NM command:', nmCommand);
+    if (dmUploadCmds.length > 0) {
+      console.log(`[saveMessageContent] DataMatrix ECC200: ${dmUploadCmds.length} ^NG upload command(s)`);
+    }
 
     // For existing messages, delete first then recreate
+    // DataMatrix bitmap uploads must happen before the ^NM command
     const commands: string[] = [];
     if (!isNew) {
       commands.push(`^DM ${messageName}`);
     }
+    // Insert ^NG (graphic upload) commands before ^NM
+    commands.push(...dmUploadCmds);
     commands.push(nmCommand);
     commands.push(FLUSH_COMMAND);
 
