@@ -359,7 +359,7 @@ export function PrinterListItem({
                           title={`Reset all group expiry offsets to message default (${messageExpiryDays} days)`}
                         >
                           <RotateCcw className="w-3 h-3" />
-                          <span className="text-[10px] font-semibold uppercase tracking-wider">Reset All</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap">Reset All</span>
                         </button>
                       )}
                     </div>
