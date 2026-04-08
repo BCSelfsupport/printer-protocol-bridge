@@ -378,7 +378,7 @@ export function MessagesScreen({
         }}
         prompts={userDefinePrompts}
         onConfirm={async (entries) => {
-          if (pendingMessageDetails && onSaveMessageContent && selectedMessage) {
+          if (pendingMessageDetails && selectedMessage) {
             // Prompted text fields: write entered values into the fields and save to printer
             const updatedFields = pendingMessageDetails.fields.map(f => {
               if (entries[f.id] !== undefined) {
@@ -386,29 +386,35 @@ export function MessagesScreen({
               }
               return f;
             });
-            try {
-              toast.loading('Writing field data to printer...', { id: 'prompt-save' });
-              const saved = await onSaveMessageContent(
-                selectedMessage.name,
-                updatedFields,
-                pendingMessageDetails.templateValue,
-                false,
-              );
-              if (saved) {
-                const updatedDetails = { ...pendingMessageDetails, fields: updatedFields };
-                // Save updated message locally so Dashboard preview shows entered values
-                onSaveStoredMessage?.(updatedDetails);
-                // Update active preview immediately so Dashboard shows new values
-                onPromptSaved?.(updatedDetails);
-                // Now select the message on the printer
-                await onSelect(selectedMessage);
-                toast.success('Message loaded with entered values', { id: 'prompt-save' });
-              } else {
-                toast.error('Failed to write field data to printer', { id: 'prompt-save' });
+
+            if (onSaveMessageContent) {
+              try {
+                toast.loading('Writing field data to printer...', { id: 'prompt-save' });
+                const saved = await onSaveMessageContent(
+                  selectedMessage.name,
+                  updatedFields,
+                  pendingMessageDetails.templateValue,
+                  false,
+                );
+                if (saved) {
+                  const updatedDetails = { ...pendingMessageDetails, fields: updatedFields };
+                  onSaveStoredMessage?.(updatedDetails);
+                  onPromptSaved?.(updatedDetails);
+                  await onSelect(selectedMessage);
+                  toast.success('Message loaded with entered values', { id: 'prompt-save' });
+                } else {
+                  toast.error('Failed to write field data to printer', { id: 'prompt-save' });
+                }
+              } catch (e) {
+                console.error('[MessagesScreen] Failed to save prompted fields:', e);
+                toast.error('Failed to write field data', { id: 'prompt-save' });
               }
-            } catch (e) {
-              console.error('[MessagesScreen] Failed to save prompted fields:', e);
-              toast.error('Failed to write field data', { id: 'prompt-save' });
+            } else {
+              // Non-connected printer: can't write fields, but still select the message
+              const updatedDetails = { ...pendingMessageDetails, fields: updatedFields };
+              onSaveStoredMessage?.(updatedDetails);
+              onPromptSaved?.(updatedDetails);
+              await onSelect(selectedMessage);
             }
           } else if (onSendCommand) {
             // Legacy: send ^TD for native userdefine fields
