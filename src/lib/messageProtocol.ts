@@ -530,7 +530,7 @@ export function buildMessageDetails(
     const canvasY = Math.max(0, templateRelativeY + blockedRows);
 
     // For barcode fields, wrap data with [ENCODING] prefix
-    let fieldData = pf.elementData || messageName;
+    let fieldData = pf.elementData || '';
     if (fieldType === 'barcode' && barcodeEncoding) {
       const encodingLabel = barcodeEncoding.toUpperCase();
       if (!fieldData.startsWith('[')) {
