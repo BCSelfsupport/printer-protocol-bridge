@@ -390,12 +390,20 @@ export function MessagesScreen({
             if (onSaveMessageContent) {
               try {
                 toast.loading('Writing field data to printer...', { id: 'prompt-save' });
-                const saved = await onSaveMessageContent(
+                // Race against a timeout to prevent locking the printer if the
+                // TCP connection stalls mid-sequence.
+                const SAVE_TIMEOUT_MS = 12000;
+                const savePromise = onSaveMessageContent(
                   selectedMessage.name,
                   updatedFields,
                   pendingMessageDetails.templateValue,
                   false,
                 );
+                const timeoutPromise = new Promise<false>((resolve) =>
+                  setTimeout(() => resolve(false), SAVE_TIMEOUT_MS),
+                );
+                const saved = await Promise.race([savePromise, timeoutPromise]);
+
                 if (saved) {
                   const updatedDetails = { ...pendingMessageDetails, fields: updatedFields };
                   onSaveStoredMessage?.(updatedDetails);
@@ -406,7 +414,12 @@ export function MessagesScreen({
                   toast.success('Message loaded with entered values', { id: 'prompt-save' });
                 } else {
                   const reason = (onSaveMessageContent as any)?.__lastError || '';
-                  toast.error(`Failed to write field data to printer${reason ? ': ' + reason : ''}`, { id: 'prompt-save' });
+                  toast.error(
+                    reason
+                      ? `Failed to write field data: ${reason}`
+                      : 'Timed out writing to printer — check connection and try again',
+                    { id: 'prompt-save', duration: 6000 },
+                  );
                 }
               } catch (e) {
                 console.error('[MessagesScreen] Failed to save prompted fields:', e);
