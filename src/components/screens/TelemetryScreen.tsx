@@ -325,7 +325,8 @@ function EventLogTable({ events, telemetryHistory }: { events: FleetEvent[]; tel
   // Count helper for category tabs
   const getCategoryCount = (catKey: EventCategory) => {
     if (catKey === 'all') return events.length;
-    if (catKey === 'viscosity') return viscosityReadings.length; // show telemetry count, not event count
+    if (catKey === 'viscosity') return viscosityReadings.length;
+    if (catKey === 'phase') return phaseReadings.length;
     return events.filter(e => {
       if (e.category && e.category !== 'event') return e.category === catKey;
       if (catKey === 'event') return ['jet_start', 'jet_stop', 'hv_on', 'hv_off', 'pressure_fault', 'pressure_drift', 'modulation_change', 'modulation_drift'].includes(e.event_type);
