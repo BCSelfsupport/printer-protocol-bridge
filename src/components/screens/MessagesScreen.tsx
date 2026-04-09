@@ -403,7 +403,8 @@ export function MessagesScreen({
                   await onSelect(selectedMessage);
                   toast.success('Message loaded with entered values', { id: 'prompt-save' });
                 } else {
-                  toast.error('Failed to write field data to printer', { id: 'prompt-save' });
+                  const reason = (onSaveMessageContent as any)?.__lastError || '';
+                  toast.error(`Failed to write field data to printer${reason ? ': ' + reason : ''}`, { id: 'prompt-save' });
                 }
               } catch (e) {
                 console.error('[MessagesScreen] Failed to save prompted fields:', e);
