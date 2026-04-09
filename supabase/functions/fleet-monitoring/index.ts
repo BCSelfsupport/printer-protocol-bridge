@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
         // Fetch previous telemetry for event detection
         const { data: prevRows } = await supabase
           .from("fleet_telemetry")
-          .select("jet_running, hv_on, ink_level, makeup_level, viscosity, pressure, phase_qual, modulation")
+          .select("jet_running, hv_on, ink_level, makeup_level, viscosity, pressure, phase_qual, modulation, filter_hours_remaining")
           .eq("printer_id", printer_id)
           .order("recorded_at", { ascending: false })
           .limit(1);
