@@ -869,8 +869,9 @@ export function EditMessageScreen({
       } else {
         // date category
         fieldTypeTag = 'date';
-        autoCodeFieldType = `date_normal_${def.id}`;
-        fieldType = `date_normal_${def.id}`;
+        const datePrefix = expiryDays > 0 ? 'date_expiry' : 'date_normal';
+        autoCodeFieldType = `${datePrefix}_${def.id}`;
+        fieldType = `${datePrefix}_${def.id}`;
       }
 
       // Compute live preview value
