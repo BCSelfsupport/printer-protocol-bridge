@@ -211,9 +211,18 @@ const Index = () => {
       && cached.fields.length === fetched.fields.length;
     const usedCachedIndexes = new Set<number>();
     const merged = { ...fetched, fields: fetched.fields.map((f, i) => {
+      const isBlankFetchedPlaceholder = f.type === 'text' && f.data.trim().length === 0;
       const typesCompatible = (candidate: MessageDetails['fields'][number]) => (
         candidate.type === f.type
         || (['date', 'time'].includes(candidate.type) && ['date', 'time'].includes(f.type))
+      );
+      const blankAutoCodeCompatible = (candidate: MessageDetails['fields'][number]) => (
+        isBlankFetchedPlaceholder
+        && ['date', 'time'].includes(candidate.type)
+        && !!candidate.autoCodeFieldType
+      );
+      const canMatchCandidate = (candidate: MessageDetails['fields'][number], allowBlankAutoCode = false) => (
+        typesCompatible(candidate) || (allowBlankAutoCode && blankAutoCodeCompatible(candidate))
       );
 
       const claimCandidate = (index: number) => {
@@ -238,7 +247,7 @@ const Index = () => {
           && candidate.x === f.x
           && candidate.y === f.y
           && candidate.height === f.height
-          && typesCompatible(candidate)
+          && canMatchCandidate(candidate, true)
         ));
         if (exactGeometryIndex >= 0) {
           cachedField = claimCandidate(exactGeometryIndex);
@@ -274,6 +283,7 @@ const Index = () => {
       // Preserve autoCode metadata that ^LF doesn't carry
       const result = {
         ...f,
+        data: isBlankFetchedPlaceholder && cachedField.autoCodeFieldType ? cachedField.data : f.data,
         autoCodeExpiryDays: f.autoCodeExpiryDays ?? cachedField.autoCodeExpiryDays,
         autoCodeFieldType: f.autoCodeFieldType ?? cachedField.autoCodeFieldType,
         autoCodeFormat: f.autoCodeFormat ?? cachedField.autoCodeFormat,
@@ -291,6 +301,10 @@ const Index = () => {
       } else if (result.autoCodeFieldType && cachedField.type === 'text' && f.type === 'date') {
         // Text field misidentified as date — restore text type
         result.type = 'text' as any;
+      } else if (isBlankFetchedPlaceholder && result.autoCodeFieldType && ['date', 'time'].includes(cachedField.type)) {
+        // Some firmware reports certain auto-code fields as blank text placeholders.
+        // Restore the cached date/time type + metadata so live rendering still works.
+        result.type = cachedField.type as any;
       }
 
       return result;
