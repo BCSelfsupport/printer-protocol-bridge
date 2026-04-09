@@ -260,10 +260,13 @@ export function useMasterSlaveSync({
         console.log(`[Broadcast] ^SM ${messageName} → ${slave.name}: ${smOk ? 'OK' : 'FAIL'}`);
 
         // Send User Define value if provided
+        // Per v2.6 §5.28.2, ^TD is a subcommand of ^MD (Message Data).
+        // Format: ^MD^TDn;text where n = text field number.
+        // We target text field 1 by default for User Define workaround fields.
         const slaveVal = slaveValues.find(v => v.printerId === slave.id);
         if (slaveVal && slaveVal.userDefineValue.trim()) {
-          const tdOk = await sendCommandToPrinter(slave, `^TD ${slaveVal.userDefineValue.trim()}`);
-          console.log(`[Broadcast] ^TD "${slaveVal.userDefineValue}" → ${slave.name}: ${tdOk ? 'OK' : 'FAIL'}`);
+          const tdOk = await sendCommandToPrinter(slave, `^MD^TD1;${slaveVal.userDefineValue.trim()}`);
+          console.log(`[Broadcast] ^MD^TD1 "${slaveVal.userDefineValue}" → ${slave.name}: ${tdOk ? 'OK' : 'FAIL'}`);
         }
       }
 
