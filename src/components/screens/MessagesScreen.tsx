@@ -408,10 +408,16 @@ export function MessagesScreen({
                   const updatedDetails = { ...pendingMessageDetails, fields: updatedFields };
                   onSaveStoredMessage?.(updatedDetails);
                   onPromptSaved?.(updatedDetails);
-                  // ^NM recreates and leaves the message active on the printer.
-                  // Sending ^SM immediately after ^SV can stall some firmware, so
-                  // treat the rewrite itself as the selection step here.
-                  toast.success('Message loaded with entered values', { id: 'prompt-save' });
+                  // Explicitly select the message after the save sequence completes.
+                  // A short delay lets the printer finish persisting to flash before ^SM.
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  try {
+                    await onSelect(selectedMessage);
+                    toast.success('Message loaded with entered values', { id: 'prompt-save' });
+                  } catch (e) {
+                    console.error('[MessagesScreen] ^SM after prompt save failed:', e);
+                    toast.error('Message saved but failed to select — try selecting manually', { id: 'prompt-save', duration: 5000 });
+                  }
                 } else {
                   const reason = (onSaveMessageContent as any)?.__lastError || '';
                   toast.error(
