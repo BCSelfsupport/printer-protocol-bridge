@@ -417,6 +417,61 @@ function EventLogTable({ events, telemetryHistory }: { events: FleetEvent[]; tel
             No viscosity readings recorded yet. Readings are logged every 30 seconds when the printer is connected.
           </div>
         )
+      ) : category === 'phase' ? (
+        phaseReadings.length > 0 ? (
+          <div className="border border-border rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/60 border-b border-border">
+                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Date</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Time</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Quality %</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Efficiency %</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Trend</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {phaseReadings.map((row, i) => {
+                    const d = new Date(row.recorded_at);
+                    const date = d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+                    const time = d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const trendIcon = row.trend === 'rising' ? '↑' : row.trend === 'falling' ? '↓' : '→';
+                    const trendLabel = row.trend === 'rising' ? 'Rising' : row.trend === 'falling' ? 'Falling' : 'Steady';
+                    const trendColor = row.trend === 'rising' ? 'text-emerald-500' : row.trend === 'falling' ? 'text-red-500' : 'text-muted-foreground';
+                    const qualColor = (row.phase_qual ?? 0) < 70 ? 'text-red-500' : (row.phase_qual ?? 0) < 90 ? 'text-amber-500' : 'text-emerald-500';
+                    const effColor = row.efficiency < 70 ? 'text-red-500' : row.efficiency < 90 ? 'text-amber-500' : 'text-emerald-500';
+
+                    return (
+                      <tr key={`phase-${i}`} className={cn(
+                        "border-b border-border/40 last:border-0 transition-colors hover:bg-muted/30",
+                        i % 2 === 0 ? 'bg-card' : 'bg-card/60'
+                      )}>
+                        <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{date}</td>
+                        <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{time}</td>
+                        <td className={cn("px-4 py-2 font-mono text-sm font-semibold", qualColor)}>
+                          {row.phase_qual}%
+                        </td>
+                        <td className={cn("px-4 py-2 font-mono text-sm font-semibold", effColor)}>
+                          {row.efficiency}%
+                        </td>
+                        <td className="px-4 py-2">
+                          <span className={cn("text-xs font-medium", trendColor)}>
+                            {trendIcon} {trendLabel}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground text-center py-16 bg-card border border-border rounded-xl">
+            No phase readings recorded yet. Readings are logged every 30 seconds when the printer is connected.
+          </div>
+        )
       ) : (
         /* ── Standard event table for all other tabs ── */
         filtered.length > 0 ? (
