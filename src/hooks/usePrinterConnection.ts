@@ -2178,9 +2178,10 @@ export function usePrinterConnection() {
     
     // Filter out empty/invalid fields to prevent phantom fields on the printer
     const validFields = fields.filter(field => {
-      // Text/userdefine fields need data; date/time/counter/barcode/logo are always valid
+      // Text/userdefine fields need data; preserve whitespace-only separator fields
+      // because they are intentional tokens from the code builder and affect field order.
       if (field.type === 'text' || field.type === 'userdefine') {
-        return field.data && field.data.trim().length > 0;
+        return typeof field.data === 'string' && field.data.length > 0;
       }
       return true;
     });
@@ -2202,6 +2203,16 @@ export function usePrinterConnection() {
         y: Math.max(0, printerY),
       }, index + 1, templateHeight, dmGraphicMap);
     }).join('');
+
+    console.log('[saveMessageContent] Valid fields for upload:', validFields.map((field, index) => ({
+      uploadFieldNum: index + 1,
+      type: field.type,
+      data: field.data,
+      autoCodeFieldType: field.autoCodeFieldType,
+      autoCodeFormat: field.autoCodeFormat,
+      x: field.x,
+      y: field.y,
+    })));
 
     // Build the full ^NM command: ^NM t;s;o;p;name^AT1;...^AT2;...
     // Speed=0 (Fast), Orientation=0 (Normal), Mode=0 (Normal) as defaults

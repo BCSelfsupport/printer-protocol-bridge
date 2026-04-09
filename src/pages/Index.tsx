@@ -189,7 +189,7 @@ const Index = () => {
     fields: details.fields
       .filter((field) => {
         if (field.type === 'text' || field.type === 'userdefine') {
-          return field.data.trim().length > 0;
+          return field.data.length > 0;
         }
         return true;
       })
