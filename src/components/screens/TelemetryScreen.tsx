@@ -593,6 +593,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<FleetPrinter | null>(null);
   const [telemetry, setTelemetry] = useState<FleetTelemetry | null>(null);
   const [events, setEvents] = useState<FleetEvent[]>([]);
+  const [telemetryHistory, setTelemetryHistory] = useState<TelemetrySnapshot[]>([]);
   const [firmware, setFirmware] = useState<Firmware[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [seeding, setSeeding] = useState(false);
