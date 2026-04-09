@@ -173,6 +173,7 @@ export type Database = {
       }
       fleet_events: {
         Row: {
+          category: string
           event_type: string
           id: string
           message: string
@@ -182,6 +183,7 @@ export type Database = {
           severity: string
         }
         Insert: {
+          category?: string
           event_type: string
           id?: string
           message: string
@@ -191,6 +193,7 @@ export type Database = {
           severity?: string
         }
         Update: {
+          category?: string
           event_type?: string
           id?: string
           message?: string
