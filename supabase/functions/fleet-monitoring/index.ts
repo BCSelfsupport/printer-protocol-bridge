@@ -90,16 +90,24 @@ Deno.serve(async (req) => {
         if (telError) throw telError;
 
         // ── Event Detection ──────────────────────────────────────────────
+        // Categories match the printer's native Event Log tabs:
+        // event    – Faults, jet start/stop, HV on/off, system events
+        // viscosity – Viscosity value logged on every change, makeup adds
+        // phase    – Phase quality changes (quality, point, width, accuracy, threshold)
+        // smartfill – Ink/makeup level changes (tank fill events)
+        // filter   – Filter life milestones (250hr warning, expiry, replacement)
         const events: any[] = [];
         const now = new Date().toISOString();
 
+        // ── EVENT category ──
         // Jet start / stop
         if (prev && prev.jet_running !== metrics.jet_running) {
           events.push({
             printer_id,
+            category: "event",
             event_type: metrics.jet_running ? "jet_start" : "jet_stop",
             severity: "info",
-            message: metrics.jet_running ? "Ink jet started" : "Ink jet stopped",
+            message: metrics.jet_running ? "Running script XstartJet" : "Running script XstopJet",
             occurred_at: now,
           });
         }
@@ -108,91 +116,160 @@ Deno.serve(async (req) => {
         if (prev && prev.hv_on !== metrics.hv_on) {
           events.push({
             printer_id,
+            category: "event",
             event_type: metrics.hv_on ? "hv_on" : "hv_off",
             severity: "info",
-            message: metrics.hv_on ? "High Voltage enabled — printing active" : "High Voltage disabled — printing paused",
+            message: metrics.hv_on ? "High Voltage enabled" : "High Voltage disabled",
             occurred_at: now,
           });
         }
 
-        // Ink level change
-        if (prev && prev.ink_level !== metrics.ink_level && metrics.ink_level) {
-          const sev = (metrics.ink_level === "LOW" || metrics.ink_level === "EMPTY") ? "warning" : "info";
-          events.push({
-            printer_id,
-            event_type: "ink_level_change",
-            severity: sev,
-            message: `Ink level changed: ${prev.ink_level} → ${metrics.ink_level}`,
-            occurred_at: now,
-          });
-        }
-
-        // Makeup level change
-        if (prev && prev.makeup_level !== metrics.makeup_level && metrics.makeup_level) {
-          const sev = (metrics.makeup_level === "LOW" || metrics.makeup_level === "EMPTY") ? "warning" : "info";
-          events.push({
-            printer_id,
-            event_type: "makeup_level_change",
-            severity: sev,
-            message: `Makeup level changed: ${prev.makeup_level} → ${metrics.makeup_level}`,
-            occurred_at: now,
-          });
-        }
-
-        // Viscosity drift (>10% change)
-        if (prev?.viscosity != null && metrics.viscosity != null && prev.viscosity > 0) {
-          const pctChange = Math.abs(metrics.viscosity - prev.viscosity) / prev.viscosity;
-          if (pctChange > 0.10) {
-            events.push({
-              printer_id,
-              event_type: "viscosity_drift",
-              severity: pctChange > 0.20 ? "warning" : "info",
-              message: `Viscosity changed ${(pctChange * 100).toFixed(0)}%: ${prev.viscosity} → ${metrics.viscosity}`,
-              occurred_at: now,
-              metadata: { previous: prev.viscosity, current: metrics.viscosity },
-            });
-          }
-        }
-
-        // Pressure drift (>10% change)
+        // Pressure fault — only on significant absolute change (±5 PSI) per v2.6 protocol
         if (prev?.pressure != null && metrics.pressure != null && prev.pressure > 0) {
-          const pctChange = Math.abs(metrics.pressure - prev.pressure) / prev.pressure;
-          if (pctChange > 0.10) {
+          const absDelta = Math.abs(metrics.pressure - prev.pressure);
+          if (absDelta >= 5) {
+            const direction = metrics.pressure > prev.pressure ? "High" : "Low";
             events.push({
               printer_id,
-              event_type: "pressure_drift",
-              severity: pctChange > 0.20 ? "warning" : "info",
-              message: `Pressure changed ${(pctChange * 100).toFixed(0)}%: ${prev.pressure} → ${metrics.pressure}`,
+              category: "event",
+              event_type: "pressure_fault",
+              severity: absDelta >= 10 ? "warning" : "info",
+              message: `Pump Rotation ${direction} T:${metrics.pressure} PSI:${prev.pressure} RPS:${metrics.rps?.toFixed(2) ?? '—'}`,
               occurred_at: now,
               metadata: { previous: prev.pressure, current: metrics.pressure },
             });
           }
         }
 
-        // Phase quality drop
-        if (prev?.phase_qual != null && metrics.phase_qual != null) {
-          if (prev.phase_qual >= 70 && metrics.phase_qual < 70) {
+        // Modulation change — only on significant absolute change (±10)
+        if (prev?.modulation != null && metrics.modulation != null && prev.modulation > 0) {
+          const absDelta = Math.abs(metrics.modulation - prev.modulation);
+          if (absDelta >= 10) {
             events.push({
               printer_id,
-              event_type: "phase_quality_low",
-              severity: "warning",
-              message: `Phase quality dropped below threshold: ${prev.phase_qual} → ${metrics.phase_qual}`,
+              category: "event",
+              event_type: "modulation_change",
+              severity: absDelta >= 20 ? "warning" : "info",
+              message: `Modulation changed: ${prev.modulation} → ${metrics.modulation}`,
               occurred_at: now,
+              metadata: { previous: prev.modulation, current: metrics.modulation },
             });
           }
         }
 
-        // Modulation drift (>15% change)
-        if (prev?.modulation != null && metrics.modulation != null && prev.modulation > 0) {
-          const pctChange = Math.abs(metrics.modulation - prev.modulation) / prev.modulation;
-          if (pctChange > 0.15) {
+        // ── VISCOSITY category ──
+        // Log viscosity on any change (printer logs every viscosity control add)
+        if (prev?.viscosity != null && metrics.viscosity != null) {
+          const viscDelta = Math.abs(metrics.viscosity - prev.viscosity);
+          if (viscDelta >= 0.01) {
+            // Determine if this was a makeup add (viscosity dropping = solvent added)
+            const isAdd = metrics.viscosity < prev.viscosity;
             events.push({
               printer_id,
-              event_type: "modulation_drift",
-              severity: pctChange > 0.25 ? "warning" : "info",
-              message: `Modulation changed ${(pctChange * 100).toFixed(0)}%: ${prev.modulation} → ${metrics.modulation}`,
+              category: "viscosity",
+              event_type: isAdd ? "viscosity_add" : "viscosity_change",
+              severity: "info",
+              message: isAdd
+                ? `Viscosity control add. Viscosity: ${prev.viscosity.toFixed(2)} → ${metrics.viscosity.toFixed(2)}`
+                : `Viscosity: ${prev.viscosity.toFixed(2)} → ${metrics.viscosity.toFixed(2)}`,
               occurred_at: now,
-              metadata: { previous: prev.modulation, current: metrics.modulation },
+              metadata: { previous: prev.viscosity, current: metrics.viscosity },
+            });
+          }
+        }
+
+        // ── PHASE category ──
+        // Log phase quality on any significant change (±5%)
+        if (prev?.phase_qual != null && metrics.phase_qual != null) {
+          const phaseDelta = Math.abs(metrics.phase_qual - prev.phase_qual);
+          if (phaseDelta >= 5) {
+            const sev = metrics.phase_qual < 70 ? "warning" : "info";
+            events.push({
+              printer_id,
+              category: "phase",
+              event_type: "phase_quality_change",
+              severity: sev,
+              message: `Phase Quality: ${prev.phase_qual}% → ${metrics.phase_qual}%`,
+              occurred_at: now,
+              metadata: { previous: prev.phase_qual, current: metrics.phase_qual },
+            });
+          }
+        }
+
+        // ── SMARTFILL category ──
+        // Ink level change (tracks tank fills and consumption)
+        if (prev && prev.ink_level !== metrics.ink_level && metrics.ink_level) {
+          const isFill = (prev.ink_level === "LOW" || prev.ink_level === "EMPTY") && (metrics.ink_level === "GOOD" || metrics.ink_level === "FULL");
+          const sev = (metrics.ink_level === "LOW" || metrics.ink_level === "EMPTY") ? "warning" : "info";
+          events.push({
+            printer_id,
+            category: "smartfill",
+            event_type: isFill ? "ink_fill" : "ink_level_change",
+            severity: sev,
+            message: isFill
+              ? `Ink tank filled. Level: ${prev.ink_level} → ${metrics.ink_level}`
+              : `Ink level: ${prev.ink_level} → ${metrics.ink_level}`,
+            occurred_at: now,
+            metadata: { previous_level: prev.ink_level, current_level: metrics.ink_level },
+          });
+        }
+
+        // Makeup level change
+        if (prev && prev.makeup_level !== metrics.makeup_level && metrics.makeup_level) {
+          const isFill = (prev.makeup_level === "LOW" || prev.makeup_level === "EMPTY") && (metrics.makeup_level === "GOOD" || metrics.makeup_level === "FULL");
+          const sev = (metrics.makeup_level === "LOW" || metrics.makeup_level === "EMPTY") ? "warning" : "info";
+          events.push({
+            printer_id,
+            category: "smartfill",
+            event_type: isFill ? "makeup_fill" : "makeup_level_change",
+            severity: sev,
+            message: isFill
+              ? `Makeup tank filled. Level: ${prev.makeup_level} → ${metrics.makeup_level}`
+              : `Makeup level: ${prev.makeup_level} → ${metrics.makeup_level}`,
+            occurred_at: now,
+            metadata: { previous_level: prev.makeup_level, current_level: metrics.makeup_level },
+          });
+        }
+
+        // ── FILTER category ──
+        // Filter hours remaining milestones
+        if (metrics.filter_hours_remaining != null) {
+          const prevFilter = prev?.filter_hours_remaining;
+          const curr = metrics.filter_hours_remaining;
+
+          // Crossed below 250 hours
+          if (prevFilter != null && prevFilter > 250 && curr <= 250) {
+            events.push({
+              printer_id,
+              category: "filter",
+              event_type: "filter_warning",
+              severity: "warning",
+              message: `Filter life below 250 hours. Remaining: ${curr.toFixed(0)}h`,
+              occurred_at: now,
+              metadata: { previous: prevFilter, current: curr },
+            });
+          }
+          // Crossed below 0 (expired)
+          if (prevFilter != null && prevFilter > 0 && curr <= 0) {
+            events.push({
+              printer_id,
+              category: "filter",
+              event_type: "filter_expired",
+              severity: "warning",
+              message: `Filter life expired. Replace filter now.`,
+              occurred_at: now,
+            });
+          }
+          // Filter replaced (hours jumped up significantly — new filter installed)
+          if (prevFilter != null && curr > prevFilter + 100) {
+            events.push({
+              printer_id,
+              category: "filter",
+              event_type: "filter_replaced",
+              severity: "info",
+              message: `New filter installed. Filter life: ${curr.toFixed(0)}h`,
+              occurred_at: now,
+              metadata: { previous: prevFilter, current: curr },
             });
           }
         }
