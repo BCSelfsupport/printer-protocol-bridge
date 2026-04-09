@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
+import { setPollingPaused } from '@/lib/pollingPause';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
 
 /**
@@ -2257,6 +2258,9 @@ export function usePrinterConnection() {
       addMessage(messageName);
       return true;
     } else if (isElectron || isRelayMode()) {
+      // Pause status polling to prevent ^SU commands from interleaving
+      // with the ^DM → ^NM → ^SV save sequence on the shared TCP socket.
+      setPollingPaused(true);
       try {
         for (const cmd of commands) {
           console.log('[saveMessageContent] Sending:', cmd);
@@ -2274,9 +2278,10 @@ export function usePrinterConnection() {
           }
         }
 
-        // Post-save verification: wait for firmware to flush, then optionally check ^LM.
-        // We no longer gate success on verification — ^NM and ^SV both succeeded above,
-        // so the message IS on the printer. The ^LM check is purely informational.
+        // Resume polling before optional verification
+        setPollingPaused(false);
+
+        // Post-save verification: wait for firmware to flush, then check ^LM.
         if (isNew) {
           await new Promise(resolve => setTimeout(resolve, 500));
           try {
@@ -2297,6 +2302,7 @@ export function usePrinterConnection() {
       } catch (e) {
         console.error('[saveMessageContent] Failed:', e);
         (saveMessageContent as any).__lastError = e instanceof Error ? e.message : 'Unknown error';
+        setPollingPaused(false);
         return false;
       }
     } else {
