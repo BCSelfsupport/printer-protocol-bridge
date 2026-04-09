@@ -208,6 +208,7 @@ export function EditMessageScreen({
   const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
   const fetchStartedRef = useRef(false); // Guard against duplicate fetches from unstable callback refs
   const printerOffsetMsRef = useRef(0);
+  const hasSavedToPrinterRef = useRef(!startEmpty);
 
   useEffect(() => {
     printerOffsetMsRef.current = printerTime ? printerTime.getTime() - Date.now() : 0;
@@ -1308,8 +1309,12 @@ export function EditMessageScreen({
 
                 <button
                   onClick={async () => {
-                    const result = await onSave(message, false);
-                    if (result && result.fields.length > 0) {
+                    const result = await onSave(message, !hasSavedToPrinterRef.current);
+                    if (!result) return;
+
+                    hasSavedToPrinterRef.current = true;
+
+                    if (result.fields.length > 0) {
                       // Check if printer adjusted any positions
                       const positionsChanged = result.fields.some((rf, i) => {
                         const ef = message.fields[i];
@@ -1326,8 +1331,6 @@ export function EditMessageScreen({
                       } else {
                         toast.success('Message saved');
                       }
-                    } else {
-                      toast.success('Message saved');
                     }
                   }}
                   className="industrial-button-success text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"

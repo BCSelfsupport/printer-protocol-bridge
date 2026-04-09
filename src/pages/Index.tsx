@@ -973,7 +973,7 @@ const Index = () => {
                 }
               }
             }
-            return null;
+            return localDetails;
           }}
           onCancel={() => {
             setCurrentScreen('messages');
@@ -1139,7 +1139,7 @@ const Index = () => {
                   }
                 }
               }
-              return null;
+              return localDetails;
             }}
             onCancel={() => {
               setCurrentScreen('messages');
