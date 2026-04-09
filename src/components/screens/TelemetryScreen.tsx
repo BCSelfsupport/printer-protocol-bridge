@@ -831,7 +831,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => { setSelectedPrinter(null); setTelemetry(null); setEvents([]); }}
+                onClick={() => { setSelectedPrinter(null); setTelemetry(null); setEvents([]); setTelemetryHistory([]); }}
                 className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
