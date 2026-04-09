@@ -67,7 +67,8 @@ interface FleetEvent {
   severity: string;
   message: string;
   occurred_at: string;
-  metadata: { previous?: number; current?: number } | null;
+  category: string;
+  metadata: { previous?: number; current?: number; previous_level?: string; current_level?: string } | null;
 }
 
 interface Firmware {
@@ -203,22 +204,72 @@ function MetricRow({ label, value, unit, status }: { label: string; value: strin
 
 // ════════════════════════════════════ Event Log Table ════════════════════════════════════
 
-type EventCategory = 'all' | 'viscosity' | 'phase' | 'pressure' | 'system';
+// Categories match the printer's native Event Log tabs per v2.6 manual
+type EventCategory = 'all' | 'event' | 'viscosity' | 'phase' | 'smartfill' | 'filter';
 
-const EVENT_CATEGORIES: { key: EventCategory; label: string; types: string[] }[] = [
-  { key: 'all', label: 'All Events', types: [] },
-  { key: 'viscosity', label: 'Viscosity', types: ['viscosity_drift'] },
-  { key: 'phase', label: 'Phase', types: ['phase_quality_low'] },
-  { key: 'pressure', label: 'Pressure', types: ['pressure_drift'] },
-  { key: 'system', label: 'System', types: ['jet_start', 'jet_stop', 'hv_on', 'hv_off', 'ink_level_change', 'makeup_level_change', 'modulation_drift'] },
+const EVENT_CATEGORIES: { key: EventCategory; label: string; icon: string; description: string }[] = [
+  { key: 'all', label: 'All', icon: '📋', description: 'All logged events' },
+  { key: 'event', label: 'Event', icon: '⚡', description: 'Faults, starts, stops, scripts' },
+  { key: 'viscosity', label: 'Viscosity', icon: '💧', description: 'Viscosity tracking & makeup adds' },
+  { key: 'phase', label: 'Phase', icon: '📊', description: 'Phase quality, point, width' },
+  { key: 'smartfill', label: 'SmartFill', icon: '🔋', description: 'Ink & makeup level changes' },
+  { key: 'filter', label: 'Filter', icon: '🔧', description: 'Filter life tracking' },
 ];
+
+// Map event_type to a human-readable label matching the printer's HMI style
+function getEventLabel(evt: FleetEvent): string {
+  switch (evt.event_type) {
+    case 'jet_start': return 'Jet Start';
+    case 'jet_stop': return 'Jet Stop';
+    case 'hv_on': return 'HV On';
+    case 'hv_off': return 'HV Off';
+    case 'pressure_fault': return 'Pressure';
+    case 'modulation_change': return 'Modulation';
+    case 'viscosity_add': return 'Viscosity Add';
+    case 'viscosity_change': return 'Viscosity';
+    case 'phase_quality_change': return 'Phase Quality';
+    case 'phase_quality_low': return 'Phase Quality';
+    case 'ink_level_change': return 'Ink Level';
+    case 'ink_fill': return 'Ink Fill';
+    case 'makeup_level_change': return 'Makeup Level';
+    case 'makeup_fill': return 'Makeup Fill';
+    case 'filter_warning': return 'Filter Warning';
+    case 'filter_expired': return 'Filter Expired';
+    case 'filter_replaced': return 'Filter Replaced';
+    // Legacy event types from before the rebuild
+    case 'viscosity_drift': return 'Viscosity';
+    case 'pressure_drift': return 'Pressure';
+    case 'modulation_drift': return 'Modulation';
+    default: return evt.event_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+}
+
+// Map severity to status label matching the printer's HMI (Event/Warning/Fault)
+function getSeverityLabel(severity: string): string {
+  switch (severity) {
+    case 'warning': return 'Warning';
+    case 'error': return 'Fault';
+    default: return 'Event';
+  }
+}
 
 function EventLogTable({ events }: { events: FleetEvent[] }) {
   const [category, setCategory] = useState<EventCategory>('all');
   
+  // Filter by category — use the category field if available, otherwise infer from event_type
   const filtered = category === 'all' 
     ? events 
-    : events.filter(e => EVENT_CATEGORIES.find(c => c.key === category)?.types.includes(e.event_type));
+    : events.filter(e => {
+        // Use server-assigned category if available
+        if (e.category && e.category !== 'event') return e.category === category;
+        // Infer category for legacy events without the category column
+        if (category === 'event') return ['jet_start', 'jet_stop', 'hv_on', 'hv_off', 'pressure_fault', 'pressure_drift', 'modulation_change', 'modulation_drift'].includes(e.event_type);
+        if (category === 'viscosity') return ['viscosity_drift', 'viscosity_add', 'viscosity_change'].includes(e.event_type);
+        if (category === 'phase') return ['phase_quality_low', 'phase_quality_change'].includes(e.event_type);
+        if (category === 'smartfill') return ['ink_level_change', 'ink_fill', 'makeup_level_change', 'makeup_fill'].includes(e.event_type);
+        if (category === 'filter') return ['filter_warning', 'filter_expired', 'filter_replaced'].includes(e.event_type);
+        return e.category === category;
+      });
 
   const severityColor = (s: string) => {
     if (s === 'warning') return 'text-amber-500';
@@ -234,14 +285,25 @@ function EventLogTable({ events }: { events: FleetEvent[] }) {
 
   return (
     <div className="space-y-4">
-      {/* Category tabs — styled like the printer's bottom nav */}
+      {/* Category tabs — matching printer's native Event Log bottom nav */}
       <div className="flex gap-1 bg-muted/50 rounded-xl p-1 overflow-x-auto">
         {EVENT_CATEGORIES.map(cat => {
-          const count = cat.key === 'all' ? events.length : events.filter(e => cat.types.includes(e.event_type)).length;
+          const count = cat.key === 'all' 
+            ? events.length 
+            : events.filter(e => {
+                if (e.category && e.category !== 'event') return e.category === cat.key;
+                if (cat.key === 'event') return ['jet_start', 'jet_stop', 'hv_on', 'hv_off', 'pressure_fault', 'pressure_drift', 'modulation_change', 'modulation_drift'].includes(e.event_type);
+                if (cat.key === 'viscosity') return ['viscosity_drift', 'viscosity_add', 'viscosity_change'].includes(e.event_type);
+                if (cat.key === 'phase') return ['phase_quality_low', 'phase_quality_change'].includes(e.event_type);
+                if (cat.key === 'smartfill') return ['ink_level_change', 'ink_fill', 'makeup_level_change', 'makeup_fill'].includes(e.event_type);
+                if (cat.key === 'filter') return ['filter_warning', 'filter_expired', 'filter_replaced'].includes(e.event_type);
+                return e.category === cat.key;
+              }).length;
           return (
             <button
               key={cat.key}
               onClick={() => setCategory(cat.key)}
+              title={cat.description}
               className={cn(
                 "px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5",
                 category === cat.key
@@ -249,6 +311,7 @@ function EventLogTable({ events }: { events: FleetEvent[] }) {
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
+              <span>{cat.icon}</span>
               {cat.label}
               {count > 0 && (
                 <span className={cn(
@@ -261,7 +324,7 @@ function EventLogTable({ events }: { events: FleetEvent[] }) {
         })}
       </div>
 
-      {/* Table */}
+      {/* Table — matches printer's native Event Log columns: Date, Time, Status, Event, Explanation */}
       {filtered.length > 0 ? (
         <div className="border border-border rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
@@ -270,28 +333,18 @@ function EventLogTable({ events }: { events: FleetEvent[] }) {
                 <tr className="bg-muted/60 border-b border-border">
                   <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Date</th>
                   <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Time</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Type</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Previous</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Current</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Trend</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Severity</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Status</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Event</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Explanation</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((evt, i) => {
                   const d = new Date(evt.occurred_at);
-                  const date = d.toLocaleDateString('en-CA'); // YYYY-MM-DD
-                  const time = d.toLocaleTimeString('en-US', { hour12: false });
-                  const prev = evt.metadata?.previous;
-                  const curr = evt.metadata?.current;
-                  let trend = '—';
-                  if (prev != null && curr != null) {
-                    if (curr > prev) trend = '↑ Rising';
-                    else if (curr < prev) trend = '↓ Falling';
-                    else trend = '→ Steady';
-                  }
-
-                  const typeLabel = evt.event_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                  const date = d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+                  const time = d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                  const statusLabel = getSeverityLabel(evt.severity);
+                  const eventLabel = getEventLabel(evt);
 
                   return (
                     <tr key={evt.id} className={cn(
@@ -301,28 +354,19 @@ function EventLogTable({ events }: { events: FleetEvent[] }) {
                       <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{date}</td>
                       <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{time}</td>
                       <td className="px-4 py-2">
-                        <span className="text-xs font-medium text-foreground">{typeLabel}</span>
-                      </td>
-                      <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
-                        {prev != null ? prev.toFixed(1) : '—'}
-                      </td>
-                      <td className="px-4 py-2 font-mono text-xs text-foreground font-semibold">
-                        {curr != null ? curr.toFixed(1) : '—'}
-                      </td>
-                      <td className="px-4 py-2">
-                        <span className={cn("text-xs font-medium", 
-                          trend.includes('Rising') ? 'text-red-500' : 
-                          trend.includes('Falling') ? 'text-blue-500' : 'text-muted-foreground'
-                        )}>{trend}</span>
-                      </td>
-                      <td className="px-4 py-2">
                         <Badge className={cn(
                           "text-[10px] font-semibold border-0",
                           severityBg(evt.severity),
                           severityColor(evt.severity)
                         )}>
-                          {evt.severity.toUpperCase()}
+                          {statusLabel}
                         </Badge>
+                      </td>
+                      <td className="px-4 py-2">
+                        <span className="text-xs font-medium text-foreground">{eventLabel}</span>
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted-foreground max-w-[300px] truncate" title={evt.message}>
+                        {evt.message}
                       </td>
                     </tr>
                   );
@@ -333,7 +377,7 @@ function EventLogTable({ events }: { events: FleetEvent[] }) {
         </div>
       ) : (
         <div className="text-sm text-muted-foreground text-center py-16 bg-card border border-border rounded-xl">
-          No {category === 'all' ? '' : category + ' '}events recorded
+          No {category === 'all' ? '' : EVENT_CATEGORIES.find(c => c.key === category)?.label + ' '}events recorded
         </div>
       )}
     </div>
