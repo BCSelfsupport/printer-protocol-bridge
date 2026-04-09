@@ -64,9 +64,34 @@ export function useMasterSlaveSync({
       return false;
     }
 
+    // If this printer is the currently connected one, use the persistent
+    // transport instead of opening a second TCP socket (BestCode printers
+    // only support a single Telnet session on port 23).
+    if (printer.id === connectedPrinterId) {
+      try {
+        const result = await printerTransport.sendCommand(printer.id, command);
+        return result?.success ?? false;
+      } catch (e) {
+        console.error(`[MasterSlaveSync] Failed to send "${command}" to connected ${printer.name}:`, e);
+        return false;
+      }
+    }
+
+    // For non-connected printers, open an ephemeral connection
+    if (isRelayMode()) {
+      try {
+        await printerTransport.connect({ id: printer.id, ipAddress: printer.ipAddress, port: printer.port });
+        const result = await printerTransport.sendCommand(printer.id, command);
+        await printerTransport.disconnect(printer.id);
+        return result?.success ?? false;
+      } catch (e) {
+        console.error(`[MasterSlaveSync] Relay failed "${command}" to ${printer.name}:`, e);
+        return false;
+      }
+    }
+
     if (isElectron && window.electronAPI) {
       try {
-        // Use on-demand connection for the slave
         await window.electronAPI.printer.connect({
           id: printer.id,
           ipAddress: printer.ipAddress,
@@ -84,6 +109,7 @@ export function useMasterSlaveSync({
 
     return false;
   }, []);
+  }, [connectedPrinterId]);
 
   // Sync message selection: when master's currentMessage changes, push full content to slaves first, then ^SM
   useEffect(() => {
