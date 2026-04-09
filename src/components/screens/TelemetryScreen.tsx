@@ -667,6 +667,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
       ]);
       setTelemetry(detail.telemetry || null);
       setEvents(detail.events || []);
+      setTelemetryHistory(detail.telemetry_history || []);
       setFirmware(fw.firmware || []);
       // Update sites and refresh selectedPrinter/selectedSite from fresh data
       const freshSites = sitesJson.sites || [];
