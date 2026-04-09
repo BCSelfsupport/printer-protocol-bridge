@@ -330,7 +330,6 @@ function EventLogTable({ events, telemetryHistory }: { events: FleetEvent[]; tel
     return events.filter(e => {
       if (e.category && e.category !== 'event') return e.category === catKey;
       if (catKey === 'event') return ['jet_start', 'jet_stop', 'hv_on', 'hv_off', 'pressure_fault', 'pressure_drift', 'modulation_change', 'modulation_drift'].includes(e.event_type);
-      if (catKey === 'phase') return ['phase_quality_low', 'phase_quality_change'].includes(e.event_type);
       if (catKey === 'smartfill') return ['ink_level_change', 'ink_fill', 'makeup_level_change', 'makeup_fill'].includes(e.event_type);
       if (catKey === 'filter') return ['filter_warning', 'filter_expired', 'filter_replaced'].includes(e.event_type);
       return e.category === catKey;
