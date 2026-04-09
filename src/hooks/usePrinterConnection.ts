@@ -1975,7 +1975,9 @@ export function usePrinterConnection() {
           : null;
         if (info) {
           const ext = info.extParams || '';
-          return `^A${info.command.slice(1)}${fieldNum};${field.x};${field.y};${fontCode};${info.typeCode}${ext}`;
+          const cmd = `^A${info.command.slice(1)}${fieldNum};${field.x};${field.y};${fontCode};${info.typeCode}${ext}`;
+          console.log(`[buildFieldSubcommand] date field ${fieldNum}: autoCodeFieldType=${field.autoCodeFieldType} expiryDays=${field.autoCodeExpiryDays} → ${cmd}`);
+          return cmd;
         }
         // Julian Date (YDDD) is a composite not in the protocol — send as text with live data
         if (field.autoCodeFieldType?.includes('julian')) {
