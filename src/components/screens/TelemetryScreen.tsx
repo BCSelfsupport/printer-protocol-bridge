@@ -1071,7 +1071,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                 </TabsContent>
 
                 <TabsContent value="events" className="mt-6">
-                  <EventLogTable events={events} />
+                  <EventLogTable events={events} telemetryHistory={telemetryHistory} />
                 </TabsContent>
 
                 <TabsContent value="firmware" className="mt-6">
