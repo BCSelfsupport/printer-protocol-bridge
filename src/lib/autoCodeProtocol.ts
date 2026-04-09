@@ -151,7 +151,12 @@ export function getProtocolFieldInfo(
     const typeCode = DATE_CODE_TO_PROTOCOL[base];
     if (typeCode === undefined) return null;
 
-    if (prog) {
+    // Alphabetic date types (alpha_month d=7, dow_alpha d=2) must use ^AP
+    // on BestCode firmware — ^AD and ^AE produce blank fields for these types.
+    // Confirmed via hardware testing: firmware stores them as Element T:4 (programmed).
+    const isAlphaType = base === 'alpha_month' || base === 'dow_alpha';
+
+    if (prog || isAlphaType) {
       return { command: 'AP', typeCode, extParams: extParams || undefined };
     }
     if (useExpiry || useRollover) {
