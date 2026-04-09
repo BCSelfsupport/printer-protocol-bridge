@@ -1969,18 +1969,26 @@ export function usePrinterConnection() {
         // ^AT n; x; y; s; data
         return `^AT${fieldNum};${field.x};${field.y};${fontCode};${field.data}`;
       case 'date': {
+        // Normalize stale builder metadata so legacy saved messages with expiry offsets
+        // still serialize as ^AE instead of ^AD when re-saved.
+        const normalizedAutoCodeFieldType = field.autoCodeFieldType?.startsWith('date_')
+          ? ((field.autoCodeExpiryDays ?? 0) > 0
+              ? field.autoCodeFieldType.replace(/^date_normal_/, 'date_expiry_')
+              : field.autoCodeFieldType.replace(/^date_expiry_/, 'date_normal_'))
+          : field.autoCodeFieldType;
+
         // Use protocol mapping from autoCodeFieldType for correct ^AD/^AE/^AP + type code
-        const info = field.autoCodeFieldType 
-          ? getProtocolFieldInfo(field.autoCodeFieldType, field.autoCodeFormat, field.autoCodeExpiryDays)
+        const info = normalizedAutoCodeFieldType
+          ? getProtocolFieldInfo(normalizedAutoCodeFieldType, field.autoCodeFormat, field.autoCodeExpiryDays)
           : null;
         if (info) {
           const ext = info.extParams || '';
           const cmd = `^A${info.command.slice(1)}${fieldNum};${field.x};${field.y};${fontCode};${info.typeCode}${ext}`;
-          console.log(`[buildFieldSubcommand] date field ${fieldNum}: autoCodeFieldType=${field.autoCodeFieldType} expiryDays=${field.autoCodeExpiryDays} → ${cmd}`);
+          console.log(`[buildFieldSubcommand] date field ${fieldNum}: autoCodeFieldType=${field.autoCodeFieldType} normalized=${normalizedAutoCodeFieldType} expiryDays=${field.autoCodeExpiryDays} → ${cmd}`);
           return cmd;
         }
         // Julian Date (YDDD) is a composite not in the protocol — send as text with live data
-        if (field.autoCodeFieldType?.includes('julian')) {
+        if (normalizedAutoCodeFieldType?.includes('julian')) {
           return `^AT${fieldNum};${field.x};${field.y};${fontCode};${field.data}`;
         }
         // Fallback: ^AD with type 12 (MM/DD/YY with delimiters)
