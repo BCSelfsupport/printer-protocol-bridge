@@ -2233,14 +2233,6 @@ export function usePrinterConnection() {
     
     console.log('[saveMessageContent] ^NM command:', nmCommand);
     
-    // DEBUG: Show the ^NM command in a toast so the user can verify protocol output
-    // Split into individual subcommands for readability
-    const subCmdBreakdown = nmCommand.replace(/\^/g, '\n^');
-    console.log('[saveMessageContent] ^NM breakdown:\n' + subCmdBreakdown);
-    toast.info('Protocol Debug: ^NM command', {
-      description: subCmdBreakdown,
-      duration: 30000,  // Show for 30 seconds
-    });
 
     if (dmUploadCmds.length > 0) {
       console.log(`[saveMessageContent] DataMatrix ECC200: ${dmUploadCmds.length} ^NG upload command(s)`);
