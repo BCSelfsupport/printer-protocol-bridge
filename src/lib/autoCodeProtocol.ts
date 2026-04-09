@@ -126,14 +126,16 @@ export function getProtocolFieldInfo(
   const useRollover = dateType === 'rollover' || dateType === 'expiry_rollover';
 
   // Build expiry/rollover extension params for ^AE / ^AP
+  // Protocol v2.6 §5.33.2.4: ^AE n;x;y;s;d;days[;rollover_hour]
+  // Parameters are plain numeric values separated by semicolons.
   let extParams = '';
   if (useExpiry && autoCodeExpiryDays) {
-    extParams += `;D${autoCodeExpiryDays}`;
+    extParams += `;${autoCodeExpiryDays}`;
   }
   // Parse rollover from format string
   if (useRollover && autoCodeFormat) {
     const rollMatch = autoCodeFormat.match(/\|rollover:(\d+)/);
-    if (rollMatch) extParams += `;R${rollMatch[1]}`;
+    if (rollMatch) extParams += `;${rollMatch[1]}`;
   }
 
   if (codeType) {
