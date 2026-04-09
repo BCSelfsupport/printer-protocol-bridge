@@ -417,14 +417,15 @@ export function MessagesScreen({
               await onSelect(selectedMessage);
             }
           } else if (onSendCommand) {
-            // Legacy: send ^TD for native userdefine fields
-            for (const [, value] of Object.entries(entries)) {
-              if (value.trim()) {
-                try {
-                  await onSendCommand(`^TD ${value.trim()}`);
-                } catch (e) {
-                  console.error('[MessagesScreen] Failed to send ^TD:', e);
-                }
+            // Legacy: send ^MD^TD for native userdefine fields (per v2.6 §5.28.2)
+            const tdEntries = Object.entries(entries).filter(([, value]) => value.trim());
+            if (tdEntries.length > 0) {
+              // Build combined ^MD command with ^TD subcommands for each field
+              const tdSubcommands = tdEntries.map(([, value], idx) => `^TD${idx + 1};${value.trim()}`).join('');
+              try {
+                await onSendCommand(`^MD${tdSubcommands}`);
+              } catch (e) {
+                console.error('[MessagesScreen] Failed to send ^MD^TD:', e);
               }
             }
           }
