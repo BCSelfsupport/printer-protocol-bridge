@@ -292,6 +292,24 @@ function EventLogTable({ events, telemetryHistory }: { events: FleetEvent[]; tel
       return { ...t, trend };
     });
 
+  // Build phase readings from telemetry history
+  // Quality = phase_qual from ^SU (PhaseQual[xx%])
+  // Efficiency = ratio of current quality to peak quality in the dataset (how close to best performance)
+  const peakPhaseQual = Math.max(...telemetryHistory.filter(t => t.phase_qual != null).map(t => t.phase_qual!), 100);
+  const phaseReadings = telemetryHistory
+    .filter(t => t.phase_qual != null)
+    .map((t, i, arr) => {
+      const prev = arr[i + 1];
+      let trend: 'rising' | 'falling' | 'steady' = 'steady';
+      if (prev?.phase_qual != null && t.phase_qual != null) {
+        const delta = t.phase_qual - prev.phase_qual;
+        if (delta > 1) trend = 'rising';
+        else if (delta < -1) trend = 'falling';
+      }
+      const efficiency = peakPhaseQual > 0 ? Math.round((t.phase_qual! / peakPhaseQual) * 100) : 0;
+      return { ...t, trend, efficiency };
+    });
+
   const severityColor = (s: string) => {
     if (s === 'warning') return 'text-amber-500';
     if (s === 'error') return 'text-red-500';
