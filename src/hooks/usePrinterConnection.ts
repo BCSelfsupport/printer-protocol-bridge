@@ -2274,8 +2274,12 @@ export function usePrinterConnection() {
             console.error('[saveMessageContent] Command rejected:', cmd, reason);
             // Store rejection reason so callers can display it
             (saveMessageContent as any).__lastError = reason;
+            setPollingPaused(false);
             return false;
           }
+          // Brief delay between commands to let firmware finish processing
+          // before the next command arrives (especially ^DM → ^NM → ^SV).
+          await new Promise(resolve => setTimeout(resolve, 250));
         }
 
         // Resume polling before optional verification
