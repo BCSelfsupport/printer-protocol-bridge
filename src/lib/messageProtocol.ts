@@ -540,7 +540,7 @@ export function buildMessageDetails(
     }
 
     return {
-      id: idx + 1,
+      id: pf.fieldNum,
       type: fieldType,
       data: fieldData,
       x: pf.x,
