@@ -2135,7 +2135,7 @@ export function usePrinterConnection() {
 
   // Save message content to the printer using proper ^NM command with field subcommands
   // Per BestCode v2.6 protocol: ^NM t;s;o;p;name^AT1;x;y;s;data^AT2;x;y;s;data...
-  // For existing messages: ^DM name first, then ^NM to recreate
+  // Always use delete-before-recreate; ^DM failures are expected for brand-new messages.
   const saveMessageContent = useCallback(async (
     messageName: string,
     fields: Array<{
@@ -2156,6 +2156,7 @@ export function usePrinterConnection() {
     isNew?: boolean,
   ): Promise<boolean> => {
     console.log('[saveMessageContent] Called with:', messageName, fields, 'template:', templateValue, 'isNew:', isNew);
+    (saveMessageContent as any).__lastError = '';
     if (!connectionState.isConnected || !connectionState.connectedPrinter) {
       console.log('[saveMessageContent] Not connected');
       return false;
@@ -2235,10 +2236,7 @@ export function usePrinterConnection() {
 
     // For existing messages, delete first then recreate
     // DataMatrix bitmap uploads must happen before the ^NM command
-    const commands: string[] = [];
-    if (!isNew) {
-      commands.push(`^DM ${messageName}`);
-    }
+    const commands: string[] = [`^DM ${messageName}`];
     // Insert ^NG (graphic upload) commands before ^NM
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
@@ -2271,10 +2269,37 @@ export function usePrinterConnection() {
             return false;
           }
         }
+
+        if (isNew) {
+          let persisted = false;
+
+          for (let attempt = 0; attempt < 3; attempt += 1) {
+            const verifyList = await printerTransport.sendCommand(printer.id, '^LM');
+            const verifyResponse = verifyList?.response ?? '';
+
+            if (verifyList?.success && verifyResponse && !isProtocolCommandFailure(verifyResponse)) {
+              const namesAfterSave = parseLmMessageNames(verifyResponse);
+              persisted = namesAfterSave.some(name => name.toUpperCase() === messageName.toUpperCase());
+              console.log('[saveMessageContent] Post-save ^LM verify:', { messageName, attempt: attempt + 1, persisted, namesAfterSave });
+              if (persisted) break;
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
+          }
+
+          if (!persisted) {
+            const reason = `Message "${messageName}" was not listed by printer after ^SV`;
+            console.error('[saveMessageContent] Persistence verification failed:', reason);
+            (saveMessageContent as any).__lastError = reason;
+            return false;
+          }
+        }
+
         addMessage(messageName);
         return true;
       } catch (e) {
         console.error('[saveMessageContent] Failed:', e);
+        (saveMessageContent as any).__lastError = e instanceof Error ? e.message : 'Unknown error';
         return false;
       }
     } else {
@@ -2345,10 +2370,7 @@ export function usePrinterConnection() {
     }).join('');
 
     const nmCommand = `^NM ${templateCode};0;0;0;${messageName}${fieldSubcommands}`;
-    const commands: string[] = [];
-    if (!isNew) {
-      commands.push(`^DM ${messageName}`);
-    }
+    const commands: string[] = [`^DM ${messageName}`];
     // Insert ^NG commands before ^NM
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
