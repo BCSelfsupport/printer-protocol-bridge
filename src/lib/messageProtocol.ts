@@ -7,6 +7,54 @@
 
 import type { MessageField, MessageDetails } from '@/components/screens/EditMessageScreen';
 
+const ALPHA_MONTH_VALUES = new Set([
+  'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+  'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+]);
+
+function inferFetchedAutoCodeMeta(
+  fieldType: MessageField['type'],
+  rawValue: string,
+): Pick<MessageField, 'autoCodeFieldType' | 'autoCodeFormat'> {
+  const value = rawValue.trim().toUpperCase();
+  if (!value) return {};
+
+  if (fieldType === 'time') {
+    if (/^\d{2}:\d{2}:\d{2}$/.test(value)) return { autoCodeFieldType: 'time', autoCodeFormat: 'HH:MM:SS' };
+    if (/^\d{2}:\d{2}$/.test(value)) return { autoCodeFieldType: 'time', autoCodeFormat: 'HH:MM' };
+    if (/^\d{6}$/.test(value)) return { autoCodeFieldType: 'time', autoCodeFormat: 'HHMMSS' };
+    if (/^\d{4}$/.test(value)) return { autoCodeFieldType: 'time', autoCodeFormat: 'HHMM' };
+    if (/^\d{2}$/.test(value)) return { autoCodeFieldType: 'time', autoCodeFormat: 'HH' };
+    return {};
+  }
+
+  if (fieldType !== 'date') return {};
+
+  if (ALPHA_MONTH_VALUES.has(value)) {
+    return { autoCodeFieldType: 'date_normal_alpha_month' };
+  }
+  if (/^\d{2}\/\d{2}\/\d{2}$/.test(value)) {
+    return { autoCodeFieldType: 'date_normal', autoCodeFormat: 'MM/DD/YY' };
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+    return { autoCodeFieldType: 'date_normal', autoCodeFormat: 'MM/DD/YYYY' };
+  }
+  if (/^\d{4}\/\d{2}\/\d{2}$/.test(value)) {
+    return { autoCodeFieldType: 'date_normal', autoCodeFormat: 'YYYY/MM/DD' };
+  }
+  if (/^\d{3}$/.test(value)) {
+    return { autoCodeFieldType: 'date_normal_doy' };
+  }
+  if (/^\d{4}$/.test(value)) {
+    return { autoCodeFieldType: 'date_normal_yyyy' };
+  }
+  if (/^\d{2}$/.test(value)) {
+    return { autoCodeFieldType: 'date_normal_dom' };
+  }
+
+  return {};
+}
+
 // ── Font mappings (protocol v2.6 §4.2.5) ────────────────────────────────────
 
 /** Protocol font code → font size name */
@@ -539,6 +587,8 @@ export function buildMessageDetails(
       console.log(`[buildMessageDetails] barcode field ${idx + 1}: encoding=${barcodeEncoding}, data="${fieldData}"`);
     }
 
+    const inferredAutoCodeMeta = inferFetchedAutoCodeMeta(fieldType, fieldData);
+
     return {
       id: pf.fieldNum,
       type: fieldType,
@@ -551,6 +601,8 @@ export function buildMessageDetails(
       bold: pf.bold,
       gap: pf.gap,
       rotation: pf.rotation === 0 ? 'Normal' as const : 'Normal' as const,
+      autoCodeFieldType: inferredAutoCodeMeta.autoCodeFieldType,
+      autoCodeFormat: inferredAutoCodeMeta.autoCodeFormat,
       autoNumerals: 0,
     };
   });
