@@ -824,10 +824,33 @@ const Index = () => {
                 if (refreshed && refreshed.fields.length > 0) {
                   const merged = mergeAutoCodeMeta(refreshed, localDetails);
                   saveMessage(merged);
+                  // After saving a new message, re-select the previously active message
+                  // so the new message is only stored, not auto-selected for printing
+                  if (isNew) {
+                    const prevMessage = connectionState.status?.currentMessage;
+                    if (prevMessage && prevMessage !== targetName) {
+                      try {
+                        await sendCommand(`^SM ${prevMessage}`);
+                      } catch (e) {
+                        console.error('[onSave] Failed to re-select previous message:', e);
+                      }
+                    }
+                  }
                   return merged;
                 }
               } catch (e) {
                 console.error('[onSave] post-save reload failed:', e);
+              }
+            }
+            // After saving a new message without refresh, still re-select previous message
+            if (isNew && connectionState.isConnected) {
+              const prevMessage = connectionState.status?.currentMessage;
+              if (prevMessage && prevMessage !== targetName) {
+                try {
+                  await sendCommand(`^SM ${prevMessage}`);
+                } catch (e) {
+                  console.error('[onSave] Failed to re-select previous message:', e);
+                }
               }
             }
             return null;
@@ -970,10 +993,30 @@ const Index = () => {
                   if (refreshed && refreshed.fields.length > 0) {
                     const merged = mergeAutoCodeMeta(refreshed, localDetails);
                     saveMessage(merged);
+                    if (isNew) {
+                      const prevMessage = connectionState.status?.currentMessage;
+                      if (prevMessage && prevMessage !== targetName) {
+                        try {
+                          await sendCommand(`^SM ${prevMessage}`);
+                        } catch (e) {
+                          console.error('[onSave] Failed to re-select previous message:', e);
+                        }
+                      }
+                    }
                     return merged;
                   }
                 } catch (e) {
                   console.error('[onSave] post-save reload failed:', e);
+                }
+              }
+              if (isNew && connectionState.isConnected) {
+                const prevMessage = connectionState.status?.currentMessage;
+                if (prevMessage && prevMessage !== targetName) {
+                  try {
+                    await sendCommand(`^SM ${prevMessage}`);
+                  } catch (e) {
+                    console.error('[onSave] Failed to re-select previous message:', e);
+                  }
                 }
               }
               return null;
