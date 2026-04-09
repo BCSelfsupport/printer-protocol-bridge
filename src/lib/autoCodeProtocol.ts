@@ -55,10 +55,10 @@ export const TIME_CODE_TO_PROTOCOL: Record<string, number> = {
   'MM':       24,  // Minutes only  (the time MM, not month)
   'HH':       23,  // Hours only
   'HHMM':     26,  // Hours and minutes (no delimiter)
-  'HH:MM':    26,  // treated same — delimiter controlled by ^CH
+  'HH:MM':    28,  // Hours and minutes (with delimiter) — v2.6 §5.33.2.5
   'HHMMSS':   27,  // Hours, minutes, seconds (no delimiter)
-  'HH:MM:SS': 27,  // treated same
-  'MM:SS':    27,  // closest match: full HMS with delimiters
+  'HH:MM:SS': 29,  // Hours, minutes, seconds (with delimiters) — v2.6 §5.33.2.5
+  'MM:SS':    29,  // closest match: HMS with delimiters
 };
 
 // ── Reverse mapping (protocol code → format string for preview) ─────────────

@@ -39,7 +39,7 @@ const PROTOCOL_CODE_TO_TEMPLATE: Record<number, string> = {
   0: '5', 1: '7', 2: '9', 3: '12', 4: '16', 5: '19', 6: '25', 7: '32',
   8: 'multi-2x7', 9: 'multi-2x9', 10: 'multi-2x12',
   12: 'multi-3x7', 13: 'multi-3x9',
-  14: 'multi-4x7', 15: 'multi-4x5',
+  14: 'multi-4x7', 15: 'multi-5x5',
   16: '3',  // 1x3 per protocol
   17: 'multi-2x5',
   20: '5s', 21: '7s',
