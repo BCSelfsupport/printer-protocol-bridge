@@ -190,15 +190,48 @@ const Index = () => {
   const mergeAutoCodeMeta = useCallback((fetched: MessageDetails, cached: MessageDetails | null): MessageDetails => {
     if (!cached) return fetched;
     const merged = { ...fetched, fields: fetched.fields.map((f, i) => {
-      const cachedField = cached.fields.find(cf => cf.id === f.id) ?? cached.fields[i];
+      // 1. Try exact ID match
+      let cachedField = cached.fields.find(cf => cf.id === f.id);
+      // 2. Fallback: match by closest (x, y) position with same height — robust
+      //    against field renumbering caused by empty-field filtering during save.
+      if (!cachedField) {
+        let bestDist = Infinity;
+        for (const cf of cached.fields) {
+          if (cf.height !== f.height) continue;
+          const dist = Math.abs(cf.x - f.x) + Math.abs(cf.y - f.y);
+          if (dist < bestDist) {
+            bestDist = dist;
+            cachedField = cf;
+          }
+        }
+      }
+      // 3. Last resort: index-based
+      if (!cachedField) cachedField = cached.fields[i];
       if (!cachedField) return f;
-      return {
+
+      // Preserve autoCode metadata that ^LF doesn't carry
+      const result = {
         ...f,
         autoCodeExpiryDays: f.autoCodeExpiryDays ?? cachedField.autoCodeExpiryDays,
         autoCodeFieldType: f.autoCodeFieldType ?? cachedField.autoCodeFieldType,
         autoCodeFormat: f.autoCodeFormat ?? cachedField.autoCodeFormat,
         dynamicSource: f.dynamicSource ?? cachedField.dynamicSource,
+        promptBeforePrint: f.promptBeforePrint ?? cachedField.promptBeforePrint,
+        promptLabel: f.promptLabel ?? cachedField.promptLabel,
+        promptLength: f.promptLength ?? cachedField.promptLength,
       };
+
+      // If cached field had specific autoCode metadata but the fetched type is
+      // generic ('date'/'time'), preserve the cached type so the canvas renderer
+      // knows the exact sub-format (e.g. DOY vs MM/DD/YY).
+      if (result.autoCodeFieldType && cachedField.type && f.type === cachedField.type) {
+        // Types already match — keep fetched type
+      } else if (result.autoCodeFieldType && cachedField.type === 'text' && f.type === 'date') {
+        // Text field misidentified as date — restore text type
+        result.type = 'text' as any;
+      }
+
+      return result;
     })};
     return merged;
   }, []);
