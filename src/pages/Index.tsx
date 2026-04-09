@@ -192,12 +192,17 @@ const Index = () => {
     const merged = { ...fetched, fields: fetched.fields.map((f, i) => {
       // 1. Try exact ID match
       let cachedField = cached.fields.find(cf => cf.id === f.id);
-      // 2. Fallback: match by closest (x, y) position with same height — robust
-      //    against field renumbering caused by empty-field filtering during save.
+
+      // 2. Fallback: match by closest (x, y) position with same height AND
+      //    compatible type — prevents a text field from inheriting date metadata.
       if (!cachedField) {
         let bestDist = Infinity;
         for (const cf of cached.fields) {
           if (cf.height !== f.height) continue;
+          // Require type compatibility: same type, or both are date/time variants
+          const typesCompatible = cf.type === f.type
+            || (['date', 'time'].includes(cf.type) && ['date', 'time'].includes(f.type));
+          if (!typesCompatible) continue;
           const dist = Math.abs(cf.x - f.x) + Math.abs(cf.y - f.y);
           if (dist < bestDist) {
             bestDist = dist;
@@ -205,8 +210,15 @@ const Index = () => {
           }
         }
       }
-      // 3. Last resort: index-based
-      if (!cachedField) cachedField = cached.fields[i];
+
+      // 3. Last resort: index-based, but ONLY if types are compatible
+      if (!cachedField) {
+        const candidate = cached.fields[i];
+        if (candidate && (candidate.type === f.type
+          || (['date', 'time'].includes(candidate.type) && ['date', 'time'].includes(f.type)))) {
+          cachedField = candidate;
+        }
+      }
       if (!cachedField) return f;
 
       // Preserve autoCode metadata that ^LF doesn't carry
