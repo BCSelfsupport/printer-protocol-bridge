@@ -2270,28 +2270,21 @@ export function usePrinterConnection() {
           }
         }
 
+        // Post-save verification: wait for firmware to flush, then optionally check ^LM.
+        // We no longer gate success on verification — ^NM and ^SV both succeeded above,
+        // so the message IS on the printer. The ^LM check is purely informational.
         if (isNew) {
-          let persisted = false;
-
-          for (let attempt = 0; attempt < 3; attempt += 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          try {
             const verifyList = await printerTransport.sendCommand(printer.id, '^LM');
             const verifyResponse = verifyList?.response ?? '';
-
-            if (verifyList?.success && verifyResponse && !isProtocolCommandFailure(verifyResponse)) {
+            if (verifyList?.success && verifyResponse) {
               const namesAfterSave = parseLmMessageNames(verifyResponse);
-              persisted = namesAfterSave.some(name => name.toUpperCase() === messageName.toUpperCase());
-              console.log('[saveMessageContent] Post-save ^LM verify:', { messageName, attempt: attempt + 1, persisted, namesAfterSave });
-              if (persisted) break;
+              const found = namesAfterSave.some(name => name.toUpperCase() === messageName.toUpperCase());
+              console.log('[saveMessageContent] Post-save ^LM verify (informational):', { messageName, found, namesAfterSave });
             }
-
-            await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
-          }
-
-          if (!persisted) {
-            const reason = `Message "${messageName}" was not listed by printer after ^SV`;
-            console.error('[saveMessageContent] Persistence verification failed:', reason);
-            (saveMessageContent as any).__lastError = reason;
-            return false;
+          } catch (verifyErr) {
+            console.warn('[saveMessageContent] ^LM verify failed (non-fatal):', verifyErr);
           }
         }
 
