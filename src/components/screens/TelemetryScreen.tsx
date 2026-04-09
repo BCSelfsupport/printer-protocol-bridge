@@ -61,6 +61,15 @@ interface FleetTelemetry {
   filter_hours_remaining: number | null;
 }
 
+interface TelemetrySnapshot {
+  recorded_at: string;
+  viscosity: number | null;
+  phase_qual: number | null;
+  pressure: number | null;
+  modulation: number | null;
+  rps: number | null;
+}
+
 interface FleetEvent {
   id: string;
   event_type: string;
