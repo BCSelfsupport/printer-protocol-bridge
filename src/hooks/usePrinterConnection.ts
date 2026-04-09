@@ -1978,19 +1978,15 @@ export function usePrinterConnection() {
           : field.autoCodeFieldType;
 
         // Use protocol mapping from autoCodeFieldType for the correct type code.
-        // IMPORTANT: Inside ^NM, we ALWAYS use ^AD (not ^AE) for date fields.
-        // ^AE is not a valid sub-command within ^NM on BestCode firmware.
-        // Expiry parameters (^AE) are sent as separate standalone commands
-        // after the ^NM command succeeds (handled in saveMessageContent).
+        // Per v2.6 protocol §5.33.2, ^AE IS a valid subcommand within ^NM.
+        // Extension params use letter prefixes: D=days, R=rollover hours, etc.
         const info = normalizedAutoCodeFieldType
           ? getProtocolFieldInfo(normalizedAutoCodeFieldType, field.autoCodeFormat, field.autoCodeExpiryDays)
           : null;
         if (info) {
-          // Always use ^AD inside ^NM (even for expiry fields)
-          // ^AP is valid inside ^NM for program codes
-          const nmCommand = info.command === 'AP' ? 'AP' : 'AD';
-          const cmd = `^A${nmCommand.slice(1)}${fieldNum};${field.x};${field.y};${fontCode};${info.typeCode}`;
-          console.log(`[buildFieldSubcommand] date field ${fieldNum}: autoCodeFieldType=${field.autoCodeFieldType} normalized=${normalizedAutoCodeFieldType} expiryDays=${field.autoCodeExpiryDays} → ${cmd} (protocol: ${info.command}, using ${nmCommand} in ^NM)`);
+          // Use the actual command from protocol mapping (^AD, ^AE, or ^AP)
+          const cmd = `^A${info.command.slice(1)}${fieldNum};${field.x};${field.y};${fontCode};${info.typeCode}${info.extParams || ''}`;
+          console.log(`[buildFieldSubcommand] date field ${fieldNum}: autoCodeFieldType=${field.autoCodeFieldType} normalized=${normalizedAutoCodeFieldType} expiryDays=${field.autoCodeExpiryDays} → ${cmd}`);
           return cmd;
         }
         // Julian Date (YDDD) is a composite not in the protocol — send as text with live data
@@ -2237,32 +2233,6 @@ export function usePrinterConnection() {
     
     console.log('[saveMessageContent] ^NM command:', nmCommand);
 
-    // Build separate ^AE commands for date fields with expiry offset.
-    // ^AE is NOT valid as a sub-command within ^NM, so we send these
-    // as standalone commands after ^NM to apply expiry/rollover params.
-    const aeCommands: string[] = [];
-    validFields.forEach((field, index) => {
-      if (field.type === 'date' && (field.autoCodeExpiryDays ?? 0) > 0) {
-        const normalizedType = field.autoCodeFieldType?.startsWith('date_')
-          ? field.autoCodeFieldType.replace(/^date_normal_/, 'date_expiry_')
-          : field.autoCodeFieldType;
-        const info = normalizedType
-          ? getProtocolFieldInfo(normalizedType, field.autoCodeFormat, field.autoCodeExpiryDays)
-          : null;
-        if (info && info.command === 'AE' && info.extParams) {
-          const fieldNum = index + 1;
-          const fontCode = fontToProtocolCode(field.fontSize);
-          const fieldHeight = fontToDotHeight(field.fontSize);
-          const templateRelativeY = field.y - (32 - templateHeight);
-          const printerY = Math.max(0, templateHeight - templateRelativeY - fieldHeight);
-          // ^AE n;x;y;s;d;days[;rollover]
-          const aeCmd = `^AE${fieldNum};${field.x};${printerY};${fontCode};${info.typeCode}${info.extParams}`;
-          aeCommands.push(aeCmd);
-          console.log(`[saveMessageContent] Post-NM expiry command: ${aeCmd}`);
-        }
-      }
-    });
-
     if (dmUploadCmds.length > 0) {
       console.log(`[saveMessageContent] DataMatrix ECC200: ${dmUploadCmds.length} ^NG upload command(s)`);
     }
@@ -2273,8 +2243,6 @@ export function usePrinterConnection() {
     // Insert ^NG (graphic upload) commands before ^NM
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
-    // After ^NM, apply expiry offset via standalone ^AE commands
-    commands.push(...aeCommands);
     commands.push(FLUSH_COMMAND);
 
     if (shouldUseEmulator()) {
