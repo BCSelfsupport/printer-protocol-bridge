@@ -184,39 +184,89 @@ const Index = () => {
   const syncingRef = useRef(false);
   const syncedMessagesRef = useRef<Set<string>>(new Set());
   // Track messages recently saved from the editor — skip auto-sync overwrite for these
+  const normalizeMessageForPrinter = useCallback((details: MessageDetails): MessageDetails => ({
+    ...details,
+    fields: details.fields
+      .filter((field) => {
+        if (field.type === 'text' || field.type === 'userdefine') {
+          return field.data.trim().length > 0;
+        }
+        return true;
+      })
+      .map((field, index) => ({
+        ...field,
+        id: index + 1,
+      })),
+  }), []);
+
   // Merge autoCode metadata (expiryDays, fieldType, format) from a cached
   // message into a freshly-fetched one. The printer's ^LF response doesn't
   // include this metadata, so we preserve it from the locally stored version.
   const mergeAutoCodeMeta = useCallback((fetched: MessageDetails, cached: MessageDetails | null): MessageDetails => {
     if (!cached) return fetched;
+    const cachedIdsAreCanonical = cached.fields.every((field, index) => field.id === index + 1);
+    const fetchedIdsAreCanonical = fetched.fields.every((field, index) => field.id === index + 1);
+    const allowExactIdMatch = cachedIdsAreCanonical
+      && fetchedIdsAreCanonical
+      && cached.fields.length === fetched.fields.length;
+    const usedCachedIndexes = new Set<number>();
     const merged = { ...fetched, fields: fetched.fields.map((f, i) => {
-      // 1. Try exact ID match
-      let cachedField = cached.fields.find(cf => cf.id === f.id);
+      const typesCompatible = (candidate: MessageDetails['fields'][number]) => (
+        candidate.type === f.type
+        || (['date', 'time'].includes(candidate.type) && ['date', 'time'].includes(f.type))
+      );
 
-      // 2. Fallback: match by closest (x, y) position with same height AND
-      //    compatible type — prevents a text field from inheriting date metadata.
+      const claimCandidate = (index: number) => {
+        usedCachedIndexes.add(index);
+        return cached.fields[index];
+      };
+
+      let cachedField = allowExactIdMatch
+        ? (() => {
+            const matchIndex = cached.fields.findIndex((candidate, index) => (
+              !usedCachedIndexes.has(index)
+              && candidate.id === f.id
+              && typesCompatible(candidate)
+            ));
+            return matchIndex >= 0 ? claimCandidate(matchIndex) : null;
+          })()
+        : null;
+
       if (!cachedField) {
-        let bestDist = Infinity;
-        for (const cf of cached.fields) {
-          if (cf.height !== f.height) continue;
-          // Require type compatibility: same type, or both are date/time variants
-          const typesCompatible = cf.type === f.type
-            || (['date', 'time'].includes(cf.type) && ['date', 'time'].includes(f.type));
-          if (!typesCompatible) continue;
-          const dist = Math.abs(cf.x - f.x) + Math.abs(cf.y - f.y);
-          if (dist < bestDist) {
-            bestDist = dist;
-            cachedField = cf;
-          }
+        const exactGeometryIndex = cached.fields.findIndex((candidate, index) => (
+          !usedCachedIndexes.has(index)
+          && candidate.x === f.x
+          && candidate.y === f.y
+          && candidate.height === f.height
+          && typesCompatible(candidate)
+        ));
+        if (exactGeometryIndex >= 0) {
+          cachedField = claimCandidate(exactGeometryIndex);
         }
       }
 
-      // 3. Last resort: index-based, but ONLY if types are compatible
       if (!cachedField) {
+        let bestIndex = -1;
+        let bestDist = Infinity;
+        for (let index = 0; index < cached.fields.length; index += 1) {
+          if (usedCachedIndexes.has(index)) continue;
+          const candidate = cached.fields[index];
+          if (candidate.height !== f.height || !typesCompatible(candidate)) continue;
+          const dist = Math.abs(candidate.x - f.x) + Math.abs(candidate.y - f.y);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestIndex = index;
+          }
+        }
+        if (bestIndex >= 0) {
+          cachedField = claimCandidate(bestIndex);
+        }
+      }
+
+      if (!cachedField && !usedCachedIndexes.has(i)) {
         const candidate = cached.fields[i];
-        if (candidate && (candidate.type === f.type
-          || (['date', 'time'].includes(candidate.type) && ['date', 'time'].includes(f.type)))) {
-          cachedField = candidate;
+        if (candidate && typesCompatible(candidate)) {
+          cachedField = claimCandidate(i);
         }
       }
       if (!cachedField) return f;
@@ -789,11 +839,12 @@ const Index = () => {
           onSendCommand={isConnectedMessageTarget ? async (cmd) => sendCommand(cmd) : undefined}
           onGetStoredMessage={getMessage}
           onSaveMessageContent={isConnectedMessageTarget ? saveMessageContent : undefined}
-          onSaveStoredMessage={saveMessage}
+          onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details))}
           connectedPrinterLineId={messageTargetPrinter?.lineId}
           onPromptSaved={(details) => {
-            setActiveMessageContent(details);
-            recentlySavedRef.current.set(details.name, Date.now());
+            const normalized = normalizeMessageForPrinter(details);
+            setActiveMessageContent(normalized);
+            recentlySavedRef.current.set(normalized.name, Date.now());
           }}
           onEdit={(message) => {
             setIsCreatingNewMessage(false);
@@ -834,10 +885,14 @@ const Index = () => {
           printerModel={connectionState.status?.printerModel}
           onSave={async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
             const targetName = isNew ? details.name : editingMessage.name;
+            const localDetails = normalizeMessageForPrinter({
+              ...details,
+              name: targetName,
+            });
             const success = await saveMessageContent(
               targetName,
-              details.fields,
-              details.templateValue,
+              localDetails.fields,
+              localDetails.templateValue,
               isNew,
             );
             if (!success) {
@@ -849,10 +904,6 @@ const Index = () => {
             if (!isNew) {
               updateMessage(editingMessage.id, details.name);
             }
-            const localDetails = {
-              ...details,
-              name: targetName,
-            };
             saveMessage(localDetails);
             // Mark as recently saved so auto-sync won't overwrite with printer version
             recentlySavedRef.current.set(targetName, Date.now());
@@ -1002,12 +1053,16 @@ const Index = () => {
             connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
             isConnected={connectionState.isConnected}
             printerModel={connectionState.status?.printerModel}
-            onSave={async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
+          onSave={async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
               const targetName = isNew ? details.name : editingMessage.name;
+              const localDetails = normalizeMessageForPrinter({
+                ...details,
+                name: targetName,
+              });
               const success = await saveMessageContent(
                 targetName,
-                details.fields,
-                details.templateValue,
+                localDetails.fields,
+                localDetails.templateValue,
                 isNew,
               );
               if (!success) {
@@ -1019,10 +1074,6 @@ const Index = () => {
               if (!isNew) {
                 updateMessage(editingMessage.id, details.name);
               }
-              const localDetails = {
-                ...details,
-                name: targetName,
-              };
               saveMessage(localDetails);
               recentlySavedRef.current.set(targetName, Date.now());
               syncedMessagesRef.current.add(targetName);
@@ -1121,11 +1172,12 @@ const Index = () => {
             onSendCommand={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id === connectionState.connectedPrinter?.id ? async (cmd) => sendCommand(cmd) : undefined}
             onGetStoredMessage={getMessage}
             onSaveMessageContent={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id === connectionState.connectedPrinter?.id ? saveMessageContent : undefined}
-            onSaveStoredMessage={saveMessage}
+            onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details))}
             connectedPrinterLineId={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.lineId}
             onPromptSaved={(details) => {
-              setActiveMessageContent(details);
-              recentlySavedRef.current.set(details.name, Date.now());
+              const normalized = normalizeMessageForPrinter(details);
+              setActiveMessageContent(normalized);
+              recentlySavedRef.current.set(normalized.name, Date.now());
             }}
             onEdit={(message) => {
               setIsCreatingNewMessage(false);
