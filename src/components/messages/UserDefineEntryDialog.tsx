@@ -18,7 +18,7 @@ interface UserDefineEntryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   prompts: UserDefinePrompt[];
-  onConfirm: (entries: Record<number, string>) => void;
+  onConfirm: (entries: Record<number, string>) => void | Promise<void>;
 }
 
 export function UserDefineEntryDialog({
@@ -29,6 +29,7 @@ export function UserDefineEntryDialog({
 }: UserDefineEntryDialogProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [entries, setEntries] = useState<Record<number, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const currentPrompt = prompts[currentIndex];
@@ -38,43 +39,52 @@ export function UserDefineEntryDialog({
     if (open) {
       setCurrentIndex(0);
       setEntries({});
+      setIsSubmitting(false);
     }
   }, [open, prompts]);
 
   // Auto-focus the input
   useEffect(() => {
-    if (open && inputRef.current) {
+    if (open && inputRef.current && !isSubmitting) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [open, currentIndex]);
+  }, [open, currentIndex, isSubmitting]);
 
   if (!currentPrompt) return null;
 
   const currentValue = entries[currentPrompt.fieldId] ?? '';
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (isSubmitting) return;
+
     if (currentIndex < prompts.length - 1) {
       setCurrentIndex(prev => prev + 1);
-    } else {
-      // All prompts answered — confirm
-      onConfirm(entries);
-      onOpenChange(false);
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await onConfirm(entries);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleCancel = () => {
+    if (isSubmitting) return;
     onOpenChange(false);
   };
 
   const handleChange = (value: string) => {
+    if (isSubmitting) return;
     // Limit to the specified length
     const trimmed = value.slice(0, currentPrompt.length);
     setEntries(prev => ({ ...prev, [currentPrompt.fieldId]: trimmed }));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && currentValue.length > 0) {
-      handleNext();
+    if (e.key === 'Enter' && currentValue.length > 0 && !isSubmitting) {
+      void handleNext();
     }
   };
 
@@ -117,14 +127,14 @@ export function UserDefineEntryDialog({
 
         {/* Footer */}
         <DialogFooter className="px-4 py-3 border-t bg-muted/30 flex gap-2 sm:justify-between">
-          <Button variant="outline" onClick={handleCancel}>
+          <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button
-            onClick={handleNext}
-            disabled={currentValue.length === 0}
+            onClick={() => void handleNext()}
+            disabled={currentValue.length === 0 || isSubmitting}
           >
-            {currentIndex < prompts.length - 1 ? 'Next' : 'Confirm'}
+            {isSubmitting ? 'Sending…' : currentIndex < prompts.length - 1 ? 'Next' : 'Confirm'}
           </Button>
         </DialogFooter>
       </DialogContent>
