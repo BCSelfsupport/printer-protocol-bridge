@@ -400,7 +400,9 @@ export function MessagesScreen({
                   const updatedDetails = { ...pendingMessageDetails, fields: updatedFields };
                   onSaveStoredMessage?.(updatedDetails);
                   onPromptSaved?.(updatedDetails);
-                  await onSelect(selectedMessage);
+                  // ^NM recreates and leaves the message active on the printer.
+                  // Sending ^SM immediately after ^SV can stall some firmware, so
+                  // treat the rewrite itself as the selection step here.
                   toast.success('Message loaded with entered values', { id: 'prompt-save' });
                 } else {
                   const reason = (onSaveMessageContent as any)?.__lastError || '';
