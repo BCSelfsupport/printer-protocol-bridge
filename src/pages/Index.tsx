@@ -193,10 +193,20 @@ const Index = () => {
         }
         return true;
       })
-      .map((field, index) => ({
-        ...field,
-        id: index + 1,
-      })),
+      .map((field, index) => {
+        const hasExpiryOffset = (field.autoCodeExpiryDays ?? 0) > 0;
+        const normalizedAutoCodeFieldType = field.autoCodeFieldType?.startsWith('date_')
+          ? hasExpiryOffset
+            ? field.autoCodeFieldType.replace(/^date_normal_/, 'date_expiry_')
+            : field.autoCodeFieldType.replace(/^date_expiry_/, 'date_normal_')
+          : field.autoCodeFieldType;
+
+        return {
+          ...field,
+          id: index + 1,
+          autoCodeFieldType: normalizedAutoCodeFieldType,
+        };
+      }),
   }), []);
 
   // Merge autoCode metadata (expiryDays, fieldType, format) from a cached
