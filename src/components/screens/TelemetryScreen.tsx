@@ -61,6 +61,15 @@ interface FleetTelemetry {
   filter_hours_remaining: number | null;
 }
 
+interface TelemetrySnapshot {
+  recorded_at: string;
+  viscosity: number | null;
+  phase_qual: number | null;
+  pressure: number | null;
+  modulation: number | null;
+  rps: number | null;
+}
+
 interface FleetEvent {
   id: string;
   event_type: string;
@@ -253,16 +262,14 @@ function getSeverityLabel(severity: string): string {
   }
 }
 
-function EventLogTable({ events }: { events: FleetEvent[] }) {
+function EventLogTable({ events, telemetryHistory }: { events: FleetEvent[]; telemetryHistory: TelemetrySnapshot[] }) {
   const [category, setCategory] = useState<EventCategory>('all');
   
   // Filter by category — use the category field if available, otherwise infer from event_type
   const filtered = category === 'all' 
     ? events 
     : events.filter(e => {
-        // Use server-assigned category if available
         if (e.category && e.category !== 'event') return e.category === category;
-        // Infer category for legacy events without the category column
         if (category === 'event') return ['jet_start', 'jet_stop', 'hv_on', 'hv_off', 'pressure_fault', 'pressure_drift', 'modulation_change', 'modulation_drift'].includes(e.event_type);
         if (category === 'viscosity') return ['viscosity_drift', 'viscosity_add', 'viscosity_change'].includes(e.event_type);
         if (category === 'phase') return ['phase_quality_low', 'phase_quality_change'].includes(e.event_type);
@@ -270,6 +277,20 @@ function EventLogTable({ events }: { events: FleetEvent[] }) {
         if (category === 'filter') return ['filter_warning', 'filter_expired', 'filter_replaced'].includes(e.event_type);
         return e.category === category;
       });
+
+  // Build viscosity readings from telemetry history (sorted newest first from server)
+  const viscosityReadings = telemetryHistory
+    .filter(t => t.viscosity != null)
+    .map((t, i, arr) => {
+      const prev = arr[i + 1]; // next in array = previous in time (descending order)
+      let trend: 'rising' | 'falling' | 'steady' = 'steady';
+      if (prev?.viscosity != null && t.viscosity != null) {
+        const delta = t.viscosity - prev.viscosity;
+        if (delta > 0.01) trend = 'rising';
+        else if (delta < -0.01) trend = 'falling';
+      }
+      return { ...t, trend };
+    });
 
   const severityColor = (s: string) => {
     if (s === 'warning') return 'text-amber-500';
@@ -283,22 +304,26 @@ function EventLogTable({ events }: { events: FleetEvent[] }) {
     return 'bg-blue-500/5';
   };
 
+  // Count helper for category tabs
+  const getCategoryCount = (catKey: EventCategory) => {
+    if (catKey === 'all') return events.length;
+    if (catKey === 'viscosity') return viscosityReadings.length; // show telemetry count, not event count
+    return events.filter(e => {
+      if (e.category && e.category !== 'event') return e.category === catKey;
+      if (catKey === 'event') return ['jet_start', 'jet_stop', 'hv_on', 'hv_off', 'pressure_fault', 'pressure_drift', 'modulation_change', 'modulation_drift'].includes(e.event_type);
+      if (catKey === 'phase') return ['phase_quality_low', 'phase_quality_change'].includes(e.event_type);
+      if (catKey === 'smartfill') return ['ink_level_change', 'ink_fill', 'makeup_level_change', 'makeup_fill'].includes(e.event_type);
+      if (catKey === 'filter') return ['filter_warning', 'filter_expired', 'filter_replaced'].includes(e.event_type);
+      return e.category === catKey;
+    }).length;
+  };
+
   return (
     <div className="space-y-4">
       {/* Category tabs — matching printer's native Event Log bottom nav */}
       <div className="flex gap-1 bg-muted/50 rounded-xl p-1 overflow-x-auto">
         {EVENT_CATEGORIES.map(cat => {
-          const count = cat.key === 'all' 
-            ? events.length 
-            : events.filter(e => {
-                if (e.category && e.category !== 'event') return e.category === cat.key;
-                if (cat.key === 'event') return ['jet_start', 'jet_stop', 'hv_on', 'hv_off', 'pressure_fault', 'pressure_drift', 'modulation_change', 'modulation_drift'].includes(e.event_type);
-                if (cat.key === 'viscosity') return ['viscosity_drift', 'viscosity_add', 'viscosity_change'].includes(e.event_type);
-                if (cat.key === 'phase') return ['phase_quality_low', 'phase_quality_change'].includes(e.event_type);
-                if (cat.key === 'smartfill') return ['ink_level_change', 'ink_fill', 'makeup_level_change', 'makeup_fill'].includes(e.event_type);
-                if (cat.key === 'filter') return ['filter_warning', 'filter_expired', 'filter_replaced'].includes(e.event_type);
-                return e.category === cat.key;
-              }).length;
+          const count = getCategoryCount(cat.key);
           return (
             <button
               key={cat.key}
@@ -324,61 +349,113 @@ function EventLogTable({ events }: { events: FleetEvent[] }) {
         })}
       </div>
 
-      {/* Table — matches printer's native Event Log columns: Date, Time, Status, Event, Explanation */}
-      {filtered.length > 0 ? (
-        <div className="border border-border rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-muted/60 border-b border-border">
-                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Date</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Time</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Status</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Event</th>
-                  <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Explanation</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((evt, i) => {
-                  const d = new Date(evt.occurred_at);
-                  const date = d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-                  const time = d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                  const statusLabel = getSeverityLabel(evt.severity);
-                  const eventLabel = getEventLabel(evt);
+      {/* ── Viscosity tab: shows telemetry readings, not events ── */}
+      {category === 'viscosity' ? (
+        viscosityReadings.length > 0 ? (
+          <div className="border border-border rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/60 border-b border-border">
+                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Date</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Time</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Viscosity (cP)</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Trend</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {viscosityReadings.map((row, i) => {
+                    const d = new Date(row.recorded_at);
+                    const date = d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+                    const time = d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const trendIcon = row.trend === 'rising' ? '↑' : row.trend === 'falling' ? '↓' : '→';
+                    const trendLabel = row.trend === 'rising' ? 'Rising' : row.trend === 'falling' ? 'Falling' : 'Steady';
+                    const trendColor = row.trend === 'rising' ? 'text-red-500' : row.trend === 'falling' ? 'text-blue-500' : 'text-muted-foreground';
 
-                  return (
-                    <tr key={evt.id} className={cn(
-                      "border-b border-border/40 last:border-0 transition-colors hover:bg-muted/30",
-                      i % 2 === 0 ? 'bg-card' : 'bg-card/60'
-                    )}>
-                      <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{date}</td>
-                      <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{time}</td>
-                      <td className="px-4 py-2">
-                        <Badge className={cn(
-                          "text-[10px] font-semibold border-0",
-                          severityBg(evt.severity),
-                          severityColor(evt.severity)
-                        )}>
-                          {statusLabel}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-2">
-                        <span className="text-xs font-medium text-foreground">{eventLabel}</span>
-                      </td>
-                      <td className="px-4 py-2 text-xs text-muted-foreground max-w-[300px] truncate" title={evt.message}>
-                        {evt.message}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                    return (
+                      <tr key={`visc-${i}`} className={cn(
+                        "border-b border-border/40 last:border-0 transition-colors hover:bg-muted/30",
+                        i % 2 === 0 ? 'bg-card' : 'bg-card/60'
+                      )}>
+                        <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{date}</td>
+                        <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{time}</td>
+                        <td className="px-4 py-2 font-mono text-sm font-semibold text-foreground">
+                          {row.viscosity?.toFixed(2)}
+                        </td>
+                        <td className="px-4 py-2">
+                          <span className={cn("text-xs font-medium", trendColor)}>
+                            {trendIcon} {trendLabel}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="text-sm text-muted-foreground text-center py-16 bg-card border border-border rounded-xl">
+            No viscosity readings recorded yet. Readings are logged every 30 seconds when the printer is connected.
+          </div>
+        )
       ) : (
-        <div className="text-sm text-muted-foreground text-center py-16 bg-card border border-border rounded-xl">
-          No {category === 'all' ? '' : EVENT_CATEGORIES.find(c => c.key === category)?.label + ' '}events recorded
-        </div>
+        /* ── Standard event table for all other tabs ── */
+        filtered.length > 0 ? (
+          <div className="border border-border rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/60 border-b border-border">
+                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Date</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Time</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Status</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Event</th>
+                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Explanation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((evt, i) => {
+                    const d = new Date(evt.occurred_at);
+                    const date = d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+                    const time = d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const statusLabel = getSeverityLabel(evt.severity);
+                    const eventLabel = getEventLabel(evt);
+
+                    return (
+                      <tr key={evt.id} className={cn(
+                        "border-b border-border/40 last:border-0 transition-colors hover:bg-muted/30",
+                        i % 2 === 0 ? 'bg-card' : 'bg-card/60'
+                      )}>
+                        <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{date}</td>
+                        <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{time}</td>
+                        <td className="px-4 py-2">
+                          <Badge className={cn(
+                            "text-[10px] font-semibold border-0",
+                            severityBg(evt.severity),
+                            severityColor(evt.severity)
+                          )}>
+                            {statusLabel}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-2">
+                          <span className="text-xs font-medium text-foreground">{eventLabel}</span>
+                        </td>
+                        <td className="px-4 py-2 text-xs text-muted-foreground max-w-[300px] truncate" title={evt.message}>
+                          {evt.message}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground text-center py-16 bg-card border border-border rounded-xl">
+            No {EVENT_CATEGORIES.find(c => c.key === category)?.label || ''} events recorded
+          </div>
+        )
       )}
     </div>
   );
@@ -584,6 +661,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<FleetPrinter | null>(null);
   const [telemetry, setTelemetry] = useState<FleetTelemetry | null>(null);
   const [events, setEvents] = useState<FleetEvent[]>([]);
+  const [telemetryHistory, setTelemetryHistory] = useState<TelemetrySnapshot[]>([]);
   const [firmware, setFirmware] = useState<Firmware[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [seeding, setSeeding] = useState(false);
@@ -657,6 +735,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
       ]);
       setTelemetry(detail.telemetry || null);
       setEvents(detail.events || []);
+      setTelemetryHistory(detail.telemetry_history || []);
       setFirmware(fw.firmware || []);
       // Update sites and refresh selectedPrinter/selectedSite from fresh data
       const freshSites = sitesJson.sites || [];
@@ -820,7 +899,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => { setSelectedPrinter(null); setTelemetry(null); setEvents([]); }}
+                onClick={() => { setSelectedPrinter(null); setTelemetry(null); setEvents([]); setTelemetryHistory([]); }}
                 className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -992,7 +1071,7 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                 </TabsContent>
 
                 <TabsContent value="events" className="mt-6">
-                  <EventLogTable events={events} />
+                  <EventLogTable events={events} telemetryHistory={telemetryHistory} />
                 </TabsContent>
 
                 <TabsContent value="firmware" className="mt-6">
