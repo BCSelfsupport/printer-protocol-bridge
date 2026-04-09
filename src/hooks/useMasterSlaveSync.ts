@@ -108,7 +108,6 @@ export function useMasterSlaveSync({
     }
 
     return false;
-  }, []);
   }, [connectedPrinterId]);
 
   // Sync message selection: when master's currentMessage changes, push full content to slaves first, then ^SM
