@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
         const printerId = url.searchParams.get("printerId");
         if (!printerId) throw new Error("printerId required");
 
-        const [telemetry, events] = await Promise.all([
+        const [telemetry, events, telemetryHistory] = await Promise.all([
           supabase
             .from("fleet_telemetry")
             .select("*")
@@ -55,6 +55,13 @@ Deno.serve(async (req) => {
             .eq("printer_id", printerId)
             .order("occurred_at", { ascending: false })
             .limit(200),
+          // Last 50 telemetry snapshots for viscosity/phase history tabs
+          supabase
+            .from("fleet_telemetry")
+            .select("recorded_at, viscosity, phase_qual, pressure, modulation, rps")
+            .eq("printer_id", printerId)
+            .order("recorded_at", { ascending: false })
+            .limit(50),
         ]);
 
         if (telemetry.error) throw telemetry.error;
@@ -64,6 +71,7 @@ Deno.serve(async (req) => {
           JSON.stringify({
             telemetry: telemetry.data?.[0] || null,
             events: events.data || [],
+            telemetry_history: telemetryHistory.data || [],
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
