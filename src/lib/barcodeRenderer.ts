@@ -274,21 +274,14 @@ export async function renderBarcodeToCanvas(
             : 25; // default estimate; actual size adapts via bwip-js
           options.scale = Math.max(1, Math.floor(targetBarPx / modules));
         } else if (encoding === 'datamatrix') {
-          // Parse DataMatrix sizeFlag (e.g. "24x24" or "36x12") to force symbol dimensions
-          let dmRows = size;
-          let dmCols = size;
+          // Use 'version' option (e.g. "24x24") to force symbol dimensions per BWIPP spec
           if (sizeFlag) {
-            const dmMatch = sizeFlag.match(/(\d+)x(\d+)/i);
-            if (dmMatch) {
-              dmCols = parseInt(dmMatch[1], 10);
-              dmRows = parseInt(dmMatch[2], 10);
-            }
+            // sizeFlag is like "24x24" or "36x12"
+            (options as any).version = sizeFlag;
           }
-          // bwip-js uses 'columns' and 'rows' for DataMatrix symbol size
-          (options as any).columns = dmCols;
-          (options as any).rows = dmRows;
-          const modules = Math.max(dmRows, dmCols);
-          options.scale = Math.max(1, Math.floor(targetBarPx / modules));
+          // Scale based on target height
+          const dmRows = sizeFlag ? parseInt((sizeFlag.match(/\d+x(\d+)/)?.[1]) || `${size}`, 10) : size;
+          options.scale = Math.max(1, Math.floor(targetBarPx / dmRows));
         } else {
           options.height = size;
           options.width = size;
