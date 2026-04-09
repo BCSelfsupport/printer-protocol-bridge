@@ -699,12 +699,14 @@ export function EditMessageScreen({
     const preferredSize =
       config.encoding === 'qrcode'
         ? config.size
-        : config.encoding === 'dotcode'
-          ? config.dotcodeScale
-          : undefined;
+        : config.encoding === 'datamatrix'
+          ? config.size
+          : config.encoding === 'dotcode'
+            ? config.dotcodeScale
+            : undefined;
 
     const barcodeFlags: string[] = [];
-    if (preferredSize && /^\d+$/.test(preferredSize)) {
+    if (preferredSize && /^[\dx]+$/i.test(preferredSize)) {
       barcodeFlags.push(`S=${preferredSize}`);
     }
     if (config.humanReadable) {
