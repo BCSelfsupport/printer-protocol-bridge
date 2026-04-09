@@ -3,6 +3,7 @@ import { Printer } from '@/types/printer';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerEmulator } from '@/lib/printerEmulator';
 import type { MessageDetails } from '@/components/screens/EditMessageScreen';
+import { printerTransport, isRelayMode } from '@/lib/printerTransport';
 
 const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
 const shouldUseEmulator = () => printerEmulator.enabled || multiPrinterEmulator.enabled;
