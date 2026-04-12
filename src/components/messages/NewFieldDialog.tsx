@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft, Tag } from 'lucide-react';
 import {
   Dialog,
