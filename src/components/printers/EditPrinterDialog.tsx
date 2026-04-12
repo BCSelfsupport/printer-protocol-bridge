@@ -34,7 +34,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
   const [role, setRole] = useState<PrinterRole>('none');
   const [masterId, setMasterId] = useState<string>('');
   const [serialNumber, setSerialNumber] = useState('');
-  const [expiryOffsetDays, setExpiryOffsetDays] = useState('0');
+  
   const [lineId, setLineId] = useState('');
   const [ipError, setIpError] = useState('');
   // Sync form when printer changes
@@ -46,7 +46,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       setRole(printer.role ?? 'none');
       setMasterId(printer.masterId?.toString() ?? '');
       setSerialNumber(printer.serialNumber ?? '');
-      setExpiryOffsetDays(String(printer.expiryOffsetDays ?? 0));
+      
       setLineId(printer.lineId ?? '');
     }
   }, [printer]);
@@ -83,7 +83,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       role,
       masterId: role === 'slave' && masterId ? parseInt(masterId, 10) : undefined,
       serialNumber: serialNumber.trim() || undefined,
-      expiryOffsetDays: expiryOffsetDays.trim() !== '' && parseInt(expiryOffsetDays, 10) !== 0 ? parseInt(expiryOffsetDays, 10) : undefined,
+      
       lineId: lineId.trim() || undefined,
     });
     onOpenChange(false);
@@ -189,24 +189,6 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
             </p>
           </div>
 
-          {/* Expiry Offset Days */}
-          <div className="space-y-2">
-            <Label htmlFor="edit-expiry-offset" className="text-slate-300 flex items-center gap-1.5">
-              <CalendarDays className="w-3.5 h-3.5" />
-              Expiry Date Offset (Days)
-            </Label>
-            <Input
-              id="edit-expiry-offset"
-              type="number"
-              value={expiryOffsetDays}
-              onChange={(e) => setExpiryOffsetDays(e.target.value)}
-              placeholder="0"
-              className="bg-slate-800 border-slate-600 text-white font-mono w-24"
-            />
-            <p className="text-[10px] text-slate-500">
-              Days to offset the expiration date for this printer (e.g., +1, +2, +7).
-            </p>
-          </div>
 
           <div className="space-y-2">
             <Label className="text-slate-300 flex items-center gap-1.5">
