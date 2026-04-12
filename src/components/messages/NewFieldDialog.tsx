@@ -39,6 +39,7 @@ export function NewFieldDialog({
   connectedPrinterLineId,
 }: NewFieldDialogProps) {
   const [showPromptConfig, setShowPromptConfig] = useState(false);
+  const [showLineIdWarning, setShowLineIdWarning] = useState(false);
   const [promptLabel, setPromptLabel] = useState('');
   const [promptLength, setPromptLength] = useState(3);
 
