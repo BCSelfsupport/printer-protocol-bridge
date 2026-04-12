@@ -125,8 +125,8 @@ export function NewFieldDialog({
           /* Line ID not configured warning */
           <div className="bg-card p-6 space-y-4 text-center">
             <div className="flex justify-center">
-              <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <AlertTriangle className="w-7 h-7 text-amber-500" />
+              <div className="w-14 h-14 rounded-full bg-accent/20 flex items-center justify-center">
+                <AlertTriangle className="w-7 h-7 text-accent-foreground" />
               </div>
             </div>
             <div className="space-y-2">
