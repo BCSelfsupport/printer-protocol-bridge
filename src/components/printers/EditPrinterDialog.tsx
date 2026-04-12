@@ -16,13 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Printer as PrinterIcon, Save, Trash2, Crown, Link, Hash, CalendarDays, Tag } from 'lucide-react';
+import { Printer as PrinterIcon, Save, Trash2, Crown, Link, Hash, Tag } from 'lucide-react';
 
 interface EditPrinterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   printer: Printer | null;
-  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string; expiryOffsetDays?: number; lineId?: string }) => void;
+  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string; lineId?: string }) => void;
   onDelete?: (printerId: number) => void;
   allPrinters?: Printer[];
 }
