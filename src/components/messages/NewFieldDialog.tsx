@@ -92,6 +92,7 @@ export function NewFieldDialog({
   const handleClose = (newOpen: boolean) => {
     if (!newOpen) {
       setShowPromptConfig(false);
+      setShowLineIdWarning(false);
       setPromptLabel('');
       setPromptLength(3);
     }
