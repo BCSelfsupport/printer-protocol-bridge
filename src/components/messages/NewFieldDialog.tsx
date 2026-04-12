@@ -134,9 +134,10 @@ export function NewFieldDialog({
                 No Line ID Configured
               </p>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                You need to set a Line ID on the printer before adding this field.
-                Go to the <span className="text-primary font-medium">Printers</span> screen, 
-                tap the edit icon on your printer card, and enter a Line ID value.
+                You need to configure a Line ID before adding this field.
+                In the left panel, find your networked printer card and tap the 
+                <span className="text-primary font-medium"> printer icon </span> 
+                in the top left of the card to open printer setup, then enter a Line ID value.
               </p>
             </div>
             <button
