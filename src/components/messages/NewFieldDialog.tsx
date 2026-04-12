@@ -64,7 +64,11 @@ export function NewFieldDialog({
       return;
     }
     if (fieldType.value === 'lineid') {
-      onSelectFieldType('text', { lineIdValue: connectedPrinterLineId || 'LINE ID' });
+      if (!connectedPrinterLineId?.trim()) {
+        setShowLineIdWarning(true);
+        return;
+      }
+      onSelectFieldType('text', { lineIdValue: connectedPrinterLineId });
       onOpenChange(false);
       return;
     }
