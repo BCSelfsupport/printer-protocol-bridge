@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft, Tag } from 'lucide-react';
 import {
   Dialog,
@@ -38,6 +39,7 @@ export function NewFieldDialog({
   connectedPrinterLineId,
 }: NewFieldDialogProps) {
   const [showPromptConfig, setShowPromptConfig] = useState(false);
+  const [showLineIdWarning, setShowLineIdWarning] = useState(false);
   const [promptLabel, setPromptLabel] = useState('');
   const [promptLength, setPromptLength] = useState(3);
 
@@ -62,7 +64,11 @@ export function NewFieldDialog({
       return;
     }
     if (fieldType.value === 'lineid') {
-      onSelectFieldType('text', { lineIdValue: connectedPrinterLineId || 'LINE ID' });
+      if (!connectedPrinterLineId?.trim()) {
+        setShowLineIdWarning(true);
+        return;
+      }
+      onSelectFieldType('text', { lineIdValue: connectedPrinterLineId });
       onOpenChange(false);
       return;
     }
@@ -86,6 +92,7 @@ export function NewFieldDialog({
   const handleClose = (newOpen: boolean) => {
     if (!newOpen) {
       setShowPromptConfig(false);
+      setShowLineIdWarning(false);
       setPromptLabel('');
       setPromptLength(3);
     }
@@ -110,11 +117,39 @@ export function NewFieldDialog({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <DialogTitle className="flex-1 text-center text-lg font-semibold pr-10">
-            {showPromptConfig ? 'User Define' : 'New Field'}
+            {showLineIdWarning ? 'Line ID Required' : showPromptConfig ? 'User Define' : 'New Field'}
           </DialogTitle>
         </div>
 
-        {showPromptConfig ? (
+        {showLineIdWarning ? (
+          /* Line ID not configured warning */
+          <div className="bg-card p-6 space-y-4 text-center">
+            <div className="flex justify-center">
+              <div className="w-14 h-14 rounded-full bg-accent/20 flex items-center justify-center">
+                <AlertTriangle className="w-7 h-7 text-accent-foreground" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-foreground font-medium text-sm">
+                No Line ID Configured
+              </p>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                You need to set a Line ID on the printer before adding this field.
+                Go to the <span className="text-primary font-medium">Printers</span> screen, 
+                tap the edit icon on your printer card, and enter a Line ID value.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowLineIdWarning(false);
+                handleClose(false);
+              }}
+              className="w-full industrial-button text-white py-3 rounded-lg font-medium"
+            >
+              OK
+            </button>
+          </div>
+        ) : showPromptConfig ? (
           /* Prompted text field config */
           <div className="bg-card p-4 space-y-3">
             <p className="text-xs text-muted-foreground">
