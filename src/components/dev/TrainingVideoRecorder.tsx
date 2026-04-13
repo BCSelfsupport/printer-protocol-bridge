@@ -163,6 +163,16 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
                 <Video className="w-4 h-4" />
                 Start Recording
               </Button>
+              <Button
+                size="sm"
+                variant={isMicEnabled ? "default" : "outline"}
+                onClick={toggleMic}
+                className="gap-1.5"
+                title={isMicEnabled ? "Microphone ON — click to mute" : "Microphone OFF — click to enable"}
+              >
+                {isMicEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+                {isMicEnabled ? 'Mic On' : 'Mic Off'}
+              </Button>
             </div>
           )}
 
