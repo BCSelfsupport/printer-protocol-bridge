@@ -1409,16 +1409,21 @@ const Index = () => {
             return f;
           });
 
-          // Build the protocol commands
-          const commands = await buildMessageCommands(currentMsg, updatedFields, stored.templateValue, false);
+          // Build the protocol commands but strip ^SV — keep changes in RAM only
+          // per firmware engineer guidance (skip flash writes to avoid lockups).
+          let commands = await buildMessageCommands(currentMsg, updatedFields, stored.templateValue, false);
           if (!commands || commands.length === 0) {
             toast.success(`${targetPrinter.name}: expiry offset saved (${days} days)`);
             return;
           }
+          // Remove ^SV (flash save) — RAM-only update is faster and safer
+          commands = commands.filter(cmd => cmd.trim() !== '^SV');
 
-          console.log(`[ExpiryChange] Resending "${currentMsg}" to ${targetPrinter.name} with ${days}-day expiry, ${commands.length} commands`);
+          console.log(`[ExpiryChange] Resending "${currentMsg}" to ${targetPrinter.name} with ${days}-day expiry, ${commands.length} commands (RAM only, no ^SV)`);
           toast.loading(`Updating expiry on ${targetPrinter.name}...`, { id: 'printer-expiry' });
 
+          // Pause polling to prevent ^SU from interleaving with the command sequence
+          setPollingPaused(true);
           try {
             let anyFailed = false;
             for (const cmd of commands) {
@@ -1428,6 +1433,8 @@ const Index = () => {
                 // ^DM failures are expected (message may not exist yet), skip them
                 if (!cmd.startsWith('^DM')) anyFailed = true;
               }
+              // Inter-command delay to let firmware finish processing
+              await new Promise(resolve => setTimeout(resolve, 250));
             }
             // Re-select the message on the printer
             await sendCommandToPrinter(targetPrinter, `^SM ${currentMsg}`);
@@ -1440,6 +1447,8 @@ const Index = () => {
           } catch (e) {
             console.error('[ExpiryChange] Failed:', e);
             toast.error(`Failed to update ${targetPrinter.name}`, { id: 'printer-expiry' });
+          } finally {
+            setPollingPaused(false);
           }
         }}
         onResetGroupExpiry={async (masterId) => {
@@ -1462,16 +1471,21 @@ const Index = () => {
           });
 
           // Re-sync the original message (with master's default expiry) to all slaves
+          // Strip ^SV — RAM-only update to avoid firmware lockups
           const allTargets = [master, ...slaves];
           toast.loading('Resetting group expiry...', { id: 'reset-expiry' });
+          // Pause polling to prevent interleaving
+          setPollingPaused(true);
           try {
-            const commands = await buildMessageCommands(currentMsg, stored.fields, stored.templateValue, false);
-            if (commands && commands.length > 0) {
+            let rawCommands = await buildMessageCommands(currentMsg, stored.fields, stored.templateValue, false);
+            if (rawCommands && rawCommands.length > 0) {
+              const commands = rawCommands.filter(cmd => cmd.trim() !== '^SV');
               for (const target of allTargets) {
                 let anyFailed = false;
                 for (const cmd of commands) {
                   const ok = await sendCommandToPrinter(target, cmd);
                   if (!ok && !cmd.startsWith('^DM')) anyFailed = true;
+                  await new Promise(resolve => setTimeout(resolve, 250));
                 }
                 await sendCommandToPrinter(target, `^SM ${currentMsg}`);
                 if (anyFailed) {
@@ -1485,6 +1499,8 @@ const Index = () => {
           } catch (e) {
             console.error('[ResetGroupExpiry] Failed:', e);
             toast.error('Failed to reset group expiry', { id: 'reset-expiry' });
+          } finally {
+            setPollingPaused(false);
           }
         }}
       />
