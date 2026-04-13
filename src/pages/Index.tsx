@@ -47,7 +47,7 @@ import { DevPanel } from '@/components/dev/DevPanel';
 import { RecordingOverlay } from '@/components/dev/RecordingOverlay';
 import { useScreenRecorder } from '@/hooks/useScreenRecorder';
 import { useLicense } from '@/contexts/LicenseContext';
-import { PrintMessage } from '@/types/printer';
+import { PrintMessage, Printer } from '@/types/printer';
 import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
 import { useProductionStorage } from '@/hooks/useProductionStorage';
 import { logConsumption } from '@/lib/consumptionTracker';
@@ -554,6 +554,60 @@ const Index = () => {
       console.log(`[MasterSlaveSync] Message "${messageName}" → ${slave.name}: ${allOk ? 'OK' : 'PARTIAL'}`);
     }
   }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildMessageCommands, sendCommandToPrinter, updatePrinter]);
+
+  const replaceMessageWithoutDelete = useCallback(async (
+    targetPrinter: Printer,
+    messageName: string,
+    details: Pick<MessageDetails, 'fields' | 'templateValue'>,
+  ) => {
+    const rawCommands = await buildMessageCommands(
+      messageName,
+      details.fields,
+      details.templateValue,
+      false,
+    );
+
+    if (!rawCommands || rawCommands.length === 0) {
+      return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | null };
+    }
+
+    const commands = rawCommands.filter((cmd) => {
+      const trimmed = cmd.trim().toUpperCase();
+      return trimmed !== '^SV' && !trimmed.startsWith('^DM ');
+    });
+
+    const normalizedMessageName = messageName.trim().toUpperCase();
+    const targetCurrentMessage = targetPrinter.currentMessage?.trim().toUpperCase();
+    if (targetCurrentMessage === normalizedMessageName) {
+      const fallbackMessage = normalizedMessageName === 'BESTCODE' ? 'BESTCODE AUTO' : 'BESTCODE';
+      const switched = await sendCommandToPrinter(targetPrinter, `^SM ${fallbackMessage}`);
+      if (!switched) {
+        return { success: false as const, reason: 'switch' as const };
+      }
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    let anyFailed = false;
+    for (const cmd of commands) {
+      const ok = await sendCommandToPrinter(targetPrinter, cmd);
+      if (!ok) {
+        anyFailed = true;
+        console.warn(`[ExpiryChange] Command failed on ${targetPrinter.name}: ${cmd.substring(0, 40)}...`);
+      }
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+
+    const reselected = await sendCommandToPrinter(targetPrinter, `^SM ${messageName}`);
+    if (!reselected) {
+      return { success: false as const, reason: 'reselect' as const };
+    }
+
+    if (anyFailed) {
+      return { success: false as const, reason: 'command' as const };
+    }
+
+    return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | null };
+  }, [buildMessageCommands, sendCommandToPrinter]);
 
   const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
     if (!editingMessage) return null;
@@ -1397,15 +1451,7 @@ const Index = () => {
             return f;
           });
 
-          let commands = await buildMessageCommands(currentMsg, updatedFields, stored.templateValue, false);
-          if (!commands || commands.length === 0) {
-            toast.success(`${targetPrinter.name}: expiry offset saved (${days} days)`);
-            return;
-          }
-
-          commands = commands.filter(cmd => cmd.trim() !== '^SV');
-
-          console.log(`[ExpiryChange] Resending "${currentMsg}" to ${targetPrinter.name} with ${days}-day expiry, ${commands.length} commands (RAM only, no ^SV)`);
+          console.log(`[ExpiryChange] Replacing "${currentMsg}" on ${targetPrinter.name} with ${days}-day expiry using ^NM replace + ^SM reselect`);
           toast.loading(`Updating expiry on ${targetPrinter.name}...`, { id: 'printer-expiry' });
 
           setPollingPaused(true);
@@ -1416,35 +1462,22 @@ const Index = () => {
               return;
             }
 
-            const targetCurrentMessage = targetPrinter.currentMessage?.trim().toUpperCase();
-            const normalizedCurrentMessage = currentMsg.trim().toUpperCase();
-            if (targetCurrentMessage === normalizedCurrentMessage) {
-              const fallbackMessage = normalizedCurrentMessage === 'BESTCODE' ? 'BESTCODE AUTO' : 'BESTCODE';
-              const switched = await sendCommandToPrinter(targetPrinter, `^SM ${fallbackMessage}`);
-              if (!switched) {
-                toast.error(`${targetPrinter.name}: couldn't safely switch away from the active message`, { id: 'printer-expiry' });
-                return;
-              }
-              await new Promise(resolve => setTimeout(resolve, 300));
+            const result = await replaceMessageWithoutDelete(targetPrinter, currentMsg, {
+              fields: updatedFields,
+              templateValue: stored.templateValue,
+            });
+
+            if (!result.success && result.reason === 'switch') {
+              toast.error(`${targetPrinter.name}: couldn't safely switch away from the active message`, { id: 'printer-expiry' });
+              return;
             }
 
-            let anyFailed = false;
-            for (const cmd of commands) {
-              const ok = await sendCommandToPrinter(targetPrinter, cmd);
-              if (!ok) {
-                console.warn(`[ExpiryChange] Command failed: ${cmd.substring(0, 30)}...`);
-                if (!cmd.startsWith('^DM')) anyFailed = true;
-              }
-              await new Promise(resolve => setTimeout(resolve, 250));
+            if (!result.success && result.reason === 'reselect') {
+              toast.error(`${targetPrinter.name}: expiry updated but the message was not re-selected`, { id: 'printer-expiry' });
+              return;
             }
 
-            const reselected = await sendCommandToPrinter(targetPrinter, `^SM ${currentMsg}`);
-            if (!reselected) {
-              anyFailed = true;
-              console.warn(`[ExpiryChange] Failed to re-select ${currentMsg} on ${targetPrinter.name}`);
-            }
-
-            if (anyFailed) {
+            if (!result.success) {
               toast.warning(`${targetPrinter.name}: expiry updated but some commands failed`, { id: 'printer-expiry' });
             } else {
               toast.success(`${targetPrinter.name}: expiry set to ${days} days`, { id: 'printer-expiry' });
