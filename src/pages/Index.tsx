@@ -220,99 +220,7 @@ const Index = () => {
     return JSON.stringify(stripPromptMetadata(next)) !== JSON.stringify(stripPromptMetadata(previous));
   }, [stripPromptMetadata]);
 
-  const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
-    if (!editingMessage) return null;
 
-    const targetName = isNew ? details.name : editingMessage.name;
-    const localDetails = normalizeMessageForPrinter({
-      ...details,
-      name: targetName,
-    });
-    const cachedDetails = getMessage(editingMessage.name) ?? getMessage(targetName) ?? null;
-    const printerWriteNeeded = isNew || hasPrinterVisibleChanges(localDetails, cachedDetails);
-
-    if (!printerWriteNeeded) {
-      updateMessage(editingMessage.id, details.name);
-      saveMessage(localDetails);
-      recentlySavedRef.current.set(targetName, Date.now());
-      syncedMessagesRef.current.add(targetName);
-      console.log('[onSave] Prompt metadata changed locally; skipping printer rewrite');
-      return localDetails;
-    }
-
-    const success = await saveMessageContent(
-      targetName,
-      localDetails.fields,
-      localDetails.templateValue,
-      isNew,
-    );
-    if (!success) {
-      const reason = (saveMessageContent as any).__lastError || '';
-      console.error('Failed to save message on printer:', reason);
-      toast.error(`Printer rejected message save: ${reason || 'Check settings and try again.'}`);
-      return null;
-    }
-    if (!isNew) {
-      updateMessage(editingMessage.id, details.name);
-    }
-    saveMessage(localDetails);
-    recentlySavedRef.current.set(targetName, Date.now());
-    syncedMessagesRef.current.add(targetName);
-    syncMessageToSlaves(targetName, localDetails, isNew);
-
-    if (connectionState.isConnected) {
-      try {
-        const refreshed = await Promise.race([
-          fetchMessageContent(targetName),
-          new Promise<null>(r => setTimeout(() => r(null), 5000)),
-        ]);
-        if (refreshed && refreshed.fields.length > 0) {
-          const merged = mergeAutoCodeMeta(refreshed, localDetails);
-          saveMessage(merged);
-          if (isNew) {
-            const prevMessage = connectionState.status?.currentMessage;
-            if (prevMessage && prevMessage !== targetName) {
-              try {
-                await sendCommand(`^SM ${prevMessage}`);
-              } catch (e) {
-                console.error('[onSave] Failed to re-select previous message:', e);
-              }
-            }
-          }
-          return merged;
-        }
-      } catch (e) {
-        console.error('[onSave] post-save reload failed:', e);
-      }
-    }
-
-    if (isNew && connectionState.isConnected) {
-      const prevMessage = connectionState.status?.currentMessage;
-      if (prevMessage && prevMessage !== targetName) {
-        try {
-          await sendCommand(`^SM ${prevMessage}`);
-        } catch (e) {
-          console.error('[onSave] Failed to re-select previous message:', e);
-        }
-      }
-    }
-
-    return localDetails;
-  }, [
-    editingMessage,
-    normalizeMessageForPrinter,
-    getMessage,
-    hasPrinterVisibleChanges,
-    updateMessage,
-    saveMessage,
-    saveMessageContent,
-    syncMessageToSlaves,
-    connectionState.isConnected,
-    connectionState.status?.currentMessage,
-    fetchMessageContent,
-    mergeAutoCodeMeta,
-    sendCommand,
-  ]);
 
   // Merge autoCode metadata (expiryDays, fieldType, format) from a cached
   // message into a freshly-fetched one. The printer's ^LF response doesn't
@@ -440,6 +348,100 @@ const Index = () => {
     })};
     return merged;
   }, []);
+
+  const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
+    if (!editingMessage) return null;
+
+    const targetName = isNew ? details.name : editingMessage.name;
+    const localDetails = normalizeMessageForPrinter({
+      ...details,
+      name: targetName,
+    });
+    const cachedDetails = getMessage(editingMessage.name) ?? getMessage(targetName) ?? null;
+    const printerWriteNeeded = isNew || hasPrinterVisibleChanges(localDetails, cachedDetails);
+
+    if (!printerWriteNeeded) {
+      updateMessage(editingMessage.id, details.name);
+      saveMessage(localDetails);
+      recentlySavedRef.current.set(targetName, Date.now());
+      syncedMessagesRef.current.add(targetName);
+      console.log('[onSave] Prompt metadata changed locally; skipping printer rewrite');
+      return localDetails;
+    }
+
+    const success = await saveMessageContent(
+      targetName,
+      localDetails.fields,
+      localDetails.templateValue,
+      isNew,
+    );
+    if (!success) {
+      const reason = (saveMessageContent as any).__lastError || '';
+      console.error('Failed to save message on printer:', reason);
+      toast.error(`Printer rejected message save: ${reason || 'Check settings and try again.'}`);
+      return null;
+    }
+    if (!isNew) {
+      updateMessage(editingMessage.id, details.name);
+    }
+    saveMessage(localDetails);
+    recentlySavedRef.current.set(targetName, Date.now());
+    syncedMessagesRef.current.add(targetName);
+    syncMessageToSlaves(targetName, localDetails, isNew);
+
+    if (connectionState.isConnected) {
+      try {
+        const refreshed = await Promise.race([
+          fetchMessageContent(targetName),
+          new Promise<null>(r => setTimeout(() => r(null), 5000)),
+        ]);
+        if (refreshed && refreshed.fields.length > 0) {
+          const merged = mergeAutoCodeMeta(refreshed, localDetails);
+          saveMessage(merged);
+          if (isNew) {
+            const prevMessage = connectionState.status?.currentMessage;
+            if (prevMessage && prevMessage !== targetName) {
+              try {
+                await sendCommand(`^SM ${prevMessage}`);
+              } catch (e) {
+                console.error('[onSave] Failed to re-select previous message:', e);
+              }
+            }
+          }
+          return merged;
+        }
+      } catch (e) {
+        console.error('[onSave] post-save reload failed:', e);
+      }
+    }
+
+    if (isNew && connectionState.isConnected) {
+      const prevMessage = connectionState.status?.currentMessage;
+      if (prevMessage && prevMessage !== targetName) {
+        try {
+          await sendCommand(`^SM ${prevMessage}`);
+        } catch (e) {
+          console.error('[onSave] Failed to re-select previous message:', e);
+        }
+      }
+    }
+
+    return localDetails;
+  }, [
+    editingMessage,
+    normalizeMessageForPrinter,
+    getMessage,
+    hasPrinterVisibleChanges,
+    updateMessage,
+    saveMessage,
+    saveMessageContent,
+    syncMessageToSlaves,
+    connectionState.isConnected,
+    connectionState.status?.currentMessage,
+    fetchMessageContent,
+    mergeAutoCodeMeta,
+    sendCommand,
+  ]);
 
   const recentlySavedRef = useRef<Map<string, number>>(new Map());
   
@@ -1365,32 +1367,27 @@ const Index = () => {
         onRefreshNetwork={checkPrinterStatus}
         isCheckingNetwork={isChecking}
         onSlaveExpiryChange={async (printerId, days) => {
-          // Get the current message details from storage
           const currentMsg = connectionState.status?.currentMessage;
           if (!currentMsg) {
             toast.info('No message currently selected');
             return;
           }
+
           const stored = getMessage(currentMsg);
           if (!stored || stored.fields.length === 0) {
             toast.info('No message fields to update');
             return;
           }
 
-          // Check if there are any autoCode expiry fields to update
           const hasExpiryFields = stored.fields.some(f => f.autoCodeExpiryDays != null && f.autoCodeExpiryDays > 0);
-          
-          // Find the target printer
           const targetPrinter = printers.find(p => p.id === printerId);
           if (!targetPrinter) return;
 
           if (!hasExpiryFields) {
-            // No expiry fields — just save the offset setting, no need to resend
             toast.success(`${targetPrinter.name}: expiry offset saved (${days} days)`);
             return;
           }
 
-          // Clone fields with the updated expiry days
           const updatedFields = stored.fields.map(f => {
             if (f.autoCodeExpiryDays != null && f.autoCodeExpiryDays > 0) {
               return { ...f, autoCodeExpiryDays: days };
@@ -1398,20 +1395,17 @@ const Index = () => {
             return f;
           });
 
-          // Build the protocol commands but strip ^SV — keep changes in RAM only
-          // per firmware engineer guidance (skip flash writes to avoid lockups).
           let commands = await buildMessageCommands(currentMsg, updatedFields, stored.templateValue, false);
           if (!commands || commands.length === 0) {
             toast.success(`${targetPrinter.name}: expiry offset saved (${days} days)`);
             return;
           }
-          // Remove ^SV (flash save) — RAM-only update is faster and safer
+
           commands = commands.filter(cmd => cmd.trim() !== '^SV');
 
           console.log(`[ExpiryChange] Resending "${currentMsg}" to ${targetPrinter.name} with ${days}-day expiry, ${commands.length} commands (RAM only, no ^SV)`);
           toast.loading(`Updating expiry on ${targetPrinter.name}...`, { id: 'printer-expiry' });
 
-          // Pause polling to prevent ^SU from interleaving with the command sequence
           setPollingPaused(true);
           try {
             const pollingIdle = await waitForPollingIdle();
@@ -1420,20 +1414,34 @@ const Index = () => {
               return;
             }
 
+            const targetCurrentMessage = targetPrinter.currentMessage?.trim().toUpperCase();
+            const normalizedCurrentMessage = currentMsg.trim().toUpperCase();
+            if (targetCurrentMessage === normalizedCurrentMessage) {
+              const fallbackMessage = normalizedCurrentMessage === 'BESTCODE' ? 'BESTCODE AUTO' : 'BESTCODE';
+              const switched = await sendCommandToPrinter(targetPrinter, `^SM ${fallbackMessage}`);
+              if (!switched) {
+                toast.error(`${targetPrinter.name}: couldn't safely switch away from the active message`, { id: 'printer-expiry' });
+                return;
+              }
+              await new Promise(resolve => setTimeout(resolve, 300));
+            }
+
             let anyFailed = false;
             for (const cmd of commands) {
               const ok = await sendCommandToPrinter(targetPrinter, cmd);
               if (!ok) {
                 console.warn(`[ExpiryChange] Command failed: ${cmd.substring(0, 30)}...`);
-                // ^DM failures are expected (message may not exist yet), skip them
                 if (!cmd.startsWith('^DM')) anyFailed = true;
               }
-              // Inter-command delay to let firmware finish processing
               await new Promise(resolve => setTimeout(resolve, 250));
             }
-            // Re-select the message on the printer
-            await sendCommandToPrinter(targetPrinter, `^SM ${currentMsg}`);
-            
+
+            const reselected = await sendCommandToPrinter(targetPrinter, `^SM ${currentMsg}`);
+            if (!reselected) {
+              anyFailed = true;
+              console.warn(`[ExpiryChange] Failed to re-select ${currentMsg} on ${targetPrinter.name}`);
+            }
+
             if (anyFailed) {
               toast.warning(`${targetPrinter.name}: expiry updated but some commands failed`, { id: 'printer-expiry' });
             } else {
