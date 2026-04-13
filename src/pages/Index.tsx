@@ -52,6 +52,7 @@ import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
 import { useProductionStorage } from '@/hooks/useProductionStorage';
 import { logConsumption } from '@/lib/consumptionTracker';
 import { useFleetTelemetryPush } from '@/hooks/useFleetTelemetryPush';
+import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
