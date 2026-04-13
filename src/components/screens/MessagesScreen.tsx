@@ -198,7 +198,7 @@ export function MessagesScreen({
   };
 
   return (
-    <div className="flex-1 p-4 flex flex-col">
+    <div className="flex-1 p-4 flex flex-col min-h-0">
       <SubPageHeader 
         title={`Messages: ${messages.length}`} 
         onHome={onHome}
