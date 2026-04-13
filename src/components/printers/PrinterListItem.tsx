@@ -270,6 +270,7 @@ export function PrinterListItem({
                           const v = e.target.value.replace(/[^0-9]/g, '');
                           setOffsetValue(v);
                         }}
+                        onFocus={(e) => e.target.select()}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             const days = parseInt(offsetValue, 10) || 0;
