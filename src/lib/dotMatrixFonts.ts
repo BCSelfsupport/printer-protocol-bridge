@@ -181,13 +181,14 @@ export function renderText(
   x: number,
   y: number,
   fontName: string,
-  dotSize: number = 8
+  dotSize: number = 8,
+  gap: number = 1
 ): void {
   const font = getFontInfo(fontName);
   let currentX = x;
   
   for (const char of text) {
     renderCharBitmap(ctx, char, currentX, y, fontName, dotSize);
-    currentX += (font.charWidth + 1) * dotSize; // +1 dot spacing between chars
+    currentX += (font.charWidth + gap) * dotSize;
   }
 }
