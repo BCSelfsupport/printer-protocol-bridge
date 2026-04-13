@@ -52,6 +52,7 @@ import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
 import { useProductionStorage } from '@/hooks/useProductionStorage';
 import { logConsumption } from '@/lib/consumptionTracker';
 import { useFleetTelemetryPush } from '@/hooks/useFleetTelemetryPush';
+import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
@@ -85,6 +86,12 @@ const Index = () => {
   const [licenseDialogOpen, setLicenseDialogOpen] = useState(false);
   const [slaveBlockDialogOpen, setSlaveBlockDialogOpen] = useState(false);
   const [slaveBlockPrinterName, setSlaveBlockPrinterName] = useState('');
+  
+  // Post-expiry user-define prompt state
+  const [expiryPromptOpen, setExpiryPromptOpen] = useState(false);
+  const [expiryPrompts, setExpiryPrompts] = useState<UserDefinePrompt[]>([]);
+  const [expiryPromptDetails, setExpiryPromptDetails] = useState<MessageDetails | null>(null);
+  const [expiryPromptMessageName, setExpiryPromptMessageName] = useState<string | null>(null);
   
   // Local message storage (persists to localStorage, scoped by printer ID)
   const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId } = useMessageStorage();
@@ -1482,6 +1489,21 @@ const Index = () => {
             } else {
               toast.success(`${targetPrinter.name}: expiry set to ${days} days`, { id: 'printer-expiry' });
             }
+
+            // After successful replace+reselect, check for prompted fields
+            const updatedStored = getMessage(currentMsg);
+            const promptedFields = updatedStored?.fields.filter(f => f.promptBeforePrint) ?? [];
+            if (promptedFields.length > 0 && updatedStored) {
+              const prompts: UserDefinePrompt[] = promptedFields.map(f => ({
+                fieldId: f.id,
+                label: f.promptLabel || f.data || 'ENTER VALUE',
+                length: f.promptLength || Math.max(f.data?.length || 3, 3),
+              }));
+              setExpiryPromptDetails(updatedStored);
+              setExpiryPromptMessageName(currentMsg);
+              setExpiryPrompts(prompts);
+              setExpiryPromptOpen(true);
+            }
           } catch (e) {
             console.error('[ExpiryChange] Failed:', e);
             toast.error(`Failed to update ${targetPrinter.name}`, { id: 'printer-expiry' });
@@ -1756,6 +1778,47 @@ const Index = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Post-expiry user-define prompt dialog */}
+      <UserDefineEntryDialog
+        open={expiryPromptOpen}
+        onOpenChange={(open) => {
+          setExpiryPromptOpen(open);
+          if (!open) {
+            setExpiryPromptDetails(null);
+            setExpiryPromptMessageName(null);
+          }
+        }}
+        prompts={expiryPrompts}
+        onConfirm={async (entries) => {
+          if (expiryPromptDetails && expiryPromptMessageName) {
+            // Send ^MD^TD commands for each prompted field
+            let textFieldIndex = 0;
+            for (const field of expiryPromptDetails.fields) {
+              if (field.type === 'text') {
+                textFieldIndex++;
+                if (entries[field.id] !== undefined) {
+                  const value = entries[field.id].trim();
+                  if (value) {
+                    const cmd = `^MD^TD${textFieldIndex};${value}`;
+                    console.log(`[ExpiryPrompt] Sending ${cmd} for field "${field.promptLabel || field.id}"`);
+                    try {
+                      await sendCommand(cmd);
+                      await new Promise(resolve => setTimeout(resolve, 200));
+                    } catch (e) {
+                      console.error('[ExpiryPrompt] Failed to send ^MD^TD:', e);
+                    }
+                  }
+                }
+              }
+            }
+            toast.success('Message updated with entered values');
+          }
+          setExpiryPromptOpen(false);
+          setExpiryPromptDetails(null);
+          setExpiryPromptMessageName(null);
+        }}
+      />
     </div>
   );
 };
