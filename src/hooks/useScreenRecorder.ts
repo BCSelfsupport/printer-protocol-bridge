@@ -7,18 +7,19 @@ export interface ScreenRecorderState {
   elapsed: number;
   recordedBlob: Blob | null;
   recordedUrl: string | null;
+  isMicEnabled: boolean;
 }
 
 export interface ScreenRecorderActions {
   startRecording: () => Promise<void>;
   stopRecording: () => void;
   discardRecording: () => void;
+  toggleMic: () => void;
 }
 
 async function getElectronStream(): Promise<MediaStream> {
   const sources = await window.electronAPI!.app.getScreenSources();
   if (!sources.length) throw new Error('No screen sources available');
-  // Use the first screen source
   const sourceId = sources[0].id;
   return navigator.mediaDevices.getUserMedia({
     audio: false,
@@ -33,27 +34,40 @@ async function getElectronStream(): Promise<MediaStream> {
   });
 }
 
+async function getMicStream(): Promise<MediaStream | null> {
+  try {
+    return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch (e) {
+    console.warn('[ScreenRecorder] Microphone access denied or unavailable:', e);
+    return null;
+  }
+}
+
 export function useScreenRecorder(onRecordingStart?: () => void) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  const [isMicEnabled, setIsMicEnabled] = useState(true);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const toggleMic = useCallback(() => {
+    setIsMicEnabled(prev => !prev);
+  }, []);
+
   const startRecording = useCallback(async () => {
     try {
-      let stream: MediaStream;
+      let screenStream: MediaStream;
 
       if (window.electronAPI?.isElectron) {
-        // Electron: use desktopCapturer via main process
-        stream = await getElectronStream();
+        screenStream = await getElectronStream();
       } else if (navigator.mediaDevices?.getDisplayMedia) {
-        // Browser: use standard getDisplayMedia
-        stream = await navigator.mediaDevices.getDisplayMedia({
+        screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: { frameRate: 15 },
           audio: false,
         });
@@ -61,11 +75,29 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
         throw new Error('Screen recording is not supported in this environment.');
       }
 
-      streamRef.current = stream;
+      // Combine screen + mic into a single stream
+      let combinedStream: MediaStream;
+      if (isMicEnabled) {
+        const micStream = await getMicStream();
+        if (micStream) {
+          micStreamRef.current = micStream;
+          const tracks = [
+            ...screenStream.getVideoTracks(),
+            ...micStream.getAudioTracks(),
+          ];
+          combinedStream = new MediaStream(tracks);
+        } else {
+          combinedStream = screenStream;
+        }
+      } else {
+        combinedStream = screenStream;
+      }
+
+      streamRef.current = combinedStream;
       chunksRef.current = [];
       setElapsed(0);
 
-      const recorder = new MediaRecorder(stream, {
+      const recorder = new MediaRecorder(combinedStream, {
         mimeType: 'video/webm;codecs=vp9',
       });
 
@@ -77,11 +109,14 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
         const blob = new Blob(chunksRef.current, { type: 'video/webm' });
         setRecordedBlob(blob);
         setRecordedUrl(URL.createObjectURL(blob));
-        stream.getTracks().forEach(t => t.stop());
+        // Stop all tracks (screen + mic)
+        screenStream.getTracks().forEach(t => t.stop());
+        micStreamRef.current?.getTracks().forEach(t => t.stop());
+        micStreamRef.current = null;
         if (timerRef.current) clearInterval(timerRef.current);
       };
 
-      stream.getVideoTracks()[0].onended = () => {
+      screenStream.getVideoTracks()[0].onended = () => {
         if (recorder.state === 'recording') recorder.stop();
         setIsRecording(false);
       };
@@ -106,7 +141,7 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
         throw err;
       }
     }
-  }, [onRecordingStart]);
+  }, [onRecordingStart, isMicEnabled]);
 
   const stopRecording = useCallback(() => {
     mediaRecorderRef.current?.stop();
@@ -122,7 +157,7 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
   }, [recordedUrl]);
 
   return {
-    state: { isRecording, elapsed, recordedBlob, recordedUrl },
-    actions: { startRecording, stopRecording, discardRecording },
+    state: { isRecording, elapsed, recordedBlob, recordedUrl, isMicEnabled },
+    actions: { startRecording, stopRecording, discardRecording, toggleMic },
   };
 }
