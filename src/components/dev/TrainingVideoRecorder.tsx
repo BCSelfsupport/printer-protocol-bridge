@@ -27,8 +27,8 @@ interface TrainingVideoRecorderProps {
 }
 
 export function TrainingVideoRecorder({ recorderState, recorderActions }: TrainingVideoRecorderProps) {
-  const { isRecording, elapsed, recordedBlob, recordedUrl } = recorderState;
-  const { startRecording, stopRecording, discardRecording: discardRaw } = recorderActions;
+  const { isRecording, elapsed, recordedBlob, recordedUrl, isMicEnabled } = recorderState;
+  const { startRecording, stopRecording, discardRecording: discardRaw, toggleMic } = recorderActions;
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
