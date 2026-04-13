@@ -258,6 +258,19 @@ export function FieldSettingsPanel({
           onDecrease={() => cycleAutoNumerals(-1)}
           disabled={disabled}
         />
+
+        {/* Prompt Before Print toggle - only for text fields */}
+        {fieldType === 'text' && onPromptBeforePrintChange && (
+          <div
+            className={`bg-muted/50 rounded-md p-2 flex flex-col items-center justify-center cursor-pointer border ${promptBeforePrint ? 'border-primary bg-primary/10' : 'border-transparent'} ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+            onClick={() => onPromptBeforePrintChange(!promptBeforePrint, promptLabel, promptLength)}
+          >
+            <span className="text-[10px] text-muted-foreground mb-1">Prompt</span>
+            <span className={`text-sm font-bold ${promptBeforePrint ? 'text-primary' : 'text-muted-foreground'}`}>
+              {promptBeforePrint ? 'ON' : 'OFF'}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
