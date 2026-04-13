@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Video, Upload, Loader2, Trash2, Play, Clock, AlertCircle, Download } from 'lucide-react';
+import { Video, Upload, Loader2, Trash2, Play, Clock, AlertCircle, Download, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,8 +27,8 @@ interface TrainingVideoRecorderProps {
 }
 
 export function TrainingVideoRecorder({ recorderState, recorderActions }: TrainingVideoRecorderProps) {
-  const { isRecording, elapsed, recordedBlob, recordedUrl } = recorderState;
-  const { startRecording, stopRecording, discardRecording: discardRaw } = recorderActions;
+  const { isRecording, elapsed, recordedBlob, recordedUrl, isMicEnabled } = recorderState;
+  const { startRecording, stopRecording, discardRecording: discardRaw, toggleMic } = recorderActions;
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -162,6 +162,16 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
               <Button size="sm" onClick={handleStartRecording} className="gap-2">
                 <Video className="w-4 h-4" />
                 Start Recording
+              </Button>
+              <Button
+                size="sm"
+                variant={isMicEnabled ? "default" : "outline"}
+                onClick={toggleMic}
+                className="gap-1.5"
+                title={isMicEnabled ? "Microphone ON — click to mute" : "Microphone OFF — click to enable"}
+              >
+                {isMicEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+                {isMicEnabled ? 'Mic On' : 'Mic Off'}
               </Button>
             </div>
           )}
