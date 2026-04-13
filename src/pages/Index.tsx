@@ -1489,6 +1489,21 @@ const Index = () => {
             } else {
               toast.success(`${targetPrinter.name}: expiry set to ${days} days`, { id: 'printer-expiry' });
             }
+
+            // After successful replace+reselect, check for prompted fields
+            const updatedStored = getMessage(currentMsg);
+            const promptedFields = updatedStored?.fields.filter(f => f.promptBeforePrint) ?? [];
+            if (promptedFields.length > 0 && updatedStored) {
+              const prompts: UserDefinePrompt[] = promptedFields.map(f => ({
+                fieldId: f.id,
+                label: f.promptLabel || f.data || 'ENTER VALUE',
+                length: f.promptLength || Math.max(f.data?.length || 3, 3),
+              }));
+              setExpiryPromptDetails(updatedStored);
+              setExpiryPromptMessageName(currentMsg);
+              setExpiryPrompts(prompts);
+              setExpiryPromptOpen(true);
+            }
           } catch (e) {
             console.error('[ExpiryChange] Failed:', e);
             toast.error(`Failed to update ${targetPrinter.name}`, { id: 'printer-expiry' });
