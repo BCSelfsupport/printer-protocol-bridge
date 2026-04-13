@@ -371,7 +371,7 @@ export function MessageCanvas({
       } else {
         const minChars = 3;
         const textLength = Math.max(field.data.length, minChars);
-        fieldW = textLength * (fontInfo.charWidth + 1) * DOT_SIZE;
+        fieldW = textLength * (fontInfo.charWidth + (field.gap ?? 1)) * DOT_SIZE;
         fieldH = fontInfo.height * DOT_SIZE;
       }
 
@@ -488,7 +488,7 @@ export function MessageCanvas({
 
       // Draw blinking cursor if editing this field (not for barcodes)
       if (isBeingEdited && cursorVisible && !isBarcode) {
-        const charWidth = (fontInfo.charWidth + 1) * DOT_SIZE;
+        const charWidth = (fontInfo.charWidth + (field.gap ?? 1)) * DOT_SIZE;
         const cursorX = fieldX + cursorPosition * charWidth;
 
         // Draw red vertical line cursor
@@ -532,7 +532,7 @@ export function MessageCanvas({
       const fontInfo = getFontInfo(field.fontSize);
       const isBarcode = field.type === 'barcode';
       const textLength = Math.max(field.data.length, 3);
-      const w = isBarcode ? field.width : textLength * (fontInfo.charWidth + 1);
+      const w = isBarcode ? field.width : textLength * (fontInfo.charWidth + (field.gap ?? 1));
       const h = isBarcode ? templateHeight : fontInfo.height;
       return x >= field.x && x < field.x + w &&
              y >= field.y && y < field.y + h;
@@ -609,7 +609,7 @@ export function MessageCanvas({
     let cursorPos: number;
     if (clickX !== undefined) {
       const fontInfo = getFontInfo(field.fontSize);
-      const charWidth = fontInfo.charWidth + 1;
+      const charWidth = fontInfo.charWidth + (field.gap ?? 1);
       const relativeX = clickX - field.x;
       const charPos = Math.round(relativeX / charWidth);
       cursorPos = Math.max(0, Math.min(charPos, field.data.length));
@@ -800,7 +800,7 @@ export function MessageCanvas({
         fields.forEach((field) => {
           const fontInfo = getFontInfo(field.fontSize);
           const isBarcode = field.type === 'barcode';
-          const fw = isBarcode ? field.width : Math.max(field.data.length, 3) * (fontInfo.charWidth + 1);
+          const fw = isBarcode ? field.width : Math.max(field.data.length, 3) * (fontInfo.charWidth + (field.gap ?? 1));
           const fh = isBarcode ? (field.height || templateHeight) : fontInfo.height;
           // Check if field overlaps with marquee
           if (field.x < x2 && field.x + fw > x1 && field.y < y2 && field.y + fh > y1) {
@@ -891,7 +891,7 @@ export function MessageCanvas({
       // If clicking on the same field, just move cursor
       if (field && field.id === editingFieldId) {
         const fontInfo = getFontInfo(field.fontSize);
-        const charWidth = fontInfo.charWidth + 1;
+        const charWidth = fontInfo.charWidth + (field.gap ?? 1);
         const relativeX = pos.x - field.x;
         const charPos = Math.round(relativeX / charWidth);
         const newCursorPos = Math.max(0, Math.min(charPos, field.data.length));
