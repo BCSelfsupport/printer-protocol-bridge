@@ -11,10 +11,13 @@
  */
 
 type PauseListener = (paused: boolean) => void;
+type IdleListener = () => void;
 
 let _paused = false;
 let _autoResumeTimer: ReturnType<typeof setTimeout> | null = null;
 const _listeners = new Set<PauseListener>();
+let _activePollCount = 0;
+const _idleListeners = new Set<IdleListener>();
 
 /** Auto-resume after 5 minutes to prevent accidental indefinite pause */
 const AUTO_RESUME_MS = 5 * 60 * 1000;
@@ -50,6 +53,45 @@ export function setPollingPaused(paused: boolean): void {
 export function onPollingPauseChange(listener: PauseListener): () => void {
   _listeners.add(listener);
   return () => { _listeners.delete(listener); };
+}
+
+/** Marks a polling cycle as active and returns a cleanup function. */
+export function beginPollingActivity(): () => void {
+  _activePollCount += 1;
+
+  let finished = false;
+  return () => {
+    if (finished) return;
+    finished = true;
+
+    _activePollCount = Math.max(0, _activePollCount - 1);
+    if (_activePollCount === 0) {
+      _idleListeners.forEach(fn => fn());
+      _idleListeners.clear();
+    }
+  };
+}
+
+/** Waits for any in-flight polling cycle to finish before sending write commands. */
+export function waitForPollingIdle(timeoutMs = 2500): Promise<boolean> {
+  if (_activePollCount === 0) {
+    return Promise.resolve(true);
+  }
+
+  return new Promise((resolve) => {
+    const onIdle = () => {
+      clearTimeout(timer);
+      _idleListeners.delete(onIdle);
+      resolve(true);
+    };
+
+    const timer = setTimeout(() => {
+      _idleListeners.delete(onIdle);
+      resolve(false);
+    }, timeoutMs);
+
+    _idleListeners.add(onIdle);
+  });
 }
 
 // --- Electron IPC bridge ---

@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { CountdownType } from '@/hooks/useJetCountdown';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
-import { setPollingPaused } from '@/lib/pollingPause';
+import { setPollingPaused, waitForPollingIdle } from '@/lib/pollingPause';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
@@ -1426,6 +1426,12 @@ const Index = () => {
           // Pause polling to prevent ^SU from interleaving with the command sequence
           setPollingPaused(true);
           try {
+            const pollingIdle = await waitForPollingIdle();
+            if (!pollingIdle) {
+              toast.error(`${targetPrinter.name}: printer is still busy, try again in a moment`, { id: 'printer-expiry' });
+              return;
+            }
+
             let anyFailed = false;
             for (const cmd of commands) {
               const ok = await sendCommandToPrinter(targetPrinter, cmd);
@@ -1478,6 +1484,12 @@ const Index = () => {
           // Pause polling to prevent interleaving
           setPollingPaused(true);
           try {
+            const pollingIdle = await waitForPollingIdle();
+            if (!pollingIdle) {
+              toast.error('Printer is still busy, try reset again in a moment', { id: 'reset-expiry' });
+              return;
+            }
+
             let rawCommands = await buildMessageCommands(currentMsg, stored.fields, stored.templateValue, false);
             if (rawCommands && rawCommands.length > 0) {
               const commands = rawCommands.filter(cmd => cmd.trim() !== '^SV');

@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { printerEmulator } from "@/lib/printerEmulator";
 import { multiPrinterEmulator } from "@/lib/multiPrinterEmulator";
 import { printerTransport, isRelayMode } from "@/lib/printerTransport";
+import { beginPollingActivity, isPollingPaused, onPollingPauseChange } from "@/lib/pollingPause";
 
 /**
  * Polls a connected printer with a command (default: ^SU) at a fixed interval.
@@ -37,6 +38,11 @@ export function useServiceStatusPolling(options: {
   });
 
   const inFlightRef = useRef(false);
+  const [isPaused, setIsPaused] = useState(isPollingPaused);
+
+  useEffect(() => {
+    return onPollingPauseChange(setIsPaused);
+  }, []);
 
   useEffect(() => {
     if (!enabled) {
@@ -47,6 +53,10 @@ export function useServiceStatusPolling(options: {
       console.log('[useServiceStatusPolling] No printerId, not polling');
       return;
     }
+    if (isPaused) {
+      console.log('[useServiceStatusPolling] Polling paused, not polling');
+      return;
+    }
 
     console.log('[useServiceStatusPolling] Starting polling for printer', printerId, printerIp, 'with command', command);
     let cancelled = false;
@@ -55,6 +65,7 @@ export function useServiceStatusPolling(options: {
       if (cancelled) return;
       if (inFlightRef.current) return;
       inFlightRef.current = true;
+      const endPollingActivity = beginPollingActivity();
 
       try {
         const isEmulatorEnabled = multiPrinterEmulator.enabled || printerEmulator.enabled;
@@ -98,6 +109,7 @@ export function useServiceStatusPolling(options: {
         console.error('[useServiceStatusPolling] Error:', e);
         if (!cancelled) onErrorRef.current?.(e);
       } finally {
+        endPollingActivity();
         inFlightRef.current = false;
       }
     };
@@ -113,5 +125,5 @@ export function useServiceStatusPolling(options: {
       clearTimeout(initialDelay);
       window.clearInterval(id);
     };
-  }, [enabled, printerId, printerIp, printerPort, intervalMs, command]);
+  }, [enabled, printerId, printerIp, printerPort, intervalMs, command, isPaused]);
 }
