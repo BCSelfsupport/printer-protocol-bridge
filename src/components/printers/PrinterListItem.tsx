@@ -249,7 +249,7 @@ export function PrinterListItem({
             {(printer.role === 'slave' || printer.role === 'master') && onUpdateExpiryOffset && messageExpiryDays != null && (
               <div className="mt-2 rounded-lg bg-slate-800/80 border border-slate-700/60 p-2" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                 {editingOffset ? (
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-col gap-1.5">
                     <div className="flex items-center gap-1">
                       <CalendarDays className="w-3.5 h-3.5 text-primary/60" />
                       <span className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Expiry Offset</span>
@@ -257,7 +257,7 @@ export function PrinterListItem({
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => setOffsetValue(String(Math.max(0, (parseInt(offsetValue, 10) || 0) - 1)))}
-                        className="w-7 h-7 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white flex items-center justify-center transition-colors"
+                        className="w-7 h-7 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white flex items-center justify-center transition-colors flex-shrink-0"
                       >
                         <Minus className="w-3.5 h-3.5" />
                       </button>
@@ -283,22 +283,23 @@ export function PrinterListItem({
                           }
                         }}
                         autoFocus
-                        className="w-14 h-7 text-sm text-center bg-slate-900 border border-primary/40 rounded-md text-white font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="w-12 h-7 text-sm text-center bg-slate-900 border border-primary/40 rounded-md text-white font-mono focus:outline-none focus:ring-1 focus:ring-primary flex-shrink-0"
                       />
                       <button
                         onClick={() => setOffsetValue(String((parseInt(offsetValue, 10) || 0) + 1))}
-                        className="w-7 h-7 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white flex items-center justify-center transition-colors"
+                        className="w-7 h-7 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white flex items-center justify-center transition-colors flex-shrink-0"
                       >
                         <Plus className="w-3.5 h-3.5" />
                       </button>
-                      <span className="text-xs text-slate-400 ml-0.5">days</span>
+                      <span className="text-[10px] text-slate-400">days</span>
+                      <div className="flex-1" />
                       <button
                         onClick={() => {
                           const days = parseInt(offsetValue, 10) || 0;
                           onUpdateExpiryOffset(printer.id, days);
                           setEditingOffset(false);
                         }}
-                        className="w-7 h-7 rounded-md bg-success/20 hover:bg-success/30 text-success flex items-center justify-center transition-colors ml-1"
+                        className="w-7 h-7 rounded-md bg-success/20 hover:bg-success/30 text-success flex items-center justify-center transition-colors flex-shrink-0"
                         title="Apply"
                       >
                         <Check className="w-3.5 h-3.5" />
@@ -308,7 +309,7 @@ export function PrinterListItem({
                           setOffsetValue(String(effectiveExpiry));
                           setEditingOffset(false);
                         }}
-                        className="w-7 h-7 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+                        className="w-7 h-7 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-400 hover:text-white flex items-center justify-center transition-colors flex-shrink-0"
                         title="Cancel"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -316,54 +317,52 @@ export function PrinterListItem({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <div className="flex items-center gap-1.5">
-                      <CalendarDays className="w-3.5 h-3.5 text-primary/60" />
+                      <CalendarDays className="w-3.5 h-3.5 text-primary/60 flex-shrink-0" />
                       <span className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Expiry</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setOffsetValue(String(effectiveExpiry));
-                          setEditingOffset(true);
-                        }}
-                        className={cn(
-                          "flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-colors",
-                          isOverridden
-                            ? "bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30"
-                            : "bg-slate-700/60 hover:bg-slate-600/60 border border-slate-600/40"
-                        )}
-                        title={isOverridden ? `Custom: ${effectiveExpiry} days (message default: ${messageExpiryDays})` : "Click to adjust expiry offset"}
-                      >
-                        <span className={cn(
-                          "text-lg font-bold font-mono leading-none",
-                          isOverridden ? "text-amber-400" : "text-white"
-                        )}>
-                          {effectiveExpiry}
-                        </span>
-                        <span className={cn(
-                          "text-[10px] font-medium",
-                          isOverridden ? "text-amber-400/70" : "text-slate-400"
-                        )}>
-                          days
-                        </span>
-                        {isOverridden && (
-                          <span className="text-[8px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400/80 font-semibold uppercase tracking-wider ml-0.5">
-                            custom
-                          </span>
-                        )}
-                      </button>
-                      {printer.role === 'master' && onResetGroupExpiry && (
-                        <button
-                          onClick={() => onResetGroupExpiry()}
-                          className="flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary/80 hover:text-primary transition-colors"
-                          title={`Reset all group expiry offsets to message default (${messageExpiryDays} days)`}
-                        >
-                          <RotateCcw className="w-3 h-3" />
-                          <span className="text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap">Reset All</span>
-                        </button>
+                    <button
+                      onClick={() => {
+                        setOffsetValue(String(effectiveExpiry));
+                        setEditingOffset(true);
+                      }}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2 py-0.5 rounded-md transition-colors",
+                        isOverridden
+                          ? "bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30"
+                          : "bg-slate-700/60 hover:bg-slate-600/60 border border-slate-600/40"
                       )}
-                    </div>
+                      title={isOverridden ? `Custom: ${effectiveExpiry} days (message default: ${messageExpiryDays})` : "Click to adjust expiry offset"}
+                    >
+                      <span className={cn(
+                        "text-sm font-bold font-mono leading-none",
+                        isOverridden ? "text-amber-400" : "text-white"
+                      )}>
+                        {effectiveExpiry}
+                      </span>
+                      <span className={cn(
+                        "text-[10px] font-medium",
+                        isOverridden ? "text-amber-400/70" : "text-slate-400"
+                      )}>
+                        days
+                      </span>
+                      {isOverridden && (
+                        <span className="text-[8px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400/80 font-semibold uppercase tracking-wider">
+                          custom
+                        </span>
+                      )}
+                    </button>
+                    {printer.role === 'master' && onResetGroupExpiry && (
+                      <button
+                        onClick={() => onResetGroupExpiry()}
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary/80 hover:text-primary transition-colors ml-auto"
+                        title={`Reset all group expiry offsets to message default (${messageExpiryDays} days)`}
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        <span className="text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap">Reset All</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
