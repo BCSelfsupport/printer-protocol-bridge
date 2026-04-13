@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { printerEmulator } from "@/lib/printerEmulator";
 import { multiPrinterEmulator } from "@/lib/multiPrinterEmulator";
-import { isPollingPaused, onPollingPauseChange } from "@/lib/pollingPause";
+import { beginPollingActivity, isPollingPaused, onPollingPauseChange } from "@/lib/pollingPause";
 import { printerTransport, isRelayMode } from "@/lib/printerTransport";
 
 /**
@@ -81,6 +81,7 @@ export function useSerializedPolling(options: {
     const tick = async () => {
       if (cancelled || inFlightRef.current) return;
       inFlightRef.current = true;
+      const endPollingActivity = beginPollingActivity();
 
       try {
         const isEmulatorEnabled = multiPrinterEmulator.enabled || printerEmulator.enabled;
@@ -145,6 +146,7 @@ export function useSerializedPolling(options: {
       } catch (e) {
         if (!cancelled) onErrorRef.current?.(e);
       } finally {
+        endPollingActivity();
         inFlightRef.current = false;
       }
     };
