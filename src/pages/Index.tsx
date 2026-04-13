@@ -1778,6 +1778,47 @@ const Index = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Post-expiry user-define prompt dialog */}
+      <UserDefineEntryDialog
+        open={expiryPromptOpen}
+        onOpenChange={(open) => {
+          setExpiryPromptOpen(open);
+          if (!open) {
+            setExpiryPromptDetails(null);
+            setExpiryPromptMessageName(null);
+          }
+        }}
+        prompts={expiryPrompts}
+        onConfirm={async (entries) => {
+          if (expiryPromptDetails && expiryPromptMessageName) {
+            // Send ^MD^TD commands for each prompted field
+            let textFieldIndex = 0;
+            for (const field of expiryPromptDetails.fields) {
+              if (field.type === 'text') {
+                textFieldIndex++;
+                if (entries[field.id] !== undefined) {
+                  const value = entries[field.id].trim();
+                  if (value) {
+                    const cmd = `^MD^TD${textFieldIndex};${value}`;
+                    console.log(`[ExpiryPrompt] Sending ${cmd} for field "${field.promptLabel || field.id}"`);
+                    try {
+                      await sendCommand(cmd);
+                      await new Promise(resolve => setTimeout(resolve, 200));
+                    } catch (e) {
+                      console.error('[ExpiryPrompt] Failed to send ^MD^TD:', e);
+                    }
+                  }
+                }
+              }
+            }
+            toast.success('Message updated with entered values');
+          }
+          setExpiryPromptOpen(false);
+          setExpiryPromptDetails(null);
+          setExpiryPromptMessageName(null);
+        }}
+      />
     </div>
   );
 };
