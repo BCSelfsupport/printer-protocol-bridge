@@ -349,99 +349,7 @@ const Index = () => {
     return merged;
   }, []);
 
-  const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
-    if (!editingMessage) return null;
 
-    const targetName = isNew ? details.name : editingMessage.name;
-    const localDetails = normalizeMessageForPrinter({
-      ...details,
-      name: targetName,
-    });
-    const cachedDetails = getMessage(editingMessage.name) ?? getMessage(targetName) ?? null;
-    const printerWriteNeeded = isNew || hasPrinterVisibleChanges(localDetails, cachedDetails);
-
-    if (!printerWriteNeeded) {
-      updateMessage(editingMessage.id, details.name);
-      saveMessage(localDetails);
-      recentlySavedRef.current.set(targetName, Date.now());
-      syncedMessagesRef.current.add(targetName);
-      console.log('[onSave] Prompt metadata changed locally; skipping printer rewrite');
-      return localDetails;
-    }
-
-    const success = await saveMessageContent(
-      targetName,
-      localDetails.fields,
-      localDetails.templateValue,
-      isNew,
-    );
-    if (!success) {
-      const reason = (saveMessageContent as any).__lastError || '';
-      console.error('Failed to save message on printer:', reason);
-      toast.error(`Printer rejected message save: ${reason || 'Check settings and try again.'}`);
-      return null;
-    }
-    if (!isNew) {
-      updateMessage(editingMessage.id, details.name);
-    }
-    saveMessage(localDetails);
-    recentlySavedRef.current.set(targetName, Date.now());
-    syncedMessagesRef.current.add(targetName);
-    syncMessageToSlaves(targetName, localDetails, isNew);
-
-    if (connectionState.isConnected) {
-      try {
-        const refreshed = await Promise.race([
-          fetchMessageContent(targetName),
-          new Promise<null>(r => setTimeout(() => r(null), 5000)),
-        ]);
-        if (refreshed && refreshed.fields.length > 0) {
-          const merged = mergeAutoCodeMeta(refreshed, localDetails);
-          saveMessage(merged);
-          if (isNew) {
-            const prevMessage = connectionState.status?.currentMessage;
-            if (prevMessage && prevMessage !== targetName) {
-              try {
-                await sendCommand(`^SM ${prevMessage}`);
-              } catch (e) {
-                console.error('[onSave] Failed to re-select previous message:', e);
-              }
-            }
-          }
-          return merged;
-        }
-      } catch (e) {
-        console.error('[onSave] post-save reload failed:', e);
-      }
-    }
-
-    if (isNew && connectionState.isConnected) {
-      const prevMessage = connectionState.status?.currentMessage;
-      if (prevMessage && prevMessage !== targetName) {
-        try {
-          await sendCommand(`^SM ${prevMessage}`);
-        } catch (e) {
-          console.error('[onSave] Failed to re-select previous message:', e);
-        }
-      }
-    }
-
-    return localDetails;
-  }, [
-    editingMessage,
-    normalizeMessageForPrinter,
-    getMessage,
-    hasPrinterVisibleChanges,
-    updateMessage,
-    saveMessage,
-    saveMessageContent,
-    syncMessageToSlaves,
-    connectionState.isConnected,
-    connectionState.status?.currentMessage,
-    fetchMessageContent,
-    mergeAutoCodeMeta,
-    sendCommand,
-  ]);
 
   const recentlySavedRef = useRef<Map<string, number>>(new Map());
   
@@ -646,6 +554,100 @@ const Index = () => {
       console.log(`[MasterSlaveSync] Message "${messageName}" → ${slave.name}: ${allOk ? 'OK' : 'PARTIAL'}`);
     }
   }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildMessageCommands, sendCommandToPrinter, updatePrinter]);
+
+  const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
+    if (!editingMessage) return null;
+
+    const targetName = isNew ? details.name : editingMessage.name;
+    const localDetails = normalizeMessageForPrinter({
+      ...details,
+      name: targetName,
+    });
+    const cachedDetails = getMessage(editingMessage.name) ?? getMessage(targetName) ?? null;
+    const printerWriteNeeded = isNew || hasPrinterVisibleChanges(localDetails, cachedDetails);
+
+    if (!printerWriteNeeded) {
+      updateMessage(editingMessage.id, details.name);
+      saveMessage(localDetails);
+      recentlySavedRef.current.set(targetName, Date.now());
+      syncedMessagesRef.current.add(targetName);
+      console.log('[onSave] Prompt metadata changed locally; skipping printer rewrite');
+      return localDetails;
+    }
+
+    const success = await saveMessageContent(
+      targetName,
+      localDetails.fields,
+      localDetails.templateValue,
+      isNew,
+    );
+    if (!success) {
+      const reason = (saveMessageContent as any).__lastError || '';
+      console.error('Failed to save message on printer:', reason);
+      toast.error(`Printer rejected message save: ${reason || 'Check settings and try again.'}`);
+      return null;
+    }
+    if (!isNew) {
+      updateMessage(editingMessage.id, details.name);
+    }
+    saveMessage(localDetails);
+    recentlySavedRef.current.set(targetName, Date.now());
+    syncedMessagesRef.current.add(targetName);
+    syncMessageToSlaves(targetName, localDetails, isNew);
+
+    if (connectionState.isConnected) {
+      try {
+        const refreshed = await Promise.race([
+          fetchMessageContent(targetName),
+          new Promise<null>(r => setTimeout(() => r(null), 5000)),
+        ]);
+        if (refreshed && refreshed.fields.length > 0) {
+          const merged = mergeAutoCodeMeta(refreshed, localDetails);
+          saveMessage(merged);
+          if (isNew) {
+            const prevMessage = connectionState.status?.currentMessage;
+            if (prevMessage && prevMessage !== targetName) {
+              try {
+                await sendCommand(`^SM ${prevMessage}`);
+              } catch (e) {
+                console.error('[onSave] Failed to re-select previous message:', e);
+              }
+            }
+          }
+          return merged;
+        }
+      } catch (e) {
+        console.error('[onSave] post-save reload failed:', e);
+      }
+    }
+
+    if (isNew && connectionState.isConnected) {
+      const prevMessage = connectionState.status?.currentMessage;
+      if (prevMessage && prevMessage !== targetName) {
+        try {
+          await sendCommand(`^SM ${prevMessage}`);
+        } catch (e) {
+          console.error('[onSave] Failed to re-select previous message:', e);
+        }
+      }
+    }
+
+    return localDetails;
+  }, [
+    editingMessage,
+    normalizeMessageForPrinter,
+    getMessage,
+    hasPrinterVisibleChanges,
+    updateMessage,
+    saveMessage,
+    saveMessageContent,
+    syncMessageToSlaves,
+    connectionState.isConnected,
+    connectionState.status?.currentMessage,
+    fetchMessageContent,
+    mergeAutoCodeMeta,
+    sendCommand,
+  ]);
 
   // Delay alerts on startup so update notification can appear first
   const [lowStockAlertQueue, setLowStockAlertQueue] = useState<LowStockAlertData[]>([]);
