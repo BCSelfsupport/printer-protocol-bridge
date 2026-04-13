@@ -713,10 +713,11 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, printerExp
           if (computed !== null) displayData = computed;
         }
 
-        renderText(ctx, displayData, x, y, fontName, effectiveDotSize);
+        const fieldGap = (field as any).gap ?? 1;
+        renderText(ctx, displayData, x, y, fontName, effectiveDotSize, fieldGap);
 
         // Track the rightmost edge of rendered content
-        const textWidth = displayData.length * (fontInfo.charWidth + 1) * effectiveDotSize;
+        const textWidth = displayData.length * (fontInfo.charWidth + fieldGap) * effectiveDotSize;
         maxXEnd = Math.max(maxXEnd, x + textWidth);
       });
       return;
