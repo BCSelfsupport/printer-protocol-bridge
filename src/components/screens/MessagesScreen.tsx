@@ -212,7 +212,7 @@ export function MessagesScreen({
             <p className="text-sm">Loading messages from printer…</p>
           </div>
         ) : (
-          <div className="flex-1">
+          <div className="flex-1 overflow-y-auto">
             {messages.map((message) => (
               <div
                 key={message.id}
