@@ -450,12 +450,12 @@ export function MessageCanvas({
           }
         } else {
           ctx.fillStyle = '#1a1a1a';
-          renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE);
+          renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE, field.gap ?? 1);
         }
       } else {
         // Regular text field
         ctx.fillStyle = '#1a1a1a';
-        renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE);
+        renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE, field.gap ?? 1);
       }
 
       // Draw field number badge (e.g., "F1", "F2") in the top-left corner
