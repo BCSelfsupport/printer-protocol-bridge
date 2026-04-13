@@ -1235,6 +1235,7 @@ export function EditMessageScreen({
                   ),
                 }));
               }}
+            />
 
           </div>
 
