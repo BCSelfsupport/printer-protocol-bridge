@@ -237,7 +237,7 @@ export function MessagesScreen({
       </div>
 
       {/* Action buttons - horizontal scroll on mobile */}
-      <div className="overflow-x-auto -mx-4 px-4 pb-2">
+      <div className="shrink-0 overflow-x-auto -mx-4 px-4 py-2 bg-background/95 backdrop-blur-sm border-t border-border">
         <div className="flex gap-4 justify-center min-w-max">
           <button
             onClick={handleSelectMessage}
