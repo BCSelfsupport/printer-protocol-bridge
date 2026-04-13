@@ -87,6 +87,12 @@ const Index = () => {
   const [slaveBlockDialogOpen, setSlaveBlockDialogOpen] = useState(false);
   const [slaveBlockPrinterName, setSlaveBlockPrinterName] = useState('');
   
+  // Post-expiry user-define prompt state
+  const [expiryPromptOpen, setExpiryPromptOpen] = useState(false);
+  const [expiryPrompts, setExpiryPrompts] = useState<UserDefinePrompt[]>([]);
+  const [expiryPromptDetails, setExpiryPromptDetails] = useState<MessageDetails | null>(null);
+  const [expiryPromptMessageName, setExpiryPromptMessageName] = useState<string | null>(null);
+  
   // Local message storage (persists to localStorage, scoped by printer ID)
   const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId } = useMessageStorage();
   
