@@ -405,7 +405,7 @@ export function MessagesScreen({
                 // ^TDn targets the nth text field (1-indexed), counting only
                 // text-type fields in the order they appear in the message.
                 let textFieldIndex = 0;
-                for (const field of updatedFields) {
+                for (const field of pendingMessageDetails.fields) {
                   if (field.type === 'text') {
                     textFieldIndex++;
                     if (entries[field.id] !== undefined) {
