@@ -379,61 +379,61 @@ export function MessagesScreen({
         prompts={userDefinePrompts}
         onConfirm={async (entries) => {
           if (pendingMessageDetails && selectedMessage) {
-            // Prompted text fields: write entered values into the fields and save to printer
+            // Prompted text fields: update values in-place using the lightweight
+            // ^MD^TDn;value command instead of the heavy ^DM/^NM/^SV rewrite
+            // cycle which can lock up printer firmware.
             const updatedFields = pendingMessageDetails.fields.map(f => {
               if (entries[f.id] !== undefined) {
                 return { ...f, data: entries[f.id] };
               }
               return f;
             });
+            const updatedDetails = { ...pendingMessageDetails, fields: updatedFields };
 
-            if (onSaveMessageContent) {
+            if (onSendCommand) {
               try {
                 toast.loading('Writing field data to printer...', { id: 'prompt-save' });
-                // Race against a timeout to prevent locking the printer if the
-                // TCP connection stalls mid-sequence.
-                const SAVE_TIMEOUT_MS = 12000;
-                const savePromise = onSaveMessageContent(
-                  selectedMessage.name,
-                  updatedFields,
-                  pendingMessageDetails.templateValue,
-                  false,
-                );
-                const timeoutPromise = new Promise<false>((resolve) =>
-                  setTimeout(() => resolve(false), SAVE_TIMEOUT_MS),
-                );
-                const saved = await Promise.race([savePromise, timeoutPromise]);
 
-                if (saved) {
-                  const updatedDetails = { ...pendingMessageDetails, fields: updatedFields };
-                  onSaveStoredMessage?.(updatedDetails);
-                  onPromptSaved?.(updatedDetails);
-                  // Explicitly select the message after the save sequence completes.
-                  // A short delay lets the printer finish persisting to flash before ^SM.
-                  await new Promise(resolve => setTimeout(resolve, 500));
-                  try {
-                    await onSelect(selectedMessage);
-                    toast.success('Message loaded with entered values', { id: 'prompt-save' });
-                  } catch (e) {
-                    console.error('[MessagesScreen] ^SM after prompt save failed:', e);
-                    toast.error('Message saved but failed to select — try selecting manually', { id: 'prompt-save', duration: 5000 });
-                  }
-                } else {
-                  const reason = (onSaveMessageContent as any)?.__lastError || '';
-                  toast.error(
-                    reason
-                      ? `Failed to write field data: ${reason}`
-                      : 'Timed out writing to printer — check connection and try again',
-                    { id: 'prompt-save', duration: 6000 },
-                  );
+                // First select the message so ^MD targets the right one
+                const smOk = await onSelect(selectedMessage);
+                if (!smOk) {
+                  toast.error('Failed to select message on printer', { id: 'prompt-save' });
+                  return;
                 }
+
+                // Brief delay after ^SM before sending ^MD
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                // Compute text-field-only index for each prompted field.
+                // ^TDn targets the nth text field (1-indexed), counting only
+                // text-type fields in the order they appear in the message.
+                let textFieldIndex = 0;
+                for (const field of updatedFields) {
+                  if (field.type === 'text') {
+                    textFieldIndex++;
+                    if (entries[field.id] !== undefined) {
+                      const value = entries[field.id].trim();
+                      if (value) {
+                        const cmd = `^MD^TD${textFieldIndex};${value}`;
+                        console.log(`[MessagesScreen] Sending ${cmd} for field "${field.promptLabel || field.id}"`);
+                        await onSendCommand(cmd);
+                        // Small delay between ^MD commands
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                      }
+                    }
+                  }
+                }
+
+                // Persist locally so preview and storage stay in sync
+                onSaveStoredMessage?.(updatedDetails);
+                onPromptSaved?.(updatedDetails);
+                toast.success('Message loaded with entered values', { id: 'prompt-save' });
               } catch (e) {
-                console.error('[MessagesScreen] Failed to save prompted fields:', e);
+                console.error('[MessagesScreen] Failed to send ^MD^TD:', e);
                 toast.error('Failed to write field data', { id: 'prompt-save' });
               }
             } else {
               // Non-connected printer: can't write fields, but still select the message
-              const updatedDetails = { ...pendingMessageDetails, fields: updatedFields };
               onSaveStoredMessage?.(updatedDetails);
               onPromptSaved?.(updatedDetails);
               await onSelect(selectedMessage);
@@ -442,7 +442,6 @@ export function MessagesScreen({
             // Legacy: send ^MD^TD for native userdefine fields (per v2.6 §5.28.2)
             const tdEntries = Object.entries(entries).filter(([, value]) => value.trim());
             if (tdEntries.length > 0) {
-              // Build combined ^MD command with ^TD subcommands for each field
               const tdSubcommands = tdEntries.map(([, value], idx) => `^TD${idx + 1};${value.trim()}`).join('');
               try {
                 await onSendCommand(`^MD${tdSubcommands}`);
