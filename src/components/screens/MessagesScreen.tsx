@@ -198,14 +198,14 @@ export function MessagesScreen({
   };
 
   return (
-    <div className="flex-1 p-4 flex flex-col">
+    <div className="flex-1 p-4 flex flex-col min-h-0">
       <SubPageHeader 
         title={`Messages: ${messages.length}`} 
         onHome={onHome}
       />
 
       {/* Message list */}
-      <div className="flex-1 bg-card rounded-lg p-4 mb-4 flex flex-col">
+      <div className="flex-1 min-h-0 bg-card rounded-lg p-4 mb-4 flex flex-col">
         {messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
             <PrinterIcon className="w-10 h-10 opacity-30 animate-pulse" />
@@ -237,7 +237,7 @@ export function MessagesScreen({
       </div>
 
       {/* Action buttons - horizontal scroll on mobile */}
-      <div className="overflow-x-auto -mx-4 px-4 pb-2">
+      <div className="shrink-0 overflow-x-auto -mx-4 px-4 py-2 bg-background/95 backdrop-blur-sm border-t border-border">
         <div className="flex gap-4 justify-center min-w-max">
           <button
             onClick={handleSelectMessage}
