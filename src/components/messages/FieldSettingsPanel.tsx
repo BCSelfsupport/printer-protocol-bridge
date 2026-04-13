@@ -160,6 +160,10 @@ interface FieldSettingsPanelProps {
   allowedFonts: { value: string; label: string; height: number }[];
   currentFontIndex: number;
   fieldType?: string;
+  promptBeforePrint?: boolean;
+  promptLabel?: string;
+  promptLength?: number;
+  onPromptBeforePrintChange?: (enabled: boolean, label?: string, length?: number) => void;
 }
 
 export function FieldSettingsPanel({
@@ -179,6 +183,10 @@ export function FieldSettingsPanel({
   allowedFonts,
   currentFontIndex,
   fieldType,
+  promptBeforePrint,
+  promptLabel,
+  promptLength,
+  onPromptBeforePrintChange,
 }: FieldSettingsPanelProps) {
   const fontLabel = allowedFonts.find(f => f.value === fontSize)?.label || fontSize;
 
@@ -250,6 +258,19 @@ export function FieldSettingsPanel({
           onDecrease={() => cycleAutoNumerals(-1)}
           disabled={disabled}
         />
+
+        {/* Prompt Before Print toggle - only for text fields */}
+        {fieldType === 'text' && onPromptBeforePrintChange && (
+          <div
+            className={`bg-muted/50 rounded-md p-2 flex flex-col items-center justify-center cursor-pointer border ${promptBeforePrint ? 'border-primary bg-primary/10' : 'border-transparent'} ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+            onClick={() => onPromptBeforePrintChange(!promptBeforePrint, promptLabel, promptLength)}
+          >
+            <span className="text-[10px] text-muted-foreground mb-1">Prompt</span>
+            <span className={`text-sm font-bold ${promptBeforePrint ? 'text-primary' : 'text-muted-foreground'}`}>
+              {promptBeforePrint ? 'ON' : 'OFF'}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

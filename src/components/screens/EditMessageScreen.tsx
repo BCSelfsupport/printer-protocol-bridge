@@ -1216,6 +1216,25 @@ export function EditMessageScreen({
               allowedFonts={getAllowedFonts()}
               currentFontIndex={selectedField ? getAllowedFonts().findIndex(f => f.value === selectedField.fontSize) : -1}
               fieldType={selectedField?.type ?? 'text'}
+              promptBeforePrint={selectedField?.promptBeforePrint}
+              promptLabel={selectedField?.promptLabel}
+              promptLength={selectedField?.promptLength}
+              onPromptBeforePrintChange={(enabled, label, length) => {
+                if (!selectedFieldId) return;
+                setMessage((prev) => ({
+                  ...prev,
+                  fields: prev.fields.map((f) =>
+                    f.id === selectedFieldId
+                      ? {
+                          ...f,
+                          promptBeforePrint: enabled,
+                          promptLabel: enabled ? (f.promptLabel || f.data || 'ENTER VALUE') : undefined,
+                          promptLength: enabled ? (f.promptLength || Math.max(f.data?.length || 3, 3)) : undefined,
+                        }
+                      : f
+                  ),
+                }));
+              }}
             />
 
           </div>
