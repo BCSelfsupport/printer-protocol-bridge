@@ -205,7 +205,7 @@ export function MessagesScreen({
       />
 
       {/* Message list */}
-      <div className="flex-1 bg-card rounded-lg p-4 mb-4 flex flex-col">
+      <div className="flex-1 min-h-0 bg-card rounded-lg p-4 mb-4 flex flex-col">
         {messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
             <PrinterIcon className="w-10 h-10 opacity-30 animate-pulse" />
