@@ -252,6 +252,20 @@ const Index = () => {
           })()
         : null;
 
+      // Try matching by exact data content — important for prompted fields
+      // whose placeholder data (e.g. "XXX") is distinctive
+      if (!cachedField) {
+        const dataMatchIndex = cached.fields.findIndex((candidate, index) => (
+          !usedCachedIndexes.has(index)
+          && candidate.data === f.data
+          && candidate.height === f.height
+          && typesCompatible(candidate)
+        ));
+        if (dataMatchIndex >= 0) {
+          cachedField = claimCandidate(dataMatchIndex);
+        }
+      }
+
       if (!cachedField) {
         const exactGeometryIndex = cached.fields.findIndex((candidate, index) => (
           !usedCachedIndexes.has(index)
