@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Video, Upload, Loader2, Trash2, Play, Clock, AlertCircle, Download } from 'lucide-react';
+import { Video, Upload, Loader2, Trash2, Play, Clock, AlertCircle, Download, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
