@@ -404,6 +404,7 @@ export function DateCodeBuilder({
                     max={9999}
                     value={offsetValue}
                     onChange={(e) => setOffsetValue(Math.max(0, parseInt(e.target.value) || 0))}
+                    onFocus={(e) => e.target.select()}
                     className="w-20 h-8 text-center text-sm"
                   />
                   <Select value={offsetUnit} onValueChange={(v) => setOffsetUnit(v as OffsetUnit)}>
