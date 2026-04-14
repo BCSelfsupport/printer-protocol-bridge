@@ -877,13 +877,20 @@ const Index = () => {
       }
     }
 
-    // Update local storage
+    // Update local message cache with new expiry days so auto-sync doesn't revert
+    const updatedStored = {
+      ...stored,
+      fields: modifiedFields,
+    };
+    saveMessage(updatedStored);
+
+    // Update printer state
     updatePrinter(printerId, { expiryOffsetDays: newDays });
-    toast.success(`${targetPrinter.name}: expiry offset → +${newDays} day${newDays !== 1 ? 's' : ''}`);
+    toast.success(`${targetPrinter.name}: expiry offset → ${newDays} day${newDays !== 1 ? 's' : ''}`);
 
     // 15s grace period — polling will naturally resume
     console.log(`[ExpiryOffset] Complete on ${targetPrinter.name}`);
-  }, [printers, getMessage, replaceMessageWithoutDelete, sendCommandToPrinter, updatePrinter]);
+  }, [printers, getMessage, saveMessage, replaceMessageWithoutDelete, sendCommandToPrinter, updatePrinter]);
 
   // Delay alerts on startup so update notification can appear first
   const [lowStockAlertQueue, setLowStockAlertQueue] = useState<LowStockAlertData[]>([]);
