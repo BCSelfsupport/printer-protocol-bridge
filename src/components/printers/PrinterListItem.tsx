@@ -251,7 +251,7 @@ export function PrinterListItem({
                 )}
                 {/* Expiry offset badge */}
                 {showExpiryBadge && (
-                  <div className="mt-1" onClick={e => e.stopPropagation()}>
+                  <div className="mt-1">
                     {editingExpiry ? (
                       <form onSubmit={handleExpirySubmit} className="flex items-center gap-1.5 bg-slate-900 border border-amber-400/50 rounded px-2 py-1">
                         <Calendar className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
