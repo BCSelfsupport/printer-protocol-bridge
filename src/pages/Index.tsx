@@ -796,9 +796,14 @@ const Index = () => {
     if (!targetPrinter) return false;
 
     const commandsToRun = commands.filter((command) => command.trim().length > 0);
-    const sequence = [`^SM ${message.name}`, ...commandsToRun];
 
-    if (targetPrinter.id === connectionState.connectedPrinter?.id) {
+    // Send ^SM first, then wait 1s for firmware to fully load the message
+    // into RAM before sending ^MD^TD commands. The previous 300ms uniform
+    // delay was too short — the printer silently dropped ^MD writes.
+    const smSequence = [`^SM ${message.name}`];
+    const isConnected = targetPrinter.id === connectionState.connectedPrinter?.id;
+
+    if (isConnected) {
       setPollingPaused(true);
       try {
         const pollingIdle = await waitForPollingIdle();
@@ -806,8 +811,22 @@ const Index = () => {
           console.warn('[PromptWrite] Connected printer is still busy');
           return false;
         }
-        const result = await sendVerifiedCommandSequence(targetPrinter, sequence, 300);
-        if (!result.success) return false;
+
+        // Step 1: Select the message
+        const smResult = await sendVerifiedCommandSequence(targetPrinter, smSequence, 300);
+        if (!smResult.success) return false;
+
+        // Step 2: Wait for firmware to load message into RAM
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Step 3: Send ^MD^TD commands
+        if (commandsToRun.length > 0) {
+          const mdResult = await sendVerifiedCommandSequence(targetPrinter, commandsToRun, 300);
+          if (!mdResult.success) {
+            console.warn('[PromptWrite] ^MD^TD commands failed, but message was selected');
+          }
+        }
+
         updatePrinter(targetPrinter.id, { currentMessage: message.name });
         return true;
       } finally {
@@ -815,8 +834,22 @@ const Index = () => {
       }
     }
 
-    const result = await sendVerifiedCommandSequence(targetPrinter, sequence, 300);
-    if (!result.success) return false;
+    // Non-connected printer: open session, send ^SM, wait, send ^MD^TD
+    const allCommands = [...smSequence];
+    // For non-connected printers we still need the longer gap, so send
+    // ^SM in its own sequence, wait, then send the rest.
+    const smResult = await sendVerifiedCommandSequence(targetPrinter, allCommands, 300);
+    if (!smResult.success) return false;
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    if (commandsToRun.length > 0) {
+      const mdResult = await sendVerifiedCommandSequence(targetPrinter, commandsToRun, 300);
+      if (!mdResult.success) {
+        console.warn('[PromptWrite] ^MD^TD commands failed on non-connected printer');
+      }
+    }
+
     updatePrinter(targetPrinter.id, { currentMessage: message.name });
     return true;
   }, [connectionState.connectedPrinter?.id, sendVerifiedCommandSequence, updatePrinter]);
