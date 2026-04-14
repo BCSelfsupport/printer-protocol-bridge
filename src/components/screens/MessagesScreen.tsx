@@ -401,22 +401,21 @@ export function MessagesScreen({
                 // Brief delay after ^SM before sending ^MD
                 await new Promise(resolve => setTimeout(resolve, 300));
 
-                // Compute text-field-only index for each prompted field.
-                // ^TDn targets the nth text field (1-indexed), counting only
-                // text-type fields in the order they appear in the message.
-                let textFieldIndex = 0;
-                for (const field of pendingMessageDetails.fields) {
-                  if (field.type === 'text') {
-                    textFieldIndex++;
-                    if (entries[field.id] !== undefined) {
-                      const value = entries[field.id].trim();
-                      if (value) {
-                        const cmd = `^MD^TD${textFieldIndex};${value}`;
-                        console.log(`[MessagesScreen] Sending ${cmd} for field "${field.promptLabel || field.id}"`);
-                        await onSendCommand(cmd);
-                        // Small delay between ^MD commands
-                        await new Promise(resolve => setTimeout(resolve, 200));
-                      }
+                // ^TDn targets the nth field by its absolute position in the
+                // ^NM definition (1-indexed), counting ALL field types — not
+                // just text fields.  Autocode (date/time), counter, barcode,
+                // and logo fields all occupy a slot in the numbering.
+                for (let i = 0; i < pendingMessageDetails.fields.length; i++) {
+                  const field = pendingMessageDetails.fields[i];
+                  const fieldNum = i + 1; // 1-indexed absolute field number
+                  if (entries[field.id] !== undefined) {
+                    const value = entries[field.id].trim();
+                    if (value) {
+                      const cmd = `^MD^TD${fieldNum};${value}`;
+                      console.log(`[MessagesScreen] Sending ${cmd} for field "${field.promptLabel || field.id}"`);
+                      await onSendCommand(cmd);
+                      // Small delay between ^MD commands
+                      await new Promise(resolve => setTimeout(resolve, 200));
                     }
                   }
                 }
