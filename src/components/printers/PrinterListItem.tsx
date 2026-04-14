@@ -461,52 +461,35 @@ export function PrinterListItem({
           {showExpiryBadge && (
             <div className="mt-1.5" onClick={e => e.stopPropagation()}>
               {editingExpiry ? (
-                <div className="bg-slate-800 border border-amber-500/40 rounded-lg p-2.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-amber-400 flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" />
-                      EXPIRY OFFSET
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={handleExpiryCancel}
-                        className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleExpirySubmit()}
-                        className="p-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 transition-colors"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Slider
-                      value={[expirySlider]}
-                      onValueChange={handleSliderChange}
+                <div className="bg-slate-800 border border-amber-500/40 rounded-lg p-2 flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                  <span className="text-[10px] text-amber-400 font-semibold whitespace-nowrap">EXPIRY:</span>
+                  <form onSubmit={handleExpirySubmit} className="flex items-center gap-1">
+                    <Input
+                      ref={expiryInputRef}
+                      type="number"
                       min={0}
-                      max={365}
-                      step={1}
-                      className="flex-1"
+                      value={expiryInput}
+                      onChange={e => setExpiryInput(e.target.value)}
+                      onKeyDown={handleExpiryKeyDown}
+                      onFocus={e => e.target.select()}
+                      className="w-16 h-7 text-sm text-center px-1 py-0 bg-slate-700 border-amber-500/50 text-white font-bold"
+                      disabled={isUpdatingExpiry}
                     />
-                    <form onSubmit={handleExpirySubmit} className="flex items-center gap-1">
-                      <Input
-                        ref={expiryInputRef}
-                        type="number"
-                        min={0}
-                        max={365}
-                        value={expiryInput}
-                        onChange={e => handleInputChange(e.target.value)}
-                        onKeyDown={handleExpiryKeyDown}
-                        onFocus={e => e.target.select()}
-                        className="w-14 h-7 text-xs text-center px-1 py-0 bg-slate-700 border-amber-500/50 text-white font-bold"
-                        disabled={isUpdatingExpiry}
-                      />
-                      <span className="text-[10px] text-slate-400 font-medium">days</span>
-                    </form>
-                  </div>
+                    <span className="text-[10px] text-slate-400 font-medium">days</span>
+                  </form>
+                  <button
+                    onClick={() => handleExpirySubmit()}
+                    className="p-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 transition-colors"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={handleExpiryCancel}
+                    className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               ) : (
                 <button
