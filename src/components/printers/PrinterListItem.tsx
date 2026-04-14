@@ -1,8 +1,10 @@
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, Calendar } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 // Color palette for sync groups (left border stripe)
@@ -39,6 +41,10 @@ interface PrinterListItemProps {
   streamHours?: string;
   /** Master's current message name — slaves display this instead of their own */
   masterMessage?: string;
+  /** Callback when expiry offset is changed on this printer */
+  onExpiryChange?: (printerId: number, days: number) => void;
+  /** Whether an expiry update is in progress for this printer */
+  isUpdatingExpiry?: boolean;
 }
 
 // Helper to get color for fluid levels
