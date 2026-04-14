@@ -877,12 +877,9 @@ const Index = () => {
       }
     }
 
-    // Update local message cache with new expiry days so auto-sync doesn't revert
-    const updatedStored = {
-      ...stored,
-      fields: modifiedFields,
-    };
-    saveMessage(updatedStored);
+    // NOTE: Do NOT update the shared message cache here — the original message
+    // definition should stay unchanged so other printers keep their original expiry.
+    // The per-printer override lives in printer.expiryOffsetDays only.
 
     // Update printer state
     updatePrinter(printerId, { expiryOffsetDays: newDays });
