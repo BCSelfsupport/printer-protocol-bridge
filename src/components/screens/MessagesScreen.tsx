@@ -382,10 +382,18 @@ export function MessagesScreen({
             // Prompted text fields: update values in-place using the lightweight
             // ^MD^TDn;value command instead of the heavy ^DM/^NM/^SV rewrite
             // cycle which can lock up printer firmware.
-            // Keep field data unchanged for canvas display — only the printer
-            // receives the entered values via ^MD^TD.  Overwriting `data` would
-            // replace fixed label text (e.g. "PA108") with the user's 3-char input.
-            const updatedDetails = { ...pendingMessageDetails };
+            // Update prompted field data with entered values so the canvas
+            // displays the actual characters instead of "XXX" placeholders.
+            // Non-prompted fields (e.g. "PA108") keep their original data.
+            const updatedDetails = {
+              ...pendingMessageDetails,
+              fields: pendingMessageDetails.fields.map(f => {
+                if (f.promptBeforePrint && entries[f.id] !== undefined) {
+                  return { ...f, data: entries[f.id].trim() || f.data };
+                }
+                return f;
+              }),
+            };
 
             if (onSendCommand) {
               try {
