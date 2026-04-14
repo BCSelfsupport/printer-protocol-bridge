@@ -1624,6 +1624,7 @@ const Index = () => {
         onLicense={() => setLicenseDialogOpen(true)}
         onRefreshNetwork={checkPrinterStatus}
         isCheckingNetwork={isChecking}
+        onSlaveExpiryChange={handleExpiryOffsetChange}
       />
     );
   };
