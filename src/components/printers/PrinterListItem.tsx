@@ -98,7 +98,35 @@ export function PrinterListItem({
     return 'text-success';
   };
   const filterLabel = filterSt ? `${filterSt.hoursRemaining.toFixed(0)}h` : '?';
-  
+
+  // Expiry offset badge - only show for printers in a sync group
+  const showExpiryBadge = syncGroupIndex !== undefined && syncGroupIndex >= 0 && onExpiryChange && printer.isAvailable;
+  const currentOffset = printer.expiryOffsetDays ?? 0;
+
+  const handleExpiryBadgeClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isUpdatingExpiry) return;
+    setExpiryInput(currentOffset.toString());
+    setEditingExpiry(true);
+    setTimeout(() => expiryInputRef.current?.focus(), 50);
+  };
+
+  const handleExpirySubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    const days = parseInt(expiryInput, 10);
+    if (!isNaN(days) && days >= 0 && days !== currentOffset) {
+      onExpiryChange!(printer.id, days);
+    }
+    setEditingExpiry(false);
+  };
+
+  const handleExpiryKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      setEditingExpiry(false);
+    }
+  };
   const groupColor = syncGroupIndex !== undefined && syncGroupIndex >= 0
     ? SYNC_GROUP_COLORS[syncGroupIndex % SYNC_GROUP_COLORS.length]
     : null;
