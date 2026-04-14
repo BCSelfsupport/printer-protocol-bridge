@@ -1947,49 +1947,7 @@ const Index = () => {
         prompts={expiryPrompts}
         onConfirm={async (entries) => {
           if (expiryPromptDetails && expiryPromptMessageName) {
-            // Build a single ^MD with all ^TD subcommands batched together.
-            // Per §5.28.2 the printer expects ONE ^MD — separate ^MD per field
-            // resets the modify context and leaves fields showing XXX.
-            const tdParts: string[] = [];
-            for (let i = 0; i < expiryPromptDetails.fields.length; i++) {
-              const field = expiryPromptDetails.fields[i];
-              const fieldNum = i + 1;
-              if (entries[field.id] !== undefined) {
-                const value = entries[field.id].trim();
-                if (value) {
-                  tdParts.push(`^TD${fieldNum};${value}`);
-                }
-              }
-            }
-            if (tdParts.length > 0) {
-              const cmd = `^MD${tdParts.join('')}`;
-              console.log(`[ExpiryPrompt] Sending batched ${cmd}`);
-              try {
-                if (expiryPromptTargetPrinter && expiryPromptMessageName) {
-                  const result = await sendVerifiedCommandSequence(
-                    expiryPromptTargetPrinter,
-                    [`^SM ${expiryPromptMessageName}`, cmd],
-                    300,
-                  );
-                  if (!result.success) {
-                    toast.error('Failed to write field data to printer');
-                    return;
-                  }
-                  updatePrinter(expiryPromptTargetPrinter.id, { currentMessage: expiryPromptMessageName });
-                } else {
-                  const result = await sendCommand(cmd);
-                  if (!result?.success || isTransportCommandFailure(result?.response ?? '')) {
-                    toast.error('Failed to write field data to printer');
-                    return;
-                  }
-                }
-              } catch (e) {
-                console.error('[ExpiryPrompt] Failed to send ^MD^TD:', e);
-                toast.error('Failed to write field data to printer');
-                return;
-              }
-            }
-            // Update local storage so canvas shows entered values instead of "XXX"
+            // Update field data with entered values
             const updatedDetails = {
               ...expiryPromptDetails,
               fields: expiryPromptDetails.fields.map(f => {
@@ -1999,6 +1957,25 @@ const Index = () => {
                 return f;
               }),
             };
+
+            // Use full message rewrite to bake entered values into the message
+            if (expiryPromptTargetPrinter) {
+              try {
+                const result = await replaceMessageWithoutDelete(expiryPromptTargetPrinter, expiryPromptMessageName, {
+                  fields: updatedDetails.fields,
+                  templateValue: updatedDetails.templateValue,
+                });
+                if (!result.success) {
+                  toast.error('Failed to write field data to printer');
+                  return;
+                }
+                updatePrinter(expiryPromptTargetPrinter.id, { currentMessage: expiryPromptMessageName });
+              } catch (e) {
+                console.error('[ExpiryPrompt] Failed to rewrite message:', e);
+                toast.error('Failed to write field data to printer');
+                return;
+              }
+            }
             saveMessage(updatedDetails);
             toast.success('Message updated with entered values');
           }
