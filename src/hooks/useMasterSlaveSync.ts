@@ -264,10 +264,12 @@ export function useMasterSlaveSync({
     }, [printers, connectedPrinterId, messages, currentMessage, sendCommandToPrinter]),
 
     // Broadcast a specific message to all slaves with optional per-printer User Define values
+    // userDefineFieldNum: the 1-indexed absolute field number (from ^NM ordering) for the prompted field
     broadcastMessage: useCallback(async (
       masterId: number,
       messageName: string,
-      slaveValues: { printerId: number; userDefineValue: string }[]
+      slaveValues: { printerId: number; userDefineValue: string }[],
+      userDefineFieldNum?: number,
     ) => {
       const master = printers.find(p => p.id === masterId && p.role === 'master');
       if (!master) throw new Error('Master not found');
@@ -287,12 +289,12 @@ export function useMasterSlaveSync({
 
         // Send User Define value if provided
         // Per v2.6 §5.28.2, ^TD is a subcommand of ^MD (Message Data).
-        // Format: ^MD^TDn;text where n = text field number.
-        // We target text field 1 by default for User Define workaround fields.
+        // Format: ^MD^TDn;text where n = absolute field number in ^NM.
         const slaveVal = slaveValues.find(v => v.printerId === slave.id);
         if (slaveVal && slaveVal.userDefineValue.trim()) {
-          const tdOk = await sendCommandToPrinter(slave, `^MD^TD1;${slaveVal.userDefineValue.trim()}`);
-          console.log(`[Broadcast] ^MD^TD1 "${slaveVal.userDefineValue}" → ${slave.name}: ${tdOk ? 'OK' : 'FAIL'}`);
+          const tdNum = userDefineFieldNum ?? 1;
+          const tdOk = await sendCommandToPrinter(slave, `^MD^TD${tdNum};${slaveVal.userDefineValue.trim()}`);
+          console.log(`[Broadcast] ^MD^TD${tdNum} "${slaveVal.userDefineValue}" → ${slave.name}: ${tdOk ? 'OK' : 'FAIL'}`);
         }
       }
 
