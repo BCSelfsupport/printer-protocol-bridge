@@ -1,0 +1,50 @@
+name: Build Dev Test Installer
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Electron build tools
+        run: |
+          npm install --save-dev electron electron-builder
+          npm install electron-updater
+
+      - name: Build frontend
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
+          ELECTRON_BUILD: "1"
+        run: npm run build
+
+      - name: Prepare icon
+        run: |
+          if (!(Test-Path "electron\resources")) { New-Item -ItemType Directory -Path "electron\resources" }
+          Copy-Item "public\codesync-icon.png" "electron\resources\icon.png" -Force
+
+      - name: Build installer (no publish)
+        run: npx electron-builder --config electron/electron-builder.json --win --publish never
+
+      - name: Upload test installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-installer
+          path: release/*.exe
+          retention-days: 7
