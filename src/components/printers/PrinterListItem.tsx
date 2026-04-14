@@ -84,6 +84,7 @@ export function PrinterListItem({
   masterMessage,
   onExpiryChange,
   isUpdatingExpiry = false,
+  messageExpiryDays,
 }: PrinterListItemProps) {
   const [editingExpiry, setEditingExpiry] = useState(false);
   const [expiryInput, setExpiryInput] = useState('');
