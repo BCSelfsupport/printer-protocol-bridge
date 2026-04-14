@@ -92,8 +92,8 @@ interface PrintersScreenProps {
   onRefreshNetwork?: () => void;
   /** Whether a network check is in progress */
   isCheckingNetwork?: boolean;
-  /** Called when a slave printer's expiry is changed — resends the message with new expiry */
-  onSlaveExpiryChange?: (printerId: number, days: number) => void;
+  /** Called when a printer's expiry offset is changed — resends the message with new expiry */
+  onSlaveExpiryChange?: (printerId: number, days: number) => Promise<void>;
   onSelectedPrinterChange?: (printer: Printer | null) => void;
   /** Look up stored/hardcoded message content by name for a specific printer */
   getMessageContent?: (name: string, printerId?: number) => MessageDetails | null;
