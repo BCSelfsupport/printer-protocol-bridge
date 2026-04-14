@@ -145,9 +145,10 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
   const [manualResponse, setManualResponse] = useState<{ command: string; response: string; timestamp: Date }[]>([]);
   const [manualSending, setManualSending] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [buildTriggering, setBuildTriggering] = useState(false);
-  const [buildResult, setBuildResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [buildTriggering, setBuildTriggering] = useState<'dev' | 'main' | false>(false);
+  const [buildResult, setBuildResult] = useState<{ success: boolean; message: string; target?: string } | null>(null);
   const [buildRuns, setBuildRuns] = useState<any[]>([]);
+  const [devBuildRuns, setDevBuildRuns] = useState<any[]>([]);
   const [buildRunsLoading, setBuildRunsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab || 'status');
 
