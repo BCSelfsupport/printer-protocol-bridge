@@ -890,7 +890,7 @@ const Index = () => {
 
     // 15s grace period — polling will naturally resume
     console.log(`[ExpiryOffset] Complete on ${targetPrinter.name}`);
-  }, [printers, getMessage, replaceMessageWithoutDelete, sendCommandToPrinter, updatePrinter]);
+  }, [printers, getMessage, saveMessage, replaceMessageWithoutDelete, sendCommandToPrinter, updatePrinter]);
 
   // Delay alerts on startup so update notification can appear first
   const [lowStockAlertQueue, setLowStockAlertQueue] = useState<LowStockAlertData[]>([]);
