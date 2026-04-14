@@ -73,7 +73,7 @@ interface PrintersScreenProps {
   // Master/Slave sync - per master
   onSyncMaster?: (masterId: number) => void;
   // Broadcast message to all slaves
-  onBroadcastMessage?: (masterId: number, messageName: string, slaveValues: { printerId: number; userDefineValue: string }[]) => Promise<void>;
+  onBroadcastMessage?: (masterId: number, messageName: string, slaveValues: { printerId: number; userDefineValue: string }[], userDefineFieldNum?: number) => Promise<void>;
   getSlavesForMaster?: (masterId: number) => Printer[];
   connectedMessages?: { id: number; name: string }[];
   // Optional content to render in the right panel instead of Dashboard
