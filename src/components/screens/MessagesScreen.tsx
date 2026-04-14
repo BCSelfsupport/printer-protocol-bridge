@@ -419,6 +419,13 @@ export function MessagesScreen({
                   }
                 }
 
+                // Persist locally BEFORE sending printer commands so the
+                // auto-fetch effect (triggered by ^SM changing currentMessage)
+                // sees the recentlySavedRef flag and skips overwriting the
+                // cached metadata (autoCodeExpiryDays, etc.).
+                onSaveStoredMessage?.(updatedDetails);
+                onPromptSaved?.(updatedDetails);
+
                 const commands = tdParts.length > 0 ? [`^MD${tdParts.join('')}`] : [];
                 const applied = onApplyPromptValues
                   ? await onApplyPromptValues(selectedMessage, commands)
@@ -440,9 +447,6 @@ export function MessagesScreen({
                   return;
                 }
 
-                // Persist locally so preview and storage stay in sync
-                onSaveStoredMessage?.(updatedDetails);
-                onPromptSaved?.(updatedDetails);
                 toast.success('Message loaded with entered values', { id: 'prompt-save' });
               } catch (e) {
                 console.error('[MessagesScreen] Failed to send ^MD^TD:', e);
