@@ -438,6 +438,44 @@ export function PrinterListItem({
               PRINTS: <span className="font-semibold">{printer.printCount.toString().padStart(7, '0')}</span>
             </div>
           )}
+          {/* Expiry offset badge */}
+          {showExpiryBadge && (
+            <div className="ml-5 mt-1" onClick={e => e.stopPropagation()}>
+              {editingExpiry ? (
+                <form onSubmit={handleExpirySubmit} className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                  <Input
+                    ref={expiryInputRef}
+                    type="number"
+                    min={0}
+                    value={expiryInput}
+                    onChange={e => setExpiryInput(e.target.value)}
+                    onBlur={() => handleExpirySubmit()}
+                    onKeyDown={handleExpiryKeyDown}
+                    onFocus={e => e.target.select()}
+                    className="w-16 h-5 text-[10px] px-1 py-0 bg-slate-700 border-amber-500/50 text-white"
+                    disabled={isUpdatingExpiry}
+                  />
+                  <span className="text-[10px] text-slate-400">days</span>
+                </form>
+              ) : (
+                <button
+                  onClick={handleExpiryBadgeClick}
+                  className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                    isUpdatingExpiry
+                      ? 'bg-amber-500/20 text-amber-300 animate-pulse'
+                      : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                  }`}
+                  title="Click to change expiry offset"
+                  disabled={isUpdatingExpiry}
+                >
+                  <Calendar className="w-3 h-3" />
+                  <span className="font-semibold">+{currentOffset}d</span>
+                  {isUpdatingExpiry && <span className="ml-0.5">...</span>}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
