@@ -52,7 +52,6 @@ import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
 import { useProductionStorage } from '@/hooks/useProductionStorage';
 import { logConsumption } from '@/lib/consumptionTracker';
 import { useFleetTelemetryPush } from '@/hooks/useFleetTelemetryPush';
-import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { isRelayMode, printerTransport } from '@/lib/printerTransport';
 
 
