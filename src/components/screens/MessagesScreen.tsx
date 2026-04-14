@@ -41,6 +41,8 @@ interface MessagesScreenProps {
   onFetchMessageDetails?: (name: string) => Promise<MessageDetails | null>;
   /** Send a raw command to the connected printer */
   onSendCommand?: (command: string) => Promise<any>;
+  /** Select the message and write prompted values in one printer session */
+  onApplyPromptValues?: (message: PrintMessage, commands: string[]) => Promise<boolean>;
   /** Get locally stored message details (includes promptBeforePrint metadata) */
   onGetStoredMessage?: (name: string) => MessageDetails | null;
   /** Save message content to printer (^DM + ^NM + ^SV) — used to write prompted field values */
@@ -69,6 +71,7 @@ export function MessagesScreen({
   onNewDialogOpened,
   onFetchMessageDetails,
   onSendCommand,
+  onApplyPromptValues,
   onGetStoredMessage,
   onSaveMessageContent,
   onSaveStoredMessage,
@@ -395,19 +398,9 @@ export function MessagesScreen({
               }),
             };
 
-            if (onSendCommand) {
+            if (onApplyPromptValues || onSendCommand) {
               try {
                 toast.loading('Writing field data to printer...', { id: 'prompt-save' });
-
-                // First select the message so ^MD targets the right one
-                const smOk = await onSelect(selectedMessage);
-                if (!smOk) {
-                  toast.error('Failed to select message on printer', { id: 'prompt-save' });
-                  return;
-                }
-
-                // Brief delay after ^SM before sending ^MD
-                await new Promise(resolve => setTimeout(resolve, 300));
 
                 // Build a single ^MD command with all ^TD subcommands batched
                 // together.  Per §5.28.2 the printer expects ONE ^MD with
@@ -425,10 +418,26 @@ export function MessagesScreen({
                     }
                   }
                 }
-                if (tdParts.length > 0) {
-                  const cmd = `^MD${tdParts.join('')}`;
-                  console.log(`[MessagesScreen] Sending batched ${cmd}`);
-                  await onSendCommand(cmd);
+
+                const commands = tdParts.length > 0 ? [`^MD${tdParts.join('')}`] : [];
+                const applied = onApplyPromptValues
+                  ? await onApplyPromptValues(selectedMessage, commands)
+                  : await (async () => {
+                      const smOk = await onSelect(selectedMessage);
+                      if (!smOk) return false;
+                      if (commands.length === 0 || !onSendCommand) return true;
+
+                      await new Promise(resolve => setTimeout(resolve, 300));
+                      for (const cmd of commands) {
+                        console.log(`[MessagesScreen] Sending batched ${cmd}`);
+                        await onSendCommand(cmd);
+                      }
+                      return true;
+                    })();
+
+                if (!applied) {
+                  toast.error('Failed to write field data', { id: 'prompt-save' });
+                  return;
                 }
 
                 // Persist locally so preview and storage stay in sync

@@ -53,11 +53,23 @@ import { useProductionStorage } from '@/hooks/useProductionStorage';
 import { logConsumption } from '@/lib/consumptionTracker';
 import { useFleetTelemetryPush } from '@/hooks/useFleetTelemetryPush';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
+import { isRelayMode, printerTransport } from '@/lib/printerTransport';
 
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
 
 type ScreenType = NavItem | 'network' | 'control' | 'editMessage' | 'consumables' | 'reports' | 'datasource' | 'wirecable' | 'training';
+
+const isTransportCommandFailure = (rawResponse?: string) => {
+  if (!rawResponse) return false;
+  const upper = rawResponse.toUpperCase();
+  return /\?\s*\d+\s*:/.test(upper)
+    || /COMMAND\s+FAILED/.test(upper)
+    || /\bERROR\b/.test(upper)
+    || /\bERR\s*\[\s*\d+\s*\]/.test(upper)
+    || /\bFAILED\b/.test(upper)
+    || /\bCANNOT\b/.test(upper);
+};
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
@@ -711,6 +723,109 @@ const Index = () => {
     sendCommand,
   ]);
 
+  const applyPromptValuesToPrinter = useCallback(async (
+    targetPrinter: Printer | null,
+    message: PrintMessage,
+    commands: string[],
+  ): Promise<boolean> => {
+    if (!targetPrinter) return false;
+
+    const commandsToRun = commands.filter((command) => command.trim().length > 0);
+
+    if (targetPrinter.id === connectionState.connectedPrinter?.id) {
+      setPollingPaused(true);
+      try {
+        const pollingIdle = await waitForPollingIdle();
+        if (!pollingIdle) {
+          console.warn('[PromptWrite] Connected printer is still busy');
+          return false;
+        }
+
+        const selected = await selectMessage(message);
+        if (!selected) return false;
+        if (commandsToRun.length === 0) return true;
+
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        for (const command of commandsToRun) {
+          console.log(`[PromptWrite] Sending to connected printer: ${command}`);
+          const result = await sendCommand(command);
+          if (!result.success || isTransportCommandFailure(result.response)) {
+            console.error(`[PromptWrite] Connected printer rejected "${command}":`, result.response);
+            return false;
+          }
+        }
+
+        return true;
+      } finally {
+        setPollingPaused(false);
+      }
+    }
+
+    if (!window.electronAPI && !isRelayMode()) {
+      const selected = await sendCommandToPrinter(targetPrinter, `^SM ${message.name}`);
+      if (!selected) return false;
+      updatePrinter(targetPrinter.id, { currentMessage: message.name });
+      if (commandsToRun.length === 0) return true;
+
+      await new Promise(resolve => setTimeout(resolve, 300));
+      for (const command of commandsToRun) {
+        console.log(`[PromptWrite] Sending via fallback transport: ${command}`);
+        const ok = await sendCommandToPrinter(targetPrinter, command);
+        if (!ok) return false;
+      }
+
+      return true;
+    }
+
+    const printerConfig = {
+      id: targetPrinter.id,
+      ipAddress: targetPrinter.ipAddress,
+      port: targetPrinter.port,
+    };
+
+    try {
+      const connectResult = await printerTransport.connect(printerConfig);
+      if (!connectResult?.success) {
+        console.error('[PromptWrite] Failed to connect prompt target:', connectResult?.error);
+        return false;
+      }
+
+      const selectResult = await printerTransport.sendCommand(targetPrinter.id, `^SM ${message.name}`);
+      const selectResponse = selectResult?.response ?? selectResult?.error ?? '';
+      if (!selectResult?.success || isTransportCommandFailure(selectResponse)) {
+        console.error('[PromptWrite] Prompt target rejected ^SM:', selectResponse);
+        return false;
+      }
+
+      updatePrinter(targetPrinter.id, { currentMessage: message.name });
+      if (commandsToRun.length === 0) return true;
+
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      for (const command of commandsToRun) {
+        console.log(`[PromptWrite] Sending in shared session: ${command}`);
+        const result = await printerTransport.sendCommand(targetPrinter.id, command);
+        const response = result?.response ?? result?.error ?? '';
+        if (!result?.success || isTransportCommandFailure(response)) {
+          console.error(`[PromptWrite] Prompt target rejected "${command}":`, response);
+          return false;
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[PromptWrite] Failed to apply prompted values:', error);
+      return false;
+    } finally {
+      try {
+        await printerTransport.disconnect(targetPrinter.id);
+      } catch (error) {
+        console.warn('[PromptWrite] Failed to close prompt session:', error);
+      }
+    }
+  }, [connectionState.connectedPrinter?.id, selectMessage, sendCommand, sendCommandToPrinter, updatePrinter]);
+
   // Delay alerts on startup so update notification can appear first
   const [lowStockAlertQueue, setLowStockAlertQueue] = useState<LowStockAlertData[]>([]);
 
@@ -1052,6 +1167,7 @@ const Index = () => {
               await sendCommandToPrinter(messageTargetPrinter, cmd);
             }
           }}
+          onApplyPromptValues={(message, commands) => applyPromptValuesToPrinter(messageTargetPrinter, message, commands)}
           onGetStoredMessage={getMessage}
           onSaveMessageContent={isConnectedMessageTarget ? saveMessageContent : undefined}
           onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details))}
@@ -1262,6 +1378,7 @@ const Index = () => {
                 await sendCommandToPrinter(target, cmd);
               }
             }}
+            onApplyPromptValues={(message, commands) => applyPromptValuesToPrinter(selectedPrinter ?? connectionState.connectedPrinter ?? null, message, commands)}
             onGetStoredMessage={getMessage}
             onSaveMessageContent={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id === connectionState.connectedPrinter?.id ? saveMessageContent : undefined}
             onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details))}
