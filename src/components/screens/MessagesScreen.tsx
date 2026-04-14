@@ -41,8 +41,8 @@ interface MessagesScreenProps {
   onFetchMessageDetails?: (name: string) => Promise<MessageDetails | null>;
   /** Send a raw command to the connected printer */
   onSendCommand?: (command: string) => Promise<any>;
-  /** Select the message and write prompted values in one printer session */
-  onApplyPromptValues?: (message: PrintMessage, commands: string[]) => Promise<boolean>;
+  /** Select the message and write prompted values via full message rewrite */
+  onApplyPromptValues?: (message: PrintMessage, updatedDetails: MessageDetails) => Promise<boolean>;
   /** Get locally stored message details (includes promptBeforePrint metadata) */
   onGetStoredMessage?: (name: string) => MessageDetails | null;
   /** Save message content to printer (^DM + ^NM + ^SV) — used to write prompted field values */
@@ -382,12 +382,8 @@ export function MessagesScreen({
         prompts={userDefinePrompts}
         onConfirm={async (entries) => {
           if (pendingMessageDetails && selectedMessage) {
-            // Prompted text fields: update values in-place using the lightweight
-            // ^MD^TDn;value command instead of the heavy ^DM/^NM/^SV rewrite
-            // cycle which can lock up printer firmware.
             // Update prompted field data with entered values so the canvas
             // displays the actual characters instead of "XXX" placeholders.
-            // Non-prompted fields (e.g. "PA108") keep their original data.
             const updatedDetails = {
               ...pendingMessageDetails,
               fields: pendingMessageDetails.fields.map(f => {
@@ -398,58 +394,26 @@ export function MessagesScreen({
               }),
             };
 
-            if (onApplyPromptValues || onSendCommand) {
+            if (onApplyPromptValues) {
               try {
                 toast.loading('Writing field data to printer...', { id: 'prompt-save' });
 
-                // Build a single ^MD command with all ^TD subcommands batched
-                // together.  Per §5.28.2 the printer expects ONE ^MD with
-                // concatenated ^TDn;value entries — sending separate ^MD per
-                // field resets the modify context and leaves fields unchanged.
-                // ^TDn uses 1-indexed absolute field position across ALL types.
-                const tdParts: string[] = [];
-                for (let i = 0; i < pendingMessageDetails.fields.length; i++) {
-                  const field = pendingMessageDetails.fields[i];
-                  const fieldNum = i + 1;
-                  if (entries[field.id] !== undefined) {
-                    const value = entries[field.id].trim();
-                    if (value) {
-                      tdParts.push(`^TD${fieldNum};${value}`);
-                    }
-                  }
-                }
-
-                // Persist locally BEFORE sending printer commands so the
-                // auto-fetch effect (triggered by ^SM changing currentMessage)
-                // sees the recentlySavedRef flag and skips overwriting the
-                // cached metadata (autoCodeExpiryDays, etc.).
-                onSaveStoredMessage?.(updatedDetails);
-                onPromptSaved?.(updatedDetails);
-
-                const commands = tdParts.length > 0 ? [`^MD${tdParts.join('')}`] : [];
-                const applied = onApplyPromptValues
-                  ? await onApplyPromptValues(selectedMessage, commands)
-                  : await (async () => {
-                      const smOk = await onSelect(selectedMessage);
-                      if (!smOk) return false;
-                      if (commands.length === 0 || !onSendCommand) return true;
-
-                      await new Promise(resolve => setTimeout(resolve, 300));
-                      for (const cmd of commands) {
-                        console.log(`[MessagesScreen] Sending batched ${cmd}`);
-                        await onSendCommand(cmd);
-                      }
-                      return true;
-                    })();
+                // Use full message rewrite (^NM + ^SM) to bake the entered
+                // values into the message definition — ^MD^TD is unreliable
+                // on this firmware and silently drops writes.
+                const applied = await onApplyPromptValues(selectedMessage, updatedDetails);
 
                 if (!applied) {
                   toast.error('Failed to write field data', { id: 'prompt-save' });
                   return;
                 }
 
+                // Persist locally so preview and storage stay in sync
+                onSaveStoredMessage?.(updatedDetails);
+                onPromptSaved?.(updatedDetails);
                 toast.success('Message loaded with entered values', { id: 'prompt-save' });
               } catch (e) {
-                console.error('[MessagesScreen] Failed to send ^MD^TD:', e);
+                console.error('[MessagesScreen] Failed to write prompt values:', e);
                 toast.error('Failed to write field data', { id: 'prompt-save' });
               }
             } else {
