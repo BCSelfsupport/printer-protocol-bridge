@@ -1415,7 +1415,16 @@ const Index = () => {
         onNavigate={handleNavigate}
         onTurnOff={handleTurnOff}
         onSyncMaster={syncMaster}
-        onBroadcastMessage={broadcastMessage}
+        onBroadcastMessage={async (masterId, messageName, slaveValues) => {
+          // Compute the absolute field number for the prompted field
+          const stored = getMessage(messageName);
+          let userDefineFieldNum: number | undefined;
+          if (stored) {
+            const idx = stored.fields.findIndex(f => f.promptBeforePrint);
+            if (idx >= 0) userDefineFieldNum = idx + 1; // 1-indexed
+          }
+          await broadcastMessage(masterId, messageName, slaveValues, userDefineFieldNum);
+        }}
         getSlavesForMaster={getSlavesForMaster}
         connectedMessages={connectionState.messages}
         rightPanelContent={getRightPanelContent()}
@@ -1792,22 +1801,22 @@ const Index = () => {
         prompts={expiryPrompts}
         onConfirm={async (entries) => {
           if (expiryPromptDetails && expiryPromptMessageName) {
-            // Send ^MD^TD commands for each prompted field
-            let textFieldIndex = 0;
-            for (const field of expiryPromptDetails.fields) {
-              if (field.type === 'text') {
-                textFieldIndex++;
-                if (entries[field.id] !== undefined) {
-                  const value = entries[field.id].trim();
-                  if (value) {
-                    const cmd = `^MD^TD${textFieldIndex};${value}`;
-                    console.log(`[ExpiryPrompt] Sending ${cmd} for field "${field.promptLabel || field.id}"`);
-                    try {
-                      await sendCommand(cmd);
-                      await new Promise(resolve => setTimeout(resolve, 200));
-                    } catch (e) {
-                      console.error('[ExpiryPrompt] Failed to send ^MD^TD:', e);
-                    }
+            // Send ^MD^TD commands for each prompted field.
+            // ^TDn uses the absolute field number (1-indexed position in the
+            // ^NM definition), counting ALL field types — not just text.
+            for (let i = 0; i < expiryPromptDetails.fields.length; i++) {
+              const field = expiryPromptDetails.fields[i];
+              const fieldNum = i + 1;
+              if (entries[field.id] !== undefined) {
+                const value = entries[field.id].trim();
+                if (value) {
+                  const cmd = `^MD^TD${fieldNum};${value}`;
+                  console.log(`[ExpiryPrompt] Sending ${cmd} for field "${field.promptLabel || field.id}"`);
+                  try {
+                    await sendCommand(cmd);
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                  } catch (e) {
+                    console.error('[ExpiryPrompt] Failed to send ^MD^TD:', e);
                   }
                 }
               }
