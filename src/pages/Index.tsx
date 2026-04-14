@@ -548,7 +548,7 @@ const Index = () => {
     const runCommand = async (command: string) => {
       if (targetPrinter.id === connectionState.connectedPrinter?.id) {
         const result = await sendCommand(command);
-        const response = result?.response ?? result?.error ?? '';
+        const response = result?.response ?? '';
         return { success: !!result?.success && !isTransportCommandFailure(response) };
       }
 
@@ -1956,7 +1956,7 @@ const Index = () => {
                   updatePrinter(expiryPromptTargetPrinter.id, { currentMessage: expiryPromptMessageName });
                 } else {
                   const result = await sendCommand(cmd);
-                  if (!result?.success || isTransportCommandFailure(result?.response ?? result?.error ?? '')) {
+                  if (!result?.success || isTransportCommandFailure(result?.response ?? '')) {
                     toast.error('Failed to write field data to printer');
                     return;
                   }
