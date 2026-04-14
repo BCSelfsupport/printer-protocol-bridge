@@ -46,6 +46,7 @@ interface DashboardProps {
   selectedPrinterId?: number;
   streamHours?: string;
   selectedPrinterLineId?: string;
+  printerExpiryOffset?: number;
 }
 
 export function Dashboard({

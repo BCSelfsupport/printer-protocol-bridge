@@ -1359,6 +1359,7 @@ const Index = () => {
             printerModel={connectionState.status?.printerModel}
             printerVariant={connectionState.status?.printerVariant}
             selectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
+            printerExpiryOffset={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.expiryOffsetDays : undefined}
           />
         );
       case 'editMessage':
