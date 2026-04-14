@@ -1828,6 +1828,17 @@ const Index = () => {
                 }
               }
             }
+            // Update local storage so canvas shows entered values instead of "XXX"
+            const updatedDetails = {
+              ...expiryPromptDetails,
+              fields: expiryPromptDetails.fields.map(f => {
+                if (f.promptBeforePrint && entries[f.id] !== undefined) {
+                  return { ...f, data: entries[f.id].trim() || f.data };
+                }
+                return f;
+              }),
+            };
+            saveMessage(updatedDetails);
             toast.success('Message updated with entered values');
           }
           setExpiryPromptOpen(false);
