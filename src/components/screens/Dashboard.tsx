@@ -699,7 +699,9 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, selectedPr
           // (i.e., they have autoCodeExpiryDays set). Manufacturing date fields (doy, julian, etc.)
           // should always show today's date.
           const fieldHasExpiry = field.autoCodeExpiryDays != null && field.autoCodeExpiryDays > 0;
-          const effectiveExpiry = fieldHasExpiry ? field.autoCodeExpiryDays : undefined;
+          const effectiveExpiry = fieldHasExpiry
+            ? (printerExpiryOffset !== undefined ? printerExpiryOffset : field.autoCodeExpiryDays)
+            : undefined;
           const computed = computeAutoCodeValue(
             liveAutoCode.autoCodeFieldType,
             liveAutoCode.autoCodeFormat,
