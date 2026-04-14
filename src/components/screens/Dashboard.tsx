@@ -45,7 +45,6 @@ interface DashboardProps {
   // Filter gauge props
   selectedPrinterId?: number;
   streamHours?: string;
-  printerExpiryOffsetDays?: number;
   selectedPrinterLineId?: string;
 }
 
@@ -75,7 +74,6 @@ export function Dashboard({
   onHome,
   selectedPrinterId,
   streamHours,
-  printerExpiryOffsetDays,
   selectedPrinterLineId,
   printerModel,
   printerVariant,
@@ -364,7 +362,6 @@ export function Dashboard({
           message={status?.currentMessage}
           printerTime={status?.printerTime}
           messageContent={messageContent}
-          printerExpiryOffsetDays={printerExpiryOffsetDays}
           selectedPrinterLineId={selectedPrinterLineId}
         />
       </div>
@@ -443,7 +440,6 @@ interface MessagePreviewCanvasProps {
   message?: string;
   printerTime?: Date;
   messageContent?: MessageDetails;
-  printerExpiryOffsetDays?: number;
   selectedPrinterLineId?: string;
 }
 
@@ -527,7 +523,7 @@ function inferFetchedAutoCode(field: MessageField): { autoCodeFieldType: string;
   return null;
 }
 
-function MessagePreviewCanvas({ message, printerTime, messageContent, printerExpiryOffsetDays, selectedPrinterLineId }: MessagePreviewCanvasProps) {
+function MessagePreviewCanvas({ message, printerTime, messageContent, selectedPrinterLineId }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dotSize, setDotSize] = useState<number>(DOT_SIZE_DESKTOP);
   const [zoomIndex, setZoomIndex] = useState(2); // Default to 2x zoom
@@ -699,11 +695,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, printerExp
           // (i.e., they have autoCodeExpiryDays set). Manufacturing date fields (doy, julian, etc.)
           // should always show today's date.
           const fieldHasExpiry = field.autoCodeExpiryDays != null && field.autoCodeExpiryDays > 0;
-          const effectiveExpiry = fieldHasExpiry
-            ? (printerExpiryOffsetDays != null && printerExpiryOffsetDays > 0
-                ? printerExpiryOffsetDays
-                : field.autoCodeExpiryDays)
-            : undefined;
+          const effectiveExpiry = fieldHasExpiry ? field.autoCodeExpiryDays : undefined;
           const computed = computeAutoCodeValue(
             liveAutoCode.autoCodeFieldType,
             liveAutoCode.autoCodeFormat,
@@ -768,7 +760,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, printerExp
     ctx.font = '16px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('No message selected', width / 2, height / 2 + 5);
-  }, [message, tickingTime, messageContent, renderWidth, effectiveDotSize, barcodeImages, printerExpiryOffsetDays, selectedPrinterLineId]);
+  }, [message, tickingTime, messageContent, renderWidth, effectiveDotSize, barcodeImages, selectedPrinterLineId]);
 
   const canvasHeight = (TOTAL_ROWS + PREVIEW_BOTTOM_PADDING_ROWS) * effectiveDotSize + 1;
 
