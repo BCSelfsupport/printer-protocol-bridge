@@ -123,6 +123,7 @@ function SortablePrinterItem({
   masterMessage,
   onExpiryChange,
   isUpdatingExpiry,
+  messageExpiryDays,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -144,6 +145,7 @@ function SortablePrinterItem({
   masterMessage?: string;
   onExpiryChange?: (printerId: number, days: number) => void;
   isUpdatingExpiry?: boolean;
+  messageExpiryDays?: number;
 }) {
   const {
     attributes,
@@ -194,6 +196,7 @@ function SortablePrinterItem({
         masterMessage={masterMessage}
         onExpiryChange={onExpiryChange}
         isUpdatingExpiry={isUpdatingExpiry}
+        messageExpiryDays={messageExpiryDays}
       />
     </div>
   );
@@ -556,7 +559,13 @@ export function PrintersScreen({
                   items={visiblePrinters.map(p => p.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  {visiblePrinters.map((printer) => (
+                  {visiblePrinters.map((printer) => {
+                    // Compute original message expiry days from cached content
+                    const msgName = printer.currentMessage || masterMessageMap.get(printer.id);
+                    const msgContent = msgName && getMessageContent ? getMessageContent(msgName, printer.id) : null;
+                    const msgExpiry = msgContent?.fields?.find(f => f.type === 'date' && (f.autoCodeExpiryDays ?? 0) > 0)?.autoCodeExpiryDays;
+
+                    return (
                     <SortablePrinterItem
                       key={printer.id}
                       printer={printer}
@@ -589,8 +598,10 @@ export function PrintersScreen({
                         }
                       } : undefined}
                       isUpdatingExpiry={updatingExpiryPrinterId === printer.id}
+                      messageExpiryDays={msgExpiry}
                     />
-                  ))}
+                    );
+                  })}
                 </SortableContext>
               </DndContext>
             )}

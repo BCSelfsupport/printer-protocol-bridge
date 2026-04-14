@@ -45,6 +45,8 @@ interface PrinterListItemProps {
   onExpiryChange?: (printerId: number, days: number) => void;
   /** Whether an expiry update is in progress for this printer */
   isUpdatingExpiry?: boolean;
+  /** Original expiry days from the message definition (fallback when no per-printer override) */
+  messageExpiryDays?: number;
 }
 
 // Helper to get color for fluid levels
@@ -82,6 +84,7 @@ export function PrinterListItem({
   masterMessage,
   onExpiryChange,
   isUpdatingExpiry = false,
+  messageExpiryDays,
 }: PrinterListItemProps) {
   const [editingExpiry, setEditingExpiry] = useState(false);
   const [expiryInput, setExpiryInput] = useState('');
@@ -101,7 +104,7 @@ export function PrinterListItem({
 
   // Expiry offset badge - only show for printers in a sync group
   const showExpiryBadge = syncGroupIndex !== undefined && syncGroupIndex >= 0 && onExpiryChange && printer.isAvailable;
-  const currentOffset = printer.expiryOffsetDays ?? 0;
+  const currentOffset = printer.expiryOffsetDays ?? messageExpiryDays ?? 0;
 
   const handleExpiryBadgeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
