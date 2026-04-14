@@ -196,6 +196,7 @@ function SortablePrinterItem({
         masterMessage={masterMessage}
         onExpiryChange={onExpiryChange}
         isUpdatingExpiry={isUpdatingExpiry}
+        messageExpiryDays={messageExpiryDays}
       />
     </div>
   );
