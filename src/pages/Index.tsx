@@ -1309,10 +1309,7 @@ const Index = () => {
             streamHours={connectionState.metrics?.streamHours}
             printerModel={connectionState.status?.printerModel}
             printerVariant={connectionState.status?.printerVariant}
-            printerExpiryOffsetDays={connectionState.connectedPrinter
-              ? (printers.find(p => p.id === connectionState.connectedPrinter?.id)?.expiryOffsetDays
-                  ?? connectionState.connectedPrinter.expiryOffsetDays)
-              : undefined}
+            selectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
             selectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
           />
         );
