@@ -99,12 +99,7 @@ const Index = () => {
   const [slaveBlockDialogOpen, setSlaveBlockDialogOpen] = useState(false);
   const [slaveBlockPrinterName, setSlaveBlockPrinterName] = useState('');
   
-  // Post-expiry user-define prompt state
-  const [expiryPromptOpen, setExpiryPromptOpen] = useState(false);
-  const [expiryPrompts, setExpiryPrompts] = useState<UserDefinePrompt[]>([]);
-  const [expiryPromptDetails, setExpiryPromptDetails] = useState<MessageDetails | null>(null);
-  const [expiryPromptMessageName, setExpiryPromptMessageName] = useState<string | null>(null);
-  const [expiryPromptTargetPrinter, setExpiryPromptTargetPrinter] = useState<Printer | null>(null);
+  
   
   // Local message storage (persists to localStorage, scoped by printer ID)
   const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId } = useMessageStorage();
@@ -182,22 +177,7 @@ const Index = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectedPrinterId]);
 
-  // Clear per-printer expiry overrides when the selected message changes.
-  // The printer card should always default to the message's autoCodeExpiryDays;
-  // per-printer overrides are only meaningful while the same message is active.
-  const prevMessageRef = useRef<string | null>(null);
-  useEffect(() => {
-    const currentMsg = connectionState.status?.currentMessage ?? null;
-    if (prevMessageRef.current !== null && currentMsg !== null && currentMsg !== prevMessageRef.current) {
-      // Message changed — clear expiryOffsetDays on all printers
-      printers.forEach(p => {
-        if (p.expiryOffsetDays != null) {
-          updatePrinter(p.id, { expiryOffsetDays: undefined });
-        }
-      });
-    }
-    prevMessageRef.current = currentMsg;
-  }, [connectionState.status?.currentMessage]);
+  
   // eslint-disable-next-line react-hooks/exhaustive-deps
 
   // Auto-sync: fetch message content from printer for any messages not yet in localStorage.
