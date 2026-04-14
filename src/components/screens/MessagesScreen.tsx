@@ -409,23 +409,26 @@ export function MessagesScreen({
                 // Brief delay after ^SM before sending ^MD
                 await new Promise(resolve => setTimeout(resolve, 300));
 
-                // ^TDn targets the nth field by its absolute position in the
-                // ^NM definition (1-indexed), counting ALL field types — not
-                // just text fields.  Autocode (date/time), counter, barcode,
-                // and logo fields all occupy a slot in the numbering.
+                // Build a single ^MD command with all ^TD subcommands batched
+                // together.  Per §5.28.2 the printer expects ONE ^MD with
+                // concatenated ^TDn;value entries — sending separate ^MD per
+                // field resets the modify context and leaves fields unchanged.
+                // ^TDn uses 1-indexed absolute field position across ALL types.
+                const tdParts: string[] = [];
                 for (let i = 0; i < pendingMessageDetails.fields.length; i++) {
                   const field = pendingMessageDetails.fields[i];
-                  const fieldNum = i + 1; // 1-indexed absolute field number
+                  const fieldNum = i + 1;
                   if (entries[field.id] !== undefined) {
                     const value = entries[field.id].trim();
                     if (value) {
-                      const cmd = `^MD^TD${fieldNum};${value}`;
-                      console.log(`[MessagesScreen] Sending ${cmd} for field "${field.promptLabel || field.id}"`);
-                      await onSendCommand(cmd);
-                      // Small delay between ^MD commands
-                      await new Promise(resolve => setTimeout(resolve, 200));
+                      tdParts.push(`^TD${fieldNum};${value}`);
                     }
                   }
+                }
+                if (tdParts.length > 0) {
+                  const cmd = `^MD${tdParts.join('')}`;
+                  console.log(`[MessagesScreen] Sending batched ${cmd}`);
+                  await onSendCommand(cmd);
                 }
 
                 // Persist locally so preview and storage stay in sync
