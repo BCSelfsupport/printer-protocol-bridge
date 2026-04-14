@@ -335,19 +335,6 @@ export function PrintersScreen({
     };
   }, [selectedPrinter, status]);
 
-  const effectivePreviewExpiryOffsetDays = useMemo(() => {
-    if (selectedPrinter) {
-      return selectedPrinter.expiryOffsetDays;
-    }
-
-    if (!connectedPrinter) {
-      return undefined;
-    }
-
-    return printers.find(p => p.id === connectedPrinter.id)?.expiryOffsetDays
-      ?? connectedPrinter.expiryOffsetDays;
-  }, [selectedPrinter, connectedPrinter, printers]);
-
   // Build a map: slavePrinterId -> master's currentMessage
   const masterMessageMap = useMemo(() => {
     const map = new Map<number, string>();
