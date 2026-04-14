@@ -763,6 +763,14 @@ const Index = () => {
     sendCommand,
   ]);
 
+  const clearAllExpiryOverrides = useCallback(() => {
+    printers.forEach((printer) => {
+      if (printer.expiryOffsetDays !== undefined) {
+        updatePrinter(printer.id, { expiryOffsetDays: undefined });
+      }
+    });
+  }, [printers, updatePrinter]);
+
   const applyPromptValuesToPrinter = useCallback(async (
     targetPrinter: Printer | null,
     message: PrintMessage,
@@ -796,7 +804,11 @@ const Index = () => {
           return false;
         }
 
-        return await selectMessage(message);
+        const selected = await selectMessage(message);
+        if (selected) {
+          clearAllExpiryOverrides();
+        }
+        return selected;
       } finally {
         setPollingPaused(false);
       }
@@ -816,9 +828,10 @@ const Index = () => {
     const ok = await sendCommandToPrinter(targetPrinter, `^SM ${message.name}`);
     if (ok) {
       updatePrinter(targetPrinter.id, { currentMessage: message.name });
+      clearAllExpiryOverrides();
     }
     return ok;
-  }, [connectionState.connectedPrinter?.id, replaceMessageWithoutDelete, updatePrinter]);
+  }, [clearAllExpiryOverrides, connectionState.connectedPrinter?.id, replaceMessageWithoutDelete, selectMessage, sendCommandToPrinter, updatePrinter]);
 
   // Per-printer expiry offset change — uses switch-away flow to rewrite ^NM with new ^AE offset
   const handleExpiryOffsetChange = useCallback(async (printerId: number, newDays: number) => {
@@ -1217,10 +1230,15 @@ const Index = () => {
               setSlaveBlockDialogOpen(true);
               return false;
             }
-            if (isConnectedMessageTarget) return await selectMessage(message);
+            if (isConnectedMessageTarget) {
+              const ok = await selectMessage(message);
+              if (ok) clearAllExpiryOverrides();
+              return ok;
+            }
             const ok = await sendCommandToPrinter(messageTargetPrinter, `^SM ${message.name}`);
             if (ok) {
               updatePrinter(messageTargetPrinter.id, { currentMessage: message.name });
+              clearAllExpiryOverrides();
             }
             return ok;
           }}
@@ -1424,10 +1442,15 @@ const Index = () => {
                 setSlaveBlockDialogOpen(true);
                 return false;
               }
-              if (messageTargetPrinter.id === connectionState.connectedPrinter?.id) return await selectMessage(message);
+              if (messageTargetPrinter.id === connectionState.connectedPrinter?.id) {
+                const ok = await selectMessage(message);
+                if (ok) clearAllExpiryOverrides();
+                return ok;
+              }
               const ok = await sendCommandToPrinter(messageTargetPrinter, `^SM ${message.name}`);
               if (ok) {
                 updatePrinter(messageTargetPrinter.id, { currentMessage: message.name });
+                clearAllExpiryOverrides();
               }
               return ok;
             }}
