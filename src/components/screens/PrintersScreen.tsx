@@ -123,6 +123,7 @@ function SortablePrinterItem({
   masterMessage,
   onExpiryChange,
   isUpdatingExpiry,
+  messageExpiryDays,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -144,6 +145,7 @@ function SortablePrinterItem({
   masterMessage?: string;
   onExpiryChange?: (printerId: number, days: number) => void;
   isUpdatingExpiry?: boolean;
+  messageExpiryDays?: number;
 }) {
   const {
     attributes,
