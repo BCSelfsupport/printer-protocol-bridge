@@ -121,6 +121,8 @@ function SortablePrinterItem({
   onBroadcast,
   streamHours,
   masterMessage,
+  onExpiryChange,
+  isUpdatingExpiry,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -140,6 +142,8 @@ function SortablePrinterItem({
   onBroadcast?: () => void;
   streamHours?: string;
   masterMessage?: string;
+  onExpiryChange?: (printerId: number, days: number) => void;
+  isUpdatingExpiry?: boolean;
 }) {
   const {
     attributes,
@@ -188,6 +192,8 @@ function SortablePrinterItem({
         onBroadcast={onBroadcast}
         streamHours={streamHours}
         masterMessage={masterMessage}
+        onExpiryChange={onExpiryChange}
+        isUpdatingExpiry={isUpdatingExpiry}
       />
     </div>
   );
