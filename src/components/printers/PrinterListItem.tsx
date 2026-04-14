@@ -104,7 +104,7 @@ export function PrinterListItem({
 
   // Expiry offset badge - only show for printers in a sync group
   const showExpiryBadge = syncGroupIndex !== undefined && syncGroupIndex >= 0 && onExpiryChange && printer.isAvailable;
-  const currentOffset = printer.expiryOffsetDays ?? 0;
+  const currentOffset = printer.expiryOffsetDays ?? messageExpiryDays ?? 0;
 
   const handleExpiryBadgeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
