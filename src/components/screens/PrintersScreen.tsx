@@ -580,6 +580,15 @@ export function PrintersScreen({
                       } : undefined}
                       streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
                       masterMessage={masterMessageMap.get(printer.id)}
+                      onExpiryChange={onSlaveExpiryChange ? async (printerId, days) => {
+                        setUpdatingExpiryPrinterId(printerId);
+                        try {
+                          await onSlaveExpiryChange(printerId, days);
+                        } finally {
+                          setUpdatingExpiryPrinterId(null);
+                        }
+                      } : undefined}
+                      isUpdatingExpiry={updatingExpiryPrinterId === printer.id}
                     />
                   ))}
                 </SortableContext>
