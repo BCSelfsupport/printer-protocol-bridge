@@ -45,6 +45,8 @@ interface PrinterListItemProps {
   onExpiryChange?: (printerId: number, days: number) => void;
   /** Whether an expiry update is in progress for this printer */
   isUpdatingExpiry?: boolean;
+  /** Original expiry days from the message definition (fallback when no per-printer override) */
+  messageExpiryDays?: number;
 }
 
 // Helper to get color for fluid levels
