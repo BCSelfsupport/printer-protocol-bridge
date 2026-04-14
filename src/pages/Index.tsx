@@ -1804,28 +1804,31 @@ const Index = () => {
         prompts={expiryPrompts}
         onConfirm={async (entries) => {
           if (expiryPromptDetails && expiryPromptMessageName) {
-            // Send ^MD^TD commands for each prompted field.
-            // ^TDn uses the absolute field number (1-indexed position in the
-            // ^NM definition), counting ALL field types — not just text.
+            // Build a single ^MD with all ^TD subcommands batched together.
+            // Per §5.28.2 the printer expects ONE ^MD — separate ^MD per field
+            // resets the modify context and leaves fields showing XXX.
+            const tdParts: string[] = [];
             for (let i = 0; i < expiryPromptDetails.fields.length; i++) {
               const field = expiryPromptDetails.fields[i];
               const fieldNum = i + 1;
               if (entries[field.id] !== undefined) {
                 const value = entries[field.id].trim();
                 if (value) {
-                  const cmd = `^MD^TD${fieldNum};${value}`;
-                  console.log(`[ExpiryPrompt] Sending ${cmd} for field "${field.promptLabel || field.id}"`);
-                  try {
-                    if (expiryPromptTargetPrinter) {
-                      await sendCommandToPrinter(expiryPromptTargetPrinter, cmd);
-                    } else {
-                      await sendCommand(cmd);
-                    }
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                  } catch (e) {
-                    console.error('[ExpiryPrompt] Failed to send ^MD^TD:', e);
-                  }
+                  tdParts.push(`^TD${fieldNum};${value}`);
                 }
+              }
+            }
+            if (tdParts.length > 0) {
+              const cmd = `^MD${tdParts.join('')}`;
+              console.log(`[ExpiryPrompt] Sending batched ${cmd}`);
+              try {
+                if (expiryPromptTargetPrinter) {
+                  await sendCommandToPrinter(expiryPromptTargetPrinter, cmd);
+                } else {
+                  await sendCommand(cmd);
+                }
+              } catch (e) {
+                console.error('[ExpiryPrompt] Failed to send ^MD^TD:', e);
               }
             }
             // Update local storage so canvas shows entered values instead of "XXX"
