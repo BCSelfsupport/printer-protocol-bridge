@@ -92,6 +92,7 @@ const Index = () => {
   const [expiryPrompts, setExpiryPrompts] = useState<UserDefinePrompt[]>([]);
   const [expiryPromptDetails, setExpiryPromptDetails] = useState<MessageDetails | null>(null);
   const [expiryPromptMessageName, setExpiryPromptMessageName] = useState<string | null>(null);
+  const [expiryPromptTargetPrinter, setExpiryPromptTargetPrinter] = useState<Printer | null>(null);
   
   // Local message storage (persists to localStorage, scoped by printer ID)
   const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId } = useMessageStorage();
