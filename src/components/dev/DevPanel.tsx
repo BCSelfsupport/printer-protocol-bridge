@@ -192,6 +192,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
       const { data, error } = await supabase.functions.invoke('github-build-status');
       if (error) throw error;
       setBuildRuns(data?.runs || []);
+      setDevBuildRuns(data?.devRuns || []);
     } catch (err) {
       console.error('Failed to fetch build status:', err);
     } finally {
@@ -203,17 +204,18 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
     fetchBuildStatus();
   }, []);
 
-  const handleTriggerBuild = async () => {
-    setBuildTriggering(true);
+  const handleTriggerBuild = async (branch: 'dev' | 'main') => {
+    setBuildTriggering(branch);
     setBuildResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke('trigger-build');
+      const { data, error } = await supabase.functions.invoke('trigger-build', {
+        body: { branch },
+      });
       if (error) throw error;
-      setBuildResult({ success: true, message: 'Build triggered! Check GitHub Actions.' });
-      // Auto-refresh build status after a short delay
+      setBuildResult({ success: true, message: data?.message || 'Build triggered!', target: branch });
       setTimeout(() => fetchBuildStatus(), 3000);
     } catch (err: any) {
-      setBuildResult({ success: false, message: err.message || 'Failed to trigger build' });
+      setBuildResult({ success: false, message: err.message || 'Failed to trigger build', target: branch });
     } finally {
       setBuildTriggering(false);
       setTimeout(() => setBuildResult(null), 5000);
