@@ -52,7 +52,6 @@ import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
 import { useProductionStorage } from '@/hooks/useProductionStorage';
 import { logConsumption } from '@/lib/consumptionTracker';
 import { useFleetTelemetryPush } from '@/hooks/useFleetTelemetryPush';
-import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { isRelayMode, printerTransport } from '@/lib/printerTransport';
 
 
@@ -99,12 +98,6 @@ const Index = () => {
   const [slaveBlockDialogOpen, setSlaveBlockDialogOpen] = useState(false);
   const [slaveBlockPrinterName, setSlaveBlockPrinterName] = useState('');
   
-  // Post-expiry user-define prompt state
-  const [expiryPromptOpen, setExpiryPromptOpen] = useState(false);
-  const [expiryPrompts, setExpiryPrompts] = useState<UserDefinePrompt[]>([]);
-  const [expiryPromptDetails, setExpiryPromptDetails] = useState<MessageDetails | null>(null);
-  const [expiryPromptMessageName, setExpiryPromptMessageName] = useState<string | null>(null);
-  const [expiryPromptTargetPrinter, setExpiryPromptTargetPrinter] = useState<Printer | null>(null);
   
   // Local message storage (persists to localStorage, scoped by printer ID)
   const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId } = useMessageStorage();
@@ -548,7 +541,7 @@ const Index = () => {
     const runCommand = async (command: string) => {
       if (targetPrinter.id === connectionState.connectedPrinter?.id) {
         const result = await sendCommand(command);
-        const response = result?.response ?? '';
+        const response = result?.response ?? (result as any)?.error ?? '';
         return { success: !!result?.success && !isTransportCommandFailure(response) };
       }
 
@@ -791,18 +784,14 @@ const Index = () => {
   const applyPromptValuesToPrinter = useCallback(async (
     targetPrinter: Printer | null,
     message: PrintMessage,
-    updatedDetails: MessageDetails,
+    commands: string[],
   ): Promise<boolean> => {
     if (!targetPrinter) return false;
 
-    const isConnected = targetPrinter.id === connectionState.connectedPrinter?.id;
+    const commandsToRun = commands.filter((command) => command.trim().length > 0);
+    const sequence = [`^SM ${message.name}`, ...commandsToRun];
 
-    // Use the same full-rewrite approach that works for date offset changes:
-    // switch away from active message → send ^NM with all field data (including
-    // entered values) → reselect. ^MD^TD is unreliable on this firmware.
-    console.log(`[PromptWrite] Using replaceMessageWithoutDelete for "${message.name}" on ${targetPrinter.name}`);
-
-    if (isConnected) {
+    if (targetPrinter.id === connectionState.connectedPrinter?.id) {
       setPollingPaused(true);
       try {
         const pollingIdle = await waitForPollingIdle();
@@ -810,17 +799,8 @@ const Index = () => {
           console.warn('[PromptWrite] Connected printer is still busy');
           return false;
         }
-
-        const result = await replaceMessageWithoutDelete(targetPrinter, message.name, {
-          fields: updatedDetails.fields,
-          templateValue: updatedDetails.templateValue,
-        });
-
-        if (!result.success) {
-          console.error(`[PromptWrite] replaceMessageWithoutDelete failed: ${result.reason}`);
-          return false;
-        }
-
+        const result = await sendVerifiedCommandSequence(targetPrinter, sequence, 300);
+        if (!result.success) return false;
         updatePrinter(targetPrinter.id, { currentMessage: message.name });
         return true;
       } finally {
@@ -828,20 +808,11 @@ const Index = () => {
       }
     }
 
-    // Non-connected printer: same full rewrite approach
-    const result = await replaceMessageWithoutDelete(targetPrinter, message.name, {
-      fields: updatedDetails.fields,
-      templateValue: updatedDetails.templateValue,
-    });
-
-    if (!result.success) {
-      console.error(`[PromptWrite] replaceMessageWithoutDelete failed on non-connected: ${result.reason}`);
-      return false;
-    }
-
+    const result = await sendVerifiedCommandSequence(targetPrinter, sequence, 300);
+    if (!result.success) return false;
     updatePrinter(targetPrinter.id, { currentMessage: message.name });
     return true;
-  }, [connectionState.connectedPrinter?.id, replaceMessageWithoutDelete, updatePrinter]);
+  }, [connectionState.connectedPrinter?.id, sendVerifiedCommandSequence, updatePrinter]);
 
   // Delay alerts on startup so update notification can appear first
   const [lowStockAlertQueue, setLowStockAlertQueue] = useState<LowStockAlertData[]>([]);
@@ -1184,7 +1155,7 @@ const Index = () => {
               await sendCommandToPrinter(messageTargetPrinter, cmd);
             }
           }}
-          onApplyPromptValues={(message, updatedDetails) => applyPromptValuesToPrinter(messageTargetPrinter, message, updatedDetails)}
+          onApplyPromptValues={(message, commands) => applyPromptValuesToPrinter(messageTargetPrinter, message, commands)}
           onGetStoredMessage={getMessage}
           onSaveMessageContent={isConnectedMessageTarget ? saveMessageContent : undefined}
           onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details))}
@@ -1395,7 +1366,7 @@ const Index = () => {
                 await sendCommandToPrinter(target, cmd);
               }
             }}
-            onApplyPromptValues={(message, updatedDetails) => applyPromptValuesToPrinter(selectedPrinter ?? connectionState.connectedPrinter ?? null, message, updatedDetails)}
+            onApplyPromptValues={(message, commands) => applyPromptValuesToPrinter(selectedPrinter ?? connectionState.connectedPrinter ?? null, message, commands)}
             onGetStoredMessage={getMessage}
             onSaveMessageContent={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id === connectionState.connectedPrinter?.id ? saveMessageContent : undefined}
             onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details))}
@@ -1649,21 +1620,6 @@ const Index = () => {
               toast.success(`${targetPrinter.name}: expiry set to ${days} days`, { id: 'printer-expiry' });
             }
 
-            // After successful replace+reselect, check for prompted fields
-            const updatedStored = getMessage(currentMsg);
-            const promptedFields = updatedStored?.fields.filter(f => f.promptBeforePrint) ?? [];
-            if (promptedFields.length > 0 && updatedStored) {
-              const prompts: UserDefinePrompt[] = promptedFields.map(f => ({
-                fieldId: f.id,
-                label: f.promptLabel || f.data || 'ENTER VALUE',
-                length: f.promptLength || Math.max(f.data?.length || 3, 3),
-              }));
-              setExpiryPromptDetails(updatedStored);
-              setExpiryPromptMessageName(currentMsg);
-              setExpiryPromptTargetPrinter(targetPrinter);
-              setExpiryPrompts(prompts);
-              setExpiryPromptOpen(true);
-            }
           } catch (e) {
             console.error('[ExpiryChange] Failed:', e);
             toast.error(`Failed to update ${targetPrinter.name}`, { id: 'printer-expiry' });
@@ -1933,58 +1889,6 @@ const Index = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Post-expiry user-define prompt dialog */}
-      <UserDefineEntryDialog
-        open={expiryPromptOpen}
-        onOpenChange={(open) => {
-          setExpiryPromptOpen(open);
-          if (!open) {
-            setExpiryPromptDetails(null);
-            setExpiryPromptMessageName(null);
-            setExpiryPromptTargetPrinter(null);
-          }
-        }}
-        prompts={expiryPrompts}
-        onConfirm={async (entries) => {
-          if (expiryPromptDetails && expiryPromptMessageName) {
-            // Update field data with entered values
-            const updatedDetails = {
-              ...expiryPromptDetails,
-              fields: expiryPromptDetails.fields.map(f => {
-                if (f.promptBeforePrint && entries[f.id] !== undefined) {
-                  return { ...f, data: entries[f.id].trim() || f.data };
-                }
-                return f;
-              }),
-            };
-
-            // Use full message rewrite to bake entered values into the message
-            if (expiryPromptTargetPrinter) {
-              try {
-                const result = await replaceMessageWithoutDelete(expiryPromptTargetPrinter, expiryPromptMessageName, {
-                  fields: updatedDetails.fields,
-                  templateValue: updatedDetails.templateValue,
-                });
-                if (!result.success) {
-                  toast.error('Failed to write field data to printer');
-                  return;
-                }
-                updatePrinter(expiryPromptTargetPrinter.id, { currentMessage: expiryPromptMessageName });
-              } catch (e) {
-                console.error('[ExpiryPrompt] Failed to rewrite message:', e);
-                toast.error('Failed to write field data to printer');
-                return;
-              }
-            }
-            saveMessage(updatedDetails);
-            toast.success('Message updated with entered values');
-          }
-          setExpiryPromptOpen(false);
-          setExpiryPromptDetails(null);
-          setExpiryPromptMessageName(null);
-          setExpiryPromptTargetPrinter(null);
-        }}
-      />
     </div>
   );
 };
