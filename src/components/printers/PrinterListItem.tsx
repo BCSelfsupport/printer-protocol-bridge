@@ -247,55 +247,39 @@ export function PrinterListItem({
                 )}
                 {/* Expiry offset badge */}
                 {showExpiryBadge && (
-                  <div className="mt-2" onClick={e => e.stopPropagation()}>
+                  <div className="mt-1" onClick={e => e.stopPropagation()}>
                     {editingExpiry ? (
-                      <div className="bg-slate-900 border border-amber-400/50 rounded-lg p-3 flex items-center gap-3">
-                        <Calendar className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                        <span className="text-sm text-amber-300 font-bold whitespace-nowrap">EXPIRY</span>
-                        <form onSubmit={handleExpirySubmit} className="flex items-center gap-2 flex-1">
-                          <Input
-                            ref={expiryInputRef}
-                            type="number"
-                            min={0}
-                            value={expiryInput}
-                            onChange={e => setExpiryInput(e.target.value)}
-                            onKeyDown={handleExpiryKeyDown}
-                            onFocus={e => e.target.select()}
-                            className="w-20 h-9 text-lg text-center px-2 bg-slate-800 border-amber-400/60 text-white font-bold rounded-md"
-                            disabled={isUpdatingExpiry}
-                          />
-                          <span className="text-sm text-slate-300 font-medium">DAYS</span>
-                        </form>
-                        <button
-                          onClick={() => handleExpirySubmit()}
-                          className="p-1.5 rounded-md bg-success/20 hover:bg-success/30 text-success transition-colors"
-                          title="Confirm"
-                        >
-                          <Check className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={handleExpiryCancel}
-                          className="p-1.5 rounded-md hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-                          title="Cancel"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
+                      <form onSubmit={handleExpirySubmit} className="flex items-center gap-1.5 bg-slate-900 border border-amber-400/50 rounded px-2 py-1">
+                        <Calendar className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                        <Input
+                          ref={expiryInputRef}
+                          type="number"
+                          min={0}
+                          value={expiryInput}
+                          onChange={e => setExpiryInput(e.target.value)}
+                          onKeyDown={handleExpiryKeyDown}
+                          onFocus={e => e.target.select()}
+                          className="w-14 h-6 text-sm text-center px-1 py-0 bg-slate-800 border-amber-400/60 text-white font-bold"
+                          disabled={isUpdatingExpiry}
+                        />
+                        <span className="text-xs text-slate-300">days</span>
+                        <button type="submit" className="p-0.5 text-success hover:text-success/80"><Check className="w-4 h-4" /></button>
+                        <button type="button" onClick={handleExpiryCancel} className="p-0.5 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+                      </form>
                     ) : (
                       <button
                         onClick={handleExpiryBadgeClick}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all w-full ${
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded transition-all ${
                           isUpdatingExpiry
-                            ? 'bg-amber-500/20 text-amber-300 animate-pulse border border-amber-500/30'
+                            ? 'bg-amber-500/20 text-amber-300 animate-pulse'
                             : 'bg-slate-900/80 text-amber-300 hover:bg-slate-800 border border-amber-400/30 hover:border-amber-400/60'
                         }`}
-                        title="Click to change expiry days"
                         disabled={isUpdatingExpiry}
                       >
-                        <Calendar className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                        <Calendar className="w-3.5 h-3.5 text-amber-400" />
                         <span className="text-sm font-bold">{currentOffset}</span>
-                        <span className="text-xs text-amber-300/70 font-medium">DAY EXPIRY</span>
-                        {isUpdatingExpiry && <span className="ml-auto text-xs">updating...</span>}
+                        <span className="text-[11px] text-amber-300/70">day expiry</span>
+                        {isUpdatingExpiry && <span className="ml-1 text-[10px]">...</span>}
                       </button>
                     )}
                   </div>
@@ -461,55 +445,39 @@ export function PrinterListItem({
             </div>
           )}
           {showExpiryBadge && (
-            <div className="mt-2" onClick={e => e.stopPropagation()}>
+            <div className="mt-1" onClick={e => e.stopPropagation()}>
               {editingExpiry ? (
-                <div className="bg-slate-900 border border-amber-400/50 rounded-lg p-3 flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                  <span className="text-sm text-amber-300 font-bold whitespace-nowrap">EXPIRY</span>
-                  <form onSubmit={handleExpirySubmit} className="flex items-center gap-2 flex-1">
-                    <Input
-                      ref={expiryInputRef}
-                      type="number"
-                      min={0}
-                      value={expiryInput}
-                      onChange={e => setExpiryInput(e.target.value)}
-                      onKeyDown={handleExpiryKeyDown}
-                      onFocus={e => e.target.select()}
-                      className="w-20 h-9 text-lg text-center px-2 bg-slate-800 border-amber-400/60 text-white font-bold rounded-md"
-                      disabled={isUpdatingExpiry}
-                    />
-                    <span className="text-sm text-slate-300 font-medium">DAYS</span>
-                  </form>
-                  <button
-                    onClick={() => handleExpirySubmit()}
-                    className="p-1.5 rounded-md bg-success/20 hover:bg-success/30 text-success transition-colors"
-                    title="Confirm"
-                  >
-                    <Check className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={handleExpiryCancel}
-                    className="p-1.5 rounded-md hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
-                    title="Cancel"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
+                <form onSubmit={handleExpirySubmit} className="flex items-center gap-1.5 bg-slate-900 border border-amber-400/50 rounded px-2 py-1">
+                  <Calendar className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                  <Input
+                    ref={expiryInputRef}
+                    type="number"
+                    min={0}
+                    value={expiryInput}
+                    onChange={e => setExpiryInput(e.target.value)}
+                    onKeyDown={handleExpiryKeyDown}
+                    onFocus={e => e.target.select()}
+                    className="w-14 h-6 text-sm text-center px-1 py-0 bg-slate-800 border-amber-400/60 text-white font-bold"
+                    disabled={isUpdatingExpiry}
+                  />
+                  <span className="text-xs text-slate-300">days</span>
+                  <button type="submit" className="p-0.5 text-success hover:text-success/80"><Check className="w-4 h-4" /></button>
+                  <button type="button" onClick={handleExpiryCancel} className="p-0.5 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+                </form>
               ) : (
                 <button
                   onClick={handleExpiryBadgeClick}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all w-full ${
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded transition-all ${
                     isUpdatingExpiry
-                      ? 'bg-amber-500/20 text-amber-300 animate-pulse border border-amber-500/30'
+                      ? 'bg-amber-500/20 text-amber-300 animate-pulse'
                       : 'bg-slate-900/80 text-amber-300 hover:bg-slate-800 border border-amber-400/30 hover:border-amber-400/60'
                   }`}
-                  title="Click to change expiry days"
                   disabled={isUpdatingExpiry}
                 >
-                  <Calendar className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                  <Calendar className="w-3.5 h-3.5 text-amber-400" />
                   <span className="text-sm font-bold">{currentOffset}</span>
-                  <span className="text-xs text-amber-300/70 font-medium">DAY EXPIRY</span>
-                  {isUpdatingExpiry && <span className="ml-auto text-xs">updating...</span>}
+                  <span className="text-[11px] text-amber-300/70">day expiry</span>
+                  {isUpdatingExpiry && <span className="ml-1 text-[10px]">...</span>}
                 </button>
               )}
             </div>
