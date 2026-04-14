@@ -120,10 +120,7 @@ function SortablePrinterItem({
   onSync,
   onBroadcast,
   streamHours,
-  onUpdateExpiryOffset,
-  messageExpiryDays,
   masterMessage,
-  onResetGroupExpiry,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -142,10 +139,7 @@ function SortablePrinterItem({
   onSync?: () => void;
   onBroadcast?: () => void;
   streamHours?: string;
-  onUpdateExpiryOffset?: (printerId: number, days: number) => void;
-  messageExpiryDays?: number | null;
   masterMessage?: string;
-  onResetGroupExpiry?: () => void;
 }) {
   const {
     attributes,
@@ -193,10 +187,7 @@ function SortablePrinterItem({
         onSync={onSync}
         onBroadcast={onBroadcast}
         streamHours={streamHours}
-        onUpdateExpiryOffset={onUpdateExpiryOffset}
-        messageExpiryDays={messageExpiryDays}
         masterMessage={masterMessage}
-        onResetGroupExpiry={onResetGroupExpiry}
       />
     </div>
   );
@@ -356,22 +347,6 @@ export function PrintersScreen({
     return printers.find(p => p.id === connectedPrinter.id)?.expiryOffsetDays
       ?? connectedPrinter.expiryOffsetDays;
   }, [selectedPrinter, connectedPrinter, printers]);
-
-  // Extract the max expiry offset from the currently selected message's fields
-  const messageExpiryDays = useMemo(() => {
-    if (!messageContent?.fields) return null;
-    let maxExpiry = 0;
-    let hasExpiry = false;
-    for (const field of messageContent.fields) {
-      if (field.autoCodeExpiryDays != null && field.autoCodeExpiryDays > 0) {
-        hasExpiry = true;
-        if (field.autoCodeExpiryDays > maxExpiry) {
-          maxExpiry = field.autoCodeExpiryDays;
-        }
-      }
-    }
-    return hasExpiry ? maxExpiry : null;
-  }, [messageContent]);
 
   // Build a map: slavePrinterId -> master's currentMessage
   const masterMessageMap = useMemo(() => {
@@ -610,22 +585,7 @@ export function PrintersScreen({
                         setBroadcastDialogOpen(true);
                       } : undefined}
                       streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
-                      onUpdateExpiryOffset={onUpdatePrinter
-                        ? (id, days) => {
-                            onUpdatePrinter(id, { expiryOffsetDays: days });
-                            // Resend the message with the new expiry to this printer
-                            if (onSlaveExpiryChange) {
-                              onSlaveExpiryChange(id, days);
-                            }
-                          }
-                        : undefined
-                      }
-                      messageExpiryDays={messageExpiryDays}
                       masterMessage={masterMessageMap.get(printer.id)}
-                      onResetGroupExpiry={printer.role === 'master' && onResetGroupExpiry && messageExpiryDays != null
-                        ? () => onResetGroupExpiry(printer.id)
-                        : undefined
-                      }
                     />
                   ))}
                 </SortableContext>
