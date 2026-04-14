@@ -766,7 +766,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, selectedPr
     ctx.font = '16px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('No message selected', width / 2, height / 2 + 5);
-  }, [message, tickingTime, messageContent, renderWidth, effectiveDotSize, barcodeImages, selectedPrinterLineId]);
+  }, [message, tickingTime, messageContent, renderWidth, effectiveDotSize, barcodeImages, selectedPrinterLineId, printerExpiryOffset]);
 
   const canvasHeight = (TOTAL_ROWS + PREVIEW_BOTTOM_PADDING_ROWS) * effectiveDotSize + 1;
 
