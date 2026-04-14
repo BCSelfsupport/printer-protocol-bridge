@@ -20,8 +20,20 @@ serve(async (req) => {
       });
     }
 
+    // Parse branch from request body, default to 'main'
+    let branch = 'main';
+    let workflow = 'build-windows.yml';
+    try {
+      const body = await req.json();
+      if (body.branch === 'dev') {
+        branch = 'dev';
+        workflow = 'build-dev.yml';
+      }
+    } catch {
+      // No body or invalid JSON — use defaults
+    }
+
     const repo = 'BCSelfsupport/printer-protocol-bridge';
-    const workflow = 'build-windows.yml';
 
     const response = await fetch(
       `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`,
@@ -32,12 +44,12 @@ serve(async (req) => {
           'Accept': 'application/vnd.github.v3+json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ref: 'main' }),
+        body: JSON.stringify({ ref: branch }),
       }
     );
 
     if (response.status === 204) {
-      return new Response(JSON.stringify({ success: true, message: 'Build triggered successfully' }), {
+      return new Response(JSON.stringify({ success: true, message: `${branch === 'dev' ? 'Dev test' : 'Production'} build triggered!` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

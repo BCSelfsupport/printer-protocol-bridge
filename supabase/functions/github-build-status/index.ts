@@ -19,42 +19,53 @@ Deno.serve(async (req) => {
     }
 
     const repo = 'BCSelfsupport/printer-protocol-bridge';
-    const workflow = 'build-windows.yml';
 
-    const response = await fetch(
-      `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/runs?per_page=5`,
-      {
-        headers: {
-          'Authorization': `Bearer ${githubPat}`,
-          'Accept': 'application/vnd.github.v3+json',
-        },
-      }
-    );
+    // Fetch both production and dev workflow runs in parallel
+    const [prodResponse, devResponse] = await Promise.all([
+      fetch(
+        `https://api.github.com/repos/${repo}/actions/workflows/build-windows.yml/runs?per_page=5`,
+        {
+          headers: {
+            'Authorization': `Bearer ${githubPat}`,
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        }
+      ),
+      fetch(
+        `https://api.github.com/repos/${repo}/actions/workflows/build-dev.yml/runs?per_page=5`,
+        {
+          headers: {
+            'Authorization': `Bearer ${githubPat}`,
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        }
+      ),
+    ]);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('GitHub API error:', response.status, errorText);
-      return new Response(JSON.stringify({ error: 'Failed to fetch build status' }), {
-        status: 502,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const mapRuns = (data: any) =>
+      (data.workflow_runs || []).map((run: any) => ({
+        id: run.id,
+        run_number: run.run_number,
+        status: run.status,
+        conclusion: run.conclusion,
+        created_at: run.created_at,
+        updated_at: run.updated_at,
+        head_branch: run.head_branch,
+        actor: run.actor?.login || 'unknown',
+        html_url: run.html_url,
+      }));
+
+    let prodRuns: any[] = [];
+    let devRuns: any[] = [];
+
+    if (prodResponse.ok) {
+      prodRuns = mapRuns(await prodResponse.json());
+    }
+    if (devResponse.ok) {
+      devRuns = mapRuns(await devResponse.json());
     }
 
-    const data = await response.json();
-    
-    const runs = (data.workflow_runs || []).map((run: any) => ({
-      id: run.id,
-      run_number: run.run_number,
-      status: run.status,
-      conclusion: run.conclusion,
-      created_at: run.created_at,
-      updated_at: run.updated_at,
-      head_branch: run.head_branch,
-      actor: run.actor?.login || 'unknown',
-      html_url: run.html_url,
-    }));
-
-    return new Response(JSON.stringify({ runs }), {
+    return new Response(JSON.stringify({ runs: prodRuns, devRuns }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

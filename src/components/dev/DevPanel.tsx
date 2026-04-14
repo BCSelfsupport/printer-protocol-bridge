@@ -145,9 +145,10 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
   const [manualResponse, setManualResponse] = useState<{ command: string; response: string; timestamp: Date }[]>([]);
   const [manualSending, setManualSending] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [buildTriggering, setBuildTriggering] = useState(false);
-  const [buildResult, setBuildResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [buildTriggering, setBuildTriggering] = useState<'dev' | 'main' | false>(false);
+  const [buildResult, setBuildResult] = useState<{ success: boolean; message: string; target?: string } | null>(null);
   const [buildRuns, setBuildRuns] = useState<any[]>([]);
+  const [devBuildRuns, setDevBuildRuns] = useState<any[]>([]);
   const [buildRunsLoading, setBuildRunsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab || 'status');
 
@@ -191,6 +192,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
       const { data, error } = await supabase.functions.invoke('github-build-status');
       if (error) throw error;
       setBuildRuns(data?.runs || []);
+      setDevBuildRuns(data?.devRuns || []);
     } catch (err) {
       console.error('Failed to fetch build status:', err);
     } finally {
@@ -202,17 +204,18 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
     fetchBuildStatus();
   }, []);
 
-  const handleTriggerBuild = async () => {
-    setBuildTriggering(true);
+  const handleTriggerBuild = async (branch: 'dev' | 'main') => {
+    setBuildTriggering(branch);
     setBuildResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke('trigger-build');
+      const { data, error } = await supabase.functions.invoke('trigger-build', {
+        body: { branch },
+      });
       if (error) throw error;
-      setBuildResult({ success: true, message: 'Build triggered! Check GitHub Actions.' });
-      // Auto-refresh build status after a short delay
+      setBuildResult({ success: true, message: data?.message || 'Build triggered!', target: branch });
       setTimeout(() => fetchBuildStatus(), 3000);
     } catch (err: any) {
-      setBuildResult({ success: false, message: err.message || 'Failed to trigger build' });
+      setBuildResult({ success: false, message: err.message || 'Failed to trigger build', target: branch });
     } finally {
       setBuildTriggering(false);
       setTimeout(() => setBuildResult(null), 5000);
@@ -946,11 +949,14 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
           </Tabs>
 
           {/* Build Status & Push Update Footer */}
-          <div className="p-3 border-t border-border space-y-2">
-            {/* Build Runs */}
-            <div className="bg-muted/50 rounded-lg border border-border p-2">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Build Status</h4>
+          <div className="p-3 border-t border-border space-y-3">
+
+            {/* DEV BUILD SECTION */}
+            <div className="bg-warning/5 rounded-lg border border-warning/30 p-2 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-[10px] font-semibold text-warning uppercase tracking-wider flex items-center gap-1">
+                  🧪 Dev Testing
+                </h4>
                 <button
                   onClick={fetchBuildStatus}
                   disabled={buildRunsLoading}
@@ -960,57 +966,114 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   <RefreshCw className={cn("w-3 h-3 text-muted-foreground", buildRunsLoading && "animate-spin")} />
                 </button>
               </div>
-              {buildRuns.length === 0 && !buildRunsLoading && (
-                <div className="text-[10px] text-muted-foreground text-center py-2">No recent builds</div>
-              )}
-              {buildRunsLoading && buildRuns.length === 0 && (
-                <div className="text-[10px] text-muted-foreground text-center py-2">Loading...</div>
-              )}
-              <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                {buildRuns.map((run) => {
+              <div className="space-y-1 max-h-20 overflow-y-auto">
+                {devBuildRuns.length === 0 && !buildRunsLoading && (
+                  <div className="text-[10px] text-muted-foreground text-center py-1">No dev builds yet</div>
+                )}
+                {devBuildRuns.map((run) => {
                   const isRunning = run.status === 'in_progress' || run.status === 'queued';
                   const isSuccess = run.conclusion === 'success';
                   const isFailed = run.conclusion === 'failure' || run.conclusion === 'cancelled';
-                  const timeAgo = getTimeAgo(run.created_at);
-
                   return (
                     <div key={run.id} className="flex items-center gap-2 text-[10px]">
-                      {isRunning ? (
-                        <Clock className="w-3 h-3 text-warning animate-pulse flex-shrink-0" />
-                      ) : isSuccess ? (
-                        <CheckCircle2 className="w-3 h-3 text-success flex-shrink-0" />
-                      ) : isFailed ? (
-                        <XCircle className="w-3 h-3 text-destructive flex-shrink-0" />
-                      ) : (
-                        <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium text-foreground">#{run.run_number}</span>
-                          <span className={cn(
-                            "px-1 rounded text-[9px] font-medium",
-                            isRunning ? "bg-warning/20 text-warning" :
-                            isSuccess ? "bg-success/20 text-success" :
-                            isFailed ? "bg-destructive/20 text-destructive" :
-                            "bg-muted text-muted-foreground"
-                          )}>
-                            {isRunning ? run.status : run.conclusion || run.status}
-                          </span>
-                          <span className="text-muted-foreground ml-auto">{timeAgo}</span>
-                        </div>
-                      </div>
-                      <a 
-                        href={run.html_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="p-0.5 hover:bg-muted rounded"
-                        title="View on GitHub"
-                      >
+                      {isRunning ? <Clock className="w-3 h-3 text-warning animate-pulse flex-shrink-0" /> :
+                       isSuccess ? <CheckCircle2 className="w-3 h-3 text-success flex-shrink-0" /> :
+                       isFailed ? <XCircle className="w-3 h-3 text-destructive flex-shrink-0" /> :
+                       <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
+                      <span className="font-medium text-foreground">#{run.run_number}</span>
+                      <span className={cn("px-1 rounded text-[9px] font-medium",
+                        isRunning ? "bg-warning/20 text-warning" :
+                        isSuccess ? "bg-success/20 text-success" :
+                        isFailed ? "bg-destructive/20 text-destructive" :
+                        "bg-muted text-muted-foreground"
+                      )}>{isRunning ? run.status : run.conclusion || run.status}</span>
+                      <span className="text-muted-foreground ml-auto">{getTimeAgo(run.created_at)}</span>
+                      <a href={run.html_url} target="_blank" rel="noopener noreferrer" className="p-0.5 hover:bg-muted rounded">
                         <ExternalLink className="w-2.5 h-2.5 text-muted-foreground" />
                       </a>
                     </div>
                   );
                 })}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full border-warning/40 text-warning hover:bg-warning/10"
+                onClick={() => handleTriggerBuild('dev')}
+                disabled={!!buildTriggering}
+              >
+                {buildTriggering === 'dev' ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4 mr-2" />
+                )}
+                {buildTriggering === 'dev' ? 'Triggering...' : 'Build Dev Installer'}
+              </Button>
+              {buildResult && buildResult.target === 'dev' && (
+                <div className={cn("text-[10px] text-center py-1 px-2 rounded",
+                  buildResult.success ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
+                )}>{buildResult.message}</div>
+              )}
+              <div className="text-[9px] text-muted-foreground text-center">
+                Builds from <span className="font-mono">dev</span> branch • Download artifact to test
+              </div>
+            </div>
+
+            {/* PRODUCTION BUILD SECTION */}
+            <div className="bg-success/5 rounded-lg border border-success/30 p-2 space-y-2">
+              <h4 className="text-[10px] font-semibold text-success uppercase tracking-wider flex items-center gap-1">
+                🚀 Production Release
+              </h4>
+              <div className="space-y-1 max-h-20 overflow-y-auto">
+                {buildRuns.length === 0 && !buildRunsLoading && (
+                  <div className="text-[10px] text-muted-foreground text-center py-1">No production builds</div>
+                )}
+                {buildRuns.map((run) => {
+                  const isRunning = run.status === 'in_progress' || run.status === 'queued';
+                  const isSuccess = run.conclusion === 'success';
+                  const isFailed = run.conclusion === 'failure' || run.conclusion === 'cancelled';
+                  return (
+                    <div key={run.id} className="flex items-center gap-2 text-[10px]">
+                      {isRunning ? <Clock className="w-3 h-3 text-warning animate-pulse flex-shrink-0" /> :
+                       isSuccess ? <CheckCircle2 className="w-3 h-3 text-success flex-shrink-0" /> :
+                       isFailed ? <XCircle className="w-3 h-3 text-destructive flex-shrink-0" /> :
+                       <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
+                      <span className="font-medium text-foreground">#{run.run_number}</span>
+                      <span className={cn("px-1 rounded text-[9px] font-medium",
+                        isRunning ? "bg-warning/20 text-warning" :
+                        isSuccess ? "bg-success/20 text-success" :
+                        isFailed ? "bg-destructive/20 text-destructive" :
+                        "bg-muted text-muted-foreground"
+                      )}>{isRunning ? run.status : run.conclusion || run.status}</span>
+                      <span className="text-muted-foreground ml-auto">{getTimeAgo(run.created_at)}</span>
+                      <a href={run.html_url} target="_blank" rel="noopener noreferrer" className="p-0.5 hover:bg-muted rounded">
+                        <ExternalLink className="w-2.5 h-2.5 text-muted-foreground" />
+                      </a>
+                    </div>
+                  );
+                })}
+              </div>
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full"
+                onClick={() => handleTriggerBuild('main')}
+                disabled={!!buildTriggering}
+              >
+                {buildTriggering === 'main' ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4 mr-2" />
+                )}
+                {buildTriggering === 'main' ? 'Triggering...' : 'Push Update to Everyone'}
+              </Button>
+              {buildResult && buildResult.target === 'main' && (
+                <div className={cn("text-[10px] text-center py-1 px-2 rounded",
+                  buildResult.success ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
+                )}>{buildResult.message}</div>
+              )}
+              <div className="text-[9px] text-muted-foreground text-center">
+                Publishes to GitHub Releases • Auto-updates all installed apps
               </div>
             </div>
 
@@ -1026,31 +1089,6 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
               )}
             </div>
 
-            <Button
-              variant="default"
-              size="sm"
-              className="w-full"
-              onClick={handleTriggerBuild}
-              disabled={buildTriggering}
-            >
-              {buildTriggering ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Upload className="w-4 h-4 mr-2" />
-              )}
-              {buildTriggering ? 'Triggering...' : 'Push Update'}
-            </Button>
-            {buildResult && (
-              <div className={cn(
-                "text-[10px] text-center py-1 px-2 rounded",
-                buildResult.success ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
-              )}>
-                {buildResult.message}
-              </div>
-            )}
-            <div className="text-[10px] text-muted-foreground text-center">
-              GitHub token status is checked when build actions run.
-            </div>
             <div className="text-[10px] text-muted-foreground text-center">
               Printer Emulator v2.0 • Bestcode Protocol • Dev Mode Only
             </div>
