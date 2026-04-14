@@ -535,6 +535,76 @@ const Index = () => {
     buildMessageCommands,
   });
 
+  const sendVerifiedCommandSequence = useCallback(async (
+    targetPrinter: Printer,
+    commands: string[],
+    delayMs = 300,
+  ): Promise<{ success: boolean; failedIndex: number | null }> => {
+    const commandsToRun = commands.filter((command) => command.trim().length > 0);
+    if (commandsToRun.length === 0) {
+      return { success: true, failedIndex: null };
+    }
+
+    const runCommand = async (command: string) => {
+      if (targetPrinter.id === connectionState.connectedPrinter?.id) {
+        const result = await sendCommand(command);
+        const response = result?.response ?? result?.error ?? '';
+        return { success: !!result?.success && !isTransportCommandFailure(response) };
+      }
+
+      if (!window.electronAPI && !isRelayMode()) {
+        const success = await sendCommandToPrinter(targetPrinter, command);
+        return { success };
+      }
+
+      const result = await printerTransport.sendCommand(targetPrinter.id, command);
+      const response = result?.response ?? result?.error ?? '';
+      return { success: !!result?.success && !isTransportCommandFailure(response) };
+    };
+
+    const needsSharedSession = targetPrinter.id !== connectionState.connectedPrinter?.id && (window.electronAPI || isRelayMode());
+
+    try {
+      if (needsSharedSession) {
+        const connectResult = await printerTransport.connect({
+          id: targetPrinter.id,
+          ipAddress: targetPrinter.ipAddress,
+          port: targetPrinter.port,
+        });
+
+        if (!connectResult?.success) {
+          console.error('[PrinterWrite] Failed to connect:', connectResult?.error);
+          return { success: false, failedIndex: 0 };
+        }
+      }
+
+      for (let index = 0; index < commandsToRun.length; index += 1) {
+        const result = await runCommand(commandsToRun[index]);
+        if (!result.success) {
+          console.error(`[PrinterWrite] Command failed on ${targetPrinter.name}: ${commandsToRun[index]}`);
+          return { success: false, failedIndex: index };
+        }
+
+        if (index < commandsToRun.length - 1 && delayMs > 0) {
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
+
+      return { success: true, failedIndex: null };
+    } catch (error) {
+      console.error('[PrinterWrite] Sequence failed:', error);
+      return { success: false, failedIndex: 0 };
+    } finally {
+      if (needsSharedSession) {
+        try {
+          await printerTransport.disconnect(targetPrinter.id);
+        } catch (error) {
+          console.warn('[PrinterWrite] Failed to close printer session:', error);
+        }
+      }
+    }
+  }, [connectionState.connectedPrinter?.id, sendCommand, sendCommandToPrinter]);
+
   // After saving a message on the master, duplicate the full content to all slaves
   const syncMessageToSlaves = useCallback(async (
     messageName: string,
@@ -598,36 +668,31 @@ const Index = () => {
 
     const normalizedMessageName = messageName.trim().toUpperCase();
     const targetCurrentMessage = targetPrinter.currentMessage?.trim().toUpperCase();
+    const sequence: string[] = [];
+    let switchCommandIndex: number | null = null;
     if (targetCurrentMessage === normalizedMessageName) {
       const fallbackMessage = normalizedMessageName === 'BESTCODE' ? 'BESTCODE AUTO' : 'BESTCODE';
-      const switched = await sendCommandToPrinter(targetPrinter, `^SM ${fallbackMessage}`);
-      if (!switched) {
+      switchCommandIndex = sequence.length;
+      sequence.push(`^SM ${fallbackMessage}`);
+    }
+
+    sequence.push(...commands);
+    const reselectCommandIndex = sequence.length;
+    sequence.push(`^SM ${messageName}`);
+
+    const result = await sendVerifiedCommandSequence(targetPrinter, sequence, 300);
+    if (!result.success) {
+      if (result.failedIndex === switchCommandIndex) {
         return { success: false as const, reason: 'switch' as const };
       }
-      await new Promise(resolve => setTimeout(resolve, 300));
-    }
-
-    let anyFailed = false;
-    for (const cmd of commands) {
-      const ok = await sendCommandToPrinter(targetPrinter, cmd);
-      if (!ok) {
-        anyFailed = true;
-        console.warn(`[ExpiryChange] Command failed on ${targetPrinter.name}: ${cmd.substring(0, 40)}...`);
+      if (result.failedIndex === reselectCommandIndex) {
+        return { success: false as const, reason: 'reselect' as const };
       }
-      await new Promise(resolve => setTimeout(resolve, 250));
-    }
-
-    const reselected = await sendCommandToPrinter(targetPrinter, `^SM ${messageName}`);
-    if (!reselected) {
-      return { success: false as const, reason: 'reselect' as const };
-    }
-
-    if (anyFailed) {
       return { success: false as const, reason: 'command' as const };
     }
 
     return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | null };
-  }, [buildMessageCommands, sendCommandToPrinter]);
+  }, [buildMessageCommands, sendVerifiedCommandSequence]);
 
   const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
     if (!editingMessage) return null;
@@ -731,6 +796,7 @@ const Index = () => {
     if (!targetPrinter) return false;
 
     const commandsToRun = commands.filter((command) => command.trim().length > 0);
+    const sequence = [`^SM ${message.name}`, ...commandsToRun];
 
     if (targetPrinter.id === connectionState.connectedPrinter?.id) {
       setPollingPaused(true);
@@ -740,91 +806,20 @@ const Index = () => {
           console.warn('[PromptWrite] Connected printer is still busy');
           return false;
         }
-
-        const selected = await selectMessage(message);
-        if (!selected) return false;
-        if (commandsToRun.length === 0) return true;
-
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        for (const command of commandsToRun) {
-          console.log(`[PromptWrite] Sending to connected printer: ${command}`);
-          const result = await sendCommand(command);
-          if (!result.success || isTransportCommandFailure(result.response)) {
-            console.error(`[PromptWrite] Connected printer rejected "${command}":`, result.response);
-            return false;
-          }
-        }
-
+        const result = await sendVerifiedCommandSequence(targetPrinter, sequence, 300);
+        if (!result.success) return false;
+        updatePrinter(targetPrinter.id, { currentMessage: message.name });
         return true;
       } finally {
         setPollingPaused(false);
       }
     }
 
-    if (!window.electronAPI && !isRelayMode()) {
-      const selected = await sendCommandToPrinter(targetPrinter, `^SM ${message.name}`);
-      if (!selected) return false;
-      updatePrinter(targetPrinter.id, { currentMessage: message.name });
-      if (commandsToRun.length === 0) return true;
-
-      await new Promise(resolve => setTimeout(resolve, 300));
-      for (const command of commandsToRun) {
-        console.log(`[PromptWrite] Sending via fallback transport: ${command}`);
-        const ok = await sendCommandToPrinter(targetPrinter, command);
-        if (!ok) return false;
-      }
-
-      return true;
-    }
-
-    const printerConfig = {
-      id: targetPrinter.id,
-      ipAddress: targetPrinter.ipAddress,
-      port: targetPrinter.port,
-    };
-
-    try {
-      const connectResult = await printerTransport.connect(printerConfig);
-      if (!connectResult?.success) {
-        console.error('[PromptWrite] Failed to connect prompt target:', connectResult?.error);
-        return false;
-      }
-
-      const selectResult = await printerTransport.sendCommand(targetPrinter.id, `^SM ${message.name}`);
-      const selectResponse = selectResult?.response ?? selectResult?.error ?? '';
-      if (!selectResult?.success || isTransportCommandFailure(selectResponse)) {
-        console.error('[PromptWrite] Prompt target rejected ^SM:', selectResponse);
-        return false;
-      }
-
-      updatePrinter(targetPrinter.id, { currentMessage: message.name });
-      if (commandsToRun.length === 0) return true;
-
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      for (const command of commandsToRun) {
-        console.log(`[PromptWrite] Sending in shared session: ${command}`);
-        const result = await printerTransport.sendCommand(targetPrinter.id, command);
-        const response = result?.response ?? result?.error ?? '';
-        if (!result?.success || isTransportCommandFailure(response)) {
-          console.error(`[PromptWrite] Prompt target rejected "${command}":`, response);
-          return false;
-        }
-      }
-
-      return true;
-    } catch (error) {
-      console.error('[PromptWrite] Failed to apply prompted values:', error);
-      return false;
-    } finally {
-      try {
-        await printerTransport.disconnect(targetPrinter.id);
-      } catch (error) {
-        console.warn('[PromptWrite] Failed to close prompt session:', error);
-      }
-    }
-  }, [connectionState.connectedPrinter?.id, selectMessage, sendCommand, sendCommandToPrinter, updatePrinter]);
+    const result = await sendVerifiedCommandSequence(targetPrinter, sequence, 300);
+    if (!result.success) return false;
+    updatePrinter(targetPrinter.id, { currentMessage: message.name });
+    return true;
+  }, [connectionState.connectedPrinter?.id, sendVerifiedCommandSequence, updatePrinter]);
 
   // Delay alerts on startup so update notification can appear first
   const [lowStockAlertQueue, setLowStockAlertQueue] = useState<LowStockAlertData[]>([]);
@@ -1587,6 +1582,7 @@ const Index = () => {
           if (!targetPrinter) return;
 
           if (!hasExpiryFields) {
+            updatePrinter(targetPrinter.id, { expiryOffsetDays: days });
             toast.success(`${targetPrinter.name}: expiry offset saved (${days} days)`);
             return;
           }
@@ -1627,6 +1623,7 @@ const Index = () => {
             if (!result.success) {
               toast.warning(`${targetPrinter.name}: expiry updated but some commands failed`, { id: 'printer-expiry' });
             } else {
+              updatePrinter(targetPrinter.id, { expiryOffsetDays: days });
               toast.success(`${targetPrinter.name}: expiry set to ${days} days`, { id: 'printer-expiry' });
             }
 
@@ -1688,14 +1685,8 @@ const Index = () => {
             if (rawCommands && rawCommands.length > 0) {
               const commands = rawCommands.filter(cmd => cmd.trim() !== '^SV');
               for (const target of allTargets) {
-                let anyFailed = false;
-                for (const cmd of commands) {
-                  const ok = await sendCommandToPrinter(target, cmd);
-                  if (!ok && !cmd.startsWith('^DM')) anyFailed = true;
-                  await new Promise(resolve => setTimeout(resolve, 250));
-                }
-                await sendCommandToPrinter(target, `^SM ${currentMsg}`);
-                if (anyFailed) {
+                const result = await sendVerifiedCommandSequence(target, [...commands, `^SM ${currentMsg}`], 250);
+                if (!result.success) {
                   console.warn(`[ResetGroupExpiry] Some commands failed on ${target.name}`);
                 }
               }
@@ -1952,13 +1943,28 @@ const Index = () => {
               const cmd = `^MD${tdParts.join('')}`;
               console.log(`[ExpiryPrompt] Sending batched ${cmd}`);
               try {
-                if (expiryPromptTargetPrinter) {
-                  await sendCommandToPrinter(expiryPromptTargetPrinter, cmd);
+                if (expiryPromptTargetPrinter && expiryPromptMessageName) {
+                  const result = await sendVerifiedCommandSequence(
+                    expiryPromptTargetPrinter,
+                    [`^SM ${expiryPromptMessageName}`, cmd],
+                    300,
+                  );
+                  if (!result.success) {
+                    toast.error('Failed to write field data to printer');
+                    return;
+                  }
+                  updatePrinter(expiryPromptTargetPrinter.id, { currentMessage: expiryPromptMessageName });
                 } else {
-                  await sendCommand(cmd);
+                  const result = await sendCommand(cmd);
+                  if (!result?.success || isTransportCommandFailure(result?.response ?? result?.error ?? '')) {
+                    toast.error('Failed to write field data to printer');
+                    return;
+                  }
                 }
               } catch (e) {
                 console.error('[ExpiryPrompt] Failed to send ^MD^TD:', e);
+                toast.error('Failed to write field data to printer');
+                return;
               }
             }
             // Update local storage so canvas shows entered values instead of "XXX"
