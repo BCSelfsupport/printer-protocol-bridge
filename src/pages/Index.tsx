@@ -796,8 +796,7 @@ const Index = () => {
           return false;
         }
 
-        updatePrinter(targetPrinter.id, { currentMessage: message.name });
-        return true;
+        return await selectMessage(message);
       } finally {
         setPollingPaused(false);
       }
