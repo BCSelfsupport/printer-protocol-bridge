@@ -99,12 +99,6 @@ const Index = () => {
   const [slaveBlockDialogOpen, setSlaveBlockDialogOpen] = useState(false);
   const [slaveBlockPrinterName, setSlaveBlockPrinterName] = useState('');
   
-  // Post-expiry user-define prompt state
-  const [expiryPromptOpen, setExpiryPromptOpen] = useState(false);
-  const [expiryPrompts, setExpiryPrompts] = useState<UserDefinePrompt[]>([]);
-  const [expiryPromptDetails, setExpiryPromptDetails] = useState<MessageDetails | null>(null);
-  const [expiryPromptMessageName, setExpiryPromptMessageName] = useState<string | null>(null);
-  const [expiryPromptTargetPrinter, setExpiryPromptTargetPrinter] = useState<Printer | null>(null);
   
   // Local message storage (persists to localStorage, scoped by printer ID)
   const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId } = useMessageStorage();
@@ -1627,21 +1621,6 @@ const Index = () => {
               toast.success(`${targetPrinter.name}: expiry set to ${days} days`, { id: 'printer-expiry' });
             }
 
-            // After successful replace+reselect, check for prompted fields
-            const updatedStored = getMessage(currentMsg);
-            const promptedFields = updatedStored?.fields.filter(f => f.promptBeforePrint) ?? [];
-            if (promptedFields.length > 0 && updatedStored) {
-              const prompts: UserDefinePrompt[] = promptedFields.map(f => ({
-                fieldId: f.id,
-                label: f.promptLabel || f.data || 'ENTER VALUE',
-                length: f.promptLength || Math.max(f.data?.length || 3, 3),
-              }));
-              setExpiryPromptDetails(updatedStored);
-              setExpiryPromptMessageName(currentMsg);
-              setExpiryPromptTargetPrinter(targetPrinter);
-              setExpiryPrompts(prompts);
-              setExpiryPromptOpen(true);
-            }
           } catch (e) {
             console.error('[ExpiryChange] Failed:', e);
             toast.error(`Failed to update ${targetPrinter.name}`, { id: 'printer-expiry' });
@@ -1911,81 +1890,6 @@ const Index = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Post-expiry user-define prompt dialog */}
-      <UserDefineEntryDialog
-        open={expiryPromptOpen}
-        onOpenChange={(open) => {
-          setExpiryPromptOpen(open);
-          if (!open) {
-            setExpiryPromptDetails(null);
-            setExpiryPromptMessageName(null);
-            setExpiryPromptTargetPrinter(null);
-          }
-        }}
-        prompts={expiryPrompts}
-        onConfirm={async (entries) => {
-          if (expiryPromptDetails && expiryPromptMessageName) {
-            // Build a single ^MD with all ^TD subcommands batched together.
-            // Per §5.28.2 the printer expects ONE ^MD — separate ^MD per field
-            // resets the modify context and leaves fields showing XXX.
-            const tdParts: string[] = [];
-            for (let i = 0; i < expiryPromptDetails.fields.length; i++) {
-              const field = expiryPromptDetails.fields[i];
-              const fieldNum = i + 1;
-              if (entries[field.id] !== undefined) {
-                const value = entries[field.id].trim();
-                if (value) {
-                  tdParts.push(`^TD${fieldNum};${value}`);
-                }
-              }
-            }
-            if (tdParts.length > 0) {
-              const cmd = `^MD${tdParts.join('')}`;
-              console.log(`[ExpiryPrompt] Sending batched ${cmd}`);
-              try {
-                if (expiryPromptTargetPrinter && expiryPromptMessageName) {
-                  const result = await sendVerifiedCommandSequence(
-                    expiryPromptTargetPrinter,
-                    [`^SM ${expiryPromptMessageName}`, cmd],
-                    300,
-                  );
-                  if (!result.success) {
-                    toast.error('Failed to write field data to printer');
-                    return;
-                  }
-                  updatePrinter(expiryPromptTargetPrinter.id, { currentMessage: expiryPromptMessageName });
-                } else {
-                  const result = await sendCommand(cmd);
-                  if (!result?.success || isTransportCommandFailure(result?.response ?? result?.error ?? '')) {
-                    toast.error('Failed to write field data to printer');
-                    return;
-                  }
-                }
-              } catch (e) {
-                console.error('[ExpiryPrompt] Failed to send ^MD^TD:', e);
-                toast.error('Failed to write field data to printer');
-                return;
-              }
-            }
-            // Update local storage so canvas shows entered values instead of "XXX"
-            const updatedDetails = {
-              ...expiryPromptDetails,
-              fields: expiryPromptDetails.fields.map(f => {
-                if (f.promptBeforePrint && entries[f.id] !== undefined) {
-                  return { ...f, data: entries[f.id].trim() || f.data };
-                }
-                return f;
-              }),
-            };
-            saveMessage(updatedDetails);
-            toast.success('Message updated with entered values');
-          }
-          setExpiryPromptOpen(false);
-          setExpiryPromptDetails(null);
-          setExpiryPromptMessageName(null);
-          setExpiryPromptTargetPrinter(null);
-        }}
-      />
     </div>
   );
 };
