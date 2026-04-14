@@ -1,8 +1,10 @@
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, Calendar } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 // Color palette for sync groups (left border stripe)
@@ -39,6 +41,10 @@ interface PrinterListItemProps {
   streamHours?: string;
   /** Master's current message name — slaves display this instead of their own */
   masterMessage?: string;
+  /** Callback when expiry offset is changed on this printer */
+  onExpiryChange?: (printerId: number, days: number) => void;
+  /** Whether an expiry update is in progress for this printer */
+  isUpdatingExpiry?: boolean;
 }
 
 // Helper to get color for fluid levels
@@ -74,7 +80,12 @@ export function PrinterListItem({
   onBroadcast,
   streamHours,
   masterMessage,
+  onExpiryChange,
+  isUpdatingExpiry = false,
 }: PrinterListItemProps) {
+  const [editingExpiry, setEditingExpiry] = useState(false);
+  const [expiryInput, setExpiryInput] = useState('');
+  const expiryInputRef = useRef<HTMLInputElement>(null);
   // Prefer the printer's own current message; only fall back to master's message for slaves with no local value
   const displayMessage = printer.currentMessage ?? ((printer.role === 'slave' && masterMessage) ? masterMessage : undefined);
   
@@ -87,7 +98,35 @@ export function PrinterListItem({
     return 'text-success';
   };
   const filterLabel = filterSt ? `${filterSt.hoursRemaining.toFixed(0)}h` : '?';
-  
+
+  // Expiry offset badge - only show for printers in a sync group
+  const showExpiryBadge = syncGroupIndex !== undefined && syncGroupIndex >= 0 && onExpiryChange && printer.isAvailable;
+  const currentOffset = printer.expiryOffsetDays ?? 0;
+
+  const handleExpiryBadgeClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isUpdatingExpiry) return;
+    setExpiryInput(currentOffset.toString());
+    setEditingExpiry(true);
+    setTimeout(() => expiryInputRef.current?.focus(), 50);
+  };
+
+  const handleExpirySubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    const days = parseInt(expiryInput, 10);
+    if (!isNaN(days) && days >= 0 && days !== currentOffset) {
+      onExpiryChange!(printer.id, days);
+    }
+    setEditingExpiry(false);
+  };
+
+  const handleExpiryKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      setEditingExpiry(false);
+    }
+  };
   const groupColor = syncGroupIndex !== undefined && syncGroupIndex >= 0
     ? SYNC_GROUP_COLORS[syncGroupIndex % SYNC_GROUP_COLORS.length]
     : null;
@@ -199,6 +238,44 @@ export function PrinterListItem({
                 {printer.printCount !== undefined && (
                   <div className="ml-6 mt-0.5">
                     PRINTS: <span className="font-semibold">{printer.printCount.toString().padStart(7, '0')}</span>
+                  </div>
+                )}
+                {/* Expiry offset badge */}
+                {showExpiryBadge && (
+                  <div className="ml-6 mt-1" onClick={e => e.stopPropagation()}>
+                    {editingExpiry ? (
+                      <form onSubmit={handleExpirySubmit} className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                        <Input
+                          ref={expiryInputRef}
+                          type="number"
+                          min={0}
+                          value={expiryInput}
+                          onChange={e => setExpiryInput(e.target.value)}
+                          onBlur={() => handleExpirySubmit()}
+                          onKeyDown={handleExpiryKeyDown}
+                          onFocus={e => e.target.select()}
+                          className="w-16 h-5 text-[10px] px-1 py-0 bg-slate-700 border-amber-500/50 text-white"
+                          disabled={isUpdatingExpiry}
+                        />
+                        <span className="text-[10px] text-slate-400">days</span>
+                      </form>
+                    ) : (
+                      <button
+                        onClick={handleExpiryBadgeClick}
+                        className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                          isUpdatingExpiry
+                            ? 'bg-amber-500/20 text-amber-300 animate-pulse'
+                            : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                        }`}
+                        title="Click to change expiry offset"
+                        disabled={isUpdatingExpiry}
+                      >
+                        <Calendar className="w-3 h-3" />
+                        <span className="font-semibold">+{currentOffset}d</span>
+                        {isUpdatingExpiry && <span className="ml-0.5">...</span>}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -359,6 +436,44 @@ export function PrinterListItem({
           {printer.printCount !== undefined && (
             <div className="ml-5 mt-0.5">
               PRINTS: <span className="font-semibold">{printer.printCount.toString().padStart(7, '0')}</span>
+            </div>
+          )}
+          {/* Expiry offset badge */}
+          {showExpiryBadge && (
+            <div className="ml-5 mt-1" onClick={e => e.stopPropagation()}>
+              {editingExpiry ? (
+                <form onSubmit={handleExpirySubmit} className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                  <Input
+                    ref={expiryInputRef}
+                    type="number"
+                    min={0}
+                    value={expiryInput}
+                    onChange={e => setExpiryInput(e.target.value)}
+                    onBlur={() => handleExpirySubmit()}
+                    onKeyDown={handleExpiryKeyDown}
+                    onFocus={e => e.target.select()}
+                    className="w-16 h-5 text-[10px] px-1 py-0 bg-slate-700 border-amber-500/50 text-white"
+                    disabled={isUpdatingExpiry}
+                  />
+                  <span className="text-[10px] text-slate-400">days</span>
+                </form>
+              ) : (
+                <button
+                  onClick={handleExpiryBadgeClick}
+                  className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                    isUpdatingExpiry
+                      ? 'bg-amber-500/20 text-amber-300 animate-pulse'
+                      : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                  }`}
+                  title="Click to change expiry offset"
+                  disabled={isUpdatingExpiry}
+                >
+                  <Calendar className="w-3 h-3" />
+                  <span className="font-semibold">+{currentOffset}d</span>
+                  {isUpdatingExpiry && <span className="ml-0.5">...</span>}
+                </button>
+              )}
             </div>
           )}
         </div>

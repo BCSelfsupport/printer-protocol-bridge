@@ -92,8 +92,8 @@ interface PrintersScreenProps {
   onRefreshNetwork?: () => void;
   /** Whether a network check is in progress */
   isCheckingNetwork?: boolean;
-  /** Called when a slave printer's expiry is changed — resends the message with new expiry */
-  onSlaveExpiryChange?: (printerId: number, days: number) => void;
+  /** Called when a printer's expiry offset is changed — resends the message with new expiry */
+  onSlaveExpiryChange?: (printerId: number, days: number) => Promise<void>;
   onSelectedPrinterChange?: (printer: Printer | null) => void;
   /** Look up stored/hardcoded message content by name for a specific printer */
   getMessageContent?: (name: string, printerId?: number) => MessageDetails | null;
@@ -121,6 +121,8 @@ function SortablePrinterItem({
   onBroadcast,
   streamHours,
   masterMessage,
+  onExpiryChange,
+  isUpdatingExpiry,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -140,6 +142,8 @@ function SortablePrinterItem({
   onBroadcast?: () => void;
   streamHours?: string;
   masterMessage?: string;
+  onExpiryChange?: (printerId: number, days: number) => void;
+  isUpdatingExpiry?: boolean;
 }) {
   const {
     attributes,
@@ -188,6 +192,8 @@ function SortablePrinterItem({
         onBroadcast={onBroadcast}
         streamHours={streamHours}
         masterMessage={masterMessage}
+        onExpiryChange={onExpiryChange}
+        isUpdatingExpiry={isUpdatingExpiry}
       />
     </div>
   );
@@ -255,6 +261,7 @@ export function PrintersScreen({
   const [servicePrinter, setServicePrinter] = useState<Printer | null>(null);
   const [broadcastDialogOpen, setBroadcastDialogOpen] = useState(false);
   const [broadcastMaster, setBroadcastMaster] = useState<Printer | null>(null);
+  const [updatingExpiryPrinterId, setUpdatingExpiryPrinterId] = useState<number | null>(null);
   const [devTaps, setDevTaps] = useState<number[]>([]);
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
@@ -573,6 +580,15 @@ export function PrintersScreen({
                       } : undefined}
                       streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
                       masterMessage={masterMessageMap.get(printer.id)}
+                      onExpiryChange={onSlaveExpiryChange ? async (printerId, days) => {
+                        setUpdatingExpiryPrinterId(printerId);
+                        try {
+                          await onSlaveExpiryChange(printerId, days);
+                        } finally {
+                          setUpdatingExpiryPrinterId(null);
+                        }
+                      } : undefined}
+                      isUpdatingExpiry={updatingExpiryPrinterId === printer.id}
                     />
                   ))}
                 </SortableContext>

@@ -818,6 +818,73 @@ const Index = () => {
     return true;
   }, [connectionState.connectedPrinter?.id, replaceMessageWithoutDelete, updatePrinter]);
 
+  // Per-printer expiry offset change — uses switch-away flow to rewrite ^NM with new ^AE offset
+  const handleExpiryOffsetChange = useCallback(async (printerId: number, newDays: number) => {
+    const targetPrinter = printers.find(p => p.id === printerId);
+    if (!targetPrinter || !targetPrinter.isAvailable) {
+      toast.error('Printer is offline');
+      return;
+    }
+
+    // Determine which message is active on this printer
+    const messageName = targetPrinter.currentMessage;
+    if (!messageName) {
+      toast.error('No active message on this printer');
+      return;
+    }
+
+    // Get cached message content
+    const stored = getMessage(messageName);
+    if (!stored || stored.fields.length === 0) {
+      toast.error(`No cached content for "${messageName}"`);
+      return;
+    }
+
+    console.log(`[ExpiryOffset] Changing offset on ${targetPrinter.name} for "${messageName}": ${targetPrinter.expiryOffsetDays ?? 0} → ${newDays} days`);
+
+    // Clone fields with modified autoCodeExpiryDays on expiry date fields ONLY
+    const modifiedFields = stored.fields.map(field => {
+      if (field.type === 'date' && (field.autoCodeExpiryDays ?? 0) > 0) {
+        return { ...field, autoCodeExpiryDays: newDays };
+      }
+      return field;
+    });
+
+    const modifiedDetails: Pick<MessageDetails, 'fields' | 'templateValue'> = {
+      fields: modifiedFields,
+      templateValue: stored.templateValue,
+    };
+
+    // Use replaceMessageWithoutDelete for the switch-away flow
+    // This handles: ^SM BESTCODE → ^NM (with new offset, no ^SV) → ^SM back
+    const result = await replaceMessageWithoutDelete(targetPrinter, messageName, modifiedDetails);
+
+    if (!result.success) {
+      console.error(`[ExpiryOffset] Failed on ${targetPrinter.name}: ${result.reason}`);
+      toast.error(`Expiry update failed on ${targetPrinter.name}: ${result.reason}`);
+      return;
+    }
+
+    // Re-apply cached User Define (prompted field) value if any
+    const promptFieldIdx = stored.fields.findIndex(f => f.promptBeforePrint);
+    if (promptFieldIdx >= 0) {
+      const promptField = stored.fields[promptFieldIdx];
+      const tdNum = promptFieldIdx + 1; // 1-indexed
+      const cachedValue = promptField.data?.trim();
+      if (cachedValue) {
+        console.log(`[ExpiryOffset] Re-applying ^MD^TD${tdNum} "${cachedValue}" on ${targetPrinter.name}`);
+        await sendCommandToPrinter(targetPrinter, `^MD^TD${tdNum};${cachedValue}`);
+      }
+    }
+
+    // Update local storage
+    updatePrinter(printerId, { expiryOffsetDays: newDays });
+    toast.success(`${targetPrinter.name}: expiry offset → +${newDays} day${newDays !== 1 ? 's' : ''}`);
+
+    // 15s grace period — polling will naturally resume
+    console.log(`[ExpiryOffset] Complete on ${targetPrinter.name}`);
+  }, [printers, getMessage, replaceMessageWithoutDelete, sendCommandToPrinter, updatePrinter]);
+
   // Delay alerts on startup so update notification can appear first
   const [lowStockAlertQueue, setLowStockAlertQueue] = useState<LowStockAlertData[]>([]);
 
@@ -1557,6 +1624,7 @@ const Index = () => {
         onLicense={() => setLicenseDialogOpen(true)}
         onRefreshNetwork={checkPrinterStatus}
         isCheckingNetwork={isChecking}
+        onSlaveExpiryChange={handleExpiryOffsetChange}
       />
     );
   };
