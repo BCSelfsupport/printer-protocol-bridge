@@ -1415,7 +1415,16 @@ const Index = () => {
         onNavigate={handleNavigate}
         onTurnOff={handleTurnOff}
         onSyncMaster={syncMaster}
-        onBroadcastMessage={broadcastMessage}
+        onBroadcastMessage={async (masterId, messageName, slaveValues) => {
+          // Compute the absolute field number for the prompted field
+          const stored = getMessage(messageName);
+          let userDefineFieldNum: number | undefined;
+          if (stored) {
+            const idx = stored.fields.findIndex(f => f.promptBeforePrint);
+            if (idx >= 0) userDefineFieldNum = idx + 1; // 1-indexed
+          }
+          await broadcastMessage(masterId, messageName, slaveValues, userDefineFieldNum);
+        }}
         getSlavesForMaster={getSlavesForMaster}
         connectedMessages={connectionState.messages}
         rightPanelContent={getRightPanelContent()}
