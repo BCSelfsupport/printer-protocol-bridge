@@ -76,6 +76,7 @@ export function Dashboard({
   selectedPrinterId,
   streamHours,
   selectedPrinterLineId,
+  printerExpiryOffset,
   printerModel,
   printerVariant,
 }: DashboardProps) {
@@ -364,6 +365,7 @@ export function Dashboard({
           printerTime={status?.printerTime}
           messageContent={messageContent}
           selectedPrinterLineId={selectedPrinterLineId}
+          printerExpiryOffset={printerExpiryOffset}
         />
       </div>
     </div>
@@ -442,6 +444,7 @@ interface MessagePreviewCanvasProps {
   printerTime?: Date;
   messageContent?: MessageDetails;
   selectedPrinterLineId?: string;
+  printerExpiryOffset?: number;
 }
 
 const DOT_SIZE_MOBILE = 3; // Smaller dots on mobile
@@ -524,7 +527,7 @@ function inferFetchedAutoCode(field: MessageField): { autoCodeFieldType: string;
   return null;
 }
 
-function MessagePreviewCanvas({ message, printerTime, messageContent, selectedPrinterLineId }: MessagePreviewCanvasProps) {
+function MessagePreviewCanvas({ message, printerTime, messageContent, selectedPrinterLineId, printerExpiryOffset }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dotSize, setDotSize] = useState<number>(DOT_SIZE_DESKTOP);
   const [zoomIndex, setZoomIndex] = useState(2); // Default to 2x zoom
