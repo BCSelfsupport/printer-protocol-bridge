@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, Calendar } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, Calendar, Check, X } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 
 // Color palette for sync groups (left border stripe)
@@ -85,6 +86,7 @@ export function PrinterListItem({
 }: PrinterListItemProps) {
   const [editingExpiry, setEditingExpiry] = useState(false);
   const [expiryInput, setExpiryInput] = useState('');
+  const [expirySlider, setExpirySlider] = useState(0);
   const expiryInputRef = useRef<HTMLInputElement>(null);
   // Prefer the printer's own current message; only fall back to master's message for slaves with no local value
   const displayMessage = printer.currentMessage ?? ((printer.role === 'slave' && masterMessage) ? masterMessage : undefined);
@@ -107,6 +109,7 @@ export function PrinterListItem({
     e.stopPropagation();
     if (isUpdatingExpiry) return;
     setExpiryInput(currentOffset.toString());
+    setExpirySlider(currentOffset);
     setEditingExpiry(true);
     setTimeout(() => expiryInputRef.current?.focus(), 50);
   };
@@ -119,6 +122,23 @@ export function PrinterListItem({
       onExpiryChange!(printer.id, days);
     }
     setEditingExpiry(false);
+  };
+
+  const handleExpiryCancel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingExpiry(false);
+  };
+
+  const handleSliderChange = (val: number[]) => {
+    const v = val[0];
+    setExpirySlider(v);
+    setExpiryInput(v.toString());
+  };
+
+  const handleInputChange = (val: string) => {
+    setExpiryInput(val);
+    const n = parseInt(val, 10);
+    if (!isNaN(n) && n >= 0 && n <= 365) setExpirySlider(n);
   };
 
   const handleExpiryKeyDown = (e: React.KeyboardEvent) => {
@@ -242,38 +262,70 @@ export function PrinterListItem({
                 )}
                 {/* Expiry offset badge */}
                 {showExpiryBadge && (
-                  <div className="ml-6 mt-1" onClick={e => e.stopPropagation()}>
+                  <div className="mt-1.5" onClick={e => e.stopPropagation()}>
                     {editingExpiry ? (
-                      <form onSubmit={handleExpirySubmit} className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-amber-400 flex-shrink-0" />
-                        <Input
-                          ref={expiryInputRef}
-                          type="number"
-                          min={0}
-                          value={expiryInput}
-                          onChange={e => setExpiryInput(e.target.value)}
-                          onBlur={() => handleExpirySubmit()}
-                          onKeyDown={handleExpiryKeyDown}
-                          onFocus={e => e.target.select()}
-                          className="w-16 h-5 text-[10px] px-1 py-0 bg-slate-700 border-amber-500/50 text-white"
-                          disabled={isUpdatingExpiry}
-                        />
-                        <span className="text-[10px] text-slate-400">days</span>
-                      </form>
+                      <div className="bg-slate-800 border border-amber-500/40 rounded-lg p-2.5 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-amber-400 flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5" />
+                            EXPIRY OFFSET
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={handleExpiryCancel}
+                              className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleExpirySubmit()}
+                              className="p-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 transition-colors"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Slider
+                            value={[expirySlider]}
+                            onValueChange={handleSliderChange}
+                            min={0}
+                            max={365}
+                            step={1}
+                            className="flex-1"
+                          />
+                          <form onSubmit={handleExpirySubmit} className="flex items-center gap-1">
+                            <Input
+                              ref={expiryInputRef}
+                              type="number"
+                              min={0}
+                              max={365}
+                              value={expiryInput}
+                              onChange={e => handleInputChange(e.target.value)}
+                              onKeyDown={handleExpiryKeyDown}
+                              onFocus={e => e.target.select()}
+                              className="w-14 h-7 text-xs text-center px-1 py-0 bg-slate-700 border-amber-500/50 text-white font-bold"
+                              disabled={isUpdatingExpiry}
+                            />
+                            <span className="text-[10px] text-slate-400 font-medium">days</span>
+                          </form>
+                        </div>
+                      </div>
                     ) : (
                       <button
                         onClick={handleExpiryBadgeClick}
-                        className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all w-full ${
                           isUpdatingExpiry
                             ? 'bg-amber-500/20 text-amber-300 animate-pulse'
-                            : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                            : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-500/40'
                         }`}
-                        title="Click to change expiry offset"
+                        title="Click to change expiry days"
                         disabled={isUpdatingExpiry}
                       >
-                        <Calendar className="w-3 h-3" />
-                        <span className="font-semibold">+{currentOffset}d</span>
-                        {isUpdatingExpiry && <span className="ml-0.5">...</span>}
+                        <Calendar className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-xs font-bold">{currentOffset}</span>
+                        <span className="text-[10px] text-amber-400/70">day expiry</span>
+                        {isUpdatingExpiry && <span className="ml-auto text-[10px]">updating...</span>}
                       </button>
                     )}
                   </div>
@@ -438,40 +490,71 @@ export function PrinterListItem({
               PRINTS: <span className="font-semibold">{printer.printCount.toString().padStart(7, '0')}</span>
             </div>
           )}
-          {/* Expiry offset badge */}
           {showExpiryBadge && (
-            <div className="ml-5 mt-1" onClick={e => e.stopPropagation()}>
+            <div className="mt-1.5" onClick={e => e.stopPropagation()}>
               {editingExpiry ? (
-                <form onSubmit={handleExpirySubmit} className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-amber-400 flex-shrink-0" />
-                  <Input
-                    ref={expiryInputRef}
-                    type="number"
-                    min={0}
-                    value={expiryInput}
-                    onChange={e => setExpiryInput(e.target.value)}
-                    onBlur={() => handleExpirySubmit()}
-                    onKeyDown={handleExpiryKeyDown}
-                    onFocus={e => e.target.select()}
-                    className="w-16 h-5 text-[10px] px-1 py-0 bg-slate-700 border-amber-500/50 text-white"
-                    disabled={isUpdatingExpiry}
-                  />
-                  <span className="text-[10px] text-slate-400">days</span>
-                </form>
+                <div className="bg-slate-800 border border-amber-500/40 rounded-lg p-2.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-amber-400 flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5" />
+                      EXPIRY OFFSET
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={handleExpiryCancel}
+                        className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleExpirySubmit()}
+                        className="p-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 transition-colors"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Slider
+                      value={[expirySlider]}
+                      onValueChange={handleSliderChange}
+                      min={0}
+                      max={365}
+                      step={1}
+                      className="flex-1"
+                    />
+                    <form onSubmit={handleExpirySubmit} className="flex items-center gap-1">
+                      <Input
+                        ref={expiryInputRef}
+                        type="number"
+                        min={0}
+                        max={365}
+                        value={expiryInput}
+                        onChange={e => handleInputChange(e.target.value)}
+                        onKeyDown={handleExpiryKeyDown}
+                        onFocus={e => e.target.select()}
+                        className="w-14 h-7 text-xs text-center px-1 py-0 bg-slate-700 border-amber-500/50 text-white font-bold"
+                        disabled={isUpdatingExpiry}
+                      />
+                      <span className="text-[10px] text-slate-400 font-medium">days</span>
+                    </form>
+                  </div>
+                </div>
               ) : (
                 <button
                   onClick={handleExpiryBadgeClick}
-                  className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all w-full ${
                     isUpdatingExpiry
                       ? 'bg-amber-500/20 text-amber-300 animate-pulse'
-                      : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                      : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-500/40'
                   }`}
-                  title="Click to change expiry offset"
+                  title="Click to change expiry days"
                   disabled={isUpdatingExpiry}
                 >
-                  <Calendar className="w-3 h-3" />
-                  <span className="font-semibold">+{currentOffset}d</span>
-                  {isUpdatingExpiry && <span className="ml-0.5">...</span>}
+                  <Calendar className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-xs font-bold">{currentOffset}</span>
+                  <span className="text-[10px] text-amber-400/70">day expiry</span>
+                  {isUpdatingExpiry && <span className="ml-auto text-[10px]">updating...</span>}
                 </button>
               )}
             </div>
