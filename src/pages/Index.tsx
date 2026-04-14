@@ -796,8 +796,7 @@ const Index = () => {
           return false;
         }
 
-        updatePrinter(targetPrinter.id, { currentMessage: message.name });
-        return true;
+        return await selectMessage(message);
       } finally {
         setPollingPaused(false);
       }
@@ -814,8 +813,11 @@ const Index = () => {
       return false;
     }
 
-    updatePrinter(targetPrinter.id, { currentMessage: message.name });
-    return true;
+    const ok = await sendCommandToPrinter(targetPrinter, `^SM ${message.name}`);
+    if (ok) {
+      updatePrinter(targetPrinter.id, { currentMessage: message.name });
+    }
+    return ok;
   }, [connectionState.connectedPrinter?.id, replaceMessageWithoutDelete, updatePrinter]);
 
   // Per-printer expiry offset change — uses switch-away flow to rewrite ^NM with new ^AE offset
