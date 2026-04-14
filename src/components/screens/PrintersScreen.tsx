@@ -261,6 +261,7 @@ export function PrintersScreen({
   const [servicePrinter, setServicePrinter] = useState<Printer | null>(null);
   const [broadcastDialogOpen, setBroadcastDialogOpen] = useState(false);
   const [broadcastMaster, setBroadcastMaster] = useState<Printer | null>(null);
+  const [updatingExpiryPrinterId, setUpdatingExpiryPrinterId] = useState<number | null>(null);
   const [devTaps, setDevTaps] = useState<number[]>([]);
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
