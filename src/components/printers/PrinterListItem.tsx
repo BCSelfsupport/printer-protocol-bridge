@@ -80,7 +80,12 @@ export function PrinterListItem({
   onBroadcast,
   streamHours,
   masterMessage,
+  onExpiryChange,
+  isUpdatingExpiry = false,
 }: PrinterListItemProps) {
+  const [editingExpiry, setEditingExpiry] = useState(false);
+  const [expiryInput, setExpiryInput] = useState('');
+  const expiryInputRef = useRef<HTMLInputElement>(null);
   // Prefer the printer's own current message; only fall back to master's message for slaves with no local value
   const displayMessage = printer.currentMessage ?? ((printer.role === 'slave' && masterMessage) ? masterMessage : undefined);
   
