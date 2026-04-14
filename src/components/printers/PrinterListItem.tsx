@@ -85,7 +85,6 @@ export function PrinterListItem({
 }: PrinterListItemProps) {
   const [editingExpiry, setEditingExpiry] = useState(false);
   const [expiryInput, setExpiryInput] = useState('');
-  const [expirySlider, setExpirySlider] = useState(0);
   const expiryInputRef = useRef<HTMLInputElement>(null);
   // Prefer the printer's own current message; only fall back to master's message for slaves with no local value
   const displayMessage = printer.currentMessage ?? ((printer.role === 'slave' && masterMessage) ? masterMessage : undefined);
@@ -108,7 +107,6 @@ export function PrinterListItem({
     e.stopPropagation();
     if (isUpdatingExpiry) return;
     setExpiryInput(currentOffset.toString());
-    setExpirySlider(currentOffset);
     setEditingExpiry(true);
     setTimeout(() => expiryInputRef.current?.focus(), 50);
   };
@@ -126,18 +124,6 @@ export function PrinterListItem({
   const handleExpiryCancel = (e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingExpiry(false);
-  };
-
-  const handleSliderChange = (val: number[]) => {
-    const v = val[0];
-    setExpirySlider(v);
-    setExpiryInput(v.toString());
-  };
-
-  const handleInputChange = (val: string) => {
-    setExpiryInput(val);
-    const n = parseInt(val, 10);
-    if (!isNaN(n) && n >= 0 && n <= 365) setExpirySlider(n);
   };
 
   const handleExpiryKeyDown = (e: React.KeyboardEvent) => {
