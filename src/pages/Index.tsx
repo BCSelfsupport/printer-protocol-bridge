@@ -791,17 +791,16 @@ const Index = () => {
   const applyPromptValuesToPrinter = useCallback(async (
     targetPrinter: Printer | null,
     message: PrintMessage,
-    commands: string[],
+    updatedDetails: MessageDetails,
   ): Promise<boolean> => {
     if (!targetPrinter) return false;
 
-    const commandsToRun = commands.filter((command) => command.trim().length > 0);
-
-    // Send ^SM first, then wait 1s for firmware to fully load the message
-    // into RAM before sending ^MD^TD commands. The previous 300ms uniform
-    // delay was too short — the printer silently dropped ^MD writes.
-    const smSequence = [`^SM ${message.name}`];
     const isConnected = targetPrinter.id === connectionState.connectedPrinter?.id;
+
+    // Use the same full-rewrite approach that works for date offset changes:
+    // switch away from active message → send ^NM with all field data (including
+    // entered values) → reselect. ^MD^TD is unreliable on this firmware.
+    console.log(`[PromptWrite] Using replaceMessageWithoutDelete for "${message.name}" on ${targetPrinter.name}`);
 
     if (isConnected) {
       setPollingPaused(true);
@@ -812,19 +811,14 @@ const Index = () => {
           return false;
         }
 
-        // Step 1: Select the message
-        const smResult = await sendVerifiedCommandSequence(targetPrinter, smSequence, 300);
-        if (!smResult.success) return false;
+        const result = await replaceMessageWithoutDelete(targetPrinter, message.name, {
+          fields: updatedDetails.fields,
+          templateValue: updatedDetails.templateValue,
+        });
 
-        // Step 2: Wait for firmware to load message into RAM
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Step 3: Send ^MD^TD commands
-        if (commandsToRun.length > 0) {
-          const mdResult = await sendVerifiedCommandSequence(targetPrinter, commandsToRun, 300);
-          if (!mdResult.success) {
-            console.warn('[PromptWrite] ^MD^TD commands failed, but message was selected');
-          }
+        if (!result.success) {
+          console.error(`[PromptWrite] replaceMessageWithoutDelete failed: ${result.reason}`);
+          return false;
         }
 
         updatePrinter(targetPrinter.id, { currentMessage: message.name });
@@ -834,25 +828,20 @@ const Index = () => {
       }
     }
 
-    // Non-connected printer: open session, send ^SM, wait, send ^MD^TD
-    const allCommands = [...smSequence];
-    // For non-connected printers we still need the longer gap, so send
-    // ^SM in its own sequence, wait, then send the rest.
-    const smResult = await sendVerifiedCommandSequence(targetPrinter, allCommands, 300);
-    if (!smResult.success) return false;
+    // Non-connected printer: same full rewrite approach
+    const result = await replaceMessageWithoutDelete(targetPrinter, message.name, {
+      fields: updatedDetails.fields,
+      templateValue: updatedDetails.templateValue,
+    });
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    if (commandsToRun.length > 0) {
-      const mdResult = await sendVerifiedCommandSequence(targetPrinter, commandsToRun, 300);
-      if (!mdResult.success) {
-        console.warn('[PromptWrite] ^MD^TD commands failed on non-connected printer');
-      }
+    if (!result.success) {
+      console.error(`[PromptWrite] replaceMessageWithoutDelete failed on non-connected: ${result.reason}`);
+      return false;
     }
 
     updatePrinter(targetPrinter.id, { currentMessage: message.name });
     return true;
-  }, [connectionState.connectedPrinter?.id, sendVerifiedCommandSequence, updatePrinter]);
+  }, [connectionState.connectedPrinter?.id, replaceMessageWithoutDelete, updatePrinter]);
 
   // Delay alerts on startup so update notification can appear first
   const [lowStockAlertQueue, setLowStockAlertQueue] = useState<LowStockAlertData[]>([]);
@@ -1195,7 +1184,7 @@ const Index = () => {
               await sendCommandToPrinter(messageTargetPrinter, cmd);
             }
           }}
-          onApplyPromptValues={(message, commands) => applyPromptValuesToPrinter(messageTargetPrinter, message, commands)}
+          onApplyPromptValues={(message, updatedDetails) => applyPromptValuesToPrinter(messageTargetPrinter, message, updatedDetails)}
           onGetStoredMessage={getMessage}
           onSaveMessageContent={isConnectedMessageTarget ? saveMessageContent : undefined}
           onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details))}
@@ -1406,7 +1395,7 @@ const Index = () => {
                 await sendCommandToPrinter(target, cmd);
               }
             }}
-            onApplyPromptValues={(message, commands) => applyPromptValuesToPrinter(selectedPrinter ?? connectionState.connectedPrinter ?? null, message, commands)}
+            onApplyPromptValues={(message, updatedDetails) => applyPromptValuesToPrinter(selectedPrinter ?? connectionState.connectedPrinter ?? null, message, updatedDetails)}
             onGetStoredMessage={getMessage}
             onSaveMessageContent={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id === connectionState.connectedPrinter?.id ? saveMessageContent : undefined}
             onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details))}
