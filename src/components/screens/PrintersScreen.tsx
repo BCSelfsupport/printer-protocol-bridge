@@ -697,6 +697,7 @@ export function PrintersScreen({
               printerModel={status?.printerModel}
               printerVariant={status?.printerVariant}
               selectedPrinterLineId={selectedPrinter?.lineId ?? connectedPrinter?.lineId}
+              printerExpiryOffset={selectedPrinter?.expiryOffsetDays}
             />
           </div>
         ) : (
