@@ -1045,7 +1045,13 @@ const Index = () => {
             return ok;
           }}
           onFetchMessageDetails={isConnectedMessageTarget ? fetchMessageContent : undefined}
-          onSendCommand={isConnectedMessageTarget ? async (cmd) => sendCommand(cmd) : undefined}
+          onSendCommand={async (cmd) => {
+            if (isConnectedMessageTarget) {
+              await sendCommand(cmd);
+            } else if (messageTargetPrinter) {
+              await sendCommandToPrinter(messageTargetPrinter, cmd);
+            }
+          }}
           onGetStoredMessage={getMessage}
           onSaveMessageContent={isConnectedMessageTarget ? saveMessageContent : undefined}
           onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details))}
@@ -1248,7 +1254,14 @@ const Index = () => {
               return ok;
             }}
             onFetchMessageDetails={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id === connectionState.connectedPrinter?.id ? fetchMessageContent : undefined}
-            onSendCommand={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id === connectionState.connectedPrinter?.id ? async (cmd) => sendCommand(cmd) : undefined}
+            onSendCommand={async (cmd) => {
+              const target = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+              if (target?.id === connectionState.connectedPrinter?.id) {
+                await sendCommand(cmd);
+              } else if (target) {
+                await sendCommandToPrinter(target, cmd);
+              }
+            }}
             onGetStoredMessage={getMessage}
             onSaveMessageContent={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id === connectionState.connectedPrinter?.id ? saveMessageContent : undefined}
             onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details))}
