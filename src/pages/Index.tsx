@@ -92,6 +92,7 @@ const Index = () => {
   const [expiryPrompts, setExpiryPrompts] = useState<UserDefinePrompt[]>([]);
   const [expiryPromptDetails, setExpiryPromptDetails] = useState<MessageDetails | null>(null);
   const [expiryPromptMessageName, setExpiryPromptMessageName] = useState<string | null>(null);
+  const [expiryPromptTargetPrinter, setExpiryPromptTargetPrinter] = useState<Printer | null>(null);
   
   // Local message storage (persists to localStorage, scoped by printer ID)
   const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId } = useMessageStorage();
@@ -1510,6 +1511,7 @@ const Index = () => {
               }));
               setExpiryPromptDetails(updatedStored);
               setExpiryPromptMessageName(currentMsg);
+              setExpiryPromptTargetPrinter(targetPrinter);
               setExpiryPrompts(prompts);
               setExpiryPromptOpen(true);
             }
@@ -1796,6 +1798,7 @@ const Index = () => {
           if (!open) {
             setExpiryPromptDetails(null);
             setExpiryPromptMessageName(null);
+            setExpiryPromptTargetPrinter(null);
           }
         }}
         prompts={expiryPrompts}
@@ -1813,7 +1816,11 @@ const Index = () => {
                   const cmd = `^MD^TD${fieldNum};${value}`;
                   console.log(`[ExpiryPrompt] Sending ${cmd} for field "${field.promptLabel || field.id}"`);
                   try {
-                    await sendCommand(cmd);
+                    if (expiryPromptTargetPrinter) {
+                      await sendCommandToPrinter(expiryPromptTargetPrinter, cmd);
+                    } else {
+                      await sendCommand(cmd);
+                    }
                     await new Promise(resolve => setTimeout(resolve, 200));
                   } catch (e) {
                     console.error('[ExpiryPrompt] Failed to send ^MD^TD:', e);
@@ -1826,6 +1833,7 @@ const Index = () => {
           setExpiryPromptOpen(false);
           setExpiryPromptDetails(null);
           setExpiryPromptMessageName(null);
+          setExpiryPromptTargetPrinter(null);
         }}
       />
     </div>
