@@ -105,6 +105,7 @@ export function PrinterListItem({
   // Expiry offset badge - only show for printers in a sync group
   const showExpiryBadge = syncGroupIndex !== undefined && syncGroupIndex >= 0 && onExpiryChange && printer.isAvailable;
   const currentOffset = printer.expiryOffsetDays ?? messageExpiryDays ?? 0;
+  const isCustomExpiry = printer.expiryOffsetDays !== undefined && messageExpiryDays !== undefined && printer.expiryOffsetDays !== messageExpiryDays;
 
   const handleExpiryBadgeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -282,6 +283,7 @@ export function PrinterListItem({
                         <Calendar className="w-3.5 h-3.5 text-amber-400" />
                         <span className="text-sm font-bold">{currentOffset}</span>
                         <span className="text-[11px] text-amber-300/70">day expiry</span>
+                        {isCustomExpiry && <span className="text-[9px] px-1 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold ml-1">CUSTOM</span>}
                         {isUpdatingExpiry && <span className="ml-1 text-[10px]">...</span>}
                       </button>
                     )}
@@ -480,6 +482,7 @@ export function PrinterListItem({
                   <Calendar className="w-3.5 h-3.5 text-amber-400" />
                   <span className="text-sm font-bold">{currentOffset}</span>
                   <span className="text-[11px] text-amber-300/70">day expiry</span>
+                  {isCustomExpiry && <span className="text-[9px] px-1 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold ml-1">CUSTOM</span>}
                   {isUpdatingExpiry && <span className="ml-1 text-[10px]">...</span>}
                 </button>
               )}
