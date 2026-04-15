@@ -122,7 +122,7 @@ function AdjustCard({
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={handleEditSubmit}
               onKeyDown={(e) => e.key === 'Enter' && handleEditSubmit()}
-              className="h-7 text-lg font-bold bg-white"
+              className="h-7 text-lg font-bold bg-background text-foreground"
               autoFocus
               min={min}
               max={max}
@@ -211,7 +211,7 @@ export function AdjustDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Adjust Settings (Live)</DialogTitle>
+          <DialogTitle>Adjust Settings (Message)</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
