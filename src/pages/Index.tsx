@@ -965,7 +965,7 @@ const Index = () => {
         console.error('[onSave] post-save reload failed:', e);
       }
     } else if (hasExtendedDateFields) {
-      console.log('[onSave] Skipping immediate post-save ^GM/^LF reload for extended date fields to avoid firmware lockup');
+      console.log('[onSave] Skipping immediate post-save ^GM/^LF reload for extended date fields');
     }
 
     if (isNew && connectionState.isConnected && !restoredByCommandSequence) {
