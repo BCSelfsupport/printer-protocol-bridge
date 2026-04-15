@@ -570,9 +570,6 @@ export function PrintersScreen({
                         || getMessageContent(msgName))
                       : null;
                     const msgExpiry = msgContent?.fields?.find(f => f.type === 'date' && (f.autoCodeExpiryDays ?? 0) > 0)?.autoCodeExpiryDays;
-                    if (msgName && !msgExpiry) {
-                      console.log(`[ExpiryBadge] ${printer.name} msg="${msgName}" content=${!!msgContent} fields=${msgContent?.fields?.length ?? 0} dateFields=${msgContent?.fields?.filter(f => f.type === 'date').length ?? 0} expiryFields=${msgContent?.fields?.filter(f => (f.autoCodeExpiryDays ?? 0) > 0).map(f => ({ id: f.id, type: f.type, expiry: f.autoCodeExpiryDays })) ?? []} syncIdx=${syncGroupMap.get(printer.id)} avail=${printer.isAvailable}`);
-                    }
 
                     return (
                     <SortablePrinterItem
