@@ -2900,7 +2900,7 @@ export function usePrinterConnection() {
   const saveMessageSettings = useCallback(async (settings: {
     speed: PrintSettings['speed'];
     rotation: string; // Extended to include tower orientations
-    printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse';
+    printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
   }): Promise<boolean> => {
     console.log('[saveMessageSettings] Called with:', settings);
     if (!connectionState.isConnected || !connectionState.connectedPrinter) {
