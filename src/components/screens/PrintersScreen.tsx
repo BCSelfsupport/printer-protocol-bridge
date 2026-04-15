@@ -570,6 +570,10 @@ export function PrintersScreen({
                         || getMessageContent(msgName))
                       : null;
                     const msgExpiry = msgContent?.fields?.find(f => f.type === 'date' && (f.autoCodeExpiryDays ?? 0) > 0)?.autoCodeExpiryDays;
+                    // Debug: trace why expiry badge may not show
+                    if (msgName) {
+                      console.log(`[ExpiryDebug] ${printer.name} msg="${msgName}" hasContent=${!!msgContent} fieldCount=${msgContent?.fields?.length ?? 0} dateFields=${JSON.stringify(msgContent?.fields?.filter(f => f.type === 'date').map(f => ({ id: f.id, expiry: f.autoCodeExpiryDays })))} msgExpiry=${msgExpiry} onSlaveExpiryChange=${!!onSlaveExpiryChange} avail=${printer.isAvailable}`);
+                    }
 
                     return (
                     <SortablePrinterItem
