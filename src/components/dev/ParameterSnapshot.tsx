@@ -16,6 +16,8 @@ const SNAPSHOT_COMMANDS = [
   { code: '^CM', label: 'Change Message (Speed/Offset/Pitch)' },
   { code: '^GM', label: 'Get Message Params' },
   { code: '^SM', label: 'Selected Message' },
+  { code: '^LF', label: 'List Fields' },
+  { code: '^LM', label: 'List Messages' },
   { code: '^SU', label: 'Status' },
 ];
 
