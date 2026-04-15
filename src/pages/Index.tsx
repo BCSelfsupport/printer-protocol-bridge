@@ -533,14 +533,11 @@ const Index = () => {
         return { success: !!result?.success && !isTransportCommandFailure(response) };
       }
 
-      if (!window.electronAPI && !isRelayMode()) {
-        const success = await sendCommandToPrinter(targetPrinter, command);
-        return { success };
-      }
-
-      const result = await printerTransport.sendCommand(targetPrinter.id, command);
-      const response = result?.response ?? result?.error ?? '';
-      return { success: !!result?.success && !isTransportCommandFailure(response) };
+      // Use sendCommandToPrinter for non-connected printers — it correctly
+      // routes through the emulator when enabled, before falling back to
+      // Electron IPC or relay transport.
+      const success = await sendCommandToPrinter(targetPrinter, command);
+      return { success };
     };
 
     const needsSharedSession = targetPrinter.id !== connectionState.connectedPrinter?.id && (window.electronAPI || isRelayMode());
