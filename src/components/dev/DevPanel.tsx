@@ -46,6 +46,7 @@ import { LicenseAssignmentPanel } from '@/components/dev/LicenseAssignmentPanel'
 import { FleetMonitoringPanel } from '@/components/dev/FleetMonitoringPanel';
 import { FeedbackPanel } from '@/components/dev/FeedbackPanel';
 import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
+import { ParameterSnapshot } from '@/components/dev/ParameterSnapshot';
 function getTimeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
@@ -835,6 +836,16 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                     </div>
                   </div>
                 )}
+
+                {/* Parameter Snapshot */}
+                <div className="mb-4 p-3 bg-muted/30 rounded-lg border border-border">
+                  <ParameterSnapshot
+                    emulatorEnabled={emulatorEnabled}
+                    connectedPrinterId={connectedPrinterId}
+                    connectedPrinterIp={connectedPrinterIp}
+                    connectedPrinterPort={connectedPrinterPort}
+                  />
+                </div>
 
                 {/* Command Reference */}
                 <div className="text-[10px] text-muted-foreground space-y-1 bg-muted/50 rounded-lg p-3 border border-border">
