@@ -207,6 +207,7 @@ export function EditMessageScreen({
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [selectedFieldIds, setSelectedFieldIds] = useState<Set<number>>(new Set());
   const [loadedTemplate, setLoadedTemplate] = useState<ParsedTemplate | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [saveAsDialogOpen, setSaveAsDialogOpen] = useState(false);
   const [saveAsName, setSaveAsName] = useState('');
   const [newFieldDialogOpen, setNewFieldDialogOpen] = useState(false);
