@@ -956,6 +956,41 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
     }
   }, [fleetCall, fetchSites, selectedSite]);
 
+  const startEditPrinter = (printer: FleetPrinter, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingPrinterId(printer.id);
+    setEditPrinterName(printer.name);
+    setEditPrinterSerial(printer.serial_number || '');
+    setEditPrinterIp(printer.ip_address);
+    setEditPrinterPort(String(printer.port));
+  };
+
+  const handleEditPrinter = useCallback(async () => {
+    if (!editingPrinterId || !editPrinterName.trim()) return;
+    setEditPrinterLoading(true);
+    try {
+      await fleetCall('edit-printer', undefined, {
+        printer_id: editingPrinterId,
+        name: editPrinterName.trim(),
+        serial_number: editPrinterSerial.trim() || null,
+        ip_address: editPrinterIp.trim(),
+        port: parseInt(editPrinterPort) || 23,
+      });
+      setEditingPrinterId(null);
+      await fetchSites();
+      if (selectedSite) {
+        const freshSites = await fleetCall('sites');
+        const freshSite = freshSites.sites?.find((s: FleetSite) => s.id === selectedSite.id);
+        if (freshSite) setSelectedSite(freshSite);
+      }
+    } catch (err: any) {
+      console.error('Edit printer error:', err);
+      alert(err?.message || 'Failed to edit printer');
+    } finally {
+      setEditPrinterLoading(false);
+    }
+  }, [fleetCall, fetchSites, selectedSite, editingPrinterId, editPrinterName, editPrinterSerial, editPrinterIp, editPrinterPort]);
+
   useEffect(() => {
     void fetchSites();
   }, [fetchSites]);
