@@ -24,6 +24,8 @@ import { GraphicFieldDialog, GraphicFieldConfig } from '@/components/messages/Gr
 import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
 import { AdvancedSettingsDialog, AdvancedSettings, defaultAdvancedSettings } from '@/components/messages/AdvancedSettingsDialog';
 import { DataLinkDialog } from '@/components/messages/DataLinkDialog';
+import { AdjustDialog } from '@/components/adjust/AdjustDialog';
+import { PrintSettings } from '@/types/printer';
 import { supabase } from '@/integrations/supabase/client';
 import { FieldSettingsPanel, FieldSettings, defaultFieldSettings } from '@/components/messages/FieldSettingsPanel';
 import { getModelCapabilities } from '@/lib/modelCapabilities';
