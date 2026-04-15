@@ -398,7 +398,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             )}
           >
 
-        <div className="flex flex-col h-full overflow-y-auto">
+        <div className="flex flex-col h-full overflow-hidden">
           {/* Header */}
           <div className="p-4 border-b border-border">
             <div className="flex items-center justify-between mb-3">
@@ -431,7 +431,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             )}
           </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
             <TabsList className="mx-4 mt-2 grid grid-cols-9 h-10">
               <TabsTrigger value="status" className="text-xs gap-1"><Gauge className="w-3.5 h-3.5" />Status</TabsTrigger>
               <TabsTrigger value="protocol" className="text-xs gap-1"><BookOpen className="w-3.5 h-3.5" />Protocol</TabsTrigger>
@@ -949,7 +949,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
           </Tabs>
 
           {/* Build Status & Push Update Footer */}
-          <div className="p-3 border-t border-border space-y-3">
+          <div className="p-3 border-t border-border space-y-3 overflow-y-auto flex-shrink-0">
 
             {/* DEV BUILD SECTION */}
             <div className="bg-warning/5 rounded-lg border border-warning/30 p-2 space-y-2">
