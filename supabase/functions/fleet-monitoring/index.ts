@@ -502,6 +502,33 @@ Deno.serve(async (req) => {
         });
       }
 
+      case "edit-printer": {
+        const body = await req.json();
+        const { printer_id, name, serial_number, ip_address, port } = body;
+        if (!printer_id) throw new Error("printer_id required");
+
+        const updateData: any = {};
+        if (name !== undefined) updateData.name = name;
+        if (serial_number !== undefined) updateData.serial_number = serial_number || null;
+        if (ip_address !== undefined) updateData.ip_address = ip_address;
+        if (port !== undefined) updateData.port = port;
+
+        // Also allow clearing firmware_version so it gets re-populated from live telemetry
+        if (body.firmware_version !== undefined) updateData.firmware_version = body.firmware_version || null;
+
+        const { data, error } = await supabase
+          .from("fleet_printers")
+          .update(updateData)
+          .eq("id", printer_id)
+          .select()
+          .single();
+        if (error) throw error;
+
+        return new Response(JSON.stringify({ success: true, printer: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       case "register-printer": {
         // Auto-register: customer's app phones home with license key + printer config
         const body = await req.json();
