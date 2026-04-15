@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
-import { setPollingPaused } from '@/lib/pollingPause';
+import { setPollingPaused, isPollingPaused } from '@/lib/pollingPause';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
 
 /**
@@ -380,6 +380,7 @@ export function usePrinterConnection() {
   const quickStatusPoll = useCallback(async () => {
     if (quickStatusInProgressRef.current) return;
     if (shouldUseEmulator()) return;
+    if (isPollingPaused()) return;
 
     const connectedId = connectedPrinterIdRef.current;
     const targets = printersRef.current.filter(
