@@ -161,6 +161,8 @@ export function EditMessageScreen({
   startEmpty = false,
   printerModel,
   preset,
+  currentAdjustSettings,
+  onSendCommand,
 }: EditMessageScreenProps) {
   // Filter templates and fonts based on connected printer model
   const capabilities = getModelCapabilities(printerModel);
