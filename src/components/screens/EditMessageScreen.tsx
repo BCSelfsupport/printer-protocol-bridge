@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database, Sliders } from 'lucide-react';
+import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database, Sliders, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
@@ -207,6 +207,7 @@ export function EditMessageScreen({
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [selectedFieldIds, setSelectedFieldIds] = useState<Set<number>>(new Set());
   const [loadedTemplate, setLoadedTemplate] = useState<ParsedTemplate | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [saveAsDialogOpen, setSaveAsDialogOpen] = useState(false);
   const [saveAsName, setSaveAsName] = useState('');
   const [newFieldDialogOpen, setNewFieldDialogOpen] = useState(false);
@@ -1374,51 +1375,57 @@ export function EditMessageScreen({
                 </button>
 
                 <button
+                  disabled={isSaving}
                   onClick={async () => {
-                    // Include adjust settings in the saved message
-                    const messageWithAdjust: MessageDetails = {
-                      ...message,
-                      adjustSettings: {
-                        width: localAdjustSettings.width,
-                        height: localAdjustSettings.height,
-                        delay: localAdjustSettings.delay,
-                        bold: localAdjustSettings.bold,
-                        gap: localAdjustSettings.gap,
-                        pitch: localAdjustSettings.pitch,
-                        speed: localAdjustSettings.speed,
-                        rotation: localAdjustSettings.rotation,
-                      },
-                    };
-                    const result = await onSave(messageWithAdjust, !hasSavedToPrinterRef.current);
-                    if (!result) return;
+                    setIsSaving(true);
+                    try {
+                      // Include adjust settings in the saved message
+                      const messageWithAdjust: MessageDetails = {
+                        ...message,
+                        adjustSettings: {
+                          width: localAdjustSettings.width,
+                          height: localAdjustSettings.height,
+                          delay: localAdjustSettings.delay,
+                          bold: localAdjustSettings.bold,
+                          gap: localAdjustSettings.gap,
+                          pitch: localAdjustSettings.pitch,
+                          speed: localAdjustSettings.speed,
+                          rotation: localAdjustSettings.rotation,
+                        },
+                      };
+                      const result = await onSave(messageWithAdjust, !hasSavedToPrinterRef.current);
+                      if (!result) return;
 
-                    hasSavedToPrinterRef.current = true;
+                      hasSavedToPrinterRef.current = true;
 
-                    if (result.fields.length > 0) {
-                      // Check if printer adjusted any positions
-                      const positionsChanged = result.fields.some((rf, i) => {
-                        const ef = message.fields[i];
-                        return ef && (rf.y !== ef.y || rf.x !== ef.x);
-                      });
-                      setMessage(prev => ({
-                        ...prev,
-                        fields: result.fields,
-                        templateValue: result.templateValue ?? prev.templateValue,
-                        height: result.height ?? prev.height,
-                      }));
-                      if (positionsChanged) {
-                        toast.info('Field positions adjusted by printer firmware');
+                      if (result.fields.length > 0) {
+                        // Check if printer adjusted any positions
+                        const positionsChanged = result.fields.some((rf, i) => {
+                          const ef = message.fields[i];
+                          return ef && (rf.y !== ef.y || rf.x !== ef.x);
+                        });
+                        setMessage(prev => ({
+                          ...prev,
+                          fields: result.fields,
+                          templateValue: result.templateValue ?? prev.templateValue,
+                          height: result.height ?? prev.height,
+                        }));
+                        if (positionsChanged) {
+                          toast.info('Field positions adjusted by printer firmware');
+                        } else {
+                          toast.success('Message saved');
+                        }
                       } else {
                         toast.success('Message saved');
                       }
-                    } else {
-                      toast.success('Message saved');
+                    } finally {
+                      setIsSaving(false);
                     }
                   }}
-                  className="industrial-button-success text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
+                  className="industrial-button-success text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px] disabled:opacity-60"
                 >
-                  <Save className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
-                  <span className="text-[9px] md:text-xs font-medium">Save</span>
+                  {isSaving ? <Loader2 className="w-4 h-4 md:w-6 md:h-6 mb-0.5 animate-spin" /> : <Save className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />}
+                  <span className="text-[9px] md:text-xs font-medium">{isSaving ? 'Saving…' : 'Save'}</span>
                 </button>
 
                 <button
