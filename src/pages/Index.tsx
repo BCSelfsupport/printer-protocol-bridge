@@ -772,11 +772,7 @@ const Index = () => {
     const reselectCommandIndex = sequence.length;
     sequence.push(`^SM ${messageName}`);
 
-    // Scale inter-command delay based on field count — ^NM payloads with
-    // multiple fields need more firmware processing time to avoid lockups.
-    const fieldCount = details.fields?.length ?? 0;
-    const baseDelay = fieldCount >= 5 ? 600 : fieldCount >= 3 ? 450 : 300;
-    const result = await sendVerifiedCommandSequence(targetPrinter, sequence, baseDelay);
+    const result = await sendVerifiedCommandSequence(targetPrinter, sequence, 300);
     if (!result.success) {
       if (result.failedIndex === switchCommandIndex) {
         return { success: false as const, reason: 'switch' as const };
