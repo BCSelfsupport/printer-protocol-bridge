@@ -813,9 +813,22 @@ const Index = () => {
     // to process large ^NM payloads before accepting follow-up commands.
     const fieldCount = localDetails.fields.length;
     const isHeavyMessage = fieldCount >= 4;
-    const baseFollowUpMs = hasExtendedDateFields ? 2500 : isHeavyMessage ? 1500 : 300;
-    const followUpSettleMs = baseFollowUpMs + Math.max(0, fieldCount - 3) * 200;
-    const reloadSettleMs = hasExtendedDateFields ? 2500 : isHeavyMessage ? 2000 : MESSAGE_RELOAD_SETTLE_MS;
+    const hasVeryHeavyMessage = fieldCount >= 5;
+    const baseFollowUpMs = hasExtendedDateFields
+      ? 3500
+      : hasVeryHeavyMessage
+        ? 3000
+        : isHeavyMessage
+          ? 2200
+          : 300;
+    const followUpSettleMs = baseFollowUpMs + Math.max(0, fieldCount - 3) * 300;
+    const reloadSettleMs = hasExtendedDateFields
+      ? 3200
+      : hasVeryHeavyMessage
+        ? 3000
+        : isHeavyMessage
+          ? 2400
+          : MESSAGE_RELOAD_SETTLE_MS;
     const shouldReloadFromPrinter = !hasExtendedDateFields && !isHeavyMessage;
 
     console.log('[AdjustDebug][saveEditedMessage.start]', {
@@ -828,6 +841,9 @@ const Index = () => {
       cachedAdjustSettings: cachedDetails?.adjustSettings ?? null,
       printerWriteNeeded,
       hasExtendedDateFields,
+      fieldCount,
+      followUpSettleMs,
+      reloadSettleMs,
     });
 
     if (!printerWriteNeeded) {
@@ -871,11 +887,8 @@ const Index = () => {
     if (messageDependentCommands.length > 0 && connectionState.connectedPrinter) {
       const commandSequence: SequencedPrinterCommand[] = [];
 
-      commandSequence.push({
-        command: `^SM ${targetName}`,
-        delayAfterMs: reloadSettleMs,
-      });
-
+      // ^NM already leaves the just-saved message selected on the printer,
+      // so avoid sending an immediate redundant ^SM on heavy saves.
       commandSequence.push(...messageDependentCommands);
 
       if (hasAdjustSettings || hasMessagePrinterSettings) {
