@@ -2323,31 +2323,71 @@ export function usePrinterConnection() {
       // with the ^DM → ^NM → ^SV save sequence on the shared TCP socket.
       setPollingPaused(true);
       try {
-        for (const cmd of commands) {
+        for (let cmdIdx = 0; cmdIdx < commands.length; cmdIdx++) {
+          const cmd = commands[cmdIdx];
           console.log('[saveMessageContent] Sending:', cmd);
           const result = await printerTransport.sendCommand(printer.id, cmd);
           console.log('[saveMessageContent] Result:', JSON.stringify(result));
           const responseText = result?.response ?? '';
+          const errorText = result?.error ?? '';
           const rejectedByPrinter = isProtocolCommandFailure(responseText);
+
+          // FAILSAFE: If the printer timed out or the socket died, abort
+          // the entire sequence immediately — sending more commands to
+          // an unresponsive printer risks a full firmware lockup.
+          const isTimeout = !result?.success && (
+            errorText.toLowerCase().includes('timeout')
+            || errorText.toLowerCase().includes('no response')
+            || errorText.toLowerCase().includes('connection closed')
+            || errorText.toLowerCase().includes('no active connection')
+          );
+          if (isTimeout) {
+            console.error('[saveMessageContent] FAILSAFE: Printer unresponsive after command, aborting sequence:', cmd);
+            (saveMessageContent as any).__lastError = 'Printer stopped responding — save aborted to prevent lockup';
+            setPollingPaused(false);
+            return false;
+          }
+
           // Don't fail on ^DM error (message might not exist yet)
           if ((!result?.success || rejectedByPrinter) && !cmd.startsWith('^DM')) {
-            const reason = responseText || result?.error || 'Unknown error';
+            const reason = responseText || errorText || 'Unknown error';
             console.error('[saveMessageContent] Command rejected:', cmd, reason);
             // Store rejection reason so callers can display it
             (saveMessageContent as any).__lastError = reason;
             setPollingPaused(false);
             return false;
           }
-          // Brief delay between commands to let firmware finish processing
-          // before the next command arrives (especially ^DM → ^NM → ^SV).
-          // Scale delay with field count — large ^NM payloads need more
-          // firmware processing time before the next command is accepted.
+
+          // Scale inter-command delay with field count — large ^NM payloads
+          // need significantly more firmware processing time.
           const fieldCount = fields.length;
-          const interCmdDelay = fieldCount >= 5 ? 500 : fieldCount >= 3 ? 400 : 250;
+          const isNmCommand = cmd.trimStart().toUpperCase().startsWith('^NM');
+          const interCmdDelay = fieldCount >= 5 ? 600 : fieldCount >= 3 ? 450 : 300;
           const delayAfterCommand = cmd.startsWith('^SM ') && needsSwitchAwayBeforeRewrite
-            ? Math.max(interCmdDelay, 700)
-            : interCmdDelay;
+            ? Math.max(interCmdDelay, 800)
+            : isNmCommand
+              ? Math.max(interCmdDelay, 500 + fieldCount * 150) // Extra time after ^NM proportional to fields
+              : interCmdDelay;
           await new Promise(resolve => setTimeout(resolve, delayAfterCommand));
+
+          // FAILSAFE: After ^NM (the heavy command), probe the printer with
+          // a lightweight ^SU to verify it's still responsive before sending
+          // ^SV or any other follow-up command. If the printer doesn't answer,
+          // abort immediately — it's better to lose the save than lock up the
+          // printer on a production line.
+          if (isNmCommand && cmdIdx < commands.length - 1) {
+            console.log('[saveMessageContent] HEARTBEAT: Probing printer after ^NM...');
+            await new Promise(resolve => setTimeout(resolve, 300)); // Extra breathing room
+            const heartbeat = await printerTransport.sendCommand(printer.id, '^SU');
+            const hbOk = heartbeat?.success && (heartbeat?.response ?? '').length > 0;
+            if (!hbOk) {
+              console.error('[saveMessageContent] FAILSAFE: Printer did not respond to heartbeat after ^NM — aborting');
+              (saveMessageContent as any).__lastError = 'Printer unresponsive after message write — save aborted to protect production';
+              setPollingPaused(false);
+              return false;
+            }
+            console.log('[saveMessageContent] HEARTBEAT: Printer responsive, continuing sequence');
+          }
         }
 
         // Resume polling before optional verification
