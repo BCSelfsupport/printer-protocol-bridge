@@ -22,11 +22,6 @@ Deno.serve(async (req) => {
   try {
     switch (action) {
       case "sites": {
-        // Update last_seen for all online printers on each fetch
-        await supabase
-          .from("fleet_printers")
-          .update({ last_seen: new Date().toISOString() })
-          .neq("status", "offline");
 
         const { data, error } = await supabase
           .from("fleet_sites")
@@ -297,6 +292,25 @@ Deno.serve(async (req) => {
           .eq("id", printer_id);
         if (prError) throw prError;
 
+        // Propagate firmware/serial to other printers with same IP (cross-site)
+        if (firmware_version || serial_number) {
+          const { data: thisPrinter } = await supabase
+            .from("fleet_printers")
+            .select("ip_address")
+            .eq("id", printer_id)
+            .single();
+          if (thisPrinter) {
+            const crossUpdate: any = {};
+            if (firmware_version) crossUpdate.firmware_version = firmware_version;
+            if (serial_number) crossUpdate.serial_number = serial_number;
+            await supabase
+              .from("fleet_printers")
+              .update(crossUpdate)
+              .eq("ip_address", thisPrinter.ip_address)
+              .neq("id", printer_id);
+          }
+        }
+
         return new Response(JSON.stringify({ success: true, events_generated: events.length }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -547,16 +561,31 @@ Deno.serve(async (req) => {
 
         if (existing) {
           // Update existing printer
+          const updateData: any = {
+            name: printer_name || existing.id,
+            status: "online",
+            last_seen: new Date().toISOString(),
+          };
+          if (firmware_version) updateData.firmware_version = firmware_version;
+          if (serial_number) updateData.serial_number = serial_number;
+
           await supabase
             .from("fleet_printers")
-            .update({
-              name: printer_name || existing.id,
-              firmware_version: firmware_version || null,
-              serial_number: serial_number || null,
-              status: "online",
-              last_seen: new Date().toISOString(),
-            })
+            .update(updateData)
             .eq("id", existing.id);
+
+          // Also propagate firmware/serial to any other fleet printers with the same IP
+          // (e.g. same physical printer registered under multiple sites)
+          if (firmware_version || serial_number) {
+            const crossUpdate: any = {};
+            if (firmware_version) crossUpdate.firmware_version = firmware_version;
+            if (serial_number) crossUpdate.serial_number = serial_number;
+            await supabase
+              .from("fleet_printers")
+              .update(crossUpdate)
+              .eq("ip_address", ip_address)
+              .neq("id", existing.id);
+          }
 
           return new Response(JSON.stringify({ success: true, action: "updated", printer_id: existing.id }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
