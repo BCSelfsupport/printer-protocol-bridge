@@ -864,55 +864,65 @@ const Index = () => {
 
     console.log(`[ExpiryOffset] Changing offset on ${targetPrinter.name} for "${messageName}": ${targetPrinter.expiryOffsetDays ?? 0} → ${newDays} days`);
 
-    // Clone fields with modified autoCodeExpiryDays on expiry date fields ONLY
-    const modifiedFields = stored.fields.map(field => {
-      const isExpiryDateField = field.type === 'date' && (
-        field.autoCodeFieldType?.startsWith('date_expiry')
-        || (field.autoCodeExpiryDays ?? 0) > 0
-      );
-      if (isExpiryDateField) {
-        return { ...field, autoCodeExpiryDays: newDays };
+    // Pause polling to prevent TCP conflicts on the target printer's port 23
+    setPollingPaused(true);
+    try {
+      const pollingIdle = await waitForPollingIdle(3000);
+      if (!pollingIdle) {
+        console.warn(`[ExpiryOffset] Polling still active, proceeding anyway`);
       }
-      return field;
-    });
 
-    const modifiedDetails: Pick<MessageDetails, 'fields' | 'templateValue'> = {
-      fields: modifiedFields,
-      templateValue: stored.templateValue,
-    };
+      // Clone fields with modified autoCodeExpiryDays on expiry date fields ONLY
+      const modifiedFields = stored.fields.map(field => {
+        const isExpiryDateField = field.type === 'date' && (
+          field.autoCodeFieldType?.startsWith('date_expiry')
+          || (field.autoCodeExpiryDays ?? 0) > 0
+        );
+        if (isExpiryDateField) {
+          return { ...field, autoCodeExpiryDays: newDays };
+        }
+        return field;
+      });
 
-    // Use replaceMessageWithoutDelete for the switch-away flow
-    // This handles: ^SM BESTCODE → ^NM (with new offset, no ^SV) → ^SM back
-    const result = await replaceMessageWithoutDelete(targetPrinter, messageName, modifiedDetails);
+      const modifiedDetails: Pick<MessageDetails, 'fields' | 'templateValue'> = {
+        fields: modifiedFields,
+        templateValue: stored.templateValue,
+      };
 
-    if (!result.success) {
-      console.error(`[ExpiryOffset] Failed on ${targetPrinter.name}: ${result.reason}`);
-      toast.error(`Expiry update failed on ${targetPrinter.name}: ${result.reason}`);
-      return;
-    }
+      // Use replaceMessageWithoutDelete for the switch-away flow
+      // This handles: ^SM BESTCODE → ^NM (with new offset, no ^SV) → ^SM back
+      const result = await replaceMessageWithoutDelete(targetPrinter, messageName, modifiedDetails);
 
-    // Re-apply cached User Define (prompted field) value if any
-    const promptFieldIdx = stored.fields.findIndex(f => f.promptBeforePrint);
-    if (promptFieldIdx >= 0) {
-      const promptField = stored.fields[promptFieldIdx];
-      const tdNum = promptFieldIdx + 1; // 1-indexed
-      const cachedValue = promptField.data?.trim();
-      if (cachedValue) {
-        console.log(`[ExpiryOffset] Re-applying ^MD^TD${tdNum} "${cachedValue}" on ${targetPrinter.name}`);
-        await sendCommandToPrinter(targetPrinter, `^MD^TD${tdNum};${cachedValue}`);
+      if (!result.success) {
+        console.error(`[ExpiryOffset] Failed on ${targetPrinter.name}: ${result.reason}`);
+        toast.error(`Expiry update failed on ${targetPrinter.name}: ${result.reason}`);
+        return;
       }
+
+      // Re-apply cached User Define (prompted field) value if any
+      const promptFieldIdx = stored.fields.findIndex(f => f.promptBeforePrint);
+      if (promptFieldIdx >= 0) {
+        const promptField = stored.fields[promptFieldIdx];
+        const tdNum = promptFieldIdx + 1; // 1-indexed
+        const cachedValue = promptField.data?.trim();
+        if (cachedValue) {
+          console.log(`[ExpiryOffset] Re-applying ^MD^TD${tdNum} "${cachedValue}" on ${targetPrinter.name}`);
+          await sendCommandToPrinter(targetPrinter, `^MD^TD${tdNum};${cachedValue}`);
+        }
+      }
+
+      // NOTE: Do NOT update the shared message cache here — the original message
+      // definition should stay unchanged so other printers keep their original expiry.
+      // The per-printer override lives in printer.expiryOffsetDays only.
+
+      // Update printer state
+      updatePrinter(printerId, { expiryOffsetDays: newDays });
+      toast.success(`${targetPrinter.name}: expiry offset → ${newDays} day${newDays !== 1 ? 's' : ''}`);
+      console.log(`[ExpiryOffset] Complete on ${targetPrinter.name}`);
+    } finally {
+      // Resume polling after a short grace period
+      setTimeout(() => setPollingPaused(false), 1000);
     }
-
-    // NOTE: Do NOT update the shared message cache here — the original message
-    // definition should stay unchanged so other printers keep their original expiry.
-    // The per-printer override lives in printer.expiryOffsetDays only.
-
-    // Update printer state
-    updatePrinter(printerId, { expiryOffsetDays: newDays });
-    toast.success(`${targetPrinter.name}: expiry offset → ${newDays} day${newDays !== 1 ? 's' : ''}`);
-
-    // 15s grace period — polling will naturally resume
-    console.log(`[ExpiryOffset] Complete on ${targetPrinter.name}`);
   }, [printers, getMessage, saveMessage, replaceMessageWithoutDelete, sendCommandToPrinter, updatePrinter, connectionState.connectedPrinter?.id]);
 
   // Delay alerts on startup so update notification can appear first
