@@ -12,6 +12,7 @@ import { Dashboard } from '@/components/screens/Dashboard';
 import { PrintersScreen } from '@/components/screens/PrintersScreen';
 import { MessagesScreen } from '@/components/screens/MessagesScreen';
 import { EditMessageScreen, MessageDetails } from '@/components/screens/EditMessageScreen';
+import { PrintSettings } from '@/types/printer';
 import { AdjustDialog } from '@/components/adjust/AdjustDialog';
 import { SetupScreen } from '@/components/screens/SetupScreen';
 import { ServiceScreen } from '@/components/screens/ServiceScreen';
@@ -1267,7 +1268,25 @@ const Index = () => {
             }
             if (isConnectedMessageTarget) {
               const ok = await selectMessage(message);
-              if (ok) clearAllExpiryOverrides();
+              if (ok) {
+                clearAllExpiryOverrides();
+                // Apply stored adjust settings for this message
+                const stored = getMessage(message.name);
+                if (stored?.adjustSettings) {
+                  const adj = stored.adjustSettings;
+                  const fullSettings: PrintSettings = {
+                    ...connectionState.settings,
+                    width: adj.width ?? connectionState.settings.width,
+                    height: adj.height ?? connectionState.settings.height,
+                    delay: adj.delay ?? connectionState.settings.delay,
+                    bold: adj.bold ?? connectionState.settings.bold,
+                    gap: adj.gap ?? connectionState.settings.gap,
+                    pitch: adj.pitch ?? connectionState.settings.pitch,
+                  };
+                  await saveGlobalAdjust(fullSettings);
+                  updateSettings(fullSettings);
+                }
+              }
               return ok;
             }
             const ok = await sendCommandToPrinter(messageTargetPrinter, `^SM ${message.name}`);
@@ -1332,6 +1351,8 @@ const Index = () => {
           connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
           isConnected={connectionState.isConnected}
           printerModel={connectionState.status?.printerModel}
+          currentAdjustSettings={connectionState.settings}
+          onSendCommand={sendCommand}
           onSave={saveEditedMessage}
           onCancel={() => {
             setCurrentScreen('messages');
@@ -1432,6 +1453,8 @@ const Index = () => {
             connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
             isConnected={connectionState.isConnected}
             printerModel={connectionState.status?.printerModel}
+            currentAdjustSettings={connectionState.settings}
+            onSendCommand={sendCommand}
           onSave={saveEditedMessage}
             onCancel={() => {
               setCurrentScreen('messages');
@@ -1479,7 +1502,25 @@ const Index = () => {
               }
               if (messageTargetPrinter.id === connectionState.connectedPrinter?.id) {
                 const ok = await selectMessage(message);
-                if (ok) clearAllExpiryOverrides();
+                if (ok) {
+                  clearAllExpiryOverrides();
+                  // Apply stored adjust settings for this message
+                  const stored = getMessage(message.name);
+                  if (stored?.adjustSettings) {
+                    const adj = stored.adjustSettings;
+                    const fullSettings: PrintSettings = {
+                      ...connectionState.settings,
+                      width: adj.width ?? connectionState.settings.width,
+                      height: adj.height ?? connectionState.settings.height,
+                      delay: adj.delay ?? connectionState.settings.delay,
+                      bold: adj.bold ?? connectionState.settings.bold,
+                      gap: adj.gap ?? connectionState.settings.gap,
+                      pitch: adj.pitch ?? connectionState.settings.pitch,
+                    };
+                    await saveGlobalAdjust(fullSettings);
+                    updateSettings(fullSettings);
+                  }
+                }
                 return ok;
               }
               const ok = await sendCommandToPrinter(messageTargetPrinter, `^SM ${message.name}`);

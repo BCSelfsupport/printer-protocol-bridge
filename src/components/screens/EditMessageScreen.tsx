@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database } from 'lucide-react';
+import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database, Sliders } from 'lucide-react';
 import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,8 @@ import { GraphicFieldDialog, GraphicFieldConfig } from '@/components/messages/Gr
 import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
 import { AdvancedSettingsDialog, AdvancedSettings, defaultAdvancedSettings } from '@/components/messages/AdvancedSettingsDialog';
 import { DataLinkDialog } from '@/components/messages/DataLinkDialog';
+import { AdjustDialog } from '@/components/adjust/AdjustDialog';
+import { PrintSettings } from '@/types/printer';
 import { supabase } from '@/integrations/supabase/client';
 import { FieldSettingsPanel, FieldSettings, defaultFieldSettings } from '@/components/messages/FieldSettingsPanel';
 import { getModelCapabilities } from '@/lib/modelCapabilities';
@@ -63,6 +65,16 @@ export interface MessageField {
   promptLength?: number;         // Max characters allowed
 }
 
+// Per-message adjust settings (width, height, delay, bold, gap, pitch)
+export interface MessageAdjustSettings {
+  width?: number;
+  height?: number;
+  delay?: number;
+  bold?: number;
+  gap?: number;
+  pitch?: number;
+}
+
 export interface MessageDetails {
   name: string;
   height: number;
@@ -71,6 +83,7 @@ export interface MessageDetails {
   templateValue?: string; // Track which template was selected
   settings?: MessageSettings; // Message-level print settings
   advancedSettings?: AdvancedSettings; // Advanced settings (pages 52-55)
+  adjustSettings?: MessageAdjustSettings; // Per-message adjust (^PW, ^PH, ^DA, ^SB, ^GP, ^PA)
 }
 
 // Template options - single heights for mixed font messages (loaded from .BIN files)
@@ -131,6 +144,8 @@ interface EditMessageScreenProps {
   startEmpty?: boolean;
   printerModel?: string | null;
   preset?: 'metrc-retail-id';
+  currentAdjustSettings?: PrintSettings;
+  onSendCommand?: (command: string) => Promise<any>;
 }
 
 export function EditMessageScreen({
@@ -146,6 +161,8 @@ export function EditMessageScreen({
   startEmpty = false,
   printerModel,
   preset,
+  currentAdjustSettings,
+  onSendCommand,
 }: EditMessageScreenProps) {
   // Filter templates and fonts based on connected printer model
   const capabilities = getModelCapabilities(printerModel);
@@ -203,6 +220,12 @@ export function EditMessageScreen({
   const [userDefineDialogOpen, setUserDefineDialogOpen] = useState(false);
   const [graphicDialogOpen, setGraphicDialogOpen] = useState(false);
   const [dataLinkDialogOpen, setDataLinkDialogOpen] = useState(false);
+  const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+  // Local adjust settings state for the dialog — initialized from message or current printer settings
+  const [localAdjustSettings, setLocalAdjustSettings] = useState<PrintSettings>(() => {
+    const adj = currentAdjustSettings ?? { width: 15, height: 8, delay: 100, bold: 0, gap: 0, pitch: 0, repeatAmount: 0, rotation: 'Normal' as const, speed: 'Ultra Fast' as const };
+    return adj;
+  });
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
   const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
@@ -235,6 +258,18 @@ export function EditMessageScreen({
         .then((details) => {
           if (details) {
             setMessage(details);
+            // Restore adjust settings from stored message if available
+            if (details.adjustSettings) {
+              setLocalAdjustSettings(prev => ({
+                ...prev,
+                width: details.adjustSettings?.width ?? prev.width,
+                height: details.adjustSettings?.height ?? prev.height,
+                delay: details.adjustSettings?.delay ?? prev.delay,
+                bold: details.adjustSettings?.bold ?? prev.bold,
+                gap: details.adjustSettings?.gap ?? prev.gap,
+                pitch: details.adjustSettings?.pitch ?? prev.pitch,
+              }));
+            }
             if (details.fields.length > 0) {
               setSelectedFieldId(details.fields[0].id);
             }
@@ -1327,8 +1362,28 @@ export function EditMessageScreen({
                 </button>
 
                 <button
+                  onClick={() => setAdjustDialogOpen(true)}
+                  className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
+                >
+                  <Sliders className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
+                  <span className="text-[9px] md:text-xs font-medium">Adjust</span>
+                </button>
+
+                <button
                   onClick={async () => {
-                    const result = await onSave(message, !hasSavedToPrinterRef.current);
+                    // Include adjust settings in the saved message
+                    const messageWithAdjust: MessageDetails = {
+                      ...message,
+                      adjustSettings: {
+                        width: localAdjustSettings.width,
+                        height: localAdjustSettings.height,
+                        delay: localAdjustSettings.delay,
+                        bold: localAdjustSettings.bold,
+                        gap: localAdjustSettings.gap,
+                        pitch: localAdjustSettings.pitch,
+                      },
+                    };
+                    const result = await onSave(messageWithAdjust, !hasSavedToPrinterRef.current);
                     if (!result) return;
 
                     hasSavedToPrinterRef.current = true;
@@ -1536,7 +1591,7 @@ export function EditMessageScreen({
                 <Button
                   onClick={async () => {
                     if (validateMessageName(saveAsName).valid) {
-                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase() }, true);
+                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch } }, true);
                       setSaveAsDialogOpen(false);
                       if (result && result.fields.length > 0) {
                         setMessage(prev => ({
@@ -1588,6 +1643,16 @@ export function EditMessageScreen({
                 };
               });
             }}
+          />
+
+          {/* Adjust Dialog (per-message) */}
+          <AdjustDialog
+            open={adjustDialogOpen}
+            onOpenChange={setAdjustDialogOpen}
+            settings={localAdjustSettings}
+            onUpdate={(partial) => setLocalAdjustSettings(prev => ({ ...prev, ...partial }))}
+            onSendCommand={onSendCommand ?? (async () => ({}))}
+            isConnected={isConnected}
           />
         </>
       )}
