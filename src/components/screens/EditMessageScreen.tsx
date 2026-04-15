@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database } from 'lucide-react';
+import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database, Sliders } from 'lucide-react';
 import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
@@ -63,6 +63,16 @@ export interface MessageField {
   promptLength?: number;         // Max characters allowed
 }
 
+// Per-message adjust settings (width, height, delay, bold, gap, pitch)
+export interface MessageAdjustSettings {
+  width?: number;
+  height?: number;
+  delay?: number;
+  bold?: number;
+  gap?: number;
+  pitch?: number;
+}
+
 export interface MessageDetails {
   name: string;
   height: number;
@@ -71,6 +81,7 @@ export interface MessageDetails {
   templateValue?: string; // Track which template was selected
   settings?: MessageSettings; // Message-level print settings
   advancedSettings?: AdvancedSettings; // Advanced settings (pages 52-55)
+  adjustSettings?: MessageAdjustSettings; // Per-message adjust (^PW, ^PH, ^DA, ^SB, ^GP, ^PA)
 }
 
 // Template options - single heights for mixed font messages (loaded from .BIN files)
