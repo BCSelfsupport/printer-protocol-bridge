@@ -2863,25 +2863,35 @@ export function usePrinterConnection() {
       for (const cmd of commands) {
         const result = emulator.processCommand(cmd);
         console.log('[saveGlobalAdjust] Emulator result for', cmd, ':', result);
+        if (!result?.success || isProtocolCommandFailure(result?.response)) {
+          console.error('[saveGlobalAdjust] Emulator command rejected:', cmd, result?.response);
+          return false;
+        }
       }
       return true;
     } else if (isElectron || isRelayMode()) {
+      setPollingPaused(true);
       try {
-        console.log('[saveGlobalAdjust] Sending commands to printer');
+        await new Promise((resolve) => setTimeout(resolve, 300));
         for (const cmd of commands) {
           console.log('[saveGlobalAdjust] Sending:', cmd);
           const result = await printerTransport.sendCommand(printer.id, cmd);
           console.log('[saveGlobalAdjust] Result:', JSON.stringify(result));
-          
-          if (!result?.success) {
-            console.error('[saveGlobalAdjust] Command failed:', cmd, result?.error);
-            // Continue with other commands even if one fails
+
+          const responseText = result?.response ?? result?.error ?? '';
+          if (!result?.success || isProtocolCommandFailure(responseText)) {
+            console.error('[saveGlobalAdjust] Command failed:', cmd, responseText);
+            return false;
           }
+
+          await new Promise((resolve) => setTimeout(resolve, 300));
         }
         return true;
       } catch (e) {
         console.error('[saveGlobalAdjust] Failed to save settings:', e);
         return false;
+      } finally {
+        setPollingPaused(false);
       }
     } else {
       // Web preview mock
