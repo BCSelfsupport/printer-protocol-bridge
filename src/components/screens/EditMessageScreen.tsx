@@ -1653,6 +1653,7 @@ export function EditMessageScreen({
             onUpdate={(partial) => setLocalAdjustSettings(prev => ({ ...prev, ...partial }))}
             onSendCommand={onSendCommand ?? (async () => ({}))}
             isConnected={isConnected}
+            title="Adjust Settings (Message)"
           />
         </>
       )}
