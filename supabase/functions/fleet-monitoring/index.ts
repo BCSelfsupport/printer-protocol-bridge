@@ -542,16 +542,31 @@ Deno.serve(async (req) => {
 
         if (existing) {
           // Update existing printer
+          const updateData: any = {
+            name: printer_name || existing.id,
+            status: "online",
+            last_seen: new Date().toISOString(),
+          };
+          if (firmware_version) updateData.firmware_version = firmware_version;
+          if (serial_number) updateData.serial_number = serial_number;
+
           await supabase
             .from("fleet_printers")
-            .update({
-              name: printer_name || existing.id,
-              firmware_version: firmware_version || null,
-              serial_number: serial_number || null,
-              status: "online",
-              last_seen: new Date().toISOString(),
-            })
+            .update(updateData)
             .eq("id", existing.id);
+
+          // Also propagate firmware/serial to any other fleet printers with the same IP
+          // (e.g. same physical printer registered under multiple sites)
+          if (firmware_version || serial_number) {
+            const crossUpdate: any = {};
+            if (firmware_version) crossUpdate.firmware_version = firmware_version;
+            if (serial_number) crossUpdate.serial_number = serial_number;
+            await supabase
+              .from("fleet_printers")
+              .update(crossUpdate)
+              .eq("ip_address", ip_address)
+              .neq("id", existing.id);
+          }
 
           return new Response(JSON.stringify({ success: true, action: "updated", printer_id: existing.id }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
