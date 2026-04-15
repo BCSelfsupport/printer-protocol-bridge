@@ -258,6 +258,18 @@ export function EditMessageScreen({
         .then((details) => {
           if (details) {
             setMessage(details);
+            // Restore adjust settings from stored message if available
+            if (details.adjustSettings) {
+              setLocalAdjustSettings(prev => ({
+                ...prev,
+                width: details.adjustSettings?.width ?? prev.width,
+                height: details.adjustSettings?.height ?? prev.height,
+                delay: details.adjustSettings?.delay ?? prev.delay,
+                bold: details.adjustSettings?.bold ?? prev.bold,
+                gap: details.adjustSettings?.gap ?? prev.gap,
+                pitch: details.adjustSettings?.pitch ?? prev.pitch,
+              }));
+            }
             if (details.fields.length > 0) {
               setSelectedFieldId(details.fields[0].id);
             }
