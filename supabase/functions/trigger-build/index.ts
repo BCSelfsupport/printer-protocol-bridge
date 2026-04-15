@@ -20,14 +20,16 @@ serve(async (req) => {
       });
     }
 
-    // Parse branch from request body, default to 'main'
-    let branch = 'main';
+    let target: 'production' | 'dev' = 'production';
     let workflow = 'build-windows.yml';
+    let workflowRef = 'main';
+
     try {
       const body = await req.json();
-      if (body.branch === 'dev') {
-        branch = 'dev';
+      if (body?.branch === 'dev' || body?.target === 'dev') {
+        target = 'dev';
         workflow = 'build-dev.yml';
+        workflowRef = 'main';
       }
     } catch {
       // No body or invalid JSON — use defaults
@@ -44,12 +46,12 @@ serve(async (req) => {
           'Accept': 'application/vnd.github.v3+json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ref: branch }),
+        body: JSON.stringify({ ref: workflowRef }),
       }
     );
 
     if (response.status === 204) {
-      return new Response(JSON.stringify({ success: true, message: `${branch === 'dev' ? 'Dev test' : 'Production'} build triggered!` }), {
+      return new Response(JSON.stringify({ success: true, message: `${target === 'dev' ? 'Dev test' : 'Production'} build triggered from ${workflowRef}!` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
