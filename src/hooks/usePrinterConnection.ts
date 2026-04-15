@@ -2190,6 +2190,18 @@ export function usePrinterConnection() {
       return false;
     }
 
+    // FAILSAFE: Hard cap on field count to prevent firmware lockups.
+    // Empirical testing shows the BestCode firmware can wedge on large
+    // ^NM payloads. Log a warning at 4+ fields, and block at 8+ fields.
+    if (fields.length >= 8) {
+      console.error(`[saveMessageContent] FAILSAFE: Refusing to save ${fields.length} fields — exceeds safe limit (max 7)`);
+      (saveMessageContent as any).__lastError = `Too many fields (${fields.length}) — maximum safe limit is 7 to prevent printer lockup`;
+      return false;
+    }
+    if (fields.length >= 4) {
+      console.warn(`[saveMessageContent] WARNING: Saving ${fields.length} fields — approaching firmware stability limits`);
+    }
+
     const printer = connectionState.connectedPrinter;
     const normalizedMessageName = messageName.trim().toUpperCase();
     const currentSelectedMessage = connectionState.status?.currentMessage?.trim().toUpperCase();
