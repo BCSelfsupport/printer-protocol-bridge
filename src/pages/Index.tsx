@@ -938,7 +938,7 @@ const Index = () => {
       }
     }
 
-    if (isNew && connectionState.isConnected) {
+    if (isNew && connectionState.isConnected && !restoredByCommandSequence) {
       const prevMessage = connectionState.status?.currentMessage;
       if (prevMessage && prevMessage !== targetName) {
         try {
