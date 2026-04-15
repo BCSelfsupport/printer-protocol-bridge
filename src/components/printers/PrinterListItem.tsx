@@ -89,8 +89,11 @@ export function PrinterListItem({
   const [editingExpiry, setEditingExpiry] = useState(false);
   const [expiryInput, setExpiryInput] = useState('');
   const expiryInputRef = useRef<HTMLInputElement>(null);
-  // Prefer the printer's own current message; only fall back to master's message for slaves with no local value
-  const displayMessage = printer.currentMessage ?? ((printer.role === 'slave' && masterMessage) ? masterMessage : undefined);
+  // Slaves should mirror the master's active message in the card UI even if
+  // their local emulator state still has an older message name.
+  const displayMessage = printer.role === 'slave'
+    ? (masterMessage ?? printer.currentMessage ?? undefined)
+    : (printer.currentMessage ?? undefined);
   
   // Filter status for this printer
   const pumpHours = streamHours ? parseStreamHoursToNumber(streamHours) : null;

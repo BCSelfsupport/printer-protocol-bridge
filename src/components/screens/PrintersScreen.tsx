@@ -561,7 +561,9 @@ export function PrintersScreen({
                 >
                   {visiblePrinters.map((printer) => {
                     // Compute original message expiry days from cached content
-                    const msgName = printer.currentMessage || masterMessageMap.get(printer.id);
+                    const msgName = printer.role === 'slave'
+                      ? (masterMessageMap.get(printer.id) || printer.currentMessage)
+                      : (printer.currentMessage || masterMessageMap.get(printer.id));
                     // Try this printer → master → connected printer → no override (current context)
                     const msgContent = msgName && getMessageContent
                       ? (getMessageContent(msgName, printer.id)

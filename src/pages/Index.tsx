@@ -843,17 +843,19 @@ const Index = () => {
     }
 
     // Determine which message is active on this printer
-    const messageName = targetPrinter.currentMessage
-      ?? (targetPrinter.role === 'slave' && targetPrinter.masterId !== undefined
-        ? printers.find(p => p.id === targetPrinter.masterId)?.currentMessage
-        : undefined);
+    const syncedMasterMessage = targetPrinter.role === 'slave' && targetPrinter.masterId !== undefined
+      ? printers.find(p => p.id === targetPrinter.masterId)?.currentMessage
+      : undefined;
+    const messageName = syncedMasterMessage ?? targetPrinter.currentMessage;
     if (!messageName) {
       toast.error('No active message on this printer');
       return;
     }
 
     // Get cached message content
-    const stored = getMessage(messageName, targetPrinter.id)
+    const stored = (targetPrinter.role === 'slave' && targetPrinter.masterId !== undefined
+      ? (getMessage(messageName, targetPrinter.masterId) || getMessage(messageName, targetPrinter.id))
+      : getMessage(messageName, targetPrinter.id))
       || (targetPrinter.masterId !== undefined ? getMessage(messageName, targetPrinter.masterId) : null)
       || (connectionState.connectedPrinter?.id !== undefined ? getMessage(messageName, connectionState.connectedPrinter.id) : null)
       || getMessage(messageName);
@@ -891,7 +893,10 @@ const Index = () => {
 
       // Use replaceMessageWithoutDelete for the switch-away flow
       // This handles: ^SM BESTCODE → ^NM (with new offset, no ^SV) → ^SM back
-      const result = await replaceMessageWithoutDelete(targetPrinter, messageName, modifiedDetails);
+      const rewriteTarget = syncedMasterMessage
+        ? { ...targetPrinter, currentMessage: messageName }
+        : targetPrinter;
+      const result = await replaceMessageWithoutDelete(rewriteTarget, messageName, modifiedDetails);
 
       if (!result.success) {
         console.error(`[ExpiryOffset] Failed on ${targetPrinter.name}: ${result.reason}`);
