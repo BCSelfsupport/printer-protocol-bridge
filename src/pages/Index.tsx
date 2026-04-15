@@ -212,6 +212,37 @@ const Index = () => {
       }),
   }), []);
 
+  const buildEffectiveMessageDependentSettings = useCallback((details: MessageDetails) => {
+    const effectiveSpeed = details.adjustSettings?.speed
+      ?? details.settings?.speed
+      ?? connectionState.settings.speed;
+    const effectiveRotation = details.adjustSettings?.rotation
+      ?? details.settings?.rotation
+      ?? connectionState.settings.rotation;
+    const effectivePrintMode = details.settings?.printMode ?? 'Normal';
+
+    const fullAdjustSettings: PrintSettings = {
+      ...connectionState.settings,
+      width: details.adjustSettings?.width ?? connectionState.settings.width,
+      height: details.adjustSettings?.height ?? connectionState.settings.height,
+      delay: details.adjustSettings?.delay ?? connectionState.settings.delay,
+      bold: details.adjustSettings?.bold ?? connectionState.settings.bold,
+      gap: details.adjustSettings?.gap ?? connectionState.settings.gap,
+      pitch: details.adjustSettings?.pitch ?? connectionState.settings.pitch,
+      speed: effectiveSpeed,
+      rotation: effectiveRotation,
+    };
+
+    return {
+      fullAdjustSettings,
+      perMessageSettings: {
+        speed: effectiveSpeed,
+        rotation: effectiveRotation,
+        printMode: effectivePrintMode,
+      },
+    };
+  }, [connectionState.settings]);
+
   const stripPromptMetadata = useCallback((details: MessageDetails): MessageDetails => ({
     ...details,
     fields: details.fields.map(({ promptBeforePrint, promptLabel, promptLength, ...field }) => field),
@@ -697,6 +728,13 @@ const Index = () => {
     });
     const cachedDetails = getMessage(editingMessage.name) ?? getMessage(targetName) ?? null;
     const printerWriteNeeded = isNew || hasPrinterVisibleChanges(localDetails, cachedDetails);
+    const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(localDetails);
+    const hasMessagePrinterSettings = !!(
+      localDetails.settings
+      || localDetails.adjustSettings?.speed !== undefined
+      || localDetails.adjustSettings?.rotation !== undefined
+    );
+    const hasAdjustSettings = !!localDetails.adjustSettings;
 
     console.log('[AdjustDebug][saveEditedMessage.start]', {
       editingMessageName: editingMessage.name,
@@ -723,6 +761,7 @@ const Index = () => {
       localDetails.fields,
       localDetails.templateValue,
       isNew,
+      perMessageSettings,
     );
     if (!success) {
       const reason = (saveMessageContent as any).__lastError || '';
@@ -730,6 +769,36 @@ const Index = () => {
       toast.error(`Printer rejected message save: ${reason || 'Check settings and try again.'}`);
       return null;
     }
+
+    const currentlySelectedName = connectionState.status?.currentMessage?.trim().toUpperCase();
+    const savedMessageIsActive = currentlySelectedName === targetName.trim().toUpperCase();
+
+    if (savedMessageIsActive) {
+      if (hasAdjustSettings) {
+        const adjustSaved = await saveGlobalAdjust(fullAdjustSettings);
+        if (!adjustSaved) {
+          toast.error(`Saved "${targetName}", but failed to apply message adjust settings on the printer.`);
+        } else {
+          updateSettings(fullAdjustSettings);
+        }
+      }
+
+      if (hasMessagePrinterSettings) {
+        const messageSettingsSaved = await saveMessageSettings(perMessageSettings);
+        if (!messageSettingsSaved) {
+          toast.error(`Saved "${targetName}", but failed to apply message settings on the printer.`);
+        }
+      }
+
+      if (hasAdjustSettings || hasMessagePrinterSettings) {
+        try {
+          await sendCommand('^SV');
+        } catch (e) {
+          console.error('[onSave] Failed to flush message-dependent settings with ^SV:', e);
+        }
+      }
+    }
+
     if (!isNew) {
       updateMessage(editingMessage.id, details.name);
     }
@@ -783,13 +852,18 @@ const Index = () => {
 
     return localDetails;
   }, [
+    buildEffectiveMessageDependentSettings,
     editingMessage,
     normalizeMessageForPrinter,
     getMessage,
     hasPrinterVisibleChanges,
+    connectionState.connectedPrinter?.id,
     updateMessage,
+    updateSettings,
     saveMessage,
     saveMessageContent,
+    saveGlobalAdjust,
+    saveMessageSettings,
     syncMessageToSlaves,
     connectionState.isConnected,
     connectionState.status?.currentMessage,
@@ -831,51 +905,52 @@ const Index = () => {
     messageName: string,
   ): Promise<void> => {
     const stored = getStoredMessageForPrinter(messageName, targetPrinter);
-    if (!stored?.adjustSettings) {
+    const hasStoredAdjustSettings = !!stored?.adjustSettings;
+    const hasStoredMessageSettings = !!stored?.settings;
+
+    if (!hasStoredAdjustSettings && !hasStoredMessageSettings) {
       console.warn('[AdjustDebug][applyStoredAdjustSettings.skip]', {
         targetPrinterId: targetPrinter.id,
         targetPrinterName: targetPrinter.name,
         messageName,
         storedFound: !!stored,
         storedAdjustSettings: stored?.adjustSettings ?? null,
+        storedMessageSettings: stored?.settings ?? null,
       });
       return;
     }
 
-    const adj = stored.adjustSettings;
-    const fullSettings: PrintSettings = {
-      ...connectionState.settings,
-      width: adj.width ?? connectionState.settings.width,
-      height: adj.height ?? connectionState.settings.height,
-      delay: adj.delay ?? connectionState.settings.delay,
-      bold: adj.bold ?? connectionState.settings.bold,
-      gap: adj.gap ?? connectionState.settings.gap,
-      pitch: adj.pitch ?? connectionState.settings.pitch,
-      speed: adj.speed ?? connectionState.settings.speed,
-      rotation: adj.rotation ?? connectionState.settings.rotation,
-    };
+    const adj = stored.adjustSettings ?? {};
+    const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(stored);
 
-    // Map speed/rotation to protocol values for ^CM command
+    const printModeMap: Record<string, number> = {
+      'Normal': 0,
+      'Auto': 1,
+      'Repeat': 2,
+      'Reverse': 3,
+      'Auto Encoder': 5,
+      'Auto Encoder Reverse': 6,
+    };
     const speedMap: Record<string, number> = { 'Fast': 0, 'Faster': 1, 'Fastest': 2, 'Ultra Fast': 3 };
     const orientationMap: Record<string, number> = {
       'Normal': 0, 'Flip': 1, 'Mirror': 2, 'Mirror Flip': 3,
       'Tower': 4, 'Tower Flip': 5, 'Tower Mirror': 6, 'Tower Mirror Flip': 7,
     };
 
-    const commands = [
-      `^PW ${fullSettings.width}`,
-      `^PH ${fullSettings.height}`,
-      `^DA ${fullSettings.delay}`,
-      `^SB ${fullSettings.bold}`,
-      `^GP ${fullSettings.gap}`,
-      `^PA ${fullSettings.pitch}`,
-    ];
+    const commands: string[] = [];
 
-    // Add ^CM command for speed and rotation if stored
-    if (adj.speed || adj.rotation) {
-      const s = speedMap[fullSettings.speed] ?? 2;
-      const o = orientationMap[fullSettings.rotation] ?? 0;
-      commands.push(`^CM s${s};o${o}`);
+    if (adj.width !== undefined) commands.push(`^PW ${fullAdjustSettings.width}`);
+    if (adj.height !== undefined) commands.push(`^PH ${fullAdjustSettings.height}`);
+    if (adj.delay !== undefined) commands.push(`^DA ${fullAdjustSettings.delay}`);
+    if (adj.bold !== undefined) commands.push(`^SB ${fullAdjustSettings.bold}`);
+    if (adj.gap !== undefined) commands.push(`^GP ${fullAdjustSettings.gap}`);
+    if (adj.pitch !== undefined) commands.push(`^PA ${fullAdjustSettings.pitch}`);
+
+    if (hasStoredMessageSettings || adj.speed !== undefined || adj.rotation !== undefined) {
+      const s = speedMap[perMessageSettings.speed] ?? 2;
+      const o = orientationMap[perMessageSettings.rotation] ?? 0;
+      const p = printModeMap[perMessageSettings.printMode] ?? 0;
+      commands.push(`^CM s${s};o${o};p${p}`);
     }
 
     console.log('[AdjustDebug][applyStoredAdjustSettings.start]', {
@@ -884,7 +959,9 @@ const Index = () => {
       messageName,
       currentConnectionSettings: connectionState.settings,
       storedAdjustSettings: adj,
-      computedFullSettings: fullSettings,
+      storedMessageSettings: stored.settings ?? null,
+      computedFullSettings: fullAdjustSettings,
+      computedPerMessageSettings: perMessageSettings,
       commands,
     });
 
@@ -922,11 +999,13 @@ const Index = () => {
     console.log('[AdjustDebug][applyStoredAdjustSettings.success]', {
       targetPrinterId: targetPrinter.id,
       messageName,
-      appliedSettings: fullSettings,
+      appliedSettings: fullAdjustSettings,
+      appliedPerMessageSettings: perMessageSettings,
     });
 
-    updateSettings(fullSettings);
+    updateSettings(fullAdjustSettings);
   }, [
+    buildEffectiveMessageDependentSettings,
     getStoredMessageForPrinter,
     connectionState.settings,
     connectionState.connectedPrinter?.id,

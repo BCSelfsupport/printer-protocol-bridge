@@ -2172,6 +2172,11 @@ export function usePrinterConnection() {
     }>,
     templateValue?: string,
     isNew?: boolean,
+    messageSettings?: {
+      speed?: PrintSettings['speed'];
+      rotation?: string;
+      printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
+    },
   ): Promise<boolean> => {
     console.log('[saveMessageContent] Called with:', messageName, fields, 'template:', templateValue, 'isNew:', isNew);
     (saveMessageContent as any).__lastError = '';
@@ -2243,9 +2248,36 @@ export function usePrinterConnection() {
       y: field.y,
     })));
 
-    // Build the full ^NM command: ^NM t;s;o;p;name^AT1;...^AT2;...
-    // Speed=0 (Fast), Orientation=0 (Normal), Mode=0 (Normal) as defaults
-    const nmCommand = `^NM ${templateCode};0;0;0;${messageName}${fieldSubcommands}`;
+    const orientationMap: Record<string, number> = {
+      'Normal': 0,
+      'Flip': 1,
+      'Mirror': 2,
+      'Mirror Flip': 3,
+      'Tower': 4,
+      'Tower Flip': 5,
+      'Tower Mirror': 6,
+      'Tower Mirror Flip': 7,
+    };
+    const speedMap: Record<PrintSettings['speed'], number> = {
+      'Fast': 0,
+      'Faster': 1,
+      'Fastest': 2,
+      'Ultra Fast': 3,
+    };
+    const printModeMap: Record<string, number> = {
+      'Normal': 0,
+      'Auto': 1,
+      'Repeat': 2,
+      'Reverse': 3,
+      'Auto Encoder': 5,
+      'Auto Encoder Reverse': 6,
+    };
+
+    const nmSpeed = speedMap[messageSettings?.speed ?? 'Fast'] ?? 0;
+    const nmOrientation = orientationMap[messageSettings?.rotation ?? 'Normal'] ?? 0;
+    const nmPrintMode = printModeMap[messageSettings?.printMode ?? 'Normal'] ?? 0;
+
+    const nmCommand = `^NM ${templateCode};${nmSpeed};${nmOrientation};${nmPrintMode};${messageName}${fieldSubcommands}`;
     
     console.log('[saveMessageContent] ^NM command:', nmCommand);
     
@@ -2352,6 +2384,11 @@ export function usePrinterConnection() {
     }>,
     templateValue?: string,
     isNew?: boolean,
+    messageSettings?: {
+      speed?: PrintSettings['speed'];
+      rotation?: string;
+      printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
+    },
   ): Promise<string[] | null> => {
     if (fields.length === 0) return null;
 
@@ -2391,7 +2428,36 @@ export function usePrinterConnection() {
       }, index + 1, templateHeight, dmGraphicMap);
     }).join('');
 
-    const nmCommand = `^NM ${templateCode};0;0;0;${messageName}${fieldSubcommands}`;
+    const orientationMap: Record<string, number> = {
+      'Normal': 0,
+      'Flip': 1,
+      'Mirror': 2,
+      'Mirror Flip': 3,
+      'Tower': 4,
+      'Tower Flip': 5,
+      'Tower Mirror': 6,
+      'Tower Mirror Flip': 7,
+    };
+    const speedMap: Record<PrintSettings['speed'], number> = {
+      'Fast': 0,
+      'Faster': 1,
+      'Fastest': 2,
+      'Ultra Fast': 3,
+    };
+    const printModeMap: Record<string, number> = {
+      'Normal': 0,
+      'Auto': 1,
+      'Repeat': 2,
+      'Reverse': 3,
+      'Auto Encoder': 5,
+      'Auto Encoder Reverse': 6,
+    };
+
+    const nmSpeed = speedMap[messageSettings?.speed ?? 'Fast'] ?? 0;
+    const nmOrientation = orientationMap[messageSettings?.rotation ?? 'Normal'] ?? 0;
+    const nmPrintMode = printModeMap[messageSettings?.printMode ?? 'Normal'] ?? 0;
+
+    const nmCommand = `^NM ${templateCode};${nmSpeed};${nmOrientation};${nmPrintMode};${messageName}${fieldSubcommands}`;
     const commands: string[] = [`^DM ${messageName}`];
     // Insert ^NG commands before ^NM
     commands.push(...dmUploadCmds);
@@ -2834,7 +2900,7 @@ export function usePrinterConnection() {
   const saveMessageSettings = useCallback(async (settings: {
     speed: PrintSettings['speed'];
     rotation: string; // Extended to include tower orientations
-    printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse';
+    printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
   }): Promise<boolean> => {
     console.log('[saveMessageSettings] Called with:', settings);
     if (!connectionState.isConnected || !connectionState.connectedPrinter) {
@@ -2867,6 +2933,8 @@ export function usePrinterConnection() {
       'Auto': 1,
       'Repeat': 2,
       'Reverse': 3,
+      'Auto Encoder': 5,
+      'Auto Encoder Reverse': 6,
     };
 
     // ^CM with named parameters: s=speed, o=orientation, p=printMode
