@@ -1363,7 +1363,19 @@ export function EditMessageScreen({
 
                 <button
                   onClick={async () => {
-                    const result = await onSave(message, !hasSavedToPrinterRef.current);
+                    // Include adjust settings in the saved message
+                    const messageWithAdjust: MessageDetails = {
+                      ...message,
+                      adjustSettings: {
+                        width: localAdjustSettings.width,
+                        height: localAdjustSettings.height,
+                        delay: localAdjustSettings.delay,
+                        bold: localAdjustSettings.bold,
+                        gap: localAdjustSettings.gap,
+                        pitch: localAdjustSettings.pitch,
+                      },
+                    };
+                    const result = await onSave(messageWithAdjust, !hasSavedToPrinterRef.current);
                     if (!result) return;
 
                     hasSavedToPrinterRef.current = true;
