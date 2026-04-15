@@ -46,6 +46,7 @@ import { LicenseAssignmentPanel } from '@/components/dev/LicenseAssignmentPanel'
 import { FleetMonitoringPanel } from '@/components/dev/FleetMonitoringPanel';
 import { FeedbackPanel } from '@/components/dev/FeedbackPanel';
 import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
+import { ParameterSnapshot } from '@/components/dev/ParameterSnapshot';
 function getTimeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
