@@ -387,9 +387,8 @@ export function MessagesScreen({
         }}
         prompts={userDefinePrompts}
         onConfirm={async (entries) => {
-          if (pendingMessageDetails && selectedMessage) {
-            // Update prompted field data with entered values so the canvas
-            // displays the actual characters instead of "XXX" placeholders.
+          if (pendingMessageDetails && selectedMessage && onSaveMessageContent) {
+            // Bake prompted values into the field data
             const updatedDetails = {
               ...pendingMessageDetails,
               fields: pendingMessageDetails.fields.map(f => {
@@ -400,33 +399,42 @@ export function MessagesScreen({
               }),
             };
 
-            if (onApplyPromptValues) {
-              try {
-                toast.loading('Writing field data to printer...', { id: 'prompt-save' });
+            try {
+              toast.loading('Writing message to printer...', { id: 'prompt-save' });
 
-                // Use full message rewrite (^NM + ^SM) to bake the entered
-                // values into the message definition — ^MD^TD is unreliable
-                // on this firmware and silently drops writes.
-                const applied = await onApplyPromptValues(selectedMessage, updatedDetails);
+              // Single atomic write: ^DM + ^NM (with all fields, settings, template) + ^SV
+              // This avoids runtime field mutation that causes firmware lockups.
+              const saved = await onSaveMessageContent(
+                selectedMessage.name,
+                updatedDetails.fields,
+                updatedDetails.templateValue,
+                false,
+                updatedDetails.settings ? {
+                  speed: updatedDetails.settings.speed,
+                  rotation: updatedDetails.settings.rotation,
+                  printMode: updatedDetails.settings.printMode,
+                } : undefined,
+              );
 
-                if (!applied) {
-                  toast.error('Failed to write field data', { id: 'prompt-save' });
-                  return;
-                }
-
-                // Persist locally so preview and storage stay in sync
-                onSaveStoredMessage?.(updatedDetails);
-                onPromptSaved?.(updatedDetails);
-                toast.success('Message loaded with entered values', { id: 'prompt-save' });
-              } catch (e) {
-                console.error('[MessagesScreen] Failed to write prompt values:', e);
-                toast.error('Failed to write field data', { id: 'prompt-save' });
+              if (!saved) {
+                toast.error('Failed to write message to printer', { id: 'prompt-save' });
+                return;
               }
-            } else {
-              // Non-connected printer: can't write fields, but still select the message
+
+              // Now select the message cleanly — it's already fully written
+              const selected = await onSelect(selectedMessage);
+              if (!selected) {
+                toast.error('Message saved but failed to select', { id: 'prompt-save' });
+                return;
+              }
+
+              // Persist locally so preview and storage stay in sync
               onSaveStoredMessage?.(updatedDetails);
               onPromptSaved?.(updatedDetails);
-              await onSelect(selectedMessage);
+              toast.success('Message loaded with entered values', { id: 'prompt-save' });
+            } catch (e) {
+              console.error('[MessagesScreen] Failed to write prompt values:', e);
+              toast.error('Failed to write message to printer', { id: 'prompt-save' });
             }
           } else if (onSendCommand) {
             // Legacy: send ^MD^TD for native userdefine fields (per v2.6 §5.28.2)
