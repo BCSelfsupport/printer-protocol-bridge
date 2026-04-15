@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Camera, ArrowRight, Loader2, Trash2, Download } from 'lucide-react';
+import { Camera, ArrowRight, Loader2, Trash2, Download, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
