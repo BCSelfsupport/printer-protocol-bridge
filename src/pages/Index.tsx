@@ -72,6 +72,13 @@ const isTransportCommandFailure = (rawResponse?: string) => {
     || /\bCANNOT\b/.test(upper);
 };
 
+type SequencedPrinterCommand = string | {
+  command: string;
+  delayAfterMs?: number;
+};
+
+const MESSAGE_RELOAD_SETTLE_MS = 900;
+
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
   const [devPanelOpen, setDevPanelOpen] = useState(false);
@@ -242,6 +249,61 @@ const Index = () => {
       },
     };
   }, [connectionState.settings]);
+
+  const buildMessageDependentCommandSequence = useCallback(({
+    adjustSettings,
+    fullAdjustSettings,
+    perMessageSettings,
+    includeMessageSettings,
+  }: {
+    adjustSettings?: MessageDetails['adjustSettings'] | null;
+    fullAdjustSettings: PrintSettings;
+    perMessageSettings: {
+      speed: PrintSettings['speed'];
+      rotation: PrintSettings['rotation'];
+      printMode: string;
+    };
+    includeMessageSettings: boolean;
+  }): SequencedPrinterCommand[] => {
+    const commands: SequencedPrinterCommand[] = [];
+    const printModeMap: Record<string, number> = {
+      'Normal': 0,
+      'Auto': 1,
+      'Repeat': 2,
+      'Reverse': 3,
+      'Auto Encoder': 5,
+      'Auto Encoder Reverse': 6,
+    };
+    const speedMap: Record<string, number> = {
+      'Fast': 0,
+      'Faster': 1,
+      'Fastest': 2,
+      'Ultra Fast': 3,
+    };
+    const orientationMap: Record<string, number> = {
+      'Normal': 0, 'Flip': 1, 'Mirror': 2, 'Mirror Flip': 3,
+      'Tower': 4, 'Tower Flip': 5, 'Tower Mirror': 6, 'Tower Mirror Flip': 7,
+    };
+
+    if (includeMessageSettings || adjustSettings?.speed !== undefined || adjustSettings?.rotation !== undefined) {
+      const s = speedMap[perMessageSettings.speed] ?? 2;
+      const o = orientationMap[perMessageSettings.rotation] ?? 0;
+      const p = printModeMap[perMessageSettings.printMode] ?? 0;
+      commands.push({
+        command: `^CM s${s};o${o};p${p}`,
+        delayAfterMs: MESSAGE_RELOAD_SETTLE_MS,
+      });
+    }
+
+    if (adjustSettings?.width !== undefined) commands.push(`^PW ${fullAdjustSettings.width}`);
+    if (adjustSettings?.height !== undefined) commands.push(`^PH ${fullAdjustSettings.height}`);
+    if (adjustSettings?.delay !== undefined) commands.push(`^DA ${fullAdjustSettings.delay}`);
+    if (adjustSettings?.bold !== undefined) commands.push(`^SB ${fullAdjustSettings.bold}`);
+    if (adjustSettings?.gap !== undefined) commands.push(`^GP ${fullAdjustSettings.gap}`);
+    if (adjustSettings?.pitch !== undefined) commands.push(`^PA ${fullAdjustSettings.pitch}`);
+
+    return commands;
+  }, []);
 
   const stripPromptMetadata = useCallback((details: MessageDetails): MessageDetails => ({
     ...details,
@@ -557,10 +619,15 @@ const Index = () => {
 
   const sendVerifiedCommandSequence = useCallback(async (
     targetPrinter: Printer,
-    commands: string[],
+    commands: SequencedPrinterCommand[],
     delayMs = 300,
   ): Promise<{ success: boolean; failedIndex: number | null }> => {
-    const commandsToRun = commands.filter((command) => command.trim().length > 0);
+    const commandsToRun = commands
+      .map((entry) => typeof entry === 'string'
+        ? { command: entry, delayAfterMs: delayMs }
+        : { command: entry.command, delayAfterMs: entry.delayAfterMs ?? delayMs })
+      .filter(({ command }) => command.trim().length > 0);
+
     if (commandsToRun.length === 0) {
       return { success: true, failedIndex: null };
     }
@@ -608,14 +675,15 @@ const Index = () => {
       }
 
       for (let index = 0; index < commandsToRun.length; index += 1) {
-        const result = await runCommand(commandsToRun[index]);
+        const { command, delayAfterMs } = commandsToRun[index];
+        const result = await runCommand(command);
         if (!result.success) {
-          console.error(`[PrinterWrite] Command failed on ${targetPrinter.name}: ${commandsToRun[index]}`);
+          console.error(`[PrinterWrite] Command failed on ${targetPrinter.name}: ${command}`);
           return { success: false, failedIndex: index };
         }
 
-        if (index < commandsToRun.length - 1 && delayMs > 0) {
-          await new Promise(resolve => setTimeout(resolve, delayMs));
+        if (index < commandsToRun.length - 1 && delayAfterMs > 0) {
+          await new Promise(resolve => setTimeout(resolve, delayAfterMs));
         }
       }
 
@@ -774,21 +842,26 @@ const Index = () => {
     const savedMessageIsActive = currentlySelectedName === targetName.trim().toUpperCase();
 
     if (savedMessageIsActive) {
-      // IMPORTANT: ^CM must be sent BEFORE ^PW/^PH etc. because ^CM reloads
-      // the stored message definition, which resets global adjust settings.
-      if (hasMessagePrinterSettings) {
-        const messageSettingsSaved = await saveMessageSettings(perMessageSettings);
-        if (!messageSettingsSaved) {
-          toast.error(`Saved "${targetName}", but failed to apply message settings on the printer.`);
-        }
-      }
+      const commands = buildMessageDependentCommandSequence({
+        adjustSettings: localDetails.adjustSettings,
+        fullAdjustSettings,
+        perMessageSettings,
+        includeMessageSettings: hasMessagePrinterSettings,
+      });
 
-      if (hasAdjustSettings) {
-        const adjustSaved = await saveGlobalAdjust(fullAdjustSettings);
-        if (!adjustSaved) {
-          toast.error(`Saved "${targetName}", but failed to apply message adjust settings on the printer.`);
-        } else {
-          updateSettings(fullAdjustSettings);
+      if (commands.length > 0 && connectionState.connectedPrinter) {
+        setPollingPaused(true);
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          await waitForPollingIdle(3000);
+          const result = await sendVerifiedCommandSequence(connectionState.connectedPrinter, commands, 300);
+          if (!result.success) {
+            toast.error(`Saved "${targetName}", but failed to apply the adjust settings on the printer.`);
+          } else if (hasAdjustSettings) {
+            updateSettings(fullAdjustSettings);
+          }
+        } finally {
+          setPollingPaused(false);
         }
       }
 
@@ -855,6 +928,7 @@ const Index = () => {
     return localDetails;
   }, [
     buildEffectiveMessageDependentSettings,
+    buildMessageDependentCommandSequence,
     editingMessage,
     normalizeMessageForPrinter,
     getMessage,
@@ -864,13 +938,13 @@ const Index = () => {
     updateSettings,
     saveMessage,
     saveMessageContent,
-    saveGlobalAdjust,
-    saveMessageSettings,
     syncMessageToSlaves,
     connectionState.isConnected,
+    connectionState.connectedPrinter,
     connectionState.status?.currentMessage,
     fetchMessageContent,
     mergeAutoCodeMeta,
+    sendVerifiedCommandSequence,
     sendCommand,
   ]);
 
@@ -924,39 +998,12 @@ const Index = () => {
 
     const adj = stored.adjustSettings ?? {};
     const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(stored);
-
-    const printModeMap: Record<string, number> = {
-      'Normal': 0,
-      'Auto': 1,
-      'Repeat': 2,
-      'Reverse': 3,
-      'Auto Encoder': 5,
-      'Auto Encoder Reverse': 6,
-    };
-    const speedMap: Record<string, number> = { 'Fast': 0, 'Faster': 1, 'Fastest': 2, 'Ultra Fast': 3 };
-    const orientationMap: Record<string, number> = {
-      'Normal': 0, 'Flip': 1, 'Mirror': 2, 'Mirror Flip': 3,
-      'Tower': 4, 'Tower Flip': 5, 'Tower Mirror': 6, 'Tower Mirror Flip': 7,
-    };
-
-    const commands: string[] = [];
-
-    // IMPORTANT: ^CM (Change Message) must be sent FIRST because it reloads
-    // the stored message definition, which resets global adjusts like ^PW.
-    // Sending ^PW before ^CM would be overwritten by the message reload.
-    if (hasStoredMessageSettings || adj.speed !== undefined || adj.rotation !== undefined) {
-      const s = speedMap[perMessageSettings.speed] ?? 2;
-      const o = orientationMap[perMessageSettings.rotation] ?? 0;
-      const p = printModeMap[perMessageSettings.printMode] ?? 0;
-      commands.push(`^CM s${s};o${o};p${p}`);
-    }
-
-    if (adj.width !== undefined) commands.push(`^PW ${fullAdjustSettings.width}`);
-    if (adj.height !== undefined) commands.push(`^PH ${fullAdjustSettings.height}`);
-    if (adj.delay !== undefined) commands.push(`^DA ${fullAdjustSettings.delay}`);
-    if (adj.bold !== undefined) commands.push(`^SB ${fullAdjustSettings.bold}`);
-    if (adj.gap !== undefined) commands.push(`^GP ${fullAdjustSettings.gap}`);
-    if (adj.pitch !== undefined) commands.push(`^PA ${fullAdjustSettings.pitch}`);
+    const commands = buildMessageDependentCommandSequence({
+      adjustSettings: adj,
+      fullAdjustSettings,
+      perMessageSettings,
+      includeMessageSettings: hasStoredMessageSettings,
+    });
 
     console.log('[AdjustDebug][applyStoredAdjustSettings.start]', {
       targetPrinterId: targetPrinter.id,
@@ -1011,6 +1058,7 @@ const Index = () => {
     updateSettings(fullAdjustSettings);
   }, [
     buildEffectiveMessageDependentSettings,
+    buildMessageDependentCommandSequence,
     getStoredMessageForPrinter,
     connectionState.settings,
     connectionState.connectedPrinter?.id,
