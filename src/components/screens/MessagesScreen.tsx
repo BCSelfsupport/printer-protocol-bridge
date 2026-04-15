@@ -122,8 +122,19 @@ export function MessagesScreen({
       const lineIdWasResolved = !!stored && !!resolvedStored && resolvedStored.fields.some((field, index) => field.data !== stored.fields[index]?.data);
       const promptedFields = resolvedStored?.fields.filter(f => f.promptBeforePrint) ?? [];
 
-      if (promptedFields.length > 0 && resolvedStored) {
-        toast.error('Safe mode: prompted field entry is disabled on live printers to prevent lockup. Use Edit to save fixed values before selecting.');
+      // If the message has prompted fields, show the entry dialog so the operator
+      // can type values. On confirm we'll do a single atomic write (^DM + ^NM + ^SV)
+      // with all values and settings baked in, then ^SM to select — no runtime
+      // field mutation that would risk a firmware lockup.
+      if (promptedFields.length > 0 && resolvedStored && onSaveMessageContent) {
+        const prompts: UserDefinePrompt[] = promptedFields.map(f => ({
+          fieldId: f.id,
+          label: f.promptLabel || f.data || 'ENTER VALUE',
+          length: f.promptLength || 20,
+        }));
+        setPendingMessageDetails(resolvedStored);
+        setUserDefinePrompts(prompts);
+        setUserDefineEntryOpen(true);
         return;
       }
 
