@@ -380,6 +380,7 @@ export function usePrinterConnection() {
   const quickStatusPoll = useCallback(async () => {
     if (quickStatusInProgressRef.current) return;
     if (shouldUseEmulator()) return;
+    if (isPollingPaused()) return;
 
     const connectedId = connectedPrinterIdRef.current;
     const targets = printersRef.current.filter(
