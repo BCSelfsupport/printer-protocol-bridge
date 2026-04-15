@@ -295,12 +295,12 @@ const Index = () => {
       });
     }
 
-    if (adjustSettings?.width !== undefined) commands.push(`^PW ${fullAdjustSettings.width}`);
-    if (adjustSettings?.height !== undefined) commands.push(`^PH ${fullAdjustSettings.height}`);
-    if (adjustSettings?.delay !== undefined) commands.push(`^DA ${fullAdjustSettings.delay}`);
-    if (adjustSettings?.bold !== undefined) commands.push(`^SB ${fullAdjustSettings.bold}`);
-    if (adjustSettings?.gap !== undefined) commands.push(`^GP ${fullAdjustSettings.gap}`);
-    if (adjustSettings?.pitch !== undefined) commands.push(`^PA ${fullAdjustSettings.pitch}`);
+    if (adjustSettings?.width !== undefined) commands.push({ command: `^PW ${fullAdjustSettings.width}`, delayAfterMs: 1200 });
+    if (adjustSettings?.height !== undefined) commands.push({ command: `^PH ${fullAdjustSettings.height}`, delayAfterMs: 900 });
+    if (adjustSettings?.delay !== undefined) commands.push({ command: `^DA ${fullAdjustSettings.delay}`, delayAfterMs: 700 });
+    if (adjustSettings?.bold !== undefined) commands.push({ command: `^SB ${fullAdjustSettings.bold}`, delayAfterMs: 700 });
+    if (adjustSettings?.gap !== undefined) commands.push({ command: `^GP ${fullAdjustSettings.gap}`, delayAfterMs: 700 });
+    if (adjustSettings?.pitch !== undefined) commands.push({ command: `^PA ${fullAdjustSettings.pitch}`, delayAfterMs: 700 });
 
     return commands;
   }, []);
@@ -686,7 +686,20 @@ const Index = () => {
           return { success: false, failedIndex: index };
         }
 
-        if (index < commandsToRun.length - 1 && delayAfterMs > 0) {
+        const upperCommand = command.trim().toUpperCase();
+        const requiresHeartbeat = upperCommand.startsWith('^PW ')
+          || upperCommand.startsWith('^PH ')
+          || upperCommand.startsWith('^CM ')
+          || upperCommand === '^SV';
+
+        if (requiresHeartbeat) {
+          await new Promise(resolve => setTimeout(resolve, Math.max(delayAfterMs, 700)));
+          const heartbeat = await runCommand('^SU');
+          if (!heartbeat.success) {
+            console.error(`[PrinterWrite] FAILSAFE: Printer unresponsive after ${command}; aborting sequence`);
+            return { success: false, failedIndex: index };
+          }
+        } else if (index < commandsToRun.length - 1 && delayAfterMs > 0) {
           await new Promise(resolve => setTimeout(resolve, delayAfterMs));
         }
       }
