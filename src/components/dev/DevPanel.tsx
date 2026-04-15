@@ -837,6 +837,16 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   </div>
                 )}
 
+                {/* Parameter Snapshot */}
+                <div className="mb-4 p-3 bg-muted/30 rounded-lg border border-border">
+                  <ParameterSnapshot
+                    emulatorEnabled={emulatorEnabled}
+                    connectedPrinterId={connectedPrinterId}
+                    connectedPrinterIp={connectedPrinterIp}
+                    connectedPrinterPort={connectedPrinterPort}
+                  />
+                </div>
+
                 {/* Command Reference */}
                 <div className="text-[10px] text-muted-foreground space-y-1 bg-muted/50 rounded-lg p-3 border border-border">
                   <p className="font-semibold mb-2 text-foreground">Command Format:</p>
