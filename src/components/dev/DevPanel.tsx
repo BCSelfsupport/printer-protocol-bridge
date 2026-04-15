@@ -398,7 +398,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             )}
           >
 
-        <div className="flex flex-col h-full overflow-y-auto">
+        <div className="flex flex-col h-full overflow-hidden">
           {/* Header */}
           <div className="p-4 border-b border-border">
             <div className="flex items-center justify-between mb-3">
