@@ -774,19 +774,21 @@ const Index = () => {
     const savedMessageIsActive = currentlySelectedName === targetName.trim().toUpperCase();
 
     if (savedMessageIsActive) {
+      // IMPORTANT: ^CM must be sent BEFORE ^PW/^PH etc. because ^CM reloads
+      // the stored message definition, which resets global adjust settings.
+      if (hasMessagePrinterSettings) {
+        const messageSettingsSaved = await saveMessageSettings(perMessageSettings);
+        if (!messageSettingsSaved) {
+          toast.error(`Saved "${targetName}", but failed to apply message settings on the printer.`);
+        }
+      }
+
       if (hasAdjustSettings) {
         const adjustSaved = await saveGlobalAdjust(fullAdjustSettings);
         if (!adjustSaved) {
           toast.error(`Saved "${targetName}", but failed to apply message adjust settings on the printer.`);
         } else {
           updateSettings(fullAdjustSettings);
-        }
-      }
-
-      if (hasMessagePrinterSettings) {
-        const messageSettingsSaved = await saveMessageSettings(perMessageSettings);
-        if (!messageSettingsSaved) {
-          toast.error(`Saved "${targetName}", but failed to apply message settings on the printer.`);
         }
       }
 
@@ -939,19 +941,22 @@ const Index = () => {
 
     const commands: string[] = [];
 
-    if (adj.width !== undefined) commands.push(`^PW ${fullAdjustSettings.width}`);
-    if (adj.height !== undefined) commands.push(`^PH ${fullAdjustSettings.height}`);
-    if (adj.delay !== undefined) commands.push(`^DA ${fullAdjustSettings.delay}`);
-    if (adj.bold !== undefined) commands.push(`^SB ${fullAdjustSettings.bold}`);
-    if (adj.gap !== undefined) commands.push(`^GP ${fullAdjustSettings.gap}`);
-    if (adj.pitch !== undefined) commands.push(`^PA ${fullAdjustSettings.pitch}`);
-
+    // IMPORTANT: ^CM (Change Message) must be sent FIRST because it reloads
+    // the stored message definition, which resets global adjusts like ^PW.
+    // Sending ^PW before ^CM would be overwritten by the message reload.
     if (hasStoredMessageSettings || adj.speed !== undefined || adj.rotation !== undefined) {
       const s = speedMap[perMessageSettings.speed] ?? 2;
       const o = orientationMap[perMessageSettings.rotation] ?? 0;
       const p = printModeMap[perMessageSettings.printMode] ?? 0;
       commands.push(`^CM s${s};o${o};p${p}`);
     }
+
+    if (adj.width !== undefined) commands.push(`^PW ${fullAdjustSettings.width}`);
+    if (adj.height !== undefined) commands.push(`^PH ${fullAdjustSettings.height}`);
+    if (adj.delay !== undefined) commands.push(`^DA ${fullAdjustSettings.delay}`);
+    if (adj.bold !== undefined) commands.push(`^SB ${fullAdjustSettings.bold}`);
+    if (adj.gap !== undefined) commands.push(`^GP ${fullAdjustSettings.gap}`);
+    if (adj.pitch !== undefined) commands.push(`^PA ${fullAdjustSettings.pitch}`);
 
     console.log('[AdjustDebug][applyStoredAdjustSettings.start]', {
       targetPrinterId: targetPrinter.id,
