@@ -151,44 +151,44 @@ export function PrinterServicePopup({
               <MetricCard 
                 icon={Activity} 
                 label="RPS" 
-                value={metrics.rps.toFixed(2)} 
+                value={metrics.subsystems.v300up ? metrics.rps.toFixed(2) : '—'} 
                 unit="rev/s"
-                status={metrics.rps > 0 ? 'good' : 'warn'}
+                status={!metrics.subsystems.v300up ? 'neutral' : metrics.rps > 0 ? 'good' : 'warn'}
               />
               <MetricCard 
                 icon={Gauge} 
                 label="Pressure" 
-                value={metrics.pressure} 
+                value={metrics.subsystems.v300up ? metrics.pressure.toString() : '—'} 
                 unit="PSI"
-                status={metrics.pressure >= 38 && metrics.pressure <= 45 ? 'good' : 'warn'}
+                status={!metrics.subsystems.v300up ? 'neutral' : metrics.pressure >= 38 && metrics.pressure <= 45 ? 'good' : 'warn'}
               />
               <MetricCard 
                 icon={Thermometer} 
                 label="Viscosity" 
-                value={metrics.viscosity.toFixed(2)} 
+                value={metrics.subsystems.v300up ? metrics.viscosity.toFixed(2) : '—'} 
                 unit="cP"
                 status="neutral"
               />
               <MetricCard 
                 icon={Zap} 
                 label="Modulation" 
-                value={metrics.modulation} 
+                value={metrics.subsystems.v300up ? metrics.modulation.toString() : '—'} 
                 unit="V"
                 status="neutral"
               />
               <MetricCard 
                 icon={Activity} 
                 label="Charge" 
-                value={metrics.charge} 
+                value={metrics.subsystems.v300up ? metrics.charge.toString() : '—'} 
                 unit="%"
-                status={metrics.charge >= 90 ? 'good' : metrics.charge >= 70 ? 'warn' : 'error'}
+                status={!metrics.subsystems.v300up ? 'neutral' : metrics.charge >= 90 ? 'good' : metrics.charge >= 70 ? 'warn' : 'error'}
               />
               <MetricCard 
                 icon={Activity} 
                 label="Phase Qual" 
-                value={metrics.phaseQual} 
+                value={metrics.subsystems.v300up ? metrics.phaseQual.toString() : '—'} 
                 unit="%"
-                status={metrics.phaseQual >= 80 ? 'good' : metrics.phaseQual >= 60 ? 'warn' : 'error'}
+                status={!metrics.subsystems.v300up ? 'neutral' : metrics.phaseQual >= 80 ? 'good' : metrics.phaseQual >= 60 ? 'warn' : 'error'}
               />
             </div>
 
