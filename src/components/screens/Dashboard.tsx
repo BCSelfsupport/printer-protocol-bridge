@@ -698,7 +698,8 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, selectedPr
           // Only apply expiry offset to fields that were created as expiration dates
           // (i.e., they have autoCodeExpiryDays set). Manufacturing date fields (doy, julian, etc.)
           // should always show today's date.
-          const fieldHasExpiry = field.autoCodeExpiryDays != null && field.autoCodeExpiryDays > 0;
+          const fieldHasExpiry = field.autoCodeFieldType?.startsWith('date_expiry')
+            || (field.autoCodeExpiryDays != null && field.autoCodeExpiryDays > 0);
           const effectiveExpiry = fieldHasExpiry
             ? (printerExpiryOffset !== undefined ? printerExpiryOffset : field.autoCodeExpiryDays)
             : undefined;

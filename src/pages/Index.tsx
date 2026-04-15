@@ -195,7 +195,8 @@ const Index = () => {
         return true;
       })
       .map((field, index) => {
-        const hasExpiryOffset = (field.autoCodeExpiryDays ?? 0) > 0;
+        const hasExpiryOffset = field.autoCodeFieldType?.startsWith('date_expiry')
+          || (field.autoCodeExpiryDays ?? 0) > 0;
         const normalizedAutoCodeFieldType = field.autoCodeFieldType?.startsWith('date_')
           ? hasExpiryOffset
             ? field.autoCodeFieldType.replace(/^date_normal_/, 'date_expiry_')
@@ -842,14 +843,20 @@ const Index = () => {
     }
 
     // Determine which message is active on this printer
-    const messageName = targetPrinter.currentMessage;
+    const messageName = targetPrinter.currentMessage
+      ?? (targetPrinter.role === 'slave' && targetPrinter.masterId !== undefined
+        ? printers.find(p => p.id === targetPrinter.masterId)?.currentMessage
+        : undefined);
     if (!messageName) {
       toast.error('No active message on this printer');
       return;
     }
 
     // Get cached message content
-    const stored = getMessage(messageName);
+    const stored = getMessage(messageName, targetPrinter.id)
+      || (targetPrinter.masterId !== undefined ? getMessage(messageName, targetPrinter.masterId) : null)
+      || (connectionState.connectedPrinter?.id !== undefined ? getMessage(messageName, connectionState.connectedPrinter.id) : null)
+      || getMessage(messageName);
     if (!stored || stored.fields.length === 0) {
       toast.error(`No cached content for "${messageName}"`);
       return;
@@ -859,8 +866,9 @@ const Index = () => {
 
     // Clone fields with modified autoCodeExpiryDays on expiry date fields ONLY
     const modifiedFields = stored.fields.map(field => {
-      const isExpiryDateField = (field.autoCodeExpiryDays ?? 0) > 0 && (
-        field.type === 'date' || field.autoCodeFieldType?.startsWith('date_')
+      const isExpiryDateField = field.type === 'date' && (
+        field.autoCodeFieldType?.startsWith('date_expiry')
+        || (field.autoCodeExpiryDays ?? 0) > 0
       );
       if (isExpiryDateField) {
         return { ...field, autoCodeExpiryDays: newDays };
@@ -905,7 +913,7 @@ const Index = () => {
 
     // 15s grace period — polling will naturally resume
     console.log(`[ExpiryOffset] Complete on ${targetPrinter.name}`);
-  }, [printers, getMessage, saveMessage, replaceMessageWithoutDelete, sendCommandToPrinter, updatePrinter]);
+  }, [printers, getMessage, saveMessage, replaceMessageWithoutDelete, sendCommandToPrinter, updatePrinter, connectionState.connectedPrinter?.id]);
 
   // Delay alerts on startup so update notification can appear first
   const [lowStockAlertQueue, setLowStockAlertQueue] = useState<LowStockAlertData[]>([]);

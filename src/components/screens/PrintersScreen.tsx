@@ -569,12 +569,16 @@ export function PrintersScreen({
                         || (connectedPrinter ? getMessageContent(msgName, connectedPrinter.id) : null)
                         || getMessageContent(msgName))
                       : null;
-                    const msgExpiry = msgContent?.fields?.find(f => (
-                      (f.autoCodeExpiryDays ?? 0) > 0 && (
-                        f.type === 'date'
-                        || f.autoCodeFieldType?.startsWith('date_')
+                    const expiryField = msgContent?.fields?.find(f => (
+                      f.type === 'date'
+                      && (
+                        f.autoCodeFieldType?.startsWith('date_expiry')
+                        || (f.autoCodeExpiryDays ?? 0) > 0
                       )
-                    ))?.autoCodeExpiryDays;
+                    ));
+                    const msgExpiry = expiryField
+                      ? (expiryField.autoCodeExpiryDays ?? 0)
+                      : undefined;
 
                     return (
                     <SortablePrinterItem
