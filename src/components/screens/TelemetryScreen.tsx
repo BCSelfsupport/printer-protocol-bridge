@@ -1272,19 +1272,19 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                   <h3 className="text-sm font-semibold text-foreground">Add Printer</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <input
-                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors"
                       placeholder="Printer name (e.g. Line 1 Coder) *"
                       value={newPrinterName}
                       onChange={e => setNewPrinterName(e.target.value)}
                     />
                     <input
-                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground font-mono"
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors font-mono"
                       placeholder="IP address (e.g. 192.168.1.10) *"
                       value={newPrinterIp}
                       onChange={e => setNewPrinterIp(e.target.value)}
                     />
                     <input
-                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground font-mono"
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors font-mono"
                       placeholder="Port (default 23)"
                       value={newPrinterPort}
                       onChange={e => setNewPrinterPort(e.target.value)}
@@ -1397,25 +1397,25 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                 <h3 className="text-sm font-semibold text-foreground">Add Company Site</h3>
                 <div className="grid grid-cols-1 gap-3">
                   <input
-                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors"
                     placeholder="Company / Site name (e.g. Sunrise Eggs Ltd) *"
                     value={newSiteName}
                     onChange={e => setNewSiteName(e.target.value)}
                   />
                   <input
-                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors"
                     placeholder="Location (e.g. Cork, Ireland)"
                     value={newSiteLocation}
                     onChange={e => setNewSiteLocation(e.target.value)}
                   />
                   <input
-                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors"
                     placeholder="Contact email"
                     value={newSiteEmail}
                     onChange={e => setNewSiteEmail(e.target.value)}
                   />
                   <input
-                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground font-mono"
+                    className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors font-mono"
                     placeholder="License key (e.g. XXXXX-XXXXX-XXXXX-XXXXX)"
                     value={newSiteLicenseKey}
                     onChange={e => setNewSiteLicenseKey(e.target.value)}
@@ -1445,25 +1445,25 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                   <h3 className="text-sm font-semibold text-foreground">Add New Customer Site</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <input
-                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors"
                       placeholder="Company / Site name (e.g. Sunrise Eggs Ltd) *"
                       value={newSiteName}
                       onChange={e => setNewSiteName(e.target.value)}
                     />
                     <input
-                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors"
                       placeholder="Location (e.g. Cork, Ireland)"
                       value={newSiteLocation}
                       onChange={e => setNewSiteLocation(e.target.value)}
                     />
                     <input
-                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors"
                       placeholder="Contact email"
                       value={newSiteEmail}
                       onChange={e => setNewSiteEmail(e.target.value)}
                     />
                     <input
-                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground font-mono"
+                      className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors font-mono"
                       placeholder="License key (e.g. XXXXX-XXXXX-XXXXX-XXXXX)"
                       value={newSiteLicenseKey}
                       onChange={e => setNewSiteLicenseKey(e.target.value)}
@@ -1495,31 +1495,31 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                         <div className="space-y-3" onClick={e => e.stopPropagation()}>
                           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Edit Site</h4>
                           <input
-                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors"
                             placeholder="Site name *"
                             value={editName}
                             onChange={e => setEditName(e.target.value)}
                           />
                           <input
-                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors"
                             placeholder="Company"
                             value={editCompany}
                             onChange={e => setEditCompany(e.target.value)}
                           />
                           <input
-                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors"
                             placeholder="Location"
                             value={editLocation}
                             onChange={e => setEditLocation(e.target.value)}
                           />
                           <input
-                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground"
+                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors"
                             placeholder="Contact email"
                             value={editEmail}
                             onChange={e => setEditEmail(e.target.value)}
                           />
                           <input
-                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-background text-foreground placeholder:text-muted-foreground font-mono"
+                            className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors font-mono"
                             placeholder="License key (XXXXX-XXXXX-XXXXX-XXXXX)"
                             value={editLicenseKey}
                             onChange={e => setEditLicenseKey(e.target.value)}
