@@ -698,6 +698,17 @@ const Index = () => {
     const cachedDetails = getMessage(editingMessage.name) ?? getMessage(targetName) ?? null;
     const printerWriteNeeded = isNew || hasPrinterVisibleChanges(localDetails, cachedDetails);
 
+    console.log('[AdjustDebug][saveEditedMessage.start]', {
+      editingMessageName: editingMessage.name,
+      targetName,
+      isNew: !!isNew,
+      connectedPrinterId: connectionState.connectedPrinter?.id ?? null,
+      incomingAdjustSettings: details.adjustSettings ?? null,
+      normalizedAdjustSettings: localDetails.adjustSettings ?? null,
+      cachedAdjustSettings: cachedDetails?.adjustSettings ?? null,
+      printerWriteNeeded,
+    });
+
     if (!printerWriteNeeded) {
       updateMessage(editingMessage.id, details.name);
       saveMessage(localDetails);
@@ -735,6 +746,12 @@ const Index = () => {
         ]);
         if (refreshed && refreshed.fields.length > 0) {
           const merged = mergeAutoCodeMeta(refreshed, localDetails);
+          console.log('[AdjustDebug][saveEditedMessage.refreshed]', {
+            targetName,
+            refreshedAdjustSettings: refreshed.adjustSettings ?? null,
+            localAdjustSettings: localDetails.adjustSettings ?? null,
+            mergedAdjustSettings: merged.adjustSettings ?? null,
+          });
           saveMessage(merged);
           if (isNew) {
             const prevMessage = connectionState.status?.currentMessage;
@@ -814,7 +831,16 @@ const Index = () => {
     messageName: string,
   ): Promise<void> => {
     const stored = getStoredMessageForPrinter(messageName, targetPrinter);
-    if (!stored?.adjustSettings) return;
+    if (!stored?.adjustSettings) {
+      console.warn('[AdjustDebug][applyStoredAdjustSettings.skip]', {
+        targetPrinterId: targetPrinter.id,
+        targetPrinterName: targetPrinter.name,
+        messageName,
+        storedFound: !!stored,
+        storedAdjustSettings: stored?.adjustSettings ?? null,
+      });
+      return;
+    }
 
     const adj = stored.adjustSettings;
     const fullSettings: PrintSettings = {
@@ -852,6 +878,16 @@ const Index = () => {
       commands.push(`^CM s${s};o${o}`);
     }
 
+    console.log('[AdjustDebug][applyStoredAdjustSettings.start]', {
+      targetPrinterId: targetPrinter.id,
+      targetPrinterName: targetPrinter.name,
+      messageName,
+      currentConnectionSettings: connectionState.settings,
+      storedAdjustSettings: adj,
+      computedFullSettings: fullSettings,
+      commands,
+    });
+
     if (targetPrinter.id === connectionState.connectedPrinter?.id) {
       setPollingPaused(true);
       try {
@@ -859,6 +895,11 @@ const Index = () => {
         await waitForPollingIdle(3000);
         const result = await sendVerifiedCommandSequence(targetPrinter, commands, 300);
         if (!result.success) {
+          console.error('[AdjustDebug][applyStoredAdjustSettings.failed]', {
+            targetPrinterId: targetPrinter.id,
+            messageName,
+            result,
+          });
           toast.error(`Failed to apply saved Adjust settings for "${messageName}"`);
           return;
         }
@@ -868,10 +909,21 @@ const Index = () => {
     } else {
       const result = await sendVerifiedCommandSequence(targetPrinter, commands, 300);
       if (!result.success) {
+        console.error('[AdjustDebug][applyStoredAdjustSettings.failed]', {
+          targetPrinterId: targetPrinter.id,
+          messageName,
+          result,
+        });
         toast.error(`Failed to apply saved Adjust settings for "${messageName}"`);
         return;
       }
     }
+
+    console.log('[AdjustDebug][applyStoredAdjustSettings.success]', {
+      targetPrinterId: targetPrinter.id,
+      messageName,
+      appliedSettings: fullSettings,
+    });
 
     updateSettings(fullSettings);
   }, [

@@ -70,6 +70,13 @@ export function useMessageStorage() {
     const pid = overridePrinterId ?? printerId;
     const key = makeKey(pid, message.name);
 
+    console.log('[AdjustDebug][storage.save]', {
+      printerId: pid,
+      key,
+      messageName: message.name,
+      adjustSettings: message.adjustSettings ?? null,
+    });
+
     setMessages((prev) => {
       const updated = { ...prev, [key]: message };
       saveAllMessages(updated);
@@ -87,7 +94,19 @@ export function useMessageStorage() {
     const pid = overridePrinterId ?? printerId;
     const key = makeKey(pid, messageName);
     // Try printer-scoped first, then fallback to legacy (printer 0)
-    return messages[key] || (pid !== 0 ? messages[makeKey(0, messageName)] : null) || null;
+    const fallbackKey = pid !== 0 ? makeKey(0, messageName) : null;
+    const resolved = messages[key] || (fallbackKey ? messages[fallbackKey] : null) || null;
+
+    console.log('[AdjustDebug][storage.get]', {
+      requestedPrinterId: pid,
+      messageName,
+      directKey: key,
+      fallbackKey,
+      resolvedFrom: messages[key] ? key : (fallbackKey && messages[fallbackKey] ? fallbackKey : null),
+      adjustSettings: resolved?.adjustSettings ?? null,
+    });
+
+    return resolved;
   }, [messages, printerId]);
 
   // Delete a message
