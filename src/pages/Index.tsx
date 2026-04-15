@@ -852,6 +852,7 @@ const Index = () => {
       includeMessageSettings: hasMessagePrinterSettings,
     });
 
+    let restoredByCommandSequence = false;
     if (messageDependentCommands.length > 0 && connectionState.connectedPrinter) {
       const commandSequence: SequencedPrinterCommand[] = [];
 
