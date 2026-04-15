@@ -593,7 +593,7 @@ const Index = () => {
         }
       }
     }
-  }, [connectionState.connectedPrinter?.id, sendCommand, sendCommandToPrinter, shouldUseEmulator]);
+  }, [connectionState.connectedPrinter?.id, sendCommand, sendCommandToPrinter]);
 
   // After saving a message on the master, duplicate the full content to all slaves
   const syncMessageToSlaves = useCallback(async (
