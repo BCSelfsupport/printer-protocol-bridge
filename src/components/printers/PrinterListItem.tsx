@@ -102,8 +102,8 @@ export function PrinterListItem({
   };
   const filterLabel = filterSt ? `${filterSt.hoursRemaining.toFixed(0)}h` : '?';
 
-  // Expiry offset badge - only show for printers in a sync group with an expiry-bearing message
-  const showExpiryBadge = syncGroupIndex !== undefined && syncGroupIndex >= 0 && onExpiryChange && printer.isAvailable && (messageExpiryDays ?? 0) > 0;
+  // Expiry offset badge - show for any available printer whose active message has an expiry-bearing date field
+  const showExpiryBadge = !!onExpiryChange && printer.isAvailable && (messageExpiryDays ?? 0) > 0;
   const currentOffset = printer.expiryOffsetDays ?? messageExpiryDays ?? 0;
   const isCustomExpiry = printer.expiryOffsetDays !== undefined && messageExpiryDays !== undefined && printer.expiryOffsetDays !== messageExpiryDays;
 
