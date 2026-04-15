@@ -65,7 +65,7 @@ export interface MessageField {
   promptLength?: number;         // Max characters allowed
 }
 
-// Per-message adjust settings (width, height, delay, bold, gap, pitch)
+// Per-message adjust settings (width, height, delay, bold, gap, pitch, speed, rotation)
 export interface MessageAdjustSettings {
   width?: number;
   height?: number;
@@ -73,6 +73,8 @@ export interface MessageAdjustSettings {
   bold?: number;
   gap?: number;
   pitch?: number;
+  speed?: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
+  rotation?: 'Normal' | 'Flip' | 'Mirror' | 'Mirror Flip' | 'Tower' | 'Tower Flip' | 'Tower Mirror' | 'Tower Mirror Flip';
 }
 
 export interface MessageDetails {
@@ -268,6 +270,8 @@ export function EditMessageScreen({
                 bold: details.adjustSettings?.bold ?? prev.bold,
                 gap: details.adjustSettings?.gap ?? prev.gap,
                 pitch: details.adjustSettings?.pitch ?? prev.pitch,
+                speed: details.adjustSettings?.speed ?? prev.speed,
+                rotation: details.adjustSettings?.rotation ?? prev.rotation,
               }));
             }
             if (details.fields.length > 0) {
@@ -1381,6 +1385,8 @@ export function EditMessageScreen({
                         bold: localAdjustSettings.bold,
                         gap: localAdjustSettings.gap,
                         pitch: localAdjustSettings.pitch,
+                        speed: localAdjustSettings.speed,
+                        rotation: localAdjustSettings.rotation,
                       },
                     };
                     const result = await onSave(messageWithAdjust, !hasSavedToPrinterRef.current);
@@ -1591,7 +1597,7 @@ export function EditMessageScreen({
                 <Button
                   onClick={async () => {
                     if (validateMessageName(saveAsName).valid) {
-                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch } }, true);
+                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch, speed: localAdjustSettings.speed, rotation: localAdjustSettings.rotation } }, true);
                       setSaveAsDialogOpen(false);
                       if (result && result.fields.length > 0) {
                         setMessage(prev => ({
