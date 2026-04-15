@@ -292,6 +292,25 @@ Deno.serve(async (req) => {
           .eq("id", printer_id);
         if (prError) throw prError;
 
+        // Propagate firmware/serial to other printers with same IP (cross-site)
+        if (firmware_version || serial_number) {
+          const { data: thisPrinter } = await supabase
+            .from("fleet_printers")
+            .select("ip_address")
+            .eq("id", printer_id)
+            .single();
+          if (thisPrinter) {
+            const crossUpdate: any = {};
+            if (firmware_version) crossUpdate.firmware_version = firmware_version;
+            if (serial_number) crossUpdate.serial_number = serial_number;
+            await supabase
+              .from("fleet_printers")
+              .update(crossUpdate)
+              .eq("ip_address", thisPrinter.ip_address)
+              .neq("id", printer_id);
+          }
+        }
+
         return new Response(JSON.stringify({ success: true, events_generated: events.length }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
