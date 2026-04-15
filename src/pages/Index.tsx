@@ -809,9 +809,14 @@ const Index = () => {
         || fieldType.startsWith('date_rollover')
         || fieldType.startsWith('date_expiry_rollover');
     });
-    const followUpSettleMs = hasExtendedDateFields ? 2500 : 300;
-    const reloadSettleMs = hasExtendedDateFields ? 2500 : MESSAGE_RELOAD_SETTLE_MS;
-    const shouldReloadFromPrinter = !hasExtendedDateFields;
+    // Scale settle times based on field count — firmware needs more time
+    // to process large ^NM payloads before accepting follow-up commands.
+    const fieldCount = localDetails.fields.length;
+    const isHeavyMessage = fieldCount >= 4;
+    const baseFollowUpMs = hasExtendedDateFields ? 2500 : isHeavyMessage ? 1500 : 300;
+    const followUpSettleMs = baseFollowUpMs + Math.max(0, fieldCount - 3) * 200;
+    const reloadSettleMs = hasExtendedDateFields ? 2500 : isHeavyMessage ? 2000 : MESSAGE_RELOAD_SETTLE_MS;
+    const shouldReloadFromPrinter = !hasExtendedDateFields && !isHeavyMessage;
 
     console.log('[AdjustDebug][saveEditedMessage.start]', {
       editingMessageName: editingMessage.name,

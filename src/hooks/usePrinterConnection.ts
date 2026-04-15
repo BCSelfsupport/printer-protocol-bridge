@@ -2326,7 +2326,11 @@ export function usePrinterConnection() {
           }
           // Brief delay between commands to let firmware finish processing
           // before the next command arrives (especially ^DM → ^NM → ^SV).
-          await new Promise(resolve => setTimeout(resolve, 250));
+          // Scale delay with field count — large ^NM payloads need more
+          // firmware processing time before the next command is accepted.
+          const fieldCount = fields.length;
+          const interCmdDelay = fieldCount >= 5 ? 500 : fieldCount >= 3 ? 400 : 250;
+          await new Promise(resolve => setTimeout(resolve, interCmdDelay));
         }
 
         // Resume polling before optional verification
