@@ -852,6 +852,7 @@ const Index = () => {
       includeMessageSettings: hasMessagePrinterSettings,
     });
 
+    let restoredByCommandSequence = false;
     if (messageDependentCommands.length > 0 && connectionState.connectedPrinter) {
       const commandSequence: SequencedPrinterCommand[] = [];
 
@@ -886,6 +887,9 @@ const Index = () => {
       } finally {
         setPollingPaused(false);
       }
+      // The command sequence already handled restoring the previous selection,
+      // so skip the duplicate restore below.
+      restoredByCommandSequence = true;
     }
 
     if (!isNew) {
@@ -898,6 +902,11 @@ const Index = () => {
 
     if (connectionState.isConnected) {
       try {
+        // Wait for the printer to settle before querying — prevents lockups
+        // from sending ^GM/^LF immediately after a settings sequence.
+        await new Promise(r => setTimeout(r, 500));
+        await waitForPollingIdle(3000);
+
         const refreshed = await Promise.race([
           fetchMessageContent(targetName),
           new Promise<null>(r => setTimeout(() => r(null), 5000)),
@@ -911,7 +920,8 @@ const Index = () => {
             mergedAdjustSettings: merged.adjustSettings ?? null,
           });
           saveMessage(merged);
-          if (isNew) {
+          // Only restore previous selection if the command sequence didn't already do it
+          if (isNew && !restoredByCommandSequence) {
             const prevMessage = connectionState.status?.currentMessage;
             if (prevMessage && prevMessage !== targetName) {
               try {
@@ -928,7 +938,7 @@ const Index = () => {
       }
     }
 
-    if (isNew && connectionState.isConnected) {
+    if (isNew && connectionState.isConnected && !restoredByCommandSequence) {
       const prevMessage = connectionState.status?.currentMessage;
       if (prevMessage && prevMessage !== targetName) {
         try {
