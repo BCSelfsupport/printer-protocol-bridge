@@ -803,6 +803,15 @@ const Index = () => {
       || localDetails.adjustSettings?.rotation !== undefined
     );
     const hasAdjustSettings = !!localDetails.adjustSettings;
+    const hasExtendedDateFields = localDetails.fields.some((field) => {
+      const fieldType = field.autoCodeFieldType ?? '';
+      return fieldType.startsWith('date_expiry')
+        || fieldType.startsWith('date_rollover')
+        || fieldType.startsWith('date_expiry_rollover');
+    });
+    const followUpSettleMs = hasExtendedDateFields ? 2500 : 300;
+    const reloadSettleMs = hasExtendedDateFields ? 2500 : MESSAGE_RELOAD_SETTLE_MS;
+    const shouldReloadFromPrinter = !hasExtendedDateFields;
 
     console.log('[AdjustDebug][saveEditedMessage.start]', {
       editingMessageName: editingMessage.name,
@@ -813,6 +822,7 @@ const Index = () => {
       normalizedAdjustSettings: localDetails.adjustSettings ?? null,
       cachedAdjustSettings: cachedDetails?.adjustSettings ?? null,
       printerWriteNeeded,
+      hasExtendedDateFields,
     });
 
     if (!printerWriteNeeded) {
@@ -858,7 +868,7 @@ const Index = () => {
 
       commandSequence.push({
         command: `^SM ${targetName}`,
-        delayAfterMs: MESSAGE_RELOAD_SETTLE_MS,
+        delayAfterMs: reloadSettleMs,
       });
 
       commandSequence.push(...messageDependentCommands);
@@ -870,15 +880,15 @@ const Index = () => {
       if (restorePreviousSelection && currentlySelectedName) {
         commandSequence.push({
           command: `^SM ${currentlySelectedName}`,
-          delayAfterMs: MESSAGE_RELOAD_SETTLE_MS,
+          delayAfterMs: reloadSettleMs,
         });
       }
 
       setPollingPaused(true);
       try {
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        await new Promise((resolve) => setTimeout(resolve, followUpSettleMs));
         await waitForPollingIdle(3000);
-        const result = await sendVerifiedCommandSequence(connectionState.connectedPrinter, commandSequence, 300);
+        const result = await sendVerifiedCommandSequence(connectionState.connectedPrinter, commandSequence, followUpSettleMs);
         if (!result.success) {
           toast.error(`Saved "${targetName}", but failed to apply the message settings on the printer.`);
         } else if (hasAdjustSettings) {
@@ -900,7 +910,7 @@ const Index = () => {
     syncedMessagesRef.current.add(targetName);
     syncMessageToSlaves(targetName, localDetails, isNew);
 
-    if (connectionState.isConnected) {
+    if (shouldReloadFromPrinter && connectionState.isConnected) {
       try {
         // Wait for the printer to settle before querying — prevents lockups
         // from sending ^GM/^LF immediately after a settings sequence.
@@ -936,6 +946,8 @@ const Index = () => {
       } catch (e) {
         console.error('[onSave] post-save reload failed:', e);
       }
+    } else if (hasExtendedDateFields) {
+      console.log('[onSave] Skipping immediate post-save ^GM/^LF reload for extended date fields to avoid firmware lockup');
     }
 
     if (isNew && connectionState.isConnected && !restoredByCommandSequence) {
