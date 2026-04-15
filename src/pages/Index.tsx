@@ -526,6 +526,10 @@ const Index = () => {
       return { success: true, failedIndex: null };
     }
 
+    // Check if emulator should handle this printer
+    const emulatorHandles = multiPrinterEmulator.enabled
+      && multiPrinterEmulator.isEmulatedIp(targetPrinter.ipAddress, targetPrinter.port);
+
     const runCommand = async (command: string) => {
       if (targetPrinter.id === connectionState.connectedPrinter?.id) {
         const result = await sendCommand(command);
@@ -533,17 +537,22 @@ const Index = () => {
         return { success: !!result?.success && !isTransportCommandFailure(response) };
       }
 
-      if (!window.electronAPI && !isRelayMode()) {
+      if (emulatorHandles) {
+        // Route through emulator via sendCommandToPrinter (no TCP needed)
         const success = await sendCommandToPrinter(targetPrinter, command);
         return { success };
       }
 
+      // Real hardware: use shared session opened below
       const result = await printerTransport.sendCommand(targetPrinter.id, command);
       const response = result?.response ?? result?.error ?? '';
       return { success: !!result?.success && !isTransportCommandFailure(response) };
     };
 
-    const needsSharedSession = targetPrinter.id !== connectionState.connectedPrinter?.id && (window.electronAPI || isRelayMode());
+    // Only open a shared TCP session for real (non-emulated) non-connected printers
+    const needsSharedSession = !emulatorHandles
+      && targetPrinter.id !== connectionState.connectedPrinter?.id
+      && (window.electronAPI || isRelayMode());
 
     try {
       if (needsSharedSession) {
