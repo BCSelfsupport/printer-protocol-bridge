@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
-import { setPollingPaused } from '@/lib/pollingPause';
+import { setPollingPaused, isPollingPaused } from '@/lib/pollingPause';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
 
 /**
