@@ -22,11 +22,6 @@ Deno.serve(async (req) => {
   try {
     switch (action) {
       case "sites": {
-        // Update last_seen for all online printers on each fetch
-        await supabase
-          .from("fleet_printers")
-          .update({ last_seen: new Date().toISOString() })
-          .neq("status", "offline");
 
         const { data, error } = await supabase
           .from("fleet_sites")
