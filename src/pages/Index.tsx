@@ -527,7 +527,8 @@ const Index = () => {
     }
 
     // Check if emulator should handle this printer
-    const emulatorHandles = shouldUseEmulator(targetPrinter.ipAddress, targetPrinter.port);
+    const emulatorHandles = multiPrinterEmulator.enabled
+      && multiPrinterEmulator.isEmulatedIp(targetPrinter.ipAddress, targetPrinter.port);
 
     const runCommand = async (command: string) => {
       if (targetPrinter.id === connectionState.connectedPrinter?.id) {
