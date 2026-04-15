@@ -523,21 +523,18 @@ Deno.serve(async (req) => {
         if (licErr || !license) throw new Error("Invalid or inactive license key");
 
         // Find site linked to this license
-        let { data: site } = await supabase
+        const { data: site } = await supabase
           .from("fleet_sites")
           .select("id, name")
           .eq("license_id", license.id)
           .single();
 
-        // If no site exists for this license, auto-create one
+        // If no site exists for this license, skip auto-registration
+        // Sites must be created manually via the Fleet Telemetry UI
         if (!site) {
-          const { data: newSite, error: sErr } = await supabase
-            .from("fleet_sites")
-            .insert({ name: `Site - ${product_key.substring(0, 8)}`, license_id: license.id })
-            .select()
-            .single();
-          if (sErr) throw sErr;
-          site = newSite;
+          return new Response(JSON.stringify({ success: false, action: "no_site", message: "No fleet site configured for this license" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
 
         // Check if printer already registered (by IP + site)
