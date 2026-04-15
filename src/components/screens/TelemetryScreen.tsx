@@ -1344,38 +1344,89 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {selectedSite.fleet_printers.map(printer => (
-                  <button
-                    key={printer.id}
-                    onClick={() => handleSelectPrinter(printer)}
-                    className="text-left bg-card border border-border rounded-2xl p-5 hover:border-primary/30 hover:shadow-lg transition-all group"
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2.5">
-                        <StatusDot status={printer.status} />
-                        <span className="text-base font-semibold text-foreground">{printer.name}</span>
+                  editingPrinterId === printer.id ? (
+                    <div key={printer.id} className="bg-card border border-primary/30 rounded-2xl p-5 space-y-3" onClick={e => e.stopPropagation()}>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Edit Printer</h4>
+                      <input
+                        className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors"
+                        placeholder="Printer name *"
+                        value={editPrinterName}
+                        onChange={e => setEditPrinterName(e.target.value)}
+                      />
+                      <input
+                        className="w-full text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors font-mono"
+                        placeholder="Serial number (from printer label)"
+                        value={editPrinterSerial}
+                        onChange={e => setEditPrinterSerial(e.target.value)}
+                      />
+                      <div className="grid grid-cols-3 gap-2">
+                        <input
+                          className="col-span-2 text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors font-mono"
+                          placeholder="IP address"
+                          value={editPrinterIp}
+                          onChange={e => setEditPrinterIp(e.target.value)}
+                        />
+                        <input
+                          className="text-sm border border-border rounded-xl px-4 py-2.5 bg-muted/50 text-foreground placeholder:text-muted-foreground focus:bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary/50 outline-none transition-colors font-mono"
+                          placeholder="Port"
+                          value={editPrinterPort}
+                          onChange={e => setEditPrinterPort(e.target.value)}
+                        />
                       </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={(e) => handleDeletePrinter(printer.id, e)}
-                          className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                          title="Delete printer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <div className="text-[10px] text-muted-foreground">
+                        Firmware version is pulled automatically from the live printer connection.
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleEditPrinter} disabled={editPrinterLoading || !editPrinterName.trim()} className="gap-1.5">
+                          {editPrinterLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                          Save
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingPrinterId(null)}>
+                          <X className="w-4 h-4 mr-1" /> Cancel
+                        </Button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-y-2 text-sm">
-                      <span className="text-muted-foreground">IP</span>
-                      <span className="font-mono text-foreground text-right">{printer.ip_address}</span>
-                      <span className="text-muted-foreground">Firmware</span>
-                      <span className="font-mono text-foreground text-right">{printer.firmware_version || '?'}</span>
-                      <span className="text-muted-foreground">Serial</span>
-                      <span className="font-mono text-foreground text-right">{printer.serial_number || 'N/A'}</span>
-                      <span className="text-muted-foreground">Last Seen</span>
-                      <span className="text-foreground text-right">{printer.last_seen ? getRelativeTime(printer.last_seen) : 'Never'}</span>
-                    </div>
-                  </button>
+                  ) : (
+                    <button
+                      key={printer.id}
+                      onClick={() => handleSelectPrinter(printer)}
+                      className="text-left bg-card border border-border rounded-2xl p-5 hover:border-primary/30 hover:shadow-lg transition-all group"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2.5">
+                          <StatusDot status={printer.status} />
+                          <span className="text-base font-semibold text-foreground">{printer.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => startEditPrinter(printer, e)}
+                            className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
+                            title="Edit printer"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => handleDeletePrinter(printer.id, e)}
+                            className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                            title="Delete printer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                          <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-y-2 text-sm">
+                        <span className="text-muted-foreground">IP</span>
+                        <span className="font-mono text-foreground text-right">{printer.ip_address}</span>
+                        <span className="text-muted-foreground">Firmware</span>
+                        <span className="font-mono text-foreground text-right">{printer.firmware_version || '—'}</span>
+                        <span className="text-muted-foreground">Serial</span>
+                        <span className="font-mono text-foreground text-right">{printer.serial_number || '—'}</span>
+                        <span className="text-muted-foreground">Last Seen</span>
+                        <span className="text-foreground text-right">{printer.last_seen ? getRelativeTime(printer.last_seen) : 'Never'}</span>
+                      </div>
+                    </button>
+                  )
                 ))}
               </div>
             </div>
