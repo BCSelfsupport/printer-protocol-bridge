@@ -118,6 +118,7 @@ function createWindow() {
       autoUpdater.checkForUpdates()
         .then((result) => logToFile(`[ready-to-show] Check result: ${JSON.stringify(result)}`))
         .catch((err) => logToFile(`[ready-to-show] Check error: ${err.message}`));
+    }
   });
 }
 
