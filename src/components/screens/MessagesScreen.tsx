@@ -155,6 +155,10 @@ export function MessagesScreen({
 
       // No prompted fields — select normally
       const success = await onSelect(selectedMessage);
+      if (!success) {
+        toast.error(`Failed to select "${selectedMessage.name}" on the printer`);
+        return;
+      }
       if (success) {
         // Legacy: check for native userdefine fields from printer
         if (onFetchMessageDetails) {

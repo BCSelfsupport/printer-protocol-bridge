@@ -136,7 +136,7 @@ const isProtocolCommandFailure = (rawResponse?: string): boolean => {
   return /\?\s*\d+\s*:/.test(upper)
     || /COMMAND\s+FAILED/.test(upper)
     || /\bERROR\b/.test(upper)
-    || /\bERR\s*\[\s*\d+\s*\]/.test(upper)
+    || /\bERR\s*\[\s*[1-9]\d*\s*\]/.test(upper)  // ERR[0] means zero errors — not a failure
     || /\bFAILED\b/.test(upper)
     || /\bCANNOT\b/.test(upper);
 };
