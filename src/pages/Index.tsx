@@ -859,7 +859,10 @@ const Index = () => {
 
     // Clone fields with modified autoCodeExpiryDays on expiry date fields ONLY
     const modifiedFields = stored.fields.map(field => {
-      if (field.type === 'date' && (field.autoCodeExpiryDays ?? 0) > 0) {
+      const isExpiryDateField = (field.autoCodeExpiryDays ?? 0) > 0 && (
+        field.type === 'date' || field.autoCodeFieldType?.startsWith('date_')
+      );
+      if (isExpiryDateField) {
         return { ...field, autoCodeExpiryDays: newDays };
       }
       return field;
