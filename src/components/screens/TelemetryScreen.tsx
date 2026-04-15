@@ -1069,16 +1069,29 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
                         <h4 className="text-[10px] text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-1.5">
                           <Gauge className="w-3.5 h-3.5" /> Diagnostics
                         </h4>
-                        <MetricRow label="Pressure" value={telemetry.pressure.toFixed(1)} unit="PSI" 
-                          status={telemetry.pressure >= 38 && telemetry.pressure <= 45 ? 'good' : 'warn'} />
-                        <MetricRow label="Viscosity" value={telemetry.viscosity.toFixed(2)} unit="cP" />
-                        <MetricRow label="RPS" value={telemetry.rps.toFixed(1)} unit="rev/s" 
-                          status={telemetry.rps > 0 ? 'good' : 'warn'} />
-                        <MetricRow label="Modulation" value={telemetry.modulation} unit="V" />
-                        <MetricRow label="Charge" value={telemetry.charge} unit="%"
-                          status={telemetry.charge >= 90 ? 'good' : telemetry.charge >= 70 ? 'warn' : 'error'} />
-                        <MetricRow label="Phase Qual" value={telemetry.phase_qual} unit="%"
-                          status={telemetry.phase_qual >= 80 ? 'good' : 'warn'} />
+                        {telemetry.jet_running ? (
+                          <>
+                            <MetricRow label="Pressure" value={telemetry.pressure.toFixed(1)} unit="PSI" 
+                              status={telemetry.pressure >= 38 && telemetry.pressure <= 45 ? 'good' : 'warn'} />
+                            <MetricRow label="Viscosity" value={telemetry.viscosity.toFixed(2)} unit="cP" />
+                            <MetricRow label="RPS" value={telemetry.rps.toFixed(1)} unit="rev/s" 
+                              status={telemetry.rps > 0 ? 'good' : 'warn'} />
+                            <MetricRow label="Modulation" value={telemetry.modulation} unit="V" />
+                            <MetricRow label="Charge" value={telemetry.charge} unit="%"
+                              status={telemetry.charge >= 90 ? 'good' : telemetry.charge >= 70 ? 'warn' : 'error'} />
+                            <MetricRow label="Phase Qual" value={telemetry.phase_qual} unit="%"
+                              status={telemetry.phase_qual >= 80 ? 'good' : 'warn'} />
+                          </>
+                        ) : (
+                          <>
+                            <MetricRow label="Pressure" value="—" unit="PSI" />
+                            <MetricRow label="Viscosity" value="—" unit="cP" />
+                            <MetricRow label="RPS" value="—" unit="rev/s" />
+                            <MetricRow label="Modulation" value="—" unit="V" />
+                            <MetricRow label="Charge" value="—" unit="%" />
+                            <MetricRow label="Phase Qual" value="—" unit="%" />
+                          </>
+                        )}
                       </div>
 
                       {/* Temperature */}
