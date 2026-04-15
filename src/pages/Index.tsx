@@ -840,7 +840,10 @@ const Index = () => {
 
     const currentlySelectedName = connectionState.status?.currentMessage?.trim().toUpperCase();
     const normalizedTargetName = targetName.trim().toUpperCase();
-    const savedMessageIsActive = currentlySelectedName === normalizedTargetName;
+    const restorePreviousSelection = !!(
+      currentlySelectedName
+      && currentlySelectedName !== normalizedTargetName
+    );
 
     const messageDependentCommands = buildMessageDependentCommandSequence({
       adjustSettings: localDetails.adjustSettings,
@@ -852,12 +855,10 @@ const Index = () => {
     if (messageDependentCommands.length > 0 && connectionState.connectedPrinter) {
       const commandSequence: SequencedPrinterCommand[] = [];
 
-      if (!savedMessageIsActive) {
-        commandSequence.push({
-          command: `^SM ${targetName}`,
-          delayAfterMs: MESSAGE_RELOAD_SETTLE_MS,
-        });
-      }
+      commandSequence.push({
+        command: `^SM ${targetName}`,
+        delayAfterMs: MESSAGE_RELOAD_SETTLE_MS,
+      });
 
       commandSequence.push(...messageDependentCommands);
 
@@ -865,7 +866,7 @@ const Index = () => {
         commandSequence.push('^SV');
       }
 
-      if (!savedMessageIsActive && currentlySelectedName && currentlySelectedName !== normalizedTargetName) {
+      if (restorePreviousSelection && currentlySelectedName) {
         commandSequence.push({
           command: `^SM ${currentlySelectedName}`,
           delayAfterMs: MESSAGE_RELOAD_SETTLE_MS,
@@ -879,7 +880,7 @@ const Index = () => {
         const result = await sendVerifiedCommandSequence(connectionState.connectedPrinter, commandSequence, 300);
         if (!result.success) {
           toast.error(`Saved "${targetName}", but failed to apply the message settings on the printer.`);
-        } else if (savedMessageIsActive && hasAdjustSettings) {
+        } else if (hasAdjustSettings) {
           updateSettings(fullAdjustSettings);
         }
       } finally {
