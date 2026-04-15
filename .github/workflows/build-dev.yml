@@ -40,7 +40,7 @@ jobs:
           Copy-Item "public\codesync-icon-dev.png" "electron\resources\icon.png" -Force
 
       - name: Build installer (no publish)
-        run: npx electron-builder --config electron/electron-builder.json --win --publish never
+        run: npx electron-builder --config electron/electron-builder-dev.json --win --publish never
 
       - name: Upload test installer
         uses: actions/upload-artifact@v4
