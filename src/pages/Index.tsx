@@ -679,27 +679,10 @@ const Index = () => {
         const result = await runCommand(command);
         if (!result.success) {
           console.error(`[PrinterWrite] Command failed on ${targetPrinter.name}: ${command}`);
-          // FAILSAFE: If a command in the sequence fails, do NOT continue
-          // sending more commands — the printer may be unresponsive and
-          // additional writes could trigger a full firmware lockup.
-          console.error(`[PrinterWrite] FAILSAFE: Aborting remaining ${commandsToRun.length - index - 1} command(s) to protect printer`);
           return { success: false, failedIndex: index };
         }
 
-        const upperCommand = command.trim().toUpperCase();
-        const requiresHeartbeat = upperCommand.startsWith('^PW ')
-          || upperCommand.startsWith('^PH ')
-          || upperCommand.startsWith('^CM ')
-          || upperCommand === '^SV';
-
-        if (requiresHeartbeat) {
-          await new Promise(resolve => setTimeout(resolve, Math.max(delayAfterMs, 700)));
-          const heartbeat = await runCommand('^SU');
-          if (!heartbeat.success) {
-            console.error(`[PrinterWrite] FAILSAFE: Printer unresponsive after ${command}; aborting sequence`);
-            return { success: false, failedIndex: index };
-          }
-        } else if (index < commandsToRun.length - 1 && delayAfterMs > 0) {
+        if (index < commandsToRun.length - 1 && delayAfterMs > 0) {
           await new Promise(resolve => setTimeout(resolve, delayAfterMs));
         }
       }
