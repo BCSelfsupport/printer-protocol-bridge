@@ -1332,6 +1332,8 @@ const Index = () => {
           connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
           isConnected={connectionState.isConnected}
           printerModel={connectionState.status?.printerModel}
+          currentAdjustSettings={connectionState.settings}
+          onSendCommand={sendCommand}
           onSave={saveEditedMessage}
           onCancel={() => {
             setCurrentScreen('messages');
@@ -1432,6 +1434,8 @@ const Index = () => {
             connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
             isConnected={connectionState.isConnected}
             printerModel={connectionState.status?.printerModel}
+            currentAdjustSettings={connectionState.settings}
+            onSendCommand={sendCommand}
           onSave={saveEditedMessage}
             onCancel={() => {
               setCurrentScreen('messages');
