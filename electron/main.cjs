@@ -62,36 +62,38 @@ function createWindow() {
     icon: path.join(__dirname, '../public/codesync-icon.png'),
   });
 
-  // Escape exits kiosk-style fullscreen → normal windowed mode with frame
-  mainWindow.webContents.on('before-input-event', (event, input) => {
-    if (input.key === 'Escape' && mainWindow.isFullScreen()) {
-      mainWindow.setFullScreen(false);
-      // Re-create window with frame to restore title bar & taskbar
-      const bounds = mainWindow.getBounds();
-      const newWin = new BrowserWindow({
-        ...bounds,
-        frame: true,
-        autoHideMenuBar: false,
-        fullscreen: false,
-        webPreferences: {
-          preload: path.join(__dirname, 'preload.cjs'),
-          contextIsolation: true,
-          nodeIntegration: false,
-        },
-        icon: path.join(__dirname, '../public/codesync-icon.png'),
-      });
-      newWin.loadURL(mainWindow.webContents.getURL());
-      mainWindow.destroy();
-      mainWindow = newWin;
-
-      // Re-register DevTools shortcut on new window
-      mainWindow.webContents.on('before-input-event', (event, input) => {
-        if (input.control && input.shift && input.key === 'I') {
-          mainWindow.webContents.toggleDevTools();
-        }
-      });
-    }
-  });
+  // Global keyboard handler for DevTools + fullscreen escape
+  function registerKeyboardHandler(win) {
+    win.webContents.on('before-input-event', (event, input) => {
+      // F12 or Ctrl+Shift+I → toggle DevTools
+      if (input.key === 'F12' || (input.control && input.shift && input.key === 'I')) {
+        win.webContents.toggleDevTools();
+        return;
+      }
+      // Escape exits kiosk-style fullscreen → normal windowed mode with frame
+      if (input.key === 'Escape' && win.isFullScreen()) {
+        win.setFullScreen(false);
+        const bounds = win.getBounds();
+        const newWin = new BrowserWindow({
+          ...bounds,
+          frame: true,
+          autoHideMenuBar: false,
+          fullscreen: false,
+          webPreferences: {
+            preload: path.join(__dirname, 'preload.cjs'),
+            contextIsolation: true,
+            nodeIntegration: false,
+          },
+          icon: path.join(__dirname, '../public/codesync-icon.png'),
+        });
+        newWin.loadURL(win.webContents.getURL());
+        win.destroy();
+        mainWindow = newWin;
+        registerKeyboardHandler(mainWindow);
+      }
+    });
+  }
+  registerKeyboardHandler(mainWindow);
 
   // In development, load from Vite dev server
   // In production, load the built files
@@ -116,14 +118,6 @@ function createWindow() {
       autoUpdater.checkForUpdates()
         .then((result) => logToFile(`[ready-to-show] Check result: ${JSON.stringify(result)}`))
         .catch((err) => logToFile(`[ready-to-show] Check error: ${err.message}`));
-    }
-
-    // Allow Ctrl+Shift+I or F12 to open DevTools in packaged builds
-    mainWindow.webContents.on('before-input-event', (event, input) => {
-      if ((input.control && input.shift && input.key === 'I') || input.key === 'F12') {
-        mainWindow.webContents.toggleDevTools();
-      }
-    });
   });
 }
 
