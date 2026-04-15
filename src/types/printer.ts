@@ -80,7 +80,7 @@ export interface PrintSettings {
   width: number;       // 0-1000
   height: number;      // 0-10
   delay: number;       // 0-4,000,000,000
-  rotation: 'Normal' | 'Mirror' | 'Flip' | 'Mirror Flip';
+  rotation: 'Normal' | 'Mirror' | 'Flip' | 'Mirror Flip' | 'Tower' | 'Tower Flip' | 'Tower Mirror' | 'Tower Mirror Flip';
   bold: number;        // 0-9
   speed: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
   gap: number;         // 0-9
