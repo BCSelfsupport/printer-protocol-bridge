@@ -34,10 +34,10 @@ jobs:
           ELECTRON_BUILD: "1"
         run: npm run build
 
-      - name: Prepare icon
+      - name: Prepare dev icon
         run: |
           if (!(Test-Path "electron\resources")) { New-Item -ItemType Directory -Path "electron\resources" }
-          Copy-Item "public\codesync-icon.png" "electron\resources\icon.png" -Force
+          Copy-Item "public\codesync-icon-dev.png" "electron\resources\icon.png" -Force
 
       - name: Build installer (no publish)
         run: npx electron-builder --config electron/electron-builder.json --win --publish never
