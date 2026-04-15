@@ -1644,6 +1644,16 @@ export function EditMessageScreen({
               });
             }}
           />
+
+          {/* Adjust Dialog (per-message) */}
+          <AdjustDialog
+            open={adjustDialogOpen}
+            onOpenChange={setAdjustDialogOpen}
+            settings={localAdjustSettings}
+            onUpdate={(partial) => setLocalAdjustSettings(prev => ({ ...prev, ...partial }))}
+            onSendCommand={onSendCommand ?? (async () => ({}))}
+            isConnected={isConnected}
+          />
         </>
       )}
     </div>
