@@ -789,6 +789,63 @@ const Index = () => {
     });
   }, [printers, updatePrinter]);
 
+  const applyStoredAdjustSettings = useCallback(async (
+    targetPrinter: Printer,
+    messageName: string,
+  ): Promise<void> => {
+    const stored = getMessage(messageName);
+    if (!stored?.adjustSettings) return;
+
+    const adj = stored.adjustSettings;
+    const fullSettings: PrintSettings = {
+      ...connectionState.settings,
+      width: adj.width ?? connectionState.settings.width,
+      height: adj.height ?? connectionState.settings.height,
+      delay: adj.delay ?? connectionState.settings.delay,
+      bold: adj.bold ?? connectionState.settings.bold,
+      gap: adj.gap ?? connectionState.settings.gap,
+      pitch: adj.pitch ?? connectionState.settings.pitch,
+    };
+
+    const commands = [
+      `^PW ${fullSettings.width}`,
+      `^PH ${fullSettings.height}`,
+      `^DA ${fullSettings.delay}`,
+      `^SB ${fullSettings.bold}`,
+      `^GP ${fullSettings.gap}`,
+      `^PA ${fullSettings.pitch}`,
+    ];
+
+    if (targetPrinter.id === connectionState.connectedPrinter?.id) {
+      setPollingPaused(true);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await waitForPollingIdle(3000);
+        const result = await sendVerifiedCommandSequence(targetPrinter, commands, 300);
+        if (!result.success) {
+          toast.error(`Failed to apply saved Adjust settings for "${messageName}"`);
+          return;
+        }
+      } finally {
+        setPollingPaused(false);
+      }
+    } else {
+      const result = await sendVerifiedCommandSequence(targetPrinter, commands, 300);
+      if (!result.success) {
+        toast.error(`Failed to apply saved Adjust settings for "${messageName}"`);
+        return;
+      }
+    }
+
+    updateSettings(fullSettings);
+  }, [
+    getMessage,
+    connectionState.settings,
+    connectionState.connectedPrinter?.id,
+    sendVerifiedCommandSequence,
+    updateSettings,
+  ]);
+
   const applyPromptValuesToPrinter = useCallback(async (
     targetPrinter: Printer | null,
     message: PrintMessage,
@@ -1277,22 +1334,7 @@ const Index = () => {
               const ok = await selectMessage(message);
               if (ok) {
                 clearAllExpiryOverrides();
-                // Apply stored adjust settings for this message
-                const stored = getMessage(message.name);
-                if (stored?.adjustSettings) {
-                  const adj = stored.adjustSettings;
-                  const fullSettings: PrintSettings = {
-                    ...connectionState.settings,
-                    width: adj.width ?? connectionState.settings.width,
-                    height: adj.height ?? connectionState.settings.height,
-                    delay: adj.delay ?? connectionState.settings.delay,
-                    bold: adj.bold ?? connectionState.settings.bold,
-                    gap: adj.gap ?? connectionState.settings.gap,
-                    pitch: adj.pitch ?? connectionState.settings.pitch,
-                  };
-                  await saveGlobalAdjust(fullSettings);
-                  updateSettings(fullSettings);
-                }
+                await applyStoredAdjustSettings(messageTargetPrinter, message.name);
               }
               return ok;
             }
@@ -1300,6 +1342,7 @@ const Index = () => {
             if (ok) {
               updatePrinter(messageTargetPrinter.id, { currentMessage: message.name });
               clearAllExpiryOverrides();
+              await applyStoredAdjustSettings(messageTargetPrinter, message.name);
             }
             return ok;
           }}
@@ -1511,22 +1554,7 @@ const Index = () => {
                 const ok = await selectMessage(message);
                 if (ok) {
                   clearAllExpiryOverrides();
-                  // Apply stored adjust settings for this message
-                  const stored = getMessage(message.name);
-                  if (stored?.adjustSettings) {
-                    const adj = stored.adjustSettings;
-                    const fullSettings: PrintSettings = {
-                      ...connectionState.settings,
-                      width: adj.width ?? connectionState.settings.width,
-                      height: adj.height ?? connectionState.settings.height,
-                      delay: adj.delay ?? connectionState.settings.delay,
-                      bold: adj.bold ?? connectionState.settings.bold,
-                      gap: adj.gap ?? connectionState.settings.gap,
-                      pitch: adj.pitch ?? connectionState.settings.pitch,
-                    };
-                    await saveGlobalAdjust(fullSettings);
-                    updateSettings(fullSettings);
-                  }
+                  await applyStoredAdjustSettings(messageTargetPrinter, message.name);
                 }
                 return ok;
               }
@@ -1534,6 +1562,7 @@ const Index = () => {
               if (ok) {
                 updatePrinter(messageTargetPrinter.id, { currentMessage: message.name });
                 clearAllExpiryOverrides();
+                await applyStoredAdjustSettings(messageTargetPrinter, message.name);
               }
               return ok;
             }}
