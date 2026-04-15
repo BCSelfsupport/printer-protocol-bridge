@@ -235,7 +235,14 @@ const Index = () => {
       && fetchedIdsAreCanonical
       && cached.fields.length === fetched.fields.length;
     const usedCachedIndexes = new Set<number>();
-    const merged = { ...fetched, fields: fetched.fields.map((f, i) => {
+    // Preserve message-level local-only metadata (adjustSettings, settings, advancedSettings)
+    // that the printer fetch doesn't carry
+    const merged = {
+      ...fetched,
+      adjustSettings: fetched.adjustSettings ?? cached.adjustSettings,
+      settings: fetched.settings ?? cached.settings,
+      advancedSettings: fetched.advancedSettings ?? cached.advancedSettings,
+      fields: fetched.fields.map((f, i) => {
       const isBlankFetchedPlaceholder = f.type === 'text' && f.data.trim().length === 0;
       const typesCompatible = (candidate: MessageDetails['fields'][number]) => (
         candidate.type === f.type
