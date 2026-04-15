@@ -2190,9 +2190,8 @@ export function usePrinterConnection() {
       return false;
     }
 
-    // Log field count for diagnostics — no hard cap, messages have the fields they need
     if (fields.length >= 6) {
-      console.warn(`[saveMessageContent] High field count (${fields.length}) — using extended delays for firmware safety`);
+      console.log(`[saveMessageContent] Field count: ${fields.length}`);
     }
 
     const printer = connectionState.connectedPrinter;
