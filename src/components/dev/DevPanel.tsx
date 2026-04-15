@@ -949,7 +949,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
           </Tabs>
 
           {/* Build Status & Push Update Footer */}
-          <div className="p-3 border-t border-border space-y-3">
+          <div className="p-3 border-t border-border space-y-3 overflow-y-auto flex-shrink-0">
 
             {/* DEV BUILD SECTION */}
             <div className="bg-warning/5 rounded-lg border border-warning/30 p-2 space-y-2">
