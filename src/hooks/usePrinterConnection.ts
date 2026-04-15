@@ -2191,6 +2191,10 @@ export function usePrinterConnection() {
     }
 
     const printer = connectionState.connectedPrinter;
+    const normalizedMessageName = messageName.trim().toUpperCase();
+    const currentSelectedMessage = connectionState.status?.currentMessage?.trim().toUpperCase();
+    const needsSwitchAwayBeforeRewrite = currentSelectedMessage === normalizedMessageName;
+    const fallbackMessage = normalizedMessageName === 'BESTCODE' ? 'BESTCODE AUTO' : 'BESTCODE';
     const templateCode = templateToProtocolCode(templateValue);
     
     // Convert absolute 32-dot canvas Y coordinates to printer Y coordinates.
@@ -2288,7 +2292,17 @@ export function usePrinterConnection() {
 
     // For existing messages, delete first then recreate
     // DataMatrix bitmap uploads must happen before the ^NM command
-    const commands: string[] = [`^DM ${messageName}`];
+    const commands: string[] = [];
+    if (needsSwitchAwayBeforeRewrite) {
+      // Rewriting the currently selected message via ^DM/^NM can wedge the firmware.
+      // Switch to a safe fallback first, then perform the destructive rewrite.
+      console.log('[saveMessageContent] Active message rewrite detected; switching away first:', {
+        messageName,
+        fallbackMessage,
+      });
+      commands.push(`^SM ${fallbackMessage}`);
+    }
+    commands.push(`^DM ${messageName}`);
     // Insert ^NG (graphic upload) commands before ^NM
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
@@ -2330,7 +2344,10 @@ export function usePrinterConnection() {
           // firmware processing time before the next command is accepted.
           const fieldCount = fields.length;
           const interCmdDelay = fieldCount >= 5 ? 500 : fieldCount >= 3 ? 400 : 250;
-          await new Promise(resolve => setTimeout(resolve, interCmdDelay));
+          const delayAfterCommand = cmd.startsWith('^SM ') && needsSwitchAwayBeforeRewrite
+            ? Math.max(interCmdDelay, 700)
+            : interCmdDelay;
+          await new Promise(resolve => setTimeout(resolve, delayAfterCommand));
         }
 
         // Resume polling before optional verification
@@ -2365,7 +2382,7 @@ export function usePrinterConnection() {
       console.log('[saveMessageContent] Web preview mock - commands:', commands);
       return true;
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter, addMessage]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter, connectionState.status?.currentMessage, addMessage]);
 
   // Build the raw protocol commands for a message (without sending).
   // Used by master/slave sync to send messages to non-connected printers.
