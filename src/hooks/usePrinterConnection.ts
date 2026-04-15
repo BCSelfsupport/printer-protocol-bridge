@@ -1973,7 +1973,7 @@ export function usePrinterConnection() {
         // Normalize stale builder metadata so legacy saved messages with expiry offsets
         // still use the correct prefix when re-saved.
         const normalizedAutoCodeFieldType = field.autoCodeFieldType?.startsWith('date_')
-          ? ((field.autoCodeExpiryDays ?? 0) > 0
+          ? ((field.autoCodeFieldType?.startsWith('date_expiry') || (field.autoCodeExpiryDays ?? 0) > 0)
               ? field.autoCodeFieldType.replace(/^date_normal_/, 'date_expiry_')
               : field.autoCodeFieldType.replace(/^date_expiry_/, 'date_normal_'))
           : field.autoCodeFieldType;

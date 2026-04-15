@@ -674,7 +674,7 @@ export function EditMessageScreen({
       // Store AutoCode metadata for live refresh
       autoCodeFormat: format,
       autoCodeFieldType: fieldType,
-      autoCodeExpiryDays: expiryDays || undefined,
+      autoCodeExpiryDays: fieldType.startsWith('date_expiry') ? expiryDays : (expiryDays || undefined),
       dynamicSource: lineIdValue ? 'lineId' : undefined,
       // Prompt before print metadata
       promptBeforePrint: promptOptions?.promptBeforePrint,
