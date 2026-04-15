@@ -51,6 +51,11 @@ interface MessagesScreenProps {
     fields: MessageDetails['fields'],
     templateValue?: string,
     isNew?: boolean,
+    messageSettings?: {
+      speed?: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
+      rotation?: string;
+      printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
+    },
   ) => Promise<boolean>;
   /** Save updated message details to local storage */
   onSaveStoredMessage?: (details: MessageDetails) => void;
