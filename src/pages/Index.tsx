@@ -1899,6 +1899,7 @@ const Index = () => {
         onUpdate={updateSettings}
         onSendCommand={sendCommand}
         isConnected={connectionState.isConnected}
+        title="Adjust Settings (Global)"
       />
 
       {/* Help Dialog */}

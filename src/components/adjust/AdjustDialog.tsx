@@ -23,6 +23,7 @@ interface AdjustDialogProps {
   onUpdate: (settings: Partial<PrintSettings>) => void;
   onSendCommand: (command: string) => Promise<any>;
   isConnected: boolean;
+  title?: string;
 }
 
 // Validation constraints from BestCode v2.0 protocol documentation
@@ -177,7 +178,8 @@ export function AdjustDialog({
   settings, 
   onUpdate, 
   onSendCommand,
-  isConnected 
+  isConnected,
+  title = 'Adjust Settings',
 }: AdjustDialogProps) {
   
   // Helper to update a numeric setting and send the command immediately
@@ -211,7 +213,7 @@ export function AdjustDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Adjust Settings (Message)</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
