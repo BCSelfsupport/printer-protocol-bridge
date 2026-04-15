@@ -123,16 +123,7 @@ export function MessagesScreen({
       const promptedFields = resolvedStored?.fields.filter(f => f.promptBeforePrint) ?? [];
 
       if (promptedFields.length > 0 && resolvedStored) {
-        // Show prompt dialog BEFORE selecting message on printer
-        const prompts: UserDefinePrompt[] = promptedFields.map(f => ({
-          fieldId: f.id,
-          label: f.promptLabel || f.data || 'ENTER VALUE',
-          length: f.promptLength || Math.max(f.data?.length || 3, 3),
-        }));
-        setPendingMessageDetails(resolvedStored);
-        setUserDefinePrompts(prompts);
-        setUserDefineEntryOpen(true);
-        // Don't proceed — wait for user entry, then we'll save + select
+        toast.error('Safe mode: prompted field entry is disabled on live printers to prevent lockup. Use Edit to save fixed values before selecting.');
         return;
       }
 
