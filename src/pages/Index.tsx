@@ -805,6 +805,15 @@ const Index = () => {
       bold: adj.bold ?? connectionState.settings.bold,
       gap: adj.gap ?? connectionState.settings.gap,
       pitch: adj.pitch ?? connectionState.settings.pitch,
+      speed: adj.speed ?? connectionState.settings.speed,
+      rotation: adj.rotation ?? connectionState.settings.rotation,
+    };
+
+    // Map speed/rotation to protocol values for ^CM command
+    const speedMap: Record<string, number> = { 'Fast': 0, 'Faster': 1, 'Fastest': 2, 'Ultra Fast': 3 };
+    const orientationMap: Record<string, number> = {
+      'Normal': 0, 'Flip': 1, 'Mirror': 2, 'Mirror Flip': 3,
+      'Tower': 4, 'Tower Flip': 5, 'Tower Mirror': 6, 'Tower Mirror Flip': 7,
     };
 
     const commands = [
@@ -815,6 +824,13 @@ const Index = () => {
       `^GP ${fullSettings.gap}`,
       `^PA ${fullSettings.pitch}`,
     ];
+
+    // Add ^CM command for speed and rotation if stored
+    if (adj.speed || adj.rotation) {
+      const s = speedMap[fullSettings.speed] ?? 2;
+      const o = orientationMap[fullSettings.rotation] ?? 0;
+      commands.push(`^CM s${s};o${o}`);
+    }
 
     if (targetPrinter.id === connectionState.connectedPrinter?.id) {
       setPollingPaused(true);
