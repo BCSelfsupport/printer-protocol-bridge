@@ -90,14 +90,30 @@ export function ParameterSnapshot({
     setLoading(false);
   }, [canQuery, emulatorEnabled, connectedPrinterId, connectedPrinterIp, connectedPrinterPort, snapshots.length]);
 
-  const exportSnapshots = () => {
-    const lines = snapshots.map((snap, i) => {
+  const formatSnapshots = () => {
+    return snapshots.map((snap) => {
       const header = `=== ${snap.label} (${snap.timestamp.toLocaleString()}) ===`;
       const entries = SNAPSHOT_COMMANDS.map(cmd => `  ${cmd.code} (${cmd.label}): ${snap.values[cmd.code] || 'N/A'}`);
       return [header, ...entries].join('\n');
     }).join('\n\n');
+  };
 
-    const blob = new Blob([lines], { type: 'text/plain' });
+  const copySnapshots = async () => {
+    try {
+      await navigator.clipboard.writeText(formatSnapshots());
+    } catch {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = formatSnapshots();
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+  };
+
+  const exportSnapshots = () => {
+    const blob = new Blob([formatSnapshots()], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
