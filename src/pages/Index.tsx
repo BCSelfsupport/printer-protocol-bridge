@@ -12,6 +12,7 @@ import { Dashboard } from '@/components/screens/Dashboard';
 import { PrintersScreen } from '@/components/screens/PrintersScreen';
 import { MessagesScreen } from '@/components/screens/MessagesScreen';
 import { EditMessageScreen, MessageDetails } from '@/components/screens/EditMessageScreen';
+import { PrintSettings } from '@/types/printer';
 import { AdjustDialog } from '@/components/adjust/AdjustDialog';
 import { SetupScreen } from '@/components/screens/SetupScreen';
 import { ServiceScreen } from '@/components/screens/ServiceScreen';
