@@ -789,11 +789,31 @@ const Index = () => {
     });
   }, [printers, updatePrinter]);
 
+  const getStoredMessageForPrinter = useCallback((messageName: string, targetPrinter?: Printer | null): MessageDetails | null => {
+    const candidatePrinterIds = [
+      ...(targetPrinter?.role === 'slave' && targetPrinter.masterId !== undefined ? [targetPrinter.masterId] : []),
+      ...(targetPrinter?.id !== undefined ? [targetPrinter.id] : []),
+      ...(targetPrinter?.role !== 'slave' && targetPrinter?.masterId !== undefined ? [targetPrinter.masterId] : []),
+      ...(connectionState.connectedPrinter?.id !== undefined ? [connectionState.connectedPrinter.id] : []),
+    ];
+
+    const seen = new Set<number>();
+    for (const printerId of candidatePrinterIds) {
+      if (seen.has(printerId)) continue;
+      seen.add(printerId);
+
+      const stored = getMessage(messageName, printerId);
+      if (stored) return stored;
+    }
+
+    return getMessage(messageName);
+  }, [connectionState.connectedPrinter?.id, getMessage]);
+
   const applyStoredAdjustSettings = useCallback(async (
     targetPrinter: Printer,
     messageName: string,
   ): Promise<void> => {
-    const stored = getMessage(messageName);
+    const stored = getStoredMessageForPrinter(messageName, targetPrinter);
     if (!stored?.adjustSettings) return;
 
     const adj = stored.adjustSettings;
@@ -855,7 +875,7 @@ const Index = () => {
 
     updateSettings(fullSettings);
   }, [
-    getMessage,
+    getStoredMessageForPrinter,
     connectionState.settings,
     connectionState.connectedPrinter?.id,
     sendVerifiedCommandSequence,
@@ -1371,9 +1391,9 @@ const Index = () => {
             }
           }}
           onApplyPromptValues={(message, updatedDetails) => applyPromptValuesToPrinter(messageTargetPrinter, message, updatedDetails)}
-          onGetStoredMessage={getMessage}
+          onGetStoredMessage={(name) => getStoredMessageForPrinter(name, messageTargetPrinter)}
           onSaveMessageContent={isConnectedMessageTarget ? saveMessageContent : undefined}
-          onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details))}
+          onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details), messageTargetPrinter?.id)}
           connectedPrinterLineId={messageTargetPrinter?.lineId}
           onPromptSaved={(details) => {
             const normalized = normalizeMessageForPrinter(details);
@@ -1395,7 +1415,7 @@ const Index = () => {
           }}
           onDelete={(message) => {
             deleteMessage(message.id);
-            deleteStoredMessage(message.name);
+            deleteStoredMessage(message.name, messageTargetPrinter?.id);
           }}
           onHome={() => setCurrentScreen('home')}
           openNewDialogOnMount={openNewDialogOnMount}
@@ -1436,8 +1456,8 @@ const Index = () => {
                   new Promise<null>(r => setTimeout(() => r(null), 10000)),
                 ]);
                 if (fetched && fetched.fields.length > 0) {
-                  const merged = mergeAutoCodeMeta(fetched, getMessage(name) ?? null);
-                  saveMessage(merged);
+                  const merged = mergeAutoCodeMeta(fetched, getStoredMessageForPrinter(name, messageTargetPrinter));
+                  saveMessage(merged, messageTargetPrinter?.id);
                   return merged;
                 }
               } catch (e) {
@@ -1445,7 +1465,7 @@ const Index = () => {
               }
             }
             // Fallback to local storage
-            return getMessage(name);
+            return getStoredMessageForPrinter(name, messageTargetPrinter);
           }}
         />
       );
@@ -1592,9 +1612,9 @@ const Index = () => {
               }
             }}
             onApplyPromptValues={(message, updatedDetails) => applyPromptValuesToPrinter(selectedPrinter ?? connectionState.connectedPrinter ?? null, message, updatedDetails)}
-            onGetStoredMessage={getMessage}
+            onGetStoredMessage={(name) => getStoredMessageForPrinter(name, selectedPrinter ?? connectionState.connectedPrinter ?? null)}
             onSaveMessageContent={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id === connectionState.connectedPrinter?.id ? saveMessageContent : undefined}
-            onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details))}
+            onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details), (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
             connectedPrinterLineId={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.lineId}
             onPromptSaved={(details) => {
               const normalized = normalizeMessageForPrinter(details);
@@ -1616,7 +1636,7 @@ const Index = () => {
             }}
             onDelete={(message) => {
               deleteMessage(message.id);
-              deleteStoredMessage(message.name);
+              deleteStoredMessage(message.name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id);
             }}
             onHome={() => setCurrentScreen('control')}
             openNewDialogOnMount={openNewDialogOnMount}
