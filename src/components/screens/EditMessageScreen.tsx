@@ -220,6 +220,12 @@ export function EditMessageScreen({
   const [userDefineDialogOpen, setUserDefineDialogOpen] = useState(false);
   const [graphicDialogOpen, setGraphicDialogOpen] = useState(false);
   const [dataLinkDialogOpen, setDataLinkDialogOpen] = useState(false);
+  const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+  // Local adjust settings state for the dialog — initialized from message or current printer settings
+  const [localAdjustSettings, setLocalAdjustSettings] = useState<PrintSettings>(() => {
+    const adj = currentAdjustSettings ?? { width: 15, height: 8, delay: 100, bold: 0, gap: 0, pitch: 0, repeatAmount: 0, rotation: 'Normal' as const, speed: 'Ultra Fast' as const };
+    return adj;
+  });
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
   const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
