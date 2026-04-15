@@ -118,9 +118,9 @@ function createWindow() {
         .catch((err) => logToFile(`[ready-to-show] Check error: ${err.message}`));
     }
 
-    // Allow Ctrl+Shift+I to open DevTools in packaged builds
+    // Allow Ctrl+Shift+I or F12 to open DevTools in packaged builds
     mainWindow.webContents.on('before-input-event', (event, input) => {
-      if (input.control && input.shift && input.key === 'I') {
+      if ((input.control && input.shift && input.key === 'I') || input.key === 'F12') {
         mainWindow.webContents.toggleDevTools();
       }
     });
