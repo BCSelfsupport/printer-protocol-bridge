@@ -757,6 +757,13 @@ export function TelemetryScreen({ onHome }: TelemetryScreenProps) {
   const [editEmail, setEditEmail] = useState('');
   const [editLicenseKey, setEditLicenseKey] = useState('');
   const [editLoading, setEditLoading] = useState(false);
+  // Edit printer state
+  const [editingPrinterId, setEditingPrinterId] = useState<string | null>(null);
+  const [editPrinterName, setEditPrinterName] = useState('');
+  const [editPrinterSerial, setEditPrinterSerial] = useState('');
+  const [editPrinterIp, setEditPrinterIp] = useState('');
+  const [editPrinterPort, setEditPrinterPort] = useState('23');
+  const [editPrinterLoading, setEditPrinterLoading] = useState(false);
 
   const fleetCall = useCallback(async (action: string, params?: Record<string, string>, body?: any) => {
     const query = new URLSearchParams({ action, ...(params || {}) }).toString();
