@@ -1739,6 +1739,15 @@ export function usePrinterConnection() {
 
   const updateSettings = useCallback((newSettings: Partial<PrintSettings>) => {
     setConnectionState(prev => ({
+      ...(() => {
+        const nextSettings = { ...prev.settings, ...newSettings };
+        console.log('[AdjustDebug][connection.updateSettings]', {
+          previousSettings: prev.settings,
+          incomingSettings: newSettings,
+          nextSettings,
+        });
+        return prev;
+      })(),
       ...prev,
       settings: { ...prev.settings, ...newSettings },
     }));
@@ -1746,6 +1755,11 @@ export function usePrinterConnection() {
 
   const selectMessage = useCallback(async (message: PrintMessage): Promise<boolean> => {
     console.log('[selectMessage] Called, message:', message.name, 'isConnected:', connectionState.isConnected);
+    console.log('[AdjustDebug][selectMessage.start]', {
+      messageName: message.name,
+      connectedPrinterId: connectionState.connectedPrinter?.id ?? null,
+      currentSettings: connectionState.settings,
+    });
     if (!connectionState.isConnected || !connectionState.connectedPrinter) {
       console.log('[selectMessage] Not connected, updating local state only');
       setConnectionState(prev => ({
@@ -2935,6 +2949,19 @@ export function usePrinterConnection() {
           const speedNum = extract('Speed');
           const gap = extract('Gap');
           const pitch = extract('Pitch');
+
+          console.log('[AdjustDebug][queryPrintSettings.parsed]', {
+            printerId: printer.id,
+            width,
+            height,
+            delay,
+            rotationNum,
+            bold,
+            speedNum,
+            gap,
+            pitch,
+            rawResponse: response,
+          });
 
           setConnectionState(prev => ({
             ...prev,
