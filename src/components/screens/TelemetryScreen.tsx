@@ -280,7 +280,7 @@ function EventLogTable({ events, telemetryHistory }: { events: FleetEvent[]; tel
 
   // Build viscosity readings from telemetry history (sorted newest first from server)
   const viscosityReadings = telemetryHistory
-    .filter(t => t.viscosity != null)
+    .filter(t => t.viscosity != null && t.viscosity > 0)
     .map((t, i, arr) => {
       const prev = arr[i + 1]; // next in array = previous in time (descending order)
       let trend: 'rising' | 'falling' | 'steady' = 'steady';
@@ -297,7 +297,7 @@ function EventLogTable({ events, telemetryHistory }: { events: FleetEvent[]; tel
   // Efficiency = ratio of current quality to peak quality in the dataset (how close to best performance)
   const peakPhaseQual = Math.max(...telemetryHistory.filter(t => t.phase_qual != null).map(t => t.phase_qual!), 100);
   const phaseReadings = telemetryHistory
-    .filter(t => t.phase_qual != null)
+    .filter(t => t.phase_qual != null && t.phase_qual > 0)
     .map((t, i, arr) => {
       const prev = arr[i + 1];
       let trend: 'rising' | 'falling' | 'steady' = 'steady';
