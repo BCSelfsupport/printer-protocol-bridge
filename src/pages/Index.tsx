@@ -679,6 +679,10 @@ const Index = () => {
         const result = await runCommand(command);
         if (!result.success) {
           console.error(`[PrinterWrite] Command failed on ${targetPrinter.name}: ${command}`);
+          // FAILSAFE: If a command in the sequence fails, do NOT continue
+          // sending more commands — the printer may be unresponsive and
+          // additional writes could trigger a full firmware lockup.
+          console.error(`[PrinterWrite] FAILSAFE: Aborting remaining ${commandsToRun.length - index - 1} command(s) to protect printer`);
           return { success: false, failedIndex: index };
         }
 
@@ -772,7 +776,11 @@ const Index = () => {
     const reselectCommandIndex = sequence.length;
     sequence.push(`^SM ${messageName}`);
 
-    const result = await sendVerifiedCommandSequence(targetPrinter, sequence, 300);
+    // Scale inter-command delay based on field count — ^NM payloads with
+    // multiple fields need more firmware processing time to avoid lockups.
+    const fieldCount = details.fields?.length ?? 0;
+    const baseDelay = fieldCount >= 5 ? 600 : fieldCount >= 3 ? 450 : 300;
+    const result = await sendVerifiedCommandSequence(targetPrinter, sequence, baseDelay);
     if (!result.success) {
       if (result.failedIndex === switchCommandIndex) {
         return { success: false as const, reason: 'switch' as const };
