@@ -191,8 +191,10 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
   const normalizedFaultCode = normalizeFaultCodeForAsset(currentFault?.code ?? '');
   const qrImagePath = normalizedFaultCode
     ? (() => {
+        const variant = FAULT_IMAGE_VARIANTS[imageVariantIndex];
         const ext = FAULT_IMAGE_EXTENSIONS[imageExtIndex];
-        return getAuthenticatedAssetUrl(`fault-codes/${normalizedFaultCode}.${ext}`);
+        const suffix = variant ? `-${variant}` : '';
+        return getAuthenticatedAssetUrl(`fault-codes/${normalizedFaultCode}${suffix}.${ext}`);
       })()
     : '';
 
