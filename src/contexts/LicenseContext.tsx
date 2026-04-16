@@ -267,7 +267,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   };
 
   const canNetwork = state.tier !== 'lite';
-  const canDatabase = state.tier === 'database' || state.tier === 'dev' || state.tier === 'demo';
+  const canDatabase = state.tier === 'database' || state.tier === 'dev';
   const isDemo = state.tier === 'demo';
 
   return (
