@@ -113,6 +113,7 @@ export function MessagesScreen({
   const [pendingMessageDetails, setPendingMessageDetails] = useState<MessageDetails | null>(null);
   const [pcLibraryOpen, setPcLibraryOpen] = useState(false);
   const [selectedLibraryMessage, setSelectedLibraryMessage] = useState<MessageDetails | null>(null);
+  const [selectedLibrarySourcePrinterId, setSelectedLibrarySourcePrinterId] = useState<number | undefined>(undefined);
   const [isPushing, setIsPushing] = useState(false);
   const [swapSlotDialogOpen, setSwapSlotDialogOpen] = useState(false);
   const [deleteLibraryConfirmOpen, setDeleteLibraryConfirmOpen] = useState(false);
