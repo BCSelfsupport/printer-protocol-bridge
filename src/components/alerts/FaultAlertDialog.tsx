@@ -144,6 +144,7 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
 
   useEffect(() => {
     setImageExtIndex(0);
+    setImageVariantIndex(0);
   }, [currentFault?.code]);
 
   const handleDismiss = useCallback(() => {
