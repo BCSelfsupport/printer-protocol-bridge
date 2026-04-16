@@ -1,4 +1,5 @@
-import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardDrive, Upload, Download, ChevronDown, ChevronRight, ArrowUpFromLine } from 'lucide-react';
+import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardDrive, Upload, Download, ChevronDown, ChevronRight, ArrowUpFromLine, Monitor } from 'lucide-react';
+import { PcLibraryEntry } from '@/hooks/useMessageStorage';
 import { PrintMessage } from '@/types/printer';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
