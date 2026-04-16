@@ -1962,6 +1962,12 @@ const Index = () => {
             onHome={() => setCurrentScreen('control')}
             openNewDialogOnMount={openNewDialogOnMount}
             onNewDialogOpened={() => setOpenNewDialogOnMount(false)}
+            pcLibraryMessages={getPcLibraryMessages((selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
+            onSaveToPcLibrary={(message) => handleSaveToPcLibrary(message, selectedPrinter ?? connectionState.connectedPrinter ?? null)}
+            onPushToprinter={(libMsg, swapName) => pushPcLibraryToPrinter(libMsg, swapName, selectedPrinter ?? connectionState.connectedPrinter ?? null)}
+            onDeleteFromPcLibrary={(name) => deleteFromPcLibrary(name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
+            swapSlotName={getSwapSlot((selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
+            onSetSwapSlot={(name) => setSwapSlot(name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
           />
         );
       case 'wirecable':
