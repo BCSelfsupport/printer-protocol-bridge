@@ -1735,6 +1735,12 @@ const Index = () => {
           onHome={() => setCurrentScreen('home')}
           openNewDialogOnMount={openNewDialogOnMount}
           onNewDialogOpened={() => setOpenNewDialogOnMount(false)}
+          pcLibraryMessages={getPcLibraryMessages(messageTargetPrinter?.id)}
+          onSaveToPcLibrary={(message) => handleSaveToPcLibrary(message, messageTargetPrinter)}
+          onPushToprinter={(libMsg, swapName) => pushPcLibraryToPrinter(libMsg, swapName, messageTargetPrinter)}
+          onDeleteFromPcLibrary={(name) => deleteFromPcLibrary(name, messageTargetPrinter?.id)}
+          swapSlotName={getSwapSlot(messageTargetPrinter?.id)}
+          onSetSwapSlot={(name) => setSwapSlot(name, messageTargetPrinter?.id)}
         />
       );
     }
