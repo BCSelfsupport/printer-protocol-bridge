@@ -280,6 +280,7 @@ export function useMessageStorage() {
     printerId,
     // PC Library
     saveToPcLibrary,
+    getAllPcLibraryMessages,
     getPcLibraryMessages,
     getPcLibraryMessage,
     deleteFromPcLibrary,
