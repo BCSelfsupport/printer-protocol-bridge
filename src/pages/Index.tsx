@@ -1735,10 +1735,12 @@ const Index = () => {
           onHome={() => setCurrentScreen('home')}
           openNewDialogOnMount={openNewDialogOnMount}
           onNewDialogOpened={() => setOpenNewDialogOnMount(false)}
+          allPcLibraryMessages={getAllPcLibraryMessages()}
+          printerNameMap={Object.fromEntries(printers.map(p => [p.id, p.name]))}
           pcLibraryMessages={getPcLibraryMessages(messageTargetPrinter?.id)}
           onSaveToPcLibrary={(message) => handleSaveToPcLibrary(message, messageTargetPrinter)}
           onPushToprinter={(libMsg, swapName) => pushPcLibraryToPrinter(libMsg, swapName, messageTargetPrinter)}
-          onDeleteFromPcLibrary={(name) => deleteFromPcLibrary(name, messageTargetPrinter?.id)}
+          onDeleteFromPcLibrary={(name, sourcePrinterId) => deleteFromPcLibrary(name, sourcePrinterId)}
           swapSlotName={getSwapSlot(messageTargetPrinter?.id)}
           onSetSwapSlot={(name) => setSwapSlot(name, messageTargetPrinter?.id)}
         />
