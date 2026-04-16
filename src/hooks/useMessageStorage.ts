@@ -219,7 +219,16 @@ export function useMessageStorage() {
     });
   }, [printerId]);
 
-  /** Get all PC Library messages for the current printer */
+  /** Get all PC Library messages across ALL printers (unified pool) */
+  const getAllPcLibraryMessages = useCallback((): PcLibraryEntry[] => {
+    return Object.entries(pcLibrary).map(([key, message]) => {
+      const colonIdx = key.indexOf(':');
+      const sourcePrinterId = colonIdx > -1 ? parseInt(key.slice(0, colonIdx), 10) : 0;
+      return { message, sourcePrinterId };
+    });
+  }, [pcLibrary]);
+
+  /** Get PC Library messages for a specific printer only */
   const getPcLibraryMessages = useCallback((overridePrinterId?: number): MessageDetails[] => {
     const pid = overridePrinterId ?? printerId;
     const prefix = `${pid}:`;
