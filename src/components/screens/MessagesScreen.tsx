@@ -1,8 +1,9 @@
-import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf } from 'lucide-react';
+import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardDrive, Upload, Download, ChevronDown, ChevronRight, ArrowUpFromLine } from 'lucide-react';
 import { PrintMessage } from '@/types/printer';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
+import { isReadOnlyMessage } from '@/hooks/useMessageStorage';
 
 interface MessagesScreenProps {
   messages: PrintMessage[];
@@ -62,6 +64,13 @@ interface MessagesScreenProps {
   /** Called after dynamic field values are saved — updates active preview immediately */
   onPromptSaved?: (details: MessageDetails) => void;
   connectedPrinterLineId?: string;
+  // PC Library props
+  pcLibraryMessages?: MessageDetails[];
+  onSaveToPcLibrary?: (message: PrintMessage) => void;
+  onPushToprinter?: (libraryMessage: MessageDetails, swapSlotName: string | null) => Promise<boolean>;
+  onDeleteFromPcLibrary?: (messageName: string) => void;
+  swapSlotName?: string | null;
+  onSetSwapSlot?: (messageName: string | null) => void;
 }
 
 export function MessagesScreen({ 
@@ -82,6 +91,12 @@ export function MessagesScreen({
   onSaveStoredMessage,
   onPromptSaved,
   connectedPrinterLineId,
+  pcLibraryMessages,
+  onSaveToPcLibrary,
+  onPushToprinter,
+  onDeleteFromPcLibrary,
+  swapSlotName,
+  onSetSwapSlot,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -90,8 +105,12 @@ export function MessagesScreen({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
   const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
-  // Store the full message details + pending prompts for rewriting after entry
   const [pendingMessageDetails, setPendingMessageDetails] = useState<MessageDetails | null>(null);
+  const [pcLibraryOpen, setPcLibraryOpen] = useState(false);
+  const [selectedLibraryMessage, setSelectedLibraryMessage] = useState<MessageDetails | null>(null);
+  const [isPushing, setIsPushing] = useState(false);
+  const [swapSlotDialogOpen, setSwapSlotDialogOpen] = useState(false);
+  const [deleteLibraryConfirmOpen, setDeleteLibraryConfirmOpen] = useState(false);
 
   // Auto-open the new dialog when navigating from Dashboard "New" button
   useEffect(() => {
@@ -250,6 +269,79 @@ export function MessagesScreen({
         )}
       </div>
 
+      {/* PC Library - Collapsible overflow section */}
+      {pcLibraryMessages && pcLibraryMessages.length > 0 && (
+        <Collapsible open={pcLibraryOpen} onOpenChange={setPcLibraryOpen} className="mb-2">
+          <CollapsibleTrigger className="flex items-center gap-2 w-full px-4 py-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+            {pcLibraryOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            <HardDrive className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium">PC Library</span>
+            <span className="text-xs text-muted-foreground ml-auto">{pcLibraryMessages.length} message{pcLibraryMessages.length !== 1 ? 's' : ''}</span>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="bg-card rounded-b-lg border border-t-0 border-border max-h-[200px] overflow-y-auto">
+              {pcLibraryMessages.map((libMsg) => (
+                <div
+                  key={libMsg.name}
+                  onClick={() => setSelectedLibraryMessage(selectedLibraryMessage?.name === libMsg.name ? null : libMsg)}
+                  className={`flex items-center py-2.5 px-4 border-b cursor-pointer transition-colors ${
+                    selectedLibraryMessage?.name === libMsg.name
+                      ? 'bg-primary/20 border-primary/30'
+                      : 'hover:bg-muted/50'
+                  }`}
+                >
+                  <HardDrive className="w-4 h-4 text-muted-foreground mr-3 shrink-0" />
+                  <span className="flex-1 text-sm">{libMsg.name}</span>
+                  <span className="text-xs text-muted-foreground">{libMsg.fields?.length ?? 0} fields</span>
+                </div>
+              ))}
+            </div>
+            {/* PC Library actions */}
+            <div className="flex gap-2 mt-2 px-1">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!selectedLibraryMessage || isPushing || !onPushToprinter}
+                onClick={async () => {
+                  if (!selectedLibraryMessage || !onPushToprinter) return;
+                  // If no swap slot set, prompt to pick one
+                  if (!swapSlotName) {
+                    setSwapSlotDialogOpen(true);
+                    return;
+                  }
+                  setIsPushing(true);
+                  try {
+                    const ok = await onPushToprinter(selectedLibraryMessage, swapSlotName);
+                    if (ok) {
+                      toast.success(`"${selectedLibraryMessage.name}" pushed to printer`);
+                      setSelectedLibraryMessage(null);
+                    } else {
+                      toast.error('Failed to push message to printer');
+                    }
+                  } finally {
+                    setIsPushing(false);
+                  }
+                }}
+                className="flex items-center gap-1.5"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                {isPushing ? 'Pushing...' : 'Push to Printer'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!selectedLibraryMessage}
+                onClick={() => selectedLibraryMessage && setDeleteLibraryConfirmOpen(true)}
+                className="flex items-center gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
+              </Button>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
       {/* Action buttons - horizontal scroll on mobile */}
       <div className="shrink-0 overflow-x-auto -mx-4 px-4 py-2 bg-background/95 backdrop-blur-sm border-t border-border">
         <div className="flex gap-4 justify-center min-w-max">
@@ -281,6 +373,18 @@ export function MessagesScreen({
             <Pencil className="w-8 h-8 mb-1" />
             <span className="font-medium">Edit</span>
           </button>
+
+          {/* Save to PC Library button */}
+          {onSaveToPcLibrary && (
+            <button 
+              onClick={() => selectedMessage && onSaveToPcLibrary(selectedMessage)}
+              disabled={!selectedMessage}
+              className="industrial-button-gray text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
+            >
+              <Download className="w-8 h-8 mb-1" />
+              <span className="font-medium">Save to PC</span>
+            </button>
+          )}
 
           <button 
             onClick={() => {
@@ -458,6 +562,70 @@ export function MessagesScreen({
           onHome();
         }}
       />
+
+      {/* Swap Slot Selection Dialog */}
+      <Dialog open={swapSlotDialogOpen} onOpenChange={setSwapSlotDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set Swap Slot</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-3">
+              Select a printer message to use as the swap slot. This message will be temporarily replaced when loading overflow messages from the PC Library. It remains safely stored on the PC.
+            </p>
+            <Label>Swap Slot Message</Label>
+            <div className="mt-2 max-h-[200px] overflow-y-auto border rounded-md">
+              {messages
+                .filter(m => m.name !== currentMessageName && !isReadOnlyMessage(m.name))
+                .map((m) => (
+                  <div
+                    key={m.id}
+                    onClick={() => {
+                      onSetSwapSlot?.(m.name);
+                      setSwapSlotDialogOpen(false);
+                      toast.success(`Swap slot set to "${m.name}"`);
+                    }}
+                    className="px-3 py-2 cursor-pointer hover:bg-muted/50 border-b last:border-b-0 text-sm"
+                  >
+                    {m.name}
+                  </div>
+                ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSwapSlotDialogOpen(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete from PC Library Confirmation */}
+      <AlertDialog open={deleteLibraryConfirmOpen} onOpenChange={setDeleteLibraryConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete from PC Library</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove "{selectedLibraryMessage?.name}" from the PC Library? This only removes the local copy — it won't affect the printer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedLibraryMessage) {
+                  onDeleteFromPcLibrary?.(selectedLibraryMessage.name);
+                  setSelectedLibraryMessage(null);
+                  toast.success('Removed from PC Library');
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

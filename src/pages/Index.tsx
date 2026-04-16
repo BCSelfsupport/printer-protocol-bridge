@@ -110,7 +110,7 @@ const Index = () => {
   
   
   // Local message storage (persists to localStorage, scoped by printer ID)
-  const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId } = useMessageStorage();
+  const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId, saveToPcLibrary, getPcLibraryMessages, deleteFromPcLibrary, getSwapSlot, setSwapSlot } = useMessageStorage();
   
   // Consumable storage
   const consumableStorage = useConsumableStorage();
@@ -1030,6 +1030,83 @@ const Index = () => {
     return getMessage(messageName);
   }, [connectionState.connectedPrinter?.id, getMessage]);
 
+  /** Push a PC Library message to the printer by replacing the swap slot */
+  const pushPcLibraryToPrinter = useCallback(async (
+    libraryMessage: MessageDetails,
+    swapSlotNameArg: string | null,
+    targetPrinter?: Printer | null,
+  ): Promise<boolean> => {
+    const printer = targetPrinter ?? connectionState.connectedPrinter;
+    if (!printer || !connectionState.isConnected) {
+      toast.error('No printer connected');
+      return false;
+    }
+
+    try {
+      // First, save the current swap slot to PC Library if it exists on the printer
+      if (swapSlotNameArg) {
+        const swapDetails = getStoredMessageForPrinter(swapSlotNameArg, printer);
+        if (swapDetails) {
+          saveToPcLibrary(swapDetails, printer.id);
+        }
+      }
+
+      // Create the library message on the printer (saveMessageContent handles ^DM + ^NM + ^SV)
+      const ok = await saveMessageContent(
+        libraryMessage.name,
+        libraryMessage.fields,
+        libraryMessage.templateValue,
+        true, // isNew — create fresh
+        libraryMessage.settings ? {
+          speed: libraryMessage.settings.speed,
+          rotation: libraryMessage.settings.rotation,
+          printMode: libraryMessage.settings.printMode,
+        } : undefined,
+      );
+
+      if (!ok) {
+        toast.error('Failed to push message to printer');
+        return false;
+      }
+
+      // Save to regular storage too
+      saveMessage(libraryMessage, printer.id);
+
+      // Remove from PC Library since it's now on the printer
+      deleteFromPcLibrary(libraryMessage.name, printer.id);
+
+      // Update swap slot to the new message name
+      setSwapSlot(libraryMessage.name, printer.id);
+
+      return true;
+    } catch (e) {
+      console.error('[PcLibrary] Failed to push message:', e);
+      return false;
+    }
+  }, [connectionState.connectedPrinter, connectionState.isConnected, saveMessageContent, getStoredMessageForPrinter, saveToPcLibrary, saveMessage, deleteFromPcLibrary, setSwapSlot]);
+
+  /** Save a printer message to the PC Library */
+  const handleSaveToPcLibrary = useCallback(async (message: PrintMessage, targetPrinter?: Printer | null) => {
+    const printer = targetPrinter ?? connectionState.connectedPrinter;
+    if (!printer) return;
+
+    // Get the full message details from storage or fetch from printer
+    let details = getStoredMessageForPrinter(message.name, printer);
+    if (!details && connectionState.isConnected) {
+      try {
+        details = await fetchMessageContent(message.name);
+      } catch {}
+    }
+
+    if (!details) {
+      toast.error('Could not read message details — connect to the printer first');
+      return;
+    }
+
+    saveToPcLibrary(details, printer.id);
+    toast.success(`"${message.name}" saved to PC Library`);
+  }, [connectionState.connectedPrinter, connectionState.isConnected, getStoredMessageForPrinter, saveToPcLibrary, fetchMessageContent]);
+
   const applyStoredAdjustSettings = useCallback(async (
     targetPrinter: Printer,
     messageName: string,
@@ -1658,6 +1735,12 @@ const Index = () => {
           onHome={() => setCurrentScreen('home')}
           openNewDialogOnMount={openNewDialogOnMount}
           onNewDialogOpened={() => setOpenNewDialogOnMount(false)}
+          pcLibraryMessages={getPcLibraryMessages(messageTargetPrinter?.id)}
+          onSaveToPcLibrary={(message) => handleSaveToPcLibrary(message, messageTargetPrinter)}
+          onPushToprinter={(libMsg, swapName) => pushPcLibraryToPrinter(libMsg, swapName, messageTargetPrinter)}
+          onDeleteFromPcLibrary={(name) => deleteFromPcLibrary(name, messageTargetPrinter?.id)}
+          swapSlotName={getSwapSlot(messageTargetPrinter?.id)}
+          onSetSwapSlot={(name) => setSwapSlot(name, messageTargetPrinter?.id)}
         />
       );
     }
@@ -1879,6 +1962,12 @@ const Index = () => {
             onHome={() => setCurrentScreen('control')}
             openNewDialogOnMount={openNewDialogOnMount}
             onNewDialogOpened={() => setOpenNewDialogOnMount(false)}
+            pcLibraryMessages={getPcLibraryMessages((selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
+            onSaveToPcLibrary={(message) => handleSaveToPcLibrary(message, selectedPrinter ?? connectionState.connectedPrinter ?? null)}
+            onPushToprinter={(libMsg, swapName) => pushPcLibraryToPrinter(libMsg, swapName, selectedPrinter ?? connectionState.connectedPrinter ?? null)}
+            onDeleteFromPcLibrary={(name) => deleteFromPcLibrary(name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
+            swapSlotName={getSwapSlot((selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
+            onSetSwapSlot={(name) => setSwapSlot(name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
           />
         );
       case 'wirecable':

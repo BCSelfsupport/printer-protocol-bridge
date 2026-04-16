@@ -1,0 +1,112 @@
+# Memory: index.md
+Updated: now
+
+# Project Memory
+
+## Core
+- BestCode Printer management (Electron app + PWA).
+- Protocol v2.6 authoritative. Save requires `^SV` after `^NM`.
+- 1 persistent TCP socket (port 23) per printer. Only one telnet session allowed by hardware.
+- Admin password: `TEXAS`. Emulator: `CITEC`. Dev panel: 5-tap gesture on Activate.
+- Hardware vertical limits: Model 82=25-dot, 86=19-dot, 88=32-dot.
+- Template Y-coords inverted: `templateRelativeY = templateHeight - printerY - fieldHeight`.
+- Font size must not exceed template height. Single-line messages anchored to bottom.
+- Asset files in `public/` must be valid PNGs accessed via absolute paths.
+- Poll `^SU` every cycle; `^LE`, `^CN`, `^TM` authoritative for faults, counts, metrics.
+- Prevent firmware stalls: 300ms delays, `waitForPollingIdle`, pauses during updates.
+- Fleet printer identity data is per-device only; never copy serial/firmware between printer records.
+
+## Memories
+- [Emulator](mem://development/printer-emulator) — Multi-printer emulator, fault reporting, dev panel toggle
+- [Ready State](mem://features/printer-ready-state-logic) — PRINT:1 and HV active determine ready state
+- [Split View Architecture](mem://style/split-view-architecture) — Sidebar constraints, printer list cards layout
+- [Code Editor](mem://features/programmable-codes-editor) — Single-item-at-a-time pattern for date/time
+- [PWA Specs](mem://integration/pwa-technical-spec) — Service worker disabled, version-based bootstrap
+- [Authentication](mem://features/printer-authentication) — Admin password TEXAS, no remote sign-in
+- [Date/Time Sync](mem://features/datetime-sync) — 500ms loop, regex substitution for HMI parity
+- [Persistence Protocol](mem://features/message-persistence-protocol) — ^SV required after ^NM, delete-recreate flow
+- [Print Modes](mem://features/print-mode-configuration) — Integer mapping for ^CM command (0-6)
+- [Relay System](mem://architecture/mobile-relay-system) — HTTP relay on port 8766 for mobile PWA
+- [Protocol Limits](mem://constraints/protocol-functional-limitations) — Read-only metrics, no remote maintenance
+- [Master/Slave](mem://features/master-slave-system) — Sync messages and selection commands to slaves
+- [Fonts](mem://features/font-rendering-specs) — 9 printer fonts, Standard7High plain zero
+- [Dashboard Layout](mem://style/dashboard-layout-specs) — Bottom alignment for 16-dot/25-dot messages
+- [Client Concurrency](mem://architecture/multi-client-concurrency) — Firmware natively handles port 23 concurrency
+- [Jet/HV Control](mem://features/jet-hv-control) — 66s startup, 134s shutdown, ^PR 1/0
+- [Polling Strategy](mem://architecture/status-polling-strategy) — Gated polling, excludes connected printer from pings
+- [Dev Access](mem://auth/dev-access-flow) — 5-tap hidden gesture, server-side password
+- [Dev Panel Design](mem://style/dev-panel-design) — 600px sidebar, manual protocol tab
+- [Version Detection](mem://integration/firmware-version-detection) — Parse ^VV for firmware, model, variant
+- [Fluid Indicators](mem://features/fluid-status-indicators) — 4-bar gauges, infer levels from ^LE if unknown
+- [Crash Diagnostics](mem://architecture/crash-diagnostic-layers) — Multi-layered promises, __CS_MOUNTED watchdog
+- [Serialized Polling](mem://architecture/serialized-polling-system) — 300ms inter-command delay, 8s watchdog
+- [Network Constraints](mem://constraints/network/connectivity-requirements) — Ethernet priority, firewall port 23
+- [Windows Execution](mem://constraints/platform/windows-execution) — Admin rights for build.bat and installer
+- [Hardware Setup](mem://integration/printer-hardware-setup) — Telnet enabled on port 23, single session limit
+- [Protocol v2.6 Specs](mem://integration/protocol-v2-6-specification) — Authoritative mapping for commands and params
+- [Status Parsing](mem://integration/status-response-parsing) — Parse ^SU for ink/makeup, ^SM strips prefixes
+- [Licensing Workflow](mem://business/automated-licensing-workflow) — Supabase edge function for 20-char keys
+- [Asset Formats](mem://constraints/asset-formats) — True PNG bitstreams required, no BMP extensions
+- [Licensing Tiers](mem://features/licensing-tier-gating) — DEMO, LITE, FULL, DATABASE functional gating
+- [License Lockout](mem://features/license-lockout-mechanism) — Full lockout for non-activated/expired apps
+- [Connection Guide](mem://support/connection-guide) — 6-step visual guide, 300px max image height
+- [Feedback System](mem://support/feedback-system) — Max 3 screenshots, secure private bucket
+- [Wire/Cable Spec](mem://features/wire-cable/technical-spec) — Distance estimation, encoder calibration
+- [Auto Update](mem://integration/auto-update-system) — Electron silent background updates via GitHub
+- [Hardware Limits](mem://constraints/hardware-specific-limits) — Model 82 (25-dot), 86 (19-dot), 88 (32-dot)
+- [Message Deletion](mem://features/message-deletion-protocol) — 20s guard, ^LM verification, explicit ^SV
+- [Variable Data Printing](mem://features/variable-data-printing) — Pause after ^NM for Print Go, scrolling UI
+- [METRC Detection](mem://integration/metrc-csv-detection) — Auto-detect CSV headers for tracking tags
+- [Data Ingestion](mem://integration/automated-data-ingestion) — REST API, Hotfolder, ODBC/SQL support
+- [VDP Optimization](mem://constraints/vdp-throughput-optimization) — Max 25 dots height for 200 units/min
+- [Data Link](mem://features/data-link-enhancements) — Multi-field mapping, preserve barcode prefixes
+- [METRC Template](mem://features/metrc-retail-id-template) — F1 QR x:0 y:7, F2 Text x:38 y:17
+- [Electron Layout](mem://style/electron-layout-constraints) — flex-1 overflow-auto, collapse inactive tabs
+- [Fault Synchronization](mem://features/fault-state-synchronization) — ^LE authoritative for hasActiveErrors
+- [Asset Protection](mem://security/proprietary-asset-protection) — Private bucket, require valid license
+- [Message Editor](mem://features/message-editor) — Reload from printer after save for parity
+- [Branding](mem://design/branding) — Blue/emerald palette, codesync-icon.png 512px
+- [Data Isolation](mem://architecture/printer-data-isolation) — Queries filtered by printer ID, auto-exit context
+- [Test Messages](mem://features/hardcoded-test-messages) — BESTCODE, QUANTUM definitions read-only
+- [Data Mapping](mem://architecture/authoritative-data-mapping) — Ignore counts/metrics during regular ^SU poll
+- [Mobile Pairing](mem://auth/mobile-pairing-system) — 5-min QR code/PIN for mobile companion
+- [Filter Tracking](mem://features/filter-tracking) — Map ^TM hours against user sizes, ceiling logic
+- [Consumables](mem://features/consumables-management) — Only deduct on low/empty to good/full transition
+- [Counter Protocol](mem://features/counter-management-protocol) — Poll ^CN every 3s, strip echoes
+- [Runtime Metrics](mem://features/runtime-metrics-monitoring) — ^TM queried independently for service screen
+- [Offline Detection](mem://architecture/connectivity/offline-detection) — 5 consecutive failed polls (15s)
+- [Polling Pause](mem://features/remote-control/polling-pause) — 5-min safety timer for manual pause
+- [Auto Sync](mem://features/message-auto-sync) — Merge ^LF fields with cached metadata
+- [QR Limits](mem://constraints/qr-code-physical-limits) — 25-dot head limited to 25x25 QR (~47 chars)
+- [Save Diagnostics](mem://features/message-save-diagnostics) — Display raw printer rejection reasons
+- [URL Shortener](mem://features/url-shortener-system) — Compress URLs to fit CIJ QR constraints
+- [Revalidate Sync](mem://architecture/stale-while-revalidate-sync) — 30s grace window after save
+- [Coordinate Parity](mem://logic/coordinate-system-parity) — Snap-to-grid hardware offsets, Y-inversion
+- [Fleet Telemetry](mem://features/fleet-telemetry-platform) — Monitor global fleet status and diagnostics
+- [Push Telemetry](mem://architecture/fleet-push-telemetry) — Sync metadata 5m, status 30s
+- [Fleet Onboarding](mem://features/fleet-onboarding-logic) — Auto-discovery via license keys, cascading cleanup
+- [Asset Delivery](mem://architecture/asset-delivery-stability) — Badges via absolute paths, no JS imports
+- [User Prompt](mem://features/user-define-prompt-system) — Full ^NM rewrite for promptBeforePrint
+- [Fleet Expiry](mem://features/fleet-expiry-management) — Non-destructive protocol flow for overrides
+- [Font Alignment](mem://constraints/font-template-alignment) — Anchor to bottom, cap at template height
+- [Line ID](mem://features/line-id-system) — Block validation if no Line ID configured
+- [Mixed Case](mem://features/mixed-case-text-support) — Disable forced uppercase in text fields
+- [Autocode Offset](mem://logic/autocode-offset-logic) — Printer offset applied to expiry only
+- [Barcode ECC200](mem://features/barcode-ecc200-workaround) — bwip-js client-side rendering via ^NG
+- [Network Navigation](mem://features/printer-network-navigation) — Click highlights, double click connects
+- [Command Targeting](mem://architecture/multi-printer-command-targeting) — Commands route to focused UI printer
+- [Selection Workflow](mem://features/message-save-selection-workflow) — Restore previous ^SM after saving new message
+- [Date Time Builder](mem://features/date-time-code-builder) — Alpha types use ^AP, uppercase params D/R
+- [Prompt Safety](mem://features/message-persistence/prompt-save-safety) — 300ms delay after ^SM, 12s timeout
+- [Event Log](mem://features/fleet-telemetry/event-log-structure) — 5 tabs, maps to ^TM native data
+- [Barcode v2.6](mem://features/barcode-system-v2-6) — Magnification multiplier = bold + 1
+- [TCP v2.6](mem://integration/tcp-protocol-v2-6) — Mandatory drain phase, target routing logic
+- [Concurrency Control](mem://architecture/polling-concurrency-control) — waitForPollingIdle guard for writes
+- [Character Gap](mem://features/font-rendering-specs/character-gap) — field.gap defaults to 1 dot
+- [Input Focus](mem://ui/input-focus-behavior) — onFocus selection highlights text
+- [Update Protocol](mem://features/live-message-update-protocol) — Switch-away flow for prompt fields
+- [Management UI](mem://style/message-management-interface) — Sticky footer, backdrop blur
+- [Firmware Grace](mem://architecture/firmware-processing-grace-periods) — 15s grace period for state parity
+- [Sync Matching](mem://features/message-metadata-sync-matching) — Prioritize by exact data content
+- [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
+- [PC Library](mem://features/pc-library-overflow) — Overflow messages stored on PC with swap-slot push mechanism
