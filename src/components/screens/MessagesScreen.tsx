@@ -288,7 +288,7 @@ export function MessagesScreen({
             <div className="bg-card rounded-b-lg border border-t-0 border-border max-h-[200px] overflow-y-auto">
               {allPcLibraryMessages.map((entry) => {
                 const isSelected = selectedLibraryMessage?.name === entry.message.name && selectedLibrarySourcePrinterId === entry.sourcePrinterId;
-                const sourceName = printerNameMap?.[entry.sourcePrinterId] || `Printer ${entry.sourcePrinterId}`;
+                
                 return (
                   <div
                     key={`${entry.sourcePrinterId}:${entry.message.name}`}
