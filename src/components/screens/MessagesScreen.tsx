@@ -638,8 +638,9 @@ export function MessagesScreen({
             <AlertDialogAction
               onClick={() => {
                 if (selectedLibraryMessage) {
-                  onDeleteFromPcLibrary?.(selectedLibraryMessage.name);
+                  onDeleteFromPcLibrary?.(selectedLibraryMessage.name, selectedLibrarySourcePrinterId);
                   setSelectedLibraryMessage(null);
+                  setSelectedLibrarySourcePrinterId(undefined);
                   toast.success('Removed from PC Library');
                 }
               }}
