@@ -19,6 +19,7 @@ interface FaultAlertDialogProps {
 }
 
 const SNOOZE_DURATION_MS = 3 * 60 * 1000; // 3 minutes
+const FAULT_IMAGE_VARIANTS = ['2', '3', '5'] as const;
 const FAULT_IMAGE_EXTENSIONS = ['png', 'bmp', 'jpg', 'jpeg', 'webp'] as const;
 const DASH_VARIANTS_REGEX = /[‐‑‒–—−]/g;
 
@@ -39,7 +40,7 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
   // Track which faults we've already shown so we don't re-pop immediately
   const [dismissedCodes, setDismissedCodes] = useState<Set<string>>(new Set());
   const [imageExtIndex, setImageExtIndex] = useState(0);
-
+  const [imageVariantIndex, setImageVariantIndex] = useState(0);
   const previousActiveCodesRef = useRef<Set<string>>(new Set());
   const previousDismissedCodesRef = useRef<Set<string>>(new Set());
   const hasSeededConnectedSnapshotRef = useRef(false);
@@ -143,6 +144,7 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
 
   useEffect(() => {
     setImageExtIndex(0);
+    setImageVariantIndex(0);
   }, [currentFault?.code]);
 
   const handleDismiss = useCallback(() => {
@@ -189,8 +191,10 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
   const normalizedFaultCode = normalizeFaultCodeForAsset(currentFault?.code ?? '');
   const qrImagePath = normalizedFaultCode
     ? (() => {
+        const variant = FAULT_IMAGE_VARIANTS[imageVariantIndex];
         const ext = FAULT_IMAGE_EXTENSIONS[imageExtIndex];
-        return getAuthenticatedAssetUrl(`fault-codes/${normalizedFaultCode}.${ext}`);
+        const suffix = variant ? `-${variant}` : '';
+        return getAuthenticatedAssetUrl(`fault-codes/${normalizedFaultCode}${suffix}.${ext}`);
       })()
     : '';
 
@@ -218,9 +222,12 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
               alt={`Fault ${currentFault.code}: ${currentFault.message}`}
               className="w-full"
               onError={() => {
-                setImageExtIndex((prev) =>
-                  prev < FAULT_IMAGE_EXTENSIONS.length - 1 ? prev + 1 : prev,
-                );
+                if (imageVariantIndex < FAULT_IMAGE_VARIANTS.length - 1) {
+                  setImageVariantIndex((prev) => prev + 1);
+                } else if (imageExtIndex < FAULT_IMAGE_EXTENSIONS.length - 1) {
+                  setImageVariantIndex(0);
+                  setImageExtIndex((prev) => prev + 1);
+                }
               }}
             />
             {/* Invisible clickable hotspot over the OK button area in the image
