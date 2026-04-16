@@ -40,7 +40,7 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
   // Track which faults we've already shown so we don't re-pop immediately
   const [dismissedCodes, setDismissedCodes] = useState<Set<string>>(new Set());
   const [imageExtIndex, setImageExtIndex] = useState(0);
-
+  const [imageVariantIndex, setImageVariantIndex] = useState(0);
   const previousActiveCodesRef = useRef<Set<string>>(new Set());
   const previousDismissedCodesRef = useRef<Set<string>>(new Set());
   const hasSeededConnectedSnapshotRef = useRef(false);
