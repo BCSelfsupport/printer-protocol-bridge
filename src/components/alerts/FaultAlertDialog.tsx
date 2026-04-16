@@ -222,9 +222,12 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
               alt={`Fault ${currentFault.code}: ${currentFault.message}`}
               className="w-full"
               onError={() => {
-                setImageExtIndex((prev) =>
-                  prev < FAULT_IMAGE_EXTENSIONS.length - 1 ? prev + 1 : prev,
-                );
+                if (imageVariantIndex < FAULT_IMAGE_VARIANTS.length - 1) {
+                  setImageVariantIndex((prev) => prev + 1);
+                } else if (imageExtIndex < FAULT_IMAGE_EXTENSIONS.length - 1) {
+                  setImageVariantIndex(0);
+                  setImageExtIndex((prev) => prev + 1);
+                }
               }}
             />
             {/* Invisible clickable hotspot over the OK button area in the image
