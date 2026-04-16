@@ -90,6 +90,12 @@ export function MessagesScreen({
   onSaveStoredMessage,
   onPromptSaved,
   connectedPrinterLineId,
+  pcLibraryMessages,
+  onSaveToPcLibrary,
+  onPushToprinter,
+  onDeleteFromPcLibrary,
+  swapSlotName,
+  onSetSwapSlot,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -98,8 +104,12 @@ export function MessagesScreen({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
   const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
-  // Store the full message details + pending prompts for rewriting after entry
   const [pendingMessageDetails, setPendingMessageDetails] = useState<MessageDetails | null>(null);
+  const [pcLibraryOpen, setPcLibraryOpen] = useState(false);
+  const [selectedLibraryMessage, setSelectedLibraryMessage] = useState<MessageDetails | null>(null);
+  const [isPushing, setIsPushing] = useState(false);
+  const [swapSlotDialogOpen, setSwapSlotDialogOpen] = useState(false);
+  const [deleteLibraryConfirmOpen, setDeleteLibraryConfirmOpen] = useState(false);
 
   // Auto-open the new dialog when navigating from Dashboard "New" button
   useEffect(() => {
