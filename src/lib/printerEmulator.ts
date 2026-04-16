@@ -63,6 +63,9 @@ export interface EmulatorState {
   
   // Errors
   errorsOn: boolean;
+  
+  // Custom faults injected via dev panel for testing fault alert images
+  customFaults: Array<{ code: string; severity: string; message: string }>;
 }
 
 export interface CommandLogEntry {
