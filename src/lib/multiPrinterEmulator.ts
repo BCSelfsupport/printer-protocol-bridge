@@ -170,6 +170,7 @@ class PrinterEmulatorInstance {
   private commandLog: CommandLogEntry[] = [];
   private listeners: Set<(state: EmulatorState) => void> = new Set();
   private logListeners: Set<(log: CommandLogEntry[]) => void> = new Set();
+  private hoursTimer: ReturnType<typeof setInterval> | null = null;
   
   public readonly config: EmulatedPrinterConfig;
   private readonly VERSION = 'v01.09.00.14';
@@ -180,6 +181,13 @@ class PrinterEmulatorInstance {
     this.state = createDefaultState(config.initialState);
     // Restore persisted messages for this instance
     this.loadPersistedMessages();
+    // Simulate pump/power hours incrementing (accelerated: ~1 hour per 30s real-time)
+    this.hoursTimer = setInterval(() => {
+      if (this.state.jetRunning) {
+        this.state.streamHours += 0.1;
+      }
+      this.state.powerHours += 0.1;
+    }, 30_000);
   }
 
   private get storageKey(): string {
