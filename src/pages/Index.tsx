@@ -110,7 +110,7 @@ const Index = () => {
   
   
   // Local message storage (persists to localStorage, scoped by printer ID)
-  const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId, saveToPcLibrary, getPcLibraryMessages, deleteFromPcLibrary, getSwapSlot, setSwapSlot } = useMessageStorage();
+  const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId, saveToPcLibrary, getAllPcLibraryMessages, getPcLibraryMessages, deleteFromPcLibrary, getSwapSlot, setSwapSlot } = useMessageStorage();
   
   // Consumable storage
   const consumableStorage = useConsumableStorage();
@@ -1735,10 +1735,12 @@ const Index = () => {
           onHome={() => setCurrentScreen('home')}
           openNewDialogOnMount={openNewDialogOnMount}
           onNewDialogOpened={() => setOpenNewDialogOnMount(false)}
+          allPcLibraryMessages={getAllPcLibraryMessages()}
+          printerNameMap={Object.fromEntries(printers.map(p => [p.id, p.name]))}
           pcLibraryMessages={getPcLibraryMessages(messageTargetPrinter?.id)}
           onSaveToPcLibrary={(message) => handleSaveToPcLibrary(message, messageTargetPrinter)}
           onPushToprinter={(libMsg, swapName) => pushPcLibraryToPrinter(libMsg, swapName, messageTargetPrinter)}
-          onDeleteFromPcLibrary={(name) => deleteFromPcLibrary(name, messageTargetPrinter?.id)}
+          onDeleteFromPcLibrary={(name, sourcePrinterId) => deleteFromPcLibrary(name, sourcePrinterId)}
           swapSlotName={getSwapSlot(messageTargetPrinter?.id)}
           onSetSwapSlot={(name) => setSwapSlot(name, messageTargetPrinter?.id)}
         />
@@ -1962,10 +1964,12 @@ const Index = () => {
             onHome={() => setCurrentScreen('control')}
             openNewDialogOnMount={openNewDialogOnMount}
             onNewDialogOpened={() => setOpenNewDialogOnMount(false)}
+            allPcLibraryMessages={getAllPcLibraryMessages()}
+            printerNameMap={Object.fromEntries(printers.map(p => [p.id, p.name]))}
             pcLibraryMessages={getPcLibraryMessages((selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
             onSaveToPcLibrary={(message) => handleSaveToPcLibrary(message, selectedPrinter ?? connectionState.connectedPrinter ?? null)}
             onPushToprinter={(libMsg, swapName) => pushPcLibraryToPrinter(libMsg, swapName, selectedPrinter ?? connectionState.connectedPrinter ?? null)}
-            onDeleteFromPcLibrary={(name) => deleteFromPcLibrary(name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
+            onDeleteFromPcLibrary={(name, sourcePrinterId) => deleteFromPcLibrary(name, sourcePrinterId)}
             swapSlotName={getSwapSlot((selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
             onSetSwapSlot={(name) => setSwapSlot(name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
           />
