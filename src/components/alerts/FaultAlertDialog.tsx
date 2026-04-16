@@ -19,6 +19,7 @@ interface FaultAlertDialogProps {
 }
 
 const SNOOZE_DURATION_MS = 3 * 60 * 1000; // 3 minutes
+const FAULT_IMAGE_VARIANTS = ['2', '3', '5'] as const;
 const FAULT_IMAGE_EXTENSIONS = ['png', 'bmp', 'jpg', 'jpeg', 'webp'] as const;
 const DASH_VARIANTS_REGEX = /[‐‑‒–—−]/g;
 
