@@ -94,6 +94,8 @@ export function MessagesScreen({
   onSaveStoredMessage,
   onPromptSaved,
   connectedPrinterLineId,
+  allPcLibraryMessages,
+  printerNameMap,
   pcLibraryMessages,
   onSaveToPcLibrary,
   onPushToprinter,
