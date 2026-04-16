@@ -276,31 +276,49 @@ export function MessagesScreen({
       </div>
 
       {/* PC Library - Collapsible overflow section */}
-      {pcLibraryMessages && pcLibraryMessages.length > 0 && (
+      {allPcLibraryMessages && allPcLibraryMessages.length > 0 && (
         <Collapsible open={pcLibraryOpen} onOpenChange={setPcLibraryOpen} className="mb-2">
           <CollapsibleTrigger className="flex items-center gap-2 w-full px-4 py-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
             {pcLibraryOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             <HardDrive className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm font-medium">PC Library</span>
-            <span className="text-xs text-muted-foreground ml-auto">{pcLibraryMessages.length} message{pcLibraryMessages.length !== 1 ? 's' : ''}</span>
+            <span className="text-xs text-muted-foreground ml-auto">{allPcLibraryMessages.length} message{allPcLibraryMessages.length !== 1 ? 's' : ''}</span>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="bg-card rounded-b-lg border border-t-0 border-border max-h-[200px] overflow-y-auto">
-              {pcLibraryMessages.map((libMsg) => (
-                <div
-                  key={libMsg.name}
-                  onClick={() => setSelectedLibraryMessage(selectedLibraryMessage?.name === libMsg.name ? null : libMsg)}
-                  className={`flex items-center py-2.5 px-4 border-b cursor-pointer transition-colors ${
-                    selectedLibraryMessage?.name === libMsg.name
-                      ? 'bg-primary/20 border-primary/30'
-                      : 'hover:bg-muted/50'
-                  }`}
-                >
-                  <HardDrive className="w-4 h-4 text-muted-foreground mr-3 shrink-0" />
-                  <span className="flex-1 text-sm">{libMsg.name}</span>
-                  <span className="text-xs text-muted-foreground">{libMsg.fields?.length ?? 0} fields</span>
-                </div>
-              ))}
+              {allPcLibraryMessages.map((entry) => {
+                const isSelected = selectedLibraryMessage?.name === entry.message.name && selectedLibrarySourcePrinterId === entry.sourcePrinterId;
+                const sourceName = printerNameMap?.[entry.sourcePrinterId] || `Printer ${entry.sourcePrinterId}`;
+                return (
+                  <div
+                    key={`${entry.sourcePrinterId}:${entry.message.name}`}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedLibraryMessage(null);
+                        setSelectedLibrarySourcePrinterId(undefined);
+                      } else {
+                        setSelectedLibraryMessage(entry.message);
+                        setSelectedLibrarySourcePrinterId(entry.sourcePrinterId);
+                      }
+                    }}
+                    className={`flex items-center py-2.5 px-4 border-b cursor-pointer transition-colors ${
+                      isSelected
+                        ? 'bg-primary/20 border-primary/30'
+                        : 'hover:bg-muted/50'
+                    }`}
+                  >
+                    <HardDrive className="w-4 h-4 text-muted-foreground mr-3 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm block truncate">{entry.message.name}</span>
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        <Monitor className="w-3 h-3" />
+                        {sourceName}
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0 ml-2">{entry.message.fields?.length ?? 0} fields</span>
+                  </div>
+                );
+              })}
             </div>
             {/* PC Library actions */}
             <div className="flex gap-2 mt-2 px-1">
@@ -310,7 +328,6 @@ export function MessagesScreen({
                 disabled={!selectedLibraryMessage || isPushing || !onPushToprinter}
                 onClick={async () => {
                   if (!selectedLibraryMessage || !onPushToprinter) return;
-                  // If no swap slot set, prompt to pick one
                   if (!swapSlotName) {
                     setSwapSlotDialogOpen(true);
                     return;
@@ -321,6 +338,7 @@ export function MessagesScreen({
                     if (ok) {
                       toast.success(`"${selectedLibraryMessage.name}" pushed to printer`);
                       setSelectedLibraryMessage(null);
+                      setSelectedLibrarySourcePrinterId(undefined);
                     } else {
                       toast.error('Failed to push message to printer');
                     }
