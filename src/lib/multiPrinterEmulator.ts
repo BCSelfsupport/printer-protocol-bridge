@@ -696,6 +696,7 @@ class PrinterEmulatorInstance {
     this.notifyListeners();
   }
 
+  reset() {
     this.state = createDefaultState(this.config.initialState);
     this.commandLog = [];
     this.notifyListeners();
