@@ -571,14 +571,40 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { code: '10-0001', severity: 'W', message: 'Ink fluid level low.', label: 'Ink Low' },
+                      // Gutter & Jet
+                      { code: '01-0001', severity: 'F', message: 'Fluid not detected in gutter.', label: 'Gutter' },
+                      { code: '08-0001', severity: 'F', message: 'High voltage trip.', label: 'HV Trip' },
+                      // Phase & Charge
+                      { code: '09-8001', severity: 'F', message: 'Charged drops not detected.', label: 'No Charge' },
+                      { code: '0A-8006', severity: 'F', message: 'Phase quality is too low.', label: 'Phase Low' },
+                      // Cooling & Temperature
+                      { code: '0C-8001', severity: 'F', message: 'Fan rotation not detected.', label: 'Fan Fault' },
+                      { code: '0C-8002', severity: 'F', message: 'Air cooling pressure not detected.', label: 'Air Cool' },
+                      { code: '13-8001', severity: 'F', message: 'System temperature too high to operate.', label: 'Sys Temp' },
+                      { code: '14-8001', severity: 'F', message: 'Printhead temperature too high to operate.', label: 'Head Temp' },
+                      // Pump
+                      { code: '0D-8003', severity: 'F', message: 'Pump rotation not detected.', label: 'Pump Fail' },
+                      { code: '0D-8002', severity: 'F', message: 'Pump pressure too high to operate.', label: 'Pump Press' },
+                      // Ink
+                      { code: '10-0003', severity: 'W', message: 'Ink fluid level is low.', label: 'Ink Low' },
                       { code: '10-0002', severity: 'F', message: 'Ink fluid level empty.', label: 'Ink Empty' },
-                      { code: '11-0001', severity: 'W', message: 'Makeup fluid level low.', label: 'Makeup Low' },
+                      { code: '10-8005', severity: 'F', message: 'Ink fluid level too high to operate.', label: 'Ink High' },
+                      // Makeup
+                      { code: '11-0003', severity: 'W', message: 'Makeup fluid level is low.', label: 'Makeup Low' },
                       { code: '11-0002', severity: 'F', message: 'Makeup fluid level empty.', label: 'Makeup Empty' },
-                      { code: '0C-8001', severity: 'F', message: 'Cooling fan fault.', label: 'Cooling Fan' },
-                      { code: '0C-8001-2', severity: 'F', message: 'Cooling fan 2 fault.', label: 'Cooling Fan 2' },
-                      { code: '0A-0001', severity: 'F', message: 'Printhead cover open.', label: 'Cover Open' },
-                      { code: '08-0001', severity: 'F', message: 'Gutter fault.', label: 'Gutter Fault' },
+                      { code: '11-8004', severity: 'F', message: 'Makeup fluid level too high to operate.', label: 'Makeup High' },
+                      // Viscosity
+                      { code: '0E-0001', severity: 'W', message: 'Ink viscosity is too low.', label: 'Visc Low' },
+                      { code: '0E-0002', severity: 'W', message: 'Ink viscosity is too high.', label: 'Visc High' },
+                      // Printhead
+                      { code: '16-8001', severity: 'F', message: 'Printhead Fault.', label: 'Head Fault' },
+                      { code: '16-8002', severity: 'F', message: 'Printhead not detected.', label: 'No Head' },
+                      // Filter
+                      { code: '12-8003', severity: 'F', message: 'SmartFilter replacement required.', label: 'Filter' },
+                      // Power & System
+                      { code: '01-8002', severity: 'F', message: 'Last shutdown due to loss of power.', label: 'Power Loss' },
+                      { code: '02-8001', severity: 'F', message: 'Trip cable not detected.', label: 'Trip Cable' },
+                      { code: '08-8001', severity: 'F', message: '300 Volt supply below threshold.', label: '300V Low' },
                     ].map(fault => {
                       const isActive = emulatorState.customFaults.some(f => f.code === fault.code);
                       return (
@@ -596,7 +622,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                             !emulatorEnabled && "opacity-50 cursor-not-allowed"
                           )}
                         >
-                          <AlertTriangle className="w-4 h-4" />
+                          <AlertTriangle className="w-3.5 h-3.5" />
                           {fault.label}
                         </button>
                       );

@@ -337,13 +337,13 @@ class PrinterEmulatorInstance {
   private cmdListErrors(): string {
     const errors: string[] = [];
     if (this.state.inkLevel === 'LOW') {
-      errors.push('10-0001 (W) - Ink fluid level low.');
+      errors.push('10-0003 (W) - Ink fluid level is low.');
     }
     if (this.state.inkLevel === 'EMPTY') {
       errors.push('10-0002 (F) - Ink fluid level empty.');
     }
     if (this.state.makeupLevel === 'LOW') {
-      errors.push('11-0001 (W) - Makeup fluid level low.');
+      errors.push('11-0003 (W) - Makeup fluid level is low.');
     }
     if (this.state.makeupLevel === 'EMPTY') {
       errors.push('11-0002 (F) - Makeup fluid level empty.');
