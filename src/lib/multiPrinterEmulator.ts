@@ -55,6 +55,7 @@ const createDefaultState = (overrides?: Partial<EmulatorState>): EmulatorState =
   logos: ['ENCODER.BMP', 'highVolt.bmp', 'phaseWave.bmp', 'running_2.bmp', 'USBdrive.bmp'],
   
   errorsOn: false,
+  customFaults: [],
   ...overrides,
 });
 
