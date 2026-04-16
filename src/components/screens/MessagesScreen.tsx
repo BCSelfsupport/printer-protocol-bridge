@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardDrive, Upload, Download, ChevronDown, ChevronRight, ArrowUpFromLine, Monitor } from 'lucide-react';
+import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardDrive, Upload, Download, ChevronDown, ChevronRight, ArrowUpFromLine } from 'lucide-react';
 import { PcLibraryEntry } from '@/hooks/useMessageStorage';
 import { PrintMessage } from '@/types/printer';
 import { useState, useEffect } from 'react';
@@ -288,7 +288,7 @@ export function MessagesScreen({
             <div className="bg-card rounded-b-lg border border-t-0 border-border max-h-[200px] overflow-y-auto">
               {allPcLibraryMessages.map((entry) => {
                 const isSelected = selectedLibraryMessage?.name === entry.message.name && selectedLibrarySourcePrinterId === entry.sourcePrinterId;
-                const sourceName = printerNameMap?.[entry.sourcePrinterId] || `Printer ${entry.sourcePrinterId}`;
+                
                 return (
                   <div
                     key={`${entry.sourcePrinterId}:${entry.message.name}`}
@@ -308,13 +308,7 @@ export function MessagesScreen({
                     }`}
                   >
                     <HardDrive className="w-4 h-4 text-muted-foreground mr-3 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm block truncate">{entry.message.name}</span>
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                        <Monitor className="w-3 h-3" />
-                        {sourceName}
-                      </span>
-                    </div>
+                    <span className="flex-1 text-sm truncate">{entry.message.name}</span>
                     <span className="text-xs text-muted-foreground shrink-0 ml-2">{entry.message.fields?.length ?? 0} fields</span>
                   </div>
                 );
