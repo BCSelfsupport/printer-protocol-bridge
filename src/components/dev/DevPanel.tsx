@@ -32,7 +32,8 @@ import {
   Shield,
   Globe,
   Signal,
-  Video
+  Video,
+  AlertTriangle
 } from 'lucide-react';
 import { CommandTerminal } from '@/components/terminal/CommandTerminal';
 import { ScrollArea } from '@/components/ui/scroll-area';
