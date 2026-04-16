@@ -985,6 +985,19 @@ class PrinterEmulator {
     this.notifyListeners();
   }
 
+  /**
+   * Toggle a custom fault on/off for testing fault alert images
+   */
+  toggleFault(code: string, severity: string, message: string) {
+    const idx = this.state.customFaults.findIndex(f => f.code === code);
+    if (idx >= 0) {
+      this.state.customFaults = this.state.customFaults.filter((_, i) => i !== idx);
+    } else {
+      this.state.customFaults = [...this.state.customFaults, { code, severity, message }];
+    }
+    this.notifyListeners();
+  }
+
   // ============ Login/Logout Commands ============
   
   private readonly ADMIN_PASSWORD = 'TEXAS';
