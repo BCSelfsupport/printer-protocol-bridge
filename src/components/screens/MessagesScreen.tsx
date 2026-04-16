@@ -308,13 +308,7 @@ export function MessagesScreen({
                     }`}
                   >
                     <HardDrive className="w-4 h-4 text-muted-foreground mr-3 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm block truncate">{entry.message.name}</span>
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                        <Monitor className="w-3 h-3" />
-                        {sourceName}
-                      </span>
-                    </div>
+                    <span className="flex-1 text-sm truncate">{entry.message.name}</span>
                     <span className="text-xs text-muted-foreground shrink-0 ml-2">{entry.message.fields?.length ?? 0} fields</span>
                   </div>
                 );
