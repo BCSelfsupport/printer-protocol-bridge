@@ -449,6 +449,10 @@ class PrinterEmulator {
     if (this.state.makeupLevel === 'EMPTY') {
       errors.push('11-0002 (F) - Makeup fluid level empty.');
     }
+    // Include custom faults injected via dev panel
+    for (const fault of this.state.customFaults) {
+      errors.push(`${fault.code} (${fault.severity}) - ${fault.message}`);
+    }
     if (errors.length === 0) {
       return 'End of list';
     }
