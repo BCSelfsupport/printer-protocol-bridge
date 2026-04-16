@@ -66,10 +66,12 @@ interface MessagesScreenProps {
   onPromptSaved?: (details: MessageDetails) => void;
   connectedPrinterLineId?: string;
   // PC Library props
+  allPcLibraryMessages?: PcLibraryEntry[];
+  printerNameMap?: Record<number, string>;
   pcLibraryMessages?: MessageDetails[];
   onSaveToPcLibrary?: (message: PrintMessage) => void;
   onPushToprinter?: (libraryMessage: MessageDetails, swapSlotName: string | null) => Promise<boolean>;
-  onDeleteFromPcLibrary?: (messageName: string) => void;
+  onDeleteFromPcLibrary?: (messageName: string, sourcePrinterId?: number) => void;
   swapSlotName?: string | null;
   onSetSwapSlot?: (messageName: string | null) => void;
 }
