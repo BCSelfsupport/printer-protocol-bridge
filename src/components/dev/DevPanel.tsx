@@ -32,7 +32,8 @@ import {
   Shield,
   Globe,
   Signal,
-  Video
+  Video,
+  AlertTriangle
 } from 'lucide-react';
 import { CommandTerminal } from '@/components/terminal/CommandTerminal';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -562,6 +563,44 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                       <Droplets className="w-4 h-4" />
                       Makeup: {emulatorState.makeupLevel}
                     </button>
+                  </div>
+
+                  {/* Fault Testing */}
+                  <h3 className="text-xs font-semibold text-muted-foreground mt-4 mb-3 uppercase tracking-wider">
+                    Fault Alert Testing
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { code: '10-0001', severity: 'W', message: 'Ink fluid level low.', label: 'Ink Low' },
+                      { code: '10-0002', severity: 'F', message: 'Ink fluid level empty.', label: 'Ink Empty' },
+                      { code: '11-0001', severity: 'W', message: 'Makeup fluid level low.', label: 'Makeup Low' },
+                      { code: '11-0002', severity: 'F', message: 'Makeup fluid level empty.', label: 'Makeup Empty' },
+                      { code: '0C-8001', severity: 'F', message: 'Cooling fan fault.', label: 'Cooling Fan' },
+                      { code: '0C-8001-2', severity: 'F', message: 'Cooling fan 2 fault.', label: 'Cooling Fan 2' },
+                      { code: '0A-0001', severity: 'F', message: 'Printhead cover open.', label: 'Cover Open' },
+                      { code: '08-0001', severity: 'F', message: 'Gutter fault.', label: 'Gutter Fault' },
+                    ].map(fault => {
+                      const isActive = emulatorState.customFaults.some(f => f.code === fault.code);
+                      return (
+                        <button
+                          key={fault.code}
+                          onClick={() => {
+                            getConnectedEmulator().toggleFault(fault.code, fault.severity, fault.message);
+                          }}
+                          disabled={!emulatorEnabled}
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all border",
+                            isActive
+                              ? "bg-destructive/20 text-destructive border-destructive/60"
+                              : "bg-muted text-muted-foreground border-border hover:bg-muted/80",
+                            !emulatorEnabled && "opacity-50 cursor-not-allowed"
+                          )}
+                        >
+                          <AlertTriangle className="w-4 h-4" />
+                          {fault.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

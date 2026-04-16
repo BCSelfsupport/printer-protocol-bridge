@@ -63,6 +63,9 @@ export interface EmulatorState {
   
   // Errors
   errorsOn: boolean;
+  
+  // Custom faults injected via dev panel for testing fault alert images
+  customFaults: Array<{ code: string; severity: string; message: string }>;
 }
 
 export interface CommandLogEntry {
@@ -202,6 +205,7 @@ const defaultState: EmulatorState = {
   logos: ['ENCODER.BMP', 'highVolt.bmp', 'phaseWave.bmp', 'running_2.bmp', 'USBdrive.bmp'],
   
   errorsOn: false,
+  customFaults: [],
 };
 
 class PrinterEmulator {
@@ -444,6 +448,10 @@ class PrinterEmulator {
     }
     if (this.state.makeupLevel === 'EMPTY') {
       errors.push('11-0002 (F) - Makeup fluid level empty.');
+    }
+    // Include custom faults injected via dev panel
+    for (const fault of this.state.customFaults) {
+      errors.push(`${fault.code} (${fault.severity}) - ${fault.message}`);
     }
     if (errors.length === 0) {
       return 'End of list';
@@ -974,6 +982,19 @@ class PrinterEmulator {
     const actualIdx = levels.findIndex(l => l === this.state.makeupLevel);
     const nextIdx = (actualIdx === -1 ? 0 : actualIdx + 1) % levels.length;
     this.state.makeupLevel = levels[nextIdx];
+    this.notifyListeners();
+  }
+
+  /**
+   * Toggle a custom fault on/off for testing fault alert images
+   */
+  toggleFault(code: string, severity: string, message: string) {
+    const idx = this.state.customFaults.findIndex(f => f.code === code);
+    if (idx >= 0) {
+      this.state.customFaults = this.state.customFaults.filter((_, i) => i !== idx);
+    } else {
+      this.state.customFaults = [...this.state.customFaults, { code, severity, message }];
+    }
     this.notifyListeners();
   }
 
