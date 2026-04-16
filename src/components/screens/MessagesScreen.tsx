@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
+import { isReadOnlyMessage } from '@/hooks/useMessageStorage';
 
 interface MessagesScreenProps {
   messages: PrintMessage[];
