@@ -561,6 +561,70 @@ export function MessagesScreen({
           onHome();
         }}
       />
+
+      {/* Swap Slot Selection Dialog */}
+      <Dialog open={swapSlotDialogOpen} onOpenChange={setSwapSlotDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set Swap Slot</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-3">
+              Select a printer message to use as the swap slot. This message will be temporarily replaced when loading overflow messages from the PC Library. It remains safely stored on the PC.
+            </p>
+            <Label>Swap Slot Message</Label>
+            <div className="mt-2 max-h-[200px] overflow-y-auto border rounded-md">
+              {messages
+                .filter(m => m.name !== currentMessageName && !isReadOnlyMessage(m.name))
+                .map((m) => (
+                  <div
+                    key={m.id}
+                    onClick={() => {
+                      onSetSwapSlot?.(m.name);
+                      setSwapSlotDialogOpen(false);
+                      toast.success(`Swap slot set to "${m.name}"`);
+                    }}
+                    className="px-3 py-2 cursor-pointer hover:bg-muted/50 border-b last:border-b-0 text-sm"
+                  >
+                    {m.name}
+                  </div>
+                ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSwapSlotDialogOpen(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete from PC Library Confirmation */}
+      <AlertDialog open={deleteLibraryConfirmOpen} onOpenChange={setDeleteLibraryConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete from PC Library</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove "{selectedLibraryMessage?.name}" from the PC Library? This only removes the local copy — it won't affect the printer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedLibraryMessage) {
+                  onDeleteFromPcLibrary?.(selectedLibraryMessage.name);
+                  setSelectedLibraryMessage(null);
+                  toast.success('Removed from PC Library');
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
