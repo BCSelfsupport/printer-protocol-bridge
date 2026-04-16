@@ -110,7 +110,7 @@ const Index = () => {
   
   
   // Local message storage (persists to localStorage, scoped by printer ID)
-  const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId } = useMessageStorage();
+  const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId, saveToPcLibrary, getPcLibraryMessages, deleteFromPcLibrary, getSwapSlot, setSwapSlot } = useMessageStorage();
   
   // Consumable storage
   const consumableStorage = useConsumableStorage();
