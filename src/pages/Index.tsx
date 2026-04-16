@@ -1927,7 +1927,7 @@ const Index = () => {
         }
         return (
           <MessagesScreen
-            messages={connectionState.messages}
+            messages={getMessagesForPrinter(selectedPrinter ?? connectionState.connectedPrinter ?? null)}
             currentMessageName={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.currentMessage ?? connectionState.status?.currentMessage ?? null}
             onSelect={async (message) => {
               const messageTargetPrinter = selectedPrinter ?? connectionState.connectedPrinter ?? null;
