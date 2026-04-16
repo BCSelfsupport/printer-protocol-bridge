@@ -1042,6 +1042,18 @@ const Index = () => {
       return false;
     }
 
+    // Validate template compatibility with target printer model
+    const model = connectionState.status?.printerModel;
+    const capabilities = getModelCapabilities(model);
+    if (capabilities && libraryMessage.templateValue) {
+      const templateId = libraryMessage.templateValue as import('@/lib/modelCapabilities').TemplateId;
+      if (!capabilities.templates.includes(templateId)) {
+        const maxTemplate = capabilities.templates[0]; // First entry is the largest
+        toast.error(`This message uses a ${libraryMessage.templateValue}-dot template which is not supported by this ${model ? 'Model ' + model : 'printer'} (max ${maxTemplate}-dot)`);
+        return false;
+      }
+    }
+
     try {
       // First, save the current swap slot to PC Library if it exists on the printer
       if (swapSlotNameArg) {
