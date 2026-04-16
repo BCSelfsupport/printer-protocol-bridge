@@ -1,8 +1,9 @@
-import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf } from 'lucide-react';
+import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardDrive, Upload, Download, ChevronDown, ChevronRight, ArrowUpFromLine } from 'lucide-react';
 import { PrintMessage } from '@/types/printer';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
