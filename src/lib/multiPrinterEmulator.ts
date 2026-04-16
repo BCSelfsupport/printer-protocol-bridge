@@ -686,7 +686,16 @@ class PrinterEmulatorInstance {
     this.notifyListeners();
   }
 
-  reset() {
+  toggleFault(code: string, severity: string, message: string) {
+    const idx = this.state.customFaults.findIndex(f => f.code === code);
+    if (idx >= 0) {
+      this.state.customFaults = this.state.customFaults.filter((_, i) => i !== idx);
+    } else {
+      this.state.customFaults = [...this.state.customFaults, { code, severity, message }];
+    }
+    this.notifyListeners();
+  }
+
     this.state = createDefaultState(this.config.initialState);
     this.commandLog = [];
     this.notifyListeners();
