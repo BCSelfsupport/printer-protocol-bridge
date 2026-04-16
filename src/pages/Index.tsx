@@ -163,6 +163,22 @@ const Index = () => {
   const connectedPrinterId = connectionState.connectedPrinter?.id ?? null;
   const selectedPrinter = selectedPrinterId != null ? printers.find((printer) => printer.id === selectedPrinterId) ?? null : null;
 
+  /** Get message list for a specific printer — uses emulator state if available, else falls back to connected printer's list */
+  const getMessagesForPrinter = useCallback((printer: Printer | null | undefined): { id: number; name: string }[] => {
+    if (!printer) return connectionState.messages;
+    // If this is the connected printer, use live data
+    if (printer.id === connectionState.connectedPrinter?.id) return connectionState.messages;
+    // In emulator mode, query the specific emulator instance
+    if (multiPrinterEmulator.enabled) {
+      const instance = multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port);
+      if (instance) {
+        const state = instance.getState();
+        return state.messages.map((name: string, idx: number) => ({ id: idx + 1, name }));
+      }
+    }
+    // For real printers we don't have their message list unless connected
+    return [];
+  }, [connectionState.messages, connectionState.connectedPrinter?.id]);
   // Push telemetry to Fleet Telemetry cloud when license is active
   useFleetTelemetryPush({
     printers,
@@ -1684,7 +1700,7 @@ const Index = () => {
     if (currentScreen === 'messages') {
       return (
         <MessagesScreen
-          messages={connectionState.messages}
+          messages={getMessagesForPrinter(messageTargetPrinter)}
           currentMessageName={messageTargetPrinter?.currentMessage ?? connectionState.status?.currentMessage ?? null}
           onSelect={async (message) => {
             if (!messageTargetPrinter) return false;
@@ -1911,7 +1927,7 @@ const Index = () => {
         }
         return (
           <MessagesScreen
-            messages={connectionState.messages}
+            messages={getMessagesForPrinter(selectedPrinter ?? connectionState.connectedPrinter ?? null)}
             currentMessageName={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.currentMessage ?? connectionState.status?.currentMessage ?? null}
             onSelect={async (message) => {
               const messageTargetPrinter = selectedPrinter ?? connectionState.connectedPrinter ?? null;
