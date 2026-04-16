@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { CountdownType } from '@/hooks/useJetCountdown';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
+import { getModelCapabilities } from '@/lib/modelCapabilities';
 import { setPollingPaused, waitForPollingIdle } from '@/lib/pollingPause';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
@@ -1040,6 +1041,18 @@ const Index = () => {
     if (!printer || !connectionState.isConnected) {
       toast.error('No printer connected');
       return false;
+    }
+
+    // Validate template compatibility with target printer model
+    const model = connectionState.status?.printerModel;
+    const capabilities = getModelCapabilities(model);
+    if (capabilities && libraryMessage.templateValue) {
+      const templateId = libraryMessage.templateValue as import('@/lib/modelCapabilities').TemplateId;
+      if (!capabilities.templates.includes(templateId)) {
+        const maxTemplate = capabilities.templates[0]; // First entry is the largest
+        toast.error(`This message uses a ${libraryMessage.templateValue}-dot template which is not supported by this ${model ? 'Model ' + model : 'printer'} (max ${maxTemplate}-dot)`);
+        return false;
+      }
     }
 
     try {
