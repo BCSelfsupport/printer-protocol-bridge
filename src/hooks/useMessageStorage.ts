@@ -23,6 +23,11 @@ interface StoredMessages {
   [compositeKey: string]: MessageDetails;
 }
 
+export interface PcLibraryEntry {
+  message: MessageDetails;
+  sourcePrinterId: number;
+}
+
 interface PcLibraryMessages {
   [compositeKey: string]: MessageDetails; // keyed by "printerId:messageName"
 }
