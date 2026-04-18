@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Download, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useToast } from '@/hooks/use-toast';
 import { exportReportToPDF, exportRunsToCSV } from '@/lib/reportExport';
 import type { ProductionRun } from '@/types/production';
 
@@ -20,12 +20,11 @@ export function ReportDownloadMenu({
   disabled?: boolean;
 }) {
   const [busy, setBusy] = useState<'pdf' | 'csv' | null>(null);
-  const { toast } = useToast();
 
   const handlePDF = async () => {
     const el = getElement();
     if (!el) {
-      toast({ title: 'Nothing to export', description: 'No report content available.', variant: 'destructive' });
+      toast.error('Nothing to export', { description: 'No report content available.' });
       return;
     }
     setBusy('pdf');
@@ -36,10 +35,10 @@ export function ReportDownloadMenu({
         element: el,
         filename: `${title.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`,
       });
-      toast({ title: 'PDF Downloaded', description: `${title} saved successfully.` });
+      toast.success('PDF downloaded', { description: `${title} saved successfully.` });
     } catch (err) {
       console.error('[ReportDownload] PDF export failed', err);
-      toast({ title: 'PDF Export Failed', description: String(err), variant: 'destructive' });
+      toast.error('PDF export failed', { description: String(err) });
     } finally {
       setBusy(null);
     }
@@ -47,13 +46,13 @@ export function ReportDownloadMenu({
 
   const handleCSV = () => {
     if (runs.length === 0) {
-      toast({ title: 'No data', description: 'No production runs in selected range.', variant: 'destructive' });
+      toast.error('No data', { description: 'No production runs in selected range.' });
       return;
     }
     setBusy('csv');
     try {
       exportRunsToCSV(runs, `${title.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv`);
-      toast({ title: 'CSV Downloaded', description: `${runs.length} runs exported.` });
+      toast.success('CSV downloaded', { description: `${runs.length} runs exported.` });
     } finally {
       setBusy(null);
     }
