@@ -1,12 +1,12 @@
 import { Bookmark, Trash2, Plus, Check } from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import { useState } from 'react';
 import type { SavedReportTemplate, CustomReportConfig, DateScope } from '@/types/reportTemplates';
-import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 export function SavedTemplatesBar({
@@ -28,12 +28,11 @@ export function SavedTemplatesBar({
 }) {
   const [saveOpen, setSaveOpen] = useState(false);
   const [name, setName] = useState('');
-  const { toast } = useToast();
 
   const handleSave = async () => {
     if (!name.trim()) return;
     await onSave(name.trim());
-    toast({ title: 'Template saved', description: `"${name.trim()}" is now available.` });
+    toast.success('Template saved', { description: `"${name.trim()}" is now available.` });
     setName('');
     setSaveOpen(false);
   };
