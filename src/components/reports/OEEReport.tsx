@@ -548,25 +548,44 @@ export function OEEReport({
 
   // ========== OVERVIEW: All printers grid ==========
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-      <div className="p-3 md:p-4 flex-shrink-0">
-        <SubPageHeader
-          title="Production Reports"
-          onHome={onHome}
-          rightContent={
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => handleExportCSV(allMetrics)} disabled={runs.length === 0}>
-                <Download className="w-4 h-4 mr-1" /> Export
-              </Button>
-              <Button size="sm" onClick={() => setNewRunDialogOpen(true)} className="industrial-button text-white border-0">
-                <Plus className="w-4 h-4 mr-1" /> New Run
-              </Button>
-            </div>
-          }
-        />
-      </div>
+    <div className={embedded ? 'flex flex-col gap-4' : 'flex-1 flex flex-col min-h-0 overflow-hidden'}>
+      {!embedded && (
+        <div className="p-3 md:p-4 flex-shrink-0">
+          <SubPageHeader
+            title="Production Reports"
+            onHome={onHome}
+            rightContent={
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => handleExportCSV(allMetrics)} disabled={runs.length === 0}>
+                  <Download className="w-4 h-4 mr-1" /> Export
+                </Button>
+                <Button size="sm" onClick={() => setNewRunDialogOpen(true)} className="industrial-button text-white border-0">
+                  <Plus className="w-4 h-4 mr-1" /> New Run
+                </Button>
+              </div>
+            }
+          />
+        </div>
+      )}
 
-      <div className="flex-1 overflow-y-auto px-3 md:px-4 pb-4 space-y-4">
+      {embedded && (
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h2 className="text-lg font-black text-foreground tracking-tight">OEE Report</h2>
+            <p className="text-xs text-muted-foreground">Availability · Performance · Quality — {runs.length} run{runs.length === 1 ? '' : 's'} in scope</p>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => handleExportCSV(allMetrics)} disabled={runs.length === 0}>
+              <Download className="w-4 h-4 mr-1" /> Export CSV
+            </Button>
+            <Button size="sm" onClick={() => setNewRunDialogOpen(true)} className="industrial-button text-white border-0">
+              <Plus className="w-4 h-4 mr-1" /> New Run
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className={embedded ? 'space-y-4' : 'flex-1 overflow-y-auto px-3 md:px-4 pb-4 space-y-4'}>
 
         {/* ===== Selected Printer OEE Detail (at top) ===== */}
         {selectedPrinter && selectedOEE && (
