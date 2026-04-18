@@ -117,6 +117,14 @@ export function MessagesScreen({
   const [isPushing, setIsPushing] = useState(false);
   const [swapSlotDialogOpen, setSwapSlotDialogOpen] = useState(false);
   const [deleteLibraryConfirmOpen, setDeleteLibraryConfirmOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'tile'>(() => {
+    if (typeof window === 'undefined') return 'list';
+    return (localStorage.getItem('messagesViewMode') as 'list' | 'tile') || 'list';
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem('messagesViewMode', viewMode); } catch {}
+  }, [viewMode]);
 
   // Auto-open the new dialog when navigating from Dashboard "New" button
   useEffect(() => {
