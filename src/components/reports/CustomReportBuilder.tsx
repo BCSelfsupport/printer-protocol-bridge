@@ -243,16 +243,19 @@ export function CustomReportBuilder({
             {/* KPI Cards */}
             {config.visualizations.includes('kpiCards') && config.metrics.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-                {config.metrics.map(m => (
-                  <KpiCard
-                    key={m}
-                    icon={METRIC_ICONS[m]}
-                    label={METRIC_LABELS[m]}
-                    value={formatMetricValue(m, metrics)}
-                    unit={metricUnit(m)}
-                    accent={METRIC_ACCENTS[m] ?? 'primary'}
-                  />
-                ))}
+                {config.metrics.map(m => {
+                  const Icon = METRIC_ICONS[m] as unknown as import('lucide-react').LucideIcon;
+                  return (
+                    <KpiCard
+                      key={m}
+                      icon={Icon}
+                      label={METRIC_LABELS[m]}
+                      value={formatMetricValue(m, metrics)}
+                      unit={metricUnit(m)}
+                      accent={METRIC_ACCENTS[m] ?? 'primary'}
+                    />
+                  );
+                })}
               </div>
             )}
 
