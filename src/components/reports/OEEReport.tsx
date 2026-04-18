@@ -21,16 +21,19 @@ import type { ProductionRun, ProductionSnapshot, OEEMetrics } from '@/types/prod
 import { calculateOEE } from '@/types/production';
 import type { Printer } from '@/types/printer';
 
-interface ReportsScreenProps {
+interface OEEReportProps {
   runs: ProductionRun[];
   snapshots: ProductionSnapshot[];
   printers: Printer[];
+  scope: DateScope;
   onAddRun: (run: Omit<ProductionRun, 'id'>) => Promise<ProductionRun>;
   onUpdateRun: (id: string, updates: Partial<ProductionRun>) => void;
   onDeleteRun: (id: string) => void;
   onAddDowntime: (runId: string, reason: string) => void;
   onEndDowntime: (runId: string, eventId: string) => void;
-  onHome: () => void;
+  /** Hide the SubPageHeader because the parent ReportsScreen already renders one */
+  embedded?: boolean;
+  onHome?: () => void;
 }
 
 /* ================================================================
