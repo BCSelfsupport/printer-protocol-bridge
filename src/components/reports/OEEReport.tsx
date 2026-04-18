@@ -394,12 +394,12 @@ function useLiveTick(hasActiveRuns: boolean) {
    MAIN COMPONENT
    ================================================================ */
 
-export function ReportsScreen({
-  runs, snapshots, printers,
+export function OEEReport({
+  runs: allRuns, snapshots, printers, scope,
   onAddRun, onUpdateRun, onDeleteRun,
   onAddDowntime, onEndDowntime,
-  onHome,
-}: ReportsScreenProps) {
+  embedded, onHome,
+}: OEEReportProps) {
   const [selectedPrinterId, setSelectedPrinterId] = useState<number | null>(null);
   const [detailPrinterId, setDetailPrinterId] = useState<number | null>(null);
   const [newRunDialogOpen, setNewRunDialogOpen] = useState(false);
@@ -410,6 +410,9 @@ export function ReportsScreen({
   const [newPrinterId, setNewPrinterId] = useState<string>('');
   const [newMessageName, setNewMessageName] = useState('');
   const [newTargetCount, setNewTargetCount] = useState('');
+
+  // Apply the date scope/printer filter from the parent
+  const runs = useMemo(() => filterRuns(allRuns, scope), [allRuns, scope]);
 
   const hasActiveRuns = runs.some(r => r.endTime === null);
   const tick = useLiveTick(hasActiveRuns);
