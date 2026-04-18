@@ -311,7 +311,7 @@ export function MessagesScreen({
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto">
-            <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
+            <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]">
               {messages.map((message) => {
                 const isSelected = selectedMessage?.id === message.id;
                 const isActive = currentMessageName === message.name;
