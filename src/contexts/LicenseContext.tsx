@@ -13,16 +13,28 @@ interface LicenseState {
   companionSessionId: string | null;
 }
 
+interface CompanionDevice {
+  id: string;
+  companion_machine_id: string;
+  paired_at: string | null;
+  last_seen: string | null;
+  status: string;
+}
+
 interface LicenseContextValue extends LicenseState {
   activate: (productKey: string) => Promise<boolean>;
   deactivate: () => void;
   pairAsCompanion: (pairingCode: string) => Promise<boolean>;
   generatePairingCode: () => Promise<{ code: string; expiresAt: string } | null>;
+  listPairedCompanions: () => Promise<CompanionDevice[]>;
+  revokeCompanion: (sessionId: string) => Promise<boolean>;
   /** Feature gating helpers */
   canNetwork: boolean;
   canDatabase: boolean;
   isDemo: boolean;
 }
+
+export type { CompanionDevice };
 
 const LicenseContext = createContext<LicenseContextValue | null>(null);
 
@@ -260,6 +272,52 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const listPairedCompanions = async (): Promise<CompanionDevice[]> => {
+    if (!state.productKey) return [];
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/license?action=list-companions`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+          body: JSON.stringify({ product_key: state.productKey, machine_id: getMachineId() }),
+        }
+      );
+      const result = await res.json();
+      if (result.error) {
+        console.error('list-companions error:', result.error);
+        return [];
+      }
+      return result.companions || [];
+    } catch (e) {
+      console.error('list-companions failed:', e);
+      return [];
+    }
+  };
+
+  const revokeCompanion = async (sessionId: string): Promise<boolean> => {
+    if (!state.productKey) return false;
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/license?action=revoke-companion`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+          body: JSON.stringify({ product_key: state.productKey, machine_id: getMachineId(), session_id: sessionId }),
+        }
+      );
+      const result = await res.json();
+      if (result.error) {
+        toast.error('Failed to unpair device', { description: result.error });
+        return false;
+      }
+      return true;
+    } catch {
+      toast.error('Failed to unpair device');
+      return false;
+    }
+  };
+
   const deactivate = () => {
     localStorage.removeItem(LICENSE_STORAGE_KEY);
     localStorage.removeItem(COMPANION_STORAGE_KEY);
@@ -271,7 +329,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   const isDemo = state.tier === 'demo';
 
   return (
-    <LicenseContext.Provider value={{ ...state, activate, deactivate, pairAsCompanion, generatePairingCode, canNetwork, canDatabase, isDemo }}>
+    <LicenseContext.Provider value={{ ...state, activate, deactivate, pairAsCompanion, generatePairingCode, listPairedCompanions, revokeCompanion, canNetwork, canDatabase, isDemo }}>
       {children}
     </LicenseContext.Provider>
   );
