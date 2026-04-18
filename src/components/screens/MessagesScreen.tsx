@@ -29,6 +29,7 @@ import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValid
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { isReadOnlyMessage } from '@/hooks/useMessageStorage';
+import { MessageThumbnail } from '@/components/messages/MessageThumbnail';
 
 interface MessagesScreenProps {
   messages: PrintMessage[];
@@ -342,8 +343,12 @@ export function MessagesScreen({
                       </div>
                     )}
                     {/* Preview area */}
-                    <div className="flex-1 flex items-center justify-center bg-muted/30 border-b border-border min-h-[80px] p-3">
-                      <FileText className="w-10 h-10 text-muted-foreground/40" />
+                    <div className="flex-1 flex items-center justify-center bg-muted/30 border-b border-border min-h-[80px] p-2 overflow-hidden">
+                      {stored && stored.fields && stored.fields.length > 0 ? (
+                        <MessageThumbnail details={stored} dotSize={2} maxHeight={76} />
+                      ) : (
+                        <FileText className="w-10 h-10 text-muted-foreground/40" />
+                      )}
                     </div>
                     {/* Footer */}
                     <div className="px-2 py-1.5 bg-card">
