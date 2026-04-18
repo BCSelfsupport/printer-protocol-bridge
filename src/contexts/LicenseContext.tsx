@@ -13,16 +13,28 @@ interface LicenseState {
   companionSessionId: string | null;
 }
 
+interface CompanionDevice {
+  id: string;
+  companion_machine_id: string;
+  paired_at: string | null;
+  last_seen: string | null;
+  status: string;
+}
+
 interface LicenseContextValue extends LicenseState {
   activate: (productKey: string) => Promise<boolean>;
   deactivate: () => void;
   pairAsCompanion: (pairingCode: string) => Promise<boolean>;
   generatePairingCode: () => Promise<{ code: string; expiresAt: string } | null>;
+  listPairedCompanions: () => Promise<CompanionDevice[]>;
+  revokeCompanion: (sessionId: string) => Promise<boolean>;
   /** Feature gating helpers */
   canNetwork: boolean;
   canDatabase: boolean;
   isDemo: boolean;
 }
+
+export type { CompanionDevice };
 
 const LicenseContext = createContext<LicenseContextValue | null>(null);
 
