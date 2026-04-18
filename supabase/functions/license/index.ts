@@ -330,7 +330,78 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── ADMIN: create license (dev panel) ──
+    // ── LIST COMPANIONS: PC requests its currently paired mobile devices ──
+    if (action === "list-companions") {
+      const { product_key, machine_id } = await req.json();
+      if (!product_key || !machine_id) {
+        return new Response(
+          JSON.stringify({ error: "product_key and machine_id required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: license } = await supabaseAdmin
+        .from("licenses")
+        .select("id")
+        .eq("product_key", product_key)
+        .maybeSingle();
+
+      if (!license) {
+        return new Response(
+          JSON.stringify({ error: "Invalid product key" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: companions } = await supabaseAdmin
+        .from("companion_sessions")
+        .select("id, companion_machine_id, paired_at, last_seen, status")
+        .eq("license_id", license.id)
+        .eq("status", "active")
+        .order("paired_at", { ascending: false });
+
+      return new Response(
+        JSON.stringify({ companions: companions || [] }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── REVOKE COMPANION: PC unpairs a specific mobile device ──
+    if (action === "revoke-companion") {
+      const { product_key, machine_id, session_id } = await req.json();
+      if (!product_key || !machine_id || !session_id) {
+        return new Response(
+          JSON.stringify({ error: "product_key, machine_id and session_id required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: license } = await supabaseAdmin
+        .from("licenses")
+        .select("id")
+        .eq("product_key", product_key)
+        .maybeSingle();
+
+      if (!license) {
+        return new Response(
+          JSON.stringify({ error: "Invalid product key" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Only revoke sessions belonging to this license
+      await supabaseAdmin
+        .from("companion_sessions")
+        .update({ status: "revoked" })
+        .eq("id", session_id)
+        .eq("license_id", license.id);
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (action === "create") {
       const { tier, customer_name, customer_email, customer_company, expires_in_days } = await req.json();
 
