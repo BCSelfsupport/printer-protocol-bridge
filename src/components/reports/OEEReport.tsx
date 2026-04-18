@@ -6,6 +6,8 @@ import {
   Printer as PrinterIcon, Package, ChevronRight
 } from 'lucide-react';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
+import { filterRuns } from '@/lib/reportAggregation';
+import type { DateScope } from '@/types/reportTemplates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
