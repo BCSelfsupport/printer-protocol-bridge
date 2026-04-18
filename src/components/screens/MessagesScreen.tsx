@@ -343,11 +343,11 @@ export function MessagesScreen({
                       </div>
                     )}
                     {/* Preview area */}
-                    <div className="flex-1 flex items-center justify-center bg-muted/30 border-b border-border min-h-[80px] p-2 overflow-hidden">
+                    <div className="flex-1 flex items-center justify-center bg-muted/30 border-b border-border min-h-[130px] p-3 overflow-hidden">
                       {stored && stored.fields && stored.fields.length > 0 ? (
-                        <MessageThumbnail details={stored} dotSize={2} maxHeight={76} />
+                        <MessageThumbnail details={stored} dotSize={3} maxHeight={120} />
                       ) : (
-                        <FileText className="w-10 h-10 text-muted-foreground/40" />
+                        <FileText className="w-12 h-12 text-muted-foreground/40" />
                       )}
                     </div>
                     {/* Footer */}
