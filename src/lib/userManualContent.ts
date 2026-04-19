@@ -119,8 +119,8 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'adjust',
         title: 'Adjust settings',
-        body: `**Adjust** opens the global print settings dialog: Width, Height, Delay, Bold, Gap, Pitch, Rotation, and Speed. These apply to all messages on the connected printer.`,
-        screenshot: '/manual-screenshots/07-adjust.png',
+        body: `**Adjust** opens the global print-engine settings dialog with editable Width, Height, Delay, Bold, Gap, Pitch, Rotation, and Speed values. Each numeric parameter pairs an inline pencil edit with up/down arrow steppers — perfect for both touchscreen and mouse use. These values apply to all messages on the connected printer.`,
+        screenshot: '/manual-screenshots/44-adjust-settings.png',
       },
       {
         id: 'counters',
@@ -136,9 +136,9 @@ export const MANUAL: ManualChapter[] = [
     sections: [
       {
         id: 'message-list',
-        title: 'Message list',
-        body: `The Messages screen shows all messages stored on the printer plus any read-only test messages (BESTCODE, QUANTUM).\n\n- **Select** — Make this message the active print job\n- **Edit** — Open the message editor\n- **New** — Create a blank message from a template\n- **Delete** — Remove the message (a 20-second guard prevents accidental re-add)`,
-        screenshot: '/manual-screenshots/08-messages-list.png',
+        title: 'Message list & thumbnail grid',
+        body: `The Messages screen shows all messages stored on the printer plus any read-only test messages (BESTCODE, QUANTUM). Use the icons in the top-right to switch between **List view** (compact rows) and **Thumbnail view** (dot-matrix previews of each message rendered in real BestCode fonts).\n\n- **Select** — Make this message the active print job\n- **Edit** — Open the message editor\n- **New** — Create a blank message from a template\n- **Delete** — Remove the message (a 20-second guard prevents accidental re-add)`,
+        screenshot: '/manual-screenshots/39-messages-thumbnail.png',
       },
       {
         id: 'editor',
@@ -149,8 +149,8 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'message-settings',
         title: 'Message settings',
-        body: `Click **Settings** in the editor toolbar to configure per-message **Speed**, **Orientation** (Normal / Inverted), and **Print Mode** (Normal, Reverse, Mirror, etc). These settings travel with the message via the ^CM command.`,
-        screenshot: '/manual-screenshots/09b-message-settings.png',
+        body: `Click **Settings** in the editor toolbar to configure per-message **Speed** (Fastest / 1-9), **Orientation** (Normal / Inverted with one-tap rotate), and **Print Mode** (Normal, Reverse, Mirror, Reverse+Mirror, etc). These settings travel with the message via the ^CM command.`,
+        screenshot: '/manual-screenshots/43-message-settings.png',
       },
       {
         id: 'new-field',
@@ -202,7 +202,14 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'data-link',
         title: 'Data Link (Variable Data Printing)',
-        body: `Data Link maps columns from a CSV, REST API, or database to fields in your message — perfect for serialization, batch coding, and METRC compliance.\n\n1. Open **Data Source** from the sidebar (or top nav)\n2. Import a CSV, configure a hotfolder, or connect via REST/ODBC\n3. In the message editor, add a **Data Link** field and map it to a column\n4. Start a Print Job — each Print Go advances to the next row`,
+        body: `Data Link maps columns from a CSV, REST API, or database to fields in your message — perfect for serialization, batch coding, and METRC compliance.\n\n1. Open **Data Source** from the sidebar (or top nav)\n2. Import a CSV, configure a hotfolder, or connect via REST/ODBC\n3. In the message editor, click **Data** and pick the source — every column appears in the mapping table\n4. Assign each column to a field number (F1, F2, F3…) shown on the canvas. METRC sources auto-highlight Tag and Retail ID columns in green for one-click setup.\n5. Start a Print Job — each Print Go advances to the next row`,
+        screenshot: '/manual-screenshots/42-data-link.png',
+      },
+      {
+        id: 'advanced-settings',
+        title: 'Advanced field settings',
+        body: `Click **Advanced** in the editor toolbar to open per-field advanced options organized into four tabs:\n\n- **General** — Default Settings, Auto-Numerals (auto-incrementing serial), Inverse Print, Auto Align Fields\n- **Date / Time** — Per-field offsets and reference date overrides\n- **Counters** — Bind the field to one of the four hardware counters (1-4)\n- **Print Mode** — Per-field Print Mode override, Delay, Pitch, Select Code, and Repeat — used for high-speed VDP and Print-Go workflows`,
+        screenshot: '/manual-screenshots/40-advanced-settings.png',
       },
     ],
   },
