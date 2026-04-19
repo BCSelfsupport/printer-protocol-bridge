@@ -1,5 +1,4 @@
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
 import "./index.css";
 
 declare const __APP_VERSION__: string;
@@ -88,10 +87,10 @@ const clearStaleWebPublishState = async (): Promise<boolean> => {
   return false;
 };
 
-const mountApp = () => {
+const mountApp = async () => {
+  const { default: App } = await import("./App.tsx");
   const root = createRoot(document.getElementById("root")!);
   root.render(<App />);
-  (window as any).__CS_MOUNTED = true;
 };
 
 if (import.meta.hot) {
@@ -100,7 +99,6 @@ if (import.meta.hot) {
   });
 }
 
-// Mark boot as started as soon as the module executes to avoid false watchdog errors
 (window as any).__CS_MOUNTED = true;
 
 const bootstrap = async () => {
@@ -108,12 +106,11 @@ const bootstrap = async () => {
   if (reloadingAfterCacheReset) return;
 
   try {
-    mountApp();
+    await mountApp();
   } catch (err) {
     showCrashReport(err);
   }
 
-  // Run Electron cache cleanup in background so UI mount is never blocked
   void clearElectronPwaCaches();
 };
 
