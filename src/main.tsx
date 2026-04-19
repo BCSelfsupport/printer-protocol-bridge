@@ -117,6 +117,12 @@ if (import.meta.env.DEV) {
         multi.multiPrinterEmulator.enabled = true;
       },
     };
+    // Auto-enable when URL contains ?cs_emu=1 (for screenshot automation)
+    if (typeof location !== 'undefined' && location.search.includes('cs_emu=1')) {
+      single.printerEmulator.enabled = true;
+      multi.multiPrinterEmulator.enabled = true;
+      console.log('[main.tsx] Emulator auto-enabled via cs_emu=1');
+    }
   });
 }
 
