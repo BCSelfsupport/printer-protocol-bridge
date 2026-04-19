@@ -134,7 +134,7 @@ export function UserManualDialog({ open, onOpenChange }: Props) {
             size="sm"
             onClick={handleDownload}
             disabled={exporting}
-            className="h-9 gap-1.5"
+            className="h-9 gap-1.5 mr-8"
           >
             {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
             <span className="text-xs font-medium">{exporting ? 'Generating…' : 'PDF'}</span>
