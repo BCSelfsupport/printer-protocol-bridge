@@ -138,11 +138,43 @@ export const MANUAL: ManualChapter[] = [
         id: 'message-list',
         title: 'Message list',
         body: `The Messages screen shows all messages stored on the printer plus any read-only test messages (BESTCODE, QUANTUM).\n\n- **Select** — Make this message the active print job\n- **Edit** — Open the message editor\n- **New** — Create a blank message from a template\n- **Delete** — Remove the message (a 20-second guard prevents accidental re-add)`,
+        screenshot: '/manual-screenshots/08-messages-list.png',
       },
       {
         id: 'editor',
         title: 'Message editor',
-        body: `The editor is a dot-matrix canvas matching the print head's physical resolution.\n\n**Adding fields:** Click **+ Add Field** and choose Text, Date Code, Time Code, Counter, Auto Code, Barcode, Graphic, User Define, or Data Link.\n\n**Moving fields:** Click and drag. Use marquee selection (drag in empty space) to select multiple fields.\n\n**Field settings:** With a field selected, the right panel shows font, position, gap (character spacing), bold, and field-specific options.\n\n**Saving:** Click **Save**. CodeSync sends ^NM and ^SV to the printer and waits for confirmation. If the printer rejects the message, the exact reason is displayed.`,
+        body: `The editor is a dot-matrix canvas matching the print head's physical resolution.\n\n**Adding fields:** Click **+ New** and choose Text, Line ID, User Define, AutoCode, Barcode, or Graphic.\n\n**Moving fields:** Click and drag. Use marquee selection (drag in empty space) to select multiple fields.\n\n**Field settings:** With a field selected, the bottom panel shows font size, template, bold, gap (character spacing), rotation, and auto-numerals.\n\n**Saving:** Click **Save**. CodeSync sends ^NM and ^SV to the printer and waits for confirmation. If the printer rejects the message, the exact reason is displayed.`,
+        screenshot: '/manual-screenshots/09-message-editor.png',
+      },
+      {
+        id: 'message-settings',
+        title: 'Message settings',
+        body: `Click **Settings** in the editor toolbar to configure per-message **Speed**, **Orientation** (Normal / Inverted), and **Print Mode** (Normal, Reverse, Mirror, etc). These settings travel with the message via the ^CM command.`,
+        screenshot: '/manual-screenshots/09b-message-settings.png',
+      },
+      {
+        id: 'new-field',
+        title: 'Adding a new field',
+        body: `Click **+ New** to open the field type chooser:\n\n- **Text Field** — static or mixed-case text\n- **Line ID** — resolves to the printer's configured Line ID at print time\n- **User Define** — operator is prompted at message-select time\n- **AutoCode Field** — Time, Date, Counter, or Shift codes\n- **Barcode Field** — 1D & 2D barcodes\n- **Graphic Field** — bitmap from the printer's graphic library`,
+        screenshot: '/manual-screenshots/09c-new-field.png',
+      },
+      {
+        id: 'autocode',
+        title: 'AutoCode fields',
+        body: `AutoCode fields automatically resolve at print time. Choose:\n\n- **Time Codes** — HH:MM:SS, AM/PM, shift letter\n- **Date Codes** — manufacturing or expiration date with full token control\n- **Counter** — Counter 1-4 (configured under Setup)\n- **Shift Codes** — alphabetic shift indicator`,
+        screenshot: '/manual-screenshots/09d-autocode-field.png',
+      },
+      {
+        id: 'date-codes',
+        title: 'Date and time codes',
+        body: `**Date/Time Code Builder** lets you compose expressions with day/month/year/Julian-day/week tokens for both Manufacturing and Expiration dates.\n\nQuick presets cover common formats (MAY 07,2026 · MM/DD/YY · DD-MM-YYYY · YYYY/MM/DD · HH:MM:SS · Date+Time). Switch to **Build Custom** to compose your own from individual tokens.\n\nExpiration date offsets (e.g. +180 days) are configured per message and per printer. Programmable date/time codes (custom alphabetic mappings) are configured under **Setup → Programmable Date Codes / Time Codes**.`,
+        screenshot: '/manual-screenshots/09e-date-code-builder.png',
+      },
+      {
+        id: 'counters',
+        title: 'Counter fields',
+        body: `The printer maintains four hardware counters (Counter 1-4). Each can be inserted into a message as an AutoCode field. Configure starting value, increment, min/max, and reset behavior under **Setup → Counters**.`,
+        screenshot: '/manual-screenshots/09f-counter-field.png',
       },
       {
         id: 'fonts',
@@ -150,14 +182,22 @@ export const MANUAL: ManualChapter[] = [
         body: `Nine authentic printer fonts are available:\n\n- **Standard 5 / 7 / 9 / 12 / 16 / 24 / 32 High** — proportional sans\n- **Narrow 7 High** — condensed\n- **Standard 7 High Plain Zero** — for serial numbers (no slashed zero)\n\nFont height cannot exceed the template height. Model 82 is limited to 25 dots, Model 86 to 19 dots, Model 88 to 32 dots.`,
       },
       {
-        id: 'date-codes',
-        title: 'Date and time codes',
-        body: `**Date Code Builder** lets you compose expressions with day/month/year/Julian-day/week tokens for both Manufacturing and Expiration dates. Expiration date offsets (e.g. +180 days) are configured per message and per printer.\n\n**Time Code Builder** supports HH:MM:SS, AM/PM, and shift codes.\n\nProgrammable date and time codes (custom alphabetic mappings) are configured under **Setup → Programmable Date Codes / Time Codes**.`,
-      },
-      {
         id: 'barcodes',
         title: 'Barcodes',
-        body: `Over 10 barcode types are supported including Code 128, Code 39, EAN-13, UPC-A, QR Code, and Data Matrix (ECC200).\n\n**QR / Data Matrix size limits:** A 25-dot print head can only fit a 25x25 matrix (~47 characters). Use the URL Shortener for long compliance URLs.\n\nData Matrix is rendered client-side using bwip-js for cross-firmware compatibility.`,
+        body: `Over 10 barcode types are supported including Code 128, Code 39, EAN-13, UPC-A, QR Code, and Data Matrix (ECC200).\n\n**Encoding options:** Human-readable on/off, checksum auto/manual, start code (A/B/C for Code 128), magnification multiplier (1×-8×).\n\n**Data sources:** Keyboard (static), AutoCode (date/time/counter), or User Define (operator prompt).\n\n**QR / Data Matrix size limits:** A 25-dot print head can only fit a 25x25 matrix (~47 characters). Use the URL Shortener for long compliance URLs.\n\nData Matrix is rendered client-side using bwip-js for cross-firmware compatibility.`,
+        screenshot: '/manual-screenshots/09g-barcode-field.png',
+      },
+      {
+        id: 'graphics',
+        title: 'Graphic fields',
+        body: `Insert any bitmap from the printer's onboard graphic library (logos, warning symbols, regulatory marks). The Graphics dialog lists each graphic by number and name (TRUPOINT.BMP, LOGO1.BMP, etc.) — click to insert.`,
+        screenshot: '/manual-screenshots/09h-graphic-field.png',
+      },
+      {
+        id: 'user-define',
+        title: 'User Define (operator-prompted) fields',
+        body: `User Define fields prompt the operator for input each time the message is selected for printing. Configure the **Prompt Label** (e.g. "LOT CODE") and **Max Characters**. Perfect for batch numbers, lot codes, and operator initials that change between runs.`,
+        screenshot: '/manual-screenshots/09i-user-define.png',
       },
       {
         id: 'data-link',
