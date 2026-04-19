@@ -139,9 +139,7 @@ export function UserManualDialog({ open, onOpenChange }: Props) {
             {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
             <span className="text-xs font-medium">{exporting ? 'Generating…' : 'PDF'}</span>
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="h-9 w-9">
-            <X className="w-4 h-4" />
-          </Button>
+          {/* Close (X) is rendered by DialogContent itself — no custom button here */}
         </div>
 
         <div className="flex flex-1 min-h-0">
