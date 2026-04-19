@@ -372,7 +372,8 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'pairing',
         title: 'Pairing a mobile device',
-        body: `1. On your PC, click the mobile icon in the top bar → **Pair Mobile**\n2. A QR code and 6-digit PIN are displayed (valid for 5 minutes)\n3. On your phone, open the CodeSync PWA and either scan the QR or enter the PIN\n4. The mobile device is now paired with your PC's license\n\nOne PC can have multiple paired mobile devices. The mobile companion routes printer commands through your PC's HTTP relay (port 8766).`,
+        body: `1. On your PC, click the mobile icon in the top bar → **Pair Mobile**\n2. A QR code and 6-digit PIN are displayed (valid for 5 minutes)\n3. On your phone, open the CodeSync PWA and either scan the QR or enter the PIN\n4. The mobile device is now paired with your PC's license\n\n**Connect via PC:** From the mobile PWA, choose Connect via PC and enter the host PC's IP address (default port 8766). The mobile companion routes printer commands through the PC's HTTP relay.`,
+        screenshot: '/manual-screenshots/16-relay-connect.png',
       },
       {
         id: 'remote-pause',
