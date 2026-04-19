@@ -206,7 +206,6 @@ export const MANUAL: ManualChapter[] = [
         body: `Click **+ Add Consumable** to register a part you keep on hand. Set the reorder threshold and supplier info. CodeSync raises a low-stock alert when remaining quantity drops below the threshold.\n\n**Stock Unit vs Reorder Unit:** Stock Unit is the individual countable item (e.g. Bottles); Reorder Unit is what you order from the supplier (e.g. Cases, with Per-Reorder-Unit indicating bottles per case). This distinction lets CodeSync correctly calculate when to reorder.`,
         screenshot: '/manual-screenshots/14b-add-consumable.png',
       },
-      },
       {
         id: 'predictions',
         title: 'Predictions',
