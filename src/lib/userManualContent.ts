@@ -350,7 +350,26 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'sources',
         title: 'Supported sources',
-        body: `- **CSV upload** — Local file import with column auto-detection\n- **Hotfolder** — Watch a folder for new CSV drops\n- **REST API** — Pull rows from an HTTP endpoint\n- **ODBC / SQL** — Direct database connection (DATABASE tier only)\n\nMETRC cannabis tracking exports are auto-detected by header keywords (Unit Quantity, Package, Tag).`,
+        body: `The Data Sources screen lists every imported dataset. Each row shows the source name, column count, and row count. Click a source to preview its data inline. Use the dashed drop zone to quickly import a CSV file.\n\n- **CSV upload** — Local file import with column auto-detection\n- **Hotfolder** — Watch a folder for new CSV drops (Desktop only)\n- **REST API / Webhook** — Push data from CANIX, METRC, or any ERP via HTTP POST\n- **ODBC / SQL** — Direct database connection (Desktop only, DATABASE tier)\n\nMETRC cannabis tracking exports are auto-detected by header keywords (Unit Quantity, Package, Tag).`,
+        screenshot: '/manual-screenshots/17-data-sources.png',
+      },
+      {
+        id: 'preview',
+        title: 'Inline data preview',
+        body: `Selecting a source opens a scrollable inline grid showing every column and row, including a green METRC badge when applicable. This is the same data your messages will pull from at print time — verify it before creating a print job.`,
+        screenshot: '/manual-screenshots/18-inline-grid.png',
+      },
+      {
+        id: 'wizard',
+        title: 'Add Database Connection wizard',
+        body: `Click **Wizard** to walk through a 4-step import:\n\n1. **Type** — choose CSV/Text File or METRC/Retail ID\n2. **File** — name the source and drop your CSV; METRC exports are auto-mapped\n3. **Columns** — confirm detected column types\n4. **Review** — confirm and save\n\nThe wizard handles encoding detection, header normalization, and METRC's Unit Code / Retail ID column auto-mapping.`,
+        screenshot: '/manual-screenshots/19-wizard-step1.png',
+      },
+      {
+        id: 'wizard-file',
+        title: 'Selecting the data file',
+        body: `Step 2 of the wizard: give the source a friendly name (e.g. "METRC Tags March 2026") and either drag-and-drop your CSV/TXT file or click to browse. METRC exports are auto-detected and the Unit Code + Retail ID columns are mapped automatically — no manual configuration needed.`,
+        screenshot: '/manual-screenshots/20-wizard-step2.png',
       },
       {
         id: 'mapping',
@@ -358,9 +377,22 @@ export const MANUAL: ManualChapter[] = [
         body: `After importing, map data columns to message fields. A single column can be mapped to multiple fields simultaneously. Barcode prefixes (e.g. ]Q3 for QR ECC200) are preserved.\n\nFor METRC Retail ID, a pre-built template places a QR code at x:0 y:7 and the readable text at x:38 y:17 — optimized for 25-dot heads at ~200 units/min.`,
       },
       {
+        id: 'integrations',
+        title: 'API & automated ingestion',
+        body: `The **Integrations** tab provides three automated ingestion paths so you don't have to manually upload files:\n\n- **API / Webhook Endpoint** — A unique HTTPS URL + API key. CANIX, METRC, or any ERP can POST JSON or CSV. Use \`?mode=append\` to add rows to an existing source.\n- **Watched Folder (Hotfolder)** — Monitor a local/network folder for new CSVs (Desktop only)\n- **Database Connection** — ODBC/MySQL polling (Desktop only)\n\nCopy the endpoint and API key directly from this screen.`,
+        screenshot: '/manual-screenshots/22-integrations.png',
+      },
+      {
         id: 'print-jobs',
-        title: 'Running a print job',
-        body: `Click **Start Job** to begin. Each Print Go from the printer advances to the next data row. The current row, total rows, and remaining count are shown live.\n\nPause, resume, or jump to a specific row at any time.`,
+        title: 'Creating and running a print job',
+        body: `Click **Print Job** to bind a Data Source to a Target Message:\n\n- **Data Source** — pick any imported source\n- **Target Message** — pick any saved message that contains data-link fields\n- **Manual Print Go (^PT)** — when on, CodeSync sends a force-print after each row (no photocell needed). Turn off when using a real photocell trigger.\n\nCreated jobs appear in the **Print Jobs** tab with a status pill (ready / running / paused / done) and a Run button. Each Print Go from the printer advances to the next data row.`,
+        screenshot: '/manual-screenshots/21-create-print-job.png',
+      },
+      {
+        id: 'job-list',
+        title: 'Managing active print jobs',
+        body: `The **Print Jobs** tab lists every saved job with the source name, message name, current row / total rows, and status. Use **Run** to start a job and the trash icon to delete one. Job state persists across sessions — you can resume a partially-completed job after a restart.`,
+        screenshot: '/manual-screenshots/23-print-jobs.png',
       },
     ],
   },
