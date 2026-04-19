@@ -483,12 +483,14 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'training',
         title: 'Training Videos',
-        body: `Click the video icon (🎥) in the top bar to access a library of training videos covering setup, message creation, troubleshooting, and best practices. Videos stream from secure cloud storage.`,
+        body: `Click the video icon (🎥) in the top bar to access a library of training videos covering setup, message creation, troubleshooting, and best practices. Videos stream from secure cloud storage.\n\nWhen no videos are available the screen shows an empty placeholder. As BestCode publishes new tutorials they appear here automatically — no application update required.`,
+        screenshot: '/manual-screenshots/37-training-videos.png',
       },
       {
         id: 'feedback',
         title: 'Sending feedback',
-        body: `Click the speech bubble icon (💬) to open the Feedback dialog.\n\n- Choose **Bug Report** or **Feature Request**\n- Describe the issue\n- Attach up to 3 screenshots\n- Submit\n\nFeedback goes directly to BestCode engineering with the app version and your context attached.`,
+        body: `Click the speech bubble icon (💬) to open the Feedback dialog.\n\n- Choose **Bug Report** or **Feature Request** (or General Feedback)\n- Describe the issue with as much detail as possible (up to 2,000 characters)\n- Attach up to 3 screenshots — drag-and-drop or click **Add**\n- Click **Submit Feedback**\n\nFeedback goes directly to BestCode engineering with the app version and your context attached. Screenshots are stored in a secure private bucket and are only visible to BestCode staff.`,
+        screenshot: '/manual-screenshots/38-feedback-bug.png',
       },
     ],
   },
