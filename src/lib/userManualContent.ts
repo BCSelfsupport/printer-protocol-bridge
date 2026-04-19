@@ -50,13 +50,14 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'tiers',
         title: 'License tiers',
-        body: `- **DEMO** — 30-day free trial of the full application\n- **LITE** — Standalone operation (USB / Serial), single printer\n- **FULL** — Network printer access, unlimited printers\n- **DATABASE** — Full + Variable Data Printing (VDP) with database integration\n\nYour current tier is shown at the bottom of the printers sidebar.`,
+        body: `- **DEMO** — 30-day free trial of the full application\n- **LITE** — Standalone operation (USB / Serial), single printer\n- **FULL** — Network printer access, unlimited printers\n- **DATABASE** — Full + Variable Data Printing (VDP) with database integration\n\nYour current tier is shown at the bottom of the printers sidebar. The Activation dialog displays the tier badge alongside the masked product key.`,
+        screenshot: '/manual-screenshots/45-license-activation.png',
       },
       {
         id: 'activate',
         title: 'Activating a license',
-        body: `1. Click the **Activate** button at the bottom of the printers sidebar\n2. Enter the 20-character product key supplied by BestCode\n3. Click **Activate**\n\nLicenses are tied to your machine. Moving CodeSync to a new PC requires re-activation; contact BestCode support if you need to transfer.\n\n**Pair with PC:** Mobile devices can pair with a licensed PC instead of needing their own license — see Chapter 13.`,
-        screenshot: '/manual-screenshots/02-license-activation.png',
+        body: `1. Click the **Activate** button at the bottom of the printers sidebar\n2. Enter the 20-character product key supplied by BestCode\n3. Click **Activate**\n\nOnce activated the dialog shows **License active**, the active tier badge, and two action buttons: **Deactivate** (release the license from this PC) and **Pair Mobile** (generate a QR/PIN to add a phone — see Chapter 12).\n\nLicenses are tied to your machine. Moving CodeSync to a new PC requires re-activation; contact BestCode support if you need to transfer.`,
+        screenshot: '/manual-screenshots/47-license-active.png',
       },
     ],
   },
@@ -467,13 +468,30 @@ export const MANUAL: ManualChapter[] = [
   {
     id: 'mobile',
     title: '12. Mobile Companion',
-    intro: 'Use a phone or tablet to monitor and control printers paired with your PC.',
+    intro: 'Use a phone or tablet to monitor and control printers paired with your PC. Multiple phones can be paired to a single license.',
     sections: [
       {
-        id: 'pairing',
-        title: 'Pairing a mobile device',
-        body: `1. On your PC, click the mobile icon in the top bar → **Pair Mobile**\n2. A QR code and 6-digit PIN are displayed (valid for 5 minutes)\n3. On your phone, open the CodeSync PWA and either scan the QR or enter the PIN\n4. The mobile device is now paired with your PC's license\n\n**Connect via PC:** From the mobile PWA, choose Connect via PC and enter the host PC's IP address (default port 8766). The mobile companion routes printer commands through the PC's HTTP relay.`,
-        screenshot: '/manual-screenshots/16-relay-connect.png',
+        id: 'pc-side-pairing',
+        title: 'Generating a pairing code (PC)',
+        body: `1. Open **License Activation** on the PC and click **Pair Mobile**\n2. The dialog displays a **QR code** plus a **6-character PIN** valid for 5 minutes\n3. The same dialog lists every currently paired phone (machine ID, paired-at, last-seen) — each row has an **Unpair** button\n4. The list refreshes every 5 seconds while the dialog is open\n\nGenerating a new pairing code only expires older *pending* codes — already-paired phones stay connected.`,
+        screenshot: '/manual-screenshots/48-pair-mobile-qr.png',
+      },
+      {
+        id: 'mobile-side-pairing',
+        title: 'Joining from the phone',
+        body: `1. Open the CodeSync PWA in your mobile browser\n2. On the License Activation screen, tap **Pair with PC**\n3. Either scan the QR code with the phone's camera or type the 6-character PIN\n4. Tap **Pair with PC** — the phone is now bound to the PC's license as a Companion session\n\nTo leave the pairing later, open License Activation and tap **Unpair Device**.`,
+        screenshot: '/manual-screenshots/46-pair-with-pc-mobile.png',
+      },
+      {
+        id: 'connect-via-pc',
+        title: 'Connect via PC (relay mode)',
+        body: `Mobile devices cannot reach factory printers directly — printer traffic is relayed through the host PC over an HTTP relay on port **8766**.\n\n1. From the mobile PWA, tap the **Smartphone** icon in the top bar (turns green when connected)\n2. Enter the **PC IP Address** (e.g. 192.168.1.50) and confirm port 8766\n3. Tap **Test Connection** — a green confirmation shows the CodeSync version detected on the PC\n4. Tap **Use This PC**\n\nBoth devices must be on the same WiFi network. To switch PCs later, tap **Disconnect from PC** at the bottom of the dialog.`,
+        screenshot: '/manual-screenshots/49-relay-connect.png',
+      },
+      {
+        id: 'broadcast-master-slave',
+        title: 'Broadcast & Master/Slave',
+        body: `When a printer is configured as **Master** (in Edit Printer → Sync Role), CodeSync can broadcast a single message to every Slave on its line:\n\n- **Message broadcast** — pick the message, optionally type a different **User Define** value per slave (different lot numbers, expiry offsets), then broadcast in one click\n- **Selection sync** — selecting a message on the Master automatically selects it on every online Slave (offline slaves are skipped)\n- **Per-printer offsets** — each slave keeps its own expiry offset; the broadcast does not overwrite it unless you explicitly enter a value\n\nMaster/Slave is configured per printer; only printers with role = Master see the **Broadcast** action in the Messages screen.`,
       },
       {
         id: 'remote-pause',
