@@ -279,17 +279,20 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'date-codes',
         title: 'Programmable date codes',
-        body: `Define custom alphabetic mappings for date components (e.g. month "01" → "A"). The single-item-at-a-time editor matches the printer's HMI behavior. Saved codes are sent via ^DC.`,
+        body: `Define custom alphabetic mappings for date components (e.g. month "01" → "A"). The single-item-at-a-time editor matches the printer's HMI behavior. Saved codes are sent via ^DC.\n\n**Categories:** Year, Month, Day of Year, Day of Month, Week, Day of Week, plus a Select Current Day shortcut.`,
+        screenshot: '/manual-screenshots/11-program-date-codes.png',
       },
       {
         id: 'time-codes',
         title: 'Programmable time codes',
-        body: `Same pattern as date codes but for time components — useful for shift coding.`,
+        body: `Same pattern as date codes but for time components — useful for shift coding. Each entry shows the YEAR / hour / minute alongside its custom CODE value.`,
+        screenshot: '/manual-screenshots/12-program-year.png',
       },
       {
         id: 'network',
         title: 'Network configuration',
         body: `Configure the printer's IP address, subnet mask, gateway, and **Line ID** — a per-printer identifier used by Line ID fields in messages. If no Line ID is configured, messages with Line ID fields will be blocked from printing.`,
+        screenshot: '/manual-screenshots/10-setup.png',
       },
     ],
   },
@@ -329,11 +332,13 @@ export const MANUAL: ManualChapter[] = [
         id: 'wire-overview',
         title: 'Overview',
         body: `The Wire & Cable screen is purpose-built for marking continuous wire and cable.\n\n**Features:**\n- Metric / Imperial unit toggle\n- Distance estimation based on encoder pulses\n- Pitch (mark spacing) configuration\n- Encoder calibration wizard\n- Flip-flop mode for alternating top/bottom marks\n- Live distance counter and animated cable visualization`,
+        screenshot: '/manual-screenshots/13-wire-cable.png',
       },
       {
         id: 'encoder',
-        title: 'Encoder calibration',
-        body: `Click **Calibrate** to walk through the encoder setup:\n\n1. Mark a starting point on the cable\n2. Pass a known distance (e.g. 10 m) through the system\n3. Enter the actual measured distance\n4. CodeSync calculates pulses-per-distance and saves it`,
+        title: 'Encoder calibration & Flip-Flop',
+        body: `**Encoder Calibration:** Set Wheel Diameter and Pulses Per Revolution (PPR). CodeSync calculates the resulting Resolution (mm/pulse and in/pulse) automatically.\n\n**Flip-Flop Rotation:** Alternates print orientation on each print so the code is readable from either side of the cable. Configure Odd Prints (e.g. Normal) and Even Prints (e.g. Flip) independently.`,
+        screenshot: '/manual-screenshots/14-encoder-flipflop.png',
       },
     ],
   },
@@ -367,7 +372,8 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'pairing',
         title: 'Pairing a mobile device',
-        body: `1. On your PC, click the mobile icon in the top bar → **Pair Mobile**\n2. A QR code and 6-digit PIN are displayed (valid for 5 minutes)\n3. On your phone, open the CodeSync PWA and either scan the QR or enter the PIN\n4. The mobile device is now paired with your PC's license\n\nOne PC can have multiple paired mobile devices. The mobile companion routes printer commands through your PC's HTTP relay (port 8766).`,
+        body: `1. On your PC, click the mobile icon in the top bar → **Pair Mobile**\n2. A QR code and 6-digit PIN are displayed (valid for 5 minutes)\n3. On your phone, open the CodeSync PWA and either scan the QR or enter the PIN\n4. The mobile device is now paired with your PC's license\n\n**Connect via PC:** From the mobile PWA, choose Connect via PC and enter the host PC's IP address (default port 8766). The mobile companion routes printer commands through the PC's HTTP relay.`,
+        screenshot: '/manual-screenshots/16-relay-connect.png',
       },
       {
         id: 'remote-pause',
