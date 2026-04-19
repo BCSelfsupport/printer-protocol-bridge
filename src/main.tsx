@@ -103,6 +103,23 @@ if (import.meta.hot) {
 // Mark boot as started as soon as the module executes to avoid false watchdog errors
 (window as any).__CS_MOUNTED = true;
 
+// Expose emulator in dev preview for documentation screenshot capture
+if (import.meta.env.DEV) {
+  void Promise.all([
+    import('./lib/printerEmulator'),
+    import('./lib/multiPrinterEmulator'),
+  ]).then(([single, multi]) => {
+    (window as any).__cs_emulator = {
+      single: single.printerEmulator,
+      multi: multi.multiPrinterEmulator,
+      enable: () => {
+        single.printerEmulator.enabled = true;
+        multi.multiPrinterEmulator.enabled = true;
+      },
+    };
+  });
+}
+
 const bootstrap = async () => {
   const reloadingAfterCacheReset = await clearStaleWebPublishState();
   if (reloadingAfterCacheReset) return;
