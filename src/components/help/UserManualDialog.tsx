@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
-import { BookOpen, Search, ChevronRight, X } from 'lucide-react';
+import { BookOpen, Search, ChevronRight, X, Download, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { MANUAL, MANUAL_TITLE, MANUAL_VERSION, type ManualChapter, type ManualSection } from '@/lib/userManualContent';
+import { generateUserManualPdf, downloadManualPdf } from '@/lib/manualPdfExport';
+import { toast } from 'sonner';
 
 interface Props {
   open: boolean;
@@ -67,6 +69,21 @@ export function UserManualDialog({ open, onOpenChange }: Props) {
   const [query, setQuery] = useState('');
   const [activeChapterId, setActiveChapterId] = useState<string>(MANUAL[0].id);
   const [activeSectionId, setActiveSectionId] = useState<string>(MANUAL[0].sections[0].id);
+  const [exporting, setExporting] = useState(false);
+
+  const handleDownload = async () => {
+    setExporting(true);
+    try {
+      const blob = await generateUserManualPdf();
+      downloadManualPdf(blob);
+      toast.success('User Manual downloaded');
+    } catch (e) {
+      console.error('PDF export failed', e);
+      toast.error('PDF export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const hits = useMemo<SearchHit[]>(() => {
     const q = query.trim().toLowerCase();
@@ -111,6 +128,16 @@ export function UserManualDialog({ open, onOpenChange }: Props) {
               className="pl-8 h-9"
             />
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownload}
+            disabled={exporting}
+            className="h-9 gap-1.5"
+          >
+            {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+            <span className="text-xs font-medium">{exporting ? 'Generating…' : 'PDF'}</span>
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="h-9 w-9">
             <X className="w-4 h-4" />
           </Button>
