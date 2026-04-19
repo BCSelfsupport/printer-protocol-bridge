@@ -3,7 +3,6 @@ import { Download, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { exportReportToPDF, exportRunsToCSV } from '@/lib/reportExport';
 import type { ProductionRun } from '@/types/production';
 
 export function ReportDownloadMenu({
@@ -29,6 +28,7 @@ export function ReportDownloadMenu({
     }
     setBusy('pdf');
     try {
+      const { exportReportToPDF } = await import('@/lib/reportExport');
       await exportReportToPDF({
         title,
         subtitle,
@@ -44,13 +44,14 @@ export function ReportDownloadMenu({
     }
   };
 
-  const handleCSV = () => {
+  const handleCSV = async () => {
     if (runs.length === 0) {
       toast.error('No data', { description: 'No production runs in selected range.' });
       return;
     }
     setBusy('csv');
     try {
+      const { exportRunsToCSV } = await import('@/lib/reportExport');
       exportRunsToCSV(runs, `${title.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv`);
       toast.success('CSV downloaded', { description: `${runs.length} runs exported.` });
     } finally {

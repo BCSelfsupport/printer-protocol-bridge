@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { CountdownType } from '@/hooks/useJetCountdown';
@@ -21,7 +21,6 @@ import { CleanScreen } from '@/components/screens/CleanScreen';
 import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
 import { RelayConnectDialog } from '@/components/relay/RelayConnectDialog';
 import { ConsumablesScreen } from '@/components/screens/ConsumablesScreen';
-import { ReportsScreen } from '@/components/screens/ReportsScreen';
 import { DataSourceScreen } from '@/components/screens/DataSourceScreen';
 import { LowStockAlert, LowStockAlertData } from '@/components/consumables/LowStockAlert';
 import { WireCableScreen } from '@/components/screens/WireCableScreen';
@@ -38,6 +37,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+
+const ReportsScreen = lazy(() =>
+  import('@/components/screens/ReportsScreen').then((module) => ({ default: module.ReportsScreen })),
+);
 
 import { SignInDialog } from '@/components/printers/SignInDialog';
 import { HelpDialog } from '@/components/help/HelpDialog';
@@ -2060,17 +2063,19 @@ const Index = () => {
           reportPrinters.some(p => p.id === r.printerId)
         );
         return (
-          <ReportsScreen
-            runs={reportRuns}
-            snapshots={productionStorage.snapshots}
-            printers={reportPrinters}
-            onAddRun={productionStorage.addRun}
-            onUpdateRun={productionStorage.updateRun}
-            onDeleteRun={productionStorage.deleteRun}
-            onAddDowntime={productionStorage.addDowntimeEvent}
-            onEndDowntime={productionStorage.endDowntimeEvent}
-            onHome={handleHome}
-          />
+          <Suspense fallback={<div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">Loading reports…</div>}>
+            <ReportsScreen
+              runs={reportRuns}
+              snapshots={productionStorage.snapshots}
+              printers={reportPrinters}
+              onAddRun={productionStorage.addRun}
+              onUpdateRun={productionStorage.updateRun}
+              onDeleteRun={productionStorage.deleteRun}
+              onAddDowntime={productionStorage.addDowntimeEvent}
+              onEndDowntime={productionStorage.endDowntimeEvent}
+              onHome={handleHome}
+            />
+          </Suspense>
         );
       }
       case 'datasource':
