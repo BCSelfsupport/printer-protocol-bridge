@@ -98,6 +98,7 @@ export const MANUAL: ManualChapter[] = [
         id: 'message-preview',
         title: 'Message preview',
         body: `The center of the dashboard shows a dot-for-dot preview of the message currently selected on the printer, rendered using the same fonts as the physical print head.\n\n**Bottom alignment:** Single-line messages are anchored to the bottom of the template — exactly matching what the printer hardware prints.`,
+        screenshot: '/manual-screenshots/05-dashboard.png',
       },
       {
         id: 'jet-control',
@@ -108,6 +109,18 @@ export const MANUAL: ManualChapter[] = [
         id: 'fluid-status',
         title: 'Fluid status',
         body: `Ink and Makeup levels are shown as 4-bar gauges:\n\n- **FULL** — fresh bottle\n- **GOOD** — normal operating level\n- **LOW** — refill soon (yellow)\n- **EMPTY** — change immediately (red)\n\nFilter life is tracked separately under Service.`,
+      },
+      {
+        id: 'service',
+        title: 'Service screen',
+        body: `Click **Service** in the bottom toolbar to view live operating metrics: Modulation (V), Pressure (PSI), Charge (%), RPS, Phase Quality (%), Viscosity (cP), printhead/electronics temperatures, subsystem status (V300UP, VLT, GUT, MOD), and runtime hours.\n\n**Force Print** triggers a single print regardless of photo-eye state — useful for setup and diagnostics.`,
+        screenshot: '/manual-screenshots/06-service.png',
+      },
+      {
+        id: 'adjust',
+        title: 'Adjust settings',
+        body: `**Adjust** opens the global print settings dialog: Width, Height, Delay, Bold, Gap, Pitch, Rotation, and Speed. These apply to all messages on the connected printer.`,
+        screenshot: '/manual-screenshots/07-adjust.png',
       },
       {
         id: 'counters',
