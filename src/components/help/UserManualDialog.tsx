@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { MANUAL, MANUAL_TITLE, MANUAL_VERSION, type ManualChapter, type ManualSection } from '@/lib/userManualContent';
 import { generateUserManualPdf, downloadManualPdf } from '@/lib/manualPdfExport';
+import { ScreenshotZoom } from './ScreenshotZoom';
 import { toast } from 'sonner';
 
 interface Props {
@@ -232,16 +233,11 @@ export function UserManualDialog({ open, onOpenChange }: Props) {
               </div>
 
               {activeSection.screenshot && (
-                <figure className="rounded-xl border bg-card overflow-hidden shadow-sm">
-                  <img
-                    src={activeSection.screenshot}
-                    alt={activeSection.title}
-                    className="w-full h-auto block"
-                  />
-                  <figcaption className="px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground font-bold border-t bg-card/50">
-                    {activeSection.title}
-                  </figcaption>
-                </figure>
+                <ScreenshotZoom
+                  src={activeSection.screenshot}
+                  alt={activeSection.title}
+                  caption={activeSection.title}
+                />
               )}
 
               <div className="space-y-3">{renderBody(activeSection.body)}</div>
