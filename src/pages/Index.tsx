@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { CountdownType } from '@/hooks/useJetCountdown';
@@ -21,7 +21,6 @@ import { CleanScreen } from '@/components/screens/CleanScreen';
 import { NetworkConfigScreen } from '@/components/screens/NetworkConfigScreen';
 import { RelayConnectDialog } from '@/components/relay/RelayConnectDialog';
 import { ConsumablesScreen } from '@/components/screens/ConsumablesScreen';
-import { ReportsScreen } from '@/components/screens/ReportsScreen';
 import { DataSourceScreen } from '@/components/screens/DataSourceScreen';
 import { LowStockAlert, LowStockAlertData } from '@/components/consumables/LowStockAlert';
 import { WireCableScreen } from '@/components/screens/WireCableScreen';
