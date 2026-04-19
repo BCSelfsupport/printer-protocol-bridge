@@ -44,6 +44,11 @@ export function ReportsScreen(props: Props) {
     [templates, activeTemplateId]
   );
 
+  const filteredRuns = useMemo(() => {
+    const range = resolveScope(scope);
+    return filterRuns(props.runs, range, scope.printerIds);
+  }, [props.runs, scope]);
+
   // OEE keeps its own self-contained UI
   if (type === 'oee') {
     return (
@@ -57,11 +62,6 @@ export function ReportsScreen(props: Props) {
       </div>
     );
   }
-
-  const filteredRuns = useMemo(() => {
-    const range = resolveScope(scope);
-    return filterRuns(props.runs, range, scope.printerIds);
-  }, [props.runs, scope]);
 
   const renderTitle = () => {
     if (type === 'production') return 'Production Summary';
