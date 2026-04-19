@@ -69,7 +69,13 @@ export const MANUAL: ManualChapter[] = [
         id: 'add-printer',
         title: 'Adding a printer',
         body: `1. Click **+ Add** at the top of the printers sidebar\n2. Enter a friendly **Name** (e.g. "Line 3 Coder")\n3. Enter the printer's **IP address** (e.g. 192.168.1.55) and **Port** (default 23)\n4. Click **Save**\n\nThe printer will appear in the list and CodeSync will start polling its status every 5 seconds.\n\n**Network requirements:** The PC and printer must be on the same subnet. Telnet / Remote Comms must be enabled on the printer's front panel. See the Connection Setup Guide (❓ icon → Connection Guide) for step-by-step photos.`,
-        screenshot: '/manual-screenshots/01-printers.png',
+        screenshot: '/manual-screenshots/03-add-printer.png',
+      },
+      {
+        id: 'edit-printer',
+        title: 'Editing a printer (Serial, Line ID, Sync Role)',
+        body: `Click the small pencil icon on a printer card to edit its settings:\n\n- **Name / IP / Port** — basic connection details\n- **Serial Number** — optional; used for Fleet Telemetry tracking\n- **Line ID** — optional; resolves dynamically as the value of any Line ID field in messages on this printer (e.g. "Line A", "Packaging 1")\n- **Sync Role** — None / Master / Slave for multi-printer synchronization (Master propagates message content and selection to its slaves)`,
+        screenshot: '/manual-screenshots/04-edit-printer.png',
       },
       {
         id: 'connect',
@@ -197,7 +203,9 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'stock',
         title: 'Stock inventory',
-        body: `Click **+ Add Consumable** to register a part you keep on hand. Set the reorder threshold and supplier info. CodeSync raises a low-stock alert when remaining quantity drops below the threshold.`,
+        body: `Click **+ Add Consumable** to register a part you keep on hand. Set the reorder threshold and supplier info. CodeSync raises a low-stock alert when remaining quantity drops below the threshold.\n\n**Stock Unit vs Reorder Unit:** Stock Unit is the individual countable item (e.g. Bottles); Reorder Unit is what you order from the supplier (e.g. Cases, with Per-Reorder-Unit indicating bottles per case). This distinction lets CodeSync correctly calculate when to reorder.`,
+        screenshot: '/manual-screenshots/14b-add-consumable.png',
+      },
       },
       {
         id: 'predictions',
