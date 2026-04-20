@@ -30,6 +30,7 @@ import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/U
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { isReadOnlyMessage } from '@/hooks/useMessageStorage';
 import { MessageThumbnail } from '@/components/messages/MessageThumbnail';
+import { SCAN_TEST_MESSAGE_NAME } from '@/lib/scanTestMessage';
 
 interface MessagesScreenProps {
   messages: PrintMessage[];
@@ -159,7 +160,12 @@ export function MessagesScreen({
           }
         : null;
       const lineIdWasResolved = !!stored && !!resolvedStored && resolvedStored.fields.some((field, index) => field.data !== stored.fields[index]?.data);
-      const promptedFields = resolvedStored?.fields.filter(f => f.promptBeforePrint) ?? [];
+      // Skip the prompt dialog for the scan-to-print test message — its prompted
+      // fields are filled by the /scan camera flow, not a manual entry.
+      const isScanTestMessage = selectedMessage.name.toUpperCase() === SCAN_TEST_MESSAGE_NAME;
+      const promptedFields = isScanTestMessage
+        ? []
+        : (resolvedStored?.fields.filter(f => f.promptBeforePrint) ?? []);
 
       // If the message has prompted fields, show the entry dialog so the operator
       // can type values. On confirm we'll do a single atomic write (^DM + ^NM + ^SV)
