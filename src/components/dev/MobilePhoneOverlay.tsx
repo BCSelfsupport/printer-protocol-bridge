@@ -131,17 +131,20 @@ export function MobilePhoneOverlay() {
     >
       {/* Top control bar (draggable handle) */}
       <div
-        onPointerDown={onDragStart}
-        onPointerMove={onDragMove}
-        onPointerUp={onDragEnd}
-        onPointerCancel={onDragEnd}
-        className="h-10 bg-zinc-900 border border-zinc-700 rounded-t-2xl flex items-center justify-between px-3 cursor-move"
+        className="h-10 bg-zinc-900 border border-zinc-700 rounded-t-2xl flex items-center justify-between px-3"
         style={{
           width: outerW * state.scale,
           height: 40 * state.scale,
         }}
       >
-        <div className="flex items-center gap-1.5" style={{ transform: `scale(${state.scale})`, transformOrigin: 'left center' }}>
+        <div
+          onPointerDown={onDragStart}
+          onPointerMove={onDragMove}
+          onPointerUp={onDragEnd}
+          onPointerCancel={onDragEnd}
+          className="flex items-center gap-1.5 flex-1 h-full cursor-move"
+          style={{ transform: `scale(${state.scale})`, transformOrigin: 'left center' }}
+        >
           <GripHorizontal className="w-4 h-4 text-zinc-400" />
           <span className="text-[11px] font-medium text-zinc-300">{dims.label} · {Math.round(state.scale * 100)}%</span>
         </div>
