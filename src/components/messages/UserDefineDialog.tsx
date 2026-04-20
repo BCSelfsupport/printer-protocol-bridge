@@ -153,6 +153,46 @@ export function UserDefineDialog({
               <RefreshCw className="w-5 h-5" />
             </button>
           </div>
+
+          {/* Input source: manual entry vs camera scan */}
+          <div className="bg-gradient-to-b from-muted to-muted/60 border border-border rounded-lg p-3 space-y-2">
+            <Label className="text-foreground font-medium text-sm block">
+              Input source
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setInputSource('manual')}
+                className={cn(
+                  'industrial-button rounded-md p-3 flex flex-col items-center gap-1 border-2 transition-colors',
+                  inputSource === 'manual'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Keyboard className="w-5 h-5" />
+                <span className="text-xs font-medium">Manual entry</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputSource('scan')}
+                className={cn(
+                  'industrial-button rounded-md p-3 flex flex-col items-center gap-1 border-2 transition-colors',
+                  inputSource === 'scan'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <ScanLine className="w-5 h-5" />
+                <span className="text-xs font-medium">Scan a code</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-snug">
+              {inputSource === 'scan'
+                ? 'Operator will be sent to the camera scanner when this message is selected.'
+                : 'Operator will type the value into a keypad when this message is selected.'}
+            </p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
