@@ -8,12 +8,10 @@ import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import TelemetryPage from "./pages/TelemetryPage";
 import DiagnosticsPage from "./pages/DiagnosticsPage";
-import ScanToPrintPage from "./pages/ScanToPrintPage";
 import NotFound from "./pages/NotFound";
 import { UpdateNotification } from "./components/UpdateNotification";
 import { SplashScreen } from "./components/SplashScreen";
 import { LicenseProvider } from "./contexts/LicenseContext";
-import { ScanBridgeProvider } from "./contexts/ScanBridgeContext";
 import { DemoWatermark } from "./components/license/DemoWatermark";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -44,17 +42,14 @@ const App = () => {
               <UpdateNotification />
               <DemoWatermark />
               {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
-              <ScanBridgeProvider>
-                <HashRouter>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/telemetry" element={<TelemetryPage />} />
-                    <Route path="/diagnostics" element={<DiagnosticsPage />} />
-                    <Route path="/scan" element={<ScanToPrintPage />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </HashRouter>
-              </ScanBridgeProvider>
+              <HashRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/telemetry" element={<TelemetryPage />} />
+                  <Route path="/diagnostics" element={<DiagnosticsPage />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </HashRouter>
             </TooltipProvider>
           </LicenseProvider>
         </ThemeProvider>

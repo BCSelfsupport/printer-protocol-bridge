@@ -2,7 +2,6 @@ import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardD
 import { PcLibraryEntry } from '@/hooks/useMessageStorage';
 import { PrintMessage } from '@/types/printer';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -31,7 +30,6 @@ import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/U
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { isReadOnlyMessage } from '@/hooks/useMessageStorage';
 import { MessageThumbnail } from '@/components/messages/MessageThumbnail';
-import { SCAN_TEST_MESSAGE_NAME } from '@/lib/scanTestMessage';
 
 interface MessagesScreenProps {
   messages: PrintMessage[];
@@ -106,7 +104,6 @@ export function MessagesScreen({
   swapSlotName,
   onSetSwapSlot,
 }: MessagesScreenProps) {
-  const navigate = useNavigate();
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
@@ -162,26 +159,13 @@ export function MessagesScreen({
           }
         : null;
       const lineIdWasResolved = !!stored && !!resolvedStored && resolvedStored.fields.some((field, index) => field.data !== stored.fields[index]?.data);
-      // Skip the prompt dialog for the scan-to-print test message — its prompted
-      // fields are filled by the /scan camera flow, not a manual entry.
-      const isScanTestMessage = selectedMessage.name.toUpperCase() === SCAN_TEST_MESSAGE_NAME;
-      const promptedFields = isScanTestMessage
-        ? []
-        : (resolvedStored?.fields.filter(f => f.promptBeforePrint) ?? []);
+      const promptedFields = resolvedStored?.fields.filter(f => f.promptBeforePrint) ?? [];
 
-      // If the message has prompted fields, decide how to collect their values.
-      // Per-field `inputSource` controls whether we open the manual keypad
-      // dialog or redirect to the /scan camera wizard. If ANY field is set to
-      // 'scan', the whole message is treated as scan-driven (the camera flow
-      // bakes values into all prompted fields atomically).
+      // If the message has prompted fields, show the entry dialog so the operator
+      // can type values. On confirm we'll do a single atomic write (^DM + ^NM + ^SV)
+      // with all values and settings baked in, then ^SM to select — no runtime
+      // field mutation that would risk a firmware lockup.
       if (promptedFields.length > 0 && resolvedStored && onSaveMessageContent) {
-        const anyScanField = promptedFields.some(f => f.inputSource === 'scan');
-        if (anyScanField) {
-          toast.info(`Open the scanner to populate "${selectedMessage.name}"`);
-          navigate('/scan');
-          return;
-        }
-
         const prompts: UserDefinePrompt[] = promptedFields.map(f => ({
           fieldId: f.id,
           label: f.promptLabel || f.data || 'ENTER VALUE',
@@ -622,12 +606,6 @@ export function MessagesScreen({
           }
         }}
         prompts={userDefinePrompts}
-        onScanInstead={() => {
-          // Close the manual-entry dialog and hand off to the camera-scan wizard.
-          setUserDefineEntryOpen(false);
-          setPendingMessageDetails(null);
-          navigate('/scan');
-        }}
         onConfirm={async (entries) => {
           if (pendingMessageDetails && selectedMessage && onSaveMessageContent) {
             // Bake prompted values into the field data

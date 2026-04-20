@@ -1016,26 +1016,11 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
 
             {/* Training Videos Tab */}
             <TabsContent value="training" className="flex-1 overflow-hidden m-0">
-              <div className="flex flex-col h-full">
-                <div className="p-3 border-b border-border bg-muted/30">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => window.dispatchEvent(new CustomEvent('cs:toggle-phone-overlay'))}
-                  >
-                    📱 Toggle Mobile Phone Overlay
-                  </Button>
-                  <p className="text-[10px] text-muted-foreground mt-1.5 leading-tight">
-                    Floating draggable phone showing the mobile companion. Use for live demos and training video recordings.
-                  </p>
-                </div>
-                {recorderState && recorderActions ? (
-                  <TrainingVideoRecorder recorderState={recorderState} recorderActions={recorderActions} />
-                ) : (
-                  <div className="p-4 text-xs text-muted-foreground">Recorder not available</div>
-                )}
-              </div>
+              {recorderState && recorderActions ? (
+                <TrainingVideoRecorder recorderState={recorderState} recorderActions={recorderActions} />
+              ) : (
+                <div className="p-4 text-xs text-muted-foreground">Recorder not available</div>
+              )}
             </TabsContent>
           </Tabs>
 

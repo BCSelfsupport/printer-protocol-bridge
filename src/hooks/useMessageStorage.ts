@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageDetails, MessageField } from '@/components/screens/EditMessageScreen';
 import { getHardcodedMessage, isHardcodedMessage } from '@/lib/hardcodedMessages';
-import { buildScanTestMessage, SCAN_TEST_MESSAGE_NAME, SCAN_TEST_SEED_VERSION } from '@/lib/scanTestMessage';
 
 const STORAGE_KEY = 'bestcode-messages-v2'; // v2: keyed by printerId:messageName
 const LEGACY_STORAGE_KEY = 'bestcode-messages'; // v1: keyed by messageName only
 const PC_LIBRARY_KEY = 'bestcode-pc-library'; // PC Library: overflow messages stored on PC
 const SWAP_SLOT_KEY = 'bestcode-swap-slot'; // Per-printer swap slot name
-const SCAN_TEST_SEED_KEY = 'bestcode-scan-test-seed-version'; // tracks last applied SCAN-TEST seed version
 
 // Hard-coded printer messages that cannot be edited or stored locally
 const READONLY_MESSAGES = ['BestCode', 'BestCode auto', 'QUANTUM', 'QUANTUM AUTO'];
@@ -34,36 +32,10 @@ interface PcLibraryMessages {
   [compositeKey: string]: MessageDetails; // keyed by "printerId:messageName"
 }
 
-function ensureSeededScanTest(messages: StoredMessages): StoredMessages {
-  const key = makeKey(1, SCAN_TEST_MESSAGE_NAME);
-  // Force-overwrite when our seed-version bumps so users on older broken
-  // SCAN-TEST entries (e.g. missing the [QRCODE|S=3] encoding prefix) get
-  // refreshed automatically without having to clear localStorage by hand.
-  let appliedVersion = 0;
-  try {
-    appliedVersion = parseInt(localStorage.getItem(SCAN_TEST_SEED_KEY) || '0', 10) || 0;
-  } catch { /* ignore */ }
-
-  if (messages[key] && appliedVersion >= SCAN_TEST_SEED_VERSION) {
-    return messages;
-  }
-
-  try { localStorage.setItem(SCAN_TEST_SEED_KEY, String(SCAN_TEST_SEED_VERSION)); } catch { /* ignore */ }
-
-  return {
-    ...messages,
-    [key]: buildScanTestMessage(),
-  };
-}
-
 function loadAllMessages(): StoredMessages {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = ensureSeededScanTest(JSON.parse(stored));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-      return parsed;
-    }
+    if (stored) return JSON.parse(stored);
 
     // Migrate from v1 (unscoped) storage if it exists
     const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
@@ -73,14 +45,11 @@ function loadAllMessages(): StoredMessages {
       for (const [name, details] of Object.entries(parsed)) {
         migrated[makeKey(0, name)] = details;
       }
-       const seeded = ensureSeededScanTest(migrated);
-       localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
-       return seeded;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+      return migrated;
     }
 
-     const seeded = ensureSeededScanTest({});
-     localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
-     return seeded;
+    return {};
   } catch {
     console.warn('Failed to load messages from localStorage');
     return {};
