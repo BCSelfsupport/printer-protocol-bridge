@@ -4,9 +4,15 @@
  */
 
 import { EmulatorState, CommandLogEntry, SimulatedPrinter, PROTOCOL_COMMANDS } from './printerEmulator';
+import { SCAN_TEST_MESSAGE_NAME } from './scanTestMessage';
+
+const ensurePrinterMessages = (messages: string[], printerId: number): string[] => {
+  if (printerId !== 1 || messages.includes(SCAN_TEST_MESSAGE_NAME)) return messages;
+  return [...messages, SCAN_TEST_MESSAGE_NAME];
+};
 
 // Default state template for new emulator instances
-const createDefaultState = (overrides?: Partial<EmulatorState>): EmulatorState => ({
+const createDefaultState = (printerId: number, overrides?: Partial<EmulatorState>): EmulatorState => ({
   hvOn: false,
   jetRunning: false,
   v300up: false,
@@ -51,7 +57,7 @@ const createDefaultState = (overrides?: Partial<EmulatorState>): EmulatorState =
   powerHours: 165.0,
   streamHours: 120.5,
   
-  messages: ['BESTCODE', 'BESTCODE-AUTO', 'TEST', 'SAMPLE', 'BC-GEN2'],
+  messages: ensurePrinterMessages(['BESTCODE', 'BESTCODE-AUTO', 'TEST', 'SAMPLE', 'BC-GEN2'], printerId),
   logos: ['ENCODER.BMP', 'highVolt.bmp', 'phaseWave.bmp', 'running_2.bmp', 'USBdrive.bmp'],
   
   errorsOn: false,
@@ -178,7 +184,7 @@ class PrinterEmulatorInstance {
 
   constructor(config: EmulatedPrinterConfig) {
     this.config = config;
-    this.state = createDefaultState(config.initialState);
+    this.state = createDefaultState(config.id, config.initialState);
     // Restore persisted messages for this instance
     this.loadPersistedMessages();
     // Simulate pump/power hours incrementing (accelerated: ~1 hour per 30s real-time)
@@ -200,7 +206,7 @@ class PrinterEmulatorInstance {
       if (saved) {
         const msgs = JSON.parse(saved) as string[];
         if (Array.isArray(msgs) && msgs.length > 0) {
-          this.state.messages = msgs;
+          this.state.messages = ensurePrinterMessages(msgs, this.config.id);
         }
       }
     } catch { /* ignore */ }
@@ -208,7 +214,7 @@ class PrinterEmulatorInstance {
 
   private persistMessages() {
     try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this.state.messages));
+      localStorage.setItem(this.storageKey, JSON.stringify(ensurePrinterMessages(this.state.messages, this.config.id)));
     } catch { /* ignore */ }
   }
 
@@ -705,7 +711,7 @@ class PrinterEmulatorInstance {
   }
 
   reset() {
-    this.state = createDefaultState(this.config.initialState);
+    this.state = createDefaultState(this.config.id, this.config.initialState);
     this.commandLog = [];
     this.notifyListeners();
     this.notifyLogListeners();
