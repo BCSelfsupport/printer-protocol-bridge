@@ -38,7 +38,7 @@ export interface ScanBridge {
     settings?: MessageDetails['settings'],
   ) => Promise<boolean>;
   selectMessage: (message: PrintMessage) => Promise<boolean>;
-  resetCounter: (counterId: number, value: number) => Promise<void> | void;
+  resetCounter: (counterId: number, value?: number) => Promise<boolean> | Promise<void> | void;
   connectToPrinter: (printer: Printer) => Promise<unknown>;
   fetchMessageContent?: (messageName: string) => Promise<MessageDetails | null>;
 }
