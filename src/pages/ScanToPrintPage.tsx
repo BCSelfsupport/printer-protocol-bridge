@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle2, Printer as PrinterIcon, FileText, ScanLine, RotateCcw, Hash, Loader2, Wifi, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
