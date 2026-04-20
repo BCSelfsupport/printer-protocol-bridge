@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, ArrowLeft, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, ArrowLeft, RefreshCw, ArrowUp, ArrowDown, Keyboard, ScanLine } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -7,12 +7,15 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 export interface UserDefineConfig {
   id: string;
   length: number;
   keepUserData: boolean;
   allowPartialEntry: boolean;
+  /** How the operator supplies the value when the message is selected. */
+  inputSource: 'manual' | 'scan';
 }
 
 interface UserDefineDialogProps {
