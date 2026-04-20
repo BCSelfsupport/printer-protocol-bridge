@@ -106,6 +106,7 @@ export function MessagesScreen({
   swapSlotName,
   onSetSwapSlot,
 }: MessagesScreenProps) {
+  const navigate = useNavigate();
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
