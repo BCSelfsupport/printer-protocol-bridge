@@ -35,6 +35,7 @@ export function UserDefineDialog({
   const [length, setLength] = useState(3);
   const [keepUserData, setKeepUserData] = useState(false);
   const [allowPartialEntry, setAllowPartialEntry] = useState(false);
+  const [inputSource, setInputSource] = useState<'manual' | 'scan'>('manual');
 
   const handleBack = () => {
     onOpenChange(false);
@@ -47,6 +48,7 @@ export function UserDefineDialog({
       length,
       keepUserData,
       allowPartialEntry,
+      inputSource,
     });
     onOpenChange(false);
     // Reset state
@@ -54,6 +56,7 @@ export function UserDefineDialog({
     setLength(3);
     setKeepUserData(false);
     setAllowPartialEntry(false);
+    setInputSource('manual');
   };
 
   const toggleKeepUserData = () => setKeepUserData(prev => !prev);
