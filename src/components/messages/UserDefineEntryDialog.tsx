@@ -20,6 +20,8 @@ interface UserDefineEntryDialogProps {
   onOpenChange: (open: boolean) => void;
   prompts: UserDefinePrompt[];
   onConfirm: (entries: Record<number, string>) => void | Promise<void>;
+  /** Optional: enables the "Scan a code" button which opens the /scan wizard. */
+  onScanInstead?: () => void;
 }
 
 export function UserDefineEntryDialog({
