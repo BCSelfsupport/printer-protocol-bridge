@@ -39,13 +39,14 @@ interface MockMessage {
 }
 
 const MOCK_PRINTERS: MockPrinter[] = [
-  { id: 1, name: 'Line A — Model 88', ipAddress: '192.168.1.51', status: 'ready' },
-  { id: 2, name: 'Line B — Model 82', ipAddress: '192.168.1.52', status: 'ready' },
-  { id: 3, name: 'Line C — Model 86', ipAddress: '192.168.1.53', status: 'offline' },
+  { id: 1, name: 'Printer 1 — Model 88 (Emulator)', ipAddress: '192.168.1.55', status: 'ready' },
+  { id: 2, name: 'Printer 2 — Model 86 (Emulator)', ipAddress: '192.168.1.56', status: 'ready' },
+  { id: 3, name: 'Printer 3 — Model 82 (Emulator)', ipAddress: '192.168.1.57', status: 'offline' },
 ];
 
 const MOCK_MESSAGES: Record<number, MockMessage[]> = {
   1: [
+    { name: 'SCAN-TEST', scanTargets: [{ type: 'text', label: 'Tag (text, 24 chars)' }, { type: 'qr', label: 'Tag (QR, ECC200)' }], hasCounter: true },
     { name: 'METRC-RETAIL', scanTargets: [{ type: 'text', label: 'Tag (text)' }, { type: 'qr', label: 'Tag (QR)' }], hasCounter: true },
     { name: 'BATCH-LOT', scanTargets: [{ type: 'text', label: 'Lot code' }], hasCounter: true },
   ],
