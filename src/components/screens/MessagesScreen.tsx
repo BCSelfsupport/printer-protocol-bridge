@@ -2,6 +2,7 @@ import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardD
 import { PcLibraryEntry } from '@/hooks/useMessageStorage';
 import { PrintMessage } from '@/types/printer';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -105,6 +106,7 @@ export function MessagesScreen({
   swapSlotName,
   onSetSwapSlot,
 }: MessagesScreenProps) {
+  const navigate = useNavigate();
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
@@ -612,6 +614,12 @@ export function MessagesScreen({
           }
         }}
         prompts={userDefinePrompts}
+        onScanInstead={() => {
+          // Close the manual-entry dialog and hand off to the camera-scan wizard.
+          setUserDefineEntryOpen(false);
+          setPendingMessageDetails(null);
+          navigate('/scan');
+        }}
         onConfirm={async (entries) => {
           if (pendingMessageDetails && selectedMessage && onSaveMessageContent) {
             // Bake prompted values into the field data
