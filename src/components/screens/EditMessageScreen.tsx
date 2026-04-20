@@ -63,6 +63,8 @@ export interface MessageField {
   promptBeforePrint?: boolean;
   promptLabel?: string;          // Display label for the prompt (e.g. "LOT CODE")
   promptLength?: number;         // Max characters allowed
+  /** How the operator supplies the value: type it, or scan a code with the camera. */
+  inputSource?: 'manual' | 'scan';
 }
 
 // Per-message adjust settings (width, height, delay, bold, gap, pitch, speed, rotation)
