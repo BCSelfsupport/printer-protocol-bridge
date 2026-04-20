@@ -63,6 +63,8 @@ export interface MessageField {
   promptBeforePrint?: boolean;
   promptLabel?: string;          // Display label for the prompt (e.g. "LOT CODE")
   promptLength?: number;         // Max characters allowed
+  /** How the operator supplies the value: type it, or scan a code with the camera. */
+  inputSource?: 'manual' | 'scan';
 }
 
 // Per-message adjust settings (width, height, delay, bold, gap, pitch, speed, rotation)
@@ -967,6 +969,12 @@ export function EditMessageScreen({
       width: config.length * 8 + 16, // Estimate width based on length
       height: Math.min(16, message.height),
       fontSize: 'Standard16High',
+      // Per-field prompt + input source so the selection flow knows whether to
+      // pop the manual keypad dialog or hand off to the camera scanner.
+      promptBeforePrint: true,
+      promptLabel: config.id,
+      promptLength: config.length,
+      inputSource: config.inputSource,
     };
     
     setMessage((prev) => {
