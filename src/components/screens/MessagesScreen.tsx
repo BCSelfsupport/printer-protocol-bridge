@@ -169,11 +169,19 @@ export function MessagesScreen({
         ? []
         : (resolvedStored?.fields.filter(f => f.promptBeforePrint) ?? []);
 
-      // If the message has prompted fields, show the entry dialog so the operator
-      // can type values. On confirm we'll do a single atomic write (^DM + ^NM + ^SV)
-      // with all values and settings baked in, then ^SM to select — no runtime
-      // field mutation that would risk a firmware lockup.
+      // If the message has prompted fields, decide how to collect their values.
+      // Per-field `inputSource` controls whether we open the manual keypad
+      // dialog or redirect to the /scan camera wizard. If ANY field is set to
+      // 'scan', the whole message is treated as scan-driven (the camera flow
+      // bakes values into all prompted fields atomically).
       if (promptedFields.length > 0 && resolvedStored && onSaveMessageContent) {
+        const anyScanField = promptedFields.some(f => f.inputSource === 'scan');
+        if (anyScanField) {
+          toast.info(`Open the scanner to populate "${selectedMessage.name}"`);
+          navigate('/scan');
+          return;
+        }
+
         const prompts: UserDefinePrompt[] = promptedFields.map(f => ({
           fieldId: f.id,
           label: f.promptLabel || f.data || 'ENTER VALUE',
