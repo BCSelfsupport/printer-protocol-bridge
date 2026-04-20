@@ -8,6 +8,7 @@ import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import TelemetryPage from "./pages/TelemetryPage";
 import DiagnosticsPage from "./pages/DiagnosticsPage";
+import ScanToPrintPage from "./pages/ScanToPrintPage";
 import NotFound from "./pages/NotFound";
 import { UpdateNotification } from "./components/UpdateNotification";
 import { SplashScreen } from "./components/SplashScreen";
@@ -47,6 +48,7 @@ const App = () => {
                   <Route path="/" element={<Index />} />
                   <Route path="/telemetry" element={<TelemetryPage />} />
                   <Route path="/diagnostics" element={<DiagnosticsPage />} />
+                  <Route path="/scan" element={<ScanToPrintPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </HashRouter>
