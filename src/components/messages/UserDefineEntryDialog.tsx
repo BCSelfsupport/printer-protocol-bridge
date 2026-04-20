@@ -107,8 +107,33 @@ export function UserDefineEntryDialog({
           )}
         </div>
 
+        {/* Scan-instead option (only shown on the first prompt, when enabled) */}
+        {onScanInstead && currentIndex === 0 && (
+          <div className="px-6 pt-4 pb-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-12 gap-2 border-primary/40 hover:bg-primary/5"
+              onClick={() => {
+                if (isSubmitting) return;
+                onScanInstead();
+              }}
+              disabled={isSubmitting}
+            >
+              <ScanLine className="h-4 w-4" />
+              Scan a code instead
+            </Button>
+            <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
+              <div className="flex-1 h-px bg-border" />
+              <Keyboard className="h-3 w-3" />
+              <span>or enter manually</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+          </div>
+        )}
+
         {/* Entry area */}
-        <div className="p-6 space-y-4">
+        <div className="p-6 pt-4 space-y-4">
           <p className="text-center text-foreground text-base font-medium">
             Enter Characters: {currentPrompt.length}
           </p>
