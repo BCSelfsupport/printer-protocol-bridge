@@ -12,7 +12,7 @@ const ensurePrinterMessages = (messages: string[], printerId: number): string[] 
 };
 
 // Default state template for new emulator instances
-const createDefaultState = (overrides?: Partial<EmulatorState>): EmulatorState => ({
+const createDefaultState = (printerId: number, overrides?: Partial<EmulatorState>): EmulatorState => ({
   hvOn: false,
   jetRunning: false,
   v300up: false,
@@ -57,7 +57,7 @@ const createDefaultState = (overrides?: Partial<EmulatorState>): EmulatorState =
   powerHours: 165.0,
   streamHours: 120.5,
   
-  messages: ensurePrinterMessages(['BESTCODE', 'BESTCODE-AUTO', 'TEST', 'SAMPLE', 'BC-GEN2'], overrides?.printCount === 1247 ? 1 : 0),
+  messages: ensurePrinterMessages(['BESTCODE', 'BESTCODE-AUTO', 'TEST', 'SAMPLE', 'BC-GEN2'], printerId),
   logos: ['ENCODER.BMP', 'highVolt.bmp', 'phaseWave.bmp', 'running_2.bmp', 'USBdrive.bmp'],
   
   errorsOn: false,
@@ -184,7 +184,7 @@ class PrinterEmulatorInstance {
 
   constructor(config: EmulatedPrinterConfig) {
     this.config = config;
-    this.state = createDefaultState(config.initialState);
+    this.state = createDefaultState(config.id, config.initialState);
     // Restore persisted messages for this instance
     this.loadPersistedMessages();
     // Simulate pump/power hours incrementing (accelerated: ~1 hour per 30s real-time)
@@ -711,7 +711,7 @@ class PrinterEmulatorInstance {
   }
 
   reset() {
-    this.state = createDefaultState(this.config.initialState);
+    this.state = createDefaultState(this.config.id, this.config.initialState);
     this.commandLog = [];
     this.notifyListeners();
     this.notifyLogListeners();
