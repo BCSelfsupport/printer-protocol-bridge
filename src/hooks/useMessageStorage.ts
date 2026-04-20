@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageDetails, MessageField } from '@/components/screens/EditMessageScreen';
 import { getHardcodedMessage, isHardcodedMessage } from '@/lib/hardcodedMessages';
-import { buildScanTestMessage, SCAN_TEST_MESSAGE_NAME } from '@/lib/scanTestMessage';
+import { buildScanTestMessage, SCAN_TEST_MESSAGE_NAME, SCAN_TEST_SEED_VERSION } from '@/lib/scanTestMessage';
 
 const STORAGE_KEY = 'bestcode-messages-v2'; // v2: keyed by printerId:messageName
 const LEGACY_STORAGE_KEY = 'bestcode-messages'; // v1: keyed by messageName only
