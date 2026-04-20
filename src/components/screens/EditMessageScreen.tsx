@@ -969,6 +969,12 @@ export function EditMessageScreen({
       width: config.length * 8 + 16, // Estimate width based on length
       height: Math.min(16, message.height),
       fontSize: 'Standard16High',
+      // Per-field prompt + input source so the selection flow knows whether to
+      // pop the manual keypad dialog or hand off to the camera scanner.
+      promptBeforePrint: true,
+      promptLabel: config.id,
+      promptLength: config.length,
+      inputSource: config.inputSource,
     };
     
     setMessage((prev) => {
