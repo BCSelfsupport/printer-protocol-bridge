@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import type { Printer, PrintMessage } from '@/types/printer';
 import type { MessageDetails } from '@/components/screens/EditMessageScreen';
 
@@ -9,40 +9,27 @@ import type { MessageDetails } from '@/components/screens/EditMessageScreen';
  * standalone /scan route so the Scan-to-Print wizard can drive the *real*
  * printer (or emulator) instead of mocked data.
  *
- * The `/scan` page consumes this context when it renders inside the same
- * React tree as <Index /> (i.e. desktop, dev phone overlay iframe pointing
- * at our own origin, or a real mobile PWA after the bootstrap completes).
+ * Architecture:
+ *   1. <Index /> calls `publishScanBridge(value)` whenever its primitives
+ *      change (printers list, connected printer, etc.).
+ *   2. <ScanBridgeProvider /> (mounted in <App />) subscribes to the
+ *      module-level singleton and re-renders consumers.
+ *   3. /scan calls `useScanBridge()` to read the live data.
  *
- * If the context is missing (e.g. /scan opened in isolation with no app
- * shell), the page falls back to a "not connected" state rather than
- * crashing.
+ * This avoids calling `usePrinterConnection` twice (which would spawn a
+ * second polling loop) while keeping <Index /> the single owner of the
+ * connection state.
+ *
+ * If <Index /> hasn't mounted yet (e.g. /scan opened in isolation with no
+ * app shell), the bridge is `null` and the page shows a "not connected"
+ * state rather than crashing.
  */
 
 export interface ScanBridge {
-  /** All known printers (online + offline + emulator). */
   printers: Printer[];
-
-  /** The currently connected printer (drives saveMessageContent gating). */
   connectedPrinterId: number | null;
-
-  /**
-   * Returns the message list for a given printer.
-   * - For the connected printer: live ^LM data
-   * - For an emulator instance: that instance's stored messages
-   * - For other real printers: empty (must connect first)
-   */
   getMessagesForPrinter: (printer: Printer | null | undefined) => { id: number; name: string }[];
-
-  /**
-   * Returns the cached/parsed message details (fields, template, settings).
-   * Falls back through slave→master→connected printer storage scopes.
-   */
   getStoredMessage: (messageName: string, printer?: Printer | null) => MessageDetails | null;
-
-  /**
-   * Atomic save: ^DM + ^NM + ^SV, with active-message switch-away protection.
-   * Only works against the currently connected printer.
-   */
   saveMessageContent: (
     messageName: string,
     fields: MessageDetails['fields'],
@@ -50,33 +37,40 @@ export interface ScanBridge {
     isNew?: boolean,
     settings?: MessageDetails['settings'],
   ) => Promise<boolean>;
-
-  /** Send ^SM to select a message on the currently connected printer. */
   selectMessage: (message: PrintMessage) => Promise<boolean>;
-
-  /** Reset (or set) a counter on the connected printer. counterId 0 = first counter. */
   resetCounter: (counterId: number, value: number) => Promise<void> | void;
-
-  /** Switch the live connection to a different printer. */
   connectToPrinter: (printer: Printer) => Promise<unknown>;
-
-  /** Force a fresh fetch of message content from the printer (^LF). */
   fetchMessageContent?: (messageName: string) => Promise<MessageDetails | null>;
 }
 
-const ScanBridgeContext = createContext<ScanBridge | null>(null);
+// ─── Module-level singleton + subscriber list ────────────────────────────
+let currentBridge: ScanBridge | null = null;
+const subscribers = new Set<(b: ScanBridge | null) => void>();
 
-export function ScanBridgeProvider({
-  value,
-  children,
-}: {
-  value: ScanBridge;
-  children: ReactNode;
-}) {
-  return <ScanBridgeContext.Provider value={value}>{children}</ScanBridgeContext.Provider>;
+export function publishScanBridge(value: ScanBridge | null) {
+  currentBridge = value;
+  subscribers.forEach((cb) => cb(value));
 }
 
-/** Returns the bridge if available; null when /scan is mounted standalone. */
+function subscribe(cb: (b: ScanBridge | null) => void): () => void {
+  subscribers.add(cb);
+  return () => subscribers.delete(cb);
+}
+
+// ─── React context wrapper ───────────────────────────────────────────────
+const ScanBridgeContext = createContext<ScanBridge | null>(null);
+
+export function ScanBridgeProvider({ children }: { children: ReactNode }) {
+  const [bridge, setBridge] = useState<ScanBridge | null>(currentBridge);
+
+  useEffect(() => {
+    setBridge(currentBridge);
+    return subscribe(setBridge);
+  }, []);
+
+  return <ScanBridgeContext.Provider value={bridge}>{children}</ScanBridgeContext.Provider>;
+}
+
 export function useScanBridge(): ScanBridge | null {
   return useContext(ScanBridgeContext);
 }
