@@ -1290,6 +1290,32 @@ const Index = () => {
     return ok;
   }, [clearAllExpiryOverrides, connectionState.connectedPrinter?.id, replaceMessageWithoutDelete, selectMessage, sendCommandToPrinter, updatePrinter]);
 
+  // ─── Publish live primitives to ScanBridge so /scan can drive the real printer ───
+  useEffect(() => {
+    publishScanBridge({
+      printers,
+      connectedPrinterId,
+      getMessagesForPrinter,
+      getStoredMessage: getStoredMessageForPrinter,
+      saveMessageContent,
+      selectMessage,
+      resetCounter,
+      connectToPrinter: connect,
+      fetchMessageContent,
+    });
+    return () => publishScanBridge(null);
+  }, [
+    printers,
+    connectedPrinterId,
+    getMessagesForPrinter,
+    getStoredMessageForPrinter,
+    saveMessageContent,
+    selectMessage,
+    resetCounter,
+    connect,
+    fetchMessageContent,
+  ]);
+
   // Per-printer expiry offset change — uses switch-away flow to rewrite ^NM with new ^AE offset
   const handleExpiryOffsetChange = useCallback(async (printerId: number, newDays: number) => {
     const targetPrinter = printers.find(p => p.id === printerId);
