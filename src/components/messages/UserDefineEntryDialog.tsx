@@ -29,6 +29,7 @@ export function UserDefineEntryDialog({
   onOpenChange,
   prompts,
   onConfirm,
+  onScanInstead,
 }: UserDefineEntryDialogProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [entries, setEntries] = useState<Record<number, string>>({});
