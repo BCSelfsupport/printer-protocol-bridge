@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { ScanLine, Keyboard } from 'lucide-react';
 
 export interface UserDefinePrompt {
   fieldId: number;
