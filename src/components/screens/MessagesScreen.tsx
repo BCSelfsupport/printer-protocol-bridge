@@ -614,6 +614,12 @@ export function MessagesScreen({
           }
         }}
         prompts={userDefinePrompts}
+        onScanInstead={() => {
+          // Close the manual-entry dialog and hand off to the camera-scan wizard.
+          setUserDefineEntryOpen(false);
+          setPendingMessageDetails(null);
+          navigate('/scan');
+        }}
         onConfirm={async (entries) => {
           if (pendingMessageDetails && selectedMessage && onSaveMessageContent) {
             // Bake prompted values into the field data
