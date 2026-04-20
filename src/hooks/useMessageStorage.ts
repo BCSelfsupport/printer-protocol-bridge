@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageDetails, MessageField } from '@/components/screens/EditMessageScreen';
 import { getHardcodedMessage, isHardcodedMessage } from '@/lib/hardcodedMessages';
-import { buildScanTestMessage, SCAN_TEST_MESSAGE_NAME } from '@/lib/scanTestMessage';
+import { buildScanTestMessage, SCAN_TEST_MESSAGE_NAME, SCAN_TEST_SEED_VERSION } from '@/lib/scanTestMessage';
 
 const STORAGE_KEY = 'bestcode-messages-v2'; // v2: keyed by printerId:messageName
 const LEGACY_STORAGE_KEY = 'bestcode-messages'; // v1: keyed by messageName only
 const PC_LIBRARY_KEY = 'bestcode-pc-library'; // PC Library: overflow messages stored on PC
 const SWAP_SLOT_KEY = 'bestcode-swap-slot'; // Per-printer swap slot name
+const SCAN_TEST_SEED_KEY = 'bestcode-scan-test-seed-version'; // tracks last applied SCAN-TEST seed version
 
 // Hard-coded printer messages that cannot be edited or stored locally
 const READONLY_MESSAGES = ['BestCode', 'BestCode auto', 'QUANTUM', 'QUANTUM AUTO'];
@@ -35,7 +36,20 @@ interface PcLibraryMessages {
 
 function ensureSeededScanTest(messages: StoredMessages): StoredMessages {
   const key = makeKey(1, SCAN_TEST_MESSAGE_NAME);
-  if (messages[key]) return messages;
+  // Force-overwrite when our seed-version bumps so users on older broken
+  // SCAN-TEST entries (e.g. missing the [QRCODE|S=3] encoding prefix) get
+  // refreshed automatically without having to clear localStorage by hand.
+  let appliedVersion = 0;
+  try {
+    appliedVersion = parseInt(localStorage.getItem(SCAN_TEST_SEED_KEY) || '0', 10) || 0;
+  } catch { /* ignore */ }
+
+  if (messages[key] && appliedVersion >= SCAN_TEST_SEED_VERSION) {
+    return messages;
+  }
+
+  try { localStorage.setItem(SCAN_TEST_SEED_KEY, String(SCAN_TEST_SEED_VERSION)); } catch { /* ignore */ }
+
   return {
     ...messages,
     [key]: buildScanTestMessage(),
