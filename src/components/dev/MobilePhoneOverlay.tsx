@@ -252,7 +252,7 @@ export function MobilePhoneOverlay() {
             size="sm"
             variant="ghost"
             className="h-7 w-7 p-0 bg-zinc-900 hover:bg-zinc-800 text-zinc-300"
-            onClick={() => setState((s) => ({ ...s, url: '/' })) || setIframeKey((k) => k + 1)}
+            onClick={() => { setState((s) => ({ ...s, url: '/' })); setIframeKey((k) => k + 1); }}
             title="Home"
           >
             <Home className="w-3.5 h-3.5" />

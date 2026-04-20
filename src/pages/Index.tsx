@@ -47,6 +47,7 @@ import { useMessageStorage, isReadOnlyMessage } from '@/hooks/useMessageStorage'
 import { useConsumableStorage } from '@/hooks/useConsumableStorage';
 import { DevPanel } from '@/components/dev/DevPanel';
 import { RecordingOverlay } from '@/components/dev/RecordingOverlay';
+import { MobilePhoneOverlay } from '@/components/dev/MobilePhoneOverlay';
 import { useScreenRecorder } from '@/hooks/useScreenRecorder';
 import { useLicense } from '@/contexts/LicenseContext';
 import { PrintMessage, Printer } from '@/types/printer';
@@ -2245,6 +2246,9 @@ const Index = () => {
           recorderActions={screenRecorder.actions}
         />
       ) : null}
+
+      {/* Mobile phone overlay — toggled from Dev Panel for live demos / training */}
+      {isDevSignedIn && <MobilePhoneOverlay />}
       
       {/* Printer Sign In Dialog */}
       <SignInDialog
