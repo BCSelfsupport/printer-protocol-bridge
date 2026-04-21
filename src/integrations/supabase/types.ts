@@ -575,6 +575,59 @@ export type Database = {
           },
         ]
       }
+      scan_requests: {
+        Row: {
+          created_at: string
+          expires_at: string
+          fulfilled_at: string | null
+          fulfilled_by_machine_id: string | null
+          id: string
+          license_id: string
+          max_length: number
+          message_name: string
+          pc_machine_id: string
+          prompt_label: string
+          scanned_value: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          fulfilled_at?: string | null
+          fulfilled_by_machine_id?: string | null
+          id?: string
+          license_id: string
+          max_length?: number
+          message_name: string
+          pc_machine_id: string
+          prompt_label: string
+          scanned_value?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          fulfilled_at?: string | null
+          fulfilled_by_machine_id?: string | null
+          id?: string
+          license_id?: string
+          max_length?: number
+          message_name?: string
+          pc_machine_id?: string
+          prompt_label?: string
+          scanned_value?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_requests_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_videos: {
         Row: {
           category: string | null
