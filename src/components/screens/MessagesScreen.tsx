@@ -27,10 +27,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
+import { ScanWaitingDialog } from '@/components/messages/ScanWaitingDialog';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
 import { isReadOnlyMessage } from '@/hooks/useMessageStorage';
 import { MessageThumbnail } from '@/components/messages/MessageThumbnail';
+import { useLicense } from '@/contexts/LicenseContext';
+
+const MACHINE_ID_KEY = 'codesync-machine-id';
+function getMachineId(): string {
+  let id = localStorage.getItem(MACHINE_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(MACHINE_ID_KEY, id);
+  }
+  return id;
+}
 
 interface MessagesScreenProps {
   messages: PrintMessage[];
@@ -113,6 +125,17 @@ export function MessagesScreen({
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
   const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
   const [pendingMessageDetails, setPendingMessageDetails] = useState<MessageDetails | null>(null);
+  // Mobile-scan workflow state
+  const [scanWaitingOpen, setScanWaitingOpen] = useState(false);
+  const [pendingScanRequestId, setPendingScanRequestId] = useState<string | null>(null);
+  const [pendingScanExpiresAt, setPendingScanExpiresAt] = useState<string | null>(null);
+  const [pendingScanLabel, setPendingScanLabel] = useState<string>('');
+  const [pendingScanContext, setPendingScanContext] = useState<{
+    message: PrintMessage;
+    details: MessageDetails;
+    fieldId: number;
+  } | null>(null);
+  const { productKey, isCompanion } = useLicense();
   const [pcLibraryOpen, setPcLibraryOpen] = useState(false);
   const [selectedLibraryMessage, setSelectedLibraryMessage] = useState<MessageDetails | null>(null);
   const [selectedLibrarySourcePrinterId, setSelectedLibrarySourcePrinterId] = useState<number | undefined>(undefined);
