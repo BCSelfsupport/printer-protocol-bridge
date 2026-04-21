@@ -1200,7 +1200,8 @@ export function EditMessageScreen({
                 width={message.width}
                 fields={(() => {
                   // Editor preview uses the user's configured startCount, not the live printer counter.
-                  const tokenMap = buildTokenMap(message);
+                  // `preview: true` substitutes empty prompt fields with X-placeholders so QR/barcodes render.
+                  const tokenMap = buildTokenMap(message, undefined, undefined, { preview: true });
                   return message.fields.map((f) => {
                     // Keep the currently-edited field raw so the operator sees/edits {TOKEN}
                     if (f.id === selectedFieldId) return f;

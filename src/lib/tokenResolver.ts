@@ -101,14 +101,23 @@ export function buildTokenMap(
   message: MessageDetails,
   customCounters?: number[],
   overrides?: Record<string, string>,
+  options?: { preview?: boolean },
 ): Record<string, string> {
   const map: Record<string, string> = {};
+  const preview = options?.preview ?? false;
 
   for (const f of message.fields) {
     if (!f.promptBeforePrint) continue;
     const token = labelToToken(f.promptLabel);
     if (!token) continue;
-    if (f.data) map[token] = f.data;
+    if (f.data) {
+      map[token] = f.data;
+    } else if (preview) {
+      // Editor preview: substitute empty prompt fields with X-placeholders so
+      // barcodes/QRs render. Without this, raw `{TOKEN}` survives into the
+      // payload and bwip-js rejects the curly braces.
+      map[token] = 'X'.repeat(Math.max(1, f.promptLength ?? 3));
+    }
   }
 
   const counters = message.advancedSettings?.counters ?? [];
