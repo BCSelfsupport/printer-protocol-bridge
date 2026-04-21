@@ -18,7 +18,7 @@ import { CounterDialog } from '@/components/messages/CounterDialog';
 import { UserDefineDialog, UserDefineConfig } from '@/components/messages/UserDefineDialog';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { LinkedFieldDialog } from '@/components/messages/LinkedFieldDialog';
-import { collectMessageTokens } from '@/lib/tokenResolver';
+import { collectMessageTokens, buildTokenMap, resolveFieldData, hasTokens } from '@/lib/tokenResolver';
 import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
 import { estimateBarcodeWidthDots } from '@/lib/barcodeRenderer';
 
@@ -1195,7 +1195,16 @@ export function EditMessageScreen({
                 templateHeight={message.height}
                 templateValue={message.templateValue}
                 width={message.width}
-                fields={message.fields}
+                fields={(() => {
+                  const tokenMap = buildTokenMap(message, customCounters);
+                  return message.fields.map((f) => {
+                    // Keep the currently-edited field raw so the operator sees/edits {TOKEN}
+                    if (f.id === selectedFieldId) return f;
+                    if (!hasTokens(f.data)) return f;
+                    const resolved = resolveFieldData(f.data, tokenMap, f.literalText);
+                    return resolved === f.data ? f : { ...f, data: resolved };
+                  });
+                })()}
                 onCanvasClick={handleCanvasClick}
                 onFieldMove={handleFieldMove}
                 onFieldsMove={handleFieldsMove}
