@@ -205,8 +205,35 @@ export default function ScanPage() {
             </div>
             <h2 className="text-lg font-semibold text-foreground">Waiting for the PC</h2>
             <p className="text-sm text-muted-foreground">
-              On the PC, select a message that has a scan field. Your camera will open here automatically.
+              On the PC, select a message that has a scan field. You'll be prompted to start the camera here.
             </p>
+          </div>
+        )}
+
+        {pending && status === 'ready' && (
+          <div className="w-full max-w-sm space-y-4 text-center">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Ready to scan</p>
+              <p className="text-xl font-bold text-foreground">{pending.prompt_label}</p>
+              <p className="text-xs text-muted-foreground">
+                Message: <span className="font-mono">{pending.message_name}</span>
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Tap below to open the camera. Your browser requires a tap before the camera can turn on.
+            </p>
+            <button
+              onClick={startCamera}
+              className="w-full industrial-button py-4 rounded-lg flex items-center justify-center gap-2 text-base font-semibold bg-primary text-primary-foreground"
+            >
+              <ScanLine className="w-5 h-5" /> Start camera
+            </button>
+            <button
+              onClick={handleCancel}
+              className="w-full industrial-button py-2 rounded-lg text-sm text-muted-foreground"
+            >
+              Cancel
+            </button>
           </div>
         )}
 
