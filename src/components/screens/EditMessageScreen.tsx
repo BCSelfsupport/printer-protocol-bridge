@@ -420,9 +420,12 @@ export function EditMessageScreen({
             if (computed !== null) newData = computed;
           } else if (f.autoCodeFieldType?.startsWith('counter_')) {
             const ctrId = parseInt(f.autoCodeFieldType.split('_')[1]) || 1;
-            // Use live counter value if available, otherwise show from advanced settings
+            // Editor preview is authoritative on the user's configured startCount.
+            // The live printer counter (customCounters) reflects whatever message is
+            // currently running on the printer — using it here would hide the user's
+            // chosen start value (e.g. start=1 displaying as 10 if printer is at 10).
             const ctrConfig = prev.advancedSettings?.counters?.find(c => c.id === ctrId);
-            const ctrValue = customCounters?.[ctrId - 1] ?? ctrConfig?.startCount ?? 0;
+            const ctrValue = ctrConfig?.startCount ?? 0;
             const endCount = ctrConfig?.endCount ?? 9999;
             const digits = endCount.toString().length;
             newData = ctrConfig?.leadingZeroes 
