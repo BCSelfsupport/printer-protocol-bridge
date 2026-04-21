@@ -159,7 +159,11 @@ export function MessagesScreen({
           }
         : null;
       const lineIdWasResolved = !!stored && !!resolvedStored && resolvedStored.fields.some((field, index) => field.data !== stored.fields[index]?.data);
-      const promptedFields = resolvedStored?.fields.filter(f => f.promptBeforePrint) ?? [];
+      // Only keyboard-source prompts trigger the PC entry dialog;
+      // scanner-source fields are populated via the mobile /scan flow instead.
+      const promptedFields = resolvedStored?.fields.filter(
+        f => f.promptBeforePrint && (f.promptSource ?? 'keyboard') === 'keyboard'
+      ) ?? [];
 
       // If the message has prompted fields, show the entry dialog so the operator
       // can type values. On confirm we'll do a single atomic write (^DM + ^NM + ^SV)

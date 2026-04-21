@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft, Tag } from 'lucide-react';
+import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft, Tag, ScanLine } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,21 +12,26 @@ const FIELD_TYPES = [
   { value: 'text', label: 'Text Field', icon: FileText, action: 'add' },
   { value: 'lineid', label: 'Line ID', icon: Tag, action: 'add' },
   { value: 'userdefine', label: 'User Define', icon: User, action: 'expand' },
+  { value: 'scanfield', label: 'Scanned Field', icon: ScanLine, action: 'expand' },
   { value: 'autocode', label: 'AutoCode Field', icon: Hash, action: 'submenu' },
   { value: 'barcode', label: 'Barcode Field', icon: Barcode, action: 'submenu' },
   { value: 'logo', label: 'Graphic Field', icon: Image, action: 'submenu' },
 ] as const;
 
+export type PromptSource = 'keyboard' | 'scanner';
+
 interface NewFieldDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectFieldType: (type: string, options?: { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number; lineIdValue?: string }) => void;
+  onSelectFieldType: (type: string, options?: { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number; promptSource?: PromptSource; lineIdValue?: string }) => void;
   onOpenAutoCode: () => void;
   onOpenBarcode: () => void;
   onOpenUserDefine: () => void;
   onOpenGraphic: () => void;
   connectedPrinterLineId?: string;
 }
+
+type ConfigMode = null | 'userdefine' | 'scanfield';
 
 export function NewFieldDialog({ 
   open, 
@@ -38,7 +43,7 @@ export function NewFieldDialog({
   onOpenGraphic,
   connectedPrinterLineId,
 }: NewFieldDialogProps) {
-  const [showPromptConfig, setShowPromptConfig] = useState(false);
+  const [configMode, setConfigMode] = useState<ConfigMode>(null);
   const [showLineIdWarning, setShowLineIdWarning] = useState(false);
   const [promptLabel, setPromptLabel] = useState('');
   const [promptLength, setPromptLength] = useState(3);
@@ -55,7 +60,15 @@ export function NewFieldDialog({
       return;
     }
     if (fieldType.value === 'userdefine') {
-      setShowPromptConfig(true);
+      setConfigMode('userdefine');
+      setPromptLabel('');
+      setPromptLength(3);
+      return;
+    }
+    if (fieldType.value === 'scanfield') {
+      setConfigMode('scanfield');
+      setPromptLabel('');
+      setPromptLength(24); // typical METRC tag length
       return;
     }
     if (fieldType.value === 'logo') {
@@ -77,27 +90,38 @@ export function NewFieldDialog({
   };
 
   const handleAddPromptedField = () => {
+    const source: PromptSource = configMode === 'scanfield' ? 'scanner' : 'keyboard';
+    const fallbackLabel = source === 'scanner' ? 'SCAN VALUE' : 'ENTER VALUE';
     onSelectFieldType('text', {
       promptBeforePrint: true,
-      promptLabel: promptLabel.trim().toUpperCase() || 'ENTER VALUE',
+      promptLabel: promptLabel.trim().toUpperCase() || fallbackLabel,
       promptLength: Math.max(1, promptLength),
+      promptSource: source,
     });
     onOpenChange(false);
-    // Reset
-    setShowPromptConfig(false);
+    setConfigMode(null);
     setPromptLabel('');
     setPromptLength(3);
   };
 
   const handleClose = (newOpen: boolean) => {
     if (!newOpen) {
-      setShowPromptConfig(false);
+      setConfigMode(null);
       setShowLineIdWarning(false);
       setPromptLabel('');
       setPromptLength(3);
     }
     onOpenChange(newOpen);
   };
+
+  const isScan = configMode === 'scanfield';
+  const headerTitle = showLineIdWarning
+    ? 'Line ID Required'
+    : configMode === 'userdefine'
+      ? 'User Define'
+      : configMode === 'scanfield'
+        ? 'Scanned Field'
+        : 'New Field';
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -106,8 +130,8 @@ export function NewFieldDialog({
         <div className="bg-gradient-to-b from-muted to-muted/80 px-4 py-3 flex items-center gap-3 border-b">
           <button
             onClick={() => {
-              if (showPromptConfig) {
-                setShowPromptConfig(false);
+              if (configMode) {
+                setConfigMode(null);
               } else {
                 handleClose(false);
               }
@@ -117,7 +141,7 @@ export function NewFieldDialog({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <DialogTitle className="flex-1 text-center text-lg font-semibold pr-10">
-            {showLineIdWarning ? 'Line ID Required' : showPromptConfig ? 'User Define' : 'New Field'}
+            {headerTitle}
           </DialogTitle>
         </div>
 
@@ -150,11 +174,21 @@ export function NewFieldDialog({
               OK
             </button>
           </div>
-        ) : showPromptConfig ? (
-          /* Prompted text field config */
+        ) : configMode ? (
+          /* Prompted text field config (keyboard or scanner) */
           <div className="bg-card p-4 space-y-3">
+            {isScan && (
+              <div className="flex items-start gap-2 bg-primary/10 border border-primary/30 rounded-lg p-3">
+                <ScanLine className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <p className="text-xs text-foreground leading-relaxed">
+                  This field will be populated by a <span className="font-semibold">QR/barcode scan</span> from a paired mobile device before each print run.
+                </p>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
-              Operator will be asked to enter this value each time the message is selected for printing.
+              {isScan
+                ? 'The operator will scan a code on their mobile device and the value is baked into this field before the message is sent to the printer.'
+                : 'Operator will be asked to enter this value each time the message is selected for printing.'}
             </p>
             <div className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 border border-border rounded-lg p-3">
               <label className="text-foreground font-medium text-sm">Prompt Label:</label>
@@ -162,7 +196,7 @@ export function NewFieldDialog({
                 value={promptLabel}
                 onChange={(e) => setPromptLabel(e.target.value)}
                 className="w-40 h-8 text-sm"
-                placeholder="LOT CODE"
+                placeholder={isScan ? 'WORK ORDER' : 'LOT CODE'}
               />
             </div>
             <div className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 border border-border rounded-lg p-3">
@@ -186,8 +220,8 @@ export function NewFieldDialog({
               onClick={handleAddPromptedField}
               className="w-full industrial-button text-white py-3 rounded-lg flex items-center justify-center gap-2"
             >
-              <Plus className="w-5 h-5 text-primary" />
-              <span className="font-medium">Add Prompted Field</span>
+              {isScan ? <ScanLine className="w-5 h-5 text-primary" /> : <Plus className="w-5 h-5 text-primary" />}
+              <span className="font-medium">{isScan ? 'Add Scanned Field' : 'Add Prompted Field'}</span>
             </button>
           </div>
         ) : (
