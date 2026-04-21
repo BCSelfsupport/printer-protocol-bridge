@@ -113,6 +113,8 @@ export function buildTokenMap(
 
   const counters = message.advancedSettings?.counters ?? [];
   for (const c of counters) {
+    // Live counter only used when explicitly provided. Editor preview omits it
+    // so the user's configured startCount drives the display.
     const live = customCounters?.[c.id - 1];
     const start = c.startCount ?? 0;
     const value = live ?? start;
