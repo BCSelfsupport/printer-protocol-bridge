@@ -613,15 +613,19 @@ export function MessagesScreen({
         prompts={userDefinePrompts}
         onConfirm={async (entries) => {
           if (pendingMessageDetails && selectedMessage && onSaveMessageContent) {
-            // Bake prompted values into the field data
+            // Bake prompted values into the prompt fields, then expand any
+            // {TOKEN} placeholders across ALL fields (e.g. a QR field referencing
+            // {WORK_ORDER} or {COUNTER1}). The printer only ever sees resolved data.
+            const bakedFields = pendingMessageDetails.fields.map(f => {
+              if (f.promptBeforePrint && entries[f.id] !== undefined) {
+                return { ...f, data: entries[f.id].trim() || f.data };
+              }
+              return f;
+            });
+            const tokenMap = buildTokenMap({ ...pendingMessageDetails, fields: bakedFields });
             const updatedDetails = {
               ...pendingMessageDetails,
-              fields: pendingMessageDetails.fields.map(f => {
-                if (f.promptBeforePrint && entries[f.id] !== undefined) {
-                  return { ...f, data: entries[f.id].trim() || f.data };
-                }
-                return f;
-              }),
+              fields: resolveAllFields(bakedFields, tokenMap),
             };
 
             try {
