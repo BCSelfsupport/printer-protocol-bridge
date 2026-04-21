@@ -1259,8 +1259,8 @@ const Index = () => {
         }
 
         const result = await replaceMessageWithoutDelete(targetPrinter, message.name, {
-          fields: updatedDetails.fields,
-          templateValue: updatedDetails.templateValue,
+          fields: resolvedDetails.fields,
+          templateValue: resolvedDetails.templateValue,
         });
 
         if (!result.success) {
@@ -1280,8 +1280,8 @@ const Index = () => {
 
     // Non-connected printer: same full rewrite approach
     const result = await replaceMessageWithoutDelete(targetPrinter, message.name, {
-      fields: updatedDetails.fields,
-      templateValue: updatedDetails.templateValue,
+      fields: resolvedDetails.fields,
+      templateValue: resolvedDetails.templateValue,
     });
 
     if (!result.success) {
