@@ -64,6 +64,9 @@ export interface MessageField {
   promptLabel?: string;          // Display label for the prompt (e.g. "LOT CODE")
   promptLength?: number;         // Max characters allowed
   promptSource?: 'keyboard' | 'scanner';  // How the value is supplied (defaults to keyboard)
+  // Token substitution: by default any field's data is scanned for {TOKEN} placeholders
+  // (e.g. {WORK_ORDER}, {COUNTER1}). Set literalText=true to print braces verbatim.
+  literalText?: boolean;
 }
 
 // Per-message adjust settings (width, height, delay, bold, gap, pitch, speed, rotation)
