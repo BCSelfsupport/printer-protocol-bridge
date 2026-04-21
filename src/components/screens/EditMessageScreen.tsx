@@ -63,6 +63,7 @@ export interface MessageField {
   promptBeforePrint?: boolean;
   promptLabel?: string;          // Display label for the prompt (e.g. "LOT CODE")
   promptLength?: number;         // Max characters allowed
+  promptSource?: 'keyboard' | 'scanner';  // How the value is supplied (defaults to keyboard)
 }
 
 // Per-message adjust settings (width, height, delay, bold, gap, pitch, speed, rotation)
@@ -610,7 +611,7 @@ export function EditMessageScreen({
     return computed ?? fieldType.toUpperCase();
   };
 
-  const handleAddField = (fieldType: string, formatOrOptions?: string | { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number; lineIdValue?: string }) => {
+  const handleAddField = (fieldType: string, formatOrOptions?: string | { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number; promptSource?: 'keyboard' | 'scanner'; lineIdValue?: string }) => {
     // Extract prompt options if provided as object
     const promptOptions = typeof formatOrOptions === 'object' ? formatOrOptions : undefined;
     const format = typeof formatOrOptions === 'string' ? formatOrOptions : undefined;
@@ -720,6 +721,7 @@ export function EditMessageScreen({
       promptBeforePrint: promptOptions?.promptBeforePrint,
       promptLabel: promptOptions?.promptLabel,
       promptLength: promptOptions?.promptLength,
+      promptSource: promptOptions?.promptBeforePrint ? (promptOptions?.promptSource ?? 'keyboard') : undefined,
     };
     setMessage((prev) => {
       const updatedFields = [...prev.fields, newField];
