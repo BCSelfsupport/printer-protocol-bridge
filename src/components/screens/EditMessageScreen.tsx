@@ -17,6 +17,8 @@ import { DateCodeBuilder, DateCodeBuilderResult } from '@/components/messages/Da
 import { CounterDialog } from '@/components/messages/CounterDialog';
 import { UserDefineDialog, UserDefineConfig } from '@/components/messages/UserDefineDialog';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
+import { LinkedFieldDialog } from '@/components/messages/LinkedFieldDialog';
+import { collectMessageTokens } from '@/lib/tokenResolver';
 import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
 import { estimateBarcodeWidthDots } from '@/lib/barcodeRenderer';
 
@@ -226,6 +228,7 @@ export function EditMessageScreen({
   const [counterDialogOpen, setCounterDialogOpen] = useState(false);
   const [userDefineDialogOpen, setUserDefineDialogOpen] = useState(false);
   const [graphicDialogOpen, setGraphicDialogOpen] = useState(false);
+  const [linkedFieldDialogOpen, setLinkedFieldDialogOpen] = useState(false);
   const [dataLinkDialogOpen, setDataLinkDialogOpen] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   // Local adjust settings state for the dialog — initialized from message or current printer settings
