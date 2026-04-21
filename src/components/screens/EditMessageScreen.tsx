@@ -1658,7 +1658,10 @@ export function EditMessageScreen({
                 <Button
                   onClick={async () => {
                     if (validateMessageName(saveAsName).valid) {
-                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch, speed: localAdjustSettings.speed, rotation: localAdjustSettings.rotation } }, true);
+                      // Bake tokens into the printer-bound copy (see Save handler).
+                      const tokenMap = buildTokenMap(message);
+                      const resolvedFields = resolveAllFields(message.fields, tokenMap);
+                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), fields: resolvedFields, adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch, speed: localAdjustSettings.speed, rotation: localAdjustSettings.rotation } }, true);
                       setSaveAsDialogOpen(false);
                       if (result && result.fields.length > 0) {
                         setMessage(prev => ({
