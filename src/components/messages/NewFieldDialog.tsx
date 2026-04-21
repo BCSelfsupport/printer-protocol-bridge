@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft, Tag, ScanLine } from 'lucide-react';
+import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft, Tag, ScanLine, Link2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ const FIELD_TYPES = [
   { value: 'lineid', label: 'Line ID', icon: Tag, action: 'add' },
   { value: 'userdefine', label: 'User Define', icon: User, action: 'expand' },
   { value: 'scanfield', label: 'Scanned Field', icon: ScanLine, action: 'expand' },
+  { value: 'linkedfield', label: 'Linked Field', icon: Link2, action: 'submenu' },
   { value: 'autocode', label: 'AutoCode Field', icon: Hash, action: 'submenu' },
   { value: 'barcode', label: 'Barcode Field', icon: Barcode, action: 'submenu' },
   { value: 'logo', label: 'Graphic Field', icon: Image, action: 'submenu' },
@@ -28,6 +29,7 @@ interface NewFieldDialogProps {
   onOpenBarcode: () => void;
   onOpenUserDefine: () => void;
   onOpenGraphic: () => void;
+  onOpenLinkedField: () => void;
   connectedPrinterLineId?: string;
 }
 
