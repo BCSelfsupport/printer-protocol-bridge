@@ -164,6 +164,10 @@ interface FieldSettingsPanelProps {
   promptLabel?: string;
   promptLength?: number;
   onPromptBeforePrintChange?: (enabled: boolean, label?: string, length?: number) => void;
+  // Literal-text opt-out — disables {TOKEN} substitution for this field
+  fieldHasTokens?: boolean;
+  literalText?: boolean;
+  onLiteralTextChange?: (enabled: boolean) => void;
 }
 
 export function FieldSettingsPanel({
