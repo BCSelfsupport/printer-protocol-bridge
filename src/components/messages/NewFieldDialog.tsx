@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft, Tag, ScanLine } from 'lucide-react';
+import { FileText, Hash, User, Barcode, Image, ChevronRight, Plus, ArrowLeft, Tag, ScanLine, Link2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ const FIELD_TYPES = [
   { value: 'lineid', label: 'Line ID', icon: Tag, action: 'add' },
   { value: 'userdefine', label: 'User Define', icon: User, action: 'expand' },
   { value: 'scanfield', label: 'Scanned Field', icon: ScanLine, action: 'expand' },
+  { value: 'linkedfield', label: 'Linked Field', icon: Link2, action: 'submenu' },
   { value: 'autocode', label: 'AutoCode Field', icon: Hash, action: 'submenu' },
   { value: 'barcode', label: 'Barcode Field', icon: Barcode, action: 'submenu' },
   { value: 'logo', label: 'Graphic Field', icon: Image, action: 'submenu' },
@@ -20,14 +21,24 @@ const FIELD_TYPES = [
 
 export type PromptSource = 'keyboard' | 'scanner';
 
+export interface AddFieldOptions {
+  promptBeforePrint?: boolean;
+  promptLabel?: string;
+  promptLength?: number;
+  promptSource?: PromptSource;
+  lineIdValue?: string;
+  linkedFieldData?: string;  // Composed token string for a Linked Field (e.g. "{WORK_ORDER}")
+}
+
 interface NewFieldDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectFieldType: (type: string, options?: { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number; promptSource?: PromptSource; lineIdValue?: string }) => void;
+  onSelectFieldType: (type: string, options?: AddFieldOptions) => void;
   onOpenAutoCode: () => void;
   onOpenBarcode: () => void;
   onOpenUserDefine: () => void;
   onOpenGraphic: () => void;
+  onOpenLinkedField: () => void;
   connectedPrinterLineId?: string;
 }
 
@@ -41,6 +52,7 @@ export function NewFieldDialog({
   onOpenBarcode,
   onOpenUserDefine,
   onOpenGraphic,
+  onOpenLinkedField,
   connectedPrinterLineId,
 }: NewFieldDialogProps) {
   const [configMode, setConfigMode] = useState<ConfigMode>(null);
@@ -74,6 +86,11 @@ export function NewFieldDialog({
     if (fieldType.value === 'logo') {
       onOpenChange(false);
       onOpenGraphic();
+      return;
+    }
+    if (fieldType.value === 'linkedfield') {
+      onOpenChange(false);
+      onOpenLinkedField();
       return;
     }
     if (fieldType.value === 'lineid') {

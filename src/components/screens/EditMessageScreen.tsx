@@ -17,6 +17,8 @@ import { DateCodeBuilder, DateCodeBuilderResult } from '@/components/messages/Da
 import { CounterDialog } from '@/components/messages/CounterDialog';
 import { UserDefineDialog, UserDefineConfig } from '@/components/messages/UserDefineDialog';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
+import { LinkedFieldDialog } from '@/components/messages/LinkedFieldDialog';
+import { collectMessageTokens, buildTokenMap, resolveFieldData, hasTokens } from '@/lib/tokenResolver';
 import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
 import { estimateBarcodeWidthDots } from '@/lib/barcodeRenderer';
 
@@ -64,6 +66,9 @@ export interface MessageField {
   promptLabel?: string;          // Display label for the prompt (e.g. "LOT CODE")
   promptLength?: number;         // Max characters allowed
   promptSource?: 'keyboard' | 'scanner';  // How the value is supplied (defaults to keyboard)
+  // Token substitution: by default any field's data is scanned for {TOKEN} placeholders
+  // (e.g. {WORK_ORDER}, {COUNTER1}). Set literalText=true to print braces verbatim.
+  literalText?: boolean;
 }
 
 // Per-message adjust settings (width, height, delay, bold, gap, pitch, speed, rotation)
@@ -223,6 +228,7 @@ export function EditMessageScreen({
   const [counterDialogOpen, setCounterDialogOpen] = useState(false);
   const [userDefineDialogOpen, setUserDefineDialogOpen] = useState(false);
   const [graphicDialogOpen, setGraphicDialogOpen] = useState(false);
+  const [linkedFieldDialogOpen, setLinkedFieldDialogOpen] = useState(false);
   const [dataLinkDialogOpen, setDataLinkDialogOpen] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   // Local adjust settings state for the dialog — initialized from message or current printer settings
@@ -611,7 +617,7 @@ export function EditMessageScreen({
     return computed ?? fieldType.toUpperCase();
   };
 
-  const handleAddField = (fieldType: string, formatOrOptions?: string | { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number; promptSource?: 'keyboard' | 'scanner'; lineIdValue?: string }) => {
+  const handleAddField = (fieldType: string, formatOrOptions?: string | { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number; promptSource?: 'keyboard' | 'scanner'; lineIdValue?: string; linkedFieldData?: string }) => {
     // Extract prompt options if provided as object
     const promptOptions = typeof formatOrOptions === 'object' ? formatOrOptions : undefined;
     const format = typeof formatOrOptions === 'string' ? formatOrOptions : undefined;
@@ -706,7 +712,11 @@ export function EditMessageScreen({
             : fieldType.startsWith('counter_') ? 'counter'
             : fieldType.startsWith('date_') ? 'date'
             : fieldType as MessageField['type'],
-      data: lineIdValue ? lineIdValue : (promptOptions?.promptBeforePrint ? 'X'.repeat(promptOptions.promptLength || 3) : fieldData),
+      data: promptOptions?.linkedFieldData
+        ? promptOptions.linkedFieldData
+        : lineIdValue
+          ? lineIdValue
+          : (promptOptions?.promptBeforePrint ? 'X'.repeat(promptOptions.promptLength || 3) : fieldData),
       x: 0,
       y: newY,
       width: 50,
@@ -1185,7 +1195,16 @@ export function EditMessageScreen({
                 templateHeight={message.height}
                 templateValue={message.templateValue}
                 width={message.width}
-                fields={message.fields}
+                fields={(() => {
+                  const tokenMap = buildTokenMap(message, customCounters);
+                  return message.fields.map((f) => {
+                    // Keep the currently-edited field raw so the operator sees/edits {TOKEN}
+                    if (f.id === selectedFieldId) return f;
+                    if (!hasTokens(f.data)) return f;
+                    const resolved = resolveFieldData(f.data, tokenMap, f.literalText);
+                    return resolved === f.data ? f : { ...f, data: resolved };
+                  });
+                })()}
                 onCanvasClick={handleCanvasClick}
                 onFieldMove={handleFieldMove}
                 onFieldsMove={handleFieldsMove}
@@ -1274,6 +1293,17 @@ export function EditMessageScreen({
                           promptLength: enabled ? (f.promptLength || Math.max(f.data?.length || 3, 3)) : undefined,
                         }
                       : f
+                  ),
+                }));
+              }}
+              fieldHasTokens={hasTokens(selectedField?.data)}
+              literalText={selectedField?.literalText}
+              onLiteralTextChange={(enabled) => {
+                if (!selectedFieldId) return;
+                setMessage((prev) => ({
+                  ...prev,
+                  fields: prev.fields.map((f) =>
+                    f.id === selectedFieldId ? { ...f, literalText: enabled || undefined } : f
                   ),
                 }));
               }}
@@ -1463,7 +1493,17 @@ export function EditMessageScreen({
             
             onOpenUserDefine={() => setUserDefineDialogOpen(true)}
             onOpenGraphic={() => setGraphicDialogOpen(true)}
+            onOpenLinkedField={() => setLinkedFieldDialogOpen(true)}
             connectedPrinterLineId={connectedPrinterLineId}
+          />
+
+          {/* Linked Field Dialog */}
+          <LinkedFieldDialog
+            open={linkedFieldDialogOpen}
+            onOpenChange={setLinkedFieldDialogOpen}
+            onBack={() => setNewFieldDialogOpen(true)}
+            availableTokens={collectMessageTokens(message)}
+            onAddLinkedField={(data) => handleAddField('text', { linkedFieldData: data })}
           />
 
           {/* AutoCode Field Dialog */}

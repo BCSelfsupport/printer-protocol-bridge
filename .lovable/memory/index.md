@@ -111,3 +111,4 @@ Updated: now
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
 - [PC Library](mem://features/pc-library-overflow) — Overflow messages stored on PC with swap-slot push mechanism
 - [Scanned Field](mem://features/scanned-field-type) — promptSource='scanner' tile creates scan-only prompted field; PC keyboard dialog filters to keyboard-source
+- [Token Linking](mem://features/token-linking-system) — {TOKEN} substitution from scanned/prompted/counter sources; Linked Field tile + literalText opt-out
