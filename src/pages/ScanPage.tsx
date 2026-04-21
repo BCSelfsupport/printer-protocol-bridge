@@ -72,6 +72,7 @@ export default function ScanPage() {
         if (cancelled) return;
         if (Array.isArray(requests) && requests.length > 0) {
           setPending(requests[0]);
+          setStatus('ready');
         }
       } catch (e) {
         // Silent — keep polling
