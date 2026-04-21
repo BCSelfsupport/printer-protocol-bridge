@@ -1469,7 +1469,17 @@ export function EditMessageScreen({
             
             onOpenUserDefine={() => setUserDefineDialogOpen(true)}
             onOpenGraphic={() => setGraphicDialogOpen(true)}
+            onOpenLinkedField={() => setLinkedFieldDialogOpen(true)}
             connectedPrinterLineId={connectedPrinterLineId}
+          />
+
+          {/* Linked Field Dialog */}
+          <LinkedFieldDialog
+            open={linkedFieldDialogOpen}
+            onOpenChange={setLinkedFieldDialogOpen}
+            onBack={() => setNewFieldDialogOpen(true)}
+            availableTokens={collectMessageTokens(message)}
+            onAddLinkedField={(data) => handleAddField('text', { linkedFieldData: data })}
           />
 
           {/* AutoCode Field Dialog */}
