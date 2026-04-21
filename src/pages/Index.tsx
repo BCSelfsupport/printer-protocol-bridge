@@ -56,6 +56,7 @@ import { logConsumption } from '@/lib/consumptionTracker';
 import { useFleetTelemetryPush } from '@/hooks/useFleetTelemetryPush';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { isRelayMode, printerTransport } from '@/lib/printerTransport';
+import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
 
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
@@ -1233,6 +1234,14 @@ const Index = () => {
   ): Promise<boolean> => {
     if (!targetPrinter) return false;
 
+    // Resolve any {TOKEN} placeholders (linked fields, QR codes referencing
+    // scanned values or counters) so the printer only ever receives baked data.
+    const tokenMap = buildTokenMap(updatedDetails);
+    const resolvedDetails: MessageDetails = {
+      ...updatedDetails,
+      fields: resolveAllFields(updatedDetails.fields, tokenMap),
+    };
+
     const isConnected = targetPrinter.id === connectionState.connectedPrinter?.id;
 
     // Use the same full-rewrite approach that works for date offset changes:
@@ -1250,8 +1259,8 @@ const Index = () => {
         }
 
         const result = await replaceMessageWithoutDelete(targetPrinter, message.name, {
-          fields: updatedDetails.fields,
-          templateValue: updatedDetails.templateValue,
+          fields: resolvedDetails.fields,
+          templateValue: resolvedDetails.templateValue,
         });
 
         if (!result.success) {
@@ -1271,8 +1280,8 @@ const Index = () => {
 
     // Non-connected printer: same full rewrite approach
     const result = await replaceMessageWithoutDelete(targetPrinter, message.name, {
-      fields: updatedDetails.fields,
-      templateValue: updatedDetails.templateValue,
+      fields: resolvedDetails.fields,
+      templateValue: resolvedDetails.templateValue,
     });
 
     if (!result.success) {
