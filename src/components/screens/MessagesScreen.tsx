@@ -665,6 +665,16 @@ export function MessagesScreen({
             ...details,
             fields: resolveAllFields(bakedFields, tokenMap),
           };
+
+          // Close the dialog and jump to the Dashboard immediately so the
+          // operator can watch the scanned value render live on the printer
+          // preview while the write is in flight.
+          setScanWaitingOpen(false);
+          setPendingScanRequestId(null);
+          setPendingScanContext(null);
+          setPendingScanExpiresAt(null);
+          onHome();
+
           try {
             toast.loading('Writing scanned value to printer…', { id: 'scan-apply' });
             const saved = await onSaveMessageContent(
@@ -687,12 +697,6 @@ export function MessagesScreen({
           } catch (e) {
             console.error('[MessagesScreen] scan apply failed:', e);
             toast.error('Failed to apply scanned value', { id: 'scan-apply' });
-          } finally {
-            setScanWaitingOpen(false);
-            setPendingScanRequestId(null);
-            setPendingScanContext(null);
-            setPendingScanExpiresAt(null);
-            onHome();
           }
         }}
       />
