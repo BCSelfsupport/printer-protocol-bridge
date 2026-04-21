@@ -191,6 +191,9 @@ export function FieldSettingsPanel({
   promptLabel,
   promptLength,
   onPromptBeforePrintChange,
+  fieldHasTokens,
+  literalText,
+  onLiteralTextChange,
 }: FieldSettingsPanelProps) {
   const fontLabel = allowedFonts.find(f => f.value === fontSize)?.label || fontSize;
 
@@ -272,6 +275,20 @@ export function FieldSettingsPanel({
             <span className="text-[10px] text-muted-foreground mb-1">Prompt</span>
             <span className={`text-sm font-bold ${promptBeforePrint ? 'text-primary' : 'text-muted-foreground'}`}>
               {promptBeforePrint ? 'ON' : 'OFF'}
+            </span>
+          </div>
+        )}
+
+        {/* Literal text opt-out — only shown when this field contains {TOKEN}-like syntax */}
+        {fieldHasTokens && onLiteralTextChange && (
+          <div
+            className={`bg-muted/50 rounded-md p-2 flex flex-col items-center justify-center cursor-pointer border ${literalText ? 'border-primary bg-primary/10' : 'border-transparent'} ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+            onClick={() => onLiteralTextChange(!literalText)}
+            title="When ON, {TOKEN} is printed verbatim instead of being substituted."
+          >
+            <span className="text-[10px] text-muted-foreground mb-1">Literal</span>
+            <span className={`text-sm font-bold ${literalText ? 'text-primary' : 'text-muted-foreground'}`}>
+              {literalText ? 'ON' : 'OFF'}
             </span>
           </div>
         )}
