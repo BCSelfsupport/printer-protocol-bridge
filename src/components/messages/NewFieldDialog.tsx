@@ -43,6 +43,7 @@ export function NewFieldDialog({
   onOpenBarcode,
   onOpenUserDefine,
   onOpenGraphic,
+  onOpenLinkedField,
   connectedPrinterLineId,
 }: NewFieldDialogProps) {
   const [configMode, setConfigMode] = useState<ConfigMode>(null);
@@ -76,6 +77,11 @@ export function NewFieldDialog({
     if (fieldType.value === 'logo') {
       onOpenChange(false);
       onOpenGraphic();
+      return;
+    }
+    if (fieldType.value === 'linkedfield') {
+      onOpenChange(false);
+      onOpenLinkedField();
       return;
     }
     if (fieldType.value === 'lineid') {
