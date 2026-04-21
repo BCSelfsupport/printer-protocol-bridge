@@ -1199,7 +1199,8 @@ export function EditMessageScreen({
                 templateValue={message.templateValue}
                 width={message.width}
                 fields={(() => {
-                  const tokenMap = buildTokenMap(message, customCounters);
+                  // Editor preview uses the user's configured startCount, not the live printer counter.
+                  const tokenMap = buildTokenMap(message);
                   return message.fields.map((f) => {
                     // Keep the currently-edited field raw so the operator sees/edits {TOKEN}
                     if (f.id === selectedFieldId) return f;
