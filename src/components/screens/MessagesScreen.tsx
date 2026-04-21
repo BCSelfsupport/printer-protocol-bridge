@@ -205,7 +205,59 @@ export function MessagesScreen({
         return;
       }
 
-      if (lineIdWasResolved && resolvedStored && onSaveMessageContent) {
+      // Scan-source prompts: open the "waiting for mobile scan" modal. The PC
+      // creates a pending scan_requests row; the paired phone fulfils it from
+      // the /scan page; we then bake the value via the existing apply path.
+      const scanFields = resolvedStored?.fields.filter(
+        f => f.promptBeforePrint && f.promptSource === 'scanner'
+      ) ?? [];
+      if (scanFields.length > 0 && resolvedStored && (onApplyPromptValues || onSaveMessageContent)) {
+        if (isCompanion) {
+          toast.error('Mobile companions can\'t initiate scan jobs — use the PC to select.');
+          return;
+        }
+        if (!productKey) {
+          toast.error('A licensed PC is required to start a scan job.');
+          return;
+        }
+        const scanField = scanFields[0]; // one-shot: handle the first scan field
+        try {
+          toast.loading('Requesting scan from paired mobile…', { id: 'scan-req' });
+          const res = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-request?action=create`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              },
+              body: JSON.stringify({
+                product_key: productKey,
+                machine_id: getMachineId(),
+                message_name: selectedMessage.name,
+                prompt_label: scanField.promptLabel || 'SCAN VALUE',
+                max_length: scanField.promptLength || 24,
+              }),
+            },
+          );
+          const data = await res.json();
+          if (!res.ok || !data.id) {
+            toast.error(data.error || 'Failed to create scan request', { id: 'scan-req' });
+            return;
+          }
+          toast.dismiss('scan-req');
+          setPendingScanContext({ message: selectedMessage, details: resolvedStored, fieldId: scanField.id });
+          setPendingScanLabel(scanField.promptLabel || 'SCAN VALUE');
+          setPendingScanRequestId(data.id);
+          setPendingScanExpiresAt(data.expires_at);
+          setScanWaitingOpen(true);
+        } catch (e) {
+          console.error('[MessagesScreen] scan-request create failed:', e);
+          toast.error('Could not reach scan service', { id: 'scan-req' });
+        }
+        return;
+      }
+
         const saved = await onSaveMessageContent(
           selectedMessage.name,
           resolvedStored.fields,
