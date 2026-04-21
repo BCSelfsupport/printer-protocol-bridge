@@ -87,11 +87,6 @@ export function NewFieldDialog({
       onOpenGraphic();
       return;
     }
-    if (fieldType.value === 'linkedfield') {
-      onOpenChange(false);
-      onOpenLinkedField();
-      return;
-    }
     if (fieldType.value === 'lineid') {
       if (!connectedPrinterLineId?.trim()) {
         setShowLineIdWarning(true);
