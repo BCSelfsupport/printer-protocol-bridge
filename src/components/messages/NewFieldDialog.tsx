@@ -21,10 +21,19 @@ const FIELD_TYPES = [
 
 export type PromptSource = 'keyboard' | 'scanner';
 
+export interface AddFieldOptions {
+  promptBeforePrint?: boolean;
+  promptLabel?: string;
+  promptLength?: number;
+  promptSource?: PromptSource;
+  lineIdValue?: string;
+  linkedFieldData?: string;  // Composed token string for a Linked Field (e.g. "{WORK_ORDER}")
+}
+
 interface NewFieldDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectFieldType: (type: string, options?: { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number; promptSource?: PromptSource; lineIdValue?: string }) => void;
+  onSelectFieldType: (type: string, options?: AddFieldOptions) => void;
   onOpenAutoCode: () => void;
   onOpenBarcode: () => void;
   onOpenUserDefine: () => void;

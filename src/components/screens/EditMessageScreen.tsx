@@ -617,7 +617,7 @@ export function EditMessageScreen({
     return computed ?? fieldType.toUpperCase();
   };
 
-  const handleAddField = (fieldType: string, formatOrOptions?: string | { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number; promptSource?: 'keyboard' | 'scanner'; lineIdValue?: string }) => {
+  const handleAddField = (fieldType: string, formatOrOptions?: string | { promptBeforePrint?: boolean; promptLabel?: string; promptLength?: number; promptSource?: 'keyboard' | 'scanner'; lineIdValue?: string; linkedFieldData?: string }) => {
     // Extract prompt options if provided as object
     const promptOptions = typeof formatOrOptions === 'object' ? formatOrOptions : undefined;
     const format = typeof formatOrOptions === 'string' ? formatOrOptions : undefined;
