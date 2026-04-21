@@ -222,7 +222,8 @@ export function MessagesScreen({
         }
         const scanField = scanFields[0]; // one-shot: handle the first scan field
         try {
-          toast.loading('Requesting scan from paired mobile…', { id: 'scan-req' });
+          // No transient toast — we go straight to the instructional dialog
+          // so the operator immediately sees what to do on the phone.
           const res = await fetch(
             `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-request?action=create`,
             {
@@ -242,10 +243,9 @@ export function MessagesScreen({
           );
           const data = await res.json();
           if (!res.ok || !data.id) {
-            toast.error(data.error || 'Failed to create scan request', { id: 'scan-req' });
+            toast.error(data.error || 'Failed to create scan request');
             return;
           }
-          toast.dismiss('scan-req');
           setPendingScanContext({ message: selectedMessage, details: resolvedStored, fieldId: scanField.id });
           setPendingScanLabel(scanField.promptLabel || 'SCAN VALUE');
           setPendingScanRequestId(data.id);
@@ -253,7 +253,7 @@ export function MessagesScreen({
           setScanWaitingOpen(true);
         } catch (e) {
           console.error('[MessagesScreen] scan-request create failed:', e);
-          toast.error('Could not reach scan service', { id: 'scan-req' });
+          toast.error('Could not reach scan service');
         }
         return;
       }
