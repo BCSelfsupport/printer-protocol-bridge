@@ -56,6 +56,7 @@ import { logConsumption } from '@/lib/consumptionTracker';
 import { useFleetTelemetryPush } from '@/hooks/useFleetTelemetryPush';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { isRelayMode, printerTransport } from '@/lib/printerTransport';
+import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
 
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
