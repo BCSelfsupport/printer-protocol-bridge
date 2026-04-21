@@ -712,7 +712,11 @@ export function EditMessageScreen({
             : fieldType.startsWith('counter_') ? 'counter'
             : fieldType.startsWith('date_') ? 'date'
             : fieldType as MessageField['type'],
-      data: lineIdValue ? lineIdValue : (promptOptions?.promptBeforePrint ? 'X'.repeat(promptOptions.promptLength || 3) : fieldData),
+      data: promptOptions?.linkedFieldData
+        ? promptOptions.linkedFieldData
+        : lineIdValue
+          ? lineIdValue
+          : (promptOptions?.promptBeforePrint ? 'X'.repeat(promptOptions.promptLength || 3) : fieldData),
       x: 0,
       y: newY,
       width: 50,
