@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScanLine, Smartphone, X } from 'lucide-react';
 import {
   Dialog,
@@ -47,9 +47,26 @@ export function ScanWaitingDialog({
     return () => clearInterval(id);
   }, [open, expiresAt]);
 
-  // Realtime subscription — fire onFulfilled the moment mobile updates the row
+  // Guard against double-fire (realtime + polling fallback can race).
+  const firedRef = useRef(false);
+
+  // Reset the guard whenever a new request is opened
+  useEffect(() => {
+    if (open && requestId) firedRef.current = false;
+  }, [open, requestId]);
+
+  // Realtime subscription — fire onFulfilled the moment mobile updates the row.
+  // We also poll every 2s as a fallback in case realtime drops or the channel
+  // subscribes after the UPDATE has already fired.
   useEffect(() => {
     if (!open || !requestId) return;
+
+    const fire = (value: string) => {
+      if (firedRef.current) return;
+      firedRef.current = true;
+      console.log('[ScanWaitingDialog] fulfilled value received:', value);
+      onFulfilled(value);
+    };
 
     const channel = supabase
       .channel(`scan-request-${requestId}`)
@@ -63,14 +80,35 @@ export function ScanWaitingDialog({
         },
         (payload) => {
           const row = payload.new as { status?: string; scanned_value?: string | null };
+          console.log('[ScanWaitingDialog] realtime update:', row);
           if (row.status === 'fulfilled' && typeof row.scanned_value === 'string') {
-            onFulfilled(row.scanned_value);
+            fire(row.scanned_value);
           }
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[ScanWaitingDialog] channel status:', status);
+      });
+
+    // Polling fallback — check the row every 2s in case realtime misses it
+    const pollId = setInterval(async () => {
+      if (firedRef.current) return;
+      const { data, error } = await supabase
+        .from('scan_requests')
+        .select('status, scanned_value')
+        .eq('id', requestId)
+        .maybeSingle();
+      if (error) {
+        console.warn('[ScanWaitingDialog] poll failed:', error);
+        return;
+      }
+      if (data?.status === 'fulfilled' && typeof data.scanned_value === 'string') {
+        fire(data.scanned_value);
+      }
+    }, 2000);
 
     return () => {
+      clearInterval(pollId);
       supabase.removeChannel(channel);
     };
   }, [open, requestId, onFulfilled]);
