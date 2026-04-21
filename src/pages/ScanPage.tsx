@@ -128,42 +128,41 @@ export default function ScanPage() {
     [pending, companionSessionId, callScanRequest, stopScanner],
   );
 
-  // Start camera scanner when a pending request appears
-  useEffect(() => {
-    if (!pending || status !== 'idle') return;
-
-    let cancelled = false;
-    const start = async () => {
-      try {
-        setStatus('scanning');
-        const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID, { verbose: false });
-        scannerRef.current = scanner;
-        await scanner.start(
-          { facingMode: 'environment' },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0,
-          },
-          (decodedText) => {
-            if (cancelled) return;
-            handleScannedValue(decodedText);
-          },
-          () => { /* ignore per-frame decode failures */ },
-        );
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Camera unavailable';
-        setErrorMessage(msg);
-        setStatus('error');
+  // Start camera scanner — MUST be triggered by a user gesture (tap),
+  // otherwise mobile browsers (especially iOS Safari) reject getUserMedia
+  // with "camera unavailable" / NotAllowedError.
+  const startCamera = useCallback(async () => {
+    if (!pending) return;
+    try {
+      setStatus('scanning');
+      setErrorMessage(null);
+      const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID, { verbose: false });
+      scannerRef.current = scanner;
+      await scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+        (decodedText) => { handleScannedValue(decodedText); },
+        () => { /* ignore per-frame decode failures */ },
+      );
+    } catch (e) {
+      const err = e as { name?: string; message?: string };
+      let msg = err?.message || 'Camera unavailable';
+      if (err?.name === 'NotAllowedError') {
+        msg = 'Camera permission denied. Please allow camera access in your browser settings and tap "Start camera" again.';
+      } else if (err?.name === 'NotFoundError') {
+        msg = 'No camera found on this device.';
+      } else if (err?.name === 'NotReadableError') {
+        msg = 'Camera is already in use by another app. Close other apps and try again.';
+      } else if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        msg = 'Camera requires HTTPS. Open this page over https://';
       }
-    };
-    start();
+      setErrorMessage(msg);
+      setStatus('error');
+    }
+  }, [pending, handleScannedValue]);
 
-    return () => {
-      cancelled = true;
-      stopScanner();
-    };
-  }, [pending, status, handleScannedValue, stopScanner]);
+  // Cleanup scanner when leaving the page
+  useEffect(() => () => { stopScanner(); }, [stopScanner]);
 
   // Cancel current scan and revert to idle
   const handleCancel = useCallback(async () => {
