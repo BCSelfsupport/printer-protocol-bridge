@@ -18,7 +18,7 @@ import { CounterDialog } from '@/components/messages/CounterDialog';
 import { UserDefineDialog, UserDefineConfig } from '@/components/messages/UserDefineDialog';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { LinkedFieldDialog } from '@/components/messages/LinkedFieldDialog';
-import { collectMessageTokens, buildTokenMap, resolveFieldData, hasTokens } from '@/lib/tokenResolver';
+import { collectMessageTokens, buildTokenMap, resolveFieldData, resolveAllFields, hasTokens } from '@/lib/tokenResolver';
 import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
 import { estimateBarcodeWidthDots } from '@/lib/barcodeRenderer';
 
@@ -1415,9 +1415,15 @@ export function EditMessageScreen({
                   onClick={async () => {
                     setIsSaving(true);
                     try {
-                      // Include adjust settings in the saved message
+                      // Include adjust settings in the saved message.
+                      // Bake any {TOKEN} placeholders into the printer-bound copy
+                      // (counter starts, prompt defaults) so the printer never
+                      // sees raw token syntax. The editor's local state keeps
+                      // the unresolved template for re-editing.
+                      const tokenMap = buildTokenMap(message);
                       const messageWithAdjust: MessageDetails = {
                         ...message,
+                        fields: resolveAllFields(message.fields, tokenMap),
                         adjustSettings: {
                           width: localAdjustSettings.width,
                           height: localAdjustSettings.height,
