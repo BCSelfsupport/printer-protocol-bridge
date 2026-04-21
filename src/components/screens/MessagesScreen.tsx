@@ -258,6 +258,7 @@ export function MessagesScreen({
         return;
       }
 
+      if (lineIdWasResolved && resolvedStored && onSaveMessageContent) {
         const saved = await onSaveMessageContent(
           selectedMessage.name,
           resolvedStored.fields,
