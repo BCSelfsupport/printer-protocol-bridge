@@ -13,7 +13,6 @@ const FIELD_TYPES = [
   { value: 'lineid', label: 'Line ID', icon: Tag, action: 'add' },
   { value: 'userdefine', label: 'User Define', icon: User, action: 'expand' },
   { value: 'scanfield', label: 'Scanned Field', icon: ScanLine, action: 'expand' },
-  { value: 'linkedfield', label: 'Linked Field', icon: Link2, action: 'submenu' },
   { value: 'autocode', label: 'AutoCode Field', icon: Hash, action: 'submenu' },
   { value: 'barcode', label: 'Barcode Field', icon: Barcode, action: 'submenu' },
   { value: 'logo', label: 'Graphic Field', icon: Image, action: 'submenu' },
@@ -86,11 +85,6 @@ export function NewFieldDialog({
     if (fieldType.value === 'logo') {
       onOpenChange(false);
       onOpenGraphic();
-      return;
-    }
-    if (fieldType.value === 'linkedfield') {
-      onOpenChange(false);
-      onOpenLinkedField();
       return;
     }
     if (fieldType.value === 'lineid') {
@@ -211,8 +205,8 @@ export function NewFieldDialog({
               <label className="text-foreground font-medium text-sm">Prompt Label:</label>
               <Input
                 value={promptLabel}
-                onChange={(e) => setPromptLabel(e.target.value)}
-                className="w-40 h-8 text-sm"
+                onChange={(e) => setPromptLabel(e.target.value.toUpperCase())}
+                className="w-40 h-8 text-sm uppercase"
                 placeholder={isScan ? 'WORK ORDER' : 'LOT CODE'}
               />
             </div>
