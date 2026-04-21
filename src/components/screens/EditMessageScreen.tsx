@@ -1416,14 +1416,12 @@ export function EditMessageScreen({
                     setIsSaving(true);
                     try {
                       // Include adjust settings in the saved message.
-                      // Bake any {TOKEN} placeholders into the printer-bound copy
-                      // (counter starts, prompt defaults) so the printer never
-                      // sees raw token syntax. The editor's local state keeps
-                      // the unresolved template for re-editing.
-                      const tokenMap = buildTokenMap(message);
+                      // Tokens (e.g. {COUNTER1}) stay as templates here — they're
+                      // resolved at the lowest layer (saveMessageContent) so the
+                      // printer always receives baked data while the editor keeps
+                      // the template for re-editing.
                       const messageWithAdjust: MessageDetails = {
                         ...message,
-                        fields: resolveAllFields(message.fields, tokenMap),
                         adjustSettings: {
                           width: localAdjustSettings.width,
                           height: localAdjustSettings.height,
@@ -1658,10 +1656,7 @@ export function EditMessageScreen({
                 <Button
                   onClick={async () => {
                     if (validateMessageName(saveAsName).valid) {
-                      // Bake tokens into the printer-bound copy (see Save handler).
-                      const tokenMap = buildTokenMap(message);
-                      const resolvedFields = resolveAllFields(message.fields, tokenMap);
-                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), fields: resolvedFields, adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch, speed: localAdjustSettings.speed, rotation: localAdjustSettings.rotation } }, true);
+                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch, speed: localAdjustSettings.speed, rotation: localAdjustSettings.rotation } }, true);
                       setSaveAsDialogOpen(false);
                       if (result && result.fields.length > 0) {
                         setMessage(prev => ({
