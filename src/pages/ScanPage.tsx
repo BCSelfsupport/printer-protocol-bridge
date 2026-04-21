@@ -136,11 +136,34 @@ export default function ScanPage() {
     try {
       setStatus('scanning');
       setErrorMessage(null);
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('This browser does not support camera access.');
+      }
+
+      // Preflight permission inside the user tap. On iPhone/WebKit this is
+      // more reliable than letting html5-qrcode request access implicitly.
+      const warmupStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      });
+      warmupStream.getTracks().forEach((track) => track.stop());
+
       const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID, { verbose: false });
       scannerRef.current = scanner;
+
+      const cameras = await Html5Qrcode.getCameras().catch(() => []);
+      const rearCamera = cameras.find((camera) => /back|rear|environment/i.test(camera.label));
+      const preferredCamera = rearCamera?.id || cameras[0]?.id || { facingMode: 'environment' };
+
       await scanner.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+        preferredCamera,
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+          disableFlip: false,
+        },
         (decodedText) => { handleScannedValue(decodedText); },
         () => { /* ignore per-frame decode failures */ },
       );
