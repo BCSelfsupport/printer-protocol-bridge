@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ScanLine, Smartphone, X } from 'lucide-react';
+import { ScanLine, Smartphone, X, ScanQrCode } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -130,7 +130,7 @@ export function ScanWaitingDialog({
           </button>
         </div>
 
-        <div className="bg-card p-6 space-y-5 text-center">
+        <div className="bg-card p-6 space-y-5">
           <div className="flex justify-center">
             <div className="relative">
               <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
@@ -140,25 +140,54 @@ export function ScanWaitingDialog({
             </div>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-foreground font-semibold">
-              Open <span className="text-primary">CodeSync</span> on your paired phone
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Go to the <span className="font-medium">Scan</span> tab and scan the QR/barcode for
-            </p>
-            <p className="text-base font-bold text-foreground tracking-wide">
+          <div className="text-center space-y-1">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Scan required</p>
+            <p className="text-2xl font-bold text-foreground tracking-wide">
               {promptLabel}
             </p>
           </div>
 
-          <div className="bg-muted/50 border border-border rounded-lg p-3 text-sm">
-            The printer will start printing automatically once the value arrives.
+          {/* Step-by-step instructions for the operator */}
+          <div className="bg-muted/40 border border-border rounded-lg p-4 space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              On your paired phone
+            </p>
+            <ol className="space-y-2.5">
+              <li className="flex gap-3 items-start">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
+                  1
+                </span>
+                <p className="text-sm text-foreground pt-0.5">
+                  Open the <span className="font-semibold text-primary">CodeSync</span> mobile app
+                </p>
+              </li>
+              <li className="flex gap-3 items-start">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
+                  2
+                </span>
+                <p className="text-sm text-foreground pt-0.5">
+                  Tap <span className="font-semibold">Start camera</span> when prompted
+                </p>
+              </li>
+              <li className="flex gap-3 items-start">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
+                  3
+                </span>
+                <p className="text-sm text-foreground pt-0.5 flex items-center gap-1.5 flex-wrap">
+                  <ScanQrCode className="w-4 h-4 text-primary flex-shrink-0" />
+                  <span>Scan the <span className="font-semibold">{promptLabel}</span> barcode or QR code</span>
+                </p>
+              </li>
+            </ol>
+          </div>
+
+          <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-xs text-center text-foreground">
+            The printer will start printing automatically as soon as the scanned value arrives.
           </div>
 
           {expiresAt && (
-            <p className="text-xs text-muted-foreground">
-              Request expires in <span className="font-mono">{timeLabel}</span>
+            <p className="text-xs text-muted-foreground text-center">
+              Request expires in <span className="font-mono font-semibold">{timeLabel}</span>
             </p>
           )}
 
