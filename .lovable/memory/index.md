@@ -110,3 +110,4 @@ Updated: now
 - [Sync Matching](mem://features/message-metadata-sync-matching) — Prioritize by exact data content
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
 - [PC Library](mem://features/pc-library-overflow) — Overflow messages stored on PC with swap-slot push mechanism
+- [Scanned Field](mem://features/scanned-field-type) — promptSource='scanner' tile creates scan-only prompted field; PC keyboard dialog filters to keyboard-source
