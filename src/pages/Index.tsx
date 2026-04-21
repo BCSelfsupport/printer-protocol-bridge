@@ -1234,6 +1234,14 @@ const Index = () => {
   ): Promise<boolean> => {
     if (!targetPrinter) return false;
 
+    // Resolve any {TOKEN} placeholders (linked fields, QR codes referencing
+    // scanned values or counters) so the printer only ever receives baked data.
+    const tokenMap = buildTokenMap(updatedDetails);
+    const resolvedDetails: MessageDetails = {
+      ...updatedDetails,
+      fields: resolveAllFields(updatedDetails.fields, tokenMap),
+    };
+
     const isConnected = targetPrinter.id === connectionState.connectedPrinter?.id;
 
     // Use the same full-rewrite approach that works for date offset changes:
