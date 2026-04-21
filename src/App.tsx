@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import TelemetryPage from "./pages/TelemetryPage";
 import DiagnosticsPage from "./pages/DiagnosticsPage";
 import NotFound from "./pages/NotFound";
+import ScanPage from "./pages/ScanPage";
 import { UpdateNotification } from "./components/UpdateNotification";
 import { SplashScreen } from "./components/SplashScreen";
 import { LicenseProvider } from "./contexts/LicenseContext";
@@ -47,6 +48,7 @@ const App = () => {
                   <Route path="/" element={<Index />} />
                   <Route path="/telemetry" element={<TelemetryPage />} />
                   <Route path="/diagnostics" element={<DiagnosticsPage />} />
+                  <Route path="/scan" element={<ScanPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </HashRouter>

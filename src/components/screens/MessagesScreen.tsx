@@ -27,10 +27,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
+import { ScanWaitingDialog } from '@/components/messages/ScanWaitingDialog';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
 import { isReadOnlyMessage } from '@/hooks/useMessageStorage';
 import { MessageThumbnail } from '@/components/messages/MessageThumbnail';
+import { useLicense } from '@/contexts/LicenseContext';
+
+const MACHINE_ID_KEY = 'codesync-machine-id';
+function getMachineId(): string {
+  let id = localStorage.getItem(MACHINE_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(MACHINE_ID_KEY, id);
+  }
+  return id;
+}
 
 interface MessagesScreenProps {
   messages: PrintMessage[];
@@ -113,6 +125,17 @@ export function MessagesScreen({
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
   const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
   const [pendingMessageDetails, setPendingMessageDetails] = useState<MessageDetails | null>(null);
+  // Mobile-scan workflow state
+  const [scanWaitingOpen, setScanWaitingOpen] = useState(false);
+  const [pendingScanRequestId, setPendingScanRequestId] = useState<string | null>(null);
+  const [pendingScanExpiresAt, setPendingScanExpiresAt] = useState<string | null>(null);
+  const [pendingScanLabel, setPendingScanLabel] = useState<string>('');
+  const [pendingScanContext, setPendingScanContext] = useState<{
+    message: PrintMessage;
+    details: MessageDetails;
+    fieldId: number;
+  } | null>(null);
+  const { productKey, isCompanion } = useLicense();
   const [pcLibraryOpen, setPcLibraryOpen] = useState(false);
   const [selectedLibraryMessage, setSelectedLibraryMessage] = useState<MessageDetails | null>(null);
   const [selectedLibrarySourcePrinterId, setSelectedLibrarySourcePrinterId] = useState<number | undefined>(undefined);
@@ -179,6 +202,59 @@ export function MessagesScreen({
         setPendingMessageDetails(resolvedStored);
         setUserDefinePrompts(prompts);
         setUserDefineEntryOpen(true);
+        return;
+      }
+
+      // Scan-source prompts: open the "waiting for mobile scan" modal. The PC
+      // creates a pending scan_requests row; the paired phone fulfils it from
+      // the /scan page; we then bake the value via the existing apply path.
+      const scanFields = resolvedStored?.fields.filter(
+        f => f.promptBeforePrint && f.promptSource === 'scanner'
+      ) ?? [];
+      if (scanFields.length > 0 && resolvedStored && (onApplyPromptValues || onSaveMessageContent)) {
+        if (isCompanion) {
+          toast.error('Mobile companions can\'t initiate scan jobs — use the PC to select.');
+          return;
+        }
+        if (!productKey) {
+          toast.error('A licensed PC is required to start a scan job.');
+          return;
+        }
+        const scanField = scanFields[0]; // one-shot: handle the first scan field
+        try {
+          toast.loading('Requesting scan from paired mobile…', { id: 'scan-req' });
+          const res = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-request?action=create`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              },
+              body: JSON.stringify({
+                product_key: productKey,
+                machine_id: getMachineId(),
+                message_name: selectedMessage.name,
+                prompt_label: scanField.promptLabel || 'SCAN VALUE',
+                max_length: scanField.promptLength || 24,
+              }),
+            },
+          );
+          const data = await res.json();
+          if (!res.ok || !data.id) {
+            toast.error(data.error || 'Failed to create scan request', { id: 'scan-req' });
+            return;
+          }
+          toast.dismiss('scan-req');
+          setPendingScanContext({ message: selectedMessage, details: resolvedStored, fieldId: scanField.id });
+          setPendingScanLabel(scanField.promptLabel || 'SCAN VALUE');
+          setPendingScanRequestId(data.id);
+          setPendingScanExpiresAt(data.expires_at);
+          setScanWaitingOpen(true);
+        } catch (e) {
+          console.error('[MessagesScreen] scan-request create failed:', e);
+          toast.error('Could not reach scan service', { id: 'scan-req' });
+        }
         return;
       }
 
@@ -545,7 +621,81 @@ export function MessagesScreen({
                   handleNewMessage();
                 }
               }}
-            />
+      />
+
+      {/* Mobile-scan waiting modal — opens after selecting a message with scanner-source field */}
+      <ScanWaitingDialog
+        open={scanWaitingOpen}
+        requestId={pendingScanRequestId}
+        promptLabel={pendingScanLabel}
+        expiresAt={pendingScanExpiresAt}
+        onCancel={async () => {
+          // Mark request cancelled server-side so mobile drops it
+          if (pendingScanRequestId && productKey) {
+            try {
+              await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-request?action=cancel`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                  },
+                  body: JSON.stringify({ product_key: productKey, request_id: pendingScanRequestId }),
+                },
+              );
+            } catch {}
+          }
+          setScanWaitingOpen(false);
+          setPendingScanRequestId(null);
+          setPendingScanContext(null);
+          setPendingScanExpiresAt(null);
+        }}
+        onFulfilled={async (value) => {
+          if (!pendingScanContext || !onSaveMessageContent) return;
+          const { message, details, fieldId } = pendingScanContext;
+          // Bake the scanned value into the source prompt field, then expand
+          // any {TOKEN} placeholders across all fields (so QR codes referencing
+          // {WORK_ORDER} or {COUNTER1} resolve to real data).
+          const bakedFields = details.fields.map(f =>
+            f.id === fieldId ? { ...f, data: value } : f
+          );
+          const tokenMap = buildTokenMap({ ...details, fields: bakedFields });
+          const updatedDetails: MessageDetails = {
+            ...details,
+            fields: resolveAllFields(bakedFields, tokenMap),
+          };
+          try {
+            toast.loading('Writing scanned value to printer…', { id: 'scan-apply' });
+            const saved = await onSaveMessageContent(
+              message.name,
+              updatedDetails.fields,
+              updatedDetails.templateValue,
+              false,
+              updatedDetails.settings ? {
+                speed: updatedDetails.settings.speed,
+                rotation: updatedDetails.settings.rotation,
+                printMode: updatedDetails.settings.printMode,
+              } : undefined,
+            );
+            if (!saved) { toast.error('Failed to write scanned value', { id: 'scan-apply' }); return; }
+            const selected = await onSelect(message);
+            if (!selected) { toast.error('Saved but failed to select', { id: 'scan-apply' }); return; }
+            onSaveStoredMessage?.(updatedDetails);
+            onPromptSaved?.(updatedDetails);
+            toast.success(`Printing with ${pendingScanLabel} = ${value}`, { id: 'scan-apply' });
+          } catch (e) {
+            console.error('[MessagesScreen] scan apply failed:', e);
+            toast.error('Failed to apply scanned value', { id: 'scan-apply' });
+          } finally {
+            setScanWaitingOpen(false);
+            setPendingScanRequestId(null);
+            setPendingScanContext(null);
+            setPendingScanExpiresAt(null);
+            onHome();
+          }
+        }}
+      />
             {newMessageName && !nameValidation.valid && (
               <p className="text-sm text-destructive mt-1">{nameValidation.error}</p>
             )}
