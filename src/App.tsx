@@ -15,6 +15,7 @@ import { SplashScreen } from "./components/SplashScreen";
 import { LicenseProvider } from "./contexts/LicenseContext";
 import { DemoWatermark } from "./components/license/DemoWatermark";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { CompanionScanFab } from "./components/CompanionScanFab";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => {
               <DemoWatermark />
               {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
               <HashRouter>
+                <CompanionScanFab />
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/telemetry" element={<TelemetryPage />} />
