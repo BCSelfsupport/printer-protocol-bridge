@@ -34,7 +34,7 @@ function getMachineId(): string {
 export default function ScanPage() {
   const { isCompanion, companionSessionId } = useLicense();
   const [pending, setPending] = useState<PendingScanRequest | null>(null);
-  const [status, setStatus] = useState<'idle' | 'scanning' | 'sending' | 'sent' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'ready' | 'scanning' | 'sending' | 'sent' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
