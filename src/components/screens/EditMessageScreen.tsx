@@ -1296,6 +1296,17 @@ export function EditMessageScreen({
                   ),
                 }));
               }}
+              fieldHasTokens={hasTokens(selectedField?.data)}
+              literalText={selectedField?.literalText}
+              onLiteralTextChange={(enabled) => {
+                if (!selectedFieldId) return;
+                setMessage((prev) => ({
+                  ...prev,
+                  fields: prev.fields.map((f) =>
+                    f.id === selectedFieldId ? { ...f, literalText: enabled || undefined } : f
+                  ),
+                }));
+              }}
             />
 
           </div>
