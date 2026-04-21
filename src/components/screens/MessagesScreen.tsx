@@ -621,7 +621,81 @@ export function MessagesScreen({
                   handleNewMessage();
                 }
               }}
-            />
+      />
+
+      {/* Mobile-scan waiting modal — opens after selecting a message with scanner-source field */}
+      <ScanWaitingDialog
+        open={scanWaitingOpen}
+        requestId={pendingScanRequestId}
+        promptLabel={pendingScanLabel}
+        expiresAt={pendingScanExpiresAt}
+        onCancel={async () => {
+          // Mark request cancelled server-side so mobile drops it
+          if (pendingScanRequestId && productKey) {
+            try {
+              await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-request?action=cancel`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                  },
+                  body: JSON.stringify({ product_key: productKey, request_id: pendingScanRequestId }),
+                },
+              );
+            } catch {}
+          }
+          setScanWaitingOpen(false);
+          setPendingScanRequestId(null);
+          setPendingScanContext(null);
+          setPendingScanExpiresAt(null);
+        }}
+        onFulfilled={async (value) => {
+          if (!pendingScanContext || !onSaveMessageContent) return;
+          const { message, details, fieldId } = pendingScanContext;
+          // Bake the scanned value into the source prompt field, then expand
+          // any {TOKEN} placeholders across all fields (so QR codes referencing
+          // {WORK_ORDER} or {COUNTER1} resolve to real data).
+          const bakedFields = details.fields.map(f =>
+            f.id === fieldId ? { ...f, data: value } : f
+          );
+          const tokenMap = buildTokenMap({ ...details, fields: bakedFields });
+          const updatedDetails: MessageDetails = {
+            ...details,
+            fields: resolveAllFields(bakedFields, tokenMap),
+          };
+          try {
+            toast.loading('Writing scanned value to printer…', { id: 'scan-apply' });
+            const saved = await onSaveMessageContent(
+              message.name,
+              updatedDetails.fields,
+              updatedDetails.templateValue,
+              false,
+              updatedDetails.settings ? {
+                speed: updatedDetails.settings.speed,
+                rotation: updatedDetails.settings.rotation,
+                printMode: updatedDetails.settings.printMode,
+              } : undefined,
+            );
+            if (!saved) { toast.error('Failed to write scanned value', { id: 'scan-apply' }); return; }
+            const selected = await onSelect(message);
+            if (!selected) { toast.error('Saved but failed to select', { id: 'scan-apply' }); return; }
+            onSaveStoredMessage?.(updatedDetails);
+            onPromptSaved?.(updatedDetails);
+            toast.success(`Printing with ${pendingScanLabel} = ${value}`, { id: 'scan-apply' });
+          } catch (e) {
+            console.error('[MessagesScreen] scan apply failed:', e);
+            toast.error('Failed to apply scanned value', { id: 'scan-apply' });
+          } finally {
+            setScanWaitingOpen(false);
+            setPendingScanRequestId(null);
+            setPendingScanContext(null);
+            setPendingScanExpiresAt(null);
+            onHome();
+          }
+        }}
+      />
             {newMessageName && !nameValidation.valid && (
               <p className="text-sm text-destructive mt-1">{nameValidation.error}</p>
             )}
