@@ -1190,7 +1190,7 @@ const Index = () => {
             messageName,
             result,
           });
-          toast.error(`Failed to apply saved Adjust settings for "${messageName}"`);
+          // Silent failure — Adjust re-apply is best-effort; print itself already succeeded
           return;
         }
       } finally {
@@ -1204,7 +1204,7 @@ const Index = () => {
           messageName,
           result,
         });
-        toast.error(`Failed to apply saved Adjust settings for "${messageName}"`);
+        // Silent failure — Adjust re-apply is best-effort
         return;
       }
     }
