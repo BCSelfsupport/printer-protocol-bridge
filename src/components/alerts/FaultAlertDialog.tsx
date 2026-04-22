@@ -85,6 +85,20 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
   const [imageExtIndex, setImageExtIndex] = useState(0);
   const [imageVariantIndex, setImageVariantIndex] = useState(0);
 
+  // Tracks the previously observed live fault count, used to detect when a
+  // ^CA we sent did NOT reduce the live ^LE list — meaning the printer
+  // consumed it on an unknown HMI event window (e.g. the 01-8002 Power
+  // warning) instead of one of our queued faults. When that happens we send
+  // an extra ^CA to "catch up" so dismissals stay aligned with our queue.
+  const prevLiveCountRef = useRef<number>(0);
+  // True for the very first ^LE poll after (re)connect. We use this to send
+  // a single proactive ^CA to drain any pre-existing event window sitting in
+  // front of the real fault list.
+  const initialDrainDoneRef = useRef<boolean>(false);
+  // Number of ^CA dismissals we've sent and are still waiting on the printer
+  // to acknowledge by reducing its live fault count.
+  const pendingDismissesRef = useRef<number>(0);
+
   // Reset everything on disconnect.
   useEffect(() => {
     if (isConnected) return;
@@ -92,6 +106,9 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
     setQueueCodes([]);
     snoozedRef.current.clear();
     seenCodesRef.current.clear();
+    prevLiveCountRef.current = 0;
+    initialDrainDoneRef.current = false;
+    pendingDismissesRef.current = 0;
   }, [isConnected]);
 
   // Sync queue with incoming faults.
