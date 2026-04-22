@@ -280,19 +280,52 @@ export function parseErrorListResponse(response: string): ErrorListResult | null
 
   const lines = response.split(/[\r\n]+/);
   for (const line of lines) {
-    // Match error lines like "10-0002 (F) - Ink fluid level empty." (supports hex codes like 0A-8001)
-    const m = line.match(/([0-9A-Fa-f]+-[0-9A-Fa-f]+)\s*\((\w)\)\s*-\s*(.+)/);
-    if (m) {
-      const [, code, severity, message] = m;
-      errors.push({ code, severity, message: message.trim() });
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    // Skip protocol noise lines
+    if (/^(end of list|success|>|\^le)\b/i.test(trimmed)) continue;
 
-      const upper = message.toUpperCase();
-      if (upper.includes('INK') && upper.includes('EMPTY')) {
-        inkEmpty = true;
+    // Try multiple real-world ^LE line formats:
+    //   "10-0002 (F) - Ink fluid level empty."   ← documented v2.6 format
+    //   "01-8002 (W) Last shutdown due to loss of power."  ← no dash separator
+    //   "01-8002 W - Last shutdown due to loss of power."  ← no parens
+    //   "01-8002: Last shutdown due to loss of power."     ← no severity
+    //   "01-8002 - Last shutdown due to loss of power."    ← no severity
+    //   "[W] 01-8002 Last shutdown due to loss of power."  ← severity prefix
+    //   "*01-8002 (W) Last shutdown due to loss of power." ← leading marker
+    let m = trimmed.match(/([0-9A-Fa-f]{1,4}-[0-9A-Fa-f]{2,5})\s*[\(\[]?\s*([FfWwIi])\s*[\)\]]?\s*[-:]?\s*(.+)/);
+    if (!m) {
+      // Try severity-prefix form: "(W) 01-8002 - message" or "[W] 01-8002 message"
+      m = trimmed.match(/[\(\[]\s*([FfWwIi])\s*[\)\]]\s*([0-9A-Fa-f]{1,4}-[0-9A-Fa-f]{2,5})\s*[-:]?\s*(.+)/);
+      if (m) {
+        const [, severity, code, message] = m;
+        errors.push({ code, severity: severity.toUpperCase(), message: message.trim() });
+        const upper = message.toUpperCase();
+        if (upper.includes('INK') && upper.includes('EMPTY')) inkEmpty = true;
+        if (upper.includes('MAKEUP') && upper.includes('EMPTY')) makeupEmpty = true;
+        continue;
       }
-      if (upper.includes('MAKEUP') && upper.includes('EMPTY')) {
-        makeupEmpty = true;
+      // Last-resort: code with no severity at all
+      m = trimmed.match(/([0-9A-Fa-f]{1,4}-[0-9A-Fa-f]{2,5})\s*[-:]\s*(.+)/);
+      if (m) {
+        const [, code, message] = m;
+        errors.push({ code, severity: 'F', message: message.trim() });
+        const upper = message.toUpperCase();
+        if (upper.includes('INK') && upper.includes('EMPTY')) inkEmpty = true;
+        if (upper.includes('MAKEUP') && upper.includes('EMPTY')) makeupEmpty = true;
       }
+      continue;
+    }
+
+    const [, code, severity, message] = m;
+    errors.push({ code, severity: severity.toUpperCase(), message: message.trim() });
+
+    const upper = message.toUpperCase();
+    if (upper.includes('INK') && upper.includes('EMPTY')) {
+      inkEmpty = true;
+    }
+    if (upper.includes('MAKEUP') && upper.includes('EMPTY')) {
+      makeupEmpty = true;
     }
   }
 
