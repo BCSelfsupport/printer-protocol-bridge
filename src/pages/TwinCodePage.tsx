@@ -15,6 +15,7 @@ import { SkewScatter } from "@/twin-code/components/SkewScatter";
 import { ThroughputGauge } from "@/twin-code/components/ThroughputGauge";
 import { BottleneckCallout } from "@/twin-code/components/BottleneckCallout";
 import { StageHeatmap } from "@/twin-code/components/StageHeatmap";
+import { ConveyorPanel } from "@/twin-code/components/ConveyorPanel";
 
 const PAGE_TITLE = "Twin Code — Profiler Harness (Phase 1a)";
 
