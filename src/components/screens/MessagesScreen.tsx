@@ -621,7 +621,34 @@ export function MessagesScreen({
                   handleNewMessage();
                 }
               }}
-      />
+            />
+            {newMessageName && !nameValidation.valid && (
+              <p className="text-sm text-destructive mt-1">{nameValidation.error}</p>
+            )}
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleNewMessage('metrc-retail-id')}
+              disabled={!nameValidation.valid}
+              className="mr-auto flex items-center gap-1.5 text-green-600 border-green-600/30 hover:bg-green-600/10"
+            >
+              <Leaf className="w-4 h-4" />
+              METRC Retail ID
+            </Button>
+            <Button variant="outline" onClick={() => setNewDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => handleNewMessage()}
+              disabled={!nameValidation.valid}
+            >
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Mobile-scan waiting modal — opens after selecting a message with scanner-source field */}
       <ScanWaitingDialog
@@ -630,7 +657,6 @@ export function MessagesScreen({
         promptLabel={pendingScanLabel}
         expiresAt={pendingScanExpiresAt}
         onCancel={async () => {
-          // Mark request cancelled server-side so mobile drops it
           if (pendingScanRequestId && productKey) {
             try {
               await fetch(
@@ -654,9 +680,6 @@ export function MessagesScreen({
         onFulfilled={async (value) => {
           if (!pendingScanContext || !onSaveMessageContent) return;
           const { message, details, fieldId } = pendingScanContext;
-          // Bake the scanned value into the source prompt field, then expand
-          // any {TOKEN} placeholders across all fields (so QR codes referencing
-          // {WORK_ORDER} or {COUNTER1} resolve to real data).
           const bakedFields = details.fields.map(f =>
             f.id === fieldId ? { ...f, data: value } : f
           );
@@ -666,9 +689,6 @@ export function MessagesScreen({
             fields: resolveAllFields(bakedFields, tokenMap),
           };
 
-          // Close the dialog and jump to the Dashboard immediately so the
-          // operator can watch the scanned value render live on the printer
-          // preview while the write is in flight.
           setScanWaitingOpen(false);
           setPendingScanRequestId(null);
           setPendingScanContext(null);
@@ -700,33 +720,6 @@ export function MessagesScreen({
           }
         }}
       />
-            {newMessageName && !nameValidation.valid && (
-              <p className="text-sm text-destructive mt-1">{nameValidation.error}</p>
-            )}
-          </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleNewMessage('metrc-retail-id')}
-              disabled={!nameValidation.valid}
-              className="mr-auto flex items-center gap-1.5 text-green-600 border-green-600/30 hover:bg-green-600/10"
-            >
-              <Leaf className="w-4 h-4" />
-              METRC Retail ID
-            </Button>
-            <Button variant="outline" onClick={() => setNewDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => handleNewMessage()}
-              disabled={!nameValidation.valid}
-            >
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
