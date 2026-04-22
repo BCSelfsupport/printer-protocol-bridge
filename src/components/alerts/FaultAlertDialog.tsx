@@ -170,18 +170,24 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
     if (!currentFault) return;
     const dismissedCode = currentFault.code;
 
-    // Send ^CA to clear the fault on the printer hardware.
-    onAcknowledge?.();
-
     // Snooze so it doesn't re-pop immediately if the printer keeps reporting
     // it on the next ^LE cycle.
     snoozedRef.current.set(dismissedCode, Date.now() + SNOOZE_DURATION_MS);
 
-    // Pop the head of the queue. Radix may auto-close via AlertDialogAction;
-    // the open/close effect above will reopen the dialog automatically if
-    // there's another queued fault.
-    setQueueCodes((prev) => prev.filter((c) => c !== dismissedCode));
-  }, [currentFault, onAcknowledge]);
+    // Only send ^CA when dismissing the LAST queued fault. ^CA is a
+    // "clear all faults" command on the hardware — sending it per-popup
+    // would acknowledge every active fault (e.g. clearing Makeup would
+    // also wipe Cooling). By deferring until the queue is empty, the
+    // operator gets to review every fault before the hardware-side ack.
+    const remaining = queueCodes.filter((c) => c !== dismissedCode);
+    if (remaining.length === 0) {
+      onAcknowledge?.();
+    }
+
+    // Pop the head of the queue. The open/close effect above will reopen
+    // the dialog automatically if there's another queued fault.
+    setQueueCodes(remaining);
+  }, [currentFault, onAcknowledge, queueCodes]);
 
   // Allow snooze to expire so the fault can pop again later if still active.
   // We clear it lazily inside the sync effect above; nothing to do here.
