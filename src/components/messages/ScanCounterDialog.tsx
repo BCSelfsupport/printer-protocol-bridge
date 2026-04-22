@@ -59,6 +59,19 @@ export function ScanCounterDialog({
   const slots = useMemo(() => detectReferencedCounters(details), [details]);
   const [values, setValues] = useState<Record<number, string>>({});
 
+  // Map each slot → its configured Start Count from the message's advanced
+  // settings. This is what "Reset" should restore to (NOT a hardcoded 0),
+  // because the printer's own Counter Reset behaviour uses startCount.
+  const startCounts = useMemo(() => {
+    const map: Record<number, number> = {};
+    const configs = details?.advancedSettings?.counters ?? [];
+    for (const slot of slots) {
+      const cfg = configs.find((c) => c.id === slot);
+      map[slot] = cfg?.startCount ?? 0;
+    }
+    return map;
+  }, [details, slots]);
+
   // Seed the inputs with the current live count whenever the dialog opens.
   useEffect(() => {
     if (!open) return;
@@ -106,6 +119,7 @@ export function ScanCounterDialog({
         <div className="space-y-3">
           {slots.map((slot) => {
             const live = liveCounters?.[slot - 1] ?? 0;
+            const startCount = startCounts[slot] ?? 0;
             return (
               <div key={slot} className="space-y-1">
                 <Label htmlFor={`counter-${slot}`} className="text-sm">
@@ -128,10 +142,13 @@ export function ScanCounterDialog({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setValues((prev) => ({ ...prev, [slot]: '0' }))}
+                    onClick={() =>
+                      setValues((prev) => ({ ...prev, [slot]: String(startCount) }))
+                    }
+                    title={`Reset to configured Start Count (${startCount})`}
                   >
                     <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                    Reset to 0
+                    Reset to {startCount}
                   </Button>
                 </div>
               </div>
