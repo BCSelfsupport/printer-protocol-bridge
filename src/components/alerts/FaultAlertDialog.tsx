@@ -245,20 +245,26 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
                 }
               }}
             />
-            {/* Invisible clickable hotspot over the OK button area in the image
-                Positioned at roughly bottom-right where the OK button sits */}
-            <AlertDialogPrimitive.Action
-              className="absolute cursor-pointer"
+            {/* Invisible clickable hotspot over the OK button area in the image.
+                NOTE: We intentionally use a plain <button> here, NOT
+                AlertDialogPrimitive.Action — Action triggers Radix's internal
+                close, which then re-fires onOpenChange(false) and would cause
+                handleDismiss() to run twice (skipping the next queued fault,
+                e.g. dismissing Makeup would also skip past Cooling). */}
+            <button
+              type="button"
+              className="absolute cursor-pointer bg-transparent"
               style={{ right: '8%', bottom: '4%', width: '25%', height: '12%' }}
               onClick={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 handleDismiss();
               }}
             >
               <span className="sr-only">
                 {!isLastFault ? 'Next Fault' : 'OK'}
               </span>
-            </AlertDialogPrimitive.Action>
+            </button>
           </div>
         </AlertDialogPrimitive.Content>
       </AlertDialogPrimitive.Portal>
