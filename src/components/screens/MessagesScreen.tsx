@@ -650,6 +650,77 @@ export function MessagesScreen({
         </DialogContent>
       </Dialog>
 
+      {/* Mobile-scan waiting modal — opens after selecting a message with scanner-source field */}
+      <ScanWaitingDialog
+        open={scanWaitingOpen}
+        requestId={pendingScanRequestId}
+        promptLabel={pendingScanLabel}
+        expiresAt={pendingScanExpiresAt}
+        onCancel={async () => {
+          if (pendingScanRequestId && productKey) {
+            try {
+              await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-request?action=cancel`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                  },
+                  body: JSON.stringify({ product_key: productKey, request_id: pendingScanRequestId }),
+                },
+              );
+            } catch {}
+          }
+          setScanWaitingOpen(false);
+          setPendingScanRequestId(null);
+          setPendingScanContext(null);
+          setPendingScanExpiresAt(null);
+        }}
+        onFulfilled={async (value) => {
+          if (!pendingScanContext || !onSaveMessageContent) return;
+          const { message, details, fieldId } = pendingScanContext;
+          const bakedFields = details.fields.map(f =>
+            f.id === fieldId ? { ...f, data: value } : f
+          );
+          const tokenMap = buildTokenMap({ ...details, fields: bakedFields });
+          const updatedDetails: MessageDetails = {
+            ...details,
+            fields: resolveAllFields(bakedFields, tokenMap),
+          };
+
+          setScanWaitingOpen(false);
+          setPendingScanRequestId(null);
+          setPendingScanContext(null);
+          setPendingScanExpiresAt(null);
+          onHome();
+
+          try {
+            toast.loading('Writing scanned value to printer…', { id: 'scan-apply' });
+            const saved = await onSaveMessageContent(
+              message.name,
+              updatedDetails.fields,
+              updatedDetails.templateValue,
+              false,
+              updatedDetails.settings ? {
+                speed: updatedDetails.settings.speed,
+                rotation: updatedDetails.settings.rotation,
+                printMode: updatedDetails.settings.printMode,
+              } : undefined,
+            );
+            if (!saved) { toast.error('Failed to write scanned value', { id: 'scan-apply' }); return; }
+            const selected = await onSelect(message);
+            if (!selected) { toast.error('Saved but failed to select', { id: 'scan-apply' }); return; }
+            onSaveStoredMessage?.(updatedDetails);
+            onPromptSaved?.(updatedDetails);
+            toast.success(`Printing with ${pendingScanLabel} = ${value}`, { id: 'scan-apply' });
+          } catch (e) {
+            console.error('[MessagesScreen] scan apply failed:', e);
+            toast.error('Failed to apply scanned value', { id: 'scan-apply' });
+          }
+        }}
+      />
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
