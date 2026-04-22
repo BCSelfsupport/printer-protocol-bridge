@@ -464,12 +464,27 @@ function calculateRequiredWidth(messageContent: MessageDetails | undefined, mess
     messageContent.fields.forEach((field) => {
       const fontName = field.fontSize || 'Standard16High';
       const fontInfo = getFontInfo(fontName);
+      const fieldGap = (field as any).gap ?? 1;
       const x = field.x * dotSize;
-      const textWidth = field.data.length * (fontInfo.charWidth + 1) * dotSize;
+      // Barcodes/graphics use their declared width directly (no font math)
+      if (field.type === 'barcode' || (field.type as string) === 'logo' || (field.type as string) === 'graphic') {
+        const w = (field.width || 0) * dotSize;
+        maxXEnd = Math.max(maxXEnd, x + w);
+        return;
+      }
+      // For autocode date/time fields the stored data may be the format token
+      // (e.g. "MM/DD/YY") while the rendered value is the resolved string of
+      // the same length, so length-based math is fine. We add an extra char of
+      // slack to absorb any rounding between calc/render gaps.
+      const charCount = Math.max(1, field.data.length) + 1;
+      const textWidth = charCount * (fontInfo.charWidth + fieldGap) * dotSize;
       maxXEnd = Math.max(maxXEnd, x + textWidth);
     });
+    // Also respect the printer-reported message width (W: in ^LF) so we never
+    // size the canvas smaller than the message envelope itself.
+    const envelopeWidth = (messageContent.width || 0) * dotSize;
     // Add some padding
-    return Math.max(MIN_CANVAS_WIDTH, maxXEnd + 20);
+    return Math.max(MIN_CANVAS_WIDTH, Math.max(maxXEnd, envelopeWidth) + 20);
   }
 
   // Fallback path: message string with time/date on right
