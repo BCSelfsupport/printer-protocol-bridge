@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog';
 import { getAuthenticatedAssetUrl } from '@/lib/assetAuth';
 
@@ -31,117 +31,147 @@ const normalizeFaultCodeForAsset = (rawCode: string) => {
   return normalizedDashes.replace(/[^a-zA-Z0-9_-]/g, '');
 };
 
+/**
+ * Fault alert popup driven by a deterministic queue.
+ *
+ * Design notes:
+ * - The queue (`queueCodes`) is the single source of truth for what's shown.
+ *   It is rebuilt synchronously from `faults` minus snoozed/dismissed entries.
+ * - We never put `setTimeout`/`setOpen` side effects inside `setState`
+ *   updaters — those updaters can run twice under React StrictMode and would
+ *   re-fire the popup (which is what caused the "Makeup fault loads twice"
+ *   symptom).
+ * - We deduplicate `faults` by code so a duplicated ^LE entry can't enqueue
+ *   the same fault twice.
+ * - "New fault" detection uses the raw `faults` set (not the eligible/active
+ *   set), so a snooze-expired fault re-triggers reliably even if the polling
+ *   payload is identical between cycles.
+ */
 export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAlertDialogProps) {
-  const [open, setOpen] = useState(false);
-  // Index of the fault currently being displayed
-  const [currentIndex, setCurrentIndex] = useState(0);
-  // Track which fault codes are currently snoozed (code -> expiry timestamp)
-  const snoozedRef = useRef<Record<string, number>>({});
-  // Track which faults we've already shown so we don't re-pop immediately
-  const [dismissedCodes, setDismissedCodes] = useState<Set<string>>(new Set());
-  const [imageExtIndex, setImageExtIndex] = useState(0);
-  const [imageVariantIndex, setImageVariantIndex] = useState(0);
-  const previousActiveCodesRef = useRef<Set<string>>(new Set());
-  const previousDismissedCodesRef = useRef<Set<string>>(new Set());
-  const hasSeededConnectedSnapshotRef = useRef(false);
-
-  // Determine which faults should trigger a popup (not snoozed)
-  const getActiveFaults = useCallback(() => {
-    const now = Date.now();
-    for (const code of Object.keys(snoozedRef.current)) {
-      if (snoozedRef.current[code] <= now) {
-        delete snoozedRef.current[code];
-      }
+  // Deduplicate by code — duplicated ^LE entries (e.g. Makeup reported twice)
+  // must never produce two popups for the same code.
+  const dedupedFaults = useMemo(() => {
+    const seen = new Set<string>();
+    const out: PrinterFault[] = [];
+    for (const f of faults) {
+      if (!f?.code || seen.has(f.code)) continue;
+      seen.add(f.code);
+      out.push(f);
     }
-    return faults.filter(f => !snoozedRef.current[f.code] && !dismissedCodes.has(f.code));
-  }, [faults, dismissedCodes]);
-
-  // When faults change, show dialog only for newly introduced faults
-  // (or when a snoozed/dismissed fault becomes eligible again).
-  useEffect(() => {
-    if (!isConnected) {
-      setOpen(false);
-      setCurrentIndex(0);
-      previousActiveCodesRef.current = new Set();
-      previousDismissedCodesRef.current = new Set();
-      hasSeededConnectedSnapshotRef.current = false;
-      return;
-    }
-
-    const active = getActiveFaults();
-    const activeCodes = new Set(active.map((fault) => fault.code));
-
-    // Seed first connected snapshot to avoid popup on startup/connect.
-    if (!hasSeededConnectedSnapshotRef.current) {
-      hasSeededConnectedSnapshotRef.current = true;
-      previousActiveCodesRef.current = activeCodes;
-      previousDismissedCodesRef.current = new Set(dismissedCodes);
-      return;
-    }
-
-    const previousActiveCodes = previousActiveCodesRef.current;
-    const previousDismissedCodes = previousDismissedCodesRef.current;
-
-    const hasNewFault = active.some((fault) => !previousActiveCodes.has(fault.code));
-    const hasDismissalExpired = active.some((fault) =>
-      previousDismissedCodes.has(fault.code) && !dismissedCodes.has(fault.code),
-    );
-
-    if ((hasNewFault || hasDismissalExpired) && active.length > 0) {
-      setCurrentIndex(0);
-      setOpen(true);
-    }
-
-    if (active.length === 0) {
-      setOpen(false);
-      setCurrentIndex(0);
-    }
-
-    previousActiveCodesRef.current = activeCodes;
-    previousDismissedCodesRef.current = new Set(dismissedCodes);
-  }, [faults, isConnected, getActiveFaults, dismissedCodes]);
-
-  // When a fault disappears from the list, remove it from dismissedCodes
-  // so it can re-trigger the dialog if it comes back later.
-  useEffect(() => {
-    if (faults.length === 0) {
-      setDismissedCodes(new Set());
-      snoozedRef.current = {};
-      setCurrentIndex(0);
-    } else {
-      // Remove dismissed/snoozed entries for faults that are no longer active
-      const currentCodes = new Set(faults.map(f => f.code));
-      setDismissedCodes(prev => {
-        const next = new Set<string>();
-        for (const code of prev) {
-          if (currentCodes.has(code)) next.add(code);
-        }
-        return next.size !== prev.size ? next : prev;
-      });
-      // Also clear snooze for faults that went away
-      for (const code of Object.keys(snoozedRef.current)) {
-        if (!currentCodes.has(code)) {
-          delete snoozedRef.current[code];
-        }
-      }
-    }
+    return out;
   }, [faults]);
 
-  // Reset when disconnected
+  const [open, setOpen] = useState(false);
+  // Codes currently queued for display (in order)
+  const [queueCodes, setQueueCodes] = useState<string[]>([]);
+
+  // Snoozed codes: code -> expiry timestamp. Snoozes survive across renders
+  // but never make it back into the queue until expiry.
+  const snoozedRef = useRef<Map<string, number>>(new Map());
+
+  // Tracks codes we've already enqueued during the current "session" so we
+  // don't re-enqueue them on every polling tick. Cleared when a code drops
+  // off the live faults list (so it can re-trigger if it comes back later).
+  const seenCodesRef = useRef<Set<string>>(new Set());
+
+  // Skip the first connected snapshot so we don't pop existing faults the
+  // moment the user connects.
+  const hasSeededRef = useRef(false);
+
+  const [imageExtIndex, setImageExtIndex] = useState(0);
+  const [imageVariantIndex, setImageVariantIndex] = useState(0);
+
+  // Reset everything on disconnect.
   useEffect(() => {
-    if (!isConnected) {
-      setDismissedCodes(new Set());
-      snoozedRef.current = {};
-      previousActiveCodesRef.current = new Set();
-      previousDismissedCodesRef.current = new Set();
-      hasSeededConnectedSnapshotRef.current = false;
-      setCurrentIndex(0);
-    }
+    if (isConnected) return;
+    setOpen(false);
+    setQueueCodes([]);
+    snoozedRef.current.clear();
+    seenCodesRef.current.clear();
+    hasSeededRef.current = false;
   }, [isConnected]);
 
-  const activeFaults = getActiveFaults();
-  const currentFault = activeFaults[currentIndex];
+  // Sync queue with incoming faults.
+  useEffect(() => {
+    if (!isConnected) return;
 
+    // Expire any snoozes that have elapsed.
+    const now = Date.now();
+    for (const [code, expiry] of snoozedRef.current.entries()) {
+      if (expiry <= now) snoozedRef.current.delete(code);
+    }
+
+    const liveCodes = new Set(dedupedFaults.map((f) => f.code));
+
+    // Drop "seen" memory for codes that are no longer live so they can
+    // re-trigger if they come back later.
+    for (const code of seenCodesRef.current) {
+      if (!liveCodes.has(code)) seenCodesRef.current.delete(code);
+    }
+
+    // Seed: on the very first poll after connecting, treat all current faults
+    // as "already seen" so they don't pop. They'll still re-pop after a
+    // user-initiated dismissal+snooze cycle expires (because seenCodesRef is
+    // cleared when a fault disappears).
+    if (!hasSeededRef.current) {
+      hasSeededRef.current = true;
+      for (const code of liveCodes) seenCodesRef.current.add(code);
+      // Drop queued codes that are no longer live.
+      setQueueCodes((prev) => prev.filter((c) => liveCodes.has(c)));
+      return;
+    }
+
+    // Determine which codes are eligible to enqueue: live, not snoozed,
+    // and not already in the queue or "seen" this session.
+    const newlyEligible: string[] = [];
+    for (const fault of dedupedFaults) {
+      if (snoozedRef.current.has(fault.code)) continue;
+      if (seenCodesRef.current.has(fault.code)) continue;
+      newlyEligible.push(fault.code);
+    }
+
+    if (newlyEligible.length > 0) {
+      for (const code of newlyEligible) seenCodesRef.current.add(code);
+      setQueueCodes((prev) => {
+        // Drop any queued codes no longer live, then append newly eligible.
+        const filtered = prev.filter((c) => liveCodes.has(c));
+        // Avoid duplicates inside the queue itself.
+        const queueSet = new Set(filtered);
+        for (const code of newlyEligible) {
+          if (!queueSet.has(code)) {
+            filtered.push(code);
+            queueSet.add(code);
+          }
+        }
+        return filtered;
+      });
+    } else {
+      // Even with no new eligibility, drop queued codes that went away.
+      setQueueCodes((prev) => {
+        const filtered = prev.filter((c) => liveCodes.has(c));
+        return filtered.length === prev.length ? prev : filtered;
+      });
+    }
+  }, [dedupedFaults, isConnected]);
+
+  // Open/close the dialog purely from queue contents — never from inside
+  // another state updater.
+  useEffect(() => {
+    if (queueCodes.length > 0 && !open) {
+      setOpen(true);
+    } else if (queueCodes.length === 0 && open) {
+      setOpen(false);
+    }
+  }, [queueCodes, open]);
+
+  // Resolve the current fault from the head of the queue.
+  const currentFault = useMemo(() => {
+    const code = queueCodes[0];
+    if (!code) return undefined;
+    return dedupedFaults.find((f) => f.code === code);
+  }, [queueCodes, dedupedFaults]);
+
+  // Reset image fallback indices when the displayed fault changes.
   useEffect(() => {
     setImageExtIndex(0);
     setImageVariantIndex(0);
@@ -149,46 +179,28 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
 
   const handleDismiss = useCallback(() => {
     if (!currentFault) return;
+    const dismissedCode = currentFault.code;
 
-    // Send ^CA to clear the fault on the printer hardware
+    // Send ^CA to clear the fault on the printer hardware.
     onAcknowledge?.();
 
-    // Snooze this fault instead of permanently dismissing — it will re-appear
-    // after SNOOZE_DURATION_MS if the fault is still active on the printer.
-    snoozedRef.current[currentFault.code] = Date.now() + SNOOZE_DURATION_MS;
+    // Snooze so it doesn't re-pop immediately if the printer keeps reporting
+    // it on the next ^LE cycle.
+    snoozedRef.current.set(dismissedCode, Date.now() + SNOOZE_DURATION_MS);
 
-    // Also add to dismissed so getActiveFaults() filters it out immediately
-    setDismissedCodes(prev => {
-      const next = new Set(prev);
-      next.add(currentFault.code);
-      // Calculate remaining undismissed faults
-      const remaining = activeFaults.filter(f => f.code !== currentFault.code && !next.has(f.code));
-      if (remaining.length > 0) {
-        // Keep dialog open and reset index for next fault
-        setCurrentIndex(0);
-        // Force re-open in case AlertDialogPrimitive.Action auto-closed it
-        setTimeout(() => setOpen(true), 50);
-      } else {
-        setOpen(false);
-        setCurrentIndex(0);
-      }
-      return next;
-    });
+    // Pop the head of the queue. Radix may auto-close via AlertDialogAction;
+    // the open/close effect above will reopen the dialog automatically if
+    // there's another queued fault.
+    setQueueCodes((prev) => prev.filter((c) => c !== dismissedCode));
+  }, [currentFault, onAcknowledge]);
 
-    // After snooze expires, clear from dismissedCodes so the fault can re-trigger
-    setTimeout(() => {
-      setDismissedCodes(prev => {
-        const next = new Set(prev);
-        next.delete(currentFault.code);
-        return next;
-      });
-    }, SNOOZE_DURATION_MS + 100);
-  }, [currentFault, activeFaults, currentIndex, onAcknowledge]);
+  // Allow snooze to expire so the fault can pop again later if still active.
+  // We clear it lazily inside the sync effect above; nothing to do here.
 
-  if (!currentFault || (!open && activeFaults.length === 0)) return null;
+  if (!currentFault) return null;
 
   // Build the fault image URL through authenticated asset serving
-  const normalizedFaultCode = normalizeFaultCodeForAsset(currentFault?.code ?? '');
+  const normalizedFaultCode = normalizeFaultCodeForAsset(currentFault.code ?? '');
   const qrImagePath = normalizedFaultCode
     ? (() => {
         const variant = FAULT_IMAGE_VARIANTS[imageVariantIndex];
@@ -198,10 +210,18 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
       })()
     : '';
 
-  const isLastFault = currentIndex >= activeFaults.length - 1;
+  const isLastFault = queueCodes.length <= 1;
 
   return (
-    <AlertDialogPrimitive.Root open={open} onOpenChange={setOpen}>
+    <AlertDialogPrimitive.Root open={open} onOpenChange={(next) => {
+      // Only honour "open=true" requests from us. If Radix tries to close
+      // (e.g., ESC), treat it as a dismiss so the queue advances.
+      if (!next && open) {
+        handleDismiss();
+      } else {
+        setOpen(next);
+      }
+    }}>
       <AlertDialogPrimitive.Portal>
         <AlertDialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <AlertDialogPrimitive.Content
@@ -235,10 +255,13 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
             <AlertDialogPrimitive.Action
               className="absolute cursor-pointer"
               style={{ right: '8%', bottom: '4%', width: '25%', height: '12%' }}
-              onClick={handleDismiss}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDismiss();
+              }}
             >
               <span className="sr-only">
-                {activeFaults.length > 1 && !isLastFault ? 'Next Fault' : 'OK'}
+                {!isLastFault ? 'Next Fault' : 'OK'}
               </span>
             </AlertDialogPrimitive.Action>
           </div>
