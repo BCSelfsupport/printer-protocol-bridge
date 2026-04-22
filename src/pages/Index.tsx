@@ -1634,6 +1634,12 @@ const Index = () => {
       }
       toast.success('Force Print triggered');
 
+      // ^PT advances Print/Product/Custom counters on the printer (and emulator).
+      // Re-query ^CN immediately so the dashboard preview's {C1}/{CN1} tokens
+      // and the counter dialog reflect the new value without waiting for the
+      // next 3s polling cycle.
+      queryCounters().catch((e) => console.warn('[handleForcePrint] queryCounters failed', e));
+
       // Check if current message has a linked data source (scoped to connected printer)
       const currentMsg = connectionState.status?.currentMessage;
       if (!currentMsg || !connectedPrinterId) return;
@@ -1697,7 +1703,7 @@ const Index = () => {
       toast.error('Force Print failed');
       console.error('[handleForcePrint]', e);
     }
-  }, [sendCommand, connectionState.status?.currentMessage, getMessage, saveMessage, connectedPrinterId]);
+  }, [sendCommand, queryCounters, connectionState.status?.currentMessage, getMessage, saveMessage, connectedPrinterId]);
 
 
   const getRightPanelContent = (): React.ReactNode | undefined => {
