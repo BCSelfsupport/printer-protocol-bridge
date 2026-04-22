@@ -133,6 +133,9 @@ export default function TwinCodePage() {
           </div>
         </div>
 
+        {/* Conveyor simulator (real ingress path: catalog → photocell → bonded print) */}
+        <ConveyorPanel />
+
         {/* Generator controls */}
         <section className="rounded-md border border-border bg-card p-4">
           <div className="mb-3 flex items-center justify-between">
