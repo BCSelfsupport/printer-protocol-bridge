@@ -49,6 +49,8 @@ import { FleetMonitoringPanel } from '@/components/dev/FleetMonitoringPanel';
 import { FeedbackPanel } from '@/components/dev/FeedbackPanel';
 import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
 import { ParameterSnapshot } from '@/components/dev/ParameterSnapshot';
+import { TwinPairBindDialog } from '@/twin-code/components/TwinPairBindDialog';
+import { useTwinPair } from '@/twin-code/twinPairStore';
 function getTimeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
@@ -154,6 +156,8 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
   const [devBuildRuns, setDevBuildRuns] = useState<any[]>([]);
   const [buildRunsLoading, setBuildRunsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab || 'status');
+  const [twinPairOpen, setTwinPairOpen] = useState(false);
+  const twinPair = useTwinPair();
 
   // Whether we can send commands: either via emulator or via real printer
   const canSendCommands = emulatorEnabled || (!!window.electronAPI && connectedPrinterId != null);
@@ -1223,6 +1227,9 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
       </div>
     </div>
   )}
+
+      {/* Twin Pair binding dialog (rendered at root so it works regardless of tab) */}
+      <TwinPairBindDialog open={twinPairOpen} onOpenChange={setTwinPairOpen} />
     </>
   );
 }
