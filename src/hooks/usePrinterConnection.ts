@@ -129,41 +129,7 @@ const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCOD
 // Without this, ^DM and ^NM changes are only queued in RAM until a manual save
 // or shutdown occurs on the printer HMI.
 const FLUSH_COMMAND = '^SV';
-const HEAVY_WRITE_FIELD_COUNT = 4;
 
-const getWriteTimingProfile = (fieldCount: number) => {
-  const isHeavyMessage = fieldCount >= HEAVY_WRITE_FIELD_COUNT;
-  const hasVeryHeavyMessage = fieldCount >= 5;
-  const commandTimeoutMs = hasVeryHeavyMessage
-    ? 20000
-    : isHeavyMessage
-      ? 15000
-      : 8000;
-  const idleAfterDataMs = hasVeryHeavyMessage
-    ? 1200
-    : isHeavyMessage
-      ? 900
-      : 600;
-  const settleBeforeSelectMs = hasVeryHeavyMessage
-    ? 3000
-    : isHeavyMessage
-      ? 2200
-      : 500;
-  const settleAfterSelectMs = hasVeryHeavyMessage
-    ? 1200
-    : isHeavyMessage
-      ? 900
-      : 300;
-
-  return {
-    isHeavyMessage,
-    hasVeryHeavyMessage,
-    commandTimeoutMs,
-    idleAfterDataMs,
-    settleBeforeSelectMs,
-    settleAfterSelectMs,
-  };
-};
 
 const isProtocolCommandFailure = (rawResponse?: string): boolean => {
   if (!rawResponse) return false;
