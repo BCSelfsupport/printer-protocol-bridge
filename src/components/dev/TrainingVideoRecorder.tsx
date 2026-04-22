@@ -42,7 +42,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   // Cropping state — local override of the hook's blob/url
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [croppedUrl, setCroppedUrl] = useState<string | null>(null);
-  const [cropTopPx, setCropTopPx] = useState<number>(40);
+  const [cropTopPx, setCropTopPx] = useState<number>(80);
   const [cropping, setCropping] = useState(false);
   const [cropProgress, setCropProgress] = useState(0);
   const [videoNaturalHeight, setVideoNaturalHeight] = useState<number>(0);
@@ -267,25 +267,26 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           {/* Preview & Upload */}
           {recordedBlob && recordedUrl && (
             <div className="space-y-3 border border-border rounded-lg p-3 bg-muted/30">
-              <div className="relative">
+              <div className="relative bg-black rounded-md overflow-hidden">
                 <video
                   ref={previewRef}
                   src={activeUrl ?? undefined}
                   controls
                   onLoadedMetadata={(e) => setVideoNaturalHeight((e.target as HTMLVideoElement).videoHeight)}
-                  className="w-full rounded-md max-h-[200px] bg-black"
+                  className="w-full max-h-[480px] block mx-auto"
                 />
                 {/* Visual crop guide overlay (only on the original, before crop applied) */}
                 {!croppedBlob && videoNaturalHeight > 0 && cropTopPx > 0 && (
                   <div
-                    className="pointer-events-none absolute top-0 left-0 right-0 bg-destructive/40 border-b-2 border-destructive rounded-t-md"
+                    className="pointer-events-none absolute top-0 left-0 right-0 bg-destructive/60 border-b-4 border-destructive shadow-lg"
                     style={{
                       height: `${(cropTopPx / videoNaturalHeight) * 100}%`,
-                      maxHeight: '200px',
                     }}
                   >
-                    <div className="absolute bottom-1 left-2 text-[10px] text-white font-medium drop-shadow">
-                      Cropped: {cropTopPx}px
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="px-2 py-0.5 rounded bg-destructive text-destructive-foreground text-xs font-bold tracking-wide drop-shadow">
+                        ✂ CROPPING {cropTopPx}px
+                      </span>
                     </div>
                   </div>
                 )}
@@ -298,42 +299,64 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
               </div>
 
               {/* Crop top controls */}
-              <div className="space-y-2 border border-dashed border-border rounded-md p-2 bg-background/50">
+              <div className="space-y-3 border border-dashed border-border rounded-md p-3 bg-background/50">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs flex items-center gap-1.5">
                     <Crop className="w-3 h-3" /> Crop top (hide Lovable banner)
                   </Label>
-                  <span className="text-[10px] font-mono text-muted-foreground">{cropTopPx}px</span>
+                  <span className="text-xs font-mono font-semibold text-foreground">
+                    {cropTopPx}px
+                    {videoNaturalHeight > 0 && (
+                      <span className="text-muted-foreground ml-1">
+                        ({((cropTopPx / videoNaturalHeight) * 100).toFixed(1)}%)
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <Slider
                   value={[cropTopPx]}
                   onValueChange={(v) => setCropTopPx(v[0])}
                   min={0}
-                  max={Math.max(200, Math.floor((videoNaturalHeight || 1080) / 3))}
+                  max={Math.max(300, Math.floor((videoNaturalHeight || 1080) / 2))}
                   step={1}
                   disabled={cropping || !!croppedBlob}
                 />
-                <div className="flex gap-2">
+                {/* Quick presets */}
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="text-[10px] text-muted-foreground self-center mr-1">Presets:</span>
+                  {[0, 40, 80, 120, 160, 200].map((px) => (
+                    <Button
+                      key={px}
+                      size="sm"
+                      variant={cropTopPx === px ? 'default' : 'outline'}
+                      onClick={() => setCropTopPx(px)}
+                      disabled={cropping || !!croppedBlob}
+                      className="h-6 px-2 text-[10px] font-mono"
+                    >
+                      {px}
+                    </Button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
                   {!croppedBlob ? (
                     <Button
                       size="sm"
-                      variant="outline"
                       onClick={applyCrop}
                       disabled={cropping || cropTopPx === 0}
-                      className="gap-1.5 h-7 text-xs"
+                      className="gap-1.5 h-8 text-xs"
                     >
                       {cropping ? <Loader2 className="w-3 h-3 animate-spin" /> : <Crop className="w-3 h-3" />}
-                      {cropping ? `Cropping ${cropProgress.toFixed(0)}%` : 'Apply Crop'}
+                      {cropping ? `Cropping ${cropProgress.toFixed(0)}%` : `Apply Crop (${cropTopPx}px)`}
                     </Button>
                   ) : (
-                    <Button size="sm" variant="ghost" onClick={resetCrop} className="h-7 text-xs">
+                    <Button size="sm" variant="ghost" onClick={resetCrop} className="h-8 text-xs">
                       Undo Crop
                     </Button>
                   )}
-                  <p className="text-[10px] text-muted-foreground self-center">
+                  <p className="text-[10px] text-muted-foreground flex-1">
                     {croppedBlob
                       ? 'Crop applied. Save to upload the cropped version.'
-                      : 'Drag slider, then Apply. Re-encodes the video (may take a moment).'}
+                      : 'Red overlay shows what gets removed. Re-encodes when applied.'}
                   </p>
                 </div>
               </div>
