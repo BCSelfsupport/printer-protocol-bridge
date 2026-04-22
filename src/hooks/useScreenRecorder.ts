@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 
 const MAX_DURATION = 3600; // 60 minutes
+const START_DELAY_SECONDS = 3; // Countdown before recording actually begins
 
 export interface ScreenRecorderState {
   isRecording: boolean;
@@ -8,6 +9,7 @@ export interface ScreenRecorderState {
   recordedBlob: Blob | null;
   recordedUrl: string | null;
   isMicEnabled: boolean;
+  countdown: number; // 0 when not counting; 3,2,1 during pre-record delay
 }
 
 export interface ScreenRecorderActions {
