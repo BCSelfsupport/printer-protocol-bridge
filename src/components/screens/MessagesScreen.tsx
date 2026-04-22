@@ -696,41 +696,46 @@ export function MessagesScreen({
           const bakedFields = details.fields.map(f =>
             f.id === fieldId ? { ...f, data: value } : f
           );
-          const tokenMap = buildTokenMap({ ...details, fields: bakedFields });
-          const updatedDetails: MessageDetails = {
-            ...details,
-            fields: resolveAllFields(bakedFields, tokenMap),
-          };
+          const bakedDetails: MessageDetails = { ...details, fields: bakedFields };
 
           setScanWaitingOpen(false);
           setPendingScanRequestId(null);
-          setPendingScanContext(null);
           setPendingScanExpiresAt(null);
-          onHome();
 
-          try {
-            toast.loading('Writing scanned value to printer…', { id: 'scan-apply' });
-            const saved = await onSaveMessageContent(
-              message.name,
-              updatedDetails.fields,
-              updatedDetails.templateValue,
-              false,
-              updatedDetails.settings ? {
-                speed: updatedDetails.settings.speed,
-                rotation: updatedDetails.settings.rotation,
-                printMode: updatedDetails.settings.printMode,
-              } : undefined,
-            );
-            if (!saved) { toast.error('Failed to write scanned value', { id: 'scan-apply' }); return; }
-            const selected = await onSelect(message);
-            if (!selected) { toast.error('Saved but failed to select', { id: 'scan-apply' }); return; }
-            onSaveStoredMessage?.(updatedDetails);
-            onPromptSaved?.(updatedDetails);
-            toast.success(`Printing with ${pendingScanLabel} = ${value}`, { id: 'scan-apply' });
-          } catch (e) {
-            console.error('[MessagesScreen] scan apply failed:', e);
-            toast.error('Failed to apply scanned value', { id: 'scan-apply' });
+          // If the message references any counter slots, give the operator a
+          // chance to reset / set the start count before we commit and print.
+          const referencedCounters = detectReferencedCounters(bakedDetails);
+          if (referencedCounters.length > 0) {
+            setScanCounterContext({ message, bakedDetails, scannedValue: value });
+            setScanCounterOpen(true);
+            return;
           }
+
+          // No counters in this message — commit immediately as before.
+          setPendingScanContext(null);
+          await commitScanPrint(message, bakedDetails, value, {});
+        }}
+      />
+
+      {/* After-scan counter setup — only shown when message has counter references */}
+      <ScanCounterDialog
+        open={scanCounterOpen}
+        details={scanCounterContext?.bakedDetails ?? null}
+        liveCounters={liveCounters}
+        scanLabel={pendingScanLabel}
+        scannedValue={scanCounterContext?.scannedValue}
+        onCancel={() => {
+          setScanCounterOpen(false);
+          setScanCounterContext(null);
+          setPendingScanContext(null);
+        }}
+        onConfirm={async (overrides) => {
+          const ctx = scanCounterContext;
+          setScanCounterOpen(false);
+          setScanCounterContext(null);
+          setPendingScanContext(null);
+          if (!ctx) return;
+          await commitScanPrint(ctx.message, ctx.bakedDetails, ctx.scannedValue, overrides);
         }}
       />
 
