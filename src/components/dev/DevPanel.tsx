@@ -1227,6 +1227,9 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
       </div>
     </div>
   )}
+
+      {/* Twin Pair binding dialog (rendered at root so it works regardless of tab) */}
+      <TwinPairBindDialog open={twinPairOpen} onOpenChange={setTwinPairOpen} />
     </>
   );
 }
