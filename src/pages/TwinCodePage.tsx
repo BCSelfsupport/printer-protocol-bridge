@@ -15,6 +15,7 @@ import { SkewScatter } from "@/twin-code/components/SkewScatter";
 import { ThroughputGauge } from "@/twin-code/components/ThroughputGauge";
 import { BottleneckCallout } from "@/twin-code/components/BottleneckCallout";
 import { StageHeatmap } from "@/twin-code/components/StageHeatmap";
+import { ConveyorPanel } from "@/twin-code/components/ConveyorPanel";
 
 const PAGE_TITLE = "Twin Code — Profiler Harness (Phase 1a)";
 
@@ -131,6 +132,9 @@ export default function TwinCodePage() {
             <ThroughputGauge samples={samples} />
           </div>
         </div>
+
+        {/* Conveyor simulator (real ingress path: catalog → photocell → bonded print) */}
+        <ConveyorPanel />
 
         {/* Generator controls */}
         <section className="rounded-md border border-border bg-card p-4">
