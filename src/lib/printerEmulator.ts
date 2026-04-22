@@ -732,6 +732,10 @@ class PrinterEmulator {
     }
     this.state.printCount++;
     this.state.productCount++;
+    // Advance Counter 1 so {C1}/{CN1} tokens visibly scroll after each force print.
+    if (Array.isArray(this.state.customCounters) && this.state.customCounters.length > 0) {
+      this.state.customCounters[0] = (this.state.customCounters[0] ?? 0) + 1;
+    }
     return this.formatSuccess();
   }
 
