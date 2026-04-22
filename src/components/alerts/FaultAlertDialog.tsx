@@ -241,6 +241,7 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
     // 'Cancel' button if both 'Cancel' and 'OK' buttons are displayed,
     // or 'OK' if only the 'OK' button is displayed."
     if (onDismissFault) {
+      pendingDismissesRef.current += 1;
       void onDismissFault('^CA').catch((err) => {
         console.error('[FaultAlertDialog] ^CA failed:', err);
       });
