@@ -57,6 +57,13 @@ export function ScanWaitingDialog({
     if (open && requestId) firedRef.current = false;
   }, [open, requestId]);
 
+  // Keep onFulfilled in a ref so the polling effect doesn't tear down on every
+  // parent re-render (the parent screen re-renders ~every 1.5s for telemetry —
+  // including onFulfilled in deps caused the 250ms first-poll timeout to be
+  // cleared before it ever fired, so polls never ran).
+  const onFulfilledRef = useRef(onFulfilled);
+  useEffect(() => { onFulfilledRef.current = onFulfilled; }, [onFulfilled]);
+
   // Poll the scan-request edge function every 2s. We can't use Supabase realtime
   // or direct table queries here because scan_requests has service-role-only RLS;
   // the edge function uses the service key to read the row on our behalf.
@@ -71,7 +78,7 @@ export function ScanWaitingDialog({
       if (firedRef.current) return;
       firedRef.current = true;
       console.log('[ScanWaitingDialog] fulfilled value received:', value);
-      onFulfilled(value);
+      onFulfilledRef.current(value);
     };
 
     let cancelled = false;
@@ -107,18 +114,17 @@ export function ScanWaitingDialog({
       }
     };
 
-    // Delay first poll by 250ms — gives the license hook time to fully settle
-    // after dialog mount, avoiding the very first 401 that triggers the global
-    // error overlay even though we swallow it locally.
-    const firstPoll = setTimeout(poll, 250);
+    // Fire immediately on mount, then every 2s. (No 250ms delay — when the
+    // parent re-renders frequently, a setTimeout was being cleared before
+    // it ever ran. The license guard above already prevents the early 401.)
+    poll();
     const pollId = setInterval(poll, 2000);
 
     return () => {
       cancelled = true;
-      clearTimeout(firstPoll);
       clearInterval(pollId);
     };
-  }, [open, requestId, productKey, onFulfilled]);
+  }, [open, requestId, productKey]);
 
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
