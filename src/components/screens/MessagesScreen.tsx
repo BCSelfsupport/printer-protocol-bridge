@@ -36,6 +36,24 @@ import { MessageThumbnail } from '@/components/messages/MessageThumbnail';
 import { useLicense } from '@/contexts/LicenseContext';
 import { setPollingPaused } from '@/lib/pollingPause';
 
+const getPromptWriteTimingProfile = (fieldCount: number) => {
+  const isHeavyMessage = fieldCount >= 4;
+  const hasVeryHeavyMessage = fieldCount >= 5;
+
+  return {
+    settleBeforeSelectMs: hasVeryHeavyMessage
+      ? 3000
+      : isHeavyMessage
+        ? 2200
+        : 500,
+    settleAfterSelectMs: hasVeryHeavyMessage
+      ? 1200
+      : isHeavyMessage
+        ? 900
+        : 300,
+  };
+};
+
 const MACHINE_ID_KEY = 'codesync-machine-id';
 function getMachineId(): string {
   let id = localStorage.getItem(MACHINE_ID_KEY);
@@ -894,6 +912,7 @@ export function MessagesScreen({
               ...pendingMessageDetails,
               fields: resolveAllFields(bakedFields, tokenMap, { preserveCounterTokens: true }),
             };
+            const writeTiming = getPromptWriteTimingProfile(updatedDetails.fields.length);
 
             try {
               toast.loading('Writing message to printer...', { id: 'prompt-save' });
@@ -924,10 +943,10 @@ export function MessagesScreen({
               setPollingPaused(true);
               let selected = false;
               try {
-                await new Promise((r) => setTimeout(r, 500));
+                await new Promise((r) => setTimeout(r, writeTiming.settleBeforeSelectMs));
                 selected = await onSelect(selectedMessage);
                 // Brief settle window after the ^SM completes
-                await new Promise((r) => setTimeout(r, 300));
+                await new Promise((r) => setTimeout(r, writeTiming.settleAfterSelectMs));
               } finally {
                 setPollingPaused(false);
               }
