@@ -248,6 +248,15 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
             </div>
           )}
 
+          {countdown > 0 && (
+            <div className="rounded-lg border border-primary/40 bg-primary/10 p-3 text-center">
+              <div className="text-3xl font-bold text-primary tabular-nums">{countdown}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Close the Dev Panel now — recording starts in {countdown}s
+              </p>
+            </div>
+          )}
+
           {isRecording && (
             <p className="text-xs text-muted-foreground">
               <AlertCircle className="w-3 h-3 inline mr-1" />
