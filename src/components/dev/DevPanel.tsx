@@ -434,8 +434,8 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-            <ScrollArea className="mx-4 mt-2">
-              <TabsList className="inline-flex w-max h-10">
+            <div className="mx-4 mt-2">
+              <TabsList className="flex h-auto flex-wrap justify-start gap-1">
                 <TabsTrigger value="status" className="text-xs gap-1 flex-shrink-0"><Gauge className="w-3.5 h-3.5" />Status</TabsTrigger>
                 <TabsTrigger value="protocol" className="text-xs gap-1 flex-shrink-0"><BookOpen className="w-3.5 h-3.5" />Protocol</TabsTrigger>
                 <TabsTrigger value="commands" className="text-xs gap-1 flex-shrink-0"><Terminal className="w-3.5 h-3.5" />Log</TabsTrigger>
@@ -458,8 +458,8 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   Training
                 </TabsTrigger>
               </TabsList>
-            </ScrollArea>
-
+            </div>
+ 
             {/* Status Tab */}
             <TabsContent value="status" className="flex-1 overflow-hidden m-0">
               <ScrollArea className="h-full p-4">
