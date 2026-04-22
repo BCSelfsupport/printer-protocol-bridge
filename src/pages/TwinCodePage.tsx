@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Play, Square, Download, Upload, Trash2, RotateCcw } from "lucide-react";
+import { ArrowLeft, Play, Square, Download, Upload, Trash2, RotateCcw, Link2 } from "lucide-react";
+import { TwinPairBindDialog } from "@/twin-code/components/TwinPairBindDialog";
+import { useTwinPair } from "@/twin-code/twinPairStore";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
@@ -24,6 +27,9 @@ export default function TwinCodePage() {
   const [running, setRunning] = useState(false);
   const [config, setConfig] = useState(DEFAULT_GENERATOR_CONFIG);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [bindOpen, setBindOpen] = useState(false);
+  const pair = useTwinPair();
+  const isBound = !!(pair.a && pair.b);
 
   // Set page title (SEO)
   useEffect(() => {
@@ -92,6 +98,20 @@ export default function TwinCodePage() {
             </p>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <Button
+              size="sm"
+              variant={isBound ? "outline" : "default"}
+              onClick={() => setBindOpen(true)}
+              className="gap-1"
+            >
+              <Link2 className="mr-1 h-4 w-4" />
+              {isBound ? "Twin pair bound" : "Bind two printers"}
+              {isBound && (
+                <Badge variant="secondary" className="ml-1 font-mono text-[10px]">
+                  {pair.a?.ip} · {pair.b?.ip}
+                </Badge>
+              )}
+            </Button>
             {!running ? (
               <Button size="sm" onClick={handleStart}>
                 <Play className="mr-1 h-4 w-4" /> Start generator
