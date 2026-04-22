@@ -16,6 +16,11 @@ export interface RelayConfig {
   port?: number;
 }
 
+export interface TransportCommandOptions {
+  maxWaitMs?: number;
+  idleAfterDataMs?: number;
+}
+
 let relayConfig: RelayConfig | null = null;
 
 // Load on module init
@@ -128,12 +133,12 @@ export const printerTransport = {
     return { success: true };
   },
 
-  async sendCommand(printerId: number, command: string) {
+  async sendCommand(printerId: number, command: string, options?: TransportCommandOptions) {
     if (isRelayMode()) {
-      return relayFetch('send-command', { printerId, command });
+      return relayFetch('send-command', { printerId, command, options });
     }
     if (window.electronAPI) {
-      return window.electronAPI.printer.sendCommand(printerId, command);
+      return (window.electronAPI.printer.sendCommand as (printerId: number, command: string, options?: TransportCommandOptions) => Promise<any>)(printerId, command, options);
     }
     return { success: false, error: 'No transport available' };
   },

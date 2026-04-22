@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
-import { setPollingPaused, isPollingPaused } from '@/lib/pollingPause';
+import { setPollingPaused, isPollingPaused, waitForPollingIdle } from '@/lib/pollingPause';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
 
 /**
@@ -129,6 +129,41 @@ const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCOD
 // Without this, ^DM and ^NM changes are only queued in RAM until a manual save
 // or shutdown occurs on the printer HMI.
 const FLUSH_COMMAND = '^SV';
+const HEAVY_WRITE_FIELD_COUNT = 4;
+
+const getWriteTimingProfile = (fieldCount: number) => {
+  const isHeavyMessage = fieldCount >= HEAVY_WRITE_FIELD_COUNT;
+  const hasVeryHeavyMessage = fieldCount >= 5;
+  const commandTimeoutMs = hasVeryHeavyMessage
+    ? 20000
+    : isHeavyMessage
+      ? 15000
+      : 8000;
+  const idleAfterDataMs = hasVeryHeavyMessage
+    ? 1200
+    : isHeavyMessage
+      ? 900
+      : 600;
+  const settleBeforeSelectMs = hasVeryHeavyMessage
+    ? 3000
+    : isHeavyMessage
+      ? 2200
+      : 500;
+  const settleAfterSelectMs = hasVeryHeavyMessage
+    ? 1200
+    : isHeavyMessage
+      ? 900
+      : 300;
+
+  return {
+    isHeavyMessage,
+    hasVeryHeavyMessage,
+    commandTimeoutMs,
+    idleAfterDataMs,
+    settleBeforeSelectMs,
+    settleAfterSelectMs,
+  };
+};
 
 const isProtocolCommandFailure = (rawResponse?: string): boolean => {
   if (!rawResponse) return false;
@@ -1788,6 +1823,7 @@ export function usePrinterConnection() {
     }
     
     const printer = connectionState.connectedPrinter;
+    const writeTiming = getWriteTimingProfile(HEAVY_WRITE_FIELD_COUNT);
     
     if (shouldUseEmulator()) {
       const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
@@ -1812,8 +1848,11 @@ export function usePrinterConnection() {
       return false;
     } else if (isElectron || isRelayMode()) {
       try {
-        console.log('[selectMessage] Sending ^SM command:', message.name);
-        const result = await printerTransport.sendCommand(printer.id, `^SM ${message.name}`);
+        console.log('[selectMessage] Sending ^SM command:', message.name, writeTiming);
+        const result = await printerTransport.sendCommand(printer.id, `^SM ${message.name}`, {
+          maxWaitMs: writeTiming.commandTimeoutMs,
+          idleAfterDataMs: writeTiming.idleAfterDataMs,
+        });
         console.log('[selectMessage] Result:', JSON.stringify(result));
 
         const responseText = result?.response ?? '';
@@ -2215,6 +2254,7 @@ export function usePrinterConnection() {
     }
 
     const printer = connectionState.connectedPrinter;
+    const writeTiming = getWriteTimingProfile(fields.length);
     const normalizedMessageName = messageName.trim().toUpperCase();
     const currentSelectedMessage = connectionState.status?.currentMessage?.trim().toUpperCase();
     const needsSwitchAwayBeforeRewrite = currentSelectedMessage === normalizedMessageName;
@@ -2347,10 +2387,18 @@ export function usePrinterConnection() {
       // with the ^DM → ^NM → ^SV save sequence on the shared TCP socket.
       setPollingPaused(true);
       try {
+        const pollingIdle = await waitForPollingIdle(writeTiming.commandTimeoutMs);
+        if (!pollingIdle) {
+          console.warn('[saveMessageContent] Polling still active before write; proceeding with paused transport');
+        }
+
         for (let cmdIdx = 0; cmdIdx < commands.length; cmdIdx++) {
           const cmd = commands[cmdIdx];
           console.log('[saveMessageContent] Sending:', cmd);
-          const result = await printerTransport.sendCommand(printer.id, cmd);
+          const result = await printerTransport.sendCommand(printer.id, cmd, {
+            maxWaitMs: writeTiming.commandTimeoutMs,
+            idleAfterDataMs: writeTiming.idleAfterDataMs,
+          });
           console.log('[saveMessageContent] Result:', JSON.stringify(result));
           const responseText = result?.response ?? '';
           const errorText = result?.error ?? '';
