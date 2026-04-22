@@ -61,7 +61,11 @@ export function ScanWaitingDialog({
   // or direct table queries here because scan_requests has service-role-only RLS;
   // the edge function uses the service key to read the row on our behalf.
   useEffect(() => {
-    if (!open || !requestId || !productKey) return;
+    if (!open || !requestId) return;
+    // Hard guard: a real product key is 20 chars + 4 dashes = 24. Anything shorter
+    // means the license context hasn't hydrated yet — skip the entire poll setup
+    // so we don't fire a request that will 401 and trip the global error reporter.
+    if (!productKey || productKey.length < 20) return;
 
     const fire = (value: string) => {
       if (firedRef.current) return;
@@ -73,10 +77,6 @@ export function ScanWaitingDialog({
     let cancelled = false;
     const poll = async () => {
       if (firedRef.current || cancelled) return;
-      // Guard: skip polls when the license context isn't ready yet — this avoids
-      // transient 401 "Invalid license" responses from the edge function on the
-      // very first tick before the license hook has hydrated.
-      if (!productKey || productKey.length < 5) return;
       try {
         const res = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-request?action=poll`,
@@ -89,13 +89,14 @@ export function ScanWaitingDialog({
             body: JSON.stringify({ product_key: productKey, request_id: requestId }),
           },
         );
-        // Swallow 401/404 silently — these are recoverable: the next poll will
-        // retry once the license hydrates or the row becomes visible.
-        if (res.status === 401 || res.status === 404) {
-          console.warn('[ScanWaitingDialog] poll got', res.status, '— retrying next tick');
+        // Swallow non-2xx silently. 401 (license race), 404 (row not yet visible),
+        // and 5xx (transient) are all recoverable on the next tick.
+        if (!res.ok) {
+          if (res.status !== 401 && res.status !== 404) {
+            console.warn('[ScanWaitingDialog] poll got', res.status);
+          }
           return;
         }
-        if (!res.ok) return;
         const data = await res.json();
         const row = data?.request as { status?: string; scanned_value?: string | null } | null;
         if (row?.status === 'fulfilled' && typeof row.scanned_value === 'string') {
@@ -106,12 +107,15 @@ export function ScanWaitingDialog({
       }
     };
 
-    // Fire immediately so we catch already-fulfilled rows without waiting 2s
-    poll();
+    // Delay first poll by 250ms — gives the license hook time to fully settle
+    // after dialog mount, avoiding the very first 401 that triggers the global
+    // error overlay even though we swallow it locally.
+    const firstPoll = setTimeout(poll, 250);
     const pollId = setInterval(poll, 2000);
 
     return () => {
       cancelled = true;
+      clearTimeout(firstPoll);
       clearInterval(pollId);
     };
   }, [open, requestId, productKey, onFulfilled]);
