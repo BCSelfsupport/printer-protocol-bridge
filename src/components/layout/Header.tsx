@@ -79,6 +79,11 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
   const [showGuide, setShowGuide] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showManual, setShowManual] = useState(false);
+  const [showPairMobile, setShowPairMobile] = useState(false);
+
+  // Show "Pair Mobile" button on PC only (Electron or desktop browser, not mobile devices)
+  const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const showPairMobileButton = !isMobileDevice;
 
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
