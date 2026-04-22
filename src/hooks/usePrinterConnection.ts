@@ -197,7 +197,6 @@ export function usePrinterConnection() {
   const printersRef = useRef(printers);
   printersRef.current = printers;
   const disconnectRef = useRef<() => void>(() => {});
-  const writeLockRef = useRef(false);
   // Ref for connected printer id – used inside checkPrinterStatus to avoid
   // recreating the callback (and resetting the interval) on every connection state change.
   const connectedPrinterIdRef = useRef<number | null>(null);
@@ -209,17 +208,6 @@ export function usePrinterConnection() {
     settings: defaultSettings,
     messages: [],
   });
-
-  const waitForWriteLockToClear = useCallback(async (timeoutMs = 2500) => {
-    const startedAt = Date.now();
-    while (writeLockRef.current) {
-      if (Date.now() - startedAt >= timeoutMs) {
-        return false;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-    return true;
-  }, []);
 
   // Keep the ref in sync with the latest connected printer id
   useEffect(() => {
