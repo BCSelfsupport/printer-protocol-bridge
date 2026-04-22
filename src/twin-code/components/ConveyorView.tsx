@@ -27,7 +27,7 @@ export function ConveyorView() {
     const ro = new ResizeObserver((entries) => {
       const r = entries[0].contentRect;
       const w = r.width;
-      const h = Math.max(180, Math.min(280, r.width * 0.18));
+      const h = Math.max(360, Math.min(460, r.width * 0.32));
       setSize({ w, h });
       // 1 px == 1 mm at default scale; conveyor mm length tracks pixel width
       // for an intuitive 1:1 visual mapping.
@@ -37,10 +37,10 @@ export function ConveyorView() {
     return () => ro.disconnect();
   }, []);
 
-  const beltY = size.h * 0.55;
-  const bottleR = Math.min(20, Math.max(8, snap.bottles.length > 0
-    ? (conveyorSim.getConfig().bottleDiameterMm / 2)
-    : 30));
+  const beltY = size.h * 0.66;
+  // Larger bottles so 13-digit serials are readable. Scales with width.
+  const bottleR = Math.max(28, Math.min(48, size.w * 0.028));
+  const bottleH = bottleR * 2.4; // taller body for a bottle silhouette
   const beamX = conveyorSim.getConfig().photocellPos * size.w;
 
   return (
@@ -56,22 +56,22 @@ export function ConveyorView() {
           {/* Printer A label (top) */}
           <g>
             <rect
-              x={beamX - 60} y={8} width={120} height={28}
+              x={beamX - 80} y={8} width={160} height={32}
               rx={4}
               fill="hsl(var(--muted))"
               stroke="hsl(var(--border))"
             />
             <text
-              x={beamX} y={26}
+              x={beamX} y={28}
               textAnchor="middle"
-              fontSize={11}
+              fontSize={13}
               fontFamily="monospace"
               fill="hsl(var(--foreground))"
             >
               Printer A · DM 16×16
             </text>
             <line
-              x1={beamX} y1={36} x2={beamX} y2={beltY - bottleR - 4}
+              x1={beamX} y1={40} x2={beamX} y2={beltY - bottleH - 4}
               stroke="hsl(var(--chart-3))"
               strokeWidth={1.5}
               strokeDasharray="3 3"
@@ -85,24 +85,24 @@ export function ConveyorView() {
             fill="hsl(var(--border))"
           />
           <rect
-            x={0} y={beltY + bottleR + 2}
-            width={size.w} height={6}
+            x={0} y={beltY + 2}
+            width={size.w} height={8}
             fill="hsl(var(--muted))"
           />
 
           {/* Photocell beam */}
           <line
-            x1={beamX} y1={size.h - 30} x2={beamX} y2={beltY + bottleR + 4}
+            x1={beamX} y1={size.h - 34} x2={beamX} y2={beltY - 4}
             stroke="hsl(var(--destructive))"
             strokeWidth={1.5}
             strokeDasharray="4 2"
             opacity={0.8}
           />
-          <circle cx={beamX} cy={size.h - 22} r={6} fill="hsl(var(--destructive))" />
+          <circle cx={beamX} cy={size.h - 24} r={7} fill="hsl(var(--destructive))" />
           <text
             x={beamX} y={size.h - 6}
             textAnchor="middle"
-            fontSize={10}
+            fontSize={11}
             fontFamily="monospace"
             fill="hsl(var(--muted-foreground))"
           >
@@ -112,16 +112,16 @@ export function ConveyorView() {
           {/* Printer B label (bottom side) */}
           <g>
             <rect
-              x={beamX + 16} y={beltY + bottleR + 12}
-              width={120} height={22}
+              x={beamX + 18} y={size.h - 38}
+              width={140} height={24}
               rx={3}
               fill="hsl(var(--muted))"
               stroke="hsl(var(--border))"
             />
             <text
-              x={beamX + 76} y={beltY + bottleR + 27}
+              x={beamX + 88} y={size.h - 22}
               textAnchor="middle"
-              fontSize={11}
+              fontSize={12}
               fontFamily="monospace"
               fill="hsl(var(--foreground))"
             >
@@ -129,43 +129,88 @@ export function ConveyorView() {
             </text>
           </g>
 
-          {/* Bottles */}
+          {/* Bottles — drawn as a silhouette (neck + shoulders + body) */}
           {snap.bottles.map((b) => {
             const fill = BOTTLE_COLOR_BY_STATE[b.state];
             const showLabel = b.state === "printed" || b.state === "missed";
+            const cx = b.xMm;
+            const bodyTop = beltY - bottleH;
+            const neckW = bottleR * 0.55;
+            const neckH = bottleR * 0.55;
+            const shoulderH = bottleR * 0.5;
+            // Path: bottle silhouette
+            const path = [
+              `M ${cx - neckW} ${bodyTop}`,
+              `L ${cx - neckW} ${bodyTop + neckH}`,
+              `Q ${cx - bottleR} ${bodyTop + neckH} ${cx - bottleR} ${bodyTop + neckH + shoulderH}`,
+              `L ${cx - bottleR} ${beltY - 2}`,
+              `L ${cx + bottleR} ${beltY - 2}`,
+              `L ${cx + bottleR} ${bodyTop + neckH + shoulderH}`,
+              `Q ${cx + bottleR} ${bodyTop + neckH} ${cx + neckW} ${bodyTop + neckH}`,
+              `L ${cx + neckW} ${bodyTop}`,
+              `Z`,
+            ].join(" ");
+            // Cap on top
+            const capY = bodyTop - bottleR * 0.18;
+            const capH = bottleR * 0.22;
             return (
               <g key={b.id}>
-                <circle
-                  cx={b.xMm}
-                  cy={beltY - bottleR - 1}
-                  r={bottleR}
+                {/* Cap */}
+                <rect
+                  x={cx - neckW - 2}
+                  y={capY}
+                  width={(neckW + 2) * 2}
+                  height={capH}
+                  rx={2}
+                  fill="hsl(var(--muted-foreground) / 0.6)"
+                />
+                {/* Bottle body */}
+                <path
+                  d={path}
                   fill={fill}
-                  fillOpacity={b.state === "pending" ? 0.5 : 0.85}
+                  fillOpacity={b.state === "pending" ? 0.55 : 0.9}
                   stroke={b.state === "missed" ? "hsl(var(--destructive))" : "hsl(var(--border))"}
                   strokeWidth={b.state === "missed" ? 2 : 1}
                 />
+                {/* Printed serial — full 13 digits, readable */}
                 {b.state === "printed" && b.serial && (
                   <text
-                    x={b.xMm}
-                    y={beltY - bottleR + 4}
+                    x={cx}
+                    y={beltY - bottleH * 0.45}
                     textAnchor="middle"
-                    fontSize={Math.max(7, bottleR * 0.45)}
+                    fontSize={Math.max(10, bottleR * 0.34)}
                     fontFamily="monospace"
+                    fontWeight={600}
                     fill="hsl(var(--primary-foreground))"
                   >
-                    {b.serial.slice(-6)}
+                    {b.serial}
                   </text>
                 )}
+                {/* MISS overlay */}
+                {b.state === "missed" && (
+                  <text
+                    x={cx}
+                    y={beltY - bottleH * 0.45}
+                    textAnchor="middle"
+                    fontSize={Math.max(11, bottleR * 0.4)}
+                    fontFamily="monospace"
+                    fontWeight={700}
+                    fill="hsl(var(--destructive-foreground))"
+                  >
+                    MISS
+                  </text>
+                )}
+                {/* Cycle ms above bottle */}
                 {showLabel && b.cycleMs !== null && (
                   <text
-                    x={b.xMm}
-                    y={beltY - bottleR - bottleR - 6}
+                    x={cx}
+                    y={bodyTop - capH - 6}
                     textAnchor="middle"
-                    fontSize={9}
+                    fontSize={11}
                     fontFamily="monospace"
                     fill={b.state === "missed" ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))"}
                   >
-                    {b.state === "missed" ? "MISS" : `${b.cycleMs.toFixed(0)}ms`}
+                    {b.state === "missed" ? "miss" : `${b.cycleMs.toFixed(0)}ms`}
                   </text>
                 )}
               </g>
