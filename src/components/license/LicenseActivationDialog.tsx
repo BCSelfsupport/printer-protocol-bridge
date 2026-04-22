@@ -120,10 +120,16 @@ export function LicenseActivationDialog({ open, onOpenChange }: LicenseActivatio
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Auto-assigned (dev build)</span>
                 </div>
-                <Button variant="outline" size="sm" onClick={deactivate} className="w-full">
-                  <LogOut className="w-3 h-3 mr-1" />
-                  Switch to LITE (test mode)
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={deactivate} className="flex-1">
+                    <LogOut className="w-3 h-3 mr-1" />
+                    Switch to LITE (test mode)
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setShowPairMobile(true)} className="flex-1">
+                    <QrCode className="w-3 h-3 mr-1" />
+                    Pair Mobile
+                  </Button>
+                </div>
               </div>
             )}
 
