@@ -8,6 +8,7 @@ import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
 import { parseBarcodeLabelData, renderBarcodeToCanvas, estimateBarcodeWidthDots } from '@/lib/barcodeRenderer';
 import { MessageDetails, MessageField } from '@/components/screens/EditMessageScreen';
 import { computeAutoCodeValue } from '@/lib/autoCodeProtocol';
+import { buildTokenMap, resolveFieldData } from '@/lib/tokenResolver';
 import { CountersDialog } from '@/components/counters/CountersDialog';
 import { NavItem } from '@/components/layout/BottomNav';
 import { ModelBadge } from '@/components/branding/ModelBadge';
@@ -562,8 +563,12 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, selectedPr
     let cancelled = false;
     const load = async () => {
       const imgs = new Map<string, HTMLCanvasElement>();
+      // Resolve {TOKEN} placeholders so QR/barcode data reflects the latest
+      // scanned/prompted/counter values rather than rendering literal `{TAG}`.
+      const tokenMap = buildTokenMap(messageContent, undefined, undefined, { preview: true });
       for (const field of barcodeFields) {
-        const parsed = parseBarcodeLabelData(field.data);
+        const resolvedData = resolveFieldData(field.data, tokenMap, field.literalText);
+        const parsed = parseBarcodeLabelData(resolvedData);
         if (!parsed || !parsed.data) continue;
         const h = field.height || messageContent.height || TOTAL_ROWS;
         try {
