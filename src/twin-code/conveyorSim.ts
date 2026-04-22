@@ -186,12 +186,18 @@ class ConveyorSim {
       }
     }
 
-    // Spawn new bottles. The "next spawn position" is offset by pitch from the
-    // last spawned bottle's entry point, so spacing is exact regardless of fps.
+    // Spawn new bottles with EXACT pitch spacing.
+    // `nextSpawnAtMm` is the x-position where the next bottle should appear.
+    // It is decremented by belt motion each frame; whenever it falls at or
+    // below 0, we spawn a bottle at that exact position (preserving the
+    // sub-frame residual) and add `pitch` for the next one. This keeps
+    // centerline-to-centerline distance equal to `pitchMm` regardless of fps.
+    const advanceMm = speedMmPerSec * dtSec;
+    this.nextSpawnAtMm -= advanceMm;
     while (this.nextSpawnAtMm <= 0) {
       this.bottles.push({
         id: this.nextBottleId++,
-        xMm: this.nextSpawnAtMm,
+        xMm: this.nextSpawnAtMm, // residual = how far past the entry the bottle should already be
         state: "pending",
         serial: null,
         skewMs: null,
@@ -201,7 +207,6 @@ class ConveyorSim {
       this.nextSpawnAtMm += this.config.pitchMm;
       this.bottleCount++;
     }
-    this.nextSpawnAtMm -= speedMmPerSec * dtSec;
 
     // Cull bottles past the right edge (with a small buffer for visualization)
     const cullX = this.conveyorLengthMm + 50;
