@@ -214,10 +214,76 @@ export function PairMobileDialog({ open, onOpenChange }: PairMobileDialogProps) 
           )}
         </div>
 
+        {/* Get the mobile app (PWA install instructions) */}
+        <div className="border-t pt-4">
+          <h3 className="text-sm font-semibold flex items-center gap-1.5 mb-2">
+            <Download className="w-4 h-4" />
+            Get the CodeSync mobile app
+          </h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            CodeSync Mobile is a Progressive Web App — no app store needed. Open the link
+            on your phone and add it to your home screen.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 bg-muted/40 rounded-md border border-border p-3">
+            <div className="bg-white p-2 rounded">
+              <QRCodeSVG value={MOBILE_APP_URL} size={96} level="M" />
+            </div>
+            <div className="flex-1 w-full min-w-0">
+              <p className="text-xs text-muted-foreground mb-1">Scan with your phone, or open:</p>
+              <div className="flex items-center gap-1.5">
+                <code className="flex-1 text-xs font-mono bg-background border border-border rounded px-2 py-1 truncate">
+                  {MOBILE_APP_URL}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 shrink-0"
+                  onClick={() => {
+                    navigator.clipboard.writeText(MOBILE_APP_URL);
+                    toast.success('Link copied');
+                  }}
+                  title="Copy link"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            <div className="rounded-md border border-border p-3">
+              <div className="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
+                <Apple className="w-3.5 h-3.5" />
+                iPhone / iPad (Safari)
+              </div>
+              <ol className="text-[11px] text-muted-foreground space-y-1 list-decimal list-inside">
+                <li>Open the link in <strong>Safari</strong></li>
+                <li>Tap the <Share2 className="w-3 h-3 inline -mt-0.5" /> Share button</li>
+                <li>Tap <strong>Add to Home Screen</strong></li>
+                <li>Tap <strong>Add</strong> in the top right</li>
+              </ol>
+            </div>
+            <div className="rounded-md border border-border p-3">
+              <div className="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
+                <Smartphone className="w-3.5 h-3.5" />
+                Android (Chrome)
+              </div>
+              <ol className="text-[11px] text-muted-foreground space-y-1 list-decimal list-inside">
+                <li>Open the link in <strong>Chrome</strong></li>
+                <li>Tap the <strong>⋮</strong> menu (top right)</li>
+                <li>Tap <PlusSquare className="w-3 h-3 inline -mt-0.5" /> <strong>Add to Home screen</strong></li>
+                <li>Tap <strong>Install</strong> to confirm</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
         <div className="text-xs text-muted-foreground border-t pt-3 space-y-1">
+          <p className="font-semibold text-foreground">Then pair it:</p>
           <p>1. Open CodeSync on your mobile device</p>
           <p>2. Tap <strong>"Pair with PC"</strong> on the license screen</p>
-          <p>3. Enter the 6-character code or scan the QR code</p>
+          <p>3. Enter the 6-character code or scan the QR code above</p>
         </div>
       </DialogContent>
     </Dialog>
