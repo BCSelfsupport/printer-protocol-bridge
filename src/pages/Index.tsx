@@ -2372,7 +2372,6 @@ const Index = () => {
       <FaultAlertDialog
         faults={activeFaults}
         isConnected={connectionState.isConnected}
-        onAcknowledge={() => sendCommand('^CA')}
       />
 
       {/* Mobile companion: pause/resume polling FAB */}
