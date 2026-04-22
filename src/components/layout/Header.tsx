@@ -150,6 +150,16 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
                 </div>
               )}
 
+              {showPairMobileButton && (
+                <button
+                  onClick={() => setShowPairMobile(true)}
+                  className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-primary/80 flex items-center justify-center hover:bg-primary transition-colors flex-shrink-0"
+                  title="Pair Mobile Device — install PWA & link with QR code"
+                >
+                  <QrCode className="w-3.5 h-3.5 md:w-5 md:h-5 text-primary-foreground" />
+                </button>
+              )}
+
               {mounted && (
                 <button
                   onClick={toggleTheme}
