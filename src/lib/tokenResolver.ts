@@ -96,12 +96,12 @@ export function resolveFieldData(
       if (!trimmed) return undefined;
 
       const normalized = labelToToken(trimmed);
-      const counterAlias = trimmed.toUpperCase().match(/^CN(\d+)$/);
+      const legacyCounterMatch = trimmed.toUpperCase().match(/^C(?:N)?(\d+)$/);
       const candidates = [
         trimmed,
         trimmed.toUpperCase(),
         normalized,
-        counterAlias ? `COUNTER${counterAlias[1]}` : undefined,
+        legacyCounterMatch ? `COUNTER${legacyCounterMatch[1]}` : undefined,
       ].filter((candidate): candidate is string => !!candidate);
 
       for (const candidate of candidates) {

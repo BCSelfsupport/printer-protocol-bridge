@@ -16,6 +16,10 @@ describe('tokenResolver legacy compatibility', () => {
     expect(resolveFieldData('[QRCODE] {WORKORDER,CN1}', { WORK_ORDER: 'ABC123', COUNTER1: '0007' })).toBe('[QRCODE] ABC123,0007');
   });
 
+  it('resolves short legacy counter aliases', () => {
+    expect(resolveFieldData('[QRCODE] {WORKORDER}{C1}', { WORK_ORDER: 'ABC123', COUNTER1: '0007' })).toBe('[QRCODE] ABC1230007');
+  });
+
   it('falls back to counter field data when advancedSettings.counters is missing', () => {
     const message = {
       name: 'TEST',
