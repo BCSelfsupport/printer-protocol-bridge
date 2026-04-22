@@ -695,10 +695,11 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, selectedPr
         const yDots = Math.max(0, clampedYDots - previewYOffsetDots);
         const y = yDots * effectiveDotSize;
 
-        // Substitute live time/date for auto-code fields, and resolve dynamic lineId
+        // Substitute linked-token values for normal text fields too, so
+        // scanned/prompted data shows in plain text previews, not just barcodes.
         let displayData = (field as any).dynamicSource === 'lineId' && selectedPrinterLineId
           ? selectedPrinterLineId
-          : field.data;
+          : resolveFieldData(field.data, previewTokenMap, field.literalText);
         const liveAutoCode = inferFetchedAutoCode(field);
         if (liveAutoCode) {
           // Only apply expiry offset to fields that were created as expiration dates
