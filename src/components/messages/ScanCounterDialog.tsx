@@ -59,6 +59,19 @@ export function ScanCounterDialog({
   const slots = useMemo(() => detectReferencedCounters(details), [details]);
   const [values, setValues] = useState<Record<number, string>>({});
 
+  // Map each slot → its configured Start Count from the message's advanced
+  // settings. This is what "Reset" should restore to (NOT a hardcoded 0),
+  // because the printer's own Counter Reset behaviour uses startCount.
+  const startCounts = useMemo(() => {
+    const map: Record<number, number> = {};
+    const configs = details?.advancedSettings?.counters ?? [];
+    for (const slot of slots) {
+      const cfg = configs.find((c) => c.id === slot);
+      map[slot] = cfg?.startCount ?? 0;
+    }
+    return map;
+  }, [details, slots]);
+
   // Seed the inputs with the current live count whenever the dialog opens.
   useEffect(() => {
     if (!open) return;
