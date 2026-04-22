@@ -11,6 +11,9 @@ interface PairMobileDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Public PWA URL operators install on their phones.
+const MOBILE_APP_URL = 'https://bestcode-codesync.lovable.app';
+
 function formatRelative(iso: string | null): string {
   if (!iso) return 'never';
   const ms = Date.now() - new Date(iso).getTime();
