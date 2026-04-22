@@ -73,6 +73,10 @@ export function ScanWaitingDialog({
     let cancelled = false;
     const poll = async () => {
       if (firedRef.current || cancelled) return;
+      // Guard: skip polls when the license context isn't ready yet — this avoids
+      // transient 401 "Invalid license" responses from the edge function on the
+      // very first tick before the license hook has hydrated.
+      if (!productKey || productKey.length < 5) return;
       try {
         const res = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-request?action=poll`,
@@ -85,6 +89,13 @@ export function ScanWaitingDialog({
             body: JSON.stringify({ product_key: productKey, request_id: requestId }),
           },
         );
+        // Swallow 401/404 silently — these are recoverable: the next poll will
+        // retry once the license hydrates or the row becomes visible.
+        if (res.status === 401 || res.status === 404) {
+          console.warn('[ScanWaitingDialog] poll got', res.status, '— retrying next tick');
+          return;
+        }
+        if (!res.ok) return;
         const data = await res.json();
         const row = data?.request as { status?: string; scanned_value?: string | null } | null;
         if (row?.status === 'fulfilled' && typeof row.scanned_value === 'string') {
