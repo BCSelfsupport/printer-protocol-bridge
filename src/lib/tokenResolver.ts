@@ -14,6 +14,10 @@ import type { MessageField, MessageDetails } from '@/components/screens/EditMess
 
 const TOKEN_RE = /\{([^{}]+)\}/g;
 
+function isCounterTokenName(name: string): boolean {
+  return /^(?:COUNTER|CN|C)\d+$/i.test(name.trim());
+}
+
 /** Convert a free-form prompt label to a canonical token identifier. */
 export function labelToToken(label: string | undefined): string | undefined {
   if (!label) return undefined;
@@ -83,6 +87,7 @@ export function resolveFieldData(
   data: string,
   values: Record<string, string>,
   literalText?: boolean,
+  options?: { preserveCounterTokens?: boolean },
 ): string {
   if (!data || literalText) return data;
   if (!data.includes('{')) return data; // fast path
@@ -94,8 +99,10 @@ export function resolveFieldData(
     const resolveLegacyToken = (name: string): string | undefined => {
       const trimmed = name.trim();
       if (!trimmed) return undefined;
+      if (options?.preserveCounterTokens && isCounterTokenName(trimmed)) return undefined;
 
       const normalized = labelToToken(trimmed);
+      if (options?.preserveCounterTokens && normalized && isCounterTokenName(normalized)) return undefined;
       const legacyCounterMatch = trimmed.toUpperCase().match(/^C(?:N)?(\d+)$/);
       const candidates = [
         trimmed,
@@ -119,7 +126,11 @@ export function resolveFieldData(
     };
 
     if (parts.length > 1) {
-      const resolvedParts = parts.map((part) => resolveLegacyToken(part) ?? part);
+      const resolvedParts = parts.map((part) => {
+        const resolved = resolveLegacyToken(part);
+        if (resolved !== undefined) return resolved;
+        return options?.preserveCounterTokens && isCounterTokenName(part) ? `{${part.trim()}}` : part;
+      });
       const changed = resolvedParts.some((part, index) => part !== parts[index]);
       return changed ? resolvedParts.join(',') : whole;
     }
@@ -200,9 +211,10 @@ export function buildTokenMap(
 export function resolveAllFields(
   fields: MessageField[],
   tokenMap: Record<string, string>,
+  options?: { preserveCounterTokens?: boolean },
 ): MessageField[] {
   return fields.map((f) => {
-    const resolved = resolveFieldData(f.data, tokenMap, f.literalText);
+    const resolved = resolveFieldData(f.data, tokenMap, f.literalText, options);
     return resolved === f.data ? f : { ...f, data: resolved };
   });
 }
