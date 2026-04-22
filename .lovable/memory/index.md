@@ -4,6 +4,7 @@ Updated: now
 # Project Memory
 
 ## Core
+- 🔒 FREEZE BASELINE v0.1.166: Build new features REMOTE/isolated. Never edit frozen modules (printer hooks, save/select flows, protocol libs, electron bridge, license). See [Freeze Baseline](mem://constraints/freeze-baseline-v0-1-166).
 - BestCode Printer management (Electron app + PWA).
 - Protocol v2.6 authoritative. Save requires `^SV` after `^NM`.
 - 1 persistent TCP socket (port 23) per printer. Only one telnet session allowed by hardware.
