@@ -251,6 +251,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
       <ConnectionGuideDialog open={showGuide} onOpenChange={setShowGuide} />
       <FeedbackDialog open={showFeedback} onOpenChange={setShowFeedback} appVersion={appVersion} />
       <UserManualDialog open={showManual} onOpenChange={setShowManual} />
+      <PairMobileDialog open={showPairMobile} onOpenChange={setShowPairMobile} />
     </header>
   );
 }
