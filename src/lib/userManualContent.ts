@@ -37,7 +37,7 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'main-layout',
         title: 'Main layout',
-        body: `The main screen has three areas:\n\n- **Network Printers** sidebar (left) — your fleet of printers with their connection status\n- **Detail panel** (right) — shows the currently selected printer's dashboard, messages, setup, etc.\n- **Top bar** — quick access to Mobile Pairing, Theme, Fullscreen, Feedback, Training Videos, Help, and Service tools\n\nClick a printer in the sidebar to connect and view its dashboard.`,
+        body: `The main screen has three areas:\n\n- **Network Printers** sidebar (left) — your fleet of printers with their connection status\n- **Detail panel** (right) — shows the currently selected printer's dashboard, messages, setup, etc.\n- **Top bar** — quick access to **Pair Mobile** (QR icon — opens the mobile install + pairing dialog), Theme, Fullscreen, Feedback, Training Videos, User Manual, Help, and Diagnostics\n\nClick a printer in the sidebar to connect and view its dashboard.`,
         screenshot: '/manual-screenshots/01-printers.png',
       },
     ],
