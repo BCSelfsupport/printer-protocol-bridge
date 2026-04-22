@@ -71,6 +71,10 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   }, [fetchVideos]);
 
   const discardRecording = () => {
+    if (croppedUrl) URL.revokeObjectURL(croppedUrl);
+    setCroppedBlob(null);
+    setCroppedUrl(null);
+    setCropProgress(0);
     discardRaw();
     setTitle('');
     setDescription('');
@@ -82,6 +86,30 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
     } catch (err: any) {
       toast.error('Failed to start recording: ' + err.message);
     }
+  };
+
+  const applyCrop = async () => {
+    if (!recordedBlob) return;
+    setCropping(true);
+    setCropProgress(0);
+    try {
+      const blob = await cropVideoTop(recordedBlob, cropTopPx, setCropProgress);
+      if (croppedUrl) URL.revokeObjectURL(croppedUrl);
+      setCroppedBlob(blob);
+      setCroppedUrl(URL.createObjectURL(blob));
+      toast.success(`Cropped ${cropTopPx}px from top (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`);
+    } catch (err: any) {
+      toast.error('Crop failed: ' + err.message);
+    } finally {
+      setCropping(false);
+    }
+  };
+
+  const resetCrop = () => {
+    if (croppedUrl) URL.revokeObjectURL(croppedUrl);
+    setCroppedBlob(null);
+    setCroppedUrl(null);
+    setCropProgress(0);
   };
 
   const captureThumbnail = (): Promise<Blob | null> => {
