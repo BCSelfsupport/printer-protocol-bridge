@@ -9,8 +9,10 @@
  * the barcode as a graphic/logo field on the printer.
  */
 
-// @ts-ignore - bwip-js browser bundle
-import bwipjs from 'bwip-js/browser';
+// Use the main bwip-js entry (ESM) — the '/browser' subpath UMD bundle fails
+// to load encoders in packaged Electron builds (file:// protocol).
+// @ts-ignore - bwip-js ships its own types but resolution differs across bundlers
+import bwipjs from 'bwip-js';
 
 /**
  * Result of generating a DataMatrix bitmap for the printer.
