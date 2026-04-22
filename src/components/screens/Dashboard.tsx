@@ -365,6 +365,7 @@ export function Dashboard({
           message={status?.currentMessage}
           printerTime={status?.printerTime}
           messageContent={messageContent}
+          customCounters={status?.customCounters}
           selectedPrinterLineId={selectedPrinterLineId}
           printerExpiryOffset={printerExpiryOffset}
         />
