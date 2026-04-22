@@ -467,7 +467,7 @@ function calculateRequiredWidth(messageContent: MessageDetails | undefined, mess
       const fieldGap = (field as any).gap ?? 1;
       const x = field.x * dotSize;
       // Barcodes/graphics use their declared width directly (no font math)
-      if (field.type === 'barcode' || field.type === 'logo' || field.type === 'graphic') {
+      if (field.type === 'barcode' || (field.type as string) === 'logo' || (field.type as string) === 'graphic') {
         const w = (field.width || 0) * dotSize;
         maxXEnd = Math.max(maxXEnd, x + w);
         return;
