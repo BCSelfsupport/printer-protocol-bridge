@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { useLicense, type CompanionDevice } from '@/contexts/LicenseContext';
 import { QRCodeSVG } from 'qrcode.react';
-import { Smartphone, Loader2, RefreshCw, Timer, Trash2, CheckCircle2 } from 'lucide-react';
+import { Smartphone, Loader2, RefreshCw, Timer, Trash2, CheckCircle2, Download, Apple, Copy, Share2, PlusSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PairMobileDialogProps {
