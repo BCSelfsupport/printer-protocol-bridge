@@ -125,9 +125,6 @@ export function ScanWaitingDialog({
           <DialogTitle className="flex-1 text-lg font-semibold">
             Waiting for mobile scan
           </DialogTitle>
-          <button onClick={onCancel} className="industrial-button p-2 rounded">
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         <div className="bg-card p-6 space-y-5">
