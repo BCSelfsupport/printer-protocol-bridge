@@ -1748,6 +1748,7 @@ const Index = () => {
           onSaveMessageContent={isConnectedMessageTarget ? saveMessageContent : undefined}
           onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details), messageTargetPrinter?.id)}
           connectedPrinterLineId={messageTargetPrinter?.lineId}
+          liveCounters={connectionState.status?.customCounters}
           onPromptSaved={(details) => {
             const normalized = normalizeMessageForPrinter(details);
             setActiveMessageContent(normalized);
@@ -1977,6 +1978,7 @@ const Index = () => {
             onSaveMessageContent={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id === connectionState.connectedPrinter?.id ? saveMessageContent : undefined}
             onSaveStoredMessage={(details) => saveMessage(normalizeMessageForPrinter(details), (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
             connectedPrinterLineId={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.lineId}
+            liveCounters={connectionState.status?.customCounters}
             onPromptSaved={(details) => {
               const normalized = normalizeMessageForPrinter(details);
               setActiveMessageContent(normalized);
