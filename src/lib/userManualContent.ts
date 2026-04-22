@@ -478,20 +478,25 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'pc-side-pairing',
         title: 'Generating a pairing code (PC)',
-        body: `1. Open **License Activation** on the PC and click **Pair Mobile**\n2. The dialog displays a **QR code** plus a **6-character PIN** valid for 5 minutes\n3. The same dialog lists every currently paired phone (machine ID, paired-at, last-seen) — each row has an **Unpair** button\n4. The list refreshes every 5 seconds while the dialog is open\n\nGenerating a new pairing code only expires older *pending* codes — already-paired phones stay connected.`,
+        body: `On the PC there are **two ways** to open the Pair Mobile dialog:\n\n- **Top bar shortcut** — click the **QR code icon** (primary blue) in the header. This is the fastest way and is always one click away.\n- **License Activation** — open the activation dialog from the printers sidebar footer, then click **Pair Mobile**.\n\nThe Pair Mobile dialog is split into two clearly numbered steps:\n\n**Step 1 — Install the PWA on the phone.** A QR code links the phone's browser to \`https://bestcode-codesync.lovable.app\`. The dialog also shows the platform-specific "Add to Home Screen" instructions for iOS Safari and Android Chrome — operators only need to do this once per phone.\n\n**Step 2 — Pair.** A second QR code (and a 6-character PIN) is valid for 5 minutes. The same dialog lists every currently paired phone (machine ID, paired-at, last-seen) with an **Unpair** button per row, refreshing every 5 seconds.\n\nGenerating a new pairing code only expires older *pending* codes — already-paired phones stay connected.`,
         screenshot: '/manual-screenshots/48-pair-mobile-qr.png',
       },
       {
         id: 'mobile-side-pairing',
         title: 'Joining from the phone',
-        body: `1. Open the CodeSync PWA in your mobile browser\n2. On the License Activation screen, tap **Pair with PC**\n3. Either scan the QR code with the phone's camera or type the 6-character PIN\n4. Tap **Pair with PC** — the phone is now bound to the PC's license as a Companion session\n\nTo leave the pairing later, open License Activation and tap **Unpair Device**.`,
+        body: `Once the PWA is installed (Step 1 above):\n\n1. Open CodeSync from the phone's home screen\n2. On the License Activation screen, tap **Pair with PC**\n3. Either scan the **Step 2** QR code with the phone's camera or type the 6-character PIN\n4. Tap **Pair with PC** — the phone is now bound to the PC's license as a Companion session\n\nThe phone now shares the PC's license and can monitor printers, fulfil scan requests, and remotely control polling. To leave the pairing later, open License Activation on the phone and tap **Unpair Device**.`,
         screenshot: '/manual-screenshots/46-pair-with-pc-mobile.png',
       },
       {
         id: 'connect-via-pc',
         title: 'Connect via PC (relay mode)',
-        body: `Mobile devices cannot reach factory printers directly — printer traffic is relayed through the host PC over an HTTP relay on port **8766**.\n\n1. From the mobile PWA, tap the **Smartphone** icon in the top bar (turns green when connected)\n2. Enter the **PC IP Address** (e.g. 192.168.1.50) and confirm port 8766\n3. Tap **Test Connection** — a green confirmation shows the CodeSync version detected on the PC\n4. Tap **Use This PC**\n\nBoth devices must be on the same WiFi network. To switch PCs later, tap **Disconnect from PC** at the bottom of the dialog.`,
+        body: `Mobile devices cannot reach factory printers directly — printer traffic is relayed through the host PC over an HTTP relay on port **8766**.\n\n1. From the mobile PWA, tap the **Smartphone** icon in the top bar (turns green when connected)\n2. Enter the **PC IP Address** (e.g. 192.168.1.50) and confirm port 8766\n3. Tap **Test Connection** — a green confirmation shows the CodeSync version detected on the PC\n4. Tap **Use This PC**\n\nBoth devices must be on the same WiFi network. To switch PCs later, tap **Disconnect from PC** at the bottom of the dialog. The Smartphone icon is hidden on desktop browsers — it only appears on actual phones/tablets.`,
         screenshot: '/manual-screenshots/49-relay-connect.png',
+      },
+      {
+        id: 'mobile-scan',
+        title: 'Mobile scan companion',
+        body: `Once paired, the phone can act as a **wireless barcode scanner** for the PC. Whenever the operator selects a message that contains a Scanned Field (Chapter 5), CodeSync raises a scan request that automatically appears on every paired phone.\n\n**On the phone:**\n\n1. A floating **Scan** pill appears at the bottom-right and pulses when a request is pending\n2. Tap it (or open the **/scan** page directly) to launch the camera scanner\n3. Aim at the barcode — the value is decoded, sent to the PC, and the scan dialog on the PC closes automatically\n4. The PC bakes the scanned value into the message and selects it on the printer\n\nThe PC scan dialog also accepts USB / wedge scanners and manual typing as fallbacks, so the mobile companion is optional. Multiple paired phones can fulfil a scan — first one wins.`,
       },
       {
         id: 'broadcast-master-slave',
