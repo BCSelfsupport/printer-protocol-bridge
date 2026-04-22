@@ -466,9 +466,9 @@ ipcMain.handle('printer:disconnect', async (event, printerId) => {
   return { success: true };
 });
 
-ipcMain.handle('printer:send-command', async (event, { printerId, command }) => {
+ipcMain.handle('printer:send-command', async (event, { printerId, command, options }) => {
   try {
-    return await sendCommandToSocket(printerId, command);
+    return await sendCommandToSocket(printerId, command, options);
   } catch (err) {
     return { success: false, error: err.message || 'Command failed' };
   }
@@ -734,10 +734,10 @@ function startRelayServer() {
         sendJson(200, { success: true });
 
       } else if (url === '/relay/send-command') {
-        const { printerId, command } = payload;
+        const { printerId, command, options } = payload;
         // Reuse the existing send-command logic by invoking it programmatically
         try {
-          const result = await sendCommandToSocket(printerId, command);
+          const result = await sendCommandToSocket(printerId, command, options);
           sendJson(200, result);
         } catch (err) {
           sendJson(200, { success: false, error: err.message || 'Command failed' });
@@ -785,12 +785,12 @@ function startRelayServer() {
 // the onData handlers collide and responses get lost → timeouts.
 const commandQueues = new Map(); // printerId → Promise chain
 
-async function sendCommandToSocket(printerId, command) {
+async function sendCommandToSocket(printerId, command, options = {}) {
   // Queue this command behind any in-flight command for the same printer
   const prev = commandQueues.get(printerId) || Promise.resolve();
   const current = prev.then(
-    () => _sendCommandToSocketImpl(printerId, command),
-    () => _sendCommandToSocketImpl(printerId, command), // continue even if prev failed
+    () => _sendCommandToSocketImpl(printerId, command, options),
+    () => _sendCommandToSocketImpl(printerId, command, options), // continue even if prev failed
   );
   commandQueues.set(printerId, current.catch(() => {})); // swallow so chain never rejects
   return current;
@@ -801,7 +801,7 @@ async function sendCommandToSocket(printerId, command) {
 // Model 88 supports exactly 1 Telnet session. Any second TCP connection (even
 // a short-lived one) will ETIMEDOUT the main socket. If the persistent socket
 // is gone, return an error and let the watchdog reconnect.
-async function _sendCommandToSocketImpl(printerId, command) {
+async function _sendCommandToSocketImpl(printerId, command, options = {}) {
   const existing = connections.get(printerId);
   const canUse = !!(existing && !existing.destroyed && existing.writable);
 
@@ -833,8 +833,8 @@ async function _sendCommandToSocketImpl(printerId, command) {
 
   return await new Promise((resolve, reject) => {
     let response = '';
-    const MAX_WAIT_MS = 8000;
-    const IDLE_AFTER_DATA_MS = 600; // 600ms idle = response done
+    const MAX_WAIT_MS = Math.max(1000, Math.min(30000, Number(options?.maxWaitMs) || 8000));
+    const IDLE_AFTER_DATA_MS = Math.max(100, Math.min(5000, Number(options?.idleAfterDataMs) || 600));
     let maxTimer = null;
     let idleTimer = null;
     let gotAnyData = false;
