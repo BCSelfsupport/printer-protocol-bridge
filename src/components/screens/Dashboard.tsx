@@ -365,6 +365,7 @@ export function Dashboard({
           message={status?.currentMessage}
           printerTime={status?.printerTime}
           messageContent={messageContent}
+          customCounters={status?.customCounters}
           selectedPrinterLineId={selectedPrinterLineId}
           printerExpiryOffset={printerExpiryOffset}
         />
@@ -444,6 +445,7 @@ interface MessagePreviewCanvasProps {
   message?: string;
   printerTime?: Date;
   messageContent?: MessageDetails;
+  customCounters?: number[];
   selectedPrinterLineId?: string;
   printerExpiryOffset?: number;
 }
@@ -528,14 +530,14 @@ function inferFetchedAutoCode(field: MessageField): { autoCodeFieldType: string;
   return null;
 }
 
-function MessagePreviewCanvas({ message, printerTime, messageContent, selectedPrinterLineId, printerExpiryOffset }: MessagePreviewCanvasProps) {
+function MessagePreviewCanvas({ message, printerTime, messageContent, customCounters, selectedPrinterLineId, printerExpiryOffset }: MessagePreviewCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dotSize, setDotSize] = useState<number>(DOT_SIZE_DESKTOP);
   const [zoomIndex, setZoomIndex] = useState(2); // Default to 2x zoom
   const [barcodeImages, setBarcodeImages] = useState<Map<string, HTMLCanvasElement>>(new Map());
   const previewTokenMap = useMemo(
-    () => messageContent ? buildTokenMap(messageContent, undefined, undefined, { preview: true }) : {},
-    [messageContent]
+    () => messageContent ? buildTokenMap(messageContent, customCounters, undefined, { preview: true }) : {},
+    [messageContent, customCounters]
   );
 
   // Compute offset between printer clock (^SD) and local PC clock so that
