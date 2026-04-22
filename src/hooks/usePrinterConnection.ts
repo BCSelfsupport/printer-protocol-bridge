@@ -2024,8 +2024,10 @@ export function usePrinterConnection() {
         return `^AH${fieldNum};${field.x};${field.y};${fontCode};7`;
       }
       case 'counter':
-        // ^AC n; x; y; s; c (default to print counter = 0)
-        return `^AC${fieldNum};${field.x};${field.y};${fontCode};0`;
+        // ^AC n; x; y; s; c where c = hardware counter slot
+        // 0 = print count, 1-4 = custom counters. Respect the field's selected
+        // counter slot so Force Print increments the correct value on-printer.
+        return `^AC${fieldNum};${field.x};${field.y};${fontCode};${Math.min(4, Math.max(0, parseInt(field.autoCodeFieldType?.match(/^counter_(\d+)$/i)?.[1] ?? '0', 10) || 0))}`;
       case 'barcode': {
         // ^AB syntax varies by barcode type (per v2.0 protocol section 5.27.2.1):
         //   1D (non-Code128): ^AB n;x;y;f;t;m;r;data

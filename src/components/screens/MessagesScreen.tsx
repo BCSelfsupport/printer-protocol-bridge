@@ -196,21 +196,13 @@ export function MessagesScreen({
       return { ...f, data: formatCounterValue(f.data, counterOverrides[slot]) };
     });
 
-    // 2) Build the token map FROM the updated fields so the live counter
-    //    field's `data` is the source of truth — this kills the {C1}=0 vs
-    //    text=00001 discrepancy.
-    const overrideTokens: Record<string, string> = {};
-    for (const [slot, value] of Object.entries(counterOverrides)) {
-      overrideTokens[`COUNTER${slot}`] = String(value);
-    }
-    const tokenMap = buildTokenMap(
-      { ...bakedDetails, fields: fieldsWithCounters },
-      undefined,
-      overrideTokens,
-    );
+    // 2) Build the token map from the updated fields, but keep hardware counter
+    //    placeholders ({C1}/{CN1}/{COUNTER1}) intact in linked fields so the
+    //    printer can continue indexing them on each print trigger.
+    const tokenMap = buildTokenMap({ ...bakedDetails, fields: fieldsWithCounters });
     const updatedDetails: MessageDetails = {
       ...bakedDetails,
-      fields: resolveAllFields(fieldsWithCounters, tokenMap),
+      fields: resolveAllFields(fieldsWithCounters, tokenMap, { preserveCounterTokens: true }),
     };
 
     onHome();
@@ -223,7 +215,7 @@ export function MessagesScreen({
       if (onSendCommand) {
         for (const [slot, value] of Object.entries(counterOverrides)) {
           try {
-            await onSendCommand(`^CC ${slot} ${value}`);
+            await onSendCommand(`^CC ${slot};${value}`);
           } catch (err) {
             console.warn('[commitScanPrint] counter reset failed', slot, err);
           }
@@ -880,7 +872,7 @@ export function MessagesScreen({
             const tokenMap = buildTokenMap({ ...pendingMessageDetails, fields: bakedFields });
             const updatedDetails = {
               ...pendingMessageDetails,
-              fields: resolveAllFields(bakedFields, tokenMap),
+              fields: resolveAllFields(bakedFields, tokenMap, { preserveCounterTokens: true }),
             };
 
             try {
