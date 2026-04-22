@@ -722,7 +722,17 @@ export function usePrinterConnection() {
           filteredNames.push(addedName);
         }
       }
-      const printerMessages: PrintMessage[] = filteredNames.map((name, idx) => ({ id: idx + 1, name }));
+      // De-duplicate (case-insensitive) — some firmware can echo the same name
+      // twice in ^LM (e.g. QUANTUM appearing on consecutive lines). Without this
+      // guard we'd render two rows with the same label but different ids.
+      const seen = new Set<string>();
+      const uniqueNames = filteredNames.filter(n => {
+        const key = n.toUpperCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      const printerMessages: PrintMessage[] = uniqueNames.map((name, idx) => ({ id: idx + 1, name }));
       console.log('[handleMessageListResponse] Parsed messages:', printerMessages.length, 'current:', detectedCurrentMessage);
       setConnectionState((prev) => ({
         ...prev,
