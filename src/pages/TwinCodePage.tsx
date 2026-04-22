@@ -246,6 +246,8 @@ export default function TwinCodePage() {
           Phase 1a · Profiler validated against synthetic data. Phase 1b will swap in a real Datajet/CSV ingress + dual <code>^FD</code> hot path.
         </p>
       </main>
+
+      <TwinPairBindDialog open={bindOpen} onOpenChange={setBindOpen} />
     </div>
   );
 }
