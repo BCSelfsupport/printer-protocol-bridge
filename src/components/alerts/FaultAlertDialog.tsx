@@ -51,7 +51,7 @@ const normalizeFaultCodeForAsset = (rawCode: string) => {
  *   set), so a snooze-expired fault re-triggers reliably even if the polling
  *   payload is identical between cycles.
  */
-export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps) {
+export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultAlertDialogProps) {
   // Deduplicate by code — duplicated ^LE entries (e.g. Makeup reported twice)
   // must never produce two popups for the same code.
   const dedupedFaults = useMemo(() => {
