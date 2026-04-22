@@ -29,7 +29,7 @@ interface TrainingVideoRecorderProps {
 }
 
 export function TrainingVideoRecorder({ recorderState, recorderActions }: TrainingVideoRecorderProps) {
-  const { isRecording, elapsed, recordedBlob, recordedUrl, isMicEnabled } = recorderState;
+  const { isRecording, elapsed, recordedBlob, recordedUrl, isMicEnabled, countdown } = recorderState;
   const { startRecording, stopRecording, discardRecording: discardRaw, toggleMic } = recorderActions;
 
   const [title, setTitle] = useState('');
