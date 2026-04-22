@@ -26,9 +26,9 @@ const DASH_VARIANTS_REGEX = /[‐‑‒–—−]/g;
 const normalizeFaultCodeForAsset = (rawCode: string) => {
   const normalizedDashes = rawCode.trim().replace(DASH_VARIANTS_REGEX, '-');
   const strictCodeMatch = normalizedDashes.match(/\b[0-9A-Fa-f]{2}-[0-9A-Fa-f]{4}\b/);
-  if (strictCodeMatch) return strictCodeMatch[0];
+  if (strictCodeMatch) return strictCodeMatch[0].toUpperCase();
 
-  return normalizedDashes.replace(/[^a-zA-Z0-9_-]/g, '');
+  return normalizedDashes.replace(/[^a-zA-Z0-9_-]/g, '').toUpperCase();
 };
 
 /**
@@ -54,9 +54,13 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
     const seen = new Set<string>();
     const out: PrinterFault[] = [];
     for (const f of faults) {
-      if (!f?.code || seen.has(f.code)) continue;
-      seen.add(f.code);
-      out.push(f);
+      const canonicalCode = normalizeFaultCodeForAsset(f?.code ?? '');
+      if (!canonicalCode || seen.has(canonicalCode)) continue;
+      seen.add(canonicalCode);
+      out.push({
+        ...f,
+        code: canonicalCode,
+      });
     }
     return out;
   }, [faults]);
