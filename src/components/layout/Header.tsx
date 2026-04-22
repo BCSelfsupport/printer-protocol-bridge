@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize, Stethoscope, HelpCircle, MessageSquare, Video, BookOpen } from 'lucide-react';
+import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize, Stethoscope, HelpCircle, MessageSquare, Video, BookOpen, QrCode } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { getRelayConfig } from '@/lib/printerTransport';
 import { ConnectionGuideDialog } from '@/components/help/ConnectionGuideDialog';
 import { FeedbackDialog } from '@/components/feedback/FeedbackDialog';
 import { UserManualDialog } from '@/components/help/UserManualDialog';
+import { PairMobileDialog } from '@/components/license/PairMobileDialog';
 import { ModelBadge } from '@/components/branding/ModelBadge';
 
 declare const __APP_VERSION__: string;
