@@ -1227,7 +1227,15 @@ export function usePrinterConnection() {
               messageNames.push(addedName);
             }
           }
-          const printerMessages: PrintMessage[] = messageNames.map((name, idx) => ({
+          // De-duplicate (case-insensitive) — see handleMessageListResponse for rationale.
+          const seen = new Set<string>();
+          const uniqueNames = messageNames.filter(n => {
+            const key = n.toUpperCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          const printerMessages: PrintMessage[] = uniqueNames.map((name, idx) => ({
             id: idx + 1,
             name,
           }));
