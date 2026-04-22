@@ -19,7 +19,7 @@ export interface ManualChapter {
   sections: ManualSection[];
 }
 
-export const MANUAL_VERSION = 'v1.0';
+export const MANUAL_VERSION = 'v1.1';
 export const MANUAL_TITLE = 'CodeSync User Manual';
 
 export const MANUAL: ManualChapter[] = [
@@ -37,7 +37,7 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'main-layout',
         title: 'Main layout',
-        body: `The main screen has three areas:\n\n- **Network Printers** sidebar (left) — your fleet of printers with their connection status\n- **Detail panel** (right) — shows the currently selected printer's dashboard, messages, setup, etc.\n- **Top bar** — quick access to Mobile Pairing, Theme, Fullscreen, Feedback, Training Videos, Help, and Service tools\n\nClick a printer in the sidebar to connect and view its dashboard.`,
+        body: `The main screen has three areas:\n\n- **Network Printers** sidebar (left) — your fleet of printers with their connection status\n- **Detail panel** (right) — shows the currently selected printer's dashboard, messages, setup, etc.\n- **Top bar** — quick access to **Pair Mobile** (QR icon — opens the mobile install + pairing dialog), Theme, Fullscreen, Feedback, Training Videos, User Manual, Help, and Diagnostics\n\nClick a printer in the sidebar to connect and view its dashboard.`,
         screenshot: '/manual-screenshots/01-printers.png',
       },
     ],
@@ -156,7 +156,7 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'new-field',
         title: 'Adding a new field',
-        body: `Click **+ New** to open the field type chooser:\n\n- **Text Field** — static or mixed-case text\n- **Line ID** — resolves to the printer's configured Line ID at print time\n- **User Define** — operator is prompted at message-select time\n- **AutoCode Field** — Time, Date, Counter, or Shift codes\n- **Barcode Field** — 1D & 2D barcodes\n- **Graphic Field** — bitmap from the printer's graphic library`,
+        body: `Click **+ New** to open the field type chooser:\n\n- **Text Field** — static or mixed-case text\n- **Scanned Field** — value supplied by a barcode scan (PC USB scanner or paired mobile camera) at message-select time\n- **Line ID** — resolves to the printer's configured Line ID at print time\n- **User Define** — operator is prompted at message-select time\n- **AutoCode Field** — Time, Date, Counter, or Shift codes\n- **Barcode Field** — 1D & 2D barcodes\n- **Graphic Field** — bitmap from the printer's graphic library`,
         screenshot: '/manual-screenshots/09c-new-field.png',
       },
       {
@@ -199,6 +199,11 @@ export const MANUAL: ManualChapter[] = [
         title: 'User Define (operator-prompted) fields',
         body: `User Define fields prompt the operator for input each time the message is selected for printing. Configure the **Prompt Label** (e.g. "LOT CODE") and **Max Characters**. Perfect for batch numbers, lot codes, and operator initials that change between runs.`,
         screenshot: '/manual-screenshots/09i-user-define.png',
+      },
+      {
+        id: 'scanned-field',
+        title: 'Scanned fields (barcode capture)',
+        body: `**Scanned Field** is a specialized prompted field whose value comes from a barcode scan instead of typed input. Use it for serialized cartons, METRC tags, lot stickers, and any workflow where the operator already has a printed code in front of them.\n\n**Creating one:**\n1. In the editor, click **+ New** and pick **Scanned Field**\n2. Set the **Prompt Label** (e.g. "SCAN UID") and **Max Length**\n3. Place the field on the canvas like any other text field\n\n**At print-select time** the operator sees a scan dialog instead of a keyboard. They can:\n\n- Scan with a **USB / wedge scanner** plugged into the PC (most reliable)\n- Scan with a **paired mobile phone's camera** — the request appears automatically on the phone, the result is pushed back to the PC and applied to the message (see Chapter 12)\n- Type the value manually as a fallback\n\nThe scanned value is baked into the message via the same atomic ^DM + ^NM + ^SV save flow used by User Define, so the printer always prints exactly what was scanned — no race conditions.\n\n**Token linking:** Scanned (and User Define) fields can be referenced from other fields using {LABEL} placeholders, so one scan can populate a barcode, a date code, and a human-readable text field at the same time. Edit any text field and type the prompt label inside curly braces, e.g. \`Lot {LOT CODE}\`.`,
       },
       {
         id: 'data-link',
