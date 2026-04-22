@@ -190,7 +190,7 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
   }, [recordedUrl]);
 
   return {
-    state: { isRecording, elapsed, recordedBlob, recordedUrl, isMicEnabled },
+    state: { isRecording, elapsed, recordedBlob, recordedUrl, isMicEnabled, countdown },
     actions: { startRecording, stopRecording, discardRecording, toggleMic },
   };
 }
