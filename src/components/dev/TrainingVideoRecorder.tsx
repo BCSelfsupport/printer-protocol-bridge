@@ -1,13 +1,15 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Video, Upload, Loader2, Trash2, Play, Clock, AlertCircle, Download, Mic, MicOff } from 'lucide-react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Video, Upload, Loader2, Trash2, Play, Clock, AlertCircle, Download, Mic, MicOff, Crop } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { ScreenRecorderState, ScreenRecorderActions } from '@/hooks/useScreenRecorder';
+import { cropVideoTop } from '@/lib/videoCropper';
 
 interface TrainingVideo {
   id: string;
