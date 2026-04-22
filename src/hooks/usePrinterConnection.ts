@@ -1555,7 +1555,6 @@ export function usePrinterConnection() {
     }
     
     const printer = connectionState.connectedPrinter;
-    const writeTiming = getWriteTimingProfile(fields.length);
     
     // Send ^PR command to enable printing (HV on)
     // IMPORTANT: Do NOT optimistically flip UI to green.
@@ -1824,6 +1823,7 @@ export function usePrinterConnection() {
     }
     
     const printer = connectionState.connectedPrinter;
+    const writeTiming = getWriteTimingProfile(message.fields?.length ?? 0);
     
     if (shouldUseEmulator()) {
       const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
@@ -2254,6 +2254,7 @@ export function usePrinterConnection() {
     }
 
     const printer = connectionState.connectedPrinter;
+    const writeTiming = getWriteTimingProfile(fields.length);
     const normalizedMessageName = messageName.trim().toUpperCase();
     const currentSelectedMessage = connectionState.status?.currentMessage?.trim().toUpperCase();
     const needsSwitchAwayBeforeRewrite = currentSelectedMessage === normalizedMessageName;
