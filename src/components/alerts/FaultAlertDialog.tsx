@@ -85,6 +85,20 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
   const [imageExtIndex, setImageExtIndex] = useState(0);
   const [imageVariantIndex, setImageVariantIndex] = useState(0);
 
+  // Tracks the previously observed live fault count, used to detect when a
+  // ^CA we sent did NOT reduce the live ^LE list — meaning the printer
+  // consumed it on an unknown HMI event window (e.g. the 01-8002 Power
+  // warning) instead of one of our queued faults. When that happens we send
+  // an extra ^CA to "catch up" so dismissals stay aligned with our queue.
+  const prevLiveCountRef = useRef<number>(0);
+  // True for the very first ^LE poll after (re)connect. We use this to send
+  // a single proactive ^CA to drain any pre-existing event window sitting in
+  // front of the real fault list.
+  const initialDrainDoneRef = useRef<boolean>(false);
+  // Number of ^CA dismissals we've sent and are still waiting on the printer
+  // to acknowledge by reducing its live fault count.
+  const pendingDismissesRef = useRef<number>(0);
+
   // Reset everything on disconnect.
   useEffect(() => {
     if (isConnected) return;
@@ -92,6 +106,9 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
     setQueueCodes([]);
     snoozedRef.current.clear();
     seenCodesRef.current.clear();
+    prevLiveCountRef.current = 0;
+    initialDrainDoneRef.current = false;
+    pendingDismissesRef.current = 0;
   }, [isConnected]);
 
   // Sync queue with incoming faults.
@@ -117,6 +134,46 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
     // were already active when the user connected (e.g. a persistent fan /
     // cooling fault), which is exactly the behaviour we don't want — those
     // are the faults the operator most needs to see.
+
+    // ── Drift detection ────────────────────────────────────────────────
+    // The printer HMI may show a transient "event window" (e.g. the
+    // 01-8002 Power warning after a power cycle) that does NOT appear in
+    // ^LE but DOES consume our ^CA. Without correction, every ^CA we send
+    // would clear the wrong thing — Ink dismiss clears Power warning, Makeup
+    // dismiss clears Ink, etc., leaving one orphan fault behind that the
+    // operator can't dismiss from CodeSync.
+    //
+    // We detect drift two ways:
+    // 1. On the first poll after connect, send a single proactive ^CA to
+    //    drain any pre-existing event window before our queue starts.
+    // 2. After each user dismiss, verify the live ^LE count actually
+    //    dropped. If it didn't, send extra ^CA(s) to catch up.
+    const liveCount = dedupedFaults.length;
+    if (!initialDrainDoneRef.current) {
+      initialDrainDoneRef.current = true;
+      // Fire-and-forget proactive drain. Safe: if there's no event window,
+      // the printer simply ignores ^CA (or clears one queued fault, which
+      // ^LE will reflect on the next poll and our queue will resync).
+      if (onDismissFault) {
+        void onDismissFault('^CA').catch(() => {
+          /* ignore — best effort drain */
+        });
+      }
+    } else if (pendingDismissesRef.current > 0) {
+      const expected = Math.max(0, prevLiveCountRef.current - pendingDismissesRef.current);
+      if (liveCount > expected && onDismissFault) {
+        // Our ^CA was consumed by something not in ^LE (event window).
+        // Send extra ^CA(s) to make up the difference.
+        const extra = liveCount - expected;
+        for (let i = 0; i < extra; i++) {
+          void onDismissFault('^CA').catch(() => {
+            /* ignore — best effort catch-up */
+          });
+        }
+      }
+      pendingDismissesRef.current = 0;
+    }
+    prevLiveCountRef.current = liveCount;
 
     // Determine which codes are eligible to enqueue: live, not snoozed,
     // and not already in the queue or "seen" this session.
@@ -149,7 +206,7 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
         return filtered.length === prev.length ? prev : filtered;
       });
     }
-  }, [dedupedFaults, isConnected]);
+  }, [dedupedFaults, isConnected, onDismissFault]);
 
   // Open/close the dialog purely from queue contents — never from inside
   // another state updater.
@@ -184,6 +241,7 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
     // 'Cancel' button if both 'Cancel' and 'OK' buttons are displayed,
     // or 'OK' if only the 'OK' button is displayed."
     if (onDismissFault) {
+      pendingDismissesRef.current += 1;
       void onDismissFault('^CA').catch((err) => {
         console.error('[FaultAlertDialog] ^CA failed:', err);
       });
