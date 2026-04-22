@@ -1,5 +1,7 @@
-// @ts-ignore - bwip-js browser bundle
-import bwipjs from 'bwip-js/browser';
+// Use the main bwip-js entry (ESM) — the '/browser' subpath UMD bundle fails
+// to load encoders in packaged Electron builds (file:// protocol), causing
+// QR/DataMatrix renders to silently throw and fall back to the placeholder.
+import bwipjs from 'bwip-js';
 import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
 
 // Map our encoding names to bwip-js encoder names
