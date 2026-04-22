@@ -210,18 +210,6 @@ export function MessagesScreen({
     try {
       toast.loading('Writing scanned value to printer…', { id: 'scan-apply' });
 
-      // 3) Push counter resets BEFORE the message save so the printer's own
-      //    counter is in sync with the baked QR data on the very next print.
-      if (onSendCommand) {
-        for (const [slot, value] of Object.entries(counterOverrides)) {
-          try {
-            await onSendCommand(`^CC ${slot};${value}`);
-          } catch (err) {
-            console.warn('[commitScanPrint] counter reset failed', slot, err);
-          }
-        }
-      }
-
       const saved = await onSaveMessageContent(
         message.name,
         updatedDetails.fields,
@@ -236,6 +224,23 @@ export function MessagesScreen({
       if (!saved) { toast.error('Failed to write scanned value', { id: 'scan-apply' }); return; }
       const selected = await onSelect(message);
       if (!selected) { toast.error('Saved but failed to select', { id: 'scan-apply' }); return; }
+
+      // 3) Push counter resets AFTER save+select. Sending ^CC before the save
+      //    is unreliable: the ^DM/^NM/^SV/^SM sequence re-initialises the
+      //    counter to its configured Start Count, which would silently undo
+      //    the operator's chosen starting value (resulting in the very first
+      //    print using 0 instead of the requested number). Writing ^CC last
+      //    guarantees the next print trigger uses the operator's value.
+      if (onSendCommand) {
+        for (const [slot, value] of Object.entries(counterOverrides)) {
+          try {
+            await onSendCommand(`^CC ${slot};${value}`);
+          } catch (err) {
+            console.warn('[commitScanPrint] counter reset failed', slot, err);
+          }
+        }
+      }
+
       onSaveStoredMessage?.(updatedDetails);
       onPromptSaved?.(updatedDetails);
       toast.success(`Printing with ${pendingScanLabel} = ${scannedValue}`, { id: 'scan-apply' });
