@@ -231,6 +231,7 @@ export function usePrinterConnection() {
   const printersRef = useRef(printers);
   printersRef.current = printers;
   const disconnectRef = useRef<() => void>(() => {});
+  const writeLockRef = useRef(false);
   // Ref for connected printer id – used inside checkPrinterStatus to avoid
   // recreating the callback (and resetting the interval) on every connection state change.
   const connectedPrinterIdRef = useRef<number | null>(null);
@@ -242,6 +243,17 @@ export function usePrinterConnection() {
     settings: defaultSettings,
     messages: [],
   });
+
+  const waitForWriteLockToClear = useCallback(async (timeoutMs = 2500) => {
+    const startedAt = Date.now();
+    while (writeLockRef.current) {
+      if (Date.now() - startedAt >= timeoutMs) {
+        return false;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    return true;
+  }, []);
 
   // Keep the ref in sync with the latest connected printer id
   useEffect(() => {
@@ -1848,6 +1860,10 @@ export function usePrinterConnection() {
       return false;
     } else if (isElectron || isRelayMode()) {
       try {
+        const writeLockCleared = await waitForWriteLockToClear(writeTiming.commandTimeoutMs);
+        if (!writeLockCleared) {
+          console.warn('[selectMessage] Proceeding while write lock is still active');
+        }
         console.log('[selectMessage] Sending ^SM command:', message.name, writeTiming);
         const result = await printerTransport.sendCommand(printer.id, `^SM ${message.name}`, {
           maxWaitMs: writeTiming.commandTimeoutMs,
@@ -1884,7 +1900,7 @@ export function usePrinterConnection() {
       updatePrinter(printer.id, { currentMessage: message.name });
       return true;
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter, updatePrinter]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter, updatePrinter, waitForWriteLockToClear]);
 
   // Printer sign-in: send ^LG password command
   const signIn = useCallback(async (password: string): Promise<boolean> => {
@@ -2385,6 +2401,7 @@ export function usePrinterConnection() {
     } else if (isElectron || isRelayMode()) {
       // Pause status polling to prevent ^SU commands from interleaving
       // with the ^DM → ^NM → ^SV save sequence on the shared TCP socket.
+      writeLockRef.current = true;
       setPollingPaused(true);
       try {
         const pollingIdle = await waitForPollingIdle(writeTiming.commandTimeoutMs);
@@ -2409,7 +2426,6 @@ export function usePrinterConnection() {
             const reason = responseText || errorText || 'Unknown error';
             console.error('[saveMessageContent] Command rejected:', cmd, reason);
             (saveMessageContent as any).__lastError = reason;
-            setPollingPaused(false);
             return false;
           }
 
@@ -2419,9 +2435,6 @@ export function usePrinterConnection() {
             : 300;
           await new Promise(resolve => setTimeout(resolve, delayAfterCommand));
         }
-
-        // Resume polling before optional verification
-        setPollingPaused(false);
 
         // Post-save verification: wait for firmware to flush, then check ^LM.
         if (isNew) {
@@ -2444,8 +2457,10 @@ export function usePrinterConnection() {
       } catch (e) {
         console.error('[saveMessageContent] Failed:', e);
         (saveMessageContent as any).__lastError = e instanceof Error ? e.message : 'Unknown error';
-        setPollingPaused(false);
         return false;
+      } finally {
+        writeLockRef.current = false;
+        setPollingPaused(false);
       }
     } else {
       // Web preview mock
