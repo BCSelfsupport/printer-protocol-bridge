@@ -109,6 +109,7 @@ Updated: now
 - [Firmware Grace](mem://architecture/firmware-processing-grace-periods) — 15s grace period for state parity
 - [Sync Matching](mem://features/message-metadata-sync-matching) — Prioritize by exact data content
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
+- [Twin Print Pair SOW](mem://features/twin-print-pair-sow) — Bonded 2-printer mode for Datajet 13-char strings, ≤30ms cycle. SOW drafted, on hold pending customer answers.
 - [PC Library](mem://features/pc-library-overflow) — Overflow messages stored on PC with swap-slot push mechanism
 - [Scanned Field](mem://features/scanned-field-type) — promptSource='scanner' tile creates scan-only prompted field; PC keyboard dialog filters to keyboard-source
 - [Token Linking](mem://features/token-linking-system) — {TOKEN} substitution from scanned/prompted/counter sources; Linked Field tile + literalText opt-out
