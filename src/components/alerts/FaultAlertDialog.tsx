@@ -14,6 +14,12 @@ interface FaultAlertDialogProps {
   faults: PrinterFault[];
   /** Whether a printer is currently connected */
   isConnected: boolean;
+  /**
+   * Called when the user dismisses a fault popup. Should send the printer's
+   * remote command (^CA) which simulates pressing OK on the HMI event window,
+   * clearing one fault from the printer itself.
+   */
+  onDismissFault?: (command: string) => Promise<{ success: boolean; response: string }>;
 }
 
 const SNOOZE_DURATION_MS = 3 * 60 * 1000; // 3 minutes
