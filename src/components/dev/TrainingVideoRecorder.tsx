@@ -29,7 +29,7 @@ interface TrainingVideoRecorderProps {
 }
 
 export function TrainingVideoRecorder({ recorderState, recorderActions }: TrainingVideoRecorderProps) {
-  const { isRecording, elapsed, recordedBlob, recordedUrl, isMicEnabled } = recorderState;
+  const { isRecording, elapsed, recordedBlob, recordedUrl, isMicEnabled, countdown } = recorderState;
   const { startRecording, stopRecording, discardRecording: discardRaw, toggleMic } = recorderActions;
 
   const [title, setTitle] = useState('');
@@ -229,7 +229,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
             Screen Recorder
           </h3>
 
-          {!recordedBlob && !isRecording && (
+          {!recordedBlob && !isRecording && countdown === 0 && (
             <div className="flex items-center gap-3">
               <Button size="sm" onClick={handleStartRecording} className="gap-2">
                 <Video className="w-4 h-4" />
@@ -245,6 +245,15 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
                 {isMicEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
                 {isMicEnabled ? 'Mic On' : 'Mic Off'}
               </Button>
+            </div>
+          )}
+
+          {countdown > 0 && (
+            <div className="rounded-lg border border-primary/40 bg-primary/10 p-3 text-center">
+              <div className="text-3xl font-bold text-primary tabular-nums">{countdown}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Close the Dev Panel now — recording starts in {countdown}s
+              </p>
             </div>
           )}
 

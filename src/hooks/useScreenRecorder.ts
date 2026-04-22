@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 
 const MAX_DURATION = 3600; // 60 minutes
+const START_DELAY_SECONDS = 3; // Countdown before recording actually begins
 
 export interface ScreenRecorderState {
   isRecording: boolean;
@@ -8,6 +9,7 @@ export interface ScreenRecorderState {
   recordedBlob: Blob | null;
   recordedUrl: string | null;
   isMicEnabled: boolean;
+  countdown: number; // 0 when not counting; 3,2,1 during pre-record delay
 }
 
 export interface ScreenRecorderActions {
@@ -49,12 +51,14 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [isMicEnabled, setIsMicEnabled] = useState(true);
+  const [countdown, setCountdown] = useState(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const toggleMic = useCallback(() => {
     setIsMicEnabled(prev => !prev);
@@ -121,10 +125,34 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
         setIsRecording(false);
       };
 
+      // Trigger UI to close panels NOW so they're gone before recording starts
+      onRecordingStart?.();
+
+      // Run countdown — gives the user time to close the dev panel
+      setCountdown(START_DELAY_SECONDS);
+      await new Promise<void>((resolve) => {
+        let remaining = START_DELAY_SECONDS;
+        countdownTimerRef.current = setInterval(() => {
+          remaining -= 1;
+          if (remaining <= 0) {
+            if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+            countdownTimerRef.current = null;
+            setCountdown(0);
+            resolve();
+          } else {
+            setCountdown(remaining);
+          }
+        }, 1000);
+      });
+
+      // Bail out if user cancelled the screen share during countdown
+      if (screenStream.getVideoTracks()[0].readyState === 'ended') {
+        return;
+      }
+
       recorder.start(1000);
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
-      onRecordingStart?.();
 
       timerRef.current = setInterval(() => {
         setElapsed(prev => {
@@ -137,6 +165,11 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
         });
       }, 1000);
     } catch (err: any) {
+      setCountdown(0);
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
       if (err.name !== 'NotAllowedError') {
         throw err;
       }
@@ -157,7 +190,7 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
   }, [recordedUrl]);
 
   return {
-    state: { isRecording, elapsed, recordedBlob, recordedUrl, isMicEnabled },
+    state: { isRecording, elapsed, recordedBlob, recordedUrl, isMicEnabled, countdown },
     actions: { startRecording, stopRecording, discardRecording, toggleMic },
   };
 }
