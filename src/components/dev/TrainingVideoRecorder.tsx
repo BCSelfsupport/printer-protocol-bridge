@@ -1,13 +1,15 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Video, Upload, Loader2, Trash2, Play, Clock, AlertCircle, Download, Mic, MicOff } from 'lucide-react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Video, Upload, Loader2, Trash2, Play, Clock, AlertCircle, Download, Mic, MicOff, Crop } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { ScreenRecorderState, ScreenRecorderActions } from '@/hooks/useScreenRecorder';
+import { cropVideoTop } from '@/lib/videoCropper';
 
 interface TrainingVideo {
   id: string;
@@ -37,6 +39,19 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   const [videos, setVideos] = useState<TrainingVideo[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Cropping state — local override of the hook's blob/url
+  const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
+  const [croppedUrl, setCroppedUrl] = useState<string | null>(null);
+  const [cropTopPx, setCropTopPx] = useState<number>(40);
+  const [cropping, setCropping] = useState(false);
+  const [cropProgress, setCropProgress] = useState(0);
+  const [videoNaturalHeight, setVideoNaturalHeight] = useState<number>(0);
+  const previewRef = useRef<HTMLVideoElement | null>(null);
+
+  // The blob/url that should be uploaded and previewed (cropped wins if present)
+  const activeBlob = croppedBlob ?? recordedBlob;
+  const activeUrl = croppedUrl ?? recordedUrl;
+
   const fetchVideos = useCallback(async () => {
     try {
       const { data, error } = await supabase.functions.invoke('training-videos', {
@@ -56,6 +71,10 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   }, [fetchVideos]);
 
   const discardRecording = () => {
+    if (croppedUrl) URL.revokeObjectURL(croppedUrl);
+    setCroppedBlob(null);
+    setCroppedUrl(null);
+    setCropProgress(0);
     discardRaw();
     setTitle('');
     setDescription('');
@@ -69,11 +88,35 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
     }
   };
 
+  const applyCrop = async () => {
+    if (!recordedBlob) return;
+    setCropping(true);
+    setCropProgress(0);
+    try {
+      const blob = await cropVideoTop(recordedBlob, cropTopPx, setCropProgress);
+      if (croppedUrl) URL.revokeObjectURL(croppedUrl);
+      setCroppedBlob(blob);
+      setCroppedUrl(URL.createObjectURL(blob));
+      toast.success(`Cropped ${cropTopPx}px from top (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`);
+    } catch (err: any) {
+      toast.error('Crop failed: ' + err.message);
+    } finally {
+      setCropping(false);
+    }
+  };
+
+  const resetCrop = () => {
+    if (croppedUrl) URL.revokeObjectURL(croppedUrl);
+    setCroppedBlob(null);
+    setCroppedUrl(null);
+    setCropProgress(0);
+  };
+
   const captureThumbnail = (): Promise<Blob | null> => {
     return new Promise((resolve) => {
-      if (!recordedUrl) return resolve(null);
+      if (!activeUrl) return resolve(null);
       const video = document.createElement('video');
-      video.src = recordedUrl;
+      video.src = activeUrl;
       video.currentTime = 1;
       video.muted = true;
       video.onloadeddata = () => { video.currentTime = 1; };
@@ -92,7 +135,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   };
 
   const uploadVideo = async () => {
-    if (!recordedBlob || !title.trim()) {
+    if (!activeBlob || !title.trim()) {
       toast.error('Please enter a title');
       return;
     }
@@ -104,7 +147,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
       // Upload video directly to storage (bypasses edge function payload limits)
       const { error: uploadError } = await supabase.storage
         .from('training-videos')
-        .upload(filePath, recordedBlob, {
+        .upload(filePath, activeBlob, {
           contentType: 'video/webm',
           upsert: false,
         });
@@ -137,11 +180,11 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           duration_seconds: elapsed,
           file_path: filePath,
           thumbnail_path: thumbnailPath,
-          file_size_bytes: recordedBlob.size,
+          file_size_bytes: activeBlob.size,
         },
       });
       if (error) throw error;
-      toast.success(`Video uploaded (${(recordedBlob.size / (1024 * 1024)).toFixed(1)} MB)`);
+      toast.success(`Video uploaded (${(activeBlob.size / (1024 * 1024)).toFixed(1)} MB)`);
       discardRecording();
       fetchVideos();
     } catch (err: any) {
@@ -215,15 +258,77 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           {/* Preview & Upload */}
           {recordedBlob && recordedUrl && (
             <div className="space-y-3 border border-border rounded-lg p-3 bg-muted/30">
-              <video
-                src={recordedUrl}
-                controls
-                className="w-full rounded-md max-h-[200px] bg-black"
-              />
+              <div className="relative">
+                <video
+                  ref={previewRef}
+                  src={activeUrl ?? undefined}
+                  controls
+                  onLoadedMetadata={(e) => setVideoNaturalHeight((e.target as HTMLVideoElement).videoHeight)}
+                  className="w-full rounded-md max-h-[200px] bg-black"
+                />
+                {/* Visual crop guide overlay (only on the original, before crop applied) */}
+                {!croppedBlob && videoNaturalHeight > 0 && cropTopPx > 0 && (
+                  <div
+                    className="pointer-events-none absolute top-0 left-0 right-0 bg-destructive/40 border-b-2 border-destructive rounded-t-md"
+                    style={{
+                      height: `${(cropTopPx / videoNaturalHeight) * 100}%`,
+                      maxHeight: '200px',
+                    }}
+                  >
+                    <div className="absolute bottom-1 left-2 text-[10px] text-white font-medium drop-shadow">
+                      Cropped: {cropTopPx}px
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="w-3 h-3" />
-                {formatTime(elapsed)} • {formatFileSize(recordedBlob.size)}
+                {formatTime(elapsed)} • {formatFileSize(activeBlob?.size ?? 0)}
+                {croppedBlob && <Badge variant="outline" className="text-[9px] px-1 py-0">CROPPED</Badge>}
               </div>
+
+              {/* Crop top controls */}
+              <div className="space-y-2 border border-dashed border-border rounded-md p-2 bg-background/50">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <Crop className="w-3 h-3" /> Crop top (hide Lovable banner)
+                  </Label>
+                  <span className="text-[10px] font-mono text-muted-foreground">{cropTopPx}px</span>
+                </div>
+                <Slider
+                  value={[cropTopPx]}
+                  onValueChange={(v) => setCropTopPx(v[0])}
+                  min={0}
+                  max={Math.max(200, Math.floor((videoNaturalHeight || 1080) / 3))}
+                  step={1}
+                  disabled={cropping || !!croppedBlob}
+                />
+                <div className="flex gap-2">
+                  {!croppedBlob ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={applyCrop}
+                      disabled={cropping || cropTopPx === 0}
+                      className="gap-1.5 h-7 text-xs"
+                    >
+                      {cropping ? <Loader2 className="w-3 h-3 animate-spin" /> : <Crop className="w-3 h-3" />}
+                      {cropping ? `Cropping ${cropProgress.toFixed(0)}%` : 'Apply Crop'}
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="ghost" onClick={resetCrop} className="h-7 text-xs">
+                      Undo Crop
+                    </Button>
+                  )}
+                  <p className="text-[10px] text-muted-foreground self-center">
+                    {croppedBlob
+                      ? 'Crop applied. Save to upload the cropped version.'
+                      : 'Drag slider, then Apply. Re-encodes the video (may take a moment).'}
+                  </p>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <div>
                   <Label className="text-xs">Title *</Label>
@@ -245,11 +350,11 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={uploadVideo} disabled={uploading || !title.trim()} className="gap-2">
+                <Button size="sm" onClick={uploadVideo} disabled={uploading || cropping || !title.trim()} className="gap-2">
                   {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                   {uploading ? 'Uploading...' : 'Save Video'}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={discardRecording}>Discard</Button>
+                <Button size="sm" variant="ghost" onClick={discardRecording} disabled={cropping}>Discard</Button>
               </div>
             </div>
           )}
