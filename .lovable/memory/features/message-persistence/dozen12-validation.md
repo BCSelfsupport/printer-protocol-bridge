@@ -1,12 +1,19 @@
 ---
-name: Dozen12 Validation Point (v0.1.166)
-description: Validated recovery baseline for prompt-save flow. v0.1.166 confirmed working for heavy prompt messages like Dozen12. Lists guards that must NEVER be re-added.
+name: Dozen12 Validation Point (v0.1.166) — SIGNIFICANT RESTORE POINT
+description: ⭐ SIGNIFICANT RESTORE POINT. Validated recovery baseline for prompt-save flow. v0.1.166 confirmed working in production for heavy prompt messages like Dozen12. Frozen baseline — see also constraints/freeze-baseline-v0-1-166.
 type: constraint
 ---
 
-# Validated Recovery Point: v0.1.166 (Message #314)
+# ⭐ SIGNIFICANT RESTORE POINT: v0.1.166 (Message #314)
 
 **Status:** ✅ Validated working in production for Dozen12 and all prompt-before-print messages.
+**Designation:** 🔒 FROZEN BASELINE — all new work must be built remote/isolated from this point forward.
+
+## Why this is a significant restore point
+- First version where the full prompt-before-print save flow (Dozen12 + 12-field operator-prompted messages) works reliably end-to-end on real hardware
+- Scan workflow, counter polling, license/pairing, fleet telemetry, and master/slave sync all confirmed intact
+- Represents the cumulative work of the prior 3 days of recovery and stabilization
+- Any regression in the prompt-save, scan, counter, or license flows → restore to here first, debug second
 
 ## What works at this version
 - Prompt-before-print save flow (e.g. Dozen12) completes without printer firmware lockup
@@ -14,7 +21,7 @@ type: constraint
 - Message selection after save is immediate and reliable
 - All scan workflow, counter, and license features developed in the prior 3 days are intact
 
-## Critical files in the validated flow
+## Critical files in the validated flow (FROZEN)
 - `src/hooks/usePrinterConnection.ts` — `selectMessage`, `saveMessageContent`
 - `src/components/screens/MessagesScreen.tsx` — save → select handler
 - `src/lib/printerTransport.ts` — transport abstraction
@@ -31,7 +38,7 @@ type: constraint
 
 ## Recovery procedure
 If the prompt-save flow breaks again:
-1. **Preferred:** Restore from Lovable History → version labeled `v0.1.166 — VALIDATED` (message #314)
+1. **Preferred:** Restore from Lovable History → version labeled `v0.1.166 — VALIDATED ⭐ RESTORE POINT` (message #314)
 2. **Surgical:** Re-port `selectMessage` and `saveMessageContent` from v0.1.166 commit into current `usePrinterConnection.ts`, and strip any settle/lock logic from `MessagesScreen.tsx` save handler
 3. Reference prior baseline: production v0.1.165 (commit `34649a0`) had the same working logic
 
@@ -40,3 +47,5 @@ If the prompt-save flow breaks again:
 - [ ] Scan workflow still functional
 - [ ] Counter dialogs still functional
 - [ ] License/pairing features intact
+- [ ] Fleet telemetry push still reporting
+- [ ] Master/slave sync still propagates ^SM
