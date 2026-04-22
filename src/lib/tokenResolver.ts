@@ -12,7 +12,7 @@
 
 import type { MessageField, MessageDetails } from '@/components/screens/EditMessageScreen';
 
-const TOKEN_RE = /\{([A-Z0-9_]+)\}/g;
+const TOKEN_RE = /\{([^{}]+)\}/g;
 
 /** Convert a free-form prompt label to a canonical token identifier. */
 export function labelToToken(label: string | undefined): string | undefined {
@@ -86,9 +86,45 @@ export function resolveFieldData(
 ): string {
   if (!data || literalText) return data;
   if (!data.includes('{')) return data; // fast path
-  return data.replace(TOKEN_RE, (whole, name: string) => {
-    const v = values[name];
-    return v !== undefined ? v : whole;
+  return data.replace(TOKEN_RE, (whole, rawName: string) => {
+    const direct = values[rawName];
+    if (direct !== undefined) return direct;
+
+    const parts = rawName.split(',').map((part) => part.trim()).filter(Boolean);
+    const resolveLegacyToken = (name: string): string | undefined => {
+      const trimmed = name.trim();
+      if (!trimmed) return undefined;
+
+      const normalized = labelToToken(trimmed);
+      const counterAlias = trimmed.toUpperCase().match(/^CN(\d+)$/);
+      const candidates = [
+        trimmed,
+        trimmed.toUpperCase(),
+        normalized,
+        counterAlias ? `COUNTER${counterAlias[1]}` : undefined,
+      ].filter((candidate): candidate is string => !!candidate);
+
+      for (const candidate of candidates) {
+        const value = values[candidate];
+        if (value !== undefined) return value;
+      }
+
+      if (normalized) {
+        const compact = normalized.replace(/_/g, '');
+        const fuzzyKey = Object.keys(values).find((key) => key.replace(/_/g, '') === compact);
+        if (fuzzyKey) return values[fuzzyKey];
+      }
+
+      return undefined;
+    };
+
+    if (parts.length > 1) {
+      const resolvedParts = parts.map((part) => resolveLegacyToken(part) ?? part);
+      const changed = resolvedParts.some((part, index) => part !== parts[index]);
+      return changed ? resolvedParts.join(',') : whole;
+    }
+
+    return resolveLegacyToken(rawName) ?? whole;
   });
 }
 
