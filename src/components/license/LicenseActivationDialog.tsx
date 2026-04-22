@@ -51,6 +51,20 @@ export function LicenseActivationDialog({ open, onOpenChange }: LicenseActivatio
   const current = tierLabels[tier] || tierLabels.lite;
   const isMobile = !window.electronAPI;
 
+  // Detect whether the page is already running as an installed PWA so we
+  // don't nag users who have already added it to their home screen.
+  const isInstalledPWA = typeof window !== 'undefined' && (
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+    // iOS Safari
+    (window.navigator as unknown as { standalone?: boolean }).standalone === true
+  );
+
+  // Detect platform for tailored install instructions
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+
+  const showInstallHint = isMobile && !isInstalledPWA;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
