@@ -74,10 +74,6 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
   // off the live faults list (so it can re-trigger if it comes back later).
   const seenCodesRef = useRef<Set<string>>(new Set());
 
-  // Skip the first connected snapshot so we don't pop existing faults the
-  // moment the user connects.
-  const hasSeededRef = useRef(false);
-
   const [imageExtIndex, setImageExtIndex] = useState(0);
   const [imageVariantIndex, setImageVariantIndex] = useState(0);
 
@@ -88,7 +84,6 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
     setQueueCodes([]);
     snoozedRef.current.clear();
     seenCodesRef.current.clear();
-    hasSeededRef.current = false;
   }, [isConnected]);
 
   // Sync queue with incoming faults.
@@ -109,17 +104,11 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
       if (!liveCodes.has(code)) seenCodesRef.current.delete(code);
     }
 
-    // Seed: on the very first poll after connecting, treat all current faults
-    // as "already seen" so they don't pop. They'll still re-pop after a
-    // user-initiated dismissal+snooze cycle expires (because seenCodesRef is
-    // cleared when a fault disappears).
-    if (!hasSeededRef.current) {
-      hasSeededRef.current = true;
-      for (const code of liveCodes) seenCodesRef.current.add(code);
-      // Drop queued codes that are no longer live.
-      setQueueCodes((prev) => prev.filter((c) => liveCodes.has(c)));
-      return;
-    }
+    // NOTE: We intentionally do NOT seed an "already seen" snapshot on the
+    // first connected poll. Doing so would suppress popups for faults that
+    // were already active when the user connected (e.g. a persistent fan /
+    // cooling fault), which is exactly the behaviour we don't want — those
+    // are the faults the operator most needs to see.
 
     // Determine which codes are eligible to enqueue: live, not snoozed,
     // and not already in the queue or "seen" this session.
