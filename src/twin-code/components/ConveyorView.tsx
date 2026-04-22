@@ -27,7 +27,7 @@ export function ConveyorView() {
     const ro = new ResizeObserver((entries) => {
       const r = entries[0].contentRect;
       const w = r.width;
-      const h = Math.max(180, Math.min(280, r.width * 0.18));
+      const h = Math.max(360, Math.min(460, r.width * 0.32));
       setSize({ w, h });
       // 1 px == 1 mm at default scale; conveyor mm length tracks pixel width
       // for an intuitive 1:1 visual mapping.
@@ -37,10 +37,10 @@ export function ConveyorView() {
     return () => ro.disconnect();
   }, []);
 
-  const beltY = size.h * 0.55;
-  const bottleR = Math.min(20, Math.max(8, snap.bottles.length > 0
-    ? (conveyorSim.getConfig().bottleDiameterMm / 2)
-    : 30));
+  const beltY = size.h * 0.66;
+  // Larger bottles so 13-digit serials are readable. Scales with width.
+  const bottleR = Math.max(28, Math.min(48, size.w * 0.028));
+  const bottleH = bottleR * 2.4; // taller body for a bottle silhouette
   const beamX = conveyorSim.getConfig().photocellPos * size.w;
 
   return (
