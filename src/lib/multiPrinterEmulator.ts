@@ -451,6 +451,11 @@ class PrinterEmulatorInstance {
       return this.formatError(59, 'CantPrint', 'Cannot print - HV deflection not enabled');
     }
     this.state.printCount++;
+    this.state.productCount++;
+    // Advance Counter 1 — the default production counter most messages bind {C1}/{CN1} to.
+    if (Array.isArray(this.state.customCounters) && this.state.customCounters.length > 0) {
+      this.state.customCounters[0] = (this.state.customCounters[0] ?? 0) + 1;
+    }
     return this.state.echoOn ? 'Command Successful!\r\nPrint triggered' : 'OK';
   }
 
