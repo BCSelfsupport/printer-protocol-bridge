@@ -5,7 +5,6 @@ import {
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { supabase } from '@/integrations/supabase/client';
 
 interface ScanWaitingDialogProps {
   open: boolean;
@@ -15,6 +14,8 @@ interface ScanWaitingDialogProps {
   promptLabel: string;
   /** Expiry timestamp from the create response — used to count down. */
   expiresAt: string | null;
+  /** Product key — needed to authorise the poll edge-function call. */
+  productKey: string | null;
   /** Called when mobile fulfils the request with a scanned value. */
   onFulfilled: (value: string) => void;
   /** Called when operator cancels or dialog closes manually. */
