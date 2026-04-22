@@ -14,6 +14,12 @@ interface FaultAlertDialogProps {
   faults: PrinterFault[];
   /** Whether a printer is currently connected */
   isConnected: boolean;
+  /**
+   * Called when the user dismisses a fault popup. Should send the printer's
+   * remote command (^CA) which simulates pressing OK on the HMI event window,
+   * clearing one fault from the printer itself.
+   */
+  onDismissFault?: (command: string) => Promise<{ success: boolean; response: string }>;
 }
 
 const SNOOZE_DURATION_MS = 3 * 60 * 1000; // 3 minutes
@@ -45,7 +51,7 @@ const normalizeFaultCodeForAsset = (rawCode: string) => {
  *   set), so a snooze-expired fault re-triggers reliably even if the polling
  *   payload is identical between cycles.
  */
-export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps) {
+export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultAlertDialogProps) {
   // Deduplicate by code — duplicated ^LE entries (e.g. Makeup reported twice)
   // must never produce two popups for the same code.
   const dedupedFaults = useMemo(() => {
@@ -172,6 +178,17 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
     if (!currentFault) return;
     const dismissedCode = currentFault.code;
 
+    // Send ^CA to the printer — this simulates pressing the OK button on the
+    // printer's HMI event window, clearing one fault from the printer itself.
+    // Per Bestcode v2.6 §5.4: "^CA – Cancel ... simulates clicking the
+    // 'Cancel' button if both 'Cancel' and 'OK' buttons are displayed,
+    // or 'OK' if only the 'OK' button is displayed."
+    if (onDismissFault) {
+      void onDismissFault('^CA').catch((err) => {
+        console.error('[FaultAlertDialog] ^CA failed:', err);
+      });
+    }
+
     // Snooze so it doesn't re-pop immediately if the printer keeps reporting
     // it on the next ^LE cycle.
     snoozedRef.current.set(dismissedCode, Date.now() + SNOOZE_DURATION_MS);
@@ -181,7 +198,7 @@ export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps)
     // Pop the head of the queue. The open/close effect above will reopen
     // the dialog automatically if there's another queued fault.
     setQueueCodes(remaining);
-  }, [currentFault, queueCodes]);
+  }, [currentFault, queueCodes, onDismissFault]);
 
   // Allow snooze to expire so the fault can pop again later if still active.
   // We clear it lazily inside the sync effect above; nothing to do here.

@@ -2372,6 +2372,7 @@ const Index = () => {
       <FaultAlertDialog
         faults={activeFaults}
         isConnected={connectionState.isConnected}
+        onDismissFault={sendCommand}
       />
 
       {/* Mobile companion: pause/resume polling FAB */}
