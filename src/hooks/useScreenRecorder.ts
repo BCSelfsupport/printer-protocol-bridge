@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 
-const MAX_DURATION = 300; // 5 minutes
+const MAX_DURATION = 3600; // 60 minutes
 
 export interface ScreenRecorderState {
   isRecording: boolean;
