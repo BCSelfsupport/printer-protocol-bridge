@@ -1296,6 +1296,9 @@ export function EditMessageScreen({
                           promptBeforePrint: enabled,
                           promptLabel: enabled ? (f.promptLabel || f.data || 'ENTER VALUE') : undefined,
                           promptLength: enabled ? (f.promptLength || Math.max(f.data?.length || 3, 3)) : undefined,
+                          // Preserve scanner/keyboard origin so a Scanned Field
+                          // doesn't silently revert to a User Define on toggle.
+                          promptSource: enabled ? (f.promptSource ?? 'keyboard') : undefined,
                         }
                       : f
                   ),
