@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
-import { setPollingPaused, isPollingPaused, waitForPollingIdle } from '@/lib/pollingPause';
+import { setPollingPaused, isPollingPaused } from '@/lib/pollingPause';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
 
 /**
@@ -1835,7 +1835,6 @@ export function usePrinterConnection() {
     }
     
     const printer = connectionState.connectedPrinter;
-    const writeTiming = getWriteTimingProfile(HEAVY_WRITE_FIELD_COUNT);
     
     if (shouldUseEmulator()) {
       const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
@@ -1860,15 +1859,8 @@ export function usePrinterConnection() {
       return false;
     } else if (isElectron || isRelayMode()) {
       try {
-        const writeLockCleared = await waitForWriteLockToClear(writeTiming.commandTimeoutMs);
-        if (!writeLockCleared) {
-          console.warn('[selectMessage] Proceeding while write lock is still active');
-        }
-        console.log('[selectMessage] Sending ^SM command:', message.name, writeTiming);
-        const result = await printerTransport.sendCommand(printer.id, `^SM ${message.name}`, {
-          maxWaitMs: writeTiming.commandTimeoutMs,
-          idleAfterDataMs: writeTiming.idleAfterDataMs,
-        });
+        console.log('[selectMessage] Sending ^SM command:', message.name);
+        const result = await printerTransport.sendCommand(printer.id, `^SM ${message.name}`);
         console.log('[selectMessage] Result:', JSON.stringify(result));
 
         const responseText = result?.response ?? '';
@@ -1900,7 +1892,7 @@ export function usePrinterConnection() {
       updatePrinter(printer.id, { currentMessage: message.name });
       return true;
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter, updatePrinter, waitForWriteLockToClear]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter, updatePrinter]);
 
   // Printer sign-in: send ^LG password command
   const signIn = useCallback(async (password: string): Promise<boolean> => {
@@ -2270,7 +2262,6 @@ export function usePrinterConnection() {
     }
 
     const printer = connectionState.connectedPrinter;
-    const writeTiming = getWriteTimingProfile(fields.length);
     const normalizedMessageName = messageName.trim().toUpperCase();
     const currentSelectedMessage = connectionState.status?.currentMessage?.trim().toUpperCase();
     const needsSwitchAwayBeforeRewrite = currentSelectedMessage === normalizedMessageName;
@@ -2401,21 +2392,12 @@ export function usePrinterConnection() {
     } else if (isElectron || isRelayMode()) {
       // Pause status polling to prevent ^SU commands from interleaving
       // with the ^DM → ^NM → ^SV save sequence on the shared TCP socket.
-      writeLockRef.current = true;
       setPollingPaused(true);
       try {
-        const pollingIdle = await waitForPollingIdle(writeTiming.commandTimeoutMs);
-        if (!pollingIdle) {
-          console.warn('[saveMessageContent] Polling still active before write; proceeding with paused transport');
-        }
-
         for (let cmdIdx = 0; cmdIdx < commands.length; cmdIdx++) {
           const cmd = commands[cmdIdx];
           console.log('[saveMessageContent] Sending:', cmd);
-          const result = await printerTransport.sendCommand(printer.id, cmd, {
-            maxWaitMs: writeTiming.commandTimeoutMs,
-            idleAfterDataMs: writeTiming.idleAfterDataMs,
-          });
+          const result = await printerTransport.sendCommand(printer.id, cmd);
           console.log('[saveMessageContent] Result:', JSON.stringify(result));
           const responseText = result?.response ?? '';
           const errorText = result?.error ?? '';
@@ -2426,6 +2408,7 @@ export function usePrinterConnection() {
             const reason = responseText || errorText || 'Unknown error';
             console.error('[saveMessageContent] Command rejected:', cmd, reason);
             (saveMessageContent as any).__lastError = reason;
+            setPollingPaused(false);
             return false;
           }
 
@@ -2435,6 +2418,9 @@ export function usePrinterConnection() {
             : 300;
           await new Promise(resolve => setTimeout(resolve, delayAfterCommand));
         }
+
+        // Resume polling before optional verification
+        setPollingPaused(false);
 
         // Post-save verification: wait for firmware to flush, then check ^LM.
         if (isNew) {
@@ -2457,10 +2443,8 @@ export function usePrinterConnection() {
       } catch (e) {
         console.error('[saveMessageContent] Failed:', e);
         (saveMessageContent as any).__lastError = e instanceof Error ? e.message : 'Unknown error';
-        return false;
-      } finally {
-        writeLockRef.current = false;
         setPollingPaused(false);
+        return false;
       }
     } else {
       // Web preview mock
