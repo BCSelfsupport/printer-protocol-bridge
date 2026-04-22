@@ -95,12 +95,33 @@ export function TrainingVideosScreen({ onBack }: TrainingVideosScreenProps) {
               <Link2 className="w-4 h-4" />
               Copy Link
             </Button>
-            <a href={selectedVideo.video_url} download={`${selectedVideo.title}.webm`} target="_blank" rel="noopener noreferrer">
-              <Button size="sm" variant="outline" className="gap-2">
-                <Download className="w-4 h-4" />
-                Download
-              </Button>
-            </a>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={async () => {
+                try {
+                  const res = await fetch(selectedVideo.video_url);
+                  if (!res.ok) throw new Error('Download failed');
+                  const blob = await res.blob();
+                  const blobUrl = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = blobUrl;
+                  a.download = `${selectedVideo.title}.webm`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(blobUrl);
+                } catch (err) {
+                  console.error('Download failed:', err);
+                  toast.error('Download failed, opening in new tab');
+                  window.open(selectedVideo.video_url, '_blank');
+                }
+              }}
+            >
+              <Download className="w-4 h-4" />
+              Download
+            </Button>
           </div>
         </div>
       </div>
