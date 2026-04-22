@@ -44,7 +44,13 @@ export function LicenseActivationDialog({ open, onOpenChange }: LicenseActivatio
   };
 
   const current = tierLabels[tier] || tierLabels.lite;
-  const isMobile = !window.electronAPI;
+  // "Mobile" here means an actual phone/tablet — not just "running in a browser".
+  // The desktop browser preview should NOT see the mobile companion pairing tab,
+  // because the desktop is the one that GENERATES pairing codes (via Pair Mobile),
+  // not the one that consumes them.
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+  const isMobile = !window.electronAPI && isMobileDevice;
 
   return (
     <>
