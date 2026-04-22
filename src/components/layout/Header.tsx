@@ -123,7 +123,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
           <div className="flex-1 min-w-0 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex w-max flex-nowrap items-center gap-1 md:gap-4 pl-2">
               {/* Relay mode indicator for mobile PWA */}
-              {!window.electronAPI && onRelayConnect && (
+              {!window.electronAPI && onRelayConnect && /Android|iPhone|iPad|iPod|Mobile/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') && (
                 <button
                   onClick={onRelayConnect}
                   className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
