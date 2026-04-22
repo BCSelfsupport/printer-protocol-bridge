@@ -39,4 +39,20 @@ describe('tokenResolver legacy compatibility', () => {
     const qr = message.fields[2];
     expect(resolveFieldData(qr.data, map, qr.literalText)).toBe('[QRCODE] ABC1230042');
   });
+
+  it('prefers live custom counters over fetched counter field text', () => {
+    const message = {
+      name: 'TEST',
+      height: 25,
+      width: 100,
+      fields: [
+        { id: 1, type: 'counter', data: '00000', x: 0, y: 0, width: 30, height: 16, fontSize: 'Standard16High', autoCodeFieldType: 'counter_1' },
+        { id: 2, type: 'barcode', data: '[QRCODE] {CN1}', x: 0, y: 0, width: 25, height: 25, fontSize: 'Standard16High' },
+      ],
+    } as unknown as MessageDetails;
+
+    const map = buildTokenMap(message, [1]);
+    expect(map.COUNTER1).toBe('00001');
+    expect(resolveFieldData(message.fields[1].data, map)).toBe('[QRCODE] 00001');
+  });
 });
