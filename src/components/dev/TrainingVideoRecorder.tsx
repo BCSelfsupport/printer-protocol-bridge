@@ -114,9 +114,9 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
 
   const captureThumbnail = (): Promise<Blob | null> => {
     return new Promise((resolve) => {
-      if (!recordedUrl) return resolve(null);
+      if (!activeUrl) return resolve(null);
       const video = document.createElement('video');
-      video.src = recordedUrl;
+      video.src = activeUrl;
       video.currentTime = 1;
       video.muted = true;
       video.onloadeddata = () => { video.currentTime = 1; };
@@ -135,7 +135,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   };
 
   const uploadVideo = async () => {
-    if (!recordedBlob || !title.trim()) {
+    if (!activeBlob || !title.trim()) {
       toast.error('Please enter a title');
       return;
     }
@@ -147,7 +147,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
       // Upload video directly to storage (bypasses edge function payload limits)
       const { error: uploadError } = await supabase.storage
         .from('training-videos')
-        .upload(filePath, recordedBlob, {
+        .upload(filePath, activeBlob, {
           contentType: 'video/webm',
           upsert: false,
         });
@@ -180,11 +180,11 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           duration_seconds: elapsed,
           file_path: filePath,
           thumbnail_path: thumbnailPath,
-          file_size_bytes: recordedBlob.size,
+          file_size_bytes: activeBlob.size,
         },
       });
       if (error) throw error;
-      toast.success(`Video uploaded (${(recordedBlob.size / (1024 * 1024)).toFixed(1)} MB)`);
+      toast.success(`Video uploaded (${(activeBlob.size / (1024 * 1024)).toFixed(1)} MB)`);
       discardRecording();
       fetchVideos();
     } catch (err: any) {
