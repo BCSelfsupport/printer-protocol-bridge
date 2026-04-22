@@ -1823,7 +1823,7 @@ export function usePrinterConnection() {
     }
     
     const printer = connectionState.connectedPrinter;
-    const writeTiming = getWriteTimingProfile(message.fields?.length ?? 0);
+    const writeTiming = getWriteTimingProfile(HEAVY_WRITE_FIELD_COUNT);
     
     if (shouldUseEmulator()) {
       const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);

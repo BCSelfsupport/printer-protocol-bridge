@@ -138,7 +138,7 @@ export const printerTransport = {
       return relayFetch('send-command', { printerId, command, options });
     }
     if (window.electronAPI) {
-      return window.electronAPI.printer.sendCommand(printerId, command, options);
+      return (window.electronAPI.printer.sendCommand as (printerId: number, command: string, options?: TransportCommandOptions) => Promise<any>)(printerId, command, options);
     }
     return { success: false, error: 'No transport available' };
   },
