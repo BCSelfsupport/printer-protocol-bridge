@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useConveyor } from "../useConveyor";
 import { conveyorSim } from "../conveyorSim";
+import { getDmGrid } from "../dmCache";
 
 const BOTTLE_COLOR_BY_STATE = {
   pending:  "hsl(var(--muted-foreground) / 0.5)",
@@ -172,20 +173,59 @@ export function ConveyorView() {
                   stroke={b.state === "missed" ? "hsl(var(--destructive))" : "hsl(var(--border))"}
                   strokeWidth={b.state === "missed" ? 2 : 1}
                 />
-                {/* Printed serial — full 13 digits, readable */}
-                {b.state === "printed" && b.serial && (
-                  <text
-                    x={cx}
-                    y={beltY - bottleH * 0.45}
-                    textAnchor="middle"
-                    fontSize={Math.max(10, bottleR * 0.34)}
-                    fontFamily="monospace"
-                    fontWeight={600}
-                    fill="hsl(var(--primary-foreground))"
-                  >
-                    {b.serial}
-                  </text>
-                )}
+                {/* Printed: 16×16 Data Matrix + human-readable 13 digits */}
+                {b.state === "printed" && b.serial && (() => {
+                  const grid = getDmGrid(b.serial);
+                  // DM occupies upper ~55% of body width
+                  const dmSize = bottleR * 1.15;
+                  const cell = dmSize / 16;
+                  const dmX = cx - dmSize / 2;
+                  const dmY = bodyTop + bottleR * 0.95;
+                  // Human-readable: fit across body width with textLength
+                  const hrWidth = bottleR * 1.7;
+                  const hrY = dmY + dmSize + Math.max(10, bottleR * 0.32);
+                  return (
+                    <g>
+                      {/* DM quiet zone (white background) */}
+                      <rect
+                        x={dmX - cell}
+                        y={dmY - cell}
+                        width={dmSize + cell * 2}
+                        height={dmSize + cell * 2}
+                        fill="hsl(0 0% 100%)"
+                      />
+                      {/* DM modules */}
+                      {grid && grid.map((row, ry) =>
+                        row.map((on, rx) =>
+                          on ? (
+                            <rect
+                              key={`${ry}-${rx}`}
+                              x={dmX + rx * cell}
+                              y={dmY + ry * cell}
+                              width={cell + 0.3}
+                              height={cell + 0.3}
+                              fill="hsl(0 0% 8%)"
+                            />
+                          ) : null
+                        )
+                      )}
+                      {/* Human-readable 13 digits, fitted to bottle width */}
+                      <text
+                        x={cx}
+                        y={hrY}
+                        textAnchor="middle"
+                        fontFamily="monospace"
+                        fontWeight={600}
+                        fontSize={Math.max(8, bottleR * 0.26)}
+                        textLength={hrWidth}
+                        lengthAdjust="spacingAndGlyphs"
+                        fill="hsl(var(--primary-foreground))"
+                      >
+                        {b.serial}
+                      </text>
+                    </g>
+                  );
+                })()}
                 {/* MISS overlay */}
                 {b.state === "missed" && (
                   <text
