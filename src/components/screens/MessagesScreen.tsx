@@ -315,6 +315,20 @@ export function MessagesScreen({
           return;
         }
         const scanField = scanFields[0]; // one-shot: handle the first scan field
+
+        // Reset stale scanned data back to the placeholder (e.g. "XXX") whenever
+        // the operator re-enters this message. This prevents the previous scan
+        // value from lingering in the preview after switching away and coming back.
+        const clearedFields = resolvedStored.fields.map(f =>
+          f.promptBeforePrint && f.promptSource === 'scanner'
+            ? { ...f, data: 'X'.repeat(Math.max(1, f.promptLength || 3)) }
+            : f
+        );
+        const clearedDetails: MessageDetails = { ...resolvedStored, fields: clearedFields };
+        // Persist the cleared placeholder locally so the message tile preview
+        // also reverts immediately — no waiting for the next scan to land.
+        onSaveStoredMessage?.(clearedDetails);
+
         try {
           // No transient toast — we go straight to the instructional dialog
           // so the operator immediately sees what to do on the phone.
@@ -340,7 +354,7 @@ export function MessagesScreen({
             toast.error(data.error || 'Failed to create scan request');
             return;
           }
-          setPendingScanContext({ message: selectedMessage, details: resolvedStored, fieldId: scanField.id });
+          setPendingScanContext({ message: selectedMessage, details: clearedDetails, fieldId: scanField.id });
           setPendingScanLabel(scanField.promptLabel || 'SCAN VALUE');
           setPendingScanRequestId(data.id);
           setPendingScanExpiresAt(data.expires_at);
