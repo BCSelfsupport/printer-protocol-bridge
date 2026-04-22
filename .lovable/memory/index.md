@@ -4,6 +4,7 @@ Updated: now
 # Project Memory
 
 ## Core
+- 🔒 FREEZE BASELINE v0.1.166: Build new features REMOTE/isolated. Never edit frozen modules (printer hooks, save/select flows, protocol libs, electron bridge, license). See [Freeze Baseline](mem://constraints/freeze-baseline-v0-1-166).
 - BestCode Printer management (Electron app + PWA).
 - Protocol v2.6 authoritative. Save requires `^SV` after `^NM`.
 - 1 persistent TCP socket (port 23) per printer. Only one telnet session allowed by hardware.
@@ -109,6 +110,7 @@ Updated: now
 - [Firmware Grace](mem://architecture/firmware-processing-grace-periods) — 15s grace period for state parity
 - [Sync Matching](mem://features/message-metadata-sync-matching) — Prioritize by exact data content
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
+- [Freeze Baseline v0.1.166](mem://constraints/freeze-baseline-v0-1-166) — Production frozen at v0.1.166; new features must be built remote/isolated, never edit frozen modules
 - [Dozen12 Validation v0.1.166](mem://features/message-persistence/dozen12-validation) — ✅ VALIDATED RECOVERY POINT (msg #314). Lists guards (writeLock, getWriteTimingProfile, settle delays, waitForPollingIdle) that must NEVER be re-added to prompt-save flow.
 - [Fault Dismiss Drift](mem://features/fault-dismiss-drift-correction) — Proactive ^CA on connect + catch-up ^CA when live ^LE count doesn't drop, to handle hidden HMI event windows like 01-8002 Power warning
 - [Twin Print Pair SOW](mem://features/twin-print-pair-sow) — Bonded 2-printer mode for Datajet 13-char strings, ≤30ms cycle. SOW drafted, on hold pending customer answers.
