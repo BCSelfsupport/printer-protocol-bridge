@@ -119,41 +119,102 @@ export function PairMobileDialog({ open, onOpenChange }: PairMobileDialogProps) 
             Pair Mobile Device
           </DialogTitle>
           <DialogDescription>
-            Open CodeSync on your phone and enter the code below, or scan the QR code. You can pair multiple phones to this license.
+            Have your mobile user install the CodeSync app first, then pair using
+            the code below. You can pair multiple phones to this license.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col items-center gap-4 py-4">
-          {isGenerating ? (
-            <div className="flex items-center gap-2 py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              <span className="text-muted-foreground">Generating code...</span>
+        {/* STEP 1 — Install the mobile PWA */}
+        <div className="rounded-lg border border-border bg-muted/30 p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold">1</span>
+            <h3 className="text-sm font-semibold flex items-center gap-1.5">
+              <Download className="w-4 h-4" />
+              Install CodeSync on the phone
+            </h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Scan this QR with the phone's camera to open the install link — no app store needed.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 bg-background/60 rounded-md border border-border p-3">
+            <div className="bg-white p-2 rounded shrink-0">
+              <QRCodeSVG value={MOBILE_APP_URL} size={110} level="M" />
             </div>
-          ) : pairingCode ? (
-            <>
-              <div className="bg-white p-4 rounded-lg">
-                <QRCodeSVG value={qrValue} size={180} level="M" />
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground mb-1">Or enter this code manually:</p>
-                <div className="text-3xl font-mono font-bold tracking-[0.3em] text-foreground">
-                  {pairingCode}
+            <div className="flex-1 w-full min-w-0 space-y-2">
+              <div>
+                <p className="text-[11px] text-muted-foreground mb-1">Or open this link manually:</p>
+                <div className="flex items-center gap-1.5">
+                  <code className="flex-1 text-xs font-mono bg-background border border-border rounded px-2 py-1 truncate">
+                    {MOBILE_APP_URL}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 shrink-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(MOBILE_APP_URL);
+                      toast.success('Link copied');
+                    }}
+                    title="Copy link"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Timer className="w-4 h-4" />
-                <span>Expires in {formatTime(secondsLeft)}</span>
+              <div className="text-[11px] text-muted-foreground space-y-0.5">
+                <p><Apple className="w-3 h-3 inline -mt-0.5" /> <strong>iPhone (Safari):</strong> Share <Share2 className="w-3 h-3 inline -mt-0.5" /> → Add to Home Screen</p>
+                <p><Smartphone className="w-3 h-3 inline -mt-0.5" /> <strong>Android (Chrome):</strong> ⋮ menu → Add to Home screen</p>
               </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center gap-3 py-8">
-              <p className="text-sm text-muted-foreground">Code expired</p>
-              <Button onClick={generate} variant="outline" size="sm">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Generate New Code
-              </Button>
             </div>
-          )}
+          </div>
+        </div>
+
+        {/* STEP 2 — Pair the installed app */}
+        <div className="rounded-lg border border-border bg-muted/30 p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold">2</span>
+            <h3 className="text-sm font-semibold">
+              Pair with this PC
+            </h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Open the installed CodeSync app on the phone, tap <strong>"Pair with PC"</strong>,
+            then scan the QR or enter the code below.
+          </p>
+
+          <div className="flex flex-col items-center gap-3">
+            {isGenerating ? (
+              <div className="flex items-center gap-2 py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <span className="text-muted-foreground">Generating code...</span>
+              </div>
+            ) : pairingCode ? (
+              <>
+                <div className="bg-white p-4 rounded-lg">
+                  <QRCodeSVG value={qrValue} size={160} level="M" />
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Or enter this code manually:</p>
+                  <div className="text-3xl font-mono font-bold tracking-[0.3em] text-foreground">
+                    {pairingCode}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Timer className="w-4 h-4" />
+                  <span>Expires in {formatTime(secondsLeft)}</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-3 py-6">
+                <p className="text-sm text-muted-foreground">Code expired</p>
+                <Button onClick={generate} variant="outline" size="sm">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Generate New Code
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Paired Devices List */}
@@ -217,77 +278,6 @@ export function PairMobileDialog({ open, onOpenChange }: PairMobileDialogProps) 
           )}
         </div>
 
-        {/* Get the mobile app (PWA install instructions) */}
-        <div className="border-t pt-4">
-          <h3 className="text-sm font-semibold flex items-center gap-1.5 mb-2">
-            <Download className="w-4 h-4" />
-            Get the CodeSync mobile app
-          </h3>
-          <p className="text-xs text-muted-foreground mb-3">
-            CodeSync Mobile is a Progressive Web App — no app store needed. Open the link
-            on your phone and add it to your home screen.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center gap-3 bg-muted/40 rounded-md border border-border p-3">
-            <div className="bg-white p-2 rounded">
-              <QRCodeSVG value={MOBILE_APP_URL} size={96} level="M" />
-            </div>
-            <div className="flex-1 w-full min-w-0">
-              <p className="text-xs text-muted-foreground mb-1">Scan with your phone, or open:</p>
-              <div className="flex items-center gap-1.5">
-                <code className="flex-1 text-xs font-mono bg-background border border-border rounded px-2 py-1 truncate">
-                  {MOBILE_APP_URL}
-                </code>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 shrink-0"
-                  onClick={() => {
-                    navigator.clipboard.writeText(MOBILE_APP_URL);
-                    toast.success('Link copied');
-                  }}
-                  title="Copy link"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-            <div className="rounded-md border border-border p-3">
-              <div className="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
-                <Apple className="w-3.5 h-3.5" />
-                iPhone / iPad (Safari)
-              </div>
-              <ol className="text-[11px] text-muted-foreground space-y-1 list-decimal list-inside">
-                <li>Open the link in <strong>Safari</strong></li>
-                <li>Tap the <Share2 className="w-3 h-3 inline -mt-0.5" /> Share button</li>
-                <li>Tap <strong>Add to Home Screen</strong></li>
-                <li>Tap <strong>Add</strong> in the top right</li>
-              </ol>
-            </div>
-            <div className="rounded-md border border-border p-3">
-              <div className="flex items-center gap-1.5 text-xs font-semibold mb-1.5">
-                <Smartphone className="w-3.5 h-3.5" />
-                Android (Chrome)
-              </div>
-              <ol className="text-[11px] text-muted-foreground space-y-1 list-decimal list-inside">
-                <li>Open the link in <strong>Chrome</strong></li>
-                <li>Tap the <strong>⋮</strong> menu (top right)</li>
-                <li>Tap <PlusSquare className="w-3 h-3 inline -mt-0.5" /> <strong>Add to Home screen</strong></li>
-                <li>Tap <strong>Install</strong> to confirm</li>
-              </ol>
-            </div>
-          </div>
-        </div>
-
-        <div className="text-xs text-muted-foreground border-t pt-3 space-y-1">
-          <p className="font-semibold text-foreground">Then pair it:</p>
-          <p>1. Open CodeSync on your mobile device</p>
-          <p>2. Tap <strong>"Pair with PC"</strong> on the license screen</p>
-          <p>3. Enter the 6-character code or scan the QR code above</p>
-        </div>
       </DialogContent>
     </Dialog>
   );
