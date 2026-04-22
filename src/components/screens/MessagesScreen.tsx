@@ -28,6 +28,7 @@ import { Label } from '@/components/ui/label';
 import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { ScanWaitingDialog } from '@/components/messages/ScanWaitingDialog';
+import { ScanCounterDialog, detectReferencedCounters, type CounterOverrides } from '@/components/messages/ScanCounterDialog';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
 import { isReadOnlyMessage } from '@/hooks/useMessageStorage';
@@ -79,6 +80,8 @@ interface MessagesScreenProps {
   /** Called after dynamic field values are saved — updates active preview immediately */
   onPromptSaved?: (details: MessageDetails) => void;
   connectedPrinterLineId?: string;
+  /** Live counter values polled from the printer (index 0 = Counter 1). */
+  liveCounters?: number[];
   // PC Library props
   allPcLibraryMessages?: PcLibraryEntry[];
   printerNameMap?: Record<number, string>;
@@ -116,6 +119,7 @@ export function MessagesScreen({
   onDeleteFromPcLibrary,
   swapSlotName,
   onSetSwapSlot,
+  liveCounters,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -135,6 +139,14 @@ export function MessagesScreen({
     details: MessageDetails;
     fieldId: number;
   } | null>(null);
+  // After-scan counter dialog state. Populated when a scan is fulfilled and
+  // the message references one or more {C1}/{CN1}/{COUNTER1} slots.
+  const [scanCounterOpen, setScanCounterOpen] = useState(false);
+  const [scanCounterContext, setScanCounterContext] = useState<{
+    message: PrintMessage;
+    bakedDetails: MessageDetails; // scanned value already baked into the prompt field
+    scannedValue: string;
+  } | null>(null);
   const { productKey, isCompanion } = useLicense();
   const [pcLibraryOpen, setPcLibraryOpen] = useState(false);
   const [selectedLibraryMessage, setSelectedLibraryMessage] = useState<MessageDetails | null>(null);
@@ -150,6 +162,96 @@ export function MessagesScreen({
   useEffect(() => {
     try { localStorage.setItem('messagesViewMode', viewMode); } catch {}
   }, [viewMode]);
+
+  /**
+   * Format a counter value to match the existing field's display width
+   * (preserves leading-zero padding so the printed output keeps its layout).
+   */
+  function formatCounterValue(currentDisplay: string, value: number): string {
+    const digits = currentDisplay?.length || String(value).length;
+    return value.toString().padStart(digits, '0');
+  }
+
+  /**
+   * Commit the post-scan write: apply counter overrides to BOTH the on-canvas
+   * counter field AND the token map, push `^CC` for each modified counter so
+   * the printer's hardware count matches what we just baked, then save +
+   * select the message.
+   */
+  async function commitScanPrint(
+    message: PrintMessage,
+    bakedDetails: MessageDetails,
+    scannedValue: string,
+    counterOverrides: CounterOverrides,
+  ) {
+    if (!onSaveMessageContent) return;
+
+    // 1) Apply counter overrides to the matching counter-type fields so the
+    //    text counter on the canvas reads the same number as `{C1}`.
+    const fieldsWithCounters = bakedDetails.fields.map((f) => {
+      if (f.type !== 'counter') return f;
+      const slotMatch = f.autoCodeFieldType?.match(/^counter_(\d+)$/i);
+      const slot = slotMatch ? parseInt(slotMatch[1], 10) : undefined;
+      if (!slot || counterOverrides[slot] === undefined) return f;
+      return { ...f, data: formatCounterValue(f.data, counterOverrides[slot]) };
+    });
+
+    // 2) Build the token map FROM the updated fields so the live counter
+    //    field's `data` is the source of truth — this kills the {C1}=0 vs
+    //    text=00001 discrepancy.
+    const overrideTokens: Record<string, string> = {};
+    for (const [slot, value] of Object.entries(counterOverrides)) {
+      overrideTokens[`COUNTER${slot}`] = String(value);
+    }
+    const tokenMap = buildTokenMap(
+      { ...bakedDetails, fields: fieldsWithCounters },
+      undefined,
+      overrideTokens,
+    );
+    const updatedDetails: MessageDetails = {
+      ...bakedDetails,
+      fields: resolveAllFields(fieldsWithCounters, tokenMap),
+    };
+
+    onHome();
+
+    try {
+      toast.loading('Writing scanned value to printer…', { id: 'scan-apply' });
+
+      // 3) Push counter resets BEFORE the message save so the printer's own
+      //    counter is in sync with the baked QR data on the very next print.
+      if (onSendCommand) {
+        for (const [slot, value] of Object.entries(counterOverrides)) {
+          try {
+            await onSendCommand(`^CC ${slot} ${value}`);
+          } catch (err) {
+            console.warn('[commitScanPrint] counter reset failed', slot, err);
+          }
+        }
+      }
+
+      const saved = await onSaveMessageContent(
+        message.name,
+        updatedDetails.fields,
+        updatedDetails.templateValue,
+        false,
+        updatedDetails.settings ? {
+          speed: updatedDetails.settings.speed,
+          rotation: updatedDetails.settings.rotation,
+          printMode: updatedDetails.settings.printMode,
+        } : undefined,
+      );
+      if (!saved) { toast.error('Failed to write scanned value', { id: 'scan-apply' }); return; }
+      const selected = await onSelect(message);
+      if (!selected) { toast.error('Saved but failed to select', { id: 'scan-apply' }); return; }
+      onSaveStoredMessage?.(updatedDetails);
+      onPromptSaved?.(updatedDetails);
+      toast.success(`Printing with ${pendingScanLabel} = ${scannedValue}`, { id: 'scan-apply' });
+    } catch (e) {
+      console.error('[commitScanPrint] failed:', e);
+      toast.error('Failed to apply scanned value', { id: 'scan-apply' });
+    }
+  }
 
   // Auto-open the new dialog when navigating from Dashboard "New" button
   useEffect(() => {
@@ -684,41 +786,46 @@ export function MessagesScreen({
           const bakedFields = details.fields.map(f =>
             f.id === fieldId ? { ...f, data: value } : f
           );
-          const tokenMap = buildTokenMap({ ...details, fields: bakedFields });
-          const updatedDetails: MessageDetails = {
-            ...details,
-            fields: resolveAllFields(bakedFields, tokenMap),
-          };
+          const bakedDetails: MessageDetails = { ...details, fields: bakedFields };
 
           setScanWaitingOpen(false);
           setPendingScanRequestId(null);
-          setPendingScanContext(null);
           setPendingScanExpiresAt(null);
-          onHome();
 
-          try {
-            toast.loading('Writing scanned value to printer…', { id: 'scan-apply' });
-            const saved = await onSaveMessageContent(
-              message.name,
-              updatedDetails.fields,
-              updatedDetails.templateValue,
-              false,
-              updatedDetails.settings ? {
-                speed: updatedDetails.settings.speed,
-                rotation: updatedDetails.settings.rotation,
-                printMode: updatedDetails.settings.printMode,
-              } : undefined,
-            );
-            if (!saved) { toast.error('Failed to write scanned value', { id: 'scan-apply' }); return; }
-            const selected = await onSelect(message);
-            if (!selected) { toast.error('Saved but failed to select', { id: 'scan-apply' }); return; }
-            onSaveStoredMessage?.(updatedDetails);
-            onPromptSaved?.(updatedDetails);
-            toast.success(`Printing with ${pendingScanLabel} = ${value}`, { id: 'scan-apply' });
-          } catch (e) {
-            console.error('[MessagesScreen] scan apply failed:', e);
-            toast.error('Failed to apply scanned value', { id: 'scan-apply' });
+          // If the message references any counter slots, give the operator a
+          // chance to reset / set the start count before we commit and print.
+          const referencedCounters = detectReferencedCounters(bakedDetails);
+          if (referencedCounters.length > 0) {
+            setScanCounterContext({ message, bakedDetails, scannedValue: value });
+            setScanCounterOpen(true);
+            return;
           }
+
+          // No counters in this message — commit immediately as before.
+          setPendingScanContext(null);
+          await commitScanPrint(message, bakedDetails, value, {});
+        }}
+      />
+
+      {/* After-scan counter setup — only shown when message has counter references */}
+      <ScanCounterDialog
+        open={scanCounterOpen}
+        details={scanCounterContext?.bakedDetails ?? null}
+        liveCounters={liveCounters}
+        scanLabel={pendingScanLabel}
+        scannedValue={scanCounterContext?.scannedValue}
+        onCancel={() => {
+          setScanCounterOpen(false);
+          setScanCounterContext(null);
+          setPendingScanContext(null);
+        }}
+        onConfirm={async (overrides) => {
+          const ctx = scanCounterContext;
+          setScanCounterOpen(false);
+          setScanCounterContext(null);
+          setPendingScanContext(null);
+          if (!ctx) return;
+          await commitScanPrint(ctx.message, ctx.bakedDetails, ctx.scannedValue, overrides);
         }}
       />
 
