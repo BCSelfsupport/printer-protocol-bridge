@@ -119,6 +119,7 @@ export function ScanCounterDialog({
         <div className="space-y-3">
           {slots.map((slot) => {
             const live = liveCounters?.[slot - 1] ?? 0;
+            const startCount = startCounts[slot] ?? 0;
             return (
               <div key={slot} className="space-y-1">
                 <Label htmlFor={`counter-${slot}`} className="text-sm">
@@ -141,10 +142,13 @@ export function ScanCounterDialog({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setValues((prev) => ({ ...prev, [slot]: '0' }))}
+                    onClick={() =>
+                      setValues((prev) => ({ ...prev, [slot]: String(startCount) }))
+                    }
+                    title={`Reset to configured Start Count (${startCount})`}
                   >
                     <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                    Reset to 0
+                    Reset to {startCount}
                   </Button>
                 </div>
               </div>
