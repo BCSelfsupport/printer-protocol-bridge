@@ -72,13 +72,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      if (duration_seconds > 300) {
-        return new Response(JSON.stringify({ error: "Video exceeds 5 minute limit" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
       const { data: record, error: insertError } = await supabase
         .from("training_videos")
         .insert({
