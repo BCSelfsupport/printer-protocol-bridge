@@ -229,7 +229,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
             Screen Recorder
           </h3>
 
-          {!recordedBlob && !isRecording && (
+          {!recordedBlob && !isRecording && countdown === 0 && (
             <div className="flex items-center gap-3">
               <Button size="sm" onClick={handleStartRecording} className="gap-2">
                 <Video className="w-4 h-4" />
