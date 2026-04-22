@@ -17,8 +17,6 @@ Deno.serve(async (req) => {
   );
 
   try {
-    const url = new URL(req.url);
-
     // GET - list all training videos
     if (req.method === "GET") {
       const { data, error } = await supabase
@@ -29,12 +27,11 @@ Deno.serve(async (req) => {
 
       if (error) throw error;
 
-      // Generate public URLs for each video
       const videos = (data || []).map((v: any) => {
         const { data: urlData } = supabase.storage
           .from("training-videos")
           .getPublicUrl(v.file_path);
-        
+
         let thumbnailUrl = null;
         if (v.thumbnail_path) {
           const { data: thumbData } = supabase.storage
@@ -55,56 +52,31 @@ Deno.serve(async (req) => {
       });
     }
 
-    // POST - upload a new training video
+    // POST - register video metadata (file already uploaded directly to storage)
     if (req.method === "POST") {
-      const formData = await req.formData();
-      const file = formData.get("file") as File;
-      const title = formData.get("title") as string;
-      const description = formData.get("description") as string || null;
-      const category = formData.get("category") as string || "general";
-      const durationSeconds = parseInt(formData.get("duration_seconds") as string || "0");
+      const body = await req.json();
+      const {
+        title,
+        description = null,
+        category = "general",
+        duration_seconds = 0,
+        file_path,
+        thumbnail_path = null,
+        file_size_bytes = 0,
+      } = body;
 
-      if (!file || !title) {
-        return new Response(JSON.stringify({ error: "file and title required" }), {
+      if (!title || !file_path) {
+        return new Response(JSON.stringify({ error: "title and file_path required" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // 5 minute limit = ~300MB max for screen recordings
-      if (durationSeconds > 300) {
+      if (duration_seconds > 300) {
         return new Response(JSON.stringify({ error: "Video exceeds 5 minute limit" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-      }
-
-      const timestamp = Date.now();
-      const ext = file.name.split(".").pop() || "webm";
-      const filePath = `videos/${timestamp}.${ext}`;
-
-      const arrayBuffer = await file.arrayBuffer();
-      const { error: uploadError } = await supabase.storage
-        .from("training-videos")
-        .upload(filePath, arrayBuffer, {
-          contentType: file.type || "video/webm",
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Upload thumbnail if provided
-      const thumbnail = formData.get("thumbnail") as File | null;
-      let thumbnailPath: string | null = null;
-      if (thumbnail) {
-        thumbnailPath = `thumbnails/${timestamp}.png`;
-        const thumbBuffer = await thumbnail.arrayBuffer();
-        await supabase.storage
-          .from("training-videos")
-          .upload(thumbnailPath, thumbBuffer, {
-            contentType: "image/png",
-            upsert: false,
-          });
       }
 
       const { data: record, error: insertError } = await supabase
@@ -113,10 +85,10 @@ Deno.serve(async (req) => {
           title,
           description,
           category,
-          file_path: filePath,
-          thumbnail_path: thumbnailPath,
-          duration_seconds: durationSeconds,
-          file_size_bytes: file.size,
+          file_path,
+          thumbnail_path,
+          duration_seconds,
+          file_size_bytes,
         })
         .select()
         .single();
@@ -138,7 +110,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Get the record first to delete the file
       const { data: record } = await supabase
         .from("training_videos")
         .select("*")

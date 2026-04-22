@@ -98,21 +98,50 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
     }
     setUploading(true);
     try {
-      const thumbnail = await captureThumbnail();
-      const formData = new FormData();
-      formData.append('file', recordedBlob, `${title}.webm`);
-      formData.append('title', title.trim());
-      formData.append('description', description.trim());
-      formData.append('category', category);
-      formData.append('duration_seconds', String(elapsed));
-      if (thumbnail) formData.append('thumbnail', thumbnail, 'thumb.png');
+      const timestamp = Date.now();
+      const filePath = `videos/${timestamp}.webm`;
 
+      // Upload video directly to storage (bypasses edge function payload limits)
+      const { error: uploadError } = await supabase.storage
+        .from('training-videos')
+        .upload(filePath, recordedBlob, {
+          contentType: 'video/webm',
+          upsert: false,
+        });
+      if (uploadError) throw uploadError;
+
+      // Upload thumbnail directly
+      const thumbnail = await captureThumbnail();
+      let thumbnailPath: string | null = null;
+      if (thumbnail) {
+        thumbnailPath = `thumbnails/${timestamp}.png`;
+        const { error: thumbError } = await supabase.storage
+          .from('training-videos')
+          .upload(thumbnailPath, thumbnail, {
+            contentType: 'image/png',
+            upsert: false,
+          });
+        if (thumbError) {
+          console.warn('Thumbnail upload failed:', thumbError);
+          thumbnailPath = null;
+        }
+      }
+
+      // Register metadata via edge function
       const { error } = await supabase.functions.invoke('training-videos', {
         method: 'POST',
-        body: formData,
+        body: {
+          title: title.trim(),
+          description: description.trim() || null,
+          category,
+          duration_seconds: elapsed,
+          file_path: filePath,
+          thumbnail_path: thumbnailPath,
+          file_size_bytes: recordedBlob.size,
+        },
       });
       if (error) throw error;
-      toast.success('Video uploaded successfully');
+      toast.success(`Video uploaded (${(recordedBlob.size / (1024 * 1024)).toFixed(1)} MB)`);
       discardRecording();
       fetchVideos();
     } catch (err: any) {
