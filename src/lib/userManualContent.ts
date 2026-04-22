@@ -201,6 +201,11 @@ export const MANUAL: ManualChapter[] = [
         screenshot: '/manual-screenshots/09i-user-define.png',
       },
       {
+        id: 'scanned-field',
+        title: 'Scanned fields (barcode capture)',
+        body: `**Scanned Field** is a specialized prompted field whose value comes from a barcode scan instead of typed input. Use it for serialized cartons, METRC tags, lot stickers, and any workflow where the operator already has a printed code in front of them.\n\n**Creating one:**\n1. In the editor, click **+ New** and pick **Scanned Field**\n2. Set the **Prompt Label** (e.g. "SCAN UID") and **Max Length**\n3. Place the field on the canvas like any other text field\n\n**At print-select time** the operator sees a scan dialog instead of a keyboard. They can:\n\n- Scan with a **USB / wedge scanner** plugged into the PC (most reliable)\n- Scan with a **paired mobile phone's camera** — the request appears automatically on the phone, the result is pushed back to the PC and applied to the message (see Chapter 12)\n- Type the value manually as a fallback\n\nThe scanned value is baked into the message via the same atomic ^DM + ^NM + ^SV save flow used by User Define, so the printer always prints exactly what was scanned — no race conditions.\n\n**Token linking:** Scanned (and User Define) fields can be referenced from other fields using {LABEL} placeholders, so one scan can populate a barcode, a date code, and a human-readable text field at the same time. Edit any text field and type the prompt label inside curly braces, e.g. \`Lot {LOT CODE}\`.`,
+      },
+      {
         id: 'data-link',
         title: 'Data Link (Variable Data Printing)',
         body: `Data Link maps columns from a CSV, REST API, or database to fields in your message — perfect for serialization, batch coding, and METRC compliance.\n\n1. Open **Data Source** from the sidebar (or top nav)\n2. Import a CSV, configure a hotfolder, or connect via REST/ODBC\n3. In the message editor, click **Data** and pick the source — every column appears in the mapping table\n4. Assign each column to a field number (F1, F2, F3…) shown on the canvas. METRC sources auto-highlight Tag and Retail ID columns in green for one-click setup.\n5. Start a Print Job — each Print Go advances to the next row`,
