@@ -28,6 +28,7 @@ import { Label } from '@/components/ui/label';
 import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { ScanWaitingDialog } from '@/components/messages/ScanWaitingDialog';
+import { ScanCounterDialog, detectReferencedCounters, type CounterOverrides } from '@/components/messages/ScanCounterDialog';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
 import { isReadOnlyMessage } from '@/hooks/useMessageStorage';
@@ -79,6 +80,8 @@ interface MessagesScreenProps {
   /** Called after dynamic field values are saved — updates active preview immediately */
   onPromptSaved?: (details: MessageDetails) => void;
   connectedPrinterLineId?: string;
+  /** Live counter values polled from the printer (index 0 = Counter 1). */
+  liveCounters?: number[];
   // PC Library props
   allPcLibraryMessages?: PcLibraryEntry[];
   printerNameMap?: Record<number, string>;
@@ -116,6 +119,7 @@ export function MessagesScreen({
   onDeleteFromPcLibrary,
   swapSlotName,
   onSetSwapSlot,
+  liveCounters,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
