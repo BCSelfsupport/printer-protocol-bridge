@@ -5,8 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useLicense } from '@/contexts/LicenseContext';
-import { Key, Loader2, CheckCircle2, XCircle, LogOut, Smartphone, QrCode } from 'lucide-react';
+import { Key, Loader2, CheckCircle2, XCircle, LogOut, Smartphone, QrCode, Download, Apple, Share2, ChevronDown } from 'lucide-react';
 import { PairMobileDialog } from './PairMobileDialog';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface LicenseActivationDialogProps {
   open: boolean;
@@ -45,6 +50,20 @@ export function LicenseActivationDialog({ open, onOpenChange }: LicenseActivatio
 
   const current = tierLabels[tier] || tierLabels.lite;
   const isMobile = !window.electronAPI;
+
+  // Detect whether the page is already running as an installed PWA so we
+  // don't nag users who have already added it to their home screen.
+  const isInstalledPWA = typeof window !== 'undefined' && (
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+    // iOS Safari
+    (window.navigator as unknown as { standalone?: boolean }).standalone === true
+  );
+
+  // Detect platform for tailored install instructions
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+
+  const showInstallHint = isMobile && !isInstalledPWA;
 
   return (
     <>
@@ -197,6 +216,39 @@ export function LicenseActivationDialog({ open, onOpenChange }: LicenseActivatio
                       {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Smartphone className="w-4 h-4 mr-2" />}
                       Pair with PC
                     </Button>
+
+                    {showInstallHint && (
+                      <Collapsible className="rounded-md border border-border bg-muted/40">
+                        <CollapsibleTrigger className="flex items-center justify-between gap-2 w-full px-3 py-2 text-left text-xs font-medium hover:bg-muted/60 rounded-md transition-colors">
+                          <span className="flex items-center gap-1.5">
+                            <Download className="w-3.5 h-3.5" />
+                            Install CodeSync on this phone
+                          </span>
+                          <ChevronDown className="w-3.5 h-3.5 transition-transform data-[state=open]:rotate-180" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="px-3 pb-3 pt-1">
+                          <p className="text-[11px] text-muted-foreground mb-2">
+                            Add this page to your home screen so it opens like a real app —
+                            no app store needed.
+                          </p>
+                          {isIOS ? (
+                            <ol className="text-[11px] text-muted-foreground space-y-1 list-decimal list-inside">
+                              <li>Make sure you're using <strong>Safari</strong></li>
+                              <li>Tap the <Share2 className="w-3 h-3 inline -mt-0.5" /> Share button at the bottom</li>
+                              <li>Tap <strong>Add to Home Screen</strong></li>
+                              <li>Tap <strong>Add</strong> in the top right</li>
+                            </ol>
+                          ) : (
+                            <ol className="text-[11px] text-muted-foreground space-y-1 list-decimal list-inside">
+                              <li>Make sure you're using <strong>Chrome</strong></li>
+                              <li>Tap the <strong>⋮</strong> menu in the top right</li>
+                              <li>Tap <strong>Add to Home screen</strong> (or <strong>Install app</strong>)</li>
+                              <li>Tap <strong>Install</strong> to confirm</li>
+                            </ol>
+                          )}
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
                   </div>
                 )}
               </div>
