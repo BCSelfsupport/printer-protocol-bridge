@@ -12,8 +12,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setMeta: (printer) => ipcRenderer.invoke('printer:set-meta', printer),
     connect: (printer) => ipcRenderer.invoke('printer:connect', printer),
     disconnect: (printerId) => ipcRenderer.invoke('printer:disconnect', printerId),
-    sendCommand: (printerId, command) => 
-      ipcRenderer.invoke('printer:send-command', { printerId, command }),
+    sendCommand: (printerId, command, options) => 
+      ipcRenderer.invoke('printer:send-command', { printerId, command, options }),
   },
 
   // Hotfolder operations

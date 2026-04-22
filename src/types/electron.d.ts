@@ -15,7 +15,7 @@ interface PrinterAPI {
   setMeta: (printer: { id: number; ipAddress: string; port: number }) => Promise<{ success: boolean }>;
   connect: (printer: { id: number; ipAddress: string; port: number }) => Promise<{ success: boolean; reused?: boolean; error?: string }>;
   disconnect: (printerId: number) => Promise<{ success: boolean }>;
-  sendCommand: (printerId: number, command: string) => Promise<{ success: boolean; response?: string; error?: string }>;
+  sendCommand: (printerId: number, command: string, options?: { maxWaitMs?: number; idleAfterDataMs?: number }) => Promise<{ success: boolean; response?: string; error?: string }>;
 }
 
 interface RelayAPI {
