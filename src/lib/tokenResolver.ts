@@ -169,17 +169,22 @@ export function buildTokenMap(
 
   // Fallback: derive counter values directly from on-canvas counter fields when
   // advancedSettings.counters is missing/empty (e.g. messages loaded from the
-  // printer with default settings). The counter field's `data` already holds
-  // the current displayed value, and `autoCodeFieldType` carries the slot
-  // identifier ("counter_1" .. "counter_4").
+  // printer with default settings). Prefer the live polled counter when present,
+  // otherwise fall back to the fetched field text.
   for (const f of message.fields) {
     if (f.type !== 'counter') continue;
     const slotMatch = f.autoCodeFieldType?.match(/^counter_(\d+)$/i);
     const slot = slotMatch ? parseInt(slotMatch[1], 10) : undefined;
     if (!slot) continue;
     const key = `COUNTER${slot}`;
-    if (map[key] === undefined && f.data) {
-      map[key] = f.data;
+    if (map[key] === undefined) {
+      const live = customCounters?.[slot - 1];
+      if (live !== undefined) {
+        const width = Math.max(String(f.data ?? '').length, String(live).length, 1);
+        map[key] = String(live).padStart(width, '0');
+      } else if (f.data) {
+        map[key] = f.data;
+      }
     }
   }
 
