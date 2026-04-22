@@ -19,7 +19,7 @@ export interface ManualChapter {
   sections: ManualSection[];
 }
 
-export const MANUAL_VERSION = 'v1.0';
+export const MANUAL_VERSION = 'v1.1';
 export const MANUAL_TITLE = 'CodeSync User Manual';
 
 export const MANUAL: ManualChapter[] = [
