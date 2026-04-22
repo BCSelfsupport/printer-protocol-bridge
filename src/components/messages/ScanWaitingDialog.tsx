@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ScanLine, Smartphone, X, ScanQrCode } from 'lucide-react';
+import { ScanLine, Smartphone, ScanQrCode } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
