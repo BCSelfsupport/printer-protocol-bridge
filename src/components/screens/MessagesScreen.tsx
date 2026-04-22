@@ -34,6 +34,7 @@ import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
 import { isReadOnlyMessage } from '@/hooks/useMessageStorage';
 import { MessageThumbnail } from '@/components/messages/MessageThumbnail';
 import { useLicense } from '@/contexts/LicenseContext';
+import { setPollingPaused } from '@/lib/pollingPause';
 
 const MACHINE_ID_KEY = 'codesync-machine-id';
 function getMachineId(): string {
@@ -916,8 +917,20 @@ export function MessagesScreen({
                 return;
               }
 
-              // Now select the message cleanly — it's already fully written
-              const selected = await onSelect(selectedMessage);
+              // Firmware-stall safety: after a destructive ^DM/^NM/^SV rewrite of a
+              // multi-field prompted message (e.g. Dozen12 with a User Define), the
+              // printer needs a moment to flush before we hit it with another ^SM.
+              // Re-pause polling around the select so a stray ^SU can't interleave.
+              setPollingPaused(true);
+              let selected = false;
+              try {
+                await new Promise((r) => setTimeout(r, 500));
+                selected = await onSelect(selectedMessage);
+                // Brief settle window after the ^SM completes
+                await new Promise((r) => setTimeout(r, 300));
+              } finally {
+                setPollingPaused(false);
+              }
               if (!selected) {
                 toast.error('Message saved but failed to select', { id: 'prompt-save' });
                 return;
@@ -930,6 +943,7 @@ export function MessagesScreen({
             } catch (e) {
               console.error('[MessagesScreen] Failed to write prompt values:', e);
               toast.error('Failed to write message to printer', { id: 'prompt-save' });
+              setPollingPaused(false);
             }
           } else if (onSendCommand) {
             // Legacy: send ^MD^TD for native userdefine fields (per v2.6 §5.28.2)
