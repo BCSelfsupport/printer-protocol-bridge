@@ -14,8 +14,6 @@ interface FaultAlertDialogProps {
   faults: PrinterFault[];
   /** Whether a printer is currently connected */
   isConnected: boolean;
-  /** Send ^CA to acknowledge/clear the fault on the printer hardware */
-  onAcknowledge?: () => void;
 }
 
 const SNOOZE_DURATION_MS = 3 * 60 * 1000; // 3 minutes
@@ -47,7 +45,7 @@ const normalizeFaultCodeForAsset = (rawCode: string) => {
  *   set), so a snooze-expired fault re-triggers reliably even if the polling
  *   payload is identical between cycles.
  */
-export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAlertDialogProps) {
+export function FaultAlertDialog({ faults, isConnected }: FaultAlertDialogProps) {
   // Deduplicate by code — duplicated ^LE entries (e.g. Makeup reported twice)
   // must never produce two popups for the same code.
   const dedupedFaults = useMemo(() => {
@@ -178,20 +176,12 @@ export function FaultAlertDialog({ faults, isConnected, onAcknowledge }: FaultAl
     // it on the next ^LE cycle.
     snoozedRef.current.set(dismissedCode, Date.now() + SNOOZE_DURATION_MS);
 
-    // Only send ^CA when dismissing the LAST queued fault. ^CA is a
-    // "clear all faults" command on the hardware — sending it per-popup
-    // would acknowledge every active fault (e.g. clearing Makeup would
-    // also wipe Cooling). By deferring until the queue is empty, the
-    // operator gets to review every fault before the hardware-side ack.
     const remaining = queueCodes.filter((c) => c !== dismissedCode);
-    if (remaining.length === 0) {
-      onAcknowledge?.();
-    }
 
     // Pop the head of the queue. The open/close effect above will reopen
     // the dialog automatically if there's another queued fault.
     setQueueCodes(remaining);
-  }, [currentFault, onAcknowledge, queueCodes]);
+  }, [currentFault, queueCodes]);
 
   // Allow snooze to expire so the fault can pop again later if still active.
   // We clear it lazily inside the sync effect above; nothing to do here.
