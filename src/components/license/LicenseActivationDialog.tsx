@@ -5,8 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useLicense } from '@/contexts/LicenseContext';
-import { Key, Loader2, CheckCircle2, XCircle, LogOut, Smartphone, QrCode } from 'lucide-react';
+import { Key, Loader2, CheckCircle2, XCircle, LogOut, Smartphone, QrCode, Download, Apple, Share2, ChevronDown } from 'lucide-react';
 import { PairMobileDialog } from './PairMobileDialog';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface LicenseActivationDialogProps {
   open: boolean;
