@@ -24,6 +24,7 @@ interface ScanWaitingDialogProps {
 
 /** PC-side modal shown after selecting a message that needs a mobile scan. */
 export function ScanWaitingDialog({
+  productKey,
   open,
   requestId,
   promptLabel,
@@ -56,11 +57,11 @@ export function ScanWaitingDialog({
     if (open && requestId) firedRef.current = false;
   }, [open, requestId]);
 
-  // Realtime subscription — fire onFulfilled the moment mobile updates the row.
-  // We also poll every 2s as a fallback in case realtime drops or the channel
-  // subscribes after the UPDATE has already fired.
+  // Poll the scan-request edge function every 2s. We can't use Supabase realtime
+  // or direct table queries here because scan_requests has service-role-only RLS;
+  // the edge function uses the service key to read the row on our behalf.
   useEffect(() => {
-    if (!open || !requestId) return;
+    if (!open || !requestId || !productKey) return;
 
     const fire = (value: string) => {
       if (firedRef.current) return;
@@ -69,50 +70,40 @@ export function ScanWaitingDialog({
       onFulfilled(value);
     };
 
-    const channel = supabase
-      .channel(`scan-request-${requestId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'scan_requests',
-          filter: `id=eq.${requestId}`,
-        },
-        (payload) => {
-          const row = payload.new as { status?: string; scanned_value?: string | null };
-          console.log('[ScanWaitingDialog] realtime update:', row);
-          if (row.status === 'fulfilled' && typeof row.scanned_value === 'string') {
-            fire(row.scanned_value);
-          }
-        },
-      )
-      .subscribe((status) => {
-        console.log('[ScanWaitingDialog] channel status:', status);
-      });
+    let cancelled = false;
+    const poll = async () => {
+      if (firedRef.current || cancelled) return;
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan-request?action=poll`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({ product_key: productKey, request_id: requestId }),
+          },
+        );
+        const data = await res.json();
+        const row = data?.request as { status?: string; scanned_value?: string | null } | null;
+        if (row?.status === 'fulfilled' && typeof row.scanned_value === 'string') {
+          fire(row.scanned_value);
+        }
+      } catch (e) {
+        console.warn('[ScanWaitingDialog] poll failed:', e);
+      }
+    };
 
-    // Polling fallback — check the row every 2s in case realtime misses it
-    const pollId = setInterval(async () => {
-      if (firedRef.current) return;
-      const { data, error } = await supabase
-        .from('scan_requests')
-        .select('status, scanned_value')
-        .eq('id', requestId)
-        .maybeSingle();
-      if (error) {
-        console.warn('[ScanWaitingDialog] poll failed:', error);
-        return;
-      }
-      if (data?.status === 'fulfilled' && typeof data.scanned_value === 'string') {
-        fire(data.scanned_value);
-      }
-    }, 2000);
+    // Fire immediately so we catch already-fulfilled rows without waiting 2s
+    poll();
+    const pollId = setInterval(poll, 2000);
 
     return () => {
+      cancelled = true;
       clearInterval(pollId);
-      supabase.removeChannel(channel);
     };
-  }, [open, requestId, onFulfilled]);
+  }, [open, requestId, productKey, onFulfilled]);
 
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
