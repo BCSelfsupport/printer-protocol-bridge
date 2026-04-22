@@ -8,6 +8,7 @@ import { renderText, getFontInfo } from '@/lib/dotMatrixFonts';
 import { parseBarcodeLabelData, renderBarcodeToCanvas, estimateBarcodeWidthDots } from '@/lib/barcodeRenderer';
 import { MessageDetails, MessageField } from '@/components/screens/EditMessageScreen';
 import { computeAutoCodeValue } from '@/lib/autoCodeProtocol';
+import { buildTokenMap, resolveFieldData } from '@/lib/tokenResolver';
 import { CountersDialog } from '@/components/counters/CountersDialog';
 import { NavItem } from '@/components/layout/BottomNav';
 import { ModelBadge } from '@/components/branding/ModelBadge';
