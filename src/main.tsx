@@ -31,6 +31,19 @@ const showCrashReport = (err: unknown) => {
   }
 };
 
+const getCurrentAppCacheToken = () => {
+  const version =
+    typeof __APP_VERSION__ !== "undefined" && __APP_VERSION__ !== "undefined"
+      ? __APP_VERSION__
+      : "";
+  const buildStamp =
+    typeof window !== "undefined"
+      ? String((window as any).__CS_BUILD_STAMP ?? "").trim()
+      : "";
+
+  return [version, buildStamp].filter(Boolean).join("::");
+};
+
 const clearElectronPwaCaches = async () => {
   if (typeof window === "undefined" || !window.electronAPI) return;
 
@@ -55,10 +68,7 @@ const clearStaleWebPublishState = async (): Promise<boolean> => {
   try {
     STALE_GITHUB_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
 
-    const currentVersion =
-      typeof __APP_VERSION__ !== "undefined" && __APP_VERSION__ !== "undefined"
-        ? __APP_VERSION__
-        : "";
+    const currentVersion = getCurrentAppCacheToken();
 
     if (!currentVersion) return false;
 
