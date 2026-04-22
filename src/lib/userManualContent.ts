@@ -156,7 +156,7 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'new-field',
         title: 'Adding a new field',
-        body: `Click **+ New** to open the field type chooser:\n\n- **Text Field** — static or mixed-case text\n- **Line ID** — resolves to the printer's configured Line ID at print time\n- **User Define** — operator is prompted at message-select time\n- **AutoCode Field** — Time, Date, Counter, or Shift codes\n- **Barcode Field** — 1D & 2D barcodes\n- **Graphic Field** — bitmap from the printer's graphic library`,
+        body: `Click **+ New** to open the field type chooser:\n\n- **Text Field** — static or mixed-case text\n- **Scanned Field** — value supplied by a barcode scan (PC USB scanner or paired mobile camera) at message-select time\n- **Line ID** — resolves to the printer's configured Line ID at print time\n- **User Define** — operator is prompted at message-select time\n- **AutoCode Field** — Time, Date, Counter, or Shift codes\n- **Barcode Field** — 1D & 2D barcodes\n- **Graphic Field** — bitmap from the printer's graphic library`,
         screenshot: '/manual-screenshots/09c-new-field.png',
       },
       {
