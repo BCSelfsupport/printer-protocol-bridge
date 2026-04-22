@@ -258,15 +258,77 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           {/* Preview & Upload */}
           {recordedBlob && recordedUrl && (
             <div className="space-y-3 border border-border rounded-lg p-3 bg-muted/30">
-              <video
-                src={recordedUrl}
-                controls
-                className="w-full rounded-md max-h-[200px] bg-black"
-              />
+              <div className="relative">
+                <video
+                  ref={previewRef}
+                  src={activeUrl ?? undefined}
+                  controls
+                  onLoadedMetadata={(e) => setVideoNaturalHeight((e.target as HTMLVideoElement).videoHeight)}
+                  className="w-full rounded-md max-h-[200px] bg-black"
+                />
+                {/* Visual crop guide overlay (only on the original, before crop applied) */}
+                {!croppedBlob && videoNaturalHeight > 0 && cropTopPx > 0 && (
+                  <div
+                    className="pointer-events-none absolute top-0 left-0 right-0 bg-destructive/40 border-b-2 border-destructive rounded-t-md"
+                    style={{
+                      height: `${(cropTopPx / videoNaturalHeight) * 100}%`,
+                      maxHeight: '200px',
+                    }}
+                  >
+                    <div className="absolute bottom-1 left-2 text-[10px] text-white font-medium drop-shadow">
+                      Cropped: {cropTopPx}px
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="w-3 h-3" />
-                {formatTime(elapsed)} • {formatFileSize(recordedBlob.size)}
+                {formatTime(elapsed)} • {formatFileSize(activeBlob?.size ?? 0)}
+                {croppedBlob && <Badge variant="outline" className="text-[9px] px-1 py-0">CROPPED</Badge>}
               </div>
+
+              {/* Crop top controls */}
+              <div className="space-y-2 border border-dashed border-border rounded-md p-2 bg-background/50">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <Crop className="w-3 h-3" /> Crop top (hide Lovable banner)
+                  </Label>
+                  <span className="text-[10px] font-mono text-muted-foreground">{cropTopPx}px</span>
+                </div>
+                <Slider
+                  value={[cropTopPx]}
+                  onValueChange={(v) => setCropTopPx(v[0])}
+                  min={0}
+                  max={Math.max(200, Math.floor((videoNaturalHeight || 1080) / 3))}
+                  step={1}
+                  disabled={cropping || !!croppedBlob}
+                />
+                <div className="flex gap-2">
+                  {!croppedBlob ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={applyCrop}
+                      disabled={cropping || cropTopPx === 0}
+                      className="gap-1.5 h-7 text-xs"
+                    >
+                      {cropping ? <Loader2 className="w-3 h-3 animate-spin" /> : <Crop className="w-3 h-3" />}
+                      {cropping ? `Cropping ${cropProgress.toFixed(0)}%` : 'Apply Crop'}
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="ghost" onClick={resetCrop} className="h-7 text-xs">
+                      Undo Crop
+                    </Button>
+                  )}
+                  <p className="text-[10px] text-muted-foreground self-center">
+                    {croppedBlob
+                      ? 'Crop applied. Save to upload the cropped version.'
+                      : 'Drag slider, then Apply. Re-encodes the video (may take a moment).'}
+                  </p>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <div>
                   <Label className="text-xs">Title *</Label>
@@ -288,11 +350,11 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={uploadVideo} disabled={uploading || !title.trim()} className="gap-2">
+                <Button size="sm" onClick={uploadVideo} disabled={uploading || cropping || !title.trim()} className="gap-2">
                   {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                   {uploading ? 'Uploading...' : 'Save Video'}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={discardRecording}>Discard</Button>
+                <Button size="sm" variant="ghost" onClick={discardRecording} disabled={cropping}>Discard</Button>
               </div>
             </div>
           )}
