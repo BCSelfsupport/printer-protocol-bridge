@@ -72,7 +72,10 @@ export function ScanCounterDialog({
     return map;
   }, [details, slots]);
 
-  // Seed the inputs with the current live count whenever the dialog opens.
+  // Seed the inputs with the current live count ONLY when the dialog opens.
+  // We intentionally do NOT re-seed when liveCounters changes mid-session — the
+  // 3s ^CN poll would otherwise overwrite the operator's edits (e.g. clicking
+  // "Reset to 0" would snap back to the polled value on the next tick).
   useEffect(() => {
     if (!open) return;
     const seed: Record<number, string> = {};
@@ -81,7 +84,8 @@ export function ScanCounterDialog({
       seed[slot] = String(live);
     }
     setValues(seed);
-  }, [open, slots, liveCounters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, slots]);
 
   if (slots.length === 0) return null;
 
