@@ -139,6 +139,14 @@ export function MessagesScreen({
     details: MessageDetails;
     fieldId: number;
   } | null>(null);
+  // After-scan counter dialog state. Populated when a scan is fulfilled and
+  // the message references one or more {C1}/{CN1}/{COUNTER1} slots.
+  const [scanCounterOpen, setScanCounterOpen] = useState(false);
+  const [scanCounterContext, setScanCounterContext] = useState<{
+    message: PrintMessage;
+    bakedDetails: MessageDetails; // scanned value already baked into the prompt field
+    scannedValue: string;
+  } | null>(null);
   const { productKey, isCompanion } = useLicense();
   const [pcLibraryOpen, setPcLibraryOpen] = useState(false);
   const [selectedLibraryMessage, setSelectedLibraryMessage] = useState<MessageDetails | null>(null);
