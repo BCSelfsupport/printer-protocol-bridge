@@ -702,6 +702,14 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, customCoun
         let displayData = (field as any).dynamicSource === 'lineId' && selectedPrinterLineId
           ? selectedPrinterLineId
           : resolveFieldData(field.data, previewTokenMap, field.literalText);
+        if (field.type === 'counter') {
+          const slotMatch = field.autoCodeFieldType?.match(/^counter_(\d+)$/i);
+          const slot = slotMatch ? parseInt(slotMatch[1], 10) : undefined;
+          if (slot) {
+            const liveCounter = previewTokenMap[`COUNTER${slot}`];
+            if (liveCounter !== undefined) displayData = liveCounter;
+          }
+        }
         const liveAutoCode = inferFetchedAutoCode(field);
         if (liveAutoCode) {
           // Only apply expiry offset to fields that were created as expiration dates
