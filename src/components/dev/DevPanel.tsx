@@ -33,7 +33,8 @@ import {
   Globe,
   Signal,
   Video,
-  AlertTriangle
+  AlertTriangle,
+  Activity
 } from 'lucide-react';
 import { CommandTerminal } from '@/components/terminal/CommandTerminal';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -456,6 +457,10 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                 <TabsTrigger value="training" className="text-xs gap-1 flex-shrink-0">
                   <Video className="w-3.5 h-3.5" />
                   Training
+                </TabsTrigger>
+                <TabsTrigger value="twincode" className="text-xs gap-1 flex-shrink-0">
+                  <Activity className="w-3.5 h-3.5" />
+                  Twin Code
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -1023,6 +1028,49 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
               ) : (
                 <div className="p-4 text-xs text-muted-foreground">Recorder not available</div>
               )}
+            </TabsContent>
+
+            {/* Twin Code Tab */}
+            <TabsContent value="twincode" className="flex-1 overflow-auto m-0 p-4">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 rounded-md border border-border bg-card p-3">
+                  <Activity className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold">Twin Code — Profiler Harness</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Phase 1a: bonded 2-printer profiler running on synthetic data. Live waterfall,
+                      stage histograms, A↔B skew scatter, throughput gauge, density heatmaps,
+                      auto-bottleneck callout. CSV/JSON export + replay.
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  className="w-full"
+                  onClick={() => { window.location.hash = '#/twin-code'; }}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Open Twin Code Profiler
+                </Button>
+
+                <div className="rounded-md border border-dashed border-border bg-muted/20 p-3">
+                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    <span className="font-semibold text-foreground">Build Remote constraint:</span>{' '}
+                    Twin Code is fully isolated under <code className="rounded bg-background px-1">src/twin-code/</code>{' '}
+                    and <code className="rounded bg-background px-1">src/pages/TwinCodePage.tsx</code>. Zero edits to v0.1.166 surface.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 rounded-md border border-border bg-card p-3">
+                  <h4 className="text-xs font-semibold">Phase plan</h4>
+                  <ul className="space-y-1 text-[11px] text-muted-foreground">
+                    <li>✓ <span className="text-foreground">Phase 1a</span> — Profiler harness + 7 visualizations + replay (synthetic data)</li>
+                    <li>○ <span className="text-foreground">Phase 1b</span> — CSV catalog ingress + anti-dup ledger + dual ^FD text hot path</li>
+                    <li>○ <span className="text-foreground">Phase 2</span> — DM 16×16 pre-render + ^SM swap on printer A</li>
+                    <li>○ <span className="text-foreground">Phase 3</span> — Hardware bench + optional RS-232 fallback</li>
+                  </ul>
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
 
