@@ -266,11 +266,31 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
                       <span>{formatFileSize(v.file_size_bytes)}</span>
                     </div>
                   </div>
-                  <a href={v.video_url} download={`${v.title}.webm`} target="_blank" rel="noopener noreferrer">
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground">
-                      <Download className="w-3.5 h-3.5" />
-                    </Button>
-                  </a>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(v.video_url);
+                        if (!res.ok) throw new Error('Download failed');
+                        const blob = await res.blob();
+                        const blobUrl = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = blobUrl;
+                        a.download = `${v.title}.webm`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(blobUrl);
+                      } catch (err) {
+                        console.error('Download failed:', err);
+                        window.open(v.video_url, '_blank');
+                      }
+                    }}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                  </Button>
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => deleteVideo(v.id)}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
