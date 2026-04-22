@@ -448,6 +448,10 @@ const Index = () => {
         promptBeforePrint: f.promptBeforePrint ?? cachedField.promptBeforePrint,
         promptLabel: f.promptLabel ?? cachedField.promptLabel,
         promptLength: f.promptLength ?? cachedField.promptLength,
+        // promptSource ('keyboard' | 'scanner') only lives in our local cache —
+        // ^LF never returns it, so always prefer the cached value when present.
+        // Without this, scanner fields revert to keyboard prompts on a fresh install.
+        promptSource: (f as any).promptSource ?? (cachedField as any).promptSource,
       };
 
       // If cached field had specific autoCode metadata but the fetched type is
