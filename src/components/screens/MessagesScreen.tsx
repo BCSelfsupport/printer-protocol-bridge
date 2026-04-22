@@ -656,6 +656,7 @@ export function MessagesScreen({
         requestId={pendingScanRequestId}
         promptLabel={pendingScanLabel}
         expiresAt={pendingScanExpiresAt}
+        productKey={productKey ?? null}
         onCancel={async () => {
           if (pendingScanRequestId && productKey) {
             try {
