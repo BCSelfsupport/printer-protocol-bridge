@@ -533,6 +533,10 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, selectedPr
   const [dotSize, setDotSize] = useState<number>(DOT_SIZE_DESKTOP);
   const [zoomIndex, setZoomIndex] = useState(2); // Default to 2x zoom
   const [barcodeImages, setBarcodeImages] = useState<Map<string, HTMLCanvasElement>>(new Map());
+  const previewTokenMap = useMemo(
+    () => messageContent ? buildTokenMap(messageContent, undefined, undefined, { preview: true }) : {},
+    [messageContent]
+  );
 
   // Compute offset between printer clock (^SD) and local PC clock so that
   // date/time rendering matches the printer HMI regardless of the browser's
@@ -563,11 +567,8 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, selectedPr
     let cancelled = false;
     const load = async () => {
       const imgs = new Map<string, HTMLCanvasElement>();
-      // Resolve {TOKEN} placeholders so QR/barcode data reflects the latest
-      // scanned/prompted/counter values rather than rendering literal `{TAG}`.
-      const tokenMap = buildTokenMap(messageContent, undefined, undefined, { preview: true });
       for (const field of barcodeFields) {
-        const resolvedData = resolveFieldData(field.data, tokenMap, field.literalText);
+        const resolvedData = resolveFieldData(field.data, previewTokenMap, field.literalText);
         const parsed = parseBarcodeLabelData(resolvedData);
         if (!parsed || !parsed.data) continue;
         const h = field.height || messageContent.height || TOTAL_ROWS;
@@ -580,7 +581,7 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, selectedPr
     };
     load();
     return () => { cancelled = true; };
-  }, [messageContent]);
+  }, [messageContent, previewTokenMap]);
 
   // Current zoom multiplier based on index
   const zoomMultiplier = ZOOM_LEVELS[zoomIndex];
