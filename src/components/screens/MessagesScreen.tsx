@@ -163,6 +163,96 @@ export function MessagesScreen({
     try { localStorage.setItem('messagesViewMode', viewMode); } catch {}
   }, [viewMode]);
 
+  /**
+   * Format a counter value to match the existing field's display width
+   * (preserves leading-zero padding so the printed output keeps its layout).
+   */
+  function formatCounterValue(currentDisplay: string, value: number): string {
+    const digits = currentDisplay?.length || String(value).length;
+    return value.toString().padStart(digits, '0');
+  }
+
+  /**
+   * Commit the post-scan write: apply counter overrides to BOTH the on-canvas
+   * counter field AND the token map, push `^CC` for each modified counter so
+   * the printer's hardware count matches what we just baked, then save +
+   * select the message.
+   */
+  async function commitScanPrint(
+    message: PrintMessage,
+    bakedDetails: MessageDetails,
+    scannedValue: string,
+    counterOverrides: CounterOverrides,
+  ) {
+    if (!onSaveMessageContent) return;
+
+    // 1) Apply counter overrides to the matching counter-type fields so the
+    //    text counter on the canvas reads the same number as `{C1}`.
+    const fieldsWithCounters = bakedDetails.fields.map((f) => {
+      if (f.type !== 'counter') return f;
+      const slotMatch = f.autoCodeFieldType?.match(/^counter_(\d+)$/i);
+      const slot = slotMatch ? parseInt(slotMatch[1], 10) : undefined;
+      if (!slot || counterOverrides[slot] === undefined) return f;
+      return { ...f, data: formatCounterValue(f.data, counterOverrides[slot]) };
+    });
+
+    // 2) Build the token map FROM the updated fields so the live counter
+    //    field's `data` is the source of truth — this kills the {C1}=0 vs
+    //    text=00001 discrepancy.
+    const overrideTokens: Record<string, string> = {};
+    for (const [slot, value] of Object.entries(counterOverrides)) {
+      overrideTokens[`COUNTER${slot}`] = String(value);
+    }
+    const tokenMap = buildTokenMap(
+      { ...bakedDetails, fields: fieldsWithCounters },
+      undefined,
+      overrideTokens,
+    );
+    const updatedDetails: MessageDetails = {
+      ...bakedDetails,
+      fields: resolveAllFields(fieldsWithCounters, tokenMap),
+    };
+
+    onHome();
+
+    try {
+      toast.loading('Writing scanned value to printer…', { id: 'scan-apply' });
+
+      // 3) Push counter resets BEFORE the message save so the printer's own
+      //    counter is in sync with the baked QR data on the very next print.
+      if (onSendCommand) {
+        for (const [slot, value] of Object.entries(counterOverrides)) {
+          try {
+            await onSendCommand(`^CC ${slot} ${value}`);
+          } catch (err) {
+            console.warn('[commitScanPrint] counter reset failed', slot, err);
+          }
+        }
+      }
+
+      const saved = await onSaveMessageContent(
+        message.name,
+        updatedDetails.fields,
+        updatedDetails.templateValue,
+        false,
+        updatedDetails.settings ? {
+          speed: updatedDetails.settings.speed,
+          rotation: updatedDetails.settings.rotation,
+          printMode: updatedDetails.settings.printMode,
+        } : undefined,
+      );
+      if (!saved) { toast.error('Failed to write scanned value', { id: 'scan-apply' }); return; }
+      const selected = await onSelect(message);
+      if (!selected) { toast.error('Saved but failed to select', { id: 'scan-apply' }); return; }
+      onSaveStoredMessage?.(updatedDetails);
+      onPromptSaved?.(updatedDetails);
+      toast.success(`Printing with ${pendingScanLabel} = ${scannedValue}`, { id: 'scan-apply' });
+    } catch (e) {
+      console.error('[commitScanPrint] failed:', e);
+      toast.error('Failed to apply scanned value', { id: 'scan-apply' });
+    }
+  }
+
   // Auto-open the new dialog when navigating from Dashboard "New" button
   useEffect(() => {
     if (openNewDialogOnMount) {
