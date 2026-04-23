@@ -57,12 +57,41 @@ class PrinterSession {
   private nextId = 1;
   private unsub: (() => void) | null = null;
   private active = false;
+  private isEmulated = false;
 
   constructor(public printerId: number, public label: 'A' | 'B') {}
 
+  /** True when this printerId belongs to the multi-printer dev emulator. */
+  private detectEmulated(): boolean {
+    try {
+      return !!multiPrinterEmulator.getInstanceById(this.printerId);
+    } catch { return false; }
+  }
+
   async enter(messageName?: string): Promise<{ ok: boolean; error?: string }> {
+    this.isEmulated = this.detectEmulated();
+
+    // ---- Emulator path: synthesize R/T/C entirely in-process ----
+    if (this.isEmulated) {
+      // Drive ^MB/^SM through the regular transport so emulator state stays consistent
+      // (oneToOneMode flag flips, currentMessage updates).
+      const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 2000 });
+      if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
+        return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed (emulator)` };
+      }
+      if (messageName) {
+        const sm = await printerTransport.sendCommand(this.printerId, `^SM ${messageName}`, { maxWaitMs: 2000 });
+        if (!sm?.success) {
+          await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }).catch(() => {});
+          return { ok: false, error: `${this.label}: ^SM failed (emulator)` };
+        }
+      }
+      this.active = true;
+      return { ok: true };
+    }
+
     if (!window.electronAPI?.oneToOne) {
-      // Renderer fallback (no Electron) — pretend we entered so demos still work.
+      // Renderer fallback (no Electron, no emulator) — pretend we entered so demos still work.
       this.active = true;
       return { ok: true };
     }
