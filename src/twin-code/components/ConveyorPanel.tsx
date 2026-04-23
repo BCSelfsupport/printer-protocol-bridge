@@ -25,7 +25,17 @@ export function ConveyorPanel() {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [csvText, setCsvText] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [running, setRunning] = useState(false);
+  // `running` mirrors the conveyor sim's actual state, polled cheaply so the
+  // Start/Stop button can never get stuck out of sync with the engine (e.g.
+  // if start was cancelled by a confirm dialog or stopped from elsewhere).
+  const [running, setRunning] = useState(() => conveyorSim.isRunning());
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const r = conveyorSim.isRunning();
+      setRunning((prev) => (prev === r ? prev : r));
+    }, 200);
+    return () => window.clearInterval(id);
+  }, []);
   const [liveMode, setLiveMode] = useState(false);
   const [liveBusy, setLiveBusy] = useState(false);
   const [dryBusy, setDryBusy] = useState(false);
