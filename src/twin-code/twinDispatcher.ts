@@ -377,34 +377,6 @@ class TwinDispatcher {
       bReason,
     };
   }
-   * report C (or one fails). Pacing is enforced per-printer; the slower
-   * printer is the natural bottleneck.
-   */
-  async dispatch(serial: string): Promise<TwinDispatchResult> {
-    if (!this.a || !this.b) return { serial, ok: false, reason: 'not-bound' };
-
-    const fieldA = this.opts.fieldA ?? 2;
-    const fieldB = this.opts.fieldB ?? 2;
-    const mdA = `^MD^TD${fieldA};${serial}`;
-    const mdB = `^MD^TD${fieldB};${serial}`;
-
-    const tStart = performance.now();
-    const [rA, rB] = await Promise.all([this.a.sendMD(mdA), this.b.sendMD(mdB)]);
-    const tEnd = performance.now();
-
-    const ok = rA.ok && rB.ok;
-    const aMs = rA.rttMs;
-    const bMs = rB.rttMs;
-    return {
-      serial,
-      ok,
-      aMs,
-      bMs,
-      skewMs: aMs != null && bMs != null ? Math.abs(aMs - bMs) : undefined,
-      cycleMs: tEnd - tStart,
-      reason: ok ? undefined : (rA.reason || rB.reason),
-    };
-  }
 
   async unbind(): Promise<void> {
     const a = this.a; const b = this.b;
