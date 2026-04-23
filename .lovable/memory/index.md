@@ -111,6 +111,8 @@ Updated: now
 - [Firmware Grace](mem://architecture/firmware-processing-grace-periods) — 15s grace period for state parity
 - [Sync Matching](mem://features/message-metadata-sync-matching) — Prioritize by exact data content
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
+- [Twin Code Persistence](mem://features/twin-code-catalog-persistence) — localStorage ledger, FNV fingerprint, Resume/Discard, two-layer anti-duplicate guard
+
 - [1-1 Mode Implementation](mem://architecture/one-to-one-mode-implementation) — Demuxer in main.cjs, oneToOneController pacing (4 in-flight cap), polling auto-pause
 - [Twin Live Dispatcher](mem://features/twin-code-live-dispatcher) — Bonded A+B dispatch via two PrinterSession instances, LIVE/SYNTH toggle in ConveyorPanel
 - [TwinCode Serial Format](mem://features/twin-code-serial-format) — 13-char uppercase alphanumeric, identical on lid (DM) and side (text)
