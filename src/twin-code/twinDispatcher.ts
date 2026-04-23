@@ -336,6 +336,16 @@ export interface TwinDispatcherOptions {
   fieldA?: number;
   /** Field index in the message that receives the side serial (default 2). */
   fieldB?: number;
+  /**
+   * Subcommand to use inside ^MD on the A (lid) side.
+   * 'BD' = native barcode-data update for DataMatrix / QR / Code128 etc. (v2.6 §5.28.1).
+   * 'TD' = text-data update.
+   * Default is 'BD' since the lid printer carries the 16x16 DataMatrix in the bonded
+   * TwinCode pair. See mem://integration/datamatrix-bd-vs-ng.
+   */
+  subcommandA?: 'TD' | 'BD';
+  /** Subcommand for the B (side) side. Default 'TD' (13-digit human-readable serial). */
+  subcommandB?: 'TD' | 'BD';
   /** Optional message to ^SM-select on entry. If omitted, current message is used. */
   messageName?: string;
   /** When true, skip the ^LF field-index sanity check on bind (default false). */
