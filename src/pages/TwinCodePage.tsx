@@ -20,6 +20,7 @@ import { BottleneckCallout } from "@/twin-code/components/BottleneckCallout";
 import { StageHeatmap } from "@/twin-code/components/StageHeatmap";
 import { ConveyorPanel } from "@/twin-code/components/ConveyorPanel";
 import { OperatorHUD } from "@/twin-code/components/OperatorHUD";
+import { ProductionRunBar } from "@/twin-code/components/ProductionRunBar";
 
 const PAGE_TITLE = "Twin Code — Profiler Harness (Phase 1a)";
 const VIEW_PREF_KEY = "twincode.view"; // "hud" | "debug"
