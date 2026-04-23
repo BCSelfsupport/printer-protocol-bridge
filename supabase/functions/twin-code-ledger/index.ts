@@ -123,6 +123,14 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  // license_id column is a UUID FK; product-key strings (e.g. "53F2G-K94HE-...")
+  // are not valid UUIDs and would 22P02 the insert. Coerce to null unless it
+  // matches the UUID format.
+  const UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const asUuid = (v: unknown): string | null =>
+    typeof v === "string" && UUID_RE.test(v) ? v : null;
+
   try {
     switch (body.op) {
       case "claim": {
@@ -136,9 +144,9 @@ Deno.serve(async (req) => {
             serial: body.serial,
             outcome: "printed",
             bottle_index: body.bottle_index,
-            run_id: body.run_id ?? null,
+            run_id: asUuid(body.run_id),
             pc_machine_id: body.pc_machine_id,
-            license_id: body.license_id ?? null,
+            license_id: asUuid(body.license_id),
           })
           .select("id")
           .single();
@@ -179,9 +187,9 @@ Deno.serve(async (req) => {
           serial: "",
           outcome: "missed",
           bottle_index: body.bottle_index,
-          run_id: body.run_id ?? null,
+          run_id: asUuid(body.run_id),
           pc_machine_id: body.pc_machine_id,
-          license_id: body.license_id ?? null,
+          license_id: asUuid(body.license_id),
         });
         if (error) throw error;
         return json({ ok: true });
@@ -201,7 +209,7 @@ Deno.serve(async (req) => {
             catalog_total_at_start: body.catalog_total_at_start,
             live_at_start: body.live_at_start,
             pc_machine_id: body.pc_machine_id,
-            license_id: body.license_id ?? null,
+            license_id: asUuid(body.license_id),
             status: "active",
           })
           .select("id, started_at")
