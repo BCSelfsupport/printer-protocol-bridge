@@ -80,6 +80,36 @@ export function ConveyorPanel() {
     toast({ title: 'Reverted to synthetic mode' });
   };
 
+  // ---- Pre-flight dry run: 5 real dispatches, no conveyor ----
+  const runDryRun = async () => {
+    setDryBusy(true);
+    setLastDryRun(null);
+    // Use the next catalog serial if available so the printers physically print
+    // a real (scannable) code; otherwise the dispatcher synthesises DRYRUNxxxx.
+    const seed = catalog.peek?.() ?? undefined;
+    const result = await twinDispatcher.dryRun(5, seed);
+    setLastDryRun(result);
+    setDryBusy(false);
+
+    if (result.ok) {
+      const a = result.aStats;
+      const b = result.bStats;
+      const skew = result.skewStats;
+      toast({
+        title: `Dry run passed (${result.passed}/${result.count})`,
+        description:
+          `A mean ${a?.mean.toFixed(1)}ms · B mean ${b?.mean.toFixed(1)}ms · ` +
+          `skew mean ${skew?.mean.toFixed(1)}ms (max ${skew?.max.toFixed(1)})`,
+      });
+    } else {
+      toast({
+        title: `Dry run failed (${result.failed}/${result.count})`,
+        description: result.reason || 'See per-side reasons',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Tear down on unmount
   useEffect(() => {
     return () => {
