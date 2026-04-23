@@ -219,60 +219,56 @@ export function OperatorHUD() {
         </div>
       </div>
 
-      {/* Main HUD grid */}
-      <div className="grid grid-cols-12 gap-4 p-5">
-        {/* === BPM gauge — the dominant element ===
-            Source priority: live ^MD dispatches (real production) → falls back
-            to conveyor sim BPM only when no real prints have happened yet. */}
-        <div className="col-span-12 lg:col-span-4">
-          <div className="flex h-full flex-col items-center justify-center rounded-md border border-border bg-background/40 p-4">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+      {/* Main HUD grid — 2 columns, packs everything above the fold */}
+      <div className="grid grid-cols-12 gap-3 p-3">
+        {/* === LEFT: BPM gauge (dominant) === */}
+        <div className="col-span-12 lg:col-span-5">
+          <div className="flex h-full flex-col items-center justify-center rounded-md border border-border bg-background/40 p-3">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Throughput
             </div>
-            <div className="mt-1 font-mono text-7xl font-bold leading-none text-foreground tabular-nums">
+            <div className="mt-0.5 font-mono text-6xl font-bold leading-none text-foreground tabular-nums">
               {Math.round(live.hasLiveData ? live.bpm : conv.bpm)}
             </div>
-            <div className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">
+            <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
               bottles per minute
             </div>
-            <div className="mt-3 flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
+            <div className="mt-2 flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground">
               <Activity className="h-3 w-3" />
               {formatLineSpeed(live.hasLiveData ? live.lineSpeedMmPerSec : conv.lineSpeedMmPerSec, units)}
             </div>
-            <div className="mt-1 text-[9px] font-mono uppercase tracking-wider text-muted-foreground/70">
+            <div className="mt-0.5 text-[9px] font-mono uppercase tracking-wider text-muted-foreground/70">
               {live.hasLiveData ? "live · last 60s" : "synthetic preview"}
             </div>
           </div>
         </div>
 
-        {/* === Twin printer status lights === */}
-        <div className="col-span-12 grid grid-cols-2 gap-3 lg:col-span-4">
-          <PrinterLight
-            label="A · LID"
-            sub={pair.a?.ip ?? "not bound"}
-            isOnline={pairBound}
-            isLive={isLive}
-            pulse={!!printing}
-          />
-          <PrinterLight
-            label="B · SIDE"
-            sub={pair.b?.ip ?? "not bound"}
-            isOnline={pairBound}
-            isLive={isLive}
-            pulse={!!printing}
-          />
-          <ModeLight
-            isLive={isLive}
-            pairBound={pairBound}
-          />
-          <YieldLight yieldPct={yieldPct} consumed={cat.consumedCount} />
-        </div>
+        {/* === RIGHT: Status lights (2x2) + Last printed === */}
+        <div className="col-span-12 lg:col-span-7 flex flex-col gap-3">
+          {/* Status lights — 2x2 compact grid */}
+          <div className="grid grid-cols-2 gap-2">
+            <PrinterLight
+              label="A · LID"
+              sub={pair.a?.ip ?? "not bound"}
+              isOnline={pairBound}
+              isLive={isLive}
+              pulse={!!printing}
+            />
+            <PrinterLight
+              label="B · SIDE"
+              sub={pair.b?.ip ?? "not bound"}
+              isOnline={pairBound}
+              isLive={isLive}
+              pulse={!!printing}
+            />
+            <ModeLight isLive={isLive} pairBound={pairBound} />
+            <YieldLight yieldPct={yieldPct} consumed={cat.consumedCount} />
+          </div>
 
-        {/* === Last printed serial — readable from across the room === */}
-        <div className="col-span-12 lg:col-span-4">
-          <div className="flex h-full flex-col rounded-md border border-border bg-background/40 p-4">
+          {/* Last printed serial — compact horizontal */}
+          <div className="rounded-md border border-border bg-background/40 px-3 py-2">
             <div className="flex items-center justify-between">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 Last printed
               </div>
               {lastCycle && lastCycle.outcome === "printed" && (
@@ -281,24 +277,27 @@ export function OperatorHUD() {
                 </span>
               )}
             </div>
-            <div className="mt-2 flex flex-1 items-center justify-center">
-              {lastPrinted ? (
-                <div className="text-center">
-                  <div className="font-mono text-3xl font-bold leading-tight text-primary tabular-nums xl:text-4xl">
-                    {lastPrinted.serial}
-                  </div>
-                  <div className="mt-1 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                    bottle #{lastPrinted.id}
-                  </div>
+            {lastPrinted ? (
+              <div className="mt-0.5 flex items-baseline justify-between gap-2">
+                <div className="font-mono text-2xl font-bold leading-tight text-primary tabular-nums truncate">
+                  {lastPrinted.serial}
                 </div>
-              ) : (
-                <div className="text-center text-sm italic text-muted-foreground">
-                  awaiting first print…
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground shrink-0">
+                  #{lastPrinted.id}
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="mt-1 text-xs italic text-muted-foreground">
+                awaiting first print…
+              </div>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Production metrics — inline compact strip (replaces standalone card) */}
+      <div className="border-t border-border px-3 py-2">
+        <ProductionMetricsCard units={units} compact />
       </div>
 
       {/* Bottom batch progress strip */}
@@ -307,10 +306,6 @@ export function OperatorHUD() {
         nextIndex={cat.nextIndex}
         missCount={cat.missCount}
       />
-    </div>
-
-    {/* Production metrics card — live BPM / line speed from real ^MD dispatches */}
-    <ProductionMetricsCard units={units} />
     </div>
   );
 }
