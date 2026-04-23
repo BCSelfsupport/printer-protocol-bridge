@@ -177,9 +177,11 @@ export function ConveyorPanel() {
       <LedgerResumeBanner />
       <FaultRecoveryBanner />
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-semibold">Conveyor simulator</h2>
+        <h2 className="text-sm font-semibold">Conveyor visualizer</h2>
         <span className="text-[11px] text-muted-foreground">
-          Photocell-triggered bonded twin printer station
+          {liveMode
+            ? 'LIVE — real photocell trips drive prints; counts will increment as bottles pass'
+            : 'Synthetic preview — animates bottles at the configured BPM (no hardware)'}
         </span>
 
         {/* LIVE / SYNTHETIC mode toggle */}
