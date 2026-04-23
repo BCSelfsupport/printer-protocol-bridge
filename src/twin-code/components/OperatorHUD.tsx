@@ -37,6 +37,8 @@ import { useTwinPair } from "../twinPairStore";
 import { useProfilerSamples } from "../useProfilerSamples";
 import { twinDispatcher } from "../twinDispatcher";
 import { missAlarm } from "../audioAlarm";
+import { useCloudLedger } from "../useCloudLedger";
+import { Cloud, CloudOff } from "lucide-react";
 
 const ALARM_PREF_KEY = "twincode.hud.alarmEnabled";
 const UNITS_PREF_KEY = "twincode.hud.units"; // "metric" | "imperial"
@@ -207,6 +209,7 @@ export function OperatorHUD() {
             {alarmEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
             <span>Alarm {alarmEnabled ? "ON" : "OFF"}</span>
           </button>
+          <CloudLedgerBadge />
           <span className="font-mono opacity-70">
             ledger {cat.fingerprint ?? "—"}
           </span>
