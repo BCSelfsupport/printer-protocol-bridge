@@ -309,6 +309,10 @@ export function OperatorHUD() {
         missCount={cat.missCount}
       />
     </div>
+
+    {/* Production metrics card — live BPM / line speed from real ^MD dispatches */}
+    <ProductionMetricsCard units={units} />
+    </div>
   );
 }
 
