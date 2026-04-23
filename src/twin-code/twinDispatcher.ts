@@ -400,13 +400,18 @@ class TwinDispatcher {
     }
 
     // Field-index sanity check — fail bind early if the active message on either
-    // side doesn't expose the configured field index. Skippable via opts.
+    // side doesn't expose the configured field index OR if its type doesn't match
+    // the chosen ^MD subcommand (^TD requires text, ^BD requires barcode).
     if (!opts.skipFieldCheck) {
       const fieldA = opts.fieldA ?? 2;
       const fieldB = opts.fieldB ?? 2;
+      const subA = opts.subcommandA ?? 'BD';
+      const subB = opts.subcommandB ?? 'TD';
+      const kindA: 'text' | 'barcode' = subA === 'BD' ? 'barcode' : 'text';
+      const kindB: 'text' | 'barcode' = subB === 'BD' ? 'barcode' : 'text';
       const [vA, vB] = await Promise.all([
-        this.a.verifyFieldIndex(fieldA),
-        this.b.verifyFieldIndex(fieldB),
+        this.a.verifyFieldIndex(fieldA, kindA),
+        this.b.verifyFieldIndex(fieldB, kindB),
       ]);
       if (!vA.ok || !vB.ok) {
         await Promise.all([this.a.exit(), this.b.exit()]);
