@@ -94,9 +94,22 @@ export interface ProductionRunState {
 class ProductionRunStore {
   private state: ProductionRunState = { active: null, lastCompleted: null };
   private listeners = new Set<Listener>();
+  /** Unsubscribe handle for the catalog-exhaustion watcher (active runs only). */
+  private catalogUnsub: (() => void) | null = null;
+  /** Optional UI hook: notified when an active run auto-stops because the
+   *  catalog hit zero. The HUD wires this to a toast + auto-download of the
+   *  signed export so the operator gets immediate end-of-lot artifacts. */
+  private onAutoStop: ((exp: ProductionRunExport) => void) | null = null;
 
   constructor() {
     this.restoreActive();
+    // If a run was restored from disk, re-arm the catalog watcher.
+    if (this.state.active) this.armCatalogWatcher();
+  }
+
+  /** Register a callback for "run auto-stopped because catalog is empty". */
+  setAutoStopHandler(fn: ((exp: ProductionRunExport) => void) | null) {
+    this.onAutoStop = fn;
   }
 
   getState(): ProductionRunState { return this.state; }
