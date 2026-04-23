@@ -24,6 +24,7 @@
 
 import { setPollingPaused, isPollingPaused } from '@/lib/pollingPause';
 import { printerTransport } from '@/lib/printerTransport';
+import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import type { Printer } from '@/types/printer';
 import type { TwinPairState } from '@/twin-code/twinPairStore';
 
@@ -32,6 +33,10 @@ const R_TIMEOUT_MS = 500;
 const C_TIMEOUT_MS = 30_000;
 /** When one side fails, give the partner this long to settle naturally before forcing abort. */
 const PARTNER_GRACE_MS = 50;
+/** Synthetic emulator timing — keep small but nonzero so the profiler shows realistic skew. */
+const EMU_R_MS = 2;
+const EMU_T_MS = 6;
+const EMU_C_JITTER_MS = 8; // C lands at ~12-20ms; A vs B drift produces visible skew
 
 type AckChar = 'R' | 'T' | 'C';
 
@@ -52,12 +57,41 @@ class PrinterSession {
   private nextId = 1;
   private unsub: (() => void) | null = null;
   private active = false;
+  private isEmulated = false;
 
   constructor(public printerId: number, public label: 'A' | 'B') {}
 
+  /** True when this printerId belongs to the multi-printer dev emulator. */
+  private detectEmulated(): boolean {
+    try {
+      return !!multiPrinterEmulator.getInstanceById(this.printerId);
+    } catch { return false; }
+  }
+
   async enter(messageName?: string): Promise<{ ok: boolean; error?: string }> {
+    this.isEmulated = this.detectEmulated();
+
+    // ---- Emulator path: synthesize R/T/C entirely in-process ----
+    if (this.isEmulated) {
+      // Drive ^MB/^SM through the regular transport so emulator state stays consistent
+      // (oneToOneMode flag flips, currentMessage updates).
+      const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 2000 });
+      if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
+        return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed (emulator)` };
+      }
+      if (messageName) {
+        const sm = await printerTransport.sendCommand(this.printerId, `^SM ${messageName}`, { maxWaitMs: 2000 });
+        if (!sm?.success) {
+          await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }).catch(() => {});
+          return { ok: false, error: `${this.label}: ^SM failed (emulator)` };
+        }
+      }
+      this.active = true;
+      return { ok: true };
+    }
+
     if (!window.electronAPI?.oneToOne) {
-      // Renderer fallback (no Electron) — pretend we entered so demos still work.
+      // Renderer fallback (no Electron, no emulator) — pretend we entered so demos still work.
       this.active = true;
       return { ok: true };
     }
@@ -103,7 +137,8 @@ class PrinterSession {
    * Returns ok=true on success, ok=false if the field is missing or ^LF couldn't be parsed.
    */
   async verifyFieldIndex(fieldIndex: number): Promise<{ ok: boolean; error?: string }> {
-    if (!window.electronAPI?.oneToOne) return { ok: true }; // skip in renderer-fallback
+    // Skip in renderer-fallback (no transport) and in emulator mode (no real ^LF parity).
+    if (!window.electronAPI?.oneToOne || this.isEmulated) return { ok: true };
     const lf = await printerTransport.sendCommand(this.printerId, '^LF', { maxWaitMs: 4000 });
     if (!lf?.success) return { ok: false, error: `${this.label}: ^LF failed` };
     const text = lf.response || '';
@@ -146,7 +181,16 @@ class PrinterSession {
     };
     this.inFlight.push(entry);
 
-    if (window.electronAPI?.oneToOne) {
+    if (this.isEmulated) {
+      // Emulator path: poke ^MD through the regular transport (so the emulator
+      // logs it and increments product counts), then synthesize R/T/C with a
+      // small per-printer jitter so A vs B skew is visible in the profiler.
+      printerTransport.sendCommand(this.printerId, mdCommand, { maxWaitMs: 1000 }).catch(() => {});
+      const jitter = Math.random() * EMU_C_JITTER_MS;
+      setTimeout(() => this.handleAck('R', id), EMU_R_MS);
+      setTimeout(() => this.handleAck('T', id), EMU_T_MS + jitter * 0.3);
+      setTimeout(() => this.handleAck('C', id), EMU_T_MS + EMU_C_JITTER_MS + jitter);
+    } else if (window.electronAPI?.oneToOne) {
       const send = await window.electronAPI.oneToOne.sendMD(this.printerId, mdCommand);
       if (!send.success) this.complete(entry, { ok: false, reason: send.error || 'send-failed' });
     } else {
@@ -177,7 +221,9 @@ class PrinterSession {
     this.active = false;
     this.abortInFlight('detached');
 
-    if (window.electronAPI?.oneToOne) {
+    if (this.isEmulated) {
+      try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }); } catch (_) {}
+    } else if (window.electronAPI?.oneToOne) {
       try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 4000 }); } catch (_) {}
       try { await window.electronAPI.oneToOne.detach(this.printerId); } catch (_) {}
     }

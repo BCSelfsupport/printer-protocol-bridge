@@ -91,3 +91,23 @@ If A and B use different field indices in their messages, set `fieldA` / `fieldB
 `ingressMs` (catalog dispense) and `dispatchMs` (in-process work) are still small synthetic
 values in LIVE mode — they're sub-millisecond on real hardware anyway. The wire timings
 (`wireAMs`, `wireBMs`) come from real R-to-C measurements.
+
+## Emulator-backed LIVE mode
+
+When the bonded pair resolves to printers owned by the multi-printer dev emulator
+(`multiPrinterEmulator.getInstanceById(id)` returns a session), `PrinterSession`
+auto-detects this in `enter()` and switches to a fully in-process path:
+
+- `^MB` / `^SM` / `^ME` are still issued through the regular transport so the
+  emulator's `oneToOneMode` flag and `currentMessage` stay consistent.
+- `^MD` is sent through the transport (emulator increments product counts and
+  logs the command), then **R/T/C are synthesized in-process** with small
+  per-printer jitter so A vs B skew is visible in the profiler.
+- Field-index verification (`^LF`) is **skipped** for emulator pairs — the
+  emulator's field model isn't a meaningful parity target.
+- No Electron `oneToOne:ack` IPC is required, so the LIVE toggle works
+  end-to-end in the dev emulator without real hardware.
+
+This means a developer can: enable the multi-printer emulator → bind a twin pair
+to two emulated printers → flip LIVE on the conveyor → watch the profiler fill
+with realistic R/T/C cycle times and A/B skew.
