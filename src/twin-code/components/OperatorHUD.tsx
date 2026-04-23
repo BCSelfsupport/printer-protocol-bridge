@@ -39,6 +39,8 @@ import { twinDispatcher } from "../twinDispatcher";
 import { missAlarm } from "../audioAlarm";
 import { useCloudLedger } from "../useCloudLedger";
 import { Cloud, CloudOff } from "lucide-react";
+import { useLiveMetrics } from "../useLiveMetrics";
+import { ProductionMetricsCard } from "./ProductionMetricsCard";
 
 const ALARM_PREF_KEY = "twincode.hud.alarmEnabled";
 const UNITS_PREF_KEY = "twincode.hud.units"; // "metric" | "imperial"
