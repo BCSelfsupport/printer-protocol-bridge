@@ -288,6 +288,8 @@ export default function TwinCodePage() {
         <p className="pb-8 pt-4 text-center text-[11px] text-muted-foreground">
           Phase 1a · Profiler validated against synthetic data. Phase 1b will swap in a real Datajet/CSV ingress + dual <code>^FD</code> hot path.
         </p>
+          </>
+        )}
       </main>
 
       <TwinPairBindDialog open={bindOpen} onOpenChange={setBindOpen} />
