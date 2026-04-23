@@ -485,6 +485,74 @@ class TwinDispatcher {
     };
   }
 
+  /**
+   * Pre-flight parity check. Fires N back-to-back dispatches at a controlled
+   * cadence (sequential, NOT pipelined) and returns aggregate timing + per-side
+   * pass/fail. Call BEFORE flipping the conveyor on, to confirm the bonded pair
+   * is actually round-tripping R/T/C cleanly on both sides.
+   *
+   * Each shot writes a deterministic dry-run serial — typically the operator
+   * supplies a real catalog seed so the printers physically print scannable
+   * codes the operator can verify. Falls back to a numeric placeholder.
+   */
+  async dryRun(
+    count: number,
+    seedSerial?: string,
+  ): Promise<TwinDryRunResult> {
+    if (!this.a || !this.b) {
+      return {
+        ok: false,
+        count: 0,
+        passed: 0,
+        failed: 0,
+        results: [],
+        reason: 'not-bound',
+      };
+    }
+    const n = Math.max(1, Math.min(count | 0, 50));
+    const results: TwinDispatchResult[] = [];
+    for (let i = 0; i < n; i++) {
+      const serial = seedSerial
+        ? `${seedSerial}${n > 1 ? String(i + 1).padStart(2, '0') : ''}`
+        : `DRYRUN${String(i + 1).padStart(4, '0')}`;
+      results.push(await this.dispatch(serial));
+    }
+
+    const okResults = results.filter(r => r.ok);
+    const passed = okResults.length;
+    const failed = n - passed;
+    const aTimes = okResults.map(r => r.aMs).filter((v): v is number => v != null);
+    const bTimes = okResults.map(r => r.bMs).filter((v): v is number => v != null);
+    const skews  = okResults.map(r => r.skewMs).filter((v): v is number => v != null);
+    const cycles = okResults.map(r => r.cycleMs).filter((v): v is number => v != null);
+    const stats = (xs: number[]) => xs.length === 0 ? undefined : {
+      min: Math.min(...xs),
+      max: Math.max(...xs),
+      mean: xs.reduce((s, x) => s + x, 0) / xs.length,
+    };
+
+    // Aggregate failure reasons per side so the operator sees what to fix.
+    const aReasons = [...new Set(results.map(r => r.aReason).filter(Boolean) as string[])];
+    const bReasons = [...new Set(results.map(r => r.bReason).filter(Boolean) as string[])];
+
+    return {
+      ok: failed === 0,
+      count: n,
+      passed,
+      failed,
+      results,
+      aStats: stats(aTimes),
+      bStats: stats(bTimes),
+      skewStats: stats(skews),
+      cycleStats: stats(cycles),
+      aReasons,
+      bReasons,
+      reason: failed === 0
+        ? undefined
+        : `${failed}/${n} failed${aReasons.length ? ` — A:[${aReasons.join('|')}]` : ''}${bReasons.length ? ` B:[${bReasons.join('|')}]` : ''}`,
+    };
+  }
+
   async unbind(): Promise<void> {
     const a = this.a; const b = this.b;
     this.a = null; this.b = null;
@@ -493,6 +561,27 @@ class TwinDispatcher {
     }
     if (!this.wasPollingPaused) setPollingPaused(false);
   }
+}
+
+export interface TwinDryRunStats {
+  min: number;
+  max: number;
+  mean: number;
+}
+
+export interface TwinDryRunResult {
+  ok: boolean;
+  count: number;
+  passed: number;
+  failed: number;
+  results: TwinDispatchResult[];
+  aStats?: TwinDryRunStats;
+  bStats?: TwinDryRunStats;
+  skewStats?: TwinDryRunStats;
+  cycleStats?: TwinDryRunStats;
+  aReasons?: string[];
+  bReasons?: string[];
+  reason?: string;
 }
 
 export const twinDispatcher = new TwinDispatcher();
