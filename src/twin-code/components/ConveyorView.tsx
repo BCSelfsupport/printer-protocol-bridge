@@ -33,7 +33,13 @@ export function ConveyorView() {
     const ro = new ResizeObserver((entries) => {
       const r = entries[0].contentRect;
       const w = r.width;
-      const h = Math.max(380, Math.min(500, r.width * 0.34));
+      // Fill the available height when the container has one (e.g. flex-1 in
+      // the new fill-screen Conveyor layout); otherwise fall back to an
+      // aspect-ratio derived height for legacy embedded uses.
+      const measuredH = r.height;
+      const h = measuredH > 200
+        ? measuredH
+        : Math.max(380, Math.min(500, w * 0.34));
       setSize({ w, h });
       conveyorSim.setConveyorLength(w);
     });
@@ -52,14 +58,14 @@ export function ConveyorView() {
   const beamX = conveyorSim.getConfig().photocellPos * size.w;
 
   return (
-    <div className="rounded-md border border-border bg-card p-3">
+    <div className="flex flex-1 flex-col rounded-md border border-border bg-card p-3 min-h-0">
       <div className="mb-2 flex items-center justify-between text-xs">
         <h4 className="font-semibold text-foreground">Conveyor — bonded twin printer station (oblique view)</h4>
         <span className="font-mono text-muted-foreground">
           {snap.bpm.toFixed(0)} bpm · {(snap.lineSpeedMmPerSec / 1000 * 60).toFixed(1)} m/min · pitch {conveyorSim.getConfig().pitchMm.toFixed(0)} mm
         </span>
       </div>
-      <div ref={containerRef} className="w-full">
+      <div ref={containerRef} className="w-full flex-1 min-h-0">
         <svg width={size.w} height={size.h} className="block">
           {/* === Belt as a parallelogram (oblique) === */}
           <polygon
