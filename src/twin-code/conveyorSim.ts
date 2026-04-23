@@ -126,6 +126,14 @@ class ConveyorSim {
   private startedAtPerf = 0;
   private listeners = new Set<Listener>();
   private bottleCount = 0;
+  /** Live dispatcher — when set, wire latencies are real; when null, synthesized. */
+  private liveDispatcher: LiveDispatcher | null = null;
+
+  /** Plug a real bonded-pair dispatcher (LIVE mode) or pass null to revert to synthetic. */
+  setLiveDispatcher(fn: LiveDispatcher | null) {
+    this.liveDispatcher = fn;
+  }
+  isLive(): boolean { return this.liveDispatcher !== null; }
 
   configure(patch: Partial<ConveyorConfig>) {
     this.config = { ...this.config, ...patch };
