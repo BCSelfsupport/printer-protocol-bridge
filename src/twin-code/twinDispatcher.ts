@@ -30,6 +30,8 @@ import type { TwinPairState } from '@/twin-code/twinPairStore';
 const MAX_IN_FLIGHT = 4;
 const R_TIMEOUT_MS = 500;
 const C_TIMEOUT_MS = 30_000;
+/** When one side fails, give the partner this long to settle naturally before forcing abort. */
+const PARTNER_GRACE_MS = 50;
 
 type AckChar = 'R' | 'T' | 'C';
 
@@ -96,6 +98,30 @@ class PrinterSession {
     return { ok: true };
   }
 
+  /**
+   * Issue ^LF on the active message and confirm a field with the given index exists.
+   * Returns ok=true on success, ok=false if the field is missing or ^LF couldn't be parsed.
+   */
+  async verifyFieldIndex(fieldIndex: number): Promise<{ ok: boolean; error?: string }> {
+    if (!window.electronAPI?.oneToOne) return { ok: true }; // skip in renderer-fallback
+    const lf = await printerTransport.sendCommand(this.printerId, '^LF', { maxWaitMs: 4000 });
+    if (!lf?.success) return { ok: false, error: `${this.label}: ^LF failed` };
+    const text = lf.response || '';
+    const explicit = /(?:field|fld)\s*[:#]?\s*(\d+)/gi;
+    const indices = new Set<number>();
+    let m: RegExpExecArray | null;
+    while ((m = explicit.exec(text)) !== null) indices.add(parseInt(m[1], 10));
+    if (indices.size === 0) {
+      // Fall back to non-empty line count (1-based).
+      const lineCount = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean).length;
+      for (let i = 1; i <= lineCount; i++) indices.add(i);
+    }
+    if (!indices.has(fieldIndex)) {
+      return { ok: false, error: `${this.label}: message has no field index ${fieldIndex} (got [${[...indices].sort((a,b)=>a-b).join(',')}])` };
+    }
+    return { ok: true };
+  }
+
   async sendMD(mdCommand: string): Promise<{ ok: boolean; rttMs?: number; reason?: string }> {
     if (!this.active) return { ok: false, reason: 'not-active' };
 
@@ -133,14 +159,23 @@ class PrinterSession {
     return promise;
   }
 
-  async exit(): Promise<void> {
-    this.active = false;
+  /**
+   * Force-fail every in-flight ^MD as aborted (used when the partner printer
+   * has already failed — no point waiting out the 30s C-timeout).
+   * Does NOT exit 1-1 mode; the caller still owns the lifecycle.
+   */
+  abortInFlight(reason = 'partner-failed') {
     const drained = [...this.inFlight];
     this.inFlight = [];
     drained.forEach(p => {
       clearTimeout(p.rTimer); clearTimeout(p.cTimer);
-      p.resolve({ ok: false, reason: 'detached' });
+      p.resolve({ ok: false, reason });
     });
+  }
+
+  async exit(): Promise<void> {
+    this.active = false;
+    this.abortInFlight('detached');
 
     if (window.electronAPI?.oneToOne) {
       try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 4000 }); } catch (_) {}
@@ -201,7 +236,11 @@ export interface TwinDispatchResult {
   skewMs?: number;
   /** max(aMs, bMs). */
   cycleMs?: number;
+  /** Combined reason (back-compat for existing consumers). */
   reason?: string;
+  /** Per-side failure reasons — undefined when that side succeeded. */
+  aReason?: string;
+  bReason?: string;
 }
 
 export interface TwinDispatcherOptions {
@@ -211,6 +250,8 @@ export interface TwinDispatcherOptions {
   fieldB?: number;
   /** Optional message to ^SM-select on entry. If omitted, current message is used. */
   messageName?: string;
+  /** When true, skip the ^LF field-index sanity check on bind (default false). */
+  skipFieldCheck?: boolean;
 }
 
 class TwinDispatcher {
@@ -260,29 +301,70 @@ class TwinDispatcher {
       return { ok: false, error: resA.error || resB.error || 'Pair entry failed' };
     }
 
+    // Field-index sanity check — fail bind early if the active message on either
+    // side doesn't expose the configured field index. Skippable via opts.
+    if (!opts.skipFieldCheck) {
+      const fieldA = opts.fieldA ?? 2;
+      const fieldB = opts.fieldB ?? 2;
+      const [vA, vB] = await Promise.all([
+        this.a.verifyFieldIndex(fieldA),
+        this.b.verifyFieldIndex(fieldB),
+      ]);
+      if (!vA.ok || !vB.ok) {
+        await Promise.all([this.a.exit(), this.b.exit()]);
+        this.a = null; this.b = null;
+        if (!this.wasPollingPaused) setPollingPaused(false);
+        return { ok: false, error: vA.error || vB.error || 'Field-index check failed' };
+      }
+    }
+
     return { ok: true, aId, bId };
   }
 
   /**
    * Dispatch a single serial to the bonded pair. Resolves when BOTH printers
-   * report C (or one fails). Pacing is enforced per-printer; the slower
-   * printer is the natural bottleneck.
+   * report C (or one fails — in which case the partner is fast-aborted instead
+   * of waiting out the C-timeout). Per-side failure reasons are surfaced in
+   * `aReason` / `bReason`.
    */
   async dispatch(serial: string): Promise<TwinDispatchResult> {
     if (!this.a || !this.b) return { serial, ok: false, reason: 'not-bound' };
 
+    const a = this.a;
+    const b = this.b;
     const fieldA = this.opts.fieldA ?? 2;
     const fieldB = this.opts.fieldB ?? 2;
     const mdA = `^MD^TD${fieldA};${serial}`;
     const mdB = `^MD^TD${fieldB};${serial}`;
 
     const tStart = performance.now();
-    const [rA, rB] = await Promise.all([this.a.sendMD(mdA), this.b.sendMD(mdB)]);
+    const pA = a.sendMD(mdA);
+    const pB = b.sendMD(mdB);
+
+    // Whichever side fails FIRST triggers an abort on the other so we don't
+    // sit on a 30s C-timeout waiting for an orphaned partner.
+    let aborted = false;
+    const watchSide = async (
+      p: Promise<{ ok: boolean; rttMs?: number; reason?: string }>,
+      partner: PrinterSession,
+    ) => {
+      const r = await p;
+      if (!r.ok && !aborted) {
+        aborted = true;
+        // Tiny grace so the partner can resolve on its own if it's nearly done.
+        setTimeout(() => partner.abortInFlight('partner-failed'), PARTNER_GRACE_MS);
+      }
+      return r;
+    };
+
+    const [rA, rB] = await Promise.all([watchSide(pA, b), watchSide(pB, a)]);
     const tEnd = performance.now();
 
     const ok = rA.ok && rB.ok;
     const aMs = rA.rttMs;
     const bMs = rB.rttMs;
+    const aReason = rA.ok ? undefined : rA.reason;
+    const bReason = rB.ok ? undefined : rB.reason;
     return {
       serial,
       ok,
@@ -290,7 +372,9 @@ class TwinDispatcher {
       bMs,
       skewMs: aMs != null && bMs != null ? Math.abs(aMs - bMs) : undefined,
       cycleMs: tEnd - tStart,
-      reason: ok ? undefined : (rA.reason || rB.reason),
+      reason: ok ? undefined : [aReason && `A:${aReason}`, bReason && `B:${bReason}`].filter(Boolean).join(' / '),
+      aReason,
+      bReason,
     };
   }
 

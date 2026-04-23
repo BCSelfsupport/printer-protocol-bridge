@@ -33,6 +33,9 @@ export type LiveDispatcher = (serial: string) => Promise<{
   aMs?: number;
   bMs?: number;
   reason?: string;
+  /** Per-side failure reasons (undefined when that side succeeded). */
+  aReason?: string;
+  bReason?: string;
 }>;
 
 export interface ConveyorConfig {

@@ -59,6 +59,13 @@ separate in-flight queues, parallel ^MB/^ME). `src/lib/twinDispatcher.ts` define
 - Per-printer 4-message buffer cap (firmware limit per §6.1)
 - 500ms R-timeout per ^MD (silent-drop detection)
 - 30s C-timeout per print (PE-bound generous)
+- **Fast-fail partner**: if A fails (timeout/JET STOP/DEF OFF), B's in-flight ^MD is
+  aborted after a 50ms grace instead of waiting out the 30s C-timeout (and vice versa).
+- **Field-index sanity check on bind**: ^LF is issued on both A and B after entry to
+  confirm the configured `fieldA` / `fieldB` indices exist. Bind fails early with a
+  clear per-side error if not. Skip via `opts.skipFieldCheck`.
+- **Per-side reasons**: `TwinDispatchResult` now exposes `aReason` / `bReason`
+  alongside the combined `reason` string (formatted as `A:<reason> / B:<reason>`).
 - `JET STOP` drains in-flight as failed but does NOT auto-unbind (caller owns lifecycle)
 - Polling is paused once for the entire bonded session and resumed on unbind, only if
   the dispatcher was the one to pause it (plays nicely with mobile-companion pause)
