@@ -98,6 +98,30 @@ class PrinterSession {
     return { ok: true };
   }
 
+  /**
+   * Issue ^LF on the active message and confirm a field with the given index exists.
+   * Returns ok=true on success, ok=false if the field is missing or ^LF couldn't be parsed.
+   */
+  async verifyFieldIndex(fieldIndex: number): Promise<{ ok: boolean; error?: string }> {
+    if (!window.electronAPI?.oneToOne) return { ok: true }; // skip in renderer-fallback
+    const lf = await printerTransport.sendCommand(this.printerId, '^LF', { maxWaitMs: 4000 });
+    if (!lf?.success) return { ok: false, error: `${this.label}: ^LF failed` };
+    const text = lf.response || '';
+    const explicit = /(?:field|fld)\s*[:#]?\s*(\d+)/gi;
+    const indices = new Set<number>();
+    let m: RegExpExecArray | null;
+    while ((m = explicit.exec(text)) !== null) indices.add(parseInt(m[1], 10));
+    if (indices.size === 0) {
+      // Fall back to non-empty line count (1-based).
+      const lineCount = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean).length;
+      for (let i = 1; i <= lineCount; i++) indices.add(i);
+    }
+    if (!indices.has(fieldIndex)) {
+      return { ok: false, error: `${this.label}: message has no field index ${fieldIndex} (got [${[...indices].sort((a,b)=>a-b).join(',')}])` };
+    }
+    return { ok: true };
+  }
+
   async sendMD(mdCommand: string): Promise<{ ok: boolean; rttMs?: number; reason?: string }> {
     if (!this.active) return { ok: false, reason: 'not-active' };
 
