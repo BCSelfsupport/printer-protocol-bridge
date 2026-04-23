@@ -149,6 +149,8 @@ class ProductionRunStore {
     liveMetrics.resetWindow();
     this.persistActive();
     this.notify();
+    // Watch the catalog so the run auto-finalizes on the last bottle.
+    this.armCatalogWatcher();
     // Register the run in the cloud (best-effort). If it succeeds we attach
     // the cloud id so subsequent ledger writes correlate.
     cloudLedger.startRun({
