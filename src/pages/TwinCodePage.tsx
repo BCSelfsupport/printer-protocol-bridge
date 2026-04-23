@@ -21,6 +21,7 @@ import { StageHeatmap } from "@/twin-code/components/StageHeatmap";
 import { ConveyorPanel } from "@/twin-code/components/ConveyorPanel";
 import { OperatorHUD } from "@/twin-code/components/OperatorHUD";
 import { ProductionRunBar } from "@/twin-code/components/ProductionRunBar";
+import { HudScreenSwitcher } from "@/twin-code/components/HudScreenSwitcher";
 
 const PAGE_TITLE = "Twin Code — Profiler Harness (Phase 1a)";
 const VIEW_PREF_KEY = "twincode.view"; // "hud" | "debug"
@@ -184,8 +185,8 @@ export default function TwinCodePage() {
         {/* Production Run bar — visible in BOTH modes; locks the line to a named batch */}
         <ProductionRunBar />
 
-        {/* HUD MODE — shift-floor display: big BPM, status lights, last serial, batch progress */}
-        {view === "hud" && <OperatorHUD />}
+        {/* HUD MODE — operator screens (Throughput / Conveyor) toggle + pop-out for dual monitor */}
+        {view === "hud" && <HudScreenSwitcher />}
 
         {/* DEBUG MODE — full profiler harness */}
         {view === "debug" && (
@@ -197,9 +198,8 @@ export default function TwinCodePage() {
           </div>
         )}
 
-        {/* Conveyor simulator (real ingress path: catalog → photocell → bonded print)
-            Visible in BOTH modes so the operator can Start / Bind / LIVE / Reset. */}
-        <ConveyorPanel />
+        {/* Conveyor simulator — only in DEBUG; HUD shows it inside the switcher */}
+        {view === "debug" && <ConveyorPanel />}
 
         {/* Debug-only sections below */}
         {view === "debug" && (
