@@ -275,19 +275,19 @@ function PrinterLight({
         ? "bg-accent-foreground"
         : "bg-muted-foreground/40";
   return (
-    <div className="flex items-center gap-3 rounded-md border border-border bg-background/40 p-3">
+    <div className="flex items-center gap-4 rounded-md border border-border bg-background/40 p-5">
       <span
-        className={`relative flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full ${dotClass}`}
+        className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${dotClass}`}
       >
         {pulse && tone === "ok" && (
           <span className="absolute inset-0 animate-ping rounded-full bg-primary/60" />
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="font-mono text-xs font-bold uppercase tracking-wider text-foreground">
+        <div className="font-mono text-base font-bold uppercase tracking-wider text-foreground">
           {label}
         </div>
-        <div className="truncate font-mono text-[10px] text-muted-foreground" title={sub}>
+        <div className="truncate font-mono text-xs text-muted-foreground" title={sub}>
           {sub}
         </div>
       </div>
@@ -297,17 +297,17 @@ function PrinterLight({
 
 function ModeLight({ isLive, pairBound }: { isLive: boolean; pairBound: boolean }) {
   return (
-    <div className="flex items-center gap-3 rounded-md border border-border bg-background/40 p-3">
+    <div className="flex items-center gap-4 rounded-md border border-border bg-background/40 p-5">
       {isLive ? (
-        <Radio className="h-4 w-4 text-primary" />
+        <Radio className="h-6 w-6 text-primary" />
       ) : (
-        <Circle className="h-4 w-4 text-muted-foreground" />
+        <Circle className="h-6 w-6 text-muted-foreground" />
       )}
       <div className="min-w-0 flex-1">
-        <div className="font-mono text-xs font-bold uppercase tracking-wider text-foreground">
+        <div className="font-mono text-base font-bold uppercase tracking-wider text-foreground">
           {isLive ? "LIVE" : "SYNTH"}
         </div>
-        <div className="truncate font-mono text-[10px] text-muted-foreground">
+        <div className="truncate font-mono text-xs text-muted-foreground">
           {isLive ? "real bonded ^MD" : pairBound ? "synthetic timings" : "no pair bound"}
         </div>
       </div>
