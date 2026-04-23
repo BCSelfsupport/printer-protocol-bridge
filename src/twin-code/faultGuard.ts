@@ -113,6 +113,7 @@ class FaultGuard {
   /** Increasing count of bottles seen — used as a fallback when bottleIndex
    *  is omitted from a dispatch outcome. */
   private bottleSeq = 0;
+  private cachedSnapshot: FaultGuardSnapshot | null = null;
 
   configure(patch: Partial<FaultGuardConfig>) {
     this.cfg = { ...this.cfg, ...patch };
@@ -260,9 +261,11 @@ class FaultGuard {
     this.notify();
   }
 
-  /** Snapshot for React subscribers. */
+  /** Snapshot for React subscribers. Cached so useSyncExternalStore sees a
+   *  stable reference between notifies (otherwise infinite re-render loop). */
   getSnapshot(): FaultGuardSnapshot {
-    return {
+    if (this.cachedSnapshot) return this.cachedSnapshot;
+    this.cachedSnapshot = {
       active: this.active,
       recent: this.recent,
       consecutiveFailures: this.consecutiveFailures,
@@ -271,11 +274,11 @@ class FaultGuard {
       autoPaused: this.autoPaused,
       trippedAtBottle: this.trippedAtBottle,
     };
+    return this.cachedSnapshot;
   }
 
   subscribe(fn: Listener): () => void {
     this.listeners.add(fn);
-    fn(this.getSnapshot());
     return () => { this.listeners.delete(fn); };
   }
 
@@ -287,6 +290,7 @@ class FaultGuard {
   }
 
   private notify() {
+    this.cachedSnapshot = null; // invalidate; getSnapshot will rebuild on next read
     const snap = this.getSnapshot();
     this.listeners.forEach((l) => l(snap));
   }
