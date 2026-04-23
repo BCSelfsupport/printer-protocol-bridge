@@ -37,6 +37,8 @@ import { toast } from "@/hooks/use-toast";
 export function ProductionRunBar() {
   const run = useProductionRun();
   const summary = useLiveRunSummary();
+  const cat = useCatalog();
+  const pair = useTwinPair();
   const [startOpen, setStartOpen] = useState(false);
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
@@ -50,6 +52,20 @@ export function ProductionRunBar() {
     return () => clearInterval(t);
   }, [run.active]);
   void elapsedTick;
+
+  // Auto-stop when the catalog is exhausted: download the signed export and
+  // surface a toast so the operator immediately sees the end-of-lot artifacts.
+  useEffect(() => {
+    productionRun.setAutoStopHandler((exp) => {
+      downloadRunCSV(exp);
+      downloadRunJSON(exp);
+      toast({
+        title: `Lot ${exp.meta.lotNumber} complete — catalog exhausted`,
+        description: `${exp.summary.printed.toLocaleString()} printed · ${exp.summary.missed.toLocaleString()} missed · yield ${exp.summary.yieldPct.toFixed(2)}%. Audit CSV + signed JSON downloaded.`,
+      });
+    });
+    return () => productionRun.setAutoStopHandler(null);
+  }, []);
 
   const handleStop = async () => {
     setStopping(true);
