@@ -179,15 +179,33 @@ class ProductionRunStore {
     this.state = { active: null, lastCompleted: exportObj };
     this.clearPersistedActive();
     this.notify();
+    catalog.setActiveRunId(null);
+    if (active.cloudRunId) {
+      cloudLedger.stopRun({
+        runId: active.cloudRunId,
+        printedCount: summary.printed,
+        missedCount: summary.missed,
+      }).catch(() => { /* best-effort */ });
+    }
     return exportObj;
   }
 
   /** Force-cancel the active run with NO export (ditches the boundary). */
   cancel() {
-    if (!this.state.active) return;
+    const active = this.state.active;
+    if (!active) return;
     this.state = { ...this.state, active: null };
     this.clearPersistedActive();
     this.notify();
+    catalog.setActiveRunId(null);
+    if (active.cloudRunId) {
+      const sum = computeSummary(active, catalog.getRecords().slice(active.recordsStartIdx), Date.now());
+      cloudLedger.stopRun({
+        runId: active.cloudRunId,
+        printedCount: sum.printed,
+        missedCount: sum.missed,
+      }).catch(() => { /* best-effort */ });
+    }
   }
 
   /** Live summary of the active run (or null if none). */
