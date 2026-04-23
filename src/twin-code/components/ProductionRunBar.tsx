@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Play, Square, Download, FileJson, FileSpreadsheet, AlertCircle, ClipboardList, X } from "lucide-react";
+import { Play, Square, Download, FileJson, FileSpreadsheet, AlertCircle, ClipboardList, X, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -27,12 +27,14 @@ import {
 import { useProductionRun, useLiveRunSummary } from "../useProductionRun";
 import { productionRun, downloadRunCSV, downloadRunJSON, type ProductionRunExport } from "../productionRun";
 import { StartRunDialog } from "./StartRunDialog";
+import { PreflightDialog } from "./PreflightDialog";
 import { toast } from "@/hooks/use-toast";
 
 export function ProductionRunBar() {
   const run = useProductionRun();
   const summary = useLiveRunSummary();
   const [startOpen, setStartOpen] = useState(false);
+  const [preflightOpen, setPreflightOpen] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [elapsedTick, setElapsedTick] = useState(0);
@@ -135,13 +137,17 @@ export function ProductionRunBar() {
         <div className="text-xs text-muted-foreground">
           No active production run. Start a run to lock the line to a lot # and capture an auditable trail of every printed serial.
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setPreflightOpen(true)}>
+            <Activity className="mr-1 h-4 w-4" /> Pre-flight
+          </Button>
           <Button size="sm" onClick={() => setStartOpen(true)}>
             <Play className="mr-1 h-4 w-4" /> Start production run
           </Button>
         </div>
       </div>
       <StartRunDialog open={startOpen} onOpenChange={setStartOpen} onStarted={() => { /* no-op */ }} />
+      <PreflightDialog open={preflightOpen} onOpenChange={setPreflightOpen} />
     </>
   );
 }

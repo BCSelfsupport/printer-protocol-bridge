@@ -17,11 +17,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Play, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Play, Loader2, Activity } from "lucide-react";
 import { useCatalog } from "../useCatalog";
 import { useTwinPair } from "../twinPairStore";
 import { twinDispatcher } from "../twinDispatcher";
 import { productionRun } from "../productionRun";
+import { PreflightDialog } from "./PreflightDialog";
 import { toast } from "@/hooks/use-toast";
 
 const OPERATOR_PREF_KEY = "twincode.run.lastOperator";
@@ -45,6 +46,7 @@ export function StartRunDialog({
   const [operator, setOperator] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [preflightOpen, setPreflightOpen] = useState(false);
 
   // Restore last operator name on open
   useEffect(() => {
@@ -107,8 +109,19 @@ export function StartRunDialog({
 
         {/* Pre-flight gates */}
         <div className="space-y-1.5 rounded-md border border-border bg-muted/30 p-3">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Pre-flight checks
+          <div className="flex items-center justify-between">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Pre-flight checks
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-6 gap-1 px-2 text-[11px]"
+              onClick={() => setPreflightOpen(true)}
+            >
+              <Activity className="h-3 w-3" /> Run dry-run test
+            </Button>
           </div>
           {gates.map((g) => (
             <div key={g.label} className="flex items-center gap-2 text-xs">
@@ -174,6 +187,8 @@ export function StartRunDialog({
             Start run
           </Button>
         </DialogFooter>
+
+        <PreflightDialog open={preflightOpen} onOpenChange={setPreflightOpen} />
       </DialogContent>
     </Dialog>
   );
