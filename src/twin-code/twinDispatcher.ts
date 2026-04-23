@@ -301,11 +301,82 @@ class TwinDispatcher {
       return { ok: false, error: resA.error || resB.error || 'Pair entry failed' };
     }
 
+    // Field-index sanity check — fail bind early if the active message on either
+    // side doesn't expose the configured field index. Skippable via opts.
+    if (!opts.skipFieldCheck) {
+      const fieldA = opts.fieldA ?? 2;
+      const fieldB = opts.fieldB ?? 2;
+      const [vA, vB] = await Promise.all([
+        this.a.verifyFieldIndex(fieldA),
+        this.b.verifyFieldIndex(fieldB),
+      ]);
+      if (!vA.ok || !vB.ok) {
+        await Promise.all([this.a.exit(), this.b.exit()]);
+        this.a = null; this.b = null;
+        if (!this.wasPollingPaused) setPollingPaused(false);
+        return { ok: false, error: vA.error || vB.error || 'Field-index check failed' };
+      }
+    }
+
     return { ok: true, aId, bId };
   }
 
   /**
    * Dispatch a single serial to the bonded pair. Resolves when BOTH printers
+   * report C (or one fails — in which case the partner is fast-aborted instead
+   * of waiting out the C-timeout). Per-side failure reasons are surfaced in
+   * `aReason` / `bReason`.
+   */
+  async dispatch(serial: string): Promise<TwinDispatchResult> {
+    if (!this.a || !this.b) return { serial, ok: false, reason: 'not-bound' };
+
+    const a = this.a;
+    const b = this.b;
+    const fieldA = this.opts.fieldA ?? 2;
+    const fieldB = this.opts.fieldB ?? 2;
+    const mdA = `^MD^TD${fieldA};${serial}`;
+    const mdB = `^MD^TD${fieldB};${serial}`;
+
+    const tStart = performance.now();
+    const pA = a.sendMD(mdA);
+    const pB = b.sendMD(mdB);
+
+    // Whichever side fails FIRST triggers an abort on the other so we don't
+    // sit on a 30s C-timeout waiting for an orphaned partner.
+    let aborted = false;
+    const watchSide = async (
+      p: Promise<{ ok: boolean; rttMs?: number; reason?: string }>,
+      partner: PrinterSession,
+    ) => {
+      const r = await p;
+      if (!r.ok && !aborted) {
+        aborted = true;
+        // Tiny grace so the partner can resolve on its own if it's nearly done.
+        setTimeout(() => partner.abortInFlight('partner-failed'), PARTNER_GRACE_MS);
+      }
+      return r;
+    };
+
+    const [rA, rB] = await Promise.all([watchSide(pA, b), watchSide(pB, a)]);
+    const tEnd = performance.now();
+
+    const ok = rA.ok && rB.ok;
+    const aMs = rA.rttMs;
+    const bMs = rB.rttMs;
+    const aReason = rA.ok ? undefined : rA.reason;
+    const bReason = rB.ok ? undefined : rB.reason;
+    return {
+      serial,
+      ok,
+      aMs,
+      bMs,
+      skewMs: aMs != null && bMs != null ? Math.abs(aMs - bMs) : undefined,
+      cycleMs: tEnd - tStart,
+      reason: ok ? undefined : [aReason && `A:${aReason}`, bReason && `B:${bReason}`].filter(Boolean).join(' / '),
+      aReason,
+      bReason,
+    };
+  }
    * report C (or one fails). Pacing is enforced per-printer; the slower
    * printer is the natural bottleneck.
    */
