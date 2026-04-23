@@ -103,6 +103,16 @@ class Catalog {
     return entry.serial;
   }
 
+  /**
+   * Look at the next serial WITHOUT consuming it. Used by tools like the
+   * pre-flight dry run that want to print real (scannable) catalog values
+   * without burning rows.
+   */
+  peek(): string | null {
+    if (this.state.nextIndex >= this.entries.length) return null;
+    return this.entries[this.state.nextIndex].serial;
+  }
+
   recordPrinted(serial: string, bottleIndex: number) {
     this.records.push({ serial, outcome: "printed", at: performance.now(), bottleIndex });
     this.state = { ...this.state, consumedCount: this.state.consumedCount + 1 };

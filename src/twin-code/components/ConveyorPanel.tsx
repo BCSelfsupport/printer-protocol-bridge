@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Upload, Play, Square, RotateCcw, Zap, FileSpreadsheet, Trash2, Radio, Loader2 } from "lucide-react";
+import { Upload, Play, Square, RotateCcw, Zap, FileSpreadsheet, Trash2, Radio, Loader2, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -12,7 +12,7 @@ import { conveyorSim, computeBpm, pitchFromBpm, ftPerMinFromBpm, DEFAULT_CONVEYO
 import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
 import { useTwinPair } from "../twinPairStore";
-import { twinDispatcher } from "../twinDispatcher";
+import { twinDispatcher, type TwinDryRunResult } from "../twinDispatcher";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 
 export function ConveyorPanel() {
@@ -25,6 +25,8 @@ export function ConveyorPanel() {
   const [running, setRunning] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [liveBusy, setLiveBusy] = useState(false);
+  const [dryBusy, setDryBusy] = useState(false);
+  const [lastDryRun, setLastDryRun] = useState<TwinDryRunResult | null>(null);
 
   // Mirror the conveyor config locally for the controls (simple & responsive).
   const [cfg, setCfg] = useState(DEFAULT_CONVEYOR_CONFIG);
@@ -76,6 +78,36 @@ export function ConveyorPanel() {
     setLiveBusy(false);
     setLiveMode(false);
     toast({ title: 'Reverted to synthetic mode' });
+  };
+
+  // ---- Pre-flight dry run: 5 real dispatches, no conveyor ----
+  const runDryRun = async () => {
+    setDryBusy(true);
+    setLastDryRun(null);
+    // Use the next catalog serial if available so the printers physically print
+    // a real (scannable) code; otherwise the dispatcher synthesises DRYRUNxxxx.
+    const seed = catalog.peek() ?? undefined;
+    const result = await twinDispatcher.dryRun(5, seed);
+    setLastDryRun(result);
+    setDryBusy(false);
+
+    if (result.ok) {
+      const a = result.aStats;
+      const b = result.bStats;
+      const skew = result.skewStats;
+      toast({
+        title: `Dry run passed (${result.passed}/${result.count})`,
+        description:
+          `A mean ${a?.mean.toFixed(1)}ms · B mean ${b?.mean.toFixed(1)}ms · ` +
+          `skew mean ${skew?.mean.toFixed(1)}ms (max ${skew?.max.toFixed(1)})`,
+      });
+    } else {
+      toast({
+        title: `Dry run failed (${result.failed}/${result.count})`,
+        description: result.reason || 'See per-side reasons',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Tear down on unmount
@@ -149,6 +181,44 @@ export function ConveyorPanel() {
             onCheckedChange={(v) => (v ? enableLive() : disableLive())}
           />
         </div>
+
+        {/* Pre-flight dry run — only meaningful when LIVE is engaged + conveyor stopped */}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={runDryRun}
+          disabled={!liveMode || running || dryBusy || liveBusy}
+          title="Fire 5 real bonded dispatches and report timings — use BEFORE starting the conveyor"
+        >
+          {dryBusy ? (
+            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+          ) : (
+            <FlaskConical className="mr-1 h-4 w-4" />
+          )}
+          Dry run ×5
+        </Button>
+
+        {/* Last dry-run result chip */}
+        {lastDryRun && (
+          <div
+            className={`rounded-md border px-2 py-1 text-[11px] font-mono ${
+              lastDryRun.ok
+                ? 'border-primary/40 bg-primary/10 text-primary'
+                : 'border-destructive/40 bg-destructive/10 text-destructive'
+            }`}
+            title={lastDryRun.reason || 'All shots completed cleanly'}
+          >
+            {lastDryRun.ok
+              ? `✓ ${lastDryRun.passed}/${lastDryRun.count}` +
+                (lastDryRun.cycleStats
+                  ? ` · cycle ${lastDryRun.cycleStats.mean.toFixed(0)}ms`
+                  : '') +
+                (lastDryRun.skewStats
+                  ? ` · skew ${lastDryRun.skewStats.mean.toFixed(1)}ms`
+                  : '')
+              : `✗ ${lastDryRun.failed}/${lastDryRun.count} failed`}
+          </div>
+        )}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <input
