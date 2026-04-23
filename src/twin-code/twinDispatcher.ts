@@ -137,7 +137,8 @@ class PrinterSession {
    * Returns ok=true on success, ok=false if the field is missing or ^LF couldn't be parsed.
    */
   async verifyFieldIndex(fieldIndex: number): Promise<{ ok: boolean; error?: string }> {
-    if (!window.electronAPI?.oneToOne) return { ok: true }; // skip in renderer-fallback
+    // Skip in renderer-fallback (no transport) and in emulator mode (no real ^LF parity).
+    if (!window.electronAPI?.oneToOne || this.isEmulated) return { ok: true };
     const lf = await printerTransport.sendCommand(this.printerId, '^LF', { maxWaitMs: 4000 });
     if (!lf?.success) return { ok: false, error: `${this.label}: ^LF failed` };
     const text = lf.response || '';
@@ -180,7 +181,16 @@ class PrinterSession {
     };
     this.inFlight.push(entry);
 
-    if (window.electronAPI?.oneToOne) {
+    if (this.isEmulated) {
+      // Emulator path: poke ^MD through the regular transport (so the emulator
+      // logs it and increments product counts), then synthesize R/T/C with a
+      // small per-printer jitter so A vs B skew is visible in the profiler.
+      printerTransport.sendCommand(this.printerId, mdCommand, { maxWaitMs: 1000 }).catch(() => {});
+      const jitter = Math.random() * EMU_C_JITTER_MS;
+      setTimeout(() => this.handleAck('R', id), EMU_R_MS);
+      setTimeout(() => this.handleAck('T', id), EMU_T_MS + jitter * 0.3);
+      setTimeout(() => this.handleAck('C', id), EMU_T_MS + EMU_C_JITTER_MS + jitter);
+    } else if (window.electronAPI?.oneToOne) {
       const send = await window.electronAPI.oneToOne.sendMD(this.printerId, mdCommand);
       if (!send.success) this.complete(entry, { ok: false, reason: send.error || 'send-failed' });
     } else {
@@ -211,7 +221,9 @@ class PrinterSession {
     this.active = false;
     this.abortInFlight('detached');
 
-    if (window.electronAPI?.oneToOne) {
+    if (this.isEmulated) {
+      try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }); } catch (_) {}
+    } else if (window.electronAPI?.oneToOne) {
       try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 4000 }); } catch (_) {}
       try { await window.electronAPI.oneToOne.detach(this.printerId); } catch (_) {}
     }
