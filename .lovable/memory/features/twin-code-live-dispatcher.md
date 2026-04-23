@@ -70,14 +70,29 @@ separate in-flight queues, parallel ^MB/^ME). `src/lib/twinDispatcher.ts` define
 - Polling is paused once for the entire bonded session and resumed on unbind, only if
   the dispatcher was the one to pause it (plays nicely with mobile-companion pause)
 
-## Field mapping
+## Field mapping & subcommand selection
 
-Default: both printers receive `^MD^TD2;<serial>` (field index 2). Configurable per printer
-via `TwinDispatcherOptions.fieldA` / `fieldB`. The customer's typical bonded pair:
-- A = lid printer, 16×16 Data Matrix, field index TBD per message
-- B = side printer, 13-digit human-readable text, field index TBD per message
+Each side picks its own ^MD subcommand independently (per protocol v2.6 §5.28):
 
-If A and B use different field indices in their messages, set `fieldA` / `fieldB` on bind.
+| Side | Default subcommand | Default field | Frame example |
+|------|--------------------|---------------|---------------|
+| A (lid) | **`^BD`** (native barcode-data) | 2 | `^MD^BD2;1234567890123` |
+| B (side) | **`^TD`** (text-data) | 2 | `^MD^TD2;1234567890123` |
+
+A defaults to `^BD` because the customer's lid printer carries the 16x16 ECC200
+DataMatrix — native `^BD` is sub-millisecond per print, vs ~5–50 ms for the
+bwip-js → `^NG` bitmap-upload workaround. See
+`mem://integration/datamatrix-bd-vs-ng` for the full rationale.
+
+Override per pair via `TwinDispatcherOptions`:
+- `fieldA` / `fieldB` — field indices (default 2 each)
+- `subcommandA` / `subcommandB` — `'TD'` or `'BD'`
+
+On bind, `verifyFieldIndex` parses `^LF` and rejects mismatches (e.g. trying
+`^BD` against a text field, or `^TD` against a graphic). Type enforcement is
+only applied when `^LF` actually surfaces a recognizable type token; if the
+firmware response is index-only the type check is skipped (existence check
+still runs). Skip both via `opts.skipFieldCheck`.
 
 ## UI behavior
 

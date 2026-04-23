@@ -133,26 +133,68 @@ class PrinterSession {
   }
 
   /**
-   * Issue ^LF on the active message and confirm a field with the given index exists.
-   * Returns ok=true on success, ok=false if the field is missing or ^LF couldn't be parsed.
+   * Issue ^LF on the active message and confirm a field with the given index exists,
+   * AND that its type matches `expectedKind` ('text' for ^TD, 'barcode' for ^BD).
+   * Per protocol v2.6 §5.28, ^MD only accepts ^TD (text) and ^BD (barcode) targets;
+   * a mismatch (e.g. trying ^BD against a graphic field) will be silently dropped
+   * by the firmware, which is exactly the failure mode we want to catch on bind.
+   * Returns ok=true on success, ok=false on missing field or type mismatch.
    */
-  async verifyFieldIndex(fieldIndex: number): Promise<{ ok: boolean; error?: string }> {
+  async verifyFieldIndex(
+    fieldIndex: number,
+    expectedKind: 'text' | 'barcode' = 'text',
+  ): Promise<{ ok: boolean; error?: string }> {
     // Skip in renderer-fallback (no transport) and in emulator mode (no real ^LF parity).
     if (!window.electronAPI?.oneToOne || this.isEmulated) return { ok: true };
     const lf = await printerTransport.sendCommand(this.printerId, '^LF', { maxWaitMs: 4000 });
     if (!lf?.success) return { ok: false, error: `${this.label}: ^LF failed` };
     const text = lf.response || '';
-    const explicit = /(?:field|fld)\s*[:#]?\s*(\d+)/gi;
-    const indices = new Set<number>();
+
+    // Try to parse "field N: <type>" pairs first. ^LF formatting varies by firmware
+    // revision but typically yields one line per field with a type token like
+    // TEXT / BARCODE / DATAMATRIX / QR / GRAPHIC / LOGO.
+    const fieldTypes = new Map<number, string>();
+    const lineRe = /(?:field|fld)\s*[:#]?\s*(\d+)[^\r\n]*?\b(text|barcode|datamatrix|dm|qr|code\s*128|code\s*39|ean|upc|graphic|logo|bitmap)\b/gi;
     let m: RegExpExecArray | null;
-    while ((m = explicit.exec(text)) !== null) indices.add(parseInt(m[1], 10));
+    while ((m = lineRe.exec(text)) !== null) {
+      fieldTypes.set(parseInt(m[1], 10), m[2].toLowerCase().replace(/\s+/g, ''));
+    }
+
+    // Fallback index discovery (in case the firmware only lists indices, not types).
+    const indices = new Set<number>(fieldTypes.keys());
     if (indices.size === 0) {
-      // Fall back to non-empty line count (1-based).
+      const explicit = /(?:field|fld)\s*[:#]?\s*(\d+)/gi;
+      while ((m = explicit.exec(text)) !== null) indices.add(parseInt(m[1], 10));
+    }
+    if (indices.size === 0) {
       const lineCount = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean).length;
       for (let i = 1; i <= lineCount; i++) indices.add(i);
     }
+
     if (!indices.has(fieldIndex)) {
-      return { ok: false, error: `${this.label}: message has no field index ${fieldIndex} (got [${[...indices].sort((a,b)=>a-b).join(',')}])` };
+      return {
+        ok: false,
+        error: `${this.label}: message has no field index ${fieldIndex} (got [${[...indices].sort((a,b)=>a-b).join(',')}])`,
+      };
+    }
+
+    // Type check — only enforce when ^LF actually told us the type.
+    const actual = fieldTypes.get(fieldIndex);
+    if (actual) {
+      const isBarcodeType = /^(barcode|datamatrix|dm|qr|code128|code39|ean|upc)$/.test(actual);
+      const isTextType = actual === 'text';
+      if (expectedKind === 'barcode' && !isBarcodeType) {
+        return {
+          ok: false,
+          error: `${this.label}: field ${fieldIndex} is "${actual}", expected a barcode field for ^MD^BD`,
+        };
+      }
+      if (expectedKind === 'text' && !isTextType) {
+        return {
+          ok: false,
+          error: `${this.label}: field ${fieldIndex} is "${actual}", expected a text field for ^MD^TD`,
+        };
+      }
     }
     return { ok: true };
   }
@@ -294,6 +336,16 @@ export interface TwinDispatcherOptions {
   fieldA?: number;
   /** Field index in the message that receives the side serial (default 2). */
   fieldB?: number;
+  /**
+   * Subcommand to use inside ^MD on the A (lid) side.
+   * 'BD' = native barcode-data update for DataMatrix / QR / Code128 etc. (v2.6 §5.28.1).
+   * 'TD' = text-data update.
+   * Default is 'BD' since the lid printer carries the 16x16 DataMatrix in the bonded
+   * TwinCode pair. See mem://integration/datamatrix-bd-vs-ng.
+   */
+  subcommandA?: 'TD' | 'BD';
+  /** Subcommand for the B (side) side. Default 'TD' (13-digit human-readable serial). */
+  subcommandB?: 'TD' | 'BD';
   /** Optional message to ^SM-select on entry. If omitted, current message is used. */
   messageName?: string;
   /** When true, skip the ^LF field-index sanity check on bind (default false). */
@@ -348,13 +400,18 @@ class TwinDispatcher {
     }
 
     // Field-index sanity check — fail bind early if the active message on either
-    // side doesn't expose the configured field index. Skippable via opts.
+    // side doesn't expose the configured field index OR if its type doesn't match
+    // the chosen ^MD subcommand (^TD requires text, ^BD requires barcode).
     if (!opts.skipFieldCheck) {
       const fieldA = opts.fieldA ?? 2;
       const fieldB = opts.fieldB ?? 2;
+      const subA = opts.subcommandA ?? 'BD';
+      const subB = opts.subcommandB ?? 'TD';
+      const kindA: 'text' | 'barcode' = subA === 'BD' ? 'barcode' : 'text';
+      const kindB: 'text' | 'barcode' = subB === 'BD' ? 'barcode' : 'text';
       const [vA, vB] = await Promise.all([
-        this.a.verifyFieldIndex(fieldA),
-        this.b.verifyFieldIndex(fieldB),
+        this.a.verifyFieldIndex(fieldA, kindA),
+        this.b.verifyFieldIndex(fieldB, kindB),
       ]);
       if (!vA.ok || !vB.ok) {
         await Promise.all([this.a.exit(), this.b.exit()]);
@@ -380,8 +437,12 @@ class TwinDispatcher {
     const b = this.b;
     const fieldA = this.opts.fieldA ?? 2;
     const fieldB = this.opts.fieldB ?? 2;
-    const mdA = `^MD^TD${fieldA};${serial}`;
-    const mdB = `^MD^TD${fieldB};${serial}`;
+    // Default A (lid) → ^BD (native DataMatrix update per v2.6 §5.28.1).
+    // Default B (side) → ^TD (text). Both are single short ^MD frames.
+    const subA = this.opts.subcommandA ?? 'BD';
+    const subB = this.opts.subcommandB ?? 'TD';
+    const mdA = `^MD^${subA}${fieldA};${serial}`;
+    const mdB = `^MD^${subB}${fieldB};${serial}`;
 
     const tStart = performance.now();
     const pA = a.sendMD(mdA);
