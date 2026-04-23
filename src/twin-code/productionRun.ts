@@ -30,6 +30,7 @@
 import { catalog, type LedgerRecord } from "./catalog";
 import { faultGuard } from "./faultGuard";
 import { cloudLedger } from "./cloudLedger";
+import { liveMetrics } from "./liveMetrics";
 
 const ACTIVE_RUN_KEY = "twincode.activeRun.v1";
 
@@ -130,6 +131,9 @@ class ProductionRunStore {
     // Fresh run = fresh fault history; otherwise prior shift's incidents
     // would muddy the new lot's recovery banner.
     faultGuard.reset();
+    // Fresh run = fresh BPM rolling window so the gauge reflects this lot
+    // only, not whatever happened before Start.
+    liveMetrics.resetWindow();
     this.persistActive();
     this.notify();
     // Register the run in the cloud (best-effort). If it succeeds we attach
