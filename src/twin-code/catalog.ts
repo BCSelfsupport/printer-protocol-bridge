@@ -153,6 +153,7 @@ class Catalog {
   private entries: CatalogEntry[] = [];
   private printedSet = new Set<string>();
   private records: LedgerRecord[] = [];
+  private activeRunId: string | null = null;
   private state: CatalogState = {
     total: 0,
     nextIndex: 0,
@@ -300,6 +301,23 @@ class Catalog {
     this.state = { ...this.state, consumedCount: this.state.consumedCount + 1 };
     this.scheduleSave();
     this.notify();
+    // Fire-and-forget cloud claim. Best-effort by default — duplicate detection
+    // across PCs surfaces as a console warning, since the local guard already
+    // ran and the bottle has physically left.
+    if (this.state.fingerprint) {
+      cloudLedger.claimSerial({
+        catalogFingerprint: this.state.fingerprint,
+        serial,
+        bottleIndex,
+        runId: this.activeRunId,
+      }).then((res) => {
+        if (!res.ok && "duplicate" in res && res.duplicate) {
+          console.warn(
+            `[catalog] cloud reports serial '${serial}' was already printed by ${res.claimedBy} — local print still proceeded.`,
+          );
+        }
+      }).catch(() => { /* swallow — best-effort */ });
+    }
   }
 
   recordMissed(bottleIndex: number) {
@@ -317,6 +335,42 @@ class Catalog {
     };
     this.scheduleSave();
     this.notify();
+    if (this.state.fingerprint) {
+      cloudLedger.recordMiss({
+        catalogFingerprint: this.state.fingerprint,
+        bottleIndex,
+        runId: this.activeRunId,
+      }).catch(() => { /* swallow */ });
+    }
+  }
+
+  /** Set the active run id so subsequent ledger entries can be associated. */
+  setActiveRunId(id: string | null) {
+    this.activeRunId = id;
+  }
+
+  /** Pre-seed the local printedSet with serials already claimed in the cloud
+   *  (used by Resume-on-backup). Skips serials already in the set. */
+  preSeedPrinted(serials: string[]) {
+    let added = 0;
+    for (const s of serials) {
+      if (!this.printedSet.has(s)) {
+        this.printedSet.add(s);
+        added++;
+      }
+    }
+    if (added > 0) {
+      // Advance nextIndex past any pre-seeded serials at the head of the catalog.
+      while (
+        this.state.nextIndex < this.entries.length &&
+        this.printedSet.has(this.entries[this.state.nextIndex].serial)
+      ) {
+        this.state = { ...this.state, nextIndex: this.state.nextIndex + 1, consumedCount: this.state.consumedCount + 1 };
+      }
+      this.scheduleSave();
+      this.notify();
+    }
+    return added;
   }
 
   /** Reset run progress but keep the loaded catalog (and its fingerprint). */
