@@ -29,6 +29,7 @@
 
 import { catalog, type LedgerRecord } from "./catalog";
 import { faultGuard } from "./faultGuard";
+import { cloudLedger } from "./cloudLedger";
 
 const ACTIVE_RUN_KEY = "twincode.activeRun.v1";
 
@@ -53,6 +54,8 @@ export interface ProductionRunMeta {
   recordsEndIdx: number | null;
   /** True if LIVE bonded mode was engaged at Start (vs synthetic). */
   liveAtStart: boolean;
+  /** Cloud-side run id (if successfully registered). */
+  cloudRunId?: string | null;
 }
 
 export interface ProductionRunSummary {
@@ -121,6 +124,7 @@ class ProductionRunStore {
       recordsStartIdx: catalog.getRecords().length,
       recordsEndIdx: null,
       liveAtStart: input.liveAtStart,
+      cloudRunId: null,
     };
     this.state = { ...this.state, active: meta };
     // Fresh run = fresh fault history; otherwise prior shift's incidents
@@ -128,6 +132,24 @@ class ProductionRunStore {
     faultGuard.reset();
     this.persistActive();
     this.notify();
+    // Register the run in the cloud (best-effort). If it succeeds we attach
+    // the cloud id so subsequent ledger writes correlate.
+    cloudLedger.startRun({
+      lotNumber: meta.lotNumber,
+      operator: meta.operator,
+      note: meta.note || null,
+      catalogFingerprint: meta.catalogFingerprint,
+      catalogTotalAtStart: meta.catalogTotalAtStart,
+      liveAtStart: meta.liveAtStart,
+    }).then((res) => {
+      if (res && this.state.active && this.state.active.id === meta.id) {
+        const updated = { ...this.state.active, cloudRunId: res.id };
+        this.state = { ...this.state, active: updated };
+        catalog.setActiveRunId(res.id);
+        this.persistActive();
+        this.notify();
+      }
+    }).catch(() => { /* best-effort */ });
     return meta;
   }
 
