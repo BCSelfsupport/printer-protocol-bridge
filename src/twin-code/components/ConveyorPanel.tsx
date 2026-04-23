@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { ConveyorView } from "./ConveyorView";
 import { CsvColumnPickerDialog } from "./CsvColumnPickerDialog";
 import { LedgerResumeBanner } from "./LedgerResumeBanner";
+import { FaultRecoveryBanner } from "./FaultRecoveryBanner";
 import { conveyorSim, computeBpm, pitchFromBpm, ftPerMinFromBpm, DEFAULT_CONVEYOR_CONFIG } from "../conveyorSim";
 import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
@@ -160,6 +161,7 @@ export function ConveyorPanel() {
   return (
     <section className="space-y-3">
       <LedgerResumeBanner />
+      <FaultRecoveryBanner />
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold">Conveyor simulator</h2>
         <span className="text-[11px] text-muted-foreground">
