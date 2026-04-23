@@ -100,6 +100,13 @@ still runs). Skip both via `opts.skipFieldCheck`.
 - LIVE toggle is **disabled** until a twin pair is bound
 - Toast on success / failure with printer IDs for traceability
 - Auto-unbinds on `ConveyorPanel` unmount (e.g. nav away from Twin Code page)
+- **Pre-flight dry run** (`twinDispatcher.dryRun(n, seed)`) — fires N (≤50) sequential
+  real dispatches before the conveyor is started. Seeds with the next un-consumed
+  catalog serial via `catalog.peek()` (does NOT mutate state) so the printers
+  produce real scannable codes. Returns aggregated `aStats` / `bStats` / `skewStats`
+  / `cycleStats` and de-duplicated per-side failure reasons. Exposed in the
+  Conveyor toolbar as a "Dry run ×5" button + result chip; only enabled while
+  LIVE is engaged AND the conveyor is stopped.
 
 ## What's still synthetic in LIVE mode
 
