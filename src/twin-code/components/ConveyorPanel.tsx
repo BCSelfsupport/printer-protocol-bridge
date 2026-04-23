@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { ConveyorView } from "./ConveyorView";
 import { CsvColumnPickerDialog } from "./CsvColumnPickerDialog";
+import { LedgerResumeBanner } from "./LedgerResumeBanner";
 import { conveyorSim, computeBpm, pitchFromBpm, ftPerMinFromBpm, DEFAULT_CONVEYOR_CONFIG } from "../conveyorSim";
 import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
