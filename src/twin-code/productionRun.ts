@@ -197,6 +197,7 @@ class ProductionRunStore {
     };
     this.state = { active: null, lastCompleted: exportObj };
     this.clearPersistedActive();
+    this.disarmCatalogWatcher();
     this.notify();
     catalog.setActiveRunId(null);
     if (active.cloudRunId) {
@@ -215,6 +216,7 @@ class ProductionRunStore {
     if (!active) return;
     this.state = { ...this.state, active: null };
     this.clearPersistedActive();
+    this.disarmCatalogWatcher();
     this.notify();
     catalog.setActiveRunId(null);
     if (active.cloudRunId) {
@@ -236,6 +238,45 @@ class ProductionRunStore {
   }
 
   // --- internals ---
+
+  /**
+   * While a run is active, watch the catalog for end-of-lot. When the catalog
+   * has been fully consumed (and at least one bottle in this run has been
+   * dispatched, so an empty catalog at start doesn't self-terminate), seal the
+   * run, hand the export to the UI hook for download, and disarm.
+   */
+  private armCatalogWatcher() {
+    if (this.catalogUnsub) return;
+    let firing = false;
+    this.catalogUnsub = catalog.subscribe((cs) => {
+      const active = this.state.active;
+      if (!active) return;
+      if (firing) return;
+      // Need a non-zero catalog AND a fully-consumed cursor.
+      if (cs.total === 0) return;
+      if (cs.nextIndex < cs.total) return;
+      // Need at least one bottle attributed to this run.
+      const recordsConsumed = catalog.getRecords().length - active.recordsStartIdx;
+      if (recordsConsumed <= 0) return;
+      firing = true;
+      // Defer one tick so the catalog notify loop completes cleanly.
+      Promise.resolve().then(async () => {
+        try {
+          const exp = await this.stop();
+          if (exp && this.onAutoStop) this.onAutoStop(exp);
+        } finally {
+          firing = false;
+        }
+      });
+    });
+  }
+
+  private disarmCatalogWatcher() {
+    if (this.catalogUnsub) {
+      this.catalogUnsub();
+      this.catalogUnsub = null;
+    }
+  }
 
   private persistActive() {
     try {
