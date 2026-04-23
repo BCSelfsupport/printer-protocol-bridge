@@ -43,20 +43,20 @@ export function ProductionMetricsCard({ units, compact = false }: { units: Units
   // ---- Compact: inline strip, no border/padding (host provides chrome) ----
   if (compact) {
     return (
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">
-          <Gauge className="h-3 w-3 text-primary" />
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground shrink-0">
+          <Gauge className="h-4 w-4 text-primary" />
           Production
           {m.hasLiveData ? (
             <span className="flex items-center gap-1 text-primary normal-case tracking-normal">
-              <span className="h-1 w-1 animate-pulse rounded-full bg-primary" />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
               live
             </span>
           ) : (
             <span className="normal-case tracking-normal text-muted-foreground/70">idle</span>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 text-base">
           <CompactMetric label="BPM" value={m.bpm.toFixed(0)} accent />
           <CompactMetric label="Speed" value={`${lineSpeedDisplay.value} ${lineSpeedDisplay.unit}`} accent />
           <CompactEditable
