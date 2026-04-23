@@ -61,6 +61,7 @@ export function OperatorHUD() {
   const cat = useCatalog();
   const pair = useTwinPair();
   const samples = useProfilerSamples();
+  const live = useLiveMetrics();
 
   const [alarmEnabled, setAlarmEnabled] = useState<boolean>(() => {
     try {
