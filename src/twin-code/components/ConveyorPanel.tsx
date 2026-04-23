@@ -25,7 +25,17 @@ export function ConveyorPanel() {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [csvText, setCsvText] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [running, setRunning] = useState(false);
+  // `running` mirrors the conveyor sim's actual state, polled cheaply so the
+  // Start/Stop button can never get stuck out of sync with the engine (e.g.
+  // if start was cancelled by a confirm dialog or stopped from elsewhere).
+  const [running, setRunning] = useState(() => conveyorSim.isRunning());
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const r = conveyorSim.isRunning();
+      setRunning((prev) => (prev === r ? prev : r));
+    }, 200);
+    return () => window.clearInterval(id);
+  }, []);
   const [liveMode, setLiveMode] = useState(false);
   const [liveBusy, setLiveBusy] = useState(false);
   const [dryBusy, setDryBusy] = useState(false);
@@ -167,9 +177,11 @@ export function ConveyorPanel() {
       <LedgerResumeBanner />
       <FaultRecoveryBanner />
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-semibold">Conveyor simulator</h2>
+        <h2 className="text-sm font-semibold">Conveyor visualizer</h2>
         <span className="text-[11px] text-muted-foreground">
-          Photocell-triggered bonded twin printer station
+          {liveMode
+            ? 'LIVE — real photocell trips drive prints; counts will increment as bottles pass'
+            : 'Synthetic preview — animates bottles at the configured BPM (no hardware)'}
         </span>
 
         {/* LIVE / SYNTHETIC mode toggle */}
@@ -246,15 +258,35 @@ export function ConveyorPanel() {
             <Upload className="mr-1 h-4 w-4" /> Load CSV catalog
           </Button>
           {!running ? (
-            <Button size="sm" onClick={handleStart}>
-              <Play className="mr-1 h-4 w-4" /> Start conveyor
+            <Button
+              size="sm"
+              onClick={handleStart}
+              disabled={liveMode}
+              title={
+                liveMode
+                  ? 'In LIVE mode the real photocell drives prints — the simulator is disabled.'
+                  : 'Start the on-screen bottle animation (synthetic photocell trips at the configured BPM)'
+              }
+            >
+              <Play className="mr-1 h-4 w-4" /> Start sim
             </Button>
           ) : (
-            <Button size="sm" variant="secondary" onClick={handleStop}>
-              <Square className="mr-1 h-4 w-4" /> Stop
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleStop}
+              title="Stop the on-screen bottle animation"
+            >
+              <Square className="mr-1 h-4 w-4" /> Stop sim
             </Button>
           )}
-          <Button size="sm" variant="outline" onClick={() => conveyorSim.manualFire()} disabled={!running}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => conveyorSim.manualFire()}
+            disabled={!running}
+            title="Manually fire the photocell once (sim only)"
+          >
             <Zap className="mr-1 h-4 w-4" /> Fire photocell
           </Button>
           <Button
