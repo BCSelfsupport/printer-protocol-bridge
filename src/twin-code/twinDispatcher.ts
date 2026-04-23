@@ -135,14 +135,23 @@ class PrinterSession {
     return promise;
   }
 
-  async exit(): Promise<void> {
-    this.active = false;
+  /**
+   * Force-fail every in-flight ^MD as aborted (used when the partner printer
+   * has already failed — no point waiting out the 30s C-timeout).
+   * Does NOT exit 1-1 mode; the caller still owns the lifecycle.
+   */
+  abortInFlight(reason = 'partner-failed') {
     const drained = [...this.inFlight];
     this.inFlight = [];
     drained.forEach(p => {
       clearTimeout(p.rTimer); clearTimeout(p.cTimer);
-      p.resolve({ ok: false, reason: 'detached' });
+      p.resolve({ ok: false, reason });
     });
+  }
+
+  async exit(): Promise<void> {
+    this.active = false;
+    this.abortInFlight('detached');
 
     if (window.electronAPI?.oneToOne) {
       try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 4000 }); } catch (_) {}
