@@ -212,7 +212,11 @@ export interface TwinDispatchResult {
   skewMs?: number;
   /** max(aMs, bMs). */
   cycleMs?: number;
+  /** Combined reason (back-compat for existing consumers). */
   reason?: string;
+  /** Per-side failure reasons — undefined when that side succeeded. */
+  aReason?: string;
+  bReason?: string;
 }
 
 export interface TwinDispatcherOptions {
@@ -222,6 +226,8 @@ export interface TwinDispatcherOptions {
   fieldB?: number;
   /** Optional message to ^SM-select on entry. If omitted, current message is used. */
   messageName?: string;
+  /** When true, skip the ^LF field-index sanity check on bind (default false). */
+  skipFieldCheck?: boolean;
 }
 
 class TwinDispatcher {
