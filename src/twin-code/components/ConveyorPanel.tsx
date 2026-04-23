@@ -17,10 +17,14 @@ import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 
 export function ConveyorPanel() {
   const catalogState = useCatalog();
+  const pair = useTwinPair();
+  const { printers } = usePrinterStorage();
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [csvText, setCsvText] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [running, setRunning] = useState(false);
+  const [liveMode, setLiveMode] = useState(false);
+  const [liveBusy, setLiveBusy] = useState(false);
 
   // Mirror the conveyor config locally for the controls (simple & responsive).
   const [cfg, setCfg] = useState(DEFAULT_CONVEYOR_CONFIG);
@@ -44,6 +48,45 @@ export function ConveyorPanel() {
       updateCfg({ ftPerMin: newFt });
     }
   };
+
+  const pairBound = !!(pair.a && pair.b);
+
+  // ---- LIVE bonded dispatch wiring ----
+  const enableLive = async () => {
+    if (!pairBound) {
+      toast({ title: 'Bind a twin pair first', variant: 'destructive' });
+      return;
+    }
+    setLiveBusy(true);
+    const res = await twinDispatcher.bind(pair, printers);
+    setLiveBusy(false);
+    if (!res.ok) {
+      toast({ title: 'Could not enter LIVE mode', description: res.error, variant: 'destructive' });
+      return;
+    }
+    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial));
+    setLiveMode(true);
+    toast({ title: 'LIVE bonded mode active', description: `Printer A id=${res.aId}, B id=${res.bId}` });
+  };
+
+  const disableLive = async () => {
+    setLiveBusy(true);
+    conveyorSim.setLiveDispatcher(null);
+    await twinDispatcher.unbind();
+    setLiveBusy(false);
+    setLiveMode(false);
+    toast({ title: 'Reverted to synthetic mode' });
+  };
+
+  // Tear down on unmount
+  useEffect(() => {
+    return () => {
+      if (twinDispatcher.isBound()) {
+        conveyorSim.setLiveDispatcher(null);
+        twinDispatcher.unbind().catch(() => {});
+      }
+    };
+  }, []);
 
   const handleStart = () => {
     if (catalogState.total === 0 && !confirm("No catalog loaded — every bottle will be a miss-print. Start anyway?")) return;
