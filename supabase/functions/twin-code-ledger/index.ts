@@ -187,9 +187,9 @@ Deno.serve(async (req) => {
           serial: "",
           outcome: "missed",
           bottle_index: body.bottle_index,
-          run_id: body.run_id ?? null,
+          run_id: asUuid(body.run_id),
           pc_machine_id: body.pc_machine_id,
-          license_id: body.license_id ?? null,
+          license_id: asUuid(body.license_id),
         });
         if (error) throw error;
         return json({ ok: true });
@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
             catalog_total_at_start: body.catalog_total_at_start,
             live_at_start: body.live_at_start,
             pc_machine_id: body.pc_machine_id,
-            license_id: body.license_id ?? null,
+            license_id: asUuid(body.license_id),
             status: "active",
           })
           .select("id, started_at")
