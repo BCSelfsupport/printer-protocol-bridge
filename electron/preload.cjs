@@ -16,6 +16,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('printer:send-command', { printerId, command, options }),
   },
 
+  // One-to-One Print Mode (Protocol v2.6 §6.1)
+  oneToOne: {
+    attach: (printerId) => ipcRenderer.invoke('oneToOne:attach', { printerId }),
+    detach: (printerId) => ipcRenderer.invoke('oneToOne:detach', { printerId }),
+    sendMD: (printerId, command) => ipcRenderer.invoke('oneToOne:sendMD', { printerId, command }),
+    onAck: (callback) => {
+      const handler = (_event, payload) => callback(payload);
+      ipcRenderer.on('oneToOne:ack', handler);
+      return () => ipcRenderer.removeListener('oneToOne:ack', handler);
+    },
+  },
+
   // Hotfolder operations
   hotfolder: {
     configure: (config) => ipcRenderer.invoke('hotfolder:configure', config),
