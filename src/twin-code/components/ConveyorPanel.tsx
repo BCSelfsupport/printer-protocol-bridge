@@ -125,6 +125,31 @@ export function ConveyorPanel() {
         <span className="text-[11px] text-muted-foreground">
           Photocell-triggered bonded twin printer station
         </span>
+
+        {/* LIVE / SYNTHETIC mode toggle */}
+        <div
+          className={`ml-2 flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] ${
+            liveMode
+              ? 'border-primary/50 bg-primary/10 text-primary'
+              : 'border-border bg-muted/40 text-muted-foreground'
+          }`}
+          title={pairBound ? 'Toggle real bonded dispatch via 1-1 mode' : 'Bind a twin pair to enable LIVE mode'}
+        >
+          {liveBusy ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Radio className={`h-3.5 w-3.5 ${liveMode ? 'text-primary' : ''}`} />
+          )}
+          <span className="font-mono uppercase tracking-wider">
+            {liveMode ? 'LIVE' : 'SYNTH'}
+          </span>
+          <Switch
+            checked={liveMode}
+            disabled={liveBusy || !pairBound || running}
+            onCheckedChange={(v) => (v ? enableLive() : disableLive())}
+          />
+        </div>
+
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <input
             ref={fileRef}
