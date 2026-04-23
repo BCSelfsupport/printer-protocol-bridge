@@ -53,10 +53,39 @@ The existing bwip-js / ^NG path is retained ONLY for:
 - Models / firmware revisions that are confirmed to lack native DataMatrix
   support (fallback path, gated by capability detection — not the default)
 
+## Protocol citation (v2.6, §5.28)
+
+Confirmed verbatim in the v2.6 spec PDF (Apr 22 2026):
+
+> "(^BD), subcommands. Only text fields and barcode fields are currently
+> supported. Message data is not saved until One-to-One print mode is
+> exited; therefore, a remote command of ^ME must be done to save the
+> last message contents."
+>
+> §5.28.1 ^BDx – Barcode Data — *Modifies data in a barcode field.*
+> Example: `^MD^BD1;12345678` replaces the encoded contents of the first
+> barcode field of the printing message with "12345678".
+>
+> §5.28.2 ^TDx – Text Data — example mixing both:
+> `^MD^TD1 Nov^TD2 28^TD3 2015^BD1 45612378`
+
+The barcode TYPE (DataMatrix vs Code128 vs QR …) is fixed at message-build
+time via §5.33.2.1 ^AB. Specifically for DataMatrix the **`s` parameter
+selects the matrix size** (0=10×10, 1=12×12, 3=14×14, 5=16×16, 7=18×18,
+8=20×20, 10=22×22, 12=24×24 … 15=32×32). ^MD^BD only swaps the encoded
+DATA — the size, ECC level (always ECC200 for DataMatrix on this
+firmware) and position are baked into the message.
+
+Thomas's "even in size, so they can't be ECC000-140" observation simply
+confirms the field was created with an even `s` value (5 = 16×16, 12 = 24×24,
+or 15 = 32×32) — i.e. a square ECC200 matrix. Spec doesn't expose ECC 000–140
+at all; only ECC200 sizes.
+
 ## Reference
 
+- Protocol §5.28 ^MD / §5.28.1 ^BD / §5.28.2 ^TD
+- Protocol §5.33.2.1 ^AB (DataMatrix size table, value 5 = 16×16)
 - Protocol §6.1: `mem://integration/protocol-v2-6-one-to-one-mode`
-  — ^MD body accepts one or more `^TDx;…` and `^BDx;…` subcommands.
 - Existing barcode field plumbing: `mem://features/barcode-system-v2-6`
 - Workaround path (no longer the hot path for TwinCode):
   `mem://features/barcode-ecc200-workaround`
