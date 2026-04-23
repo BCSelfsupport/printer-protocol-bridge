@@ -140,6 +140,7 @@ export function OperatorHUD() {
   });
 
   return (
+    <div className="space-y-4">
     <div
       className={`relative overflow-hidden rounded-lg border-2 bg-card transition-colors ${
         flashing
