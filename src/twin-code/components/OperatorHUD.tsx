@@ -334,13 +334,13 @@ function YieldLight({ yieldPct, consumed }: { yieldPct: number; consumed: number
           ? "text-destructive"
           : "text-muted-foreground";
   return (
-    <div className="flex items-center gap-3 rounded-md border border-border bg-background/40 p-3">
-      <Icon className={`h-4 w-4 ${colorClass}`} />
+    <div className="flex items-center gap-4 rounded-md border border-border bg-background/40 p-5">
+      <Icon className={`h-6 w-6 ${colorClass}`} />
       <div className="min-w-0 flex-1">
-        <div className={`font-mono text-xs font-bold uppercase tracking-wider ${colorClass}`}>
+        <div className={`font-mono text-base font-bold uppercase tracking-wider ${colorClass}`}>
           {consumed === 0 ? "—" : `${yieldPct.toFixed(2)}%`}
         </div>
-        <div className="truncate font-mono text-[10px] text-muted-foreground">
+        <div className="truncate font-mono text-xs text-muted-foreground">
           yield · {consumed.toLocaleString()} dispensed
         </div>
       </div>
