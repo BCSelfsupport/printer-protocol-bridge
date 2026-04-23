@@ -25,6 +25,7 @@
 import { setPollingPaused, isPollingPaused } from '@/lib/pollingPause';
 import { printerTransport } from '@/lib/printerTransport';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
+import { generateDataMatrixBitmap } from '@/lib/dataMatrixGenerator';
 import type { Printer } from '@/types/printer';
 import type { TwinPairState } from '@/twin-code/twinPairStore';
 
