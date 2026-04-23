@@ -113,6 +113,7 @@ Updated: now
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
 - [Twin Code Persistence](mem://features/twin-code-catalog-persistence) — localStorage ledger, FNV fingerprint, Resume/Discard, two-layer anti-duplicate guard
 - [Twin Code Operator HUD](mem://features/twin-code-operator-hud) — Shift-floor view: big BPM, A/B status lights, last serial, audible miss alarm
+- [Twin Code Production Run](mem://features/twin-code-production-run) — Lot-locked runs, pre-flight gates, SHA-256 signed CSV/JSON audit export
 
 - [1-1 Mode Implementation](mem://architecture/one-to-one-mode-implementation) — Demuxer in main.cjs, oneToOneController pacing (4 in-flight cap), polling auto-pause
 - [Twin Live Dispatcher](mem://features/twin-code-live-dispatcher) — Bonded A+B dispatch via two PrinterSession instances, LIVE/SYNTH toggle in ConveyorPanel
