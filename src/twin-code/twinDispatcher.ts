@@ -30,6 +30,8 @@ import type { TwinPairState } from '@/twin-code/twinPairStore';
 const MAX_IN_FLIGHT = 4;
 const R_TIMEOUT_MS = 500;
 const C_TIMEOUT_MS = 30_000;
+/** When one side fails, give the partner this long to settle naturally before forcing abort. */
+const PARTNER_GRACE_MS = 50;
 
 type AckChar = 'R' | 'T' | 'C';
 
