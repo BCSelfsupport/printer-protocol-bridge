@@ -16,7 +16,7 @@ import { liveMetrics } from "../liveMetrics";
 
 type Units = "metric" | "imperial";
 
-export function ProductionMetricsCard({ units }: { units: Units }) {
+export function ProductionMetricsCard({ units, compact = false }: { units: Units; compact?: boolean }) {
   const m = useLiveMetrics();
   const [editing, setEditing] = useState<"pitch" | "diameter" | null>(null);
   const [draft, setDraft] = useState("");
@@ -40,6 +40,52 @@ export function ProductionMetricsCard({ units }: { units: Units }) {
   const diameterDisplay = formatLength(m.bottleDiameterMm, units);
   const gapDisplay = formatLength(m.gapMm, units);
 
+  // ---- Compact: inline strip, no border/padding (host provides chrome) ----
+  if (compact) {
+    return (
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">
+          <Gauge className="h-3 w-3 text-primary" />
+          Production
+          {m.hasLiveData ? (
+            <span className="flex items-center gap-1 text-primary normal-case tracking-normal">
+              <span className="h-1 w-1 animate-pulse rounded-full bg-primary" />
+              live
+            </span>
+          ) : (
+            <span className="normal-case tracking-normal text-muted-foreground/70">idle</span>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
+          <CompactMetric label="BPM" value={m.bpm.toFixed(0)} accent />
+          <CompactMetric label="Speed" value={`${lineSpeedDisplay.value} ${lineSpeedDisplay.unit}`} accent />
+          <CompactEditable
+            label="Pitch"
+            value={`${pitchDisplay.value} ${pitchDisplay.unit}`}
+            editing={editing === "pitch"}
+            draft={draft}
+            onDraftChange={setDraft}
+            onStartEdit={() => startEdit("pitch")}
+            onCommit={commitEdit}
+            onCancel={cancelEdit}
+          />
+          <CompactEditable
+            label="Ø"
+            value={`${diameterDisplay.value} ${diameterDisplay.unit}`}
+            editing={editing === "diameter"}
+            draft={draft}
+            onDraftChange={setDraft}
+            onStartEdit={() => startEdit("diameter")}
+            onCommit={commitEdit}
+            onCancel={cancelEdit}
+          />
+          <CompactMetric label="Gap" value={`${gapDisplay.value} ${gapDisplay.unit}`} />
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Full card (used outside the HUD if needed) ----
   return (
     <div className="rounded-md border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -60,55 +106,15 @@ export function ProductionMetricsCard({ units }: { units: Units }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        {/* Live BPM */}
-        <Metric
-          icon={<Activity className="h-3.5 w-3.5" />}
-          label="Live BPM"
-          value={m.bpm.toFixed(0)}
-          sub="bottles/min"
-          accent
-        />
-        {/* Line speed */}
-        <Metric
-          icon={<Activity className="h-3.5 w-3.5" />}
-          label="Line speed"
-          value={lineSpeedDisplay.value}
-          sub={lineSpeedDisplay.unit}
-          accent
-        />
-        {/* Pitch (editable) */}
-        <EditableMetric
-          icon={<Ruler className="h-3.5 w-3.5" />}
-          label="Pitch"
-          value={pitchDisplay.value}
-          sub={pitchDisplay.unit}
-          editing={editing === "pitch"}
-          draft={draft}
-          onDraftChange={setDraft}
-          onStartEdit={() => startEdit("pitch")}
-          onCommit={commitEdit}
-          onCancel={cancelEdit}
-        />
-        {/* Bottle Ø (editable) */}
-        <EditableMetric
-          icon={<Circle className="h-3.5 w-3.5" />}
-          label="Bottle Ø"
-          value={diameterDisplay.value}
-          sub={diameterDisplay.unit}
-          editing={editing === "diameter"}
-          draft={draft}
-          onDraftChange={setDraft}
-          onStartEdit={() => startEdit("diameter")}
-          onCommit={commitEdit}
-          onCancel={cancelEdit}
-        />
-        {/* Gap (computed) */}
-        <Metric
-          icon={<Ruler className="h-3.5 w-3.5" />}
-          label="Gap"
-          value={gapDisplay.value}
-          sub={gapDisplay.unit}
-        />
+        <Metric icon={<Activity className="h-3.5 w-3.5" />} label="Live BPM" value={m.bpm.toFixed(0)} sub="bottles/min" accent />
+        <Metric icon={<Activity className="h-3.5 w-3.5" />} label="Line speed" value={lineSpeedDisplay.value} sub={lineSpeedDisplay.unit} accent />
+        <EditableMetric icon={<Ruler className="h-3.5 w-3.5" />} label="Pitch" value={pitchDisplay.value} sub={pitchDisplay.unit}
+          editing={editing === "pitch"} draft={draft} onDraftChange={setDraft}
+          onStartEdit={() => startEdit("pitch")} onCommit={commitEdit} onCancel={cancelEdit} />
+        <EditableMetric icon={<Circle className="h-3.5 w-3.5" />} label="Bottle Ø" value={diameterDisplay.value} sub={diameterDisplay.unit}
+          editing={editing === "diameter"} draft={draft} onDraftChange={setDraft}
+          onStartEdit={() => startEdit("diameter")} onCommit={commitEdit} onCancel={cancelEdit} />
+        <Metric icon={<Ruler className="h-3.5 w-3.5" />} label="Gap" value={gapDisplay.value} sub={gapDisplay.unit} />
       </div>
 
       <div className="mt-3 text-[10px] text-muted-foreground">
@@ -117,6 +123,61 @@ export function ProductionMetricsCard({ units }: { units: Units }) {
         values persist on this PC.
       </div>
     </div>
+  );
+}
+
+function CompactMetric({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="flex items-baseline gap-1">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className={`font-mono font-semibold tabular-nums ${accent ? "text-primary" : "text-foreground"}`}>{value}</span>
+    </div>
+  );
+}
+
+function CompactEditable({
+  label, value, editing, draft, onDraftChange, onStartEdit, onCommit, onCancel,
+}: {
+  label: string; value: string; editing: boolean; draft: string;
+  onDraftChange: (v: string) => void;
+  onStartEdit: () => void; onCommit: () => void; onCancel: () => void;
+}) {
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+        <Input
+          type="number"
+          value={draft}
+          onChange={(e) => onDraftChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onCommit();
+            if (e.key === "Escape") onCancel();
+          }}
+          autoFocus
+          onFocus={(e) => e.currentTarget.select()}
+          className="h-6 w-16 px-1.5 font-mono text-[11px]"
+        />
+        <button type="button" onClick={onCommit} className="rounded p-0.5 hover:bg-muted" aria-label="Save">
+          <Check className="h-3 w-3 text-primary" />
+        </button>
+        <button type="button" onClick={onCancel} className="rounded p-0.5 hover:bg-muted" aria-label="Cancel">
+          <X className="h-3 w-3 text-muted-foreground" />
+        </button>
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onStartEdit}
+      className="flex items-baseline gap-1 rounded px-1 -mx-1 hover:bg-muted/50 group"
+      title={`Edit ${label}`}
+    >
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className="font-mono font-semibold tabular-nums text-foreground">{value}</span>
+      <Pencil className="h-2.5 w-2.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100" />
+    </button>
   );
 }
 
