@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Upload, Play, Square, RotateCcw, Zap, FileSpreadsheet, Trash2, Radio, Loader2, FlaskConical } from "lucide-react";
+import { Upload, Play, Square, RotateCcw, Zap, FileSpreadsheet, Trash2, Radio, Loader2, FlaskConical, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -15,6 +15,7 @@ import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
 import { useTwinPair } from "../twinPairStore";
 import { twinDispatcher, type TwinDryRunResult } from "../twinDispatcher";
+import { faultGuard } from "../faultGuard";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 
 export function ConveyorPanel() {
@@ -252,6 +253,24 @@ export function ConveyorPanel() {
           )}
           <Button size="sm" variant="outline" onClick={() => conveyorSim.manualFire()} disabled={!running}>
             <Zap className="mr-1 h-4 w-4" /> Fire photocell
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              faultGuard.trip({
+                code: "jet-stop",
+                side: "A",
+                message: "Synthetic JET STOP — injected to test the recovery flow.",
+                at: Date.now(),
+                lastBottleIndex: null,
+                recentReasons: ["test:injected"],
+              });
+              toast({ title: "Test fault injected", description: "Use the resume banner to recover." });
+            }}
+            title="Simulate a printer fault to test the recovery banner without hardware"
+          >
+            <AlertTriangle className="mr-1 h-4 w-4" /> Test fault
           </Button>
           <Button size="sm" variant="outline" onClick={handleReset}>
             <RotateCcw className="mr-1 h-4 w-4" /> Reset
