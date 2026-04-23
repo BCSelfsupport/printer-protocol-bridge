@@ -157,6 +157,36 @@ export function OperatorHUD() {
           <span className="uppercase tracking-wider">{status.label}</span>
         </div>
         <div className="flex items-center gap-3 text-[11px] font-normal">
+          <div
+            className="flex items-center gap-0.5 rounded border border-border/40 bg-background/30 p-0.5"
+            role="group"
+            aria-label="Unit system"
+          >
+            <button
+              type="button"
+              onClick={() => setUnits("metric")}
+              className={`rounded px-2 py-0.5 font-mono uppercase tracking-wider transition-colors ${
+                units === "metric"
+                  ? "bg-foreground/15 text-foreground"
+                  : "text-muted-foreground hover:bg-background/30"
+              }`}
+              aria-pressed={units === "metric"}
+            >
+              m
+            </button>
+            <button
+              type="button"
+              onClick={() => setUnits("imperial")}
+              className={`rounded px-2 py-0.5 font-mono uppercase tracking-wider transition-colors ${
+                units === "imperial"
+                  ? "bg-foreground/15 text-foreground"
+                  : "text-muted-foreground hover:bg-background/30"
+              }`}
+              aria-pressed={units === "imperial"}
+            >
+              ft
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => setAlarmEnabled((v) => !v)}
