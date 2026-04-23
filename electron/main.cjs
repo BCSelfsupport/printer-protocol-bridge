@@ -474,6 +474,140 @@ ipcMain.handle('printer:send-command', async (event, { printerId, command, optio
   }
 });
 
+// ============================================================
+// One-to-One Print Mode (Protocol v2.6 §6.1)
+// ------------------------------------------------------------
+// When a printer is in 1-1 mode, the persistent socket emits
+// async R/T/C single-character ACKs (and DEF OFF / JET STOP
+// indications) interleaved with normal command-response data.
+//
+// We attach a dedicated 'data' listener that splits on \r\n,
+// classifies each line, and forwards ACK/async lines to the
+// renderer via 'oneToOne:ack' IPC events. Anything else falls
+// through to the normal sendCommand pipeline (which is also
+// the reason ^MB / ^SM / ^ME still work via sendCommandToSocket).
+// ============================================================
+
+const oneToOneState = new Map(); // printerId → { lineBuf: '', listener: fn }
+
+function isAckLine(line) {
+  if (!line || line.length === 0 || line.length > 3) return false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c !== 'R' && c !== 'T' && c !== 'C') return false;
+  }
+  return true;
+}
+
+function emitOneToOneEvent(printerId, payload) {
+  try {
+    mainWindow?.webContents.send('oneToOne:ack', { printerId, ...payload });
+  } catch (_) {}
+}
+
+function attachOneToOneDemuxer(printerId) {
+  const socket = connections.get(printerId);
+  if (!socket || socket.destroyed) {
+    logToFile(`[1-1] Cannot attach demuxer for printer ${printerId} — no socket`);
+    return false;
+  }
+  // Already attached — idempotent
+  if (oneToOneState.has(printerId)) return true;
+
+  const state = { lineBuf: '' };
+
+  const onData = (chunk) => {
+    // Telnet bytes are stripped here too in case the printer renegotiates mid-stream.
+    handleTelnetNegotiation(socket, chunk);
+    const stripped = stripTelnetBytes(chunk);
+    if (!stripped || stripped.length === 0) return;
+
+    state.lineBuf += stripped.toString('binary');
+    // Split on CRLF (also tolerate bare LF / CR)
+    const parts = state.lineBuf.split(/\r\n|\n|\r/);
+    state.lineBuf = parts.pop() || ''; // keep trailing partial
+
+    for (const raw of parts) {
+      const line = raw.trim();
+      if (!line) continue;
+
+      if (isAckLine(line)) {
+        // R / T / C / RT / TC / RTC — emit each char as its own event
+        for (const c of line) {
+          emitOneToOneEvent(printerId, { kind: 'ack', char: c, ts: Date.now() });
+        }
+        continue;
+      }
+
+      if (line === 'JET STOP' || line.includes('JET STOP')) {
+        emitOneToOneEvent(printerId, { kind: 'fault', code: 'JET_STOP', raw: line, ts: Date.now() });
+        continue;
+      }
+
+      if (line === 'DEF OFF' || line.includes('DEF OFF')) {
+        emitOneToOneEvent(printerId, { kind: 'fault', code: 'DEF_OFF', raw: line, ts: Date.now() });
+        continue;
+      }
+
+      // Anything else (including stray '>' or '? ...' from out-of-band commands) is ignored here.
+      // The sendCommandToSocket pipeline owns regular command-response framing.
+    }
+  };
+
+  socket.on('data', onData);
+  state.listener = onData;
+  oneToOneState.set(printerId, state);
+  logToFile(`[1-1] Demuxer attached for printer ${printerId}`);
+  return true;
+}
+
+function detachOneToOneDemuxer(printerId) {
+  const state = oneToOneState.get(printerId);
+  if (!state) return;
+  const socket = connections.get(printerId);
+  if (socket && state.listener) {
+    try { socket.off('data', state.listener); } catch (_) {}
+  }
+  oneToOneState.delete(printerId);
+  logToFile(`[1-1] Demuxer detached for printer ${printerId}`);
+}
+
+// Renderer asks main to attach/detach the demuxer.
+// The renderer-side controller is responsible for actually sending ^MB / ^ME via sendCommand.
+ipcMain.handle('oneToOne:attach', async (event, { printerId }) => {
+  const ok = attachOneToOneDemuxer(printerId);
+  return { success: ok };
+});
+
+ipcMain.handle('oneToOne:detach', async (event, { printerId }) => {
+  detachOneToOneDemuxer(printerId);
+  return { success: true };
+});
+
+// Send ^MD (or any 1-1-mode write) WITHOUT awaiting a response.
+// In 1-1 mode the printer suppresses '>' and '?' replies for ^MD —
+// the only feedback is the async R/T/C stream picked up by the demuxer.
+ipcMain.handle('oneToOne:sendMD', async (event, { printerId, command }) => {
+  const socket = connections.get(printerId);
+  if (!socket || socket.destroyed || !socket.writable) {
+    return { success: false, error: 'No active connection' };
+  }
+  try {
+    socket.write(command + '\r');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message || 'Write failed' };
+  }
+});
+
+// Make sure we tear down 1-1 state when the underlying socket dies,
+// otherwise the next reconnect would inherit a stale listener.
+const _origConnectionsDelete = connections.delete.bind(connections);
+connections.delete = (id) => {
+  if (oneToOneState.has(id)) detachOneToOneDemuxer(id);
+  return _origConnectionsDelete(id);
+};
+
 // Cache update state so renderer can query it after mount (avoids race condition)
 let cachedUpdateState = { stage: 'idle', info: null, progress: null };
 
