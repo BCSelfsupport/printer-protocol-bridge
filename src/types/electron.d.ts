@@ -33,9 +33,29 @@ interface AppAPI {
   getScreenSources: () => Promise<{ id: string; name: string }[]>;
 }
 
+interface OneToOneAckPayload {
+  printerId: number;
+  kind: 'ack' | 'fault';
+  /** ACK character: 'R' | 'T' | 'C'. Present when kind === 'ack'. */
+  char?: 'R' | 'T' | 'C';
+  /** Fault code. Present when kind === 'fault'. */
+  code?: 'JET_STOP' | 'DEF_OFF';
+  raw?: string;
+  ts: number;
+}
+
+interface OneToOneAPI {
+  attach: (printerId: number) => Promise<{ success: boolean }>;
+  detach: (printerId: number) => Promise<{ success: boolean }>;
+  sendMD: (printerId: number, command: string) => Promise<{ success: boolean; error?: string }>;
+  /** Subscribe to async 1-1 events. Returns an unsubscribe function. */
+  onAck: (callback: (payload: OneToOneAckPayload) => void) => () => void;
+}
+
 interface ElectronAPI {
   isElectron: boolean;
   printer: PrinterAPI;
+  oneToOne: OneToOneAPI;
   relay: RelayAPI;
   app: AppAPI;
   onUpdateAvailable: (callback: (info: { version: string }) => void) => void;
