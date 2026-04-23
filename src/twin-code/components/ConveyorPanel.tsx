@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { ConveyorView } from "./ConveyorView";
 import { CsvColumnPickerDialog } from "./CsvColumnPickerDialog";
+import { LedgerResumeBanner } from "./LedgerResumeBanner";
 import { conveyorSim, computeBpm, pitchFromBpm, ftPerMinFromBpm, DEFAULT_CONVEYOR_CONFIG } from "../conveyorSim";
 import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
@@ -145,13 +146,20 @@ export function ConveyorPanel() {
   };
 
   const handleConfirmCsv = (serials: string[]) => {
-    catalog.load(serials);
+    const { matchesPersisted } = catalog.load(serials);
     setPickerOpen(false);
     setCsvText(null);
+    if (matchesPersisted) {
+      toast({
+        title: 'Same catalog detected',
+        description: 'Use the resume banner to pick up where the previous run left off.',
+      });
+    }
   };
 
   return (
     <section className="space-y-3">
+      <LedgerResumeBanner />
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold">Conveyor simulator</h2>
         <span className="text-[11px] text-muted-foreground">
@@ -285,6 +293,24 @@ export function ConveyorPanel() {
         />
       </div>
 
+      {/* Persistence status — keeps the operator aware that the ledger is
+          surviving page refreshes / Electron restarts. */}
+      {catalogState.fingerprint && (
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+          <span className="font-mono">
+            ledger fp <span className="text-foreground">{catalogState.fingerprint}</span>
+          </span>
+          <span>·</span>
+          <span>
+            {catalogState.lastSavedAt
+              ? `auto-saved ${formatRelativeTime(catalogState.lastSavedAt)}`
+              : 'awaiting first save…'}
+          </span>
+          <span>·</span>
+          <span>persists across refresh / restart</span>
+        </div>
+      )}
+
       {/* Speed controls — all three editable, cross-recomputed */}
       <div className="grid grid-cols-1 gap-3 rounded-md border border-border bg-card p-3 md:grid-cols-3">
         <SpeedControl
@@ -344,6 +370,15 @@ export function ConveyorPanel() {
       />
     </section>
   );
+}
+
+function formatRelativeTime(epochMs: number): string {
+  const sec = Math.max(0, Math.round((Date.now() - epochMs) / 1000));
+  if (sec < 5) return "just now";
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.round(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  return `${(min / 60).toFixed(1)}h ago`;
 }
 
 function Counter({
