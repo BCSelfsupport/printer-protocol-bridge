@@ -291,10 +291,20 @@ class ConveyorSim {
         const skewMs = Math.abs(wireAMs - wireBMs);
 
         if (res.ok) {
-          bottle.state = "printed";
-          bottle.cycleMs = cycleMs;
-          bottle.skewMs = skewMs;
-          catalog.recordPrinted(serial, bottle.id);
+          try {
+            catalog.recordPrinted(serial, bottle.id);
+            bottle.state = "printed";
+            bottle.cycleMs = cycleMs;
+            bottle.skewMs = skewMs;
+          } catch (err) {
+            // Anti-duplicate guard fired — should be impossible since dispense()
+            // is sequential, but never trust the network. Convert to a miss.
+            console.error('[twin-live] duplicate-serial guard:', err);
+            bottle.state = "missed";
+            bottle.cycleMs = cycleMs;
+            bottle.skewMs = skewMs;
+            catalog.recordMissed(bottle.id);
+          }
         } else {
           bottle.state = "missed";
           bottle.cycleMs = cycleMs;
@@ -345,10 +355,16 @@ class ConveyorSim {
     const settleAfterMs = Math.min(cycleMs, 200); // cap visual delay
 
     setTimeout(() => {
-      bottle.state = "printed";
-      bottle.cycleMs = cycleMs;
-      bottle.skewMs = skewMs;
-      catalog.recordPrinted(serial, bottle.id);
+      try {
+        catalog.recordPrinted(serial, bottle.id);
+        bottle.state = "printed";
+        bottle.cycleMs = cycleMs;
+        bottle.skewMs = skewMs;
+      } catch (err) {
+        console.error('[twin-sim] duplicate-serial guard:', err);
+        bottle.state = "missed";
+        catalog.recordMissed(bottle.id);
+      }
     }, settleAfterMs);
 
     profilerBus.push({
