@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Play, Square, Download, FileJson, FileSpreadsheet, AlertCircle, ClipboardList, X, Activity } from "lucide-react";
+import { Play, Square, Download, FileJson, FileSpreadsheet, AlertCircle, ClipboardList, X, Activity, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,8 +24,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useProductionRun, useLiveRunSummary } from "../useProductionRun";
 import { productionRun, downloadRunCSV, downloadRunJSON, type ProductionRunExport } from "../productionRun";
+import { useCatalog } from "../useCatalog";
+import { useTwinPair } from "../twinPairStore";
+import { twinDispatcher } from "../twinDispatcher";
 import { StartRunDialog } from "./StartRunDialog";
 import { PreflightDialog } from "./PreflightDialog";
 import { toast } from "@/hooks/use-toast";
@@ -33,6 +37,8 @@ import { toast } from "@/hooks/use-toast";
 export function ProductionRunBar() {
   const run = useProductionRun();
   const summary = useLiveRunSummary();
+  const cat = useCatalog();
+  const pair = useTwinPair();
   const [startOpen, setStartOpen] = useState(false);
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
@@ -46,6 +52,20 @@ export function ProductionRunBar() {
     return () => clearInterval(t);
   }, [run.active]);
   void elapsedTick;
+
+  // Auto-stop when the catalog is exhausted: download the signed export and
+  // surface a toast so the operator immediately sees the end-of-lot artifacts.
+  useEffect(() => {
+    productionRun.setAutoStopHandler((exp) => {
+      downloadRunCSV(exp);
+      downloadRunJSON(exp);
+      toast({
+        title: `Lot ${exp.meta.lotNumber} complete — catalog exhausted`,
+        description: `${exp.summary.printed.toLocaleString()} printed · ${exp.summary.missed.toLocaleString()} missed · yield ${exp.summary.yieldPct.toFixed(2)}%. Audit CSV + signed JSON downloaded.`,
+      });
+    });
+    return () => productionRun.setAutoStopHandler(null);
+  }, []);
 
   const handleStop = async () => {
     setStopping(true);
@@ -130,25 +150,79 @@ export function ProductionRunBar() {
   }
 
   // -------- IDLE state --------
+  const remaining = Math.max(0, cat.total - cat.nextIndex);
+  const pairBound = !!(pair.a && pair.b);
+  const isLive = twinDispatcher.isBound();
+  const catalogReady = remaining > 0;
+  const startBlockedReason = !catalogReady
+    ? "Load a CSV catalog first — the Start Production button unlocks once serials are available."
+    : null;
+
   return (
     <>
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed border-border bg-muted/30 px-4 py-2.5">
         <ClipboardList className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <div className="text-xs text-muted-foreground">
-          No active production run. Start a run to lock the line to a lot # and capture an auditable trail of every printed serial.
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="text-xs text-muted-foreground">
+            No active production run. Lock the line to a lot # to capture an auditable trail of every printed serial.
+          </div>
+          {/* Inline readiness checklist — glanceable, mirrors StartRunDialog gates */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+            <Gate ok={catalogReady} required label={
+              catalogReady
+                ? `Catalog · ${remaining.toLocaleString()} serials`
+                : "Catalog · load CSV"
+            } />
+            <Gate ok={pairBound} label={pairBound ? "Twin pair bound" : "Twin pair · optional"} />
+            <Gate ok={isLive} label={isLive ? "LIVE bonded" : "LIVE · optional"} />
+          </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={() => setPreflightOpen(true)}>
             <Activity className="mr-1 h-4 w-4" /> Pre-flight
           </Button>
-          <Button size="sm" onClick={() => setStartOpen(true)}>
-            <Play className="mr-1 h-4 w-4" /> Start production run
-          </Button>
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {/* span wrapper so tooltip works even when button is disabled */}
+                <span className="inline-flex">
+                  <Button
+                    size="sm"
+                    onClick={() => setStartOpen(true)}
+                    disabled={!catalogReady}
+                  >
+                    <Play className="mr-1 h-4 w-4" /> Start production run
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {startBlockedReason && (
+                <TooltipContent side="bottom" className="max-w-xs text-xs">
+                  {startBlockedReason}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
       <StartRunDialog open={startOpen} onOpenChange={setStartOpen} onStarted={() => { /* no-op */ }} />
       <PreflightDialog open={preflightOpen} onOpenChange={setPreflightOpen} />
     </>
+  );
+}
+
+/** Tiny inline gate chip (✓ / ✗) used by the IDLE readiness row. */
+function Gate({ ok, label, required }: { ok: boolean; label: string; required?: boolean }) {
+  const Icon = ok ? CheckCircle2 : XCircle;
+  const tone = ok
+    ? "text-primary"
+    : required
+      ? "text-destructive"
+      : "text-muted-foreground";
+  return (
+    <span className={`inline-flex items-center gap-1 ${tone}`}>
+      <Icon className="h-3 w-3" />
+      <span>{label}</span>
+    </span>
   );
 }
 
