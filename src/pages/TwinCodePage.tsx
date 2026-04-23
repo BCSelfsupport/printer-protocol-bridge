@@ -181,6 +181,9 @@ export default function TwinCodePage() {
       </header>
 
       <main className="mx-auto max-w-[1600px] space-y-4 px-6 py-6">
+        {/* Production Run bar — visible in BOTH modes; locks the line to a named batch */}
+        <ProductionRunBar />
+
         {/* HUD MODE — shift-floor display: big BPM, status lights, last serial, batch progress */}
         {view === "hud" && <OperatorHUD />}
 
