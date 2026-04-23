@@ -219,7 +219,7 @@ export function OperatorHUD() {
             </div>
             <div className="mt-3 flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
               <Activity className="h-3 w-3" />
-              {((conv.lineSpeedMmPerSec / 1000) * 60).toFixed(1)} m/min
+              {formatLineSpeed(conv.lineSpeedMmPerSec, units)}
             </div>
           </div>
         </div>
