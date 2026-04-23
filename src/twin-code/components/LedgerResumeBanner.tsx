@@ -63,8 +63,8 @@ export function LedgerResumeBanner() {
   };
 
   return (
-    <div className="flex items-start gap-3 rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm dark:border-yellow-400/40 dark:bg-yellow-400/10">
-      <History className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+    <div className="flex items-start gap-3 rounded-md border border-accent bg-accent/20 p-3 text-sm">
+      <History className="mt-0.5 h-4 w-4 shrink-0 text-accent-foreground" />
       <div className="flex-1 space-y-1">
         <div className="font-medium text-foreground">
           {isFingerprintMatch
