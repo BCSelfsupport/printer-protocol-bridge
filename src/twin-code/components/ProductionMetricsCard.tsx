@@ -43,20 +43,20 @@ export function ProductionMetricsCard({ units, compact = false }: { units: Units
   // ---- Compact: inline strip, no border/padding (host provides chrome) ----
   if (compact) {
     return (
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">
-          <Gauge className="h-3 w-3 text-primary" />
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground shrink-0">
+          <Gauge className="h-4 w-4 text-primary" />
           Production
           {m.hasLiveData ? (
             <span className="flex items-center gap-1 text-primary normal-case tracking-normal">
-              <span className="h-1 w-1 animate-pulse rounded-full bg-primary" />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
               live
             </span>
           ) : (
             <span className="normal-case tracking-normal text-muted-foreground/70">idle</span>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 text-base">
           <CompactMetric label="BPM" value={m.bpm.toFixed(0)} accent />
           <CompactMetric label="Speed" value={`${lineSpeedDisplay.value} ${lineSpeedDisplay.unit}`} accent />
           <CompactEditable
@@ -128,9 +128,9 @@ export function ProductionMetricsCard({ units, compact = false }: { units: Units
 
 function CompactMetric({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className="flex items-baseline gap-1">
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
-      <span className={`font-mono font-semibold tabular-nums ${accent ? "text-primary" : "text-foreground"}`}>{value}</span>
+    <div className="flex items-baseline gap-1.5">
+      <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className={`font-mono text-lg font-bold tabular-nums ${accent ? "text-primary" : "text-foreground"}`}>{value}</span>
     </div>
   );
 }
@@ -145,7 +145,7 @@ function CompactEditable({
   if (editing) {
     return (
       <div className="flex items-center gap-1">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
         <Input
           type="number"
           value={draft}
@@ -156,13 +156,13 @@ function CompactEditable({
           }}
           autoFocus
           onFocus={(e) => e.currentTarget.select()}
-          className="h-6 w-16 px-1.5 font-mono text-[11px]"
+          className="h-8 w-20 px-2 font-mono text-sm"
         />
         <button type="button" onClick={onCommit} className="rounded p-0.5 hover:bg-muted" aria-label="Save">
-          <Check className="h-3 w-3 text-primary" />
+          <Check className="h-4 w-4 text-primary" />
         </button>
         <button type="button" onClick={onCancel} className="rounded p-0.5 hover:bg-muted" aria-label="Cancel">
-          <X className="h-3 w-3 text-muted-foreground" />
+          <X className="h-4 w-4 text-muted-foreground" />
         </button>
       </div>
     );
@@ -171,12 +171,12 @@ function CompactEditable({
     <button
       type="button"
       onClick={onStartEdit}
-      className="flex items-baseline gap-1 rounded px-1 -mx-1 hover:bg-muted/50 group"
+      className="flex items-baseline gap-1.5 rounded px-1 -mx-1 hover:bg-muted/50 group"
       title={`Edit ${label}`}
     >
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
-      <span className="font-mono font-semibold tabular-nums text-foreground">{value}</span>
-      <Pencil className="h-2.5 w-2.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100" />
+      <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className="font-mono text-lg font-bold tabular-nums text-foreground">{value}</span>
+      <Pencil className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100" />
     </button>
   );
 }

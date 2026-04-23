@@ -141,7 +141,7 @@ export function OperatorHUD() {
 
   return (
     <div
-      className={`relative overflow-hidden rounded-lg border-2 bg-card transition-colors ${
+      className={`relative flex min-h-[calc(100vh-180px)] flex-col overflow-hidden rounded-lg border-2 bg-card transition-colors ${
         flashing
           ? "border-destructive animate-pulse"
           : status.tone === "ok"
@@ -153,7 +153,7 @@ export function OperatorHUD() {
     >
       {/* Top status bar — compact */}
       <div
-        className={`flex items-center justify-between px-4 py-1.5 text-xs font-semibold ${
+        className={`flex shrink-0 items-center justify-between px-4 py-1.5 text-xs font-semibold ${
           status.tone === "ok"
             ? "bg-primary/10 text-primary"
             : status.tone === "warn"
@@ -219,34 +219,34 @@ export function OperatorHUD() {
         </div>
       </div>
 
-      {/* Main HUD grid — 2 columns, packs everything above the fold */}
-      <div className="grid grid-cols-12 gap-3 p-3">
-        {/* === LEFT: BPM gauge (dominant) === */}
+      {/* Main HUD grid — fills the viewport, glanceable from across the room */}
+      <div className="grid flex-1 grid-cols-12 gap-4 p-4">
+        {/* === LEFT: BPM gauge (dominant, fills column) === */}
         <div className="col-span-12 lg:col-span-5">
-          <div className="flex h-full flex-col items-center justify-center rounded-md border border-border bg-background/40 p-3">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <div className="flex h-full flex-col items-center justify-center rounded-md border border-border bg-background/40 p-4">
+            <div className="text-sm font-semibold uppercase tracking-[0.3em] text-muted-foreground">
               Throughput
             </div>
-            <div className="mt-0.5 font-mono text-6xl font-bold leading-none text-foreground tabular-nums">
+            <div className="mt-2 font-mono font-bold leading-none text-foreground tabular-nums" style={{ fontSize: "clamp(6rem, 18vw, 14rem)" }}>
               {Math.round(live.hasLiveData ? live.bpm : conv.bpm)}
             </div>
-            <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+            <div className="mt-2 text-base uppercase tracking-[0.2em] text-muted-foreground">
               bottles per minute
             </div>
-            <div className="mt-2 flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground">
-              <Activity className="h-3 w-3" />
+            <div className="mt-6 flex items-center gap-2 font-mono text-2xl text-foreground/80">
+              <Activity className="h-5 w-5" />
               {formatLineSpeed(live.hasLiveData ? live.lineSpeedMmPerSec : conv.lineSpeedMmPerSec, units)}
             </div>
-            <div className="mt-0.5 text-[9px] font-mono uppercase tracking-wider text-muted-foreground/70">
+            <div className="mt-2 text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground/70">
               {live.hasLiveData ? "live · last 60s" : "synthetic preview"}
             </div>
           </div>
         </div>
 
-        {/* === RIGHT: Status lights (2x2) + Last printed === */}
-        <div className="col-span-12 lg:col-span-7 flex flex-col gap-3">
-          {/* Status lights — 2x2 compact grid */}
-          <div className="grid grid-cols-2 gap-2">
+        {/* === RIGHT: Status lights (2x2) + Last printed (fills column) === */}
+        <div className="col-span-12 lg:col-span-7 flex flex-col gap-4">
+          {/* Status lights — 2x2 large grid */}
+          <div className="grid grid-cols-2 gap-3">
             <PrinterLight
               label="A · LID"
               sub={pair.a?.ip ?? "not bound"}
@@ -265,29 +265,29 @@ export function OperatorHUD() {
             <YieldLight yieldPct={yieldPct} consumed={cat.consumedCount} />
           </div>
 
-          {/* Last printed serial — compact horizontal */}
-          <div className="rounded-md border border-border bg-background/40 px-3 py-2">
+          {/* Last printed serial — huge, fills remaining vertical space */}
+          <div className="flex flex-1 flex-col rounded-md border border-border bg-background/40 px-5 py-4">
             <div className="flex items-center justify-between">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <div className="text-sm font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 Last printed
               </div>
               {lastCycle && lastCycle.outcome === "printed" && (
-                <span className="font-mono text-[10px] text-muted-foreground">
+                <span className="font-mono text-xs text-muted-foreground">
                   cycle {lastCycle.cycleMs.toFixed(0)}ms · skew {lastCycle.skewMs.toFixed(1)}ms
                 </span>
               )}
             </div>
             {lastPrinted ? (
-              <div className="mt-0.5 flex items-baseline justify-between gap-2">
-                <div className="font-mono text-2xl font-bold leading-tight text-primary tabular-nums truncate">
+              <div className="flex flex-1 flex-col items-center justify-center">
+                <div className="font-mono font-bold leading-tight text-primary tabular-nums text-center break-all" style={{ fontSize: "clamp(2.5rem, 7vw, 6rem)" }}>
                   {lastPrinted.serial}
                 </div>
-                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground shrink-0">
-                  #{lastPrinted.id}
+                <div className="mt-3 font-mono text-base uppercase tracking-[0.3em] text-muted-foreground">
+                  bottle #{lastPrinted.id}
                 </div>
               </div>
             ) : (
-              <div className="mt-1 text-xs italic text-muted-foreground">
+              <div className="flex flex-1 items-center justify-center text-2xl italic text-muted-foreground">
                 awaiting first print…
               </div>
             )}
@@ -295,17 +295,19 @@ export function OperatorHUD() {
         </div>
       </div>
 
-      {/* Production metrics — inline compact strip (replaces standalone card) */}
-      <div className="border-t border-border px-3 py-2">
+      {/* Production metrics — larger inline strip */}
+      <div className="shrink-0 border-t border-border px-4 py-3">
         <ProductionMetricsCard units={units} compact />
       </div>
 
       {/* Bottom batch progress strip */}
-      <BatchProgress
-        total={cat.total}
-        nextIndex={cat.nextIndex}
-        missCount={cat.missCount}
-      />
+      <div className="shrink-0">
+        <BatchProgress
+          total={cat.total}
+          nextIndex={cat.nextIndex}
+          missCount={cat.missCount}
+        />
+      </div>
     </div>
   );
 }
@@ -337,19 +339,19 @@ function PrinterLight({
         ? "bg-accent-foreground"
         : "bg-muted-foreground/40";
   return (
-    <div className="flex items-center gap-3 rounded-md border border-border bg-background/40 px-3 py-2">
+    <div className="flex items-center gap-4 rounded-md border border-border bg-background/40 px-5 py-4">
       <span
-        className={`relative flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${dotClass}`}
+        className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${dotClass}`}
       >
         {pulse && tone === "ok" && (
           <span className="absolute inset-0 animate-ping rounded-full bg-primary/60" />
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="font-mono text-sm font-bold uppercase tracking-wider text-foreground">
+        <div className="font-mono text-lg font-bold uppercase tracking-wider text-foreground">
           {label}
         </div>
-        <div className="truncate font-mono text-[10px] text-muted-foreground" title={sub}>
+        <div className="truncate font-mono text-xs text-muted-foreground" title={sub}>
           {sub}
         </div>
       </div>
@@ -359,14 +361,14 @@ function PrinterLight({
 
 function ModeLight({ isLive, pairBound }: { isLive: boolean; pairBound: boolean }) {
   return (
-    <div className="flex items-center gap-4 rounded-md border border-border bg-background/40 p-5">
+    <div className="flex items-center gap-4 rounded-md border border-border bg-background/40 px-5 py-4">
       {isLive ? (
-        <Radio className="h-6 w-6 text-primary" />
+        <Radio className="h-7 w-7 text-primary" />
       ) : (
-        <Circle className="h-6 w-6 text-muted-foreground" />
+        <Circle className="h-7 w-7 text-muted-foreground" />
       )}
       <div className="min-w-0 flex-1">
-        <div className="font-mono text-base font-bold uppercase tracking-wider text-foreground">
+        <div className="font-mono text-lg font-bold uppercase tracking-wider text-foreground">
           {isLive ? "LIVE" : "SYNTH"}
         </div>
         <div className="truncate font-mono text-xs text-muted-foreground">
@@ -396,10 +398,10 @@ function YieldLight({ yieldPct, consumed }: { yieldPct: number; consumed: number
           ? "text-destructive"
           : "text-muted-foreground";
   return (
-    <div className="flex items-center gap-4 rounded-md border border-border bg-background/40 p-5">
-      <Icon className={`h-6 w-6 ${colorClass}`} />
+    <div className="flex items-center gap-4 rounded-md border border-border bg-background/40 px-5 py-4">
+      <Icon className={`h-7 w-7 ${colorClass}`} />
       <div className="min-w-0 flex-1">
-        <div className={`font-mono text-base font-bold uppercase tracking-wider ${colorClass}`}>
+        <div className={`font-mono text-lg font-bold uppercase tracking-wider ${colorClass}`}>
           {consumed === 0 ? "—" : `${yieldPct.toFixed(2)}%`}
         </div>
         <div className="truncate font-mono text-xs text-muted-foreground">
@@ -421,7 +423,7 @@ function BatchProgress({
 }) {
   if (total === 0) {
     return (
-      <div className="border-t border-border bg-background/40 px-5 py-2.5 text-center text-[11px] text-muted-foreground">
+      <div className="border-t border-border bg-background/40 px-5 py-3 text-center text-sm text-muted-foreground">
         No catalog loaded — load a CSV to start a batch.
       </div>
     );
@@ -430,16 +432,16 @@ function BatchProgress({
   const pct = total > 0 ? (nextIndex / total) * 100 : 0;
   const printed = nextIndex - missCount;
   return (
-    <div className="border-t border-border bg-background/40 px-5 py-3">
-      <div className="mb-1.5 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+    <div className="border-t border-border bg-background/40 px-5 py-4">
+      <div className="mb-2 flex items-center justify-between text-sm font-mono text-muted-foreground">
         <span>
-          BATCH · <span className="text-foreground">{printed.toLocaleString()}</span> printed ·{" "}
-          <span className="text-destructive">{missCount.toLocaleString()}</span> missed ·{" "}
-          <span className="text-foreground">{remaining.toLocaleString()}</span> remaining
+          BATCH · <span className="text-foreground font-bold">{printed.toLocaleString()}</span> printed ·{" "}
+          <span className="text-destructive font-bold">{missCount.toLocaleString()}</span> missed ·{" "}
+          <span className="text-foreground font-bold">{remaining.toLocaleString()}</span> remaining
         </span>
-        <span>{pct.toFixed(1)}%</span>
+        <span className="text-base font-bold text-foreground">{pct.toFixed(1)}%</span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
         <div
           className="h-full bg-primary transition-all duration-500 ease-out"
           style={{ width: `${pct}%` }}
