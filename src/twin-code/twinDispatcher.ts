@@ -511,10 +511,19 @@ class TwinDispatcher {
     }
     const n = Math.max(1, Math.min(count | 0, 50));
     const results: TwinDispatchResult[] = [];
+    // Customer-confirmed payload shape: 13-char uppercase alphanumeric, identical
+    // on both printers (e.g. "25X221546754U"). When no real catalog seed is
+    // supplied we synthesize a same-shape dry-run serial so the DataMatrix
+    // capacity and text-field width are realistic.
+    const synthBase = 'DRYRUN'; // 6 chars
     for (let i = 0; i < n; i++) {
+      const suffix = String(i + 1).padStart(2, '0');
       const serial = seedSerial
-        ? `${seedSerial}${n > 1 ? String(i + 1).padStart(2, '0') : ''}`
-        : `DRYRUN${String(i + 1).padStart(4, '0')}`;
+        // Real catalog seed: append a 2-digit run index so each shot is unique
+        // (avoids the printer skipping a duplicate as a no-op).
+        ? `${seedSerial}${n > 1 ? suffix : ''}`
+        // Synthetic: pad to a realistic 13-char shape — "DRYRUN" + 5 digits + 2-digit run idx.
+        : `${synthBase}${String(Date.now() % 100000).padStart(5, '0')}${suffix}`;
       results.push(await this.dispatch(serial));
     }
 
