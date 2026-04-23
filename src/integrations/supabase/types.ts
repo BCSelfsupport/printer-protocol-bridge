@@ -670,6 +670,128 @@ export type Database = {
         }
         Relationships: []
       }
+      twin_code_ledger: {
+        Row: {
+          bottle_index: number
+          catalog_fingerprint: string
+          created_at: string
+          id: string
+          license_id: string | null
+          outcome: string
+          pc_machine_id: string
+          run_id: string | null
+          serial: string
+          wall_at: string
+        }
+        Insert: {
+          bottle_index: number
+          catalog_fingerprint: string
+          created_at?: string
+          id?: string
+          license_id?: string | null
+          outcome: string
+          pc_machine_id: string
+          run_id?: string | null
+          serial: string
+          wall_at?: string
+        }
+        Update: {
+          bottle_index?: number
+          catalog_fingerprint?: string
+          created_at?: string
+          id?: string
+          license_id?: string | null
+          outcome?: string
+          pc_machine_id?: string
+          run_id?: string | null
+          serial?: string
+          wall_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twin_code_ledger_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "twin_code_ledger_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "twin_code_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      twin_code_runs: {
+        Row: {
+          catalog_fingerprint: string | null
+          catalog_total_at_start: number
+          created_at: string
+          ended_at: string | null
+          id: string
+          last_heartbeat_at: string
+          license_id: string | null
+          live_at_start: boolean
+          lot_number: string
+          missed_count: number
+          note: string | null
+          operator: string
+          pc_machine_id: string
+          printed_count: number
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          catalog_fingerprint?: string | null
+          catalog_total_at_start?: number
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          last_heartbeat_at?: string
+          license_id?: string | null
+          live_at_start?: boolean
+          lot_number: string
+          missed_count?: number
+          note?: string | null
+          operator: string
+          pc_machine_id: string
+          printed_count?: number
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          catalog_fingerprint?: string | null
+          catalog_total_at_start?: number
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          last_heartbeat_at?: string
+          license_id?: string | null
+          live_at_start?: boolean
+          lot_number?: string
+          missed_count?: number
+          note?: string | null
+          operator?: string
+          pc_machine_id?: string
+          printed_count?: number
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twin_code_runs_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

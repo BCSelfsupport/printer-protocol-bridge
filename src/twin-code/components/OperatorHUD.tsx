@@ -37,6 +37,8 @@ import { useTwinPair } from "../twinPairStore";
 import { useProfilerSamples } from "../useProfilerSamples";
 import { twinDispatcher } from "../twinDispatcher";
 import { missAlarm } from "../audioAlarm";
+import { useCloudLedger } from "../useCloudLedger";
+import { Cloud, CloudOff } from "lucide-react";
 
 const ALARM_PREF_KEY = "twincode.hud.alarmEnabled";
 const UNITS_PREF_KEY = "twincode.hud.units"; // "metric" | "imperial"
@@ -207,6 +209,7 @@ export function OperatorHUD() {
             {alarmEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
             <span>Alarm {alarmEnabled ? "ON" : "OFF"}</span>
           </button>
+          <CloudLedgerBadge />
           <span className="font-mono opacity-70">
             ledger {cat.fingerprint ?? "—"}
           </span>
@@ -457,4 +460,25 @@ function computeOverallStatus(s: StatusInput): { tone: "ok" | "warn" | "bad"; la
   if (s.missRecent && s.yieldPct < 98) return { tone: "bad", label: "Miss-prints detected" };
   if (!s.isLive) return { tone: "warn", label: "Synthetic mode" };
   return { tone: "ok", label: "Production · all systems nominal" };
+}
+
+function CloudLedgerBadge() {
+  const cloud = useCloudLedger();
+  if (cloud.mode === "off") {
+    return (
+      <span className="flex items-center gap-1 opacity-60" title="Cloud ledger disabled">
+        <CloudOff className="h-3 w-3" /> off
+      </span>
+    );
+  }
+  return (
+    <span
+      className={`flex items-center gap-1 ${cloud.online ? "text-primary/80" : "text-destructive"}`}
+      title={cloud.online ? `Cloud sync OK${cloud.lastOkAt ? ` · ${new Date(cloud.lastOkAt).toLocaleTimeString()}` : ""}` : `Cloud offline: ${cloud.lastError ?? "unknown"}`}
+    >
+      {cloud.online ? <Cloud className="h-3 w-3" /> : <CloudOff className="h-3 w-3" />}
+      <span className="font-mono">{cloud.online ? "sync" : "offline"}</span>
+      {cloud.inFlight > 0 && <span className="opacity-60">·{cloud.inFlight}</span>}
+    </span>
+  );
 }

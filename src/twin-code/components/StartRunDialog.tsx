@@ -17,11 +17,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Play, Loader2, Activity } from "lucide-react";
+import { CheckCircle2, XCircle, Play, Loader2, Activity, Cloud, RotateCcw } from "lucide-react";
 import { useCatalog } from "../useCatalog";
 import { useTwinPair } from "../twinPairStore";
 import { twinDispatcher } from "../twinDispatcher";
 import { productionRun } from "../productionRun";
+import { catalog } from "../catalog";
+import { cloudLedger, type CloudActiveRun } from "../cloudLedger";
 import { PreflightDialog } from "./PreflightDialog";
 import { toast } from "@/hooks/use-toast";
 
@@ -47,6 +49,8 @@ export function StartRunDialog({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [preflightOpen, setPreflightOpen] = useState(false);
+  const [activeRuns, setActiveRuns] = useState<CloudActiveRun[]>([]);
+  const [resuming, setResuming] = useState(false);
 
   // Restore last operator name on open
   useEffect(() => {
@@ -64,6 +68,42 @@ export function StartRunDialog({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Look up cloud-side active runs for this catalog so the operator can
+  // resume from a backup PC if the original PC died mid-shift.
+  useEffect(() => {
+    if (!open || !cat.fingerprint) { setActiveRuns([]); return; }
+    let cancelled = false;
+    cloudLedger.listActiveRuns(cat.fingerprint).then((runs) => {
+      if (!cancelled) setActiveRuns(runs);
+    });
+    return () => { cancelled = true; };
+  }, [open, cat.fingerprint]);
+
+  const handleResumeFromCloud = async (run: CloudActiveRun) => {
+    if (!cat.fingerprint) return;
+    setResuming(true);
+    try {
+      const printed = await cloudLedger.queryPrinted(cat.fingerprint);
+      const added = catalog.preSeedPrinted(printed.map((p) => p.serial));
+      productionRun.start({
+        lotNumber: run.lot_number,
+        operator: run.operator,
+        note: `[Resumed from ${run.pc_machine_id.slice(0, 8)}] ${run.note ?? ""}`.trim(),
+        liveAtStart: isLive,
+      });
+      toast({
+        title: `Resumed run ${run.lot_number}`,
+        description: `Skipped ${added.toLocaleString()} already-printed serials. ${cat.total - cat.nextIndex - added} remaining.`,
+      });
+      onOpenChange(false);
+      onStarted();
+    } catch (e: any) {
+      toast({ title: "Resume failed", description: e?.message ?? String(e), variant: "destructive" });
+    } finally {
+      setResuming(false);
+    }
+  };
 
   const gates = useMemo(() => buildGates({ remaining, pairBound, isLive }), [remaining, pairBound, isLive]);
   const blocking = gates.some((g) => g.required && !g.ok);
