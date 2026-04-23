@@ -21,7 +21,7 @@ import { StageHeatmap } from "@/twin-code/components/StageHeatmap";
 import { ConveyorPanel } from "@/twin-code/components/ConveyorPanel";
 import { OperatorHUD } from "@/twin-code/components/OperatorHUD";
 import { ProductionRunBar } from "@/twin-code/components/ProductionRunBar";
-import { HudScreenSwitcher } from "@/twin-code/components/HudScreenSwitcher";
+import { CatalogStripBar } from "@/twin-code/components/CatalogStripBar";
 
 const PAGE_TITLE = "Twin Code — Profiler Harness (Phase 1a)";
 const VIEW_PREF_KEY = "twincode.view"; // "hud" | "debug"
@@ -185,8 +185,15 @@ export default function TwinCodePage() {
         {/* Production Run bar — visible in BOTH modes; locks the line to a named batch */}
         <ProductionRunBar />
 
-        {/* HUD MODE — operator screens (Throughput / Conveyor) toggle + pop-out for dual monitor */}
-        {view === "hud" && <HudScreenSwitcher />}
+        {/* HUD MODE — production operator screen.
+            Top: catalog/lot strip (load CSV, counters, LIVE toggle, dry run).
+            Below: full-screen Throughput HUD (BPM, last serial, status). */}
+        {view === "hud" && (
+          <>
+            <CatalogStripBar />
+            <OperatorHUD />
+          </>
+        )}
 
         {/* DEBUG MODE — full profiler harness */}
         {view === "debug" && (
@@ -198,7 +205,7 @@ export default function TwinCodePage() {
           </div>
         )}
 
-        {/* Conveyor simulator — only in DEBUG; HUD shows it inside the switcher */}
+        {/* Conveyor simulator — DEBUG ONLY (synthetic visualizer + speed sliders) */}
         {view === "debug" && <ConveyorPanel />}
 
         {/* Debug-only sections below */}
