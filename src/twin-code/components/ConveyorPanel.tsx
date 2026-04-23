@@ -160,7 +160,10 @@ export function ConveyorPanel() {
   };
 
   return (
-    <section className="space-y-3">
+    <section
+      className="flex flex-col gap-3"
+      style={{ minHeight: "calc(100vh - 180px)" }}
+    >
       <LedgerResumeBanner />
       <FaultRecoveryBanner />
       <div className="flex flex-wrap items-center gap-2">
