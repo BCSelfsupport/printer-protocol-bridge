@@ -93,7 +93,8 @@ Updated: now
 - [Line ID](mem://features/line-id-system) — Block validation if no Line ID configured
 - [Mixed Case](mem://features/mixed-case-text-support) — Disable forced uppercase in text fields
 - [Autocode Offset](mem://logic/autocode-offset-logic) — Printer offset applied to expiry only
-- [Barcode ECC200](mem://features/barcode-ecc200-workaround) — bwip-js client-side rendering via ^NG
+- [Barcode ECC200](mem://features/barcode-ecc200-workaround) — bwip-js client-side rendering via ^NG (fallback only)
+- [DataMatrix in 1-1](mem://integration/datamatrix-bd-vs-ng) — Use ^MD^BDx;<data> natively for TwinCode hot path; ^NG bitmap is fallback only (Authentix confirmation)
 - [Network Navigation](mem://features/printer-network-navigation) — Click highlights, double click connects
 - [Command Targeting](mem://architecture/multi-printer-command-targeting) — Commands route to focused UI printer
 - [Selection Workflow](mem://features/message-save-selection-workflow) — Restore previous ^SM after saving new message
