@@ -25,6 +25,8 @@ export function ConveyorPanel() {
   const [running, setRunning] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [liveBusy, setLiveBusy] = useState(false);
+  const [dryBusy, setDryBusy] = useState(false);
+  const [lastDryRun, setLastDryRun] = useState<TwinDryRunResult | null>(null);
 
   // Mirror the conveyor config locally for the controls (simple & responsive).
   const [cfg, setCfg] = useState(DEFAULT_CONVEYOR_CONFIG);
