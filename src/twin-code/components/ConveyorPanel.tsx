@@ -256,15 +256,35 @@ export function ConveyorPanel() {
             <Upload className="mr-1 h-4 w-4" /> Load CSV catalog
           </Button>
           {!running ? (
-            <Button size="sm" onClick={handleStart}>
-              <Play className="mr-1 h-4 w-4" /> Start conveyor
+            <Button
+              size="sm"
+              onClick={handleStart}
+              disabled={liveMode}
+              title={
+                liveMode
+                  ? 'In LIVE mode the real photocell drives prints — the simulator is disabled.'
+                  : 'Start the on-screen bottle animation (synthetic photocell trips at the configured BPM)'
+              }
+            >
+              <Play className="mr-1 h-4 w-4" /> Start sim
             </Button>
           ) : (
-            <Button size="sm" variant="secondary" onClick={handleStop}>
-              <Square className="mr-1 h-4 w-4" /> Stop
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleStop}
+              title="Stop the on-screen bottle animation"
+            >
+              <Square className="mr-1 h-4 w-4" /> Stop sim
             </Button>
           )}
-          <Button size="sm" variant="outline" onClick={() => conveyorSim.manualFire()} disabled={!running}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => conveyorSim.manualFire()}
+            disabled={!running}
+            title="Manually fire the photocell once (sim only)"
+          >
             <Zap className="mr-1 h-4 w-4" /> Fire photocell
           </Button>
           <Button
