@@ -32,6 +32,18 @@ export default function TwinCodePage() {
   const [bindOpen, setBindOpen] = useState(false);
   const pair = useTwinPair();
   const isBound = !!(pair.a && pair.b);
+  const [view, setView] = useState<"hud" | "debug">(() => {
+    try {
+      const v = localStorage.getItem(VIEW_PREF_KEY);
+      return v === "debug" ? "debug" : "hud";
+    } catch {
+      return "hud";
+    }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem(VIEW_PREF_KEY, view); } catch { /* ignore */ }
+  }, [view]);
 
   // Set page title (SEO)
   useEffect(() => {
