@@ -123,6 +123,22 @@ export function CsvColumnPickerDialog({ open, rawText, onCancel, onConfirm }: Pr
             </div>
           </div>
 
+          {mismatched.length > 0 && (
+            <div className="rounded-md border border-yellow-500/40 bg-yellow-500/10 p-2.5 text-[11px] text-yellow-700 dark:text-yellow-300">
+              <div className="font-semibold">
+                {mismatched.length} of {sample.length} sampled rows don't match the expected
+                {' '}<span className="font-mono">^[A-Z0-9]{'{13}'}$</span> serial format
+                {' '}({mismatchPct.toFixed(0)}%).
+              </div>
+              <div className="mt-1 opacity-90">
+                Example: <span className="font-mono">"{mismatchExample}"</span>.
+                {' '}Common causes: wrong column selected, Excel stripped leading zeros,
+                {' '}or lower-case letters in the source. You can still load — but the
+                {' '}printers may reject these rows at dispatch.
+              </div>
+            </div>
+          )}
+
           <p className="text-xs text-muted-foreground">
             Will load <span className="font-mono font-semibold text-foreground">{serialCount}</span> serial{serialCount === 1 ? "" : "s"} into the catalog. Existing catalog state will be cleared.
           </p>
