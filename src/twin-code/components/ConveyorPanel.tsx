@@ -12,7 +12,7 @@ import { conveyorSim, computeBpm, pitchFromBpm, ftPerMinFromBpm, DEFAULT_CONVEYO
 import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
 import { useTwinPair } from "../twinPairStore";
-import { twinDispatcher } from "@/lib/twinDispatcher";
+import { twinDispatcher } from "../twinDispatcher";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 
 export function ConveyorPanel() {
