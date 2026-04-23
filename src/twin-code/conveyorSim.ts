@@ -20,6 +20,7 @@
 
 import { profilerBus } from "./profilerBus";
 import { catalog } from "./catalog";
+import { faultGuard } from "./faultGuard";
 
 /**
  * Pluggable per-bottle dispatcher. When set (e.g. via `setLiveDispatcher`),
@@ -311,6 +312,16 @@ class ConveyorSim {
           bottle.skewMs = skewMs;
           catalog.recordMissed(bottle.id);
         }
+
+        // Wire the result through the fault guard — it may auto-pause the
+        // conveyor when it detects JET STOP, disconnects, or sustained misses.
+        faultGuard.observeDispatch({
+          ok: res.ok,
+          reason: res.reason,
+          aReason: res.aReason,
+          bReason: res.bReason,
+          bottleIndex: bottle.id,
+        });
 
         profilerBus.push({
           serial,

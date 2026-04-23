@@ -112,6 +112,7 @@ Updated: now
 - [Sync Matching](mem://features/message-metadata-sync-matching) — Prioritize by exact data content
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
 - [Twin Code pre-flight](mem://features/twin-code-preflight) — Dry-run ghost cycles, green/red verdict, no catalog/ledger side effects
+- [Twin Code fault recovery](mem://features/twin-code-fault-recovery) — JET STOP / disconnect / miss-streak detection, auto-pause, resume-from-bottle-N banner
 - [Twin Code Persistence](mem://features/twin-code-catalog-persistence) — localStorage ledger, FNV fingerprint, Resume/Discard, two-layer anti-duplicate guard
 - [Twin Code Operator HUD](mem://features/twin-code-operator-hud) — Shift-floor view: big BPM, A/B status lights, last serial, audible miss alarm
 - [Twin Code Production Run](mem://features/twin-code-production-run) — Lot-locked runs, pre-flight gates, SHA-256 signed CSV/JSON audit export
