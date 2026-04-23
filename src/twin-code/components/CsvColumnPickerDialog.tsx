@@ -30,6 +30,16 @@ export function CsvColumnPickerDialog({ open, rawText, onCancel, onConfirm }: Pr
   const colCount = Math.max(0, ...rows.map((r) => r.length));
   const serialCount = dataRows.filter((r) => (r[colIdx] ?? "").trim() !== "").length;
 
+  // Customer-confirmed payload shape (Authentix): 13-char uppercase alphanumeric,
+  // identical on lid + side. We sample up to 200 rows to flag mismatches early —
+  // the most common real-world cause is Excel stripping leading zeros from a
+  // numeric-looking column, or the wrong column being picked.
+  const SERIAL_FORMAT = /^[A-Z0-9]{13}$/;
+  const sample = dataRows.slice(0, 200).map((r) => (r[colIdx] ?? "").trim()).filter(Boolean);
+  const mismatched = sample.filter((s) => !SERIAL_FORMAT.test(s));
+  const mismatchPct = sample.length === 0 ? 0 : (mismatched.length / sample.length) * 100;
+  const mismatchExample = mismatched[0];
+
   const handleConfirm = () => {
     const serials = dataRows
       .map((r) => (r[colIdx] ?? "").trim())
