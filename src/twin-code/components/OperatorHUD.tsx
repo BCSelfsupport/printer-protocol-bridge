@@ -39,6 +39,18 @@ import { twinDispatcher } from "../twinDispatcher";
 import { missAlarm } from "../audioAlarm";
 
 const ALARM_PREF_KEY = "twincode.hud.alarmEnabled";
+const UNITS_PREF_KEY = "twincode.hud.units"; // "metric" | "imperial"
+type Units = "metric" | "imperial";
+
+function formatLineSpeed(mmPerSec: number, units: Units): string {
+  if (units === "imperial") {
+    // mm/s → ft/min: ×60 / 304.8
+    const ftPerMin = (mmPerSec * 60) / 304.8;
+    return `${ftPerMin.toFixed(1)} ft/min`;
+  }
+  const mPerMin = (mmPerSec / 1000) * 60;
+  return `${mPerMin.toFixed(1)} m/min`;
+}
 
 export function OperatorHUD() {
   const conv = useConveyor();
@@ -53,6 +65,16 @@ export function OperatorHUD() {
       return true;
     }
   });
+  const [units, setUnits] = useState<Units>(() => {
+    try {
+      return localStorage.getItem(UNITS_PREF_KEY) === "imperial" ? "imperial" : "metric";
+    } catch {
+      return "metric";
+    }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(UNITS_PREF_KEY, units); } catch { /* ignore */ }
+  }, [units]);
   const [flashing, setFlashing] = useState(false);
   const lastMissCount = useRef(cat.missCount);
 
@@ -145,6 +167,36 @@ export function OperatorHUD() {
           <span className="uppercase tracking-wider">{status.label}</span>
         </div>
         <div className="flex items-center gap-3 text-[11px] font-normal">
+          <div
+            className="flex items-center gap-0.5 rounded border border-border/40 bg-background/30 p-0.5"
+            role="group"
+            aria-label="Unit system"
+          >
+            <button
+              type="button"
+              onClick={() => setUnits("metric")}
+              className={`rounded px-2 py-0.5 font-mono uppercase tracking-wider transition-colors ${
+                units === "metric"
+                  ? "bg-foreground/15 text-foreground"
+                  : "text-muted-foreground hover:bg-background/30"
+              }`}
+              aria-pressed={units === "metric"}
+            >
+              m
+            </button>
+            <button
+              type="button"
+              onClick={() => setUnits("imperial")}
+              className={`rounded px-2 py-0.5 font-mono uppercase tracking-wider transition-colors ${
+                units === "imperial"
+                  ? "bg-foreground/15 text-foreground"
+                  : "text-muted-foreground hover:bg-background/30"
+              }`}
+              aria-pressed={units === "imperial"}
+            >
+              ft
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => setAlarmEnabled((v) => !v)}
@@ -177,7 +229,7 @@ export function OperatorHUD() {
             </div>
             <div className="mt-3 flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
               <Activity className="h-3 w-3" />
-              {((conv.lineSpeedMmPerSec / 1000) * 60).toFixed(1)} m/min
+              {formatLineSpeed(conv.lineSpeedMmPerSec, units)}
             </div>
           </div>
         </div>
