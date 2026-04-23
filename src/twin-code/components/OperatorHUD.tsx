@@ -42,6 +42,16 @@ const ALARM_PREF_KEY = "twincode.hud.alarmEnabled";
 const UNITS_PREF_KEY = "twincode.hud.units"; // "metric" | "imperial"
 type Units = "metric" | "imperial";
 
+function formatLineSpeed(mmPerSec: number, units: Units): string {
+  if (units === "imperial") {
+    // mm/s → ft/min: ×60 / 304.8
+    const ftPerMin = (mmPerSec * 60) / 304.8;
+    return `${ftPerMin.toFixed(1)} ft/min`;
+  }
+  const mPerMin = (mmPerSec / 1000) * 60;
+  return `${mPerMin.toFixed(1)} m/min`;
+}
+
 export function OperatorHUD() {
   const conv = useConveyor();
   const cat = useCatalog();
