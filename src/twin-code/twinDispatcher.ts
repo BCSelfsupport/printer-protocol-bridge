@@ -437,8 +437,12 @@ class TwinDispatcher {
     const b = this.b;
     const fieldA = this.opts.fieldA ?? 2;
     const fieldB = this.opts.fieldB ?? 2;
-    const mdA = `^MD^TD${fieldA};${serial}`;
-    const mdB = `^MD^TD${fieldB};${serial}`;
+    // Default A (lid) → ^BD (native DataMatrix update per v2.6 §5.28.1).
+    // Default B (side) → ^TD (text). Both are single short ^MD frames.
+    const subA = this.opts.subcommandA ?? 'BD';
+    const subB = this.opts.subcommandB ?? 'TD';
+    const mdA = `^MD^${subA}${fieldA};${serial}`;
+    const mdB = `^MD^${subB}${fieldB};${serial}`;
 
     const tStart = performance.now();
     const pA = a.sendMD(mdA);
