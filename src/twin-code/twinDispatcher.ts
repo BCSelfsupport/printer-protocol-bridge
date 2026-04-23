@@ -24,6 +24,7 @@
 
 import { setPollingPaused, isPollingPaused } from '@/lib/pollingPause';
 import { printerTransport } from '@/lib/printerTransport';
+import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import type { Printer } from '@/types/printer';
 import type { TwinPairState } from '@/twin-code/twinPairStore';
 
@@ -32,6 +33,10 @@ const R_TIMEOUT_MS = 500;
 const C_TIMEOUT_MS = 30_000;
 /** When one side fails, give the partner this long to settle naturally before forcing abort. */
 const PARTNER_GRACE_MS = 50;
+/** Synthetic emulator timing — keep small but nonzero so the profiler shows realistic skew. */
+const EMU_R_MS = 2;
+const EMU_T_MS = 6;
+const EMU_C_JITTER_MS = 8; // C lands at ~12-20ms; A vs B drift produces visible skew
 
 type AckChar = 'R' | 'T' | 'C';
 
