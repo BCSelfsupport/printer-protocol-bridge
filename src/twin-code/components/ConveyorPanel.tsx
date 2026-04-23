@@ -1,21 +1,30 @@
-import { useRef, useState } from "react";
-import { Upload, Play, Square, RotateCcw, Zap, FileSpreadsheet, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Upload, Play, Square, RotateCcw, Zap, FileSpreadsheet, Trash2, Radio, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "@/hooks/use-toast";
 import { ConveyorView } from "./ConveyorView";
 import { CsvColumnPickerDialog } from "./CsvColumnPickerDialog";
 import { conveyorSim, computeBpm, pitchFromBpm, ftPerMinFromBpm, DEFAULT_CONVEYOR_CONFIG } from "../conveyorSim";
 import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
+import { useTwinPair } from "../twinPairStore";
+import { twinDispatcher } from "../twinDispatcher";
+import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 
 export function ConveyorPanel() {
   const catalogState = useCatalog();
+  const pair = useTwinPair();
+  const { printers } = usePrinterStorage();
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [csvText, setCsvText] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [running, setRunning] = useState(false);
+  const [liveMode, setLiveMode] = useState(false);
+  const [liveBusy, setLiveBusy] = useState(false);
 
   // Mirror the conveyor config locally for the controls (simple & responsive).
   const [cfg, setCfg] = useState(DEFAULT_CONVEYOR_CONFIG);
@@ -39,6 +48,45 @@ export function ConveyorPanel() {
       updateCfg({ ftPerMin: newFt });
     }
   };
+
+  const pairBound = !!(pair.a && pair.b);
+
+  // ---- LIVE bonded dispatch wiring ----
+  const enableLive = async () => {
+    if (!pairBound) {
+      toast({ title: 'Bind a twin pair first', variant: 'destructive' });
+      return;
+    }
+    setLiveBusy(true);
+    const res = await twinDispatcher.bind(pair, printers);
+    setLiveBusy(false);
+    if (!res.ok) {
+      toast({ title: 'Could not enter LIVE mode', description: res.error, variant: 'destructive' });
+      return;
+    }
+    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial));
+    setLiveMode(true);
+    toast({ title: 'LIVE bonded mode active', description: `Printer A id=${res.aId}, B id=${res.bId}` });
+  };
+
+  const disableLive = async () => {
+    setLiveBusy(true);
+    conveyorSim.setLiveDispatcher(null);
+    await twinDispatcher.unbind();
+    setLiveBusy(false);
+    setLiveMode(false);
+    toast({ title: 'Reverted to synthetic mode' });
+  };
+
+  // Tear down on unmount
+  useEffect(() => {
+    return () => {
+      if (twinDispatcher.isBound()) {
+        conveyorSim.setLiveDispatcher(null);
+        twinDispatcher.unbind().catch(() => {});
+      }
+    };
+  }, []);
 
   const handleStart = () => {
     if (catalogState.total === 0 && !confirm("No catalog loaded — every bottle will be a miss-print. Start anyway?")) return;
@@ -77,6 +125,31 @@ export function ConveyorPanel() {
         <span className="text-[11px] text-muted-foreground">
           Photocell-triggered bonded twin printer station
         </span>
+
+        {/* LIVE / SYNTHETIC mode toggle */}
+        <div
+          className={`ml-2 flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] ${
+            liveMode
+              ? 'border-primary/50 bg-primary/10 text-primary'
+              : 'border-border bg-muted/40 text-muted-foreground'
+          }`}
+          title={pairBound ? 'Toggle real bonded dispatch via 1-1 mode' : 'Bind a twin pair to enable LIVE mode'}
+        >
+          {liveBusy ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Radio className={`h-3.5 w-3.5 ${liveMode ? 'text-primary' : ''}`} />
+          )}
+          <span className="font-mono uppercase tracking-wider">
+            {liveMode ? 'LIVE' : 'SYNTH'}
+          </span>
+          <Switch
+            checked={liveMode}
+            disabled={liveBusy || !pairBound || running}
+            onCheckedChange={(v) => (v ? enableLive() : disableLive())}
+          />
+        </div>
+
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <input
             ref={fileRef}

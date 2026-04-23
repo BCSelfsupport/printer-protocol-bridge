@@ -21,6 +21,20 @@
 import { profilerBus } from "./profilerBus";
 import { catalog } from "./catalog";
 
+/**
+ * Pluggable per-bottle dispatcher. When set (e.g. via `setLiveDispatcher`),
+ * `firePhotocell` awaits the real wire round-trip instead of synthesizing
+ * `wireAMean` / `wireBMean`. Returns per-printer RTTs in ms.
+ *
+ * `null` = synthetic mode (default). Set to a function = LIVE mode.
+ */
+export type LiveDispatcher = (serial: string) => Promise<{
+  ok: boolean;
+  aMs?: number;
+  bMs?: number;
+  reason?: string;
+}>;
+
 export interface ConveyorConfig {
   /** Line speed in ft/min. */
   ftPerMin: number;
@@ -112,6 +126,14 @@ class ConveyorSim {
   private startedAtPerf = 0;
   private listeners = new Set<Listener>();
   private bottleCount = 0;
+  /** Live dispatcher — when set, wire latencies are real; when null, synthesized. */
+  private liveDispatcher: LiveDispatcher | null = null;
+
+  /** Plug a real bonded-pair dispatcher (LIVE mode) or pass null to revert to synthetic. */
+  setLiveDispatcher(fn: LiveDispatcher | null) {
+    this.liveDispatcher = fn;
+  }
+  isLive(): boolean { return this.liveDispatcher !== null; }
 
   configure(patch: Partial<ConveyorConfig>) {
     this.config = { ...this.config, ...patch };
@@ -243,8 +265,63 @@ class ConveyorSim {
       return;
     }
 
-    // Realistic latencies
-    const ingressMs = 0.5 * noise(c.jitter); // catalog lookup is in-memory + cheap
+    // Stamp serial onto the bottle immediately for visual feedback.
+    bottle.serial = serial;
+
+    // ---- LIVE path: real bonded dispatch via oneToOne controller ----
+    if (this.liveDispatcher) {
+      const ingressMs = 0.5 * noise(c.jitter);
+      const dispatchMs = 1.5 * noise(c.jitter);
+      const t1 = t0 + ingressMs;
+      const t2a = t1 + dispatchMs;
+      const t2b = t1 + dispatchMs;
+      const tWireStart = performance.now();
+
+      this.liveDispatcher(serial).then((res) => {
+        const tWireEnd = performance.now() - this.startedAtPerf;
+        const wireAMs = res.aMs ?? (tWireEnd - t2a);
+        const wireBMs = res.bMs ?? (tWireEnd - t2b);
+        const t3a = t2a + wireAMs;
+        const t3b = t2b + wireBMs;
+        const t4 = Math.max(t3a, t3b);
+        const cycleMs = t4 - t0;
+        const skewMs = Math.abs(wireAMs - wireBMs);
+
+        if (res.ok) {
+          bottle.state = "printed";
+          bottle.cycleMs = cycleMs;
+          bottle.skewMs = skewMs;
+          catalog.recordPrinted(serial, bottle.id);
+        } else {
+          bottle.state = "missed";
+          bottle.cycleMs = cycleMs;
+          bottle.skewMs = skewMs;
+          catalog.recordMissed(bottle.id);
+        }
+
+        profilerBus.push({
+          serial,
+          outcome: res.ok ? "printed" : "missed",
+          t0, t1, t2a, t2b, t3a, t3b, t4,
+          ingressMs, dispatchMs, wireAMs, wireBMs, skewMs, cycleMs,
+        });
+      }).catch((err) => {
+        // Silent fault — record as miss-print
+        bottle.state = "missed";
+        catalog.recordMissed(bottle.id);
+        console.warn('[twin-live] dispatch error', err);
+      });
+      // Avoid blocking the next photocell — measurements arrive async via .then
+      // (sim treats this exactly like the synthetic path's setTimeout settle).
+      // Suppress the synthetic timing path below.
+      // Mark so we don't double-time-stamp.
+      // eslint-disable-next-line no-unused-expressions
+      tWireStart;
+      return;
+    }
+
+    // ---- SYNTHETIC path (default) ----
+    const ingressMs = 0.5 * noise(c.jitter);
     const dispatchMs = 1.5 * noise(c.jitter);
     let wireAMs = c.wireAMean * noise(c.jitter);
     let wireBMs = c.wireBMean * noise(c.jitter);
@@ -259,11 +336,6 @@ class ConveyorSim {
     const t3a = t2a + wireAMs;
     const t3b = t2b + wireBMs;
     const t4 = Math.max(t3a, t3b);
-
-    // Stamp the bottle now (visual), then schedule the "printed" transition
-    // to land after the simulated wire round-trip so the operator can see the
-    // print latency relative to bottle motion.
-    bottle.serial = serial;
 
     const cycleMs = t4 - t0;
     const skewMs = Math.abs(t3a - t3b);
