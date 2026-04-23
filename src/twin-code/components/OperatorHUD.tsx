@@ -55,6 +55,16 @@ export function OperatorHUD() {
       return true;
     }
   });
+  const [units, setUnits] = useState<Units>(() => {
+    try {
+      return localStorage.getItem(UNITS_PREF_KEY) === "imperial" ? "imperial" : "metric";
+    } catch {
+      return "metric";
+    }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(UNITS_PREF_KEY, units); } catch { /* ignore */ }
+  }, [units]);
   const [flashing, setFlashing] = useState(false);
   const lastMissCount = useRef(cat.missCount);
 
