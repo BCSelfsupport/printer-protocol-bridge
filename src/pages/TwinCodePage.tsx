@@ -112,6 +112,27 @@ export default function TwinCodePage() {
             </p>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            {/* HUD / Debug view switcher */}
+            <div className="flex items-center rounded-md border border-border bg-muted/30 p-0.5">
+              <Button
+                size="sm"
+                variant={view === "hud" ? "default" : "ghost"}
+                className="h-7 gap-1 px-2.5 text-xs"
+                onClick={() => setView("hud")}
+                title="Operator HUD — shift-floor view"
+              >
+                <Gauge className="h-3.5 w-3.5" /> HUD
+              </Button>
+              <Button
+                size="sm"
+                variant={view === "debug" ? "default" : "ghost"}
+                className="h-7 gap-1 px-2.5 text-xs"
+                onClick={() => setView("debug")}
+                title="Debug — full profiler & charts"
+              >
+                <Wrench className="h-3.5 w-3.5" /> Debug
+              </Button>
+            </div>
             <Button
               size="sm"
               variant={isBound ? "outline" : "default"}
@@ -159,18 +180,26 @@ export default function TwinCodePage() {
       </header>
 
       <main className="mx-auto max-w-[1600px] space-y-4 px-6 py-6">
-        {/* Top row: bottleneck callout + throughput */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto]">
-          <BottleneckCallout samples={samples} />
-          <div className="lg:w-64">
-            <ThroughputGauge samples={samples} />
-          </div>
-        </div>
+        {/* HUD MODE — shift-floor display: big BPM, status lights, last serial, batch progress */}
+        {view === "hud" && <OperatorHUD />}
 
-        {/* Conveyor simulator (real ingress path: catalog → photocell → bonded print) */}
+        {/* DEBUG MODE — full profiler harness */}
+        {view === "debug" && (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto]">
+            <BottleneckCallout samples={samples} />
+            <div className="lg:w-64">
+              <ThroughputGauge samples={samples} />
+            </div>
+          </div>
+        )}
+
+        {/* Conveyor simulator (real ingress path: catalog → photocell → bonded print)
+            Visible in BOTH modes so the operator can Start / Bind / LIVE / Reset. */}
         <ConveyorPanel />
 
-        {/* Generator controls */}
+        {/* Debug-only sections below */}
+        {view === "debug" && (
+          <>
         <section className="rounded-md border border-border bg-card p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold">Synthetic generator</h3>
