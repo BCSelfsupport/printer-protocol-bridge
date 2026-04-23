@@ -113,6 +113,7 @@ Updated: now
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
 - [1-1 Mode Implementation](mem://architecture/one-to-one-mode-implementation) — Demuxer in main.cjs, oneToOneController pacing (4 in-flight cap), polling auto-pause
 - [Twin Live Dispatcher](mem://features/twin-code-live-dispatcher) — Bonded A+B dispatch via two PrinterSession instances, LIVE/SYNTH toggle in ConveyorPanel
+- [TwinCode Serial Format](mem://features/twin-code-serial-format) — 13-char uppercase alphanumeric, identical on lid (DM) and side (text)
 - [1-to-1 Print Mode](mem://integration/protocol-v2-6-one-to-one-mode) — ^MB/^MD/^ME flow with R/T/C async ACKs on same socket; 4-buffer cap, coalesced ACK lines (RT/TC/RTC), JET STOP auto-exits.
 - [Freeze Baseline v0.1.166](mem://constraints/freeze-baseline-v0-1-166) — Production frozen at v0.1.166; new features must be built remote/isolated, never edit frozen modules
 - [Dozen12 Validation v0.1.166](mem://features/message-persistence/dozen12-validation) — ✅ VALIDATED RECOVERY POINT (msg #314). Lists guards (writeLock, getWriteTimingProfile, settle delays, waitForPollingIdle) that must NEVER be re-added to prompt-save flow.

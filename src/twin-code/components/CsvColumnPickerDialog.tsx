@@ -30,6 +30,16 @@ export function CsvColumnPickerDialog({ open, rawText, onCancel, onConfirm }: Pr
   const colCount = Math.max(0, ...rows.map((r) => r.length));
   const serialCount = dataRows.filter((r) => (r[colIdx] ?? "").trim() !== "").length;
 
+  // Customer-confirmed payload shape (Authentix): 13-char uppercase alphanumeric,
+  // identical on lid + side. We sample up to 200 rows to flag mismatches early —
+  // the most common real-world cause is Excel stripping leading zeros from a
+  // numeric-looking column, or the wrong column being picked.
+  const SERIAL_FORMAT = /^[A-Z0-9]{13}$/;
+  const sample = dataRows.slice(0, 200).map((r) => (r[colIdx] ?? "").trim()).filter(Boolean);
+  const mismatched = sample.filter((s) => !SERIAL_FORMAT.test(s));
+  const mismatchPct = sample.length === 0 ? 0 : (mismatched.length / sample.length) * 100;
+  const mismatchExample = mismatched[0];
+
   const handleConfirm = () => {
     const serials = dataRows
       .map((r) => (r[colIdx] ?? "").trim())
@@ -112,6 +122,22 @@ export function CsvColumnPickerDialog({ open, rawText, onCancel, onConfirm }: Pr
               </table>
             </div>
           </div>
+
+          {mismatched.length > 0 && (
+            <div className="rounded-md border border-warning/40 bg-warning/10 p-2.5 text-[11px] text-warning">
+              <div className="font-semibold">
+                {mismatched.length} of {sample.length} sampled rows don't match the expected
+                {' '}<span className="font-mono">^[A-Z0-9]{'{13}'}$</span> serial format
+                {' '}({mismatchPct.toFixed(0)}%).
+              </div>
+              <div className="mt-1 opacity-90">
+                Example: <span className="font-mono">"{mismatchExample}"</span>.
+                {' '}Common causes: wrong column selected, Excel stripped leading zeros,
+                {' '}or lower-case letters in the source. You can still load — but the
+                {' '}printers may reject these rows at dispatch.
+              </div>
+            </div>
+          )}
 
           <p className="text-xs text-muted-foreground">
             Will load <span className="font-mono font-semibold text-foreground">{serialCount}</span> serial{serialCount === 1 ? "" : "s"} into the catalog. Existing catalog state will be cleared.
