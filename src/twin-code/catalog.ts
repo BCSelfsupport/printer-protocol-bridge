@@ -27,6 +27,8 @@
  *      any external dispatcher that bypasses `dispense()`.
  */
 
+import { cloudLedger } from "./cloudLedger";
+
 const STORAGE_KEY = "twincode.catalog.v1";
 
 export interface CatalogEntry {
