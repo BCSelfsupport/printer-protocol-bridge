@@ -146,13 +146,20 @@ export function ConveyorPanel() {
   };
 
   const handleConfirmCsv = (serials: string[]) => {
-    catalog.load(serials);
+    const { matchesPersisted } = catalog.load(serials);
     setPickerOpen(false);
     setCsvText(null);
+    if (matchesPersisted) {
+      toast({
+        title: 'Same catalog detected',
+        description: 'Use the resume banner to pick up where the previous run left off.',
+      });
+    }
   };
 
   return (
     <section className="space-y-3">
+      <LedgerResumeBanner />
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold">Conveyor simulator</h2>
         <span className="text-[11px] text-muted-foreground">
