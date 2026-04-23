@@ -237,6 +237,7 @@ class ProductionRunStore {
       const meta = JSON.parse(raw) as ProductionRunMeta;
       if (meta && meta.id && meta.lotNumber) {
         this.state = { ...this.state, active: meta };
+        if (meta.cloudRunId) catalog.setActiveRunId(meta.cloudRunId);
       }
     } catch { /* ignore */ }
   }
