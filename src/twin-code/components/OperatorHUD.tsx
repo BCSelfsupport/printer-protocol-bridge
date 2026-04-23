@@ -140,7 +140,6 @@ export function OperatorHUD() {
   });
 
   return (
-    <div className="space-y-4">
     <div
       className={`relative overflow-hidden rounded-lg border-2 bg-card transition-colors ${
         flashing
@@ -152,9 +151,9 @@ export function OperatorHUD() {
               : "border-destructive/60"
       }`}
     >
-      {/* Top status bar */}
+      {/* Top status bar — compact */}
       <div
-        className={`flex items-center justify-between px-5 py-2 text-sm font-semibold ${
+        className={`flex items-center justify-between px-4 py-1.5 text-xs font-semibold ${
           status.tone === "ok"
             ? "bg-primary/10 text-primary"
             : status.tone === "warn"
