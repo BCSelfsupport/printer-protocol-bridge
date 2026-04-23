@@ -28,6 +28,7 @@
  */
 
 import { catalog, type LedgerRecord } from "./catalog";
+import { faultGuard } from "./faultGuard";
 
 const ACTIVE_RUN_KEY = "twincode.activeRun.v1";
 
@@ -122,6 +123,9 @@ class ProductionRunStore {
       liveAtStart: input.liveAtStart,
     };
     this.state = { ...this.state, active: meta };
+    // Fresh run = fresh fault history; otherwise prior shift's incidents
+    // would muddy the new lot's recovery banner.
+    faultGuard.reset();
     this.persistActive();
     this.notify();
     return meta;
