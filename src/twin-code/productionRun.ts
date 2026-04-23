@@ -30,6 +30,7 @@
 import { catalog, type LedgerRecord } from "./catalog";
 import { faultGuard } from "./faultGuard";
 import { cloudLedger } from "./cloudLedger";
+import { liveMetrics } from "./liveMetrics";
 
 const ACTIVE_RUN_KEY = "twincode.activeRun.v1";
 
