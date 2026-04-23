@@ -11,6 +11,7 @@ import DiagnosticsPage from "./pages/DiagnosticsPage";
 import NotFound from "./pages/NotFound";
 import ScanPage from "./pages/ScanPage";
 import TwinCodePage from "./pages/TwinCodePage";
+import TwinCodeScreenPage from "./pages/TwinCodeScreenPage";
 import { UpdateNotification } from "./components/UpdateNotification";
 import { SplashScreen } from "./components/SplashScreen";
 import { LicenseProvider } from "./contexts/LicenseContext";
@@ -61,6 +62,7 @@ const App = () => {
                   <Route path="/diagnostics" element={<DiagnosticsPage />} />
                   <Route path="/scan" element={<ScanPage />} />
                   <Route path="/twin-code" element={<TwinCodePage />} />
+                  <Route path="/twin-code/screen" element={<TwinCodeScreenPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </HashRouter>
