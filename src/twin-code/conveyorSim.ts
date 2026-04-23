@@ -21,6 +21,20 @@
 import { profilerBus } from "./profilerBus";
 import { catalog } from "./catalog";
 
+/**
+ * Pluggable per-bottle dispatcher. When set (e.g. via `setLiveDispatcher`),
+ * `firePhotocell` awaits the real wire round-trip instead of synthesizing
+ * `wireAMean` / `wireBMean`. Returns per-printer RTTs in ms.
+ *
+ * `null` = synthetic mode (default). Set to a function = LIVE mode.
+ */
+export type LiveDispatcher = (serial: string) => Promise<{
+  ok: boolean;
+  aMs?: number;
+  bMs?: number;
+  reason?: string;
+}>;
+
 export interface ConveyorConfig {
   /** Line speed in ft/min. */
   ftPerMin: number;

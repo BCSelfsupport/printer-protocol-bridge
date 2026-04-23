@@ -22,8 +22,8 @@
  * this module spins up dedicated controller instances for A and B.
  */
 
-import { setPollingPaused, isPollingPaused } from './pollingPause';
-import { printerTransport } from './printerTransport';
+import { setPollingPaused, isPollingPaused } from '@/lib/pollingPause';
+import { printerTransport } from '@/lib/printerTransport';
 import type { Printer } from '@/types/printer';
 import type { TwinPairState } from '@/twin-code/twinPairStore';
 
