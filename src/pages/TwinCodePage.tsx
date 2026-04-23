@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Play, Square, Download, Upload, Trash2, RotateCcw, Link2 } from "lucide-react";
+import { ArrowLeft, Play, Square, Download, Upload, Trash2, RotateCcw, Link2, Gauge, Wrench } from "lucide-react";
 import { TwinPairBindDialog } from "@/twin-code/components/TwinPairBindDialog";
 import { useTwinPair } from "@/twin-code/twinPairStore";
 import { Badge } from "@/components/ui/badge";
@@ -19,8 +19,10 @@ import { ThroughputGauge } from "@/twin-code/components/ThroughputGauge";
 import { BottleneckCallout } from "@/twin-code/components/BottleneckCallout";
 import { StageHeatmap } from "@/twin-code/components/StageHeatmap";
 import { ConveyorPanel } from "@/twin-code/components/ConveyorPanel";
+import { OperatorHUD } from "@/twin-code/components/OperatorHUD";
 
 const PAGE_TITLE = "Twin Code — Profiler Harness (Phase 1a)";
+const VIEW_PREF_KEY = "twincode.view"; // "hud" | "debug"
 
 export default function TwinCodePage() {
   const samples = useProfilerSamples();
