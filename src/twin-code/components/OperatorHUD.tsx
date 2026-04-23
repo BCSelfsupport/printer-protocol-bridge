@@ -39,6 +39,8 @@ import { twinDispatcher } from "../twinDispatcher";
 import { missAlarm } from "../audioAlarm";
 
 const ALARM_PREF_KEY = "twincode.hud.alarmEnabled";
+const UNITS_PREF_KEY = "twincode.hud.units"; // "metric" | "imperial"
+type Units = "metric" | "imperial";
 
 export function OperatorHUD() {
   const conv = useConveyor();
