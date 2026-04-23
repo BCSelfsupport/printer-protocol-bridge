@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Play, Square, Download, FileJson, FileSpreadsheet, AlertCircle, ClipboardList, X, Activity } from "lucide-react";
+import { Play, Square, Download, FileJson, FileSpreadsheet, AlertCircle, ClipboardList, X, Activity, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,8 +24,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useProductionRun, useLiveRunSummary } from "../useProductionRun";
 import { productionRun, downloadRunCSV, downloadRunJSON, type ProductionRunExport } from "../productionRun";
+import { useCatalog } from "../useCatalog";
+import { useTwinPair } from "../twinPairStore";
+import { twinDispatcher } from "../twinDispatcher";
 import { StartRunDialog } from "./StartRunDialog";
 import { PreflightDialog } from "./PreflightDialog";
 import { toast } from "@/hooks/use-toast";
