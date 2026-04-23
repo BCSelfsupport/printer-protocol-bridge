@@ -423,7 +423,7 @@ function BatchProgress({
 }) {
   if (total === 0) {
     return (
-      <div className="border-t border-border bg-background/40 px-5 py-2.5 text-center text-[11px] text-muted-foreground">
+      <div className="border-t border-border bg-background/40 px-5 py-3 text-center text-sm text-muted-foreground">
         No catalog loaded — load a CSV to start a batch.
       </div>
     );
@@ -432,16 +432,16 @@ function BatchProgress({
   const pct = total > 0 ? (nextIndex / total) * 100 : 0;
   const printed = nextIndex - missCount;
   return (
-    <div className="border-t border-border bg-background/40 px-5 py-3">
-      <div className="mb-1.5 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+    <div className="border-t border-border bg-background/40 px-5 py-4">
+      <div className="mb-2 flex items-center justify-between text-sm font-mono text-muted-foreground">
         <span>
-          BATCH · <span className="text-foreground">{printed.toLocaleString()}</span> printed ·{" "}
-          <span className="text-destructive">{missCount.toLocaleString()}</span> missed ·{" "}
-          <span className="text-foreground">{remaining.toLocaleString()}</span> remaining
+          BATCH · <span className="text-foreground font-bold">{printed.toLocaleString()}</span> printed ·{" "}
+          <span className="text-destructive font-bold">{missCount.toLocaleString()}</span> missed ·{" "}
+          <span className="text-foreground font-bold">{remaining.toLocaleString()}</span> remaining
         </span>
-        <span>{pct.toFixed(1)}%</span>
+        <span className="text-base font-bold text-foreground">{pct.toFixed(1)}%</span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
         <div
           className="h-full bg-primary transition-all duration-500 ease-out"
           style={{ width: `${pct}%` }}
