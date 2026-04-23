@@ -133,26 +133,68 @@ class PrinterSession {
   }
 
   /**
-   * Issue ^LF on the active message and confirm a field with the given index exists.
-   * Returns ok=true on success, ok=false if the field is missing or ^LF couldn't be parsed.
+   * Issue ^LF on the active message and confirm a field with the given index exists,
+   * AND that its type matches `expectedKind` ('text' for ^TD, 'barcode' for ^BD).
+   * Per protocol v2.6 §5.28, ^MD only accepts ^TD (text) and ^BD (barcode) targets;
+   * a mismatch (e.g. trying ^BD against a graphic field) will be silently dropped
+   * by the firmware, which is exactly the failure mode we want to catch on bind.
+   * Returns ok=true on success, ok=false on missing field or type mismatch.
    */
-  async verifyFieldIndex(fieldIndex: number): Promise<{ ok: boolean; error?: string }> {
+  async verifyFieldIndex(
+    fieldIndex: number,
+    expectedKind: 'text' | 'barcode' = 'text',
+  ): Promise<{ ok: boolean; error?: string }> {
     // Skip in renderer-fallback (no transport) and in emulator mode (no real ^LF parity).
     if (!window.electronAPI?.oneToOne || this.isEmulated) return { ok: true };
     const lf = await printerTransport.sendCommand(this.printerId, '^LF', { maxWaitMs: 4000 });
     if (!lf?.success) return { ok: false, error: `${this.label}: ^LF failed` };
     const text = lf.response || '';
-    const explicit = /(?:field|fld)\s*[:#]?\s*(\d+)/gi;
-    const indices = new Set<number>();
+
+    // Try to parse "field N: <type>" pairs first. ^LF formatting varies by firmware
+    // revision but typically yields one line per field with a type token like
+    // TEXT / BARCODE / DATAMATRIX / QR / GRAPHIC / LOGO.
+    const fieldTypes = new Map<number, string>();
+    const lineRe = /(?:field|fld)\s*[:#]?\s*(\d+)[^\r\n]*?\b(text|barcode|datamatrix|dm|qr|code\s*128|code\s*39|ean|upc|graphic|logo|bitmap)\b/gi;
     let m: RegExpExecArray | null;
-    while ((m = explicit.exec(text)) !== null) indices.add(parseInt(m[1], 10));
+    while ((m = lineRe.exec(text)) !== null) {
+      fieldTypes.set(parseInt(m[1], 10), m[2].toLowerCase().replace(/\s+/g, ''));
+    }
+
+    // Fallback index discovery (in case the firmware only lists indices, not types).
+    const indices = new Set<number>(fieldTypes.keys());
     if (indices.size === 0) {
-      // Fall back to non-empty line count (1-based).
+      const explicit = /(?:field|fld)\s*[:#]?\s*(\d+)/gi;
+      while ((m = explicit.exec(text)) !== null) indices.add(parseInt(m[1], 10));
+    }
+    if (indices.size === 0) {
       const lineCount = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean).length;
       for (let i = 1; i <= lineCount; i++) indices.add(i);
     }
+
     if (!indices.has(fieldIndex)) {
-      return { ok: false, error: `${this.label}: message has no field index ${fieldIndex} (got [${[...indices].sort((a,b)=>a-b).join(',')}])` };
+      return {
+        ok: false,
+        error: `${this.label}: message has no field index ${fieldIndex} (got [${[...indices].sort((a,b)=>a-b).join(',')}])`,
+      };
+    }
+
+    // Type check — only enforce when ^LF actually told us the type.
+    const actual = fieldTypes.get(fieldIndex);
+    if (actual) {
+      const isBarcodeType = /^(barcode|datamatrix|dm|qr|code128|code39|ean|upc)$/.test(actual);
+      const isTextType = actual === 'text';
+      if (expectedKind === 'barcode' && !isBarcodeType) {
+        return {
+          ok: false,
+          error: `${this.label}: field ${fieldIndex} is "${actual}", expected a barcode field for ^MD^BD`,
+        };
+      }
+      if (expectedKind === 'text' && !isTextType) {
+        return {
+          ok: false,
+          error: `${this.label}: field ${fieldIndex} is "${actual}", expected a text field for ^MD^TD`,
+        };
+      }
     }
     return { ok: true };
   }
