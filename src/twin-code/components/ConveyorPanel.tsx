@@ -293,6 +293,24 @@ export function ConveyorPanel() {
         />
       </div>
 
+      {/* Persistence status — keeps the operator aware that the ledger is
+          surviving page refreshes / Electron restarts. */}
+      {catalogState.fingerprint && (
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+          <span className="font-mono">
+            ledger fp <span className="text-foreground">{catalogState.fingerprint}</span>
+          </span>
+          <span>·</span>
+          <span>
+            {catalogState.lastSavedAt
+              ? `auto-saved ${formatRelativeTime(catalogState.lastSavedAt)}`
+              : 'awaiting first save…'}
+          </span>
+          <span>·</span>
+          <span>persists across refresh / restart</span>
+        </div>
+      )}
+
       {/* Speed controls — all three editable, cross-recomputed */}
       <div className="grid grid-cols-1 gap-3 rounded-md border border-border bg-card p-3 md:grid-cols-3">
         <SpeedControl
