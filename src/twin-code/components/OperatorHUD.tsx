@@ -221,21 +221,26 @@ export function OperatorHUD() {
 
       {/* Main HUD grid */}
       <div className="grid grid-cols-12 gap-4 p-5">
-        {/* === BPM gauge — the dominant element === */}
+        {/* === BPM gauge — the dominant element ===
+            Source priority: live ^MD dispatches (real production) → falls back
+            to conveyor sim BPM only when no real prints have happened yet. */}
         <div className="col-span-12 lg:col-span-4">
           <div className="flex h-full flex-col items-center justify-center rounded-md border border-border bg-background/40 p-4">
             <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Throughput
             </div>
             <div className="mt-1 font-mono text-7xl font-bold leading-none text-foreground tabular-nums">
-              {Math.round(conv.bpm)}
+              {Math.round(live.hasLiveData ? live.bpm : conv.bpm)}
             </div>
             <div className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">
               bottles per minute
             </div>
             <div className="mt-3 flex items-center gap-2 text-[11px] font-mono text-muted-foreground">
               <Activity className="h-3 w-3" />
-              {formatLineSpeed(conv.lineSpeedMmPerSec, units)}
+              {formatLineSpeed(live.hasLiveData ? live.lineSpeedMmPerSec : conv.lineSpeedMmPerSec, units)}
+            </div>
+            <div className="mt-1 text-[9px] font-mono uppercase tracking-wider text-muted-foreground/70">
+              {live.hasLiveData ? "live · last 60s" : "synthetic preview"}
             </div>
           </div>
         </div>
