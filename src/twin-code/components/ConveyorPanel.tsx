@@ -1,14 +1,19 @@
-import { useRef, useState } from "react";
-import { Upload, Play, Square, RotateCcw, Zap, FileSpreadsheet, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Upload, Play, Square, RotateCcw, Zap, FileSpreadsheet, Trash2, Radio, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "@/hooks/use-toast";
 import { ConveyorView } from "./ConveyorView";
 import { CsvColumnPickerDialog } from "./CsvColumnPickerDialog";
 import { conveyorSim, computeBpm, pitchFromBpm, ftPerMinFromBpm, DEFAULT_CONVEYOR_CONFIG } from "../conveyorSim";
 import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
+import { useTwinPair } from "../twinPairStore";
+import { twinDispatcher } from "@/lib/twinDispatcher";
+import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 
 export function ConveyorPanel() {
   const catalogState = useCatalog();
