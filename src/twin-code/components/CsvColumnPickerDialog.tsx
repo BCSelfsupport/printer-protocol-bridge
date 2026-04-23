@@ -124,7 +124,7 @@ export function CsvColumnPickerDialog({ open, rawText, onCancel, onConfirm }: Pr
           </div>
 
           {mismatched.length > 0 && (
-            <div className="rounded-md border border-yellow-500/40 bg-yellow-500/10 p-2.5 text-[11px] text-yellow-700 dark:text-yellow-300">
+            <div className="rounded-md border border-warning/40 bg-warning/10 p-2.5 text-[11px] text-warning">
               <div className="font-semibold">
                 {mismatched.length} of {sample.length} sampled rows don't match the expected
                 {' '}<span className="font-mono">^[A-Z0-9]{'{13}'}$</span> serial format
