@@ -219,7 +219,7 @@ export function CatalogStripBar() {
           between 1 and the configured threshold; disappears at 0 (auto-stop
           handles that) and above threshold. */}
       {lowActive && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-yellow-700 dark:text-yellow-300">
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-warning">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <div className="text-xs font-medium">
             Low catalog — <span className="font-mono">{remaining.toLocaleString()}</span> serials remaining.
