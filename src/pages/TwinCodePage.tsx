@@ -108,8 +108,12 @@ export default function TwinCodePage() {
             </Link>
           </Button>
           <div className="flex flex-col">
-            <h1 className="text-base font-semibold">Twin Code</h1>
-            <p className="text-[11px] text-muted-foreground">
+            <h1 className="flex items-baseline leading-none">
+              <span className="text-2xl font-bold italic text-blue-500">Twin</span>
+              <span className="text-2xl font-bold italic text-emerald-500">Code</span>
+              <span className="ml-0.5 text-[10px] font-normal text-slate-500">™</span>
+            </h1>
+            <p className="mt-1 text-[11px] text-muted-foreground">
               Bonded 2-printer profiler harness · Phase 1a (synthetic data)
             </p>
           </div>
