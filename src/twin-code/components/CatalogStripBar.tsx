@@ -308,6 +308,40 @@ export function CatalogStripBar() {
         )}
 
         <div className="ml-auto flex items-center gap-2">
+          {/* Low-catalog warning settings */}
+          <div
+            className="flex items-center gap-1.5 rounded-md border border-border bg-muted/30 px-2 py-1 text-[11px]"
+            title="When remaining serials drop to or below this number, the operator gets a yellow banner + chirp so the next CSV can be staged before the line auto-stops."
+          >
+            <Label htmlFor="low-th" className="text-muted-foreground">
+              Warn at
+            </Label>
+            <Input
+              id="low-th"
+              type="number"
+              min={0}
+              value={lowThreshold}
+              onChange={(e) => {
+                const n = parseInt(e.target.value, 10);
+                setLowThreshold(Number.isFinite(n) && n >= 0 ? n : 0);
+              }}
+              className="h-6 w-16 px-1.5 text-xs"
+            />
+            <button
+              type="button"
+              onClick={() => setAudioEnabled((v) => !v)}
+              className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
+                audioEnabled
+                  ? "text-primary hover:bg-primary/10"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+              title={audioEnabled ? "Audio chirp ON — click to mute" : "Audio chirp MUTED — click to enable"}
+              aria-label={audioEnabled ? "Mute low-catalog chirp" : "Enable low-catalog chirp"}
+            >
+              {audioEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+
           <Button
             size="sm"
             variant="ghost"
