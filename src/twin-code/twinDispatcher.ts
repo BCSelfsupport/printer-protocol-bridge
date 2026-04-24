@@ -346,8 +346,16 @@ export interface TwinDispatcherOptions {
   subcommandA?: 'TD' | 'BD';
   /** Subcommand for the B (side) side. Default 'TD' (13-digit human-readable serial). */
   subcommandB?: 'TD' | 'BD';
-  /** Optional message to ^SM-select on entry. If omitted, current message is used. */
+  /**
+   * Optional message to ^SM-select on entry. If both sides should select the
+   * same message name, set `messageName`. If A and B run different message
+   * names (the customer's typical setup — e.g. "LID" on A, "SIDE" on B), set
+   * `messageNameA` and/or `messageNameB` and they take precedence per side.
+   * If none are set, whatever message is already active on each printer is used.
+   */
   messageName?: string;
+  messageNameA?: string;
+  messageNameB?: string;
   /** When true, skip the ^LF field-index sanity check on bind (default false). */
   skipFieldCheck?: boolean;
 }
