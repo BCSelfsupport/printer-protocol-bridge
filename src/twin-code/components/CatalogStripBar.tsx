@@ -23,9 +23,14 @@ import {
   Loader2,
   FlaskConical,
   RotateCcw,
+  Volume2,
+  VolumeX,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { CsvColumnPickerDialog } from "./CsvColumnPickerDialog";
 import { LedgerResumeBanner } from "./LedgerResumeBanner";
@@ -35,7 +40,12 @@ import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
 import { useTwinPair } from "../twinPairStore";
 import { twinDispatcher, type TwinDryRunResult } from "../twinDispatcher";
+import { lowCatalogChirp } from "../audioAlarm";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
+
+const LOW_THRESHOLD_KEY = "twincode.lowCatalogThreshold.v1";
+const LOW_AUDIO_KEY = "twincode.lowCatalogAudio.v1";
+const DEFAULT_LOW_THRESHOLD = 50;
 
 export function CatalogStripBar() {
   const cat = useCatalog();
@@ -48,6 +58,46 @@ export function CatalogStripBar() {
   const [liveBusy, setLiveBusy] = useState(false);
   const [dryBusy, setDryBusy] = useState(false);
   const [lastDryRun, setLastDryRun] = useState<TwinDryRunResult | null>(null);
+
+  // ---- Low-catalog warning settings (persisted) ----
+  const [lowThreshold, setLowThreshold] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem(LOW_THRESHOLD_KEY);
+      const n = raw ? parseInt(raw, 10) : DEFAULT_LOW_THRESHOLD;
+      return Number.isFinite(n) && n >= 0 ? n : DEFAULT_LOW_THRESHOLD;
+    } catch { return DEFAULT_LOW_THRESHOLD; }
+  });
+  const [audioEnabled, setAudioEnabled] = useState<boolean>(() => {
+    try { return localStorage.getItem(LOW_AUDIO_KEY) !== "0"; } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(LOW_THRESHOLD_KEY, String(lowThreshold)); } catch { /* ignore */ }
+  }, [lowThreshold]);
+  useEffect(() => {
+    try { localStorage.setItem(LOW_AUDIO_KEY, audioEnabled ? "1" : "0"); } catch { /* ignore */ }
+  }, [audioEnabled]);
+
+  // One-shot guard so the chirp + toast fire on the falling edge only, not
+  // every time React rerenders while we're under threshold. Re-arms when
+  // remaining climbs back above the threshold (e.g. CSV reloaded / lot reset).
+  const lowFiredRef = useRef(false);
+  const remaining = Math.max(0, cat.total - cat.nextIndex);
+  useEffect(() => {
+    if (cat.total === 0) { lowFiredRef.current = false; return; }
+    if (remaining > lowThreshold) {
+      lowFiredRef.current = false;
+      return;
+    }
+    if (remaining === 0) return; // end-of-lot is handled by auto-stop, not "low"
+    if (lowFiredRef.current) return;
+    lowFiredRef.current = true;
+    if (audioEnabled) lowCatalogChirp();
+    toast({
+      title: `Low catalog — ${remaining.toLocaleString()} serials remaining`,
+      description: `Stage the next CSV before the lot auto-finalizes (threshold: ${lowThreshold}).`,
+    });
+  }, [remaining, lowThreshold, audioEnabled, cat.total]);
+
 
   const pairBound = !!(pair.a && pair.b);
 
@@ -156,13 +206,27 @@ export function CatalogStripBar() {
     catalog.reset();
   };
 
-  const remaining = cat.total - cat.nextIndex;
   const printed = cat.consumedCount - cat.missCount;
+  // `remaining` is computed above (used by the low-catalog watcher); reused here.
+  const lowActive = cat.total > 0 && remaining > 0 && remaining <= lowThreshold;
 
   return (
     <div className="space-y-2">
       <LedgerResumeBanner />
       <FaultRecoveryBanner />
+
+      {/* Low-catalog warning banner (yellow). Visible only while remaining is
+          between 1 and the configured threshold; disappears at 0 (auto-stop
+          handles that) and above threshold. */}
+      {lowActive && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-warning">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <div className="text-xs font-medium">
+            Low catalog — <span className="font-mono">{remaining.toLocaleString()}</span> serials remaining.
+            Stage the next CSV before the lot auto-finalizes.
+          </div>
+        </div>
+      )}
 
       {/* Action row + LIVE toggle */}
       <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-card px-3 py-2">
@@ -244,6 +308,40 @@ export function CatalogStripBar() {
         )}
 
         <div className="ml-auto flex items-center gap-2">
+          {/* Low-catalog warning settings */}
+          <div
+            className="flex items-center gap-1.5 rounded-md border border-border bg-muted/30 px-2 py-1 text-[11px]"
+            title="When remaining serials drop to or below this number, the operator gets a yellow banner + chirp so the next CSV can be staged before the line auto-stops."
+          >
+            <Label htmlFor="low-th" className="text-muted-foreground">
+              Warn at
+            </Label>
+            <Input
+              id="low-th"
+              type="number"
+              min={0}
+              value={lowThreshold}
+              onChange={(e) => {
+                const n = parseInt(e.target.value, 10);
+                setLowThreshold(Number.isFinite(n) && n >= 0 ? n : 0);
+              }}
+              className="h-6 w-16 px-1.5 text-xs"
+            />
+            <button
+              type="button"
+              onClick={() => setAudioEnabled((v) => !v)}
+              className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
+                audioEnabled
+                  ? "text-primary hover:bg-primary/10"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+              title={audioEnabled ? "Audio chirp ON — click to mute" : "Audio chirp MUTED — click to enable"}
+              aria-label={audioEnabled ? "Mute low-catalog chirp" : "Enable low-catalog chirp"}
+            >
+              {audioEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+
           <Button
             size="sm"
             variant="ghost"

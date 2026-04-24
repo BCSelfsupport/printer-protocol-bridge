@@ -68,3 +68,16 @@ export function missAlarm() {
 export function printTick() {
   beep({ freq: 1200, durationMs: 25, type: "sine", gain: 0.08 });
 }
+
+/**
+ * Three ascending tones — fired once when the catalog crosses below the
+ * "low" threshold so the operator can stage the next CSV before the line
+ * auto-stops. Distinct from `missAlarm` (which descends) so a passing
+ * supervisor can tell them apart from across the shop floor.
+ */
+export function lowCatalogChirp() {
+  beep({ freq: 660, durationMs: 90, type: "triangle", gain: 0.18 });
+  setTimeout(() => beep({ freq: 880, durationMs: 90, type: "triangle", gain: 0.18 }), 110);
+  setTimeout(() => beep({ freq: 1175, durationMs: 160, type: "triangle", gain: 0.20 }), 230);
+}
+
