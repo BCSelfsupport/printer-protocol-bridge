@@ -346,8 +346,16 @@ export interface TwinDispatcherOptions {
   subcommandA?: 'TD' | 'BD';
   /** Subcommand for the B (side) side. Default 'TD' (13-digit human-readable serial). */
   subcommandB?: 'TD' | 'BD';
-  /** Optional message to ^SM-select on entry. If omitted, current message is used. */
+  /**
+   * Optional message to ^SM-select on entry. If both sides should select the
+   * same message name, set `messageName`. If A and B run different message
+   * names (the customer's typical setup — e.g. "LID" on A, "SIDE" on B), set
+   * `messageNameA` and/or `messageNameB` and they take precedence per side.
+   * If none are set, whatever message is already active on each printer is used.
+   */
   messageName?: string;
+  messageNameA?: string;
+  messageNameB?: string;
   /** When true, skip the ^LF field-index sanity check on bind (default false). */
   skipFieldCheck?: boolean;
 }
@@ -385,10 +393,13 @@ class TwinDispatcher {
     this.a = new PrinterSession(aId, 'A');
     this.b = new PrinterSession(bId, 'B');
 
-    // Enter both in parallel for fastest startup.
+    // Enter both in parallel for fastest startup. Per-side message name takes
+    // precedence over the shared `messageName` so A and B can run different msgs.
+    const msgA = opts.messageNameA ?? opts.messageName;
+    const msgB = opts.messageNameB ?? opts.messageName;
     const [resA, resB] = await Promise.all([
-      this.a.enter(opts.messageName),
-      this.b.enter(opts.messageName),
+      this.a.enter(msgA),
+      this.b.enter(msgB),
     ]);
 
     if (!resA.ok || !resB.ok) {
