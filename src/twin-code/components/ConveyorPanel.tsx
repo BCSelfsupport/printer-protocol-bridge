@@ -73,7 +73,17 @@ export function ConveyorPanel() {
       return;
     }
     setLiveBusy(true);
-    const res = await twinDispatcher.bind(pair, printers);
+    // Pull per-side dispatch config from the store (set in TwinPairBindDialog).
+    // Falls back to dispatcher defaults (field 2, A=BD, B=TD, current message)
+    // for legacy bindings that pre-date the config UI.
+    const res = await twinDispatcher.bind(pair, printers, {
+      messageNameA: pair.a?.messageName,
+      messageNameB: pair.b?.messageName,
+      fieldA: pair.a?.fieldIndex,
+      fieldB: pair.b?.fieldIndex,
+      subcommandA: pair.a?.subcommand,
+      subcommandB: pair.b?.subcommand,
+    });
     setLiveBusy(false);
     if (!res.ok) {
       toast({ title: 'Could not enter LIVE mode', description: res.error, variant: 'destructive' });
@@ -81,7 +91,12 @@ export function ConveyorPanel() {
     }
     conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial));
     setLiveMode(true);
-    toast({ title: 'LIVE bonded mode active', description: `Printer A id=${res.aId}, B id=${res.bId}` });
+    toast({
+      title: 'LIVE bonded mode active',
+      description:
+        `A: ${pair.a?.messageName ?? '(current msg)'} f${pair.a?.fieldIndex ?? '2'} ^${pair.a?.subcommand ?? 'BD'} · ` +
+        `B: ${pair.b?.messageName ?? '(current msg)'} f${pair.b?.fieldIndex ?? '2'} ^${pair.b?.subcommand ?? 'TD'}`,
+    });
   };
 
   const disableLive = async () => {
