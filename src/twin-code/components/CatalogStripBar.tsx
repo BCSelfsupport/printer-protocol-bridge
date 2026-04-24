@@ -23,9 +23,14 @@ import {
   Loader2,
   FlaskConical,
   RotateCcw,
+  Volume2,
+  VolumeX,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { CsvColumnPickerDialog } from "./CsvColumnPickerDialog";
 import { LedgerResumeBanner } from "./LedgerResumeBanner";
@@ -35,7 +40,12 @@ import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
 import { useTwinPair } from "../twinPairStore";
 import { twinDispatcher, type TwinDryRunResult } from "../twinDispatcher";
+import { lowCatalogChirp } from "../audioAlarm";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
+
+const LOW_THRESHOLD_KEY = "twincode.lowCatalogThreshold.v1";
+const LOW_AUDIO_KEY = "twincode.lowCatalogAudio.v1";
+const DEFAULT_LOW_THRESHOLD = 50;
 
 export function CatalogStripBar() {
   const cat = useCatalog();
@@ -48,6 +58,46 @@ export function CatalogStripBar() {
   const [liveBusy, setLiveBusy] = useState(false);
   const [dryBusy, setDryBusy] = useState(false);
   const [lastDryRun, setLastDryRun] = useState<TwinDryRunResult | null>(null);
+
+  // ---- Low-catalog warning settings (persisted) ----
+  const [lowThreshold, setLowThreshold] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem(LOW_THRESHOLD_KEY);
+      const n = raw ? parseInt(raw, 10) : DEFAULT_LOW_THRESHOLD;
+      return Number.isFinite(n) && n >= 0 ? n : DEFAULT_LOW_THRESHOLD;
+    } catch { return DEFAULT_LOW_THRESHOLD; }
+  });
+  const [audioEnabled, setAudioEnabled] = useState<boolean>(() => {
+    try { return localStorage.getItem(LOW_AUDIO_KEY) !== "0"; } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(LOW_THRESHOLD_KEY, String(lowThreshold)); } catch { /* ignore */ }
+  }, [lowThreshold]);
+  useEffect(() => {
+    try { localStorage.setItem(LOW_AUDIO_KEY, audioEnabled ? "1" : "0"); } catch { /* ignore */ }
+  }, [audioEnabled]);
+
+  // One-shot guard so the chirp + toast fire on the falling edge only, not
+  // every time React rerenders while we're under threshold. Re-arms when
+  // remaining climbs back above the threshold (e.g. CSV reloaded / lot reset).
+  const lowFiredRef = useRef(false);
+  const remaining = Math.max(0, cat.total - cat.nextIndex);
+  useEffect(() => {
+    if (cat.total === 0) { lowFiredRef.current = false; return; }
+    if (remaining > lowThreshold) {
+      lowFiredRef.current = false;
+      return;
+    }
+    if (remaining === 0) return; // end-of-lot is handled by auto-stop, not "low"
+    if (lowFiredRef.current) return;
+    lowFiredRef.current = true;
+    if (audioEnabled) lowCatalogChirp();
+    toast({
+      title: `Low catalog — ${remaining.toLocaleString()} serials remaining`,
+      description: `Stage the next CSV before the lot auto-finalizes (threshold: ${lowThreshold}).`,
+    });
+  }, [remaining, lowThreshold, audioEnabled, cat.total]);
+
 
   const pairBound = !!(pair.a && pair.b);
 
