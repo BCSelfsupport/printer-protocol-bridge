@@ -393,10 +393,13 @@ class TwinDispatcher {
     this.a = new PrinterSession(aId, 'A');
     this.b = new PrinterSession(bId, 'B');
 
-    // Enter both in parallel for fastest startup.
+    // Enter both in parallel for fastest startup. Per-side message name takes
+    // precedence over the shared `messageName` so A and B can run different msgs.
+    const msgA = opts.messageNameA ?? opts.messageName;
+    const msgB = opts.messageNameB ?? opts.messageName;
     const [resA, resB] = await Promise.all([
-      this.a.enter(opts.messageName),
-      this.b.enter(opts.messageName),
+      this.a.enter(msgA),
+      this.b.enter(msgB),
     ]);
 
     if (!resA.ok || !resB.ok) {
