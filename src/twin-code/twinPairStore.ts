@@ -15,6 +15,7 @@
 import { useSyncExternalStore } from "react";
 
 export type BindKind = "ip" | "serial"; // serial reserved for future
+export type DispatchSubcommand = "BD" | "TD";
 
 export interface TwinPrinterBinding {
   kind: BindKind;
@@ -24,6 +25,22 @@ export interface TwinPrinterBinding {
   ip: string;
   /** TCP port (when kind === "ip"); BestCode default 23. */
   port: number;
+  /**
+   * Per-side dispatch config — what message to ^SM-select on bind, which field
+   * index inside that message receives the serial, and which ^MD subcommand
+   * (BD = native barcode update for DataMatrix/QR/Code128, TD = text update).
+   *
+   * Customer rule of thumb (Authentix lid+side pair):
+   *   A (lid)  → messageName "LID",  field 1, subcommand BD  (DataMatrix 16x16)
+   *   B (side) → messageName "SIDE", field 1, subcommand TD  (human-readable text)
+   *
+   * All three are optional in the type so v1 store entries (which only had
+   * { kind, name, ip, port }) keep loading; the dispatcher falls back to its
+   * own defaults when these are absent.
+   */
+  messageName?: string;
+  fieldIndex?: number;
+  subcommand?: DispatchSubcommand;
 }
 
 export interface TwinPairState {
@@ -36,14 +53,28 @@ export interface TwinPairState {
 const STORAGE_KEY = "twin-code:pair-binding:v1";
 const EMPTY: TwinPairState = { a: null, b: null, boundAt: null };
 
+function migrateBinding(b: any): TwinPrinterBinding | null {
+  if (!b || typeof b !== "object") return null;
+  if (typeof b.ip !== "string" || typeof b.port !== "number") return null;
+  return {
+    kind: b.kind === "serial" ? "serial" : "ip",
+    name: typeof b.name === "string" ? b.name : "",
+    ip: b.ip,
+    port: b.port,
+    messageName: typeof b.messageName === "string" && b.messageName.trim() ? b.messageName.trim() : undefined,
+    fieldIndex: Number.isInteger(b.fieldIndex) && b.fieldIndex > 0 ? b.fieldIndex : undefined,
+    subcommand: b.subcommand === "BD" || b.subcommand === "TD" ? b.subcommand : undefined,
+  };
+}
+
 function read(): TwinPairState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw);
     return {
-      a: parsed.a ?? null,
-      b: parsed.b ?? null,
+      a: migrateBinding(parsed.a),
+      b: migrateBinding(parsed.b),
       boundAt: parsed.boundAt ?? null,
     };
   } catch {
