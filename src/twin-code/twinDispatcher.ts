@@ -27,6 +27,7 @@ import { printerTransport } from '@/lib/printerTransport';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import type { Printer } from '@/types/printer';
 import type { TwinPairState } from '@/twin-code/twinPairStore';
+import { buildSeedCommands, seedForSide, type MessageSeed } from '@/twin-code/messageSeeds';
 
 const MAX_IN_FLIGHT = 4;
 const R_TIMEOUT_MS = 500;
