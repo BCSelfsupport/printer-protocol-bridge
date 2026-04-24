@@ -111,6 +111,7 @@ Updated: now
 - [Firmware Grace](mem://architecture/firmware-processing-grace-periods) — 15s grace period for state parity
 - [Sync Matching](mem://features/message-metadata-sync-matching) — Prioritize by exact data content
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
+- [Twin Code per-pair config](mem://features/twin-code-per-pair-config) — Per-side messageName/fieldIndex/^BD|^TD stored on TwinPrinterBinding, fed into LIVE bind
 - [Twin Code Live Metrics](mem://features/twin-code-live-metrics) — Real BPM from ^MD dispatches; pitch + Ø drive line-speed math
 
 - [Twin Code pre-flight](mem://features/twin-code-preflight) — Dry-run ghost cycles, green/red verdict, no catalog/ledger side effects
