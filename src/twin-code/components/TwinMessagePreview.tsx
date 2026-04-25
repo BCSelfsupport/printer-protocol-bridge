@@ -19,8 +19,9 @@
  *     vs. configured drift is caught loud, not silent.
  */
 import { renderText } from '@/lib/dotMatrixFonts';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTwinPair } from '../twinPairStore';
+import { Slider } from '@/components/ui/slider';
 // @ts-ignore — bwip-js ships its own types but resolution differs across bundlers
 import bwipjs from 'bwip-js';
 
@@ -36,6 +37,8 @@ interface SidePreviewProps {
   bound: boolean;
   /** Friendly printer label from the binding (IP, name). */
   printerLabel?: string;
+  /** Operator-controlled preview scale multiplier (1 = baseline). */
+  scale: number;
 }
 
 /**
