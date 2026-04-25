@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil, RotateCcw, Power, FileText, Database, SlidersHorizontal, Brush, Settings, Wrench, Filter, Cable } from 'lucide-react';
+import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil, RotateCcw, Power, FileText, Database, SlidersHorizontal, Brush, Settings, Wrench, Filter, Cable, Lock } from 'lucide-react';
+import { useLicense } from '@/contexts/LicenseContext';
 import { Wifi } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
@@ -82,6 +83,7 @@ export function Dashboard({
   printerVariant,
 }: DashboardProps) {
   const [countersDialogOpen, setCountersDialogOpen] = useState(false);
+  const { canDatabase } = useLicense();
 
   // Filter status for the gauge
   const filterStatus = useMemo(() => {
@@ -406,7 +408,7 @@ export function Dashboard({
 
             {[
               { id: 'messages' as const, label: 'Messages', icon: <FileText className="w-5 h-5 md:w-6 md:h-6" /> },
-              { id: 'datasource' as const, label: 'Data', icon: <Database className="w-5 h-5 md:w-6 md:h-6" /> },
+              { id: 'datasource' as const, label: 'Data', icon: canDatabase ? <Database className="w-5 h-5 md:w-6 md:h-6" /> : <Lock className="w-5 h-5 md:w-6 md:h-6" />, disabled: !canDatabase },
               { id: 'adjust' as const, label: 'Adjust', icon: <SlidersHorizontal className="w-5 h-5 md:w-6 md:h-6" /> },
               { id: 'wirecable' as const, label: 'Cable', icon: <Cable className="w-5 h-5 md:w-6 md:h-6" /> },
               { id: 'clean' as const, label: 'Clean', icon: <Brush className="w-5 h-5 md:w-6 md:h-6" />, disabled: true },
