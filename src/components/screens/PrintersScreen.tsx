@@ -127,6 +127,7 @@ function SortablePrinterItem({
   onExpiryChange,
   isUpdatingExpiry,
   messageExpiryDays,
+  twinPairRole,
 }: {
   printer: Printer;
   isSelected: boolean;
