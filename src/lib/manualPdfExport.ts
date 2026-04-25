@@ -19,6 +19,58 @@ const TEXT_DARK: [number, number, number] = [17, 24, 39];
 const TEXT_MUTED: [number, number, number] = [107, 114, 128];
 const RULE: [number, number, number] = [229, 231, 235];
 
+/**
+ * jsPDF's built-in Helvetica is WinAnsi-only — emoji and many Unicode
+ * symbols render as garbage (e.g. 💬 → "Ø=Ü¬"). Replace known glyphs
+ * with ASCII equivalents and strip anything else outside Latin-1.
+ */
+const GLYPH_MAP: Record<string, string> = {
+  '💬': '[Feedback]',
+  '🎥': '[Video]',
+  '📖': '[Manual]',
+  '❓': '[?]',
+  '⚙': '[Settings]',
+  '⚙️': '[Settings]',
+  '✓': 'v',
+  '✔': 'v',
+  '✗': 'x',
+  '✘': 'x',
+  '→': '->',
+  '←': '<-',
+  '↑': '^',
+  '↓': 'v',
+  '•': '-',
+  '·': '-',
+  '–': '-',
+  '—': '-',
+  '“': '"',
+  '”': '"',
+  '‘': "'",
+  '’': "'",
+  '…': '...',
+  '™': '(TM)',
+  '®': '(R)',
+  '©': '(C)',
+  '°': ' deg',
+  '±': '+/-',
+  '×': 'x',
+  '≥': '>=',
+  '≤': '<=',
+  '≠': '!=',
+};
+
+function sanitizePdfText(input: unknown): string {
+  if (input == null) return '';
+  let s = String(input);
+  // Apply explicit replacements first
+  for (const [from, to] of Object.entries(GLYPH_MAP)) {
+    if (s.includes(from)) s = s.split(from).join(to);
+  }
+  // Strip any remaining non-Latin-1 characters (incl. all emoji)
+  s = s.replace(/[^\x00-\xFF]/g, '');
+  return s;
+}
+
 /** Load an image from /manual-screenshots into a data URL. */
 async function loadImage(src: string): Promise<{ dataUrl: string; w: number; h: number } | null> {
   try {
