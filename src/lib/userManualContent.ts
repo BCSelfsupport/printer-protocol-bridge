@@ -513,6 +513,13 @@ export const MANUAL: ManualChapter[] = [
         title: 'Adding a consumable',
         body: `Click **+ Add Consumable** to register a part you keep on hand. **Stock Unit vs Reorder Unit:** Stock Unit is the individual countable item (e.g. Bottles); Reorder Unit is what you order from the supplier (e.g. Cases, with Per-Reorder-Unit indicating bottles per case). This distinction lets CodeSync correctly calculate when to reorder.`,
         screenshot: '/manual-screenshots/14b-add-consumable.png',
+        callouts: [
+          { label: 'Type selector', text: 'Ink / Makeup / Filter / Other — drives where the part appears in the dashboard cards' },
+          { label: 'Part Number & Description', text: 'BestCode P/N or your internal SKU plus a friendly name' },
+          { label: 'Stock Unit', text: 'individual countable unit, e.g. Bottle — used for the +Add / −Use buttons' },
+          { label: 'Reorder Unit + Per-Unit', text: 'how the supplier ships it (e.g. Case of 4 Bottles) — drives reorder math' },
+          { label: 'Minimum Threshold', text: 'when on-hand quantity drops to this level the LOW badge appears' },
+        ],
       },
       {
         id: 'stock',
