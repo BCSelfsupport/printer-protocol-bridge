@@ -336,7 +336,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
 
   // TwinCode and dev tiers also get full network access (they manage paired printers).
   const canNetwork = effectiveTier !== 'lite';
-  const canDatabase = effectiveTier === 'database' || effectiveTier === 'dev';
+  const canDatabase = effectiveTier === 'database' || effectiveTier === 'demo' || effectiveTier === 'dev';
   const canTwinCode = effectiveTier === 'twincode' || effectiveTier === 'dev';
   const isDemo = effectiveTier === 'demo';
 
