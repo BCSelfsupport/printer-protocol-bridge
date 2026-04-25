@@ -148,7 +148,12 @@ export function PrinterListItem({
   const groupColor = syncGroupIndex !== undefined && syncGroupIndex >= 0
     ? SYNC_GROUP_COLORS[syncGroupIndex % SYNC_GROUP_COLORS.length]
     : null;
-  const groupBorderClass = groupColor ? `border-l-4 ${groupColor.border}` : '';
+  // TwinCode bound pair gets its own emerald/blue stripe (takes priority over master/slave grouping).
+  const twinColor = twinPairRole
+    ? { border: 'border-l-emerald-400', bg: 'bg-emerald-400/5', badge: 'bg-emerald-500/20 text-emerald-300' }
+    : null;
+  const effectiveColor = twinColor ?? groupColor;
+  const groupBorderClass = effectiveColor ? `border-l-4 ${effectiveColor.border}` : '';
   
   // Determine effective status (countdown overrides ready state regardless of connection)
   const getEffectiveStatus = () => {
