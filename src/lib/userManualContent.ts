@@ -737,7 +737,8 @@ export const MANUAL: ManualChapter[] = [
     ],
   },
   {
-
+    id: 'appendix',
+    title: '20. Appendix',
     intro: 'Reference material.',
     sections: [
       {
