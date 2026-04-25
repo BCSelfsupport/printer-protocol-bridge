@@ -260,9 +260,11 @@ export function PrinterListItem({
                 </span>
               )}
               {twinPairRole && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 bg-gradient-to-r from-blue-500/20 to-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-1 ${twinColor?.badge} border border-current/30`}>
                   <Link2 className="w-2.5 h-2.5" />
-                  TWIN {twinPairRole}{twinPairRole === 'A' ? ' · LID' : ' · SIDE'}
+                  <span className="font-black">{twinPairRole}</span>
+                  <span className="opacity-80">·</span>
+                  <span>{twinPairRole === 'A' ? 'LID' : 'SIDE'}</span>
                 </span>
               )}
             </div>
