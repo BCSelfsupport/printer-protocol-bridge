@@ -309,7 +309,7 @@ export function OperatorHUD() {
       </div>
 
       {/* Bottom batch progress strip */}
-      <div className="shrink-0">
+      <div className="shrink-0" data-tour="hud-batch-progress">
         <BatchProgress
           total={cat.total}
           nextIndex={cat.nextIndex}

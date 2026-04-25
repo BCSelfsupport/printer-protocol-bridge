@@ -22,6 +22,9 @@ import { ConveyorPanel } from "@/twin-code/components/ConveyorPanel";
 import { OperatorHUD } from "@/twin-code/components/OperatorHUD";
 import { ProductionRunBar } from "@/twin-code/components/ProductionRunBar";
 import { CatalogStripBar } from "@/twin-code/components/CatalogStripBar";
+import { TrainingProvider } from "@/twin-code/training/TrainingProvider";
+import { TrainingOverlay } from "@/twin-code/training/TrainingOverlay";
+import { TrainingLauncherButton, FirstLaunchBanner } from "@/twin-code/training/TrainingLauncher";
 
 const PAGE_TITLE = "Twin Code — Profiler Harness (Phase 1a)";
 const VIEW_PREF_KEY = "twincode.view"; // "hud" | "debug"
@@ -98,6 +101,39 @@ export default function TwinCodePage() {
     }
   };
 
+  return (
+    <TrainingProvider>
+      <TrainingOverlay />
+      <TwinCodePageInner
+        samples={samples}
+        running={running}
+        config={config}
+        fileInputRef={fileInputRef}
+        bindOpen={bindOpen}
+        setBindOpen={setBindOpen}
+        pair={pair}
+        isBound={isBound}
+        view={view}
+        setView={setView}
+        handleStart={handleStart}
+        handleStop={handleStop}
+        handleClear={handleClear}
+        handleConfigChange={handleConfigChange}
+        handleExportCSV={handleExportCSV}
+        handleExportJSON={handleExportJSON}
+        handleImport={handleImport}
+      />
+    </TrainingProvider>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function TwinCodePageInner(props: any) {
+  const {
+    samples, running, config, fileInputRef, bindOpen, setBindOpen,
+    pair, isBound, view, setView, handleStart, handleStop, handleClear,
+    handleConfigChange, handleExportCSV, handleExportJSON, handleImport,
+  } = props;
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card">
