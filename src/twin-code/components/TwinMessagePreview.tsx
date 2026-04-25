@@ -66,29 +66,25 @@ function SideCanvas({ side }: { side: 'A' | 'B' }) {
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
-    const templateDots = side === 'A' ? TEMPLATE_DOTS_A : TEMPLATE_DOTS_B;
-    c.width = PAD_DOTS * DOT;
-    c.height = templateDots * DOT;
-    const ctx = c.getContext('2d');
-    if (!ctx) return;
-
-    // Background — match MessageThumbnail palette.
-    ctx.fillStyle = 'hsl(220, 13%, 12%)';
-    ctx.fillRect(0, 0, c.width, c.height);
-
-    // Light grid every 4 dots for visual scale.
-    ctx.fillStyle = 'hsl(220, 13%, 18%)';
-    for (let r = 0; r < templateDots; r += 4) {
-      for (let col = 0; col < PAD_DOTS; col += 4) {
-        ctx.fillRect(col * DOT, r * DOT, 1, 1);
-      }
-    }
 
     if (side === 'A') {
-      // LID: real ECC200 DM 16×16 of the SAME placeholder string the SIDE shows,
-      // rendered with bwip-js and quantized to dot pixels so it visually matches
-      // the dot-matrix style of the SIDE canvas.
-      // Centered horizontally on the 84-dot canvas, bottom-anchored on the 16-dot template.
+      // LID canvas: render the DM as a clean square — 16 modules × DM_MODULE_PX.
+      // Bigger module size than the SIDE text dots so the DM is readable; we
+      // accept a slight visual size mismatch with B in exchange for a clearly
+      // square, scannable preview that matches "16×16 ECC200".
+      const DM_MODULE_PX = 6;
+      const QUIET_PX = DM_MODULE_PX; // 1-module quiet zone all sides per ECC200 spec
+      const sizePx = 16 * DM_MODULE_PX + QUIET_PX * 2;
+      c.width = sizePx;
+      c.height = sizePx;
+      const ctx = c.getContext('2d');
+      if (!ctx) return;
+
+      // Background — match MessageThumbnail palette.
+      ctx.fillStyle = 'hsl(220, 13%, 12%)';
+      ctx.fillRect(0, 0, c.width, c.height);
+
+      // Real ECC200 DM 16×16 of the same placeholder string the SIDE renders.
       const tmp = document.createElement('canvas');
       bwipjs.toCanvas(tmp, {
         bcid: 'datamatrix',
@@ -101,35 +97,52 @@ function SideCanvas({ side }: { side: 'A' | 'B' }) {
         paddingwidth: 0,
         paddingheight: 0,
       });
-      // bwip-js renders at 16x16 raw pixels — we need to plot them as `DOT`-sized squares.
       const tctx = tmp.getContext('2d');
       if (tctx && tmp.width > 0 && tmp.height > 0) {
         const img = tctx.getImageData(0, 0, tmp.width, tmp.height);
-        // Sample at integer steps — assumes bwip-js produced a 16x16 pixel grid.
         const cellW = tmp.width / 16;
         const cellH = tmp.height / 16;
-        const x0 = Math.floor((PAD_DOTS - 16) / 2) * DOT; // center on canvas
         ctx.fillStyle = 'hsl(160, 84%, 55%)'; // emerald — printer ink
         for (let r = 0; r < 16; r++) {
           for (let col = 0; col < 16; col++) {
             const px = Math.floor(col * cellW + cellW / 2);
             const py = Math.floor(r * cellH + cellH / 2);
             const idx = (py * tmp.width + px) * 4;
-            // bwip-js paints modules as dark on white — pick "dark" via R channel.
             if (img.data[idx] < 128) {
-              ctx.fillRect(x0 + col * DOT, r * DOT, DOT, DOT);
+              ctx.fillRect(
+                QUIET_PX + col * DM_MODULE_PX,
+                QUIET_PX + r * DM_MODULE_PX,
+                DM_MODULE_PX,
+                DM_MODULE_PX,
+              );
             }
           }
         }
       }
     } else {
-      // SIDE: 13-char placeholder in Standard 7×5, left-aligned, fills the 7-dot template.
+      // SIDE: 13-char placeholder in Standard 7×5 dot-matrix font on a 7-dot template.
+      c.width = PAD_DOTS * DOT;
+      c.height = TEMPLATE_DOTS_B * DOT;
+      const ctx = c.getContext('2d');
+      if (!ctx) return;
+
+      // Background — match MessageThumbnail palette.
+      ctx.fillStyle = 'hsl(220, 13%, 12%)';
+      ctx.fillRect(0, 0, c.width, c.height);
+
+      // Light grid every 4 dots for visual scale.
+      ctx.fillStyle = 'hsl(220, 13%, 18%)';
+      for (let r = 0; r < TEMPLATE_DOTS_B; r += 4) {
+        for (let col = 0; col < PAD_DOTS; col += 4) {
+          ctx.fillRect(col * DOT, r * DOT, 1, 1);
+        }
+      }
+
       ctx.fillStyle = 'hsl(160, 84%, 55%)'; // emerald — printer ink
       try {
         renderText(ctx, PLACEHOLDER_SERIAL, 0, 0, 'Standard7High', DOT, 1);
       } catch {
-        // Font load may not be ready on first paint — skip silently; the
-        // canvas already has the grid background so the panel stays valid.
+        // Font load may not be ready on first paint — skip silently.
       }
     }
   }, [side]);
@@ -137,7 +150,12 @@ function SideCanvas({ side }: { side: 'A' | 'B' }) {
   return (
     <canvas
       ref={ref}
-      style={{ height: (side === 'A' ? TEMPLATE_DOTS_A : TEMPLATE_DOTS_B) * DOT, width: 'auto', imageRendering: 'pixelated' }}
+      style={{
+        // LID = square DM, fixed visual size. SIDE = 7-dot strip, fills width.
+        height: side === 'A' ? undefined : TEMPLATE_DOTS_B * DOT * 2,
+        width: 'auto',
+        imageRendering: 'pixelated',
+      }}
       className="rounded border border-border"
     />
   );
