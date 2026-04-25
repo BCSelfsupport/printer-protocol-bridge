@@ -41,6 +41,7 @@ import { useCloudLedger } from "../useCloudLedger";
 import { Cloud, CloudOff } from "lucide-react";
 import { useLiveMetrics } from "../useLiveMetrics";
 import { ProductionMetricsCard } from "./ProductionMetricsCard";
+import { TwinMessagePreview } from "./TwinMessagePreview";
 
 const ALARM_PREF_KEY = "twincode.hud.alarmEnabled";
 const UNITS_PREF_KEY = "twincode.hud.units"; // "metric" | "imperial"
@@ -221,23 +222,27 @@ export function OperatorHUD() {
 
       {/* Main HUD grid — fills the viewport, glanceable from across the room */}
       <div className="grid flex-1 grid-cols-12 gap-4 p-4">
-        {/* === LEFT: BPM gauge (dominant, fills column) === */}
-        <div className="col-span-12 lg:col-span-5">
-          <div className="flex h-full flex-col items-center justify-center rounded-md border border-border bg-background/40 p-4">
-            <div className="text-sm font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+        {/* === LEFT: Message preview (top) + BPM gauge (bottom) === */}
+        <div className="col-span-12 lg:col-span-5 flex flex-col gap-3 min-h-0">
+          {/* Visual cross-check — operator confirms the right messages are
+              loaded on each printer before/during a run. */}
+          <TwinMessagePreview />
+
+          <div className="flex flex-1 min-h-0 flex-col items-center justify-center rounded-md border border-border bg-background/40 p-3">
+            <div className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
               Throughput
             </div>
-            <div className="mt-2 font-mono font-bold leading-none text-foreground tabular-nums" style={{ fontSize: "clamp(6rem, 18vw, 14rem)" }}>
+            <div className="mt-1 font-mono font-bold leading-none text-foreground tabular-nums" style={{ fontSize: "clamp(3.5rem, 10vw, 8rem)" }}>
               {Math.round(live.hasLiveData ? live.bpm : conv.bpm)}
             </div>
-            <div className="mt-2 text-base uppercase tracking-[0.2em] text-muted-foreground">
+            <div className="mt-1 text-sm uppercase tracking-[0.2em] text-muted-foreground">
               bottles per minute
             </div>
-            <div className="mt-6 flex items-center gap-2 font-mono text-2xl text-foreground/80">
-              <Activity className="h-5 w-5" />
+            <div className="mt-3 flex items-center gap-2 font-mono text-lg text-foreground/80">
+              <Activity className="h-4 w-4" />
               {formatLineSpeed(live.hasLiveData ? live.lineSpeedMmPerSec : conv.lineSpeedMmPerSec, units)}
             </div>
-            <div className="mt-2 text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground/70">
+            <div className="mt-1 text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground/70">
               {live.hasLiveData ? "live · last 60s" : "synthetic preview"}
             </div>
           </div>
