@@ -149,16 +149,18 @@ function SideCanvas({ side, scale }: { side: 'A' | 'B'; scale: number }) {
   }, [side]);
 
   // Baseline display sizes — Side A is a 16×16 DM rendered as a square thumbnail,
-  // Side B is a 13-char dot-matrix strip. Multiplying by `scale` lets the operator
-  // dial both previews together while keeping their proportional relationship.
+  // Side B is a 13-char dot-matrix strip. Multiplying BOTH dimensions by `scale`
+  // keeps the native aspect ratio of each canvas (PAD_DOTS × TEMPLATE_DOTS_B for B,
+  // square for A) so the text doesn't get stretched vertically.
   const baseA = 80;
-  const baseB = TEMPLATE_DOTS_B * 6;
+  const baseBHeight = TEMPLATE_DOTS_B * 6;
+  const baseBWidth = baseBHeight * (PAD_DOTS / TEMPLATE_DOTS_B);
   return (
     <canvas
       ref={ref}
       style={{
-        height: side === 'A' ? baseA * scale : baseB * scale,
-        width: side === 'A' ? baseA * scale : 'auto',
+        height: side === 'A' ? baseA * scale : baseBHeight * scale,
+        width: side === 'A' ? baseA * scale : baseBWidth * scale,
         imageRendering: 'pixelated',
       }}
       className="rounded border border-border"
