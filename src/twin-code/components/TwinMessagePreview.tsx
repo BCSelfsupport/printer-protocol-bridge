@@ -151,7 +151,7 @@ function SideCanvas({ side }: { side: 'A' | 'B' }) {
       style={{
         // Preview thumbnail — small on purpose, this is a glance check.
         // Scale both sides together so they stay visually paired.
-        height: side === 'A' ? 80 : TEMPLATE_DOTS_B * 8,
+        height: side === 'A' ? 80 : TEMPLATE_DOTS_B * 6,
         width: side === 'A' ? 80 : 'auto',
         imageRendering: 'pixelated',
       }}
