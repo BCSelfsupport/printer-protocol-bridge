@@ -36,9 +36,10 @@ interface SidePreviewProps {
   printerLabel?: string;
 }
 
-const TEMPLATE_DOTS = 16;
 const DOT = 4; // px per dot — readable on 1396px viewport without dominating the panel
 const PAD_DOTS = 60; // approximate template width matching the seed's centering math
+const TEMPLATE_DOTS_A = 16; // LID seed runs on a 16-dot template (DM 16×16)
+const TEMPLATE_DOTS_B = 7;  // SIDE seed runs on a 7-dot template (Standard 7×5 text)
 
 /**
  * Renders the canonical seed shape for one side of the pair onto a small
@@ -51,8 +52,9 @@ function SideCanvas({ side }: { side: 'A' | 'B' }) {
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
+    const templateDots = side === 'A' ? TEMPLATE_DOTS_A : TEMPLATE_DOTS_B;
     c.width = PAD_DOTS * DOT;
-    c.height = TEMPLATE_DOTS * DOT;
+    c.height = templateDots * DOT;
     const ctx = c.getContext('2d');
     if (!ctx) return;
 
@@ -62,7 +64,7 @@ function SideCanvas({ side }: { side: 'A' | 'B' }) {
 
     // Light grid every 4 dots for visual scale.
     ctx.fillStyle = 'hsl(220, 13%, 18%)';
-    for (let r = 0; r < TEMPLATE_DOTS; r += 4) {
+    for (let r = 0; r < templateDots; r += 4) {
       for (let col = 0; col < PAD_DOTS; col += 4) {
         ctx.fillRect(col * DOT, r * DOT, 1, 1);
       }
@@ -79,13 +81,9 @@ function SideCanvas({ side }: { side: 'A' | 'B' }) {
       const size = 16 * DOT;
 
       // L-shape "finder" border (left + bottom solid, top + right dashed)
-      // Left solid
       ctx.fillRect(x0, y0, DOT, size);
-      // Bottom solid
       ctx.fillRect(x0, y0 + size - DOT, size, DOT);
-      // Top dashed
       for (let i = 0; i < 16; i += 2) ctx.fillRect(x0 + i * DOT, y0, DOT, DOT);
-      // Right dashed
       for (let i = 0; i < 16; i += 2) ctx.fillRect(x0 + size - DOT, y0 + i * DOT, DOT, DOT);
 
       // Pseudo-random module pattern (deterministic so the preview is stable)
@@ -100,7 +98,7 @@ function SideCanvas({ side }: { side: 'A' | 'B' }) {
       }
     } else {
       // SIDE seed: 13-character placeholder in Standard 7×5, left-aligned,
-      // bottom-anchored on the 16-dot template (so y maps to canvas top).
+      // bottom-anchored on the 7-dot template (text fills the full template).
       try {
         renderText(ctx, 'DRYRUN0000000', 0, 0, 'Standard7High', DOT, 1);
       } catch {
@@ -113,7 +111,7 @@ function SideCanvas({ side }: { side: 'A' | 'B' }) {
   return (
     <canvas
       ref={ref}
-      style={{ height: TEMPLATE_DOTS * DOT, width: 'auto', imageRendering: 'pixelated' }}
+      style={{ height: (side === 'A' ? TEMPLATE_DOTS_A : TEMPLATE_DOTS_B) * DOT, width: 'auto', imageRendering: 'pixelated' }}
       className="rounded border border-border"
     />
   );

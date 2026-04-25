@@ -104,11 +104,11 @@ export const LID_SEED: MessageSeed = {
 export const SIDE_SEED: MessageSeed = {
   label: "Side · 7×5 text",
   description:
-    "16-dot template, single Standard 7×5 text field at field 1 sized for 13 chars. " +
+    "7-dot template, single Standard 7×5 text field at field 1 sized for 13 chars. " +
     "Dispatcher overwrites the data per print via ^MD^TD1.",
   commandsTemplate: [
     "^DM __NAME__",
-    "^NM 16;0;0;0;__NAME__^AT 0;0;1;DRYRUN0000000",
+    "^NM 7;0;0;0;__NAME__^AT 0;0;1;DRYRUN0000000",
     "^SV",
   ],
 };
