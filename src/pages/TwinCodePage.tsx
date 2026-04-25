@@ -81,6 +81,10 @@ export default function TwinCodePage() {
     setConfig(next);
     syntheticGenerator.configure(patch);
   };
+  const handleResetConfig = () => {
+    setConfig(DEFAULT_GENERATOR_CONFIG);
+    syntheticGenerator.configure(DEFAULT_GENERATOR_CONFIG);
+  };
   const handleExportCSV = () => exportSessionCSV(samples, "twin-code");
   const handleExportJSON = () => {
     const session = profilerBus.endSession();
@@ -119,6 +123,7 @@ export default function TwinCodePage() {
         handleStop={handleStop}
         handleClear={handleClear}
         handleConfigChange={handleConfigChange}
+        handleResetConfig={handleResetConfig}
         handleExportCSV={handleExportCSV}
         handleExportJSON={handleExportJSON}
         handleImport={handleImport}
@@ -132,7 +137,7 @@ function TwinCodePageInner(props: any) {
   const {
     samples, running, config, fileInputRef, bindOpen, setBindOpen,
     pair, isBound, view, setView, handleStart, handleStop, handleClear,
-    handleConfigChange, handleExportCSV, handleExportJSON, handleImport,
+    handleConfigChange, handleResetConfig, handleExportCSV, handleExportJSON, handleImport,
   } = props;
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -154,6 +159,7 @@ function TwinCodePageInner(props: any) {
             </p>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <TrainingLauncherButton />
             {/* HUD / Debug view switcher */}
             <div className="flex items-center rounded-md border border-border bg-muted/30 p-0.5">
               <Button
@@ -222,6 +228,7 @@ function TwinCodePageInner(props: any) {
       </header>
 
       <main className="mx-auto max-w-[1600px] space-y-4 px-6 py-6">
+        <FirstLaunchBanner />
         {/* Production Run bar — visible in BOTH modes; locks the line to a named batch */}
         <ProductionRunBar />
 
@@ -257,10 +264,7 @@ function TwinCodePageInner(props: any) {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => {
-                setConfig(DEFAULT_GENERATOR_CONFIG);
-                syntheticGenerator.configure(DEFAULT_GENERATOR_CONFIG);
-              }}
+              onClick={handleResetConfig}
             >
               <RotateCcw className="mr-1 h-3 w-3" /> Reset
             </Button>
