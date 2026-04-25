@@ -1,14 +1,14 @@
 # Memory: index.md
-Updated: now
+Updated: today
 
 # Project Memory
 
 ## Core
-- 🔒 FREEZE BASELINE v0.1.166: Build new features REMOTE/isolated. Never edit frozen modules (printer hooks, save/select flows, protocol libs, electron bridge, license). See [Freeze Baseline](mem://constraints/freeze-baseline-v0-1-166).
 - BestCode Printer management (Electron app + PWA).
 - Protocol v2.6 authoritative. Save requires `^SV` after `^NM`.
 - 1 persistent TCP socket (port 23) per printer. Only one telnet session allowed by hardware.
-- Admin password: `TEXAS`. Emulator: `CITEC`. Dev panel: 5-tap gesture on Activate.
+- Admin password: `TEXAS`. Emulator: `CITEC`. Dev panel: gated by license-key + TOTP 2FA (no shared password).
+- Owner developer key: `53F2G-K94HE-VK8DB-8RB4U`. Only owner can issue developer invites.
 - Hardware vertical limits: Model 82=25-dot, 86=19-dot, 88=32-dot.
 - Template Y-coords inverted: `templateRelativeY = templateHeight - printerY - fieldHeight`.
 - Font size must not exceed template height. Single-line messages anchored to bottom.
@@ -18,6 +18,7 @@ Updated: now
 - Fleet printer identity data is per-device only; never copy serial/firmware between printer records.
 
 ## Memories
+- [Developer Access](mem://auth/developer-access-system) — License-key + TOTP 2FA, owner-issued invites, no shared password
 - [Emulator](mem://development/printer-emulator) — Multi-printer emulator, fault reporting, dev panel toggle
 - [Ready State](mem://features/printer-ready-state-logic) — PRINT:1 and HV active determine ready state
 - [Split View Architecture](mem://style/split-view-architecture) — Sidebar constraints, printer list cards layout
@@ -35,7 +36,7 @@ Updated: now
 - [Client Concurrency](mem://architecture/multi-client-concurrency) — Firmware natively handles port 23 concurrency
 - [Jet/HV Control](mem://features/jet-hv-control) — 66s startup, 134s shutdown, ^PR 1/0
 - [Polling Strategy](mem://architecture/status-polling-strategy) — Gated polling, excludes connected printer from pings
-- [Dev Access](mem://auth/dev-access-flow) — 5-tap hidden gesture, server-side password
+- [Dev Access](mem://auth/dev-access-flow) — DEPRECATED — superseded by developer-access-system
 - [Dev Panel Design](mem://style/dev-panel-design) — 600px sidebar, manual protocol tab
 - [Version Detection](mem://integration/firmware-version-detection) — Parse ^VV for firmware, model, variant
 - [Fluid Indicators](mem://features/fluid-status-indicators) — 4-bar gauges, infer levels from ^LE if unknown
@@ -93,8 +94,7 @@ Updated: now
 - [Line ID](mem://features/line-id-system) — Block validation if no Line ID configured
 - [Mixed Case](mem://features/mixed-case-text-support) — Disable forced uppercase in text fields
 - [Autocode Offset](mem://logic/autocode-offset-logic) — Printer offset applied to expiry only
-- [Barcode ECC200](mem://features/barcode-ecc200-workaround) — bwip-js client-side rendering via ^NG (fallback only)
-- [DataMatrix in 1-1](mem://integration/datamatrix-bd-vs-ng) — Use ^MD^BDx;<data> natively for TwinCode hot path; ^NG bitmap is fallback only (Authentix confirmation)
+- [Barcode ECC200](mem://features/barcode-ecc200-workaround) — bwip-js client-side rendering via ^NG
 - [Network Navigation](mem://features/printer-network-navigation) — Click highlights, double click connects
 - [Command Targeting](mem://architecture/multi-printer-command-targeting) — Commands route to focused UI printer
 - [Selection Workflow](mem://features/message-save-selection-workflow) — Restore previous ^SM after saving new message
@@ -111,27 +111,3 @@ Updated: now
 - [Firmware Grace](mem://architecture/firmware-processing-grace-periods) — 15s grace period for state parity
 - [Sync Matching](mem://features/message-metadata-sync-matching) — Prioritize by exact data content
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
-- [TwinCode license & pair panel](mem://features/twincode-license-and-pair-panel) — 'twincode' tier gates TwinCode; bound pair appears in Network panel and swaps the right pane to embedded TwinCodeView.
-- [TwinCode SOW](mem://features/twin-code-sow) — Authoritative scope, layered guarantees, canonical seed shapes, gating
-- [TwinCode quick-start](mem://features/twin-code-quick-start) — 10-step bring-up checklist with pass signals + failure→fix table
-- [TwinCode auto-create messages](mem://features/twin-code-auto-create-messages) — Bind seeds LID (DM 16×16) and SIDE (7×5 text) on printer if missing, removing manual HMI prep step
-- [Twin Code per-pair config](mem://features/twin-code-per-pair-config) — Per-side messageName/fieldIndex/^BD|^TD stored on TwinPrinterBinding, fed into LIVE bind
-- [Twin Code Live Metrics](mem://features/twin-code-live-metrics) — Real BPM from ^MD dispatches; pitch + Ø drive line-speed math
-
-- [Twin Code pre-flight](mem://features/twin-code-preflight) — Dry-run ghost cycles, green/red verdict, no catalog/ledger side effects
-- [Twin Code fault recovery](mem://features/twin-code-fault-recovery) — JET STOP / disconnect / miss-streak detection, auto-pause, resume-from-bottle-N banner
-- [Twin Code Persistence](mem://features/twin-code-catalog-persistence) — localStorage ledger, FNV fingerprint, Resume/Discard, two-layer anti-duplicate guard
-- [Twin Code Operator HUD](mem://features/twin-code-operator-hud) — Shift-floor view: big BPM, A/B status lights, last serial, audible miss alarm
-- [Twin Code Production Run](mem://features/twin-code-production-run) — Lot-locked runs, pre-flight gates, SHA-256 signed CSV/JSON audit export
-
-- [1-1 Mode Implementation](mem://architecture/one-to-one-mode-implementation) — Demuxer in main.cjs, oneToOneController pacing (4 in-flight cap), polling auto-pause
-- [Twin Live Dispatcher](mem://features/twin-code-live-dispatcher) — Bonded A+B dispatch via two PrinterSession instances, LIVE/SYNTH toggle in ConveyorPanel
-- [TwinCode Serial Format](mem://features/twin-code-serial-format) — 13-char uppercase alphanumeric, identical on lid (DM) and side (text)
-- [1-to-1 Print Mode](mem://integration/protocol-v2-6-one-to-one-mode) — ^MB/^MD/^ME flow with R/T/C async ACKs on same socket; 4-buffer cap, coalesced ACK lines (RT/TC/RTC), JET STOP auto-exits.
-- [Freeze Baseline v0.1.166](mem://constraints/freeze-baseline-v0-1-166) — Production frozen at v0.1.166; new features must be built remote/isolated, never edit frozen modules
-- [Dozen12 Validation v0.1.166](mem://features/message-persistence/dozen12-validation) — ✅ VALIDATED RECOVERY POINT (msg #314). Lists guards (writeLock, getWriteTimingProfile, settle delays, waitForPollingIdle) that must NEVER be re-added to prompt-save flow.
-- [Fault Dismiss Drift](mem://features/fault-dismiss-drift-correction) — Proactive ^CA on connect + catch-up ^CA when live ^LE count doesn't drop, to handle hidden HMI event windows like 01-8002 Power warning
-- [Twin Print Pair SOW](mem://features/twin-print-pair-sow) — Bonded 2-printer mode for Datajet 13-char strings, ≤30ms cycle. SOW drafted, on hold pending customer answers.
-- [PC Library](mem://features/pc-library-overflow) — Overflow messages stored on PC with swap-slot push mechanism
-- [Scanned Field](mem://features/scanned-field-type) — promptSource='scanner' tile creates scan-only prompted field; PC keyboard dialog filters to keyboard-source
-- [Token Linking](mem://features/token-linking-system) — {TOKEN} substitution from scanned/prompted/counter sources; Linked Field tile + literalText opt-out
