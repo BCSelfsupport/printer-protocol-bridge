@@ -81,6 +81,10 @@ export default function TwinCodePage() {
     setConfig(next);
     syntheticGenerator.configure(patch);
   };
+  const handleResetConfig = () => {
+    setConfig(DEFAULT_GENERATOR_CONFIG);
+    syntheticGenerator.configure(DEFAULT_GENERATOR_CONFIG);
+  };
   const handleExportCSV = () => exportSessionCSV(samples, "twin-code");
   const handleExportJSON = () => {
     const session = profilerBus.endSession();
