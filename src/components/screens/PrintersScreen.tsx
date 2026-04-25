@@ -274,7 +274,7 @@ export function PrintersScreen({
   const [devTaps, setDevTaps] = useState<number[]>([]);
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
-  const { canNetwork, canDatabase, canTwinCode, tier, isActivated } = useLicense();
+  const { canNetwork, canDatabase, canTwinCode, tier, isActivated, isDeveloper } = useLicense();
   const navigate = useNavigate();
   const twinPair = useTwinPair();
 
@@ -780,6 +780,12 @@ export function PrintersScreen({
                   : "border-slate-600 text-slate-400 hover:bg-slate-800"
                 }`}
                 onClick={() => {
+                  // Only developer-flagged licenses get the hidden 5-tap dev gesture.
+                  // For everyone else this button is a plain Activate / tier badge.
+                  if (!isDeveloper) {
+                    onLicense();
+                    return;
+                  }
                   const now = Date.now();
                   const newTaps = [...devTaps, now].filter(t => now - t < 2000);
                   setDevTaps(newTaps);
