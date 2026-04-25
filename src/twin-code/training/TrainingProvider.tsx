@@ -113,6 +113,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     queueRef.current = []; // single-stage run, no queue
     setActiveStageId(id);
     setStepIndex(0);
+    setPaused(false);
   }, [consumeFirstLaunch]);
 
   const startFullTour = useCallback(() => {
@@ -121,6 +122,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     queueRef.current = order.slice(1); // first stage runs immediately
     setActiveStageId(order[0]);
     setStepIndex(0);
+    setPaused(false);
   }, [consumeFirstLaunch]);
 
   const finishCurrentStage = useCallback(() => {
