@@ -148,7 +148,12 @@ export function PrinterListItem({
   const groupColor = syncGroupIndex !== undefined && syncGroupIndex >= 0
     ? SYNC_GROUP_COLORS[syncGroupIndex % SYNC_GROUP_COLORS.length]
     : null;
-  const groupBorderClass = groupColor ? `border-l-4 ${groupColor.border}` : '';
+  // TwinCode bound pair gets its own emerald/blue stripe (takes priority over master/slave grouping).
+  const twinColor = twinPairRole
+    ? { border: 'border-l-emerald-400', bg: 'bg-emerald-400/5', badge: 'bg-emerald-500/20 text-emerald-300' }
+    : null;
+  const effectiveColor = twinColor ?? groupColor;
+  const groupBorderClass = effectiveColor ? `border-l-4 ${effectiveColor.border}` : '';
   
   // Determine effective status (countdown overrides ready state regardless of connection)
   const getEffectiveStatus = () => {
@@ -196,8 +201,8 @@ export function PrinterListItem({
             ? 'bg-success/20 border-success ring-2 ring-success/30'
             : isSelected 
               ? 'bg-primary/20 border-primary' 
-              : groupColor
-                ? `${groupColor.bg} border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600`
+              : effectiveColor
+                ? `${effectiveColor.bg} border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600`
                 : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600'
         }`}
       >
@@ -379,8 +384,8 @@ export function PrinterListItem({
       className={`w-full text-left p-3 rounded-lg transition-all border overflow-hidden ${groupBorderClass} ${
         isSelected 
           ? 'bg-primary/20 border-primary shadow-lg' 
-          : groupColor
-            ? `${groupColor.bg} border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600`
+          : effectiveColor
+            ? `${effectiveColor.bg} border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600`
             : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600'
       }`}
     >
