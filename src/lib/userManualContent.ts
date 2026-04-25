@@ -895,6 +895,12 @@ export const MANUAL: ManualChapter[] = [
         title: 'Sending feedback',
         body: `Click the speech bubble icon (💬) to open the Feedback dialog.\n\n- Choose **Bug Report** or **Feature Request** (or General Feedback)\n- Describe the issue with as much detail as possible (up to 2,000 characters)\n- Attach up to 3 screenshots — drag-and-drop or click **Add**\n- Click **Submit Feedback**\n\nFeedback goes directly to BestCode engineering with the app version and your context attached. Screenshots are stored in a secure private bucket and are only visible to BestCode staff.`,
         screenshot: '/manual-screenshots/38-feedback-bug.png',
+        callouts: [
+          { label: 'Type selector', text: 'Bug Report / Feature Request / General Feedback — routes the message to the right team' },
+          { label: 'Description (2,000 char)', text: 'free-text — include reproduction steps, expected vs actual behaviour, printer model' },
+          { label: 'Screenshot drop zone', text: 'up to 3 images; drag-drop or click Add — uploaded to a private secure bucket' },
+          { label: 'Submit Feedback', text: 'sends message + app version + machine ID context to BestCode engineering' },
+        ],
       },
     ],
   },
