@@ -89,7 +89,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'activation',
-    title: '2. Activation & Licensing',
+    title: '3. Activation & Licensing',
     intro: 'CodeSync requires a license to connect to printers. Four tiers are available.',
     sections: [
       {
@@ -108,7 +108,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'connecting',
-    title: '3. Connecting Printers',
+    title: '4. Connecting Printers',
     intro: 'Add printers to your network and connect to them.',
     sections: [
       {
@@ -137,7 +137,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'dashboard',
-    title: '4. Dashboard',
+    title: '5. Dashboard',
     intro: 'The Dashboard is your live view of a connected printer.',
     sections: [
       {
@@ -177,7 +177,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'messages',
-    title: '5. Messages',
+    title: '6. Messages',
     intro: 'Create, edit, select, and manage print messages.',
     sections: [
       {
@@ -266,7 +266,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'reports',
-    title: '6. Production Reports',
+    title: '7. Production Reports',
     intro: 'Track production runs, downtime, OEE, and custom metrics.',
     sections: [
       {
@@ -320,7 +320,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'consumables',
-    title: '7. Consumables',
+    title: '8. Consumables',
     intro: 'Track ink, makeup, and filter inventory; get alerts before you run out.',
     sections: [
       {
@@ -362,7 +362,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'setup',
-    title: '8. Setup',
+    title: '9. Setup',
     intro: 'Printer-level configuration: counters, programmable date/time codes, network, line ID.',
     sections: [
       {
@@ -392,7 +392,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'service',
-    title: '9. Service & Diagnostics',
+    title: '10. Service & Diagnostics',
     intro: 'Monitor printer health, view runtime hours, and run diagnostic procedures.',
     sections: [
       {
@@ -444,7 +444,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'wire-cable',
-    title: '10. Wire & Cable',
+    title: '11. Wire & Cable',
     intro: 'Specialized high-speed marking view for cable and wire applications.',
     sections: [
       {
@@ -463,7 +463,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'data-source',
-    title: '11. Data Source',
+    title: '12. Data Source',
     intro: 'Import variable data for serialization, batch coding, and compliance printing.',
     sections: [
       {
@@ -517,7 +517,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'mobile',
-    title: '12. Mobile Companion',
+    title: '13. Mobile Companion',
     intro: 'Use a phone or tablet to monitor and control printers paired with your PC. Multiple phones can be paired to a single license.',
     sections: [
       {
@@ -557,7 +557,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'training-feedback',
-    title: '13. Training Videos & Feedback',
+    title: '14. Training Videos & Feedback',
     intro: 'Built-in tutorials and a way to send issues directly to BestCode.',
     sections: [
       {
@@ -576,7 +576,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'troubleshooting',
-    title: '14. Troubleshooting',
+    title: '15. Troubleshooting',
     intro: 'Common issues and how to resolve them.',
     sections: [
       {
@@ -603,7 +603,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'appendix',
-    title: '15. Appendix',
+    title: '20. Appendix',
     intro: 'Reference material.',
     sections: [
       {
