@@ -149,10 +149,10 @@ function SideCanvas({ side }: { side: 'A' | 'B' }) {
     <canvas
       ref={ref}
       style={{
-        // Preview thumbnail sizes — small on purpose, this is a glance check
-        // not a scannable code. LID = 24px square, SIDE = 14px-tall strip.
-        height: side === 'A' ? 24 : TEMPLATE_DOTS_B * 2,
-        width: side === 'A' ? 24 : 'auto',
+        // Preview thumbnail — small on purpose, this is a glance check.
+        // Scale both sides together so they stay visually paired.
+        height: side === 'A' ? 40 : TEMPLATE_DOTS_B * 4,
+        width: side === 'A' ? 40 : 'auto',
         imageRendering: 'pixelated',
       }}
       className="rounded border border-border"
