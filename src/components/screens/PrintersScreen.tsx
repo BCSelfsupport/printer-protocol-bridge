@@ -558,6 +558,62 @@ export function PrintersScreen({
         {/* Printer List with ScrollArea */}
         <ScrollArea className="flex-1">
           <div className="p-2 pr-3 space-y-2">
+            {/* TwinCode Bound Pair card — only when license allows AND a pair is bound to two known printers */}
+            {pairPrinters && (
+              <button
+                type="button"
+                onClick={() => setPairSelected(true)}
+                className={`w-full text-left rounded-lg border p-3 transition-colors ${
+                  pairSelected
+                    ? 'border-emerald-500/70 bg-gradient-to-r from-blue-500/15 via-emerald-500/10 to-emerald-500/15 shadow-lg shadow-emerald-500/10'
+                    : 'border-slate-700 bg-slate-800/40 hover:border-emerald-500/50 hover:bg-slate-800/70'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-md bg-gradient-to-br from-blue-500/30 to-emerald-500/30 flex items-center justify-center">
+                    <Link2 className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-1 leading-none">
+                      <span className="text-xs font-bold italic text-blue-400">Twin</span>
+                      <span className="text-xs font-bold italic text-emerald-400">Code</span>
+                      <span className="text-[8px] text-slate-500">™</span>
+                      <span className="ml-1 text-[10px] text-slate-400">Bound Pair</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5 truncate">
+                      {pairPrinters.a.name} ↔ {pairPrinters.b.name}
+                    </div>
+                  </div>
+                  {pairSelected && (
+                    <span className="text-[9px] font-semibold uppercase tracking-wider text-emerald-400">Active</span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                  <div className={`rounded px-2 py-1 border ${pairPrinters.a.isAvailable ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300' : 'border-slate-700 bg-slate-900/50 text-slate-500'}`}>
+                    <div className="font-semibold">A · Lid</div>
+                    <div className="font-mono">{pairPrinters.a.ipAddress}</div>
+                  </div>
+                  <div className={`rounded px-2 py-1 border ${pairPrinters.b.isAvailable ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300' : 'border-slate-700 bg-slate-900/50 text-slate-500'}`}>
+                    <div className="font-semibold">B · Side</div>
+                    <div className="font-mono">{pairPrinters.b.ipAddress}</div>
+                  </div>
+                </div>
+              </button>
+            )}
+
+            {/* TwinCode license but no pair bound yet — hint card */}
+            {canTwinCode && !pairPrinters && (
+              <div className="rounded-lg border border-dashed border-emerald-500/40 bg-emerald-500/5 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Link2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-xs font-semibold text-emerald-300">TwinCode pair not bound</span>
+                </div>
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                  Visit <span className="font-mono text-emerald-400">/twin-code</span> to bind two printers as a Lid/Side pair. Once bound, the pair will appear here and selecting it opens the TwinCode workspace.
+                </p>
+              </div>
+            )}
+
             {visiblePrinters.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-slate-500 py-8">
                 <PrinterIcon className="w-10 h-10 mb-3 opacity-50" />
