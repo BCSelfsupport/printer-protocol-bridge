@@ -601,6 +601,11 @@ export const MANUAL: ManualChapter[] = [
         title: 'Network configuration',
         body: `Configure the printer's IP address, subnet mask, gateway, and **Line ID** — a per-printer identifier used by Line ID fields in messages. If no Line ID is configured, messages with Line ID fields will be blocked from printing.`,
         screenshot: '/manual-screenshots/10-setup.png',
+        callouts: [
+          { label: 'IP / Subnet / Gateway', text: 'mirrors the printer front-panel network menu — must match your factory subnet' },
+          { label: 'Line ID input', text: 'per-printer identifier resolved by Line ID fields in messages — required before printing those messages' },
+          { label: 'Save', text: 'pushes the new network/Line ID values to the printer; CodeSync reconnects automatically' },
+        ],
       },
     ],
   },
