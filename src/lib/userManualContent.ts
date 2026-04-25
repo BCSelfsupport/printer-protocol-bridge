@@ -578,6 +578,12 @@ export const MANUAL: ManualChapter[] = [
         title: 'Programmable date codes',
         body: `Define custom alphabetic mappings for date components (e.g. month "01" → "A"). The single-item-at-a-time editor matches the printer's HMI behavior. Saved codes are sent via ^DC.\n\n**Categories:** Year, Month, Day of Year, Day of Month, Week, Day of Week, plus a Select Current Day shortcut.`,
         screenshot: '/manual-screenshots/11-program-date-codes.png',
+        callouts: [
+          { label: 'Category tabs', text: 'Year / Month / Day of Year / Day of Month / Week / Day of Week — pick which date component you are remapping' },
+          { label: 'Item list', text: 'every value in the chosen category (e.g. months 01–12) — click to load it into the editor' },
+          { label: 'Code input', text: 'the single character or short string the printer will substitute for the selected value' },
+          { label: 'Save / Send to Printer', text: 'persists the mapping locally and pushes it to the printer via ^DC' },
+        ],
       },
       {
         id: 'time-codes',
