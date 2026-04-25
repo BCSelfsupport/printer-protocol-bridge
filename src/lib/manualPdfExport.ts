@@ -394,8 +394,11 @@ export async function generateUserManualPdf(): Promise<Blob> {
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(48);
   pdf.text('CodeSync', MARGIN_X, 140);
+  // Small superscript trademark — sized relative to the wordmark
+  const wordmarkWidth = pdf.getTextWidth('CodeSync');
   pdf.setTextColor(180, 230, 200);
-  pdf.text('™', MARGIN_X + pdf.getTextWidth('CodeSync'), 110);
+  pdf.setFontSize(14);
+  pdf.text('TM', MARGIN_X + wordmarkWidth + 4, 110);
 
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(20);
