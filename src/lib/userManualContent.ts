@@ -619,6 +619,12 @@ export const MANUAL: ManualChapter[] = [
         title: 'Service screen',
         body: `Click the **Service** tab in the bottom navigation to open the full service dialog.\n\n**Primary Metrics** — Modulation (Volts), Pressure (PSI), Charge (%), RPS (rev/s), Phase Quality (%), Viscosity (cP).\n\n**Subsystems** — V300UP, VLT, GUT, MOD on/off states.\n\n**Consumables** — current ink and makeup levels, plus printhead and electronics temperature.\n\n**System Info** — Allow Errors, Error Active, runtime hours, and firmware/model identification.`,
         screenshot: '/manual-screenshots/29-service-detail.png',
+        callouts: [
+          { label: 'Primary Metrics tile', text: 'Modulation, Pressure, Charge, RPS, Phase Quality, Viscosity — live from ^SU' },
+          { label: 'Subsystems tile', text: 'V300UP / VLT / GUT / MOD on-off states — useful for jet stability checks' },
+          { label: 'Consumables tile', text: 'ink + makeup levels with temperatures, mirroring the dashboard fluid bars' },
+          { label: 'System Info tile', text: 'firmware version, model, runtime hours and Allow-Errors / Error-Active flags' },
+        ],
       },
       {
         id: 'counters',
