@@ -371,6 +371,28 @@ function SlotCard({
               ^SM {state.messageName || "?"} → ^MD^{state.subcommand}{state.fieldIndex || "?"};&lt;serial&gt;
             </span>
           </div>
+
+          {/* Auto-create on bind */}
+          <label
+            htmlFor={`auto-${slotKey}`}
+            className="flex cursor-pointer items-start gap-2 rounded-md border border-border/60 bg-background/60 p-2 hover:bg-accent/30"
+          >
+            <Checkbox
+              id={`auto-${slotKey}`}
+              checked={state.autoCreate}
+              onCheckedChange={(v) => onChange({ ...state, autoCreate: v === true })}
+              className="mt-0.5"
+            />
+            <div className="flex-1 space-y-0.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium">
+                <Sparkles className="h-3 w-3 text-primary" />
+                Auto-create on bind if missing
+              </div>
+              <div className="text-[10px] text-muted-foreground leading-snug">
+                {seedForSide(slotKey).description}
+              </div>
+            </div>
+          </label>
         </div>
       </div>
     </div>
