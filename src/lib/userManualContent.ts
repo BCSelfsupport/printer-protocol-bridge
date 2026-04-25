@@ -514,6 +514,12 @@ export const MANUAL: ManualChapter[] = [
         title: 'Stock inventory',
         body: `The right-hand panel lists every registered part with a segmented stock gauge and the current count vs the minimum threshold. A **LOW** badge appears as soon as quantity drops at or below the reorder point.\n\nUse **+ Add** to receive new stock, **− Use** to record a manual deduction, and **Order** to launch your supplier site (configurable in Reorder Settings).`,
         screenshot: '/manual-screenshots/34-consumables-stock.png',
+        callouts: [
+          { label: 'Stock gauge', text: 'segmented bar showing current quantity vs the configured minimum threshold' },
+          { label: 'LOW badge', text: 'turns amber as soon as quantity drops at or below the reorder point' },
+          { label: '+ Add / − Use', text: 'manually receive new stock or record a deduction outside the auto-tracking flow' },
+          { label: 'Order', text: 'launches your configured reorder action (supplier site, email, or clipboard)' },
+        ],
       },
       {
         id: 'reorder-settings',
@@ -526,6 +532,12 @@ export const MANUAL: ManualChapter[] = [
         title: 'Filter tracking',
         body: `Click **Set Up Filter Tracking** on any printer to enable filter life monitoring. Pick the rated filter size (2,000 / 5,000 / 10,000 hours); CodeSync reads **Current Pump Hours** live from the printer via the ^TM command and computes Filter Life Remaining automatically.\n\nWhen the remaining life drops below 10 % the filter card turns amber on the dashboard.`,
         screenshot: '/manual-screenshots/36-filter-tracking.png',
+        callouts: [
+          { label: 'Filter rating selector', text: '2,000 / 5,000 / 10,000 hour filter — pick what you have installed' },
+          { label: 'Current Pump Hours', text: 'live from the printer via ^TM — authoritative for life calculation' },
+          { label: 'Filter Life Remaining', text: 'computed automatically; turns amber under 10% and red at 0' },
+          { label: 'Reset filter', text: 'use after a physical filter change to zero the counter against the new rating' },
+        ],
       },
       {
         id: 'predictions',
