@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Loader2, CheckCircle2, XCircle, Link2, Unlink, Cpu, Wifi, FileText, Hash, Barcode, Type } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Link2, Unlink, Cpu, Wifi, FileText, Hash, Barcode, Type, Sparkles } from "lucide-react";
 import { twinPairStore, useTwinPair, type TwinPrinterBinding, type DispatchSubcommand } from "../twinPairStore";
+import { seedForSide } from "../messageSeeds";
 
 type ProbeState = "idle" | "probing" | "ok" | "fail";
 
@@ -18,6 +20,8 @@ interface SlotState {
   messageName: string;
   fieldIndex: string;
   subcommand: DispatchSubcommand;
+  /** When true, auto-seed the canonical message on bind if missing. */
+  autoCreate: boolean;
   probe: ProbeState;
   probeMs: number | null;
   probeError: string | null;
