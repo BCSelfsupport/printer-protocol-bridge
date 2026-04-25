@@ -83,6 +83,7 @@ export function Dashboard({
   printerVariant,
 }: DashboardProps) {
   const [countersDialogOpen, setCountersDialogOpen] = useState(false);
+  const { canDatabase } = useLicense();
 
   // Filter status for the gauge
   const filterStatus = useMemo(() => {
