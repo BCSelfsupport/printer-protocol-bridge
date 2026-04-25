@@ -608,18 +608,37 @@ export const MANUAL: ManualChapter[] = [
         title: 'Diagnostic test procedure',
         body: `Open the standalone **Telnet Diagnostics** tool by navigating to \`#/diagnostics\` (or via the dev panel). It opens with a **Pre-Flight Checklist** that confirms the basics — printer powered on, ethernet connected, Remote Comms enabled, IP matches, no other Telnet sessions, same subnet — before any tests run.\n\nClick **Skip** on the checklist (or check all 6 items) to reveal the 7-phase test suite:\n\n1. **Can We Reach the Printer?** — basic TCP connectivity\n2. **Does the Printer Understand Us?** — all main protocol commands\n3. **Is the Connection Stable?** — long-duration reliability\n4. **How Long to Reconnect?** — drop/recover timing\n5. **Edge Cases & Limits** — concurrent sessions, malformed input\n6. **Network Quality (WiFi vs Wired)**\n7. **App Build & Deployment** — Electron, auto-updater, relay server\n\nClick **Run All Tests** or expand a phase to run individual tests. Use **Copy Report** to paste the full results into Lovable chat for analysis.`,
         screenshot: '/manual-screenshots/31-diagnostics-checklist.png',
+        callouts: [
+          { label: 'Pre-Flight Checklist', text: '6 must-pass items before tests run — power, ethernet, Remote Comms, IP match, no other Telnet, same subnet' },
+          { label: 'Skip', text: 'bypass the checklist and jump straight to the 7-phase suite' },
+          { label: 'Printer IP input', text: 'target printer for every phase; defaults to the currently-connected printer' },
+          { label: 'Run All Tests', text: 'runs all 26 tests across 7 phases sequentially with a live progress strip' },
+          { label: 'Copy Report / Download', text: 'paste into a support ticket or save as JSON for offline analysis' },
+        ],
       },
       {
         id: 'diagnostic-phases',
         title: 'Diagnostic test phases',
         body: `The full 7-phase test suite covers 26 individual tests. Each phase shows a Pass/Fail/Not Run status and can be expanded for per-test details. Use the **Download** button to save the report as a JSON file, or **Copy Report** to share results with support.`,
         screenshot: '/manual-screenshots/32-diagnostics-phases.png',
+        callouts: [
+          { label: 'Phase header', text: 'Pass / Fail / Not Run badge with elapsed time; click to expand the per-test breakdown' },
+          { label: 'Per-test row', text: 'individual test name, status, latency, and the raw printer reply when applicable' },
+          { label: 'Re-run phase', text: 'runs only that phase — useful when iterating on a single network change' },
+        ],
       },
       {
         id: 'raw-terminal',
         title: 'Raw Telnet terminal',
         body: `The **Raw Terminal** tab provides a manual command interface for advanced troubleshooting. Click **Connect** to open a Telnet session, then send any v2.6 protocol command (^SU, ^VV, ^LE, ^LM, ^SD, ^TP and more are pre-set as quick-command buttons).\n\n**Show hex dump** displays raw byte responses — useful for diagnosing character encoding or protocol framing issues.`,
         screenshot: '/manual-screenshots/33-diagnostics-terminal.png',
+        callouts: [
+          { label: 'Connect / Disconnect', text: 'opens or closes the raw Telnet session to the configured IP:port' },
+          { label: 'Quick command buttons', text: 'one-click ^SU, ^VV, ^LE, ^LM, ^SD, ^TP — the most-useful diagnostic commands' },
+          { label: 'Command input', text: 'send any v2.6 protocol command; auto-prefixes with ^ if you forget' },
+          { label: 'Show hex dump toggle', text: 'displays raw byte responses for diagnosing encoding or framing issues' },
+          { label: 'Output log', text: 'every TX/RX pair with timestamp; right-click to copy or clear' },
+        ],
       },
       {
         id: 'clean',
