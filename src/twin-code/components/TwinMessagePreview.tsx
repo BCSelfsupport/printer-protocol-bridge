@@ -69,10 +69,9 @@ function SideCanvas({ side }: { side: 'A' | 'B' }) {
 
     if (side === 'A') {
       // LID canvas: render the DM as a clean square — 16 modules × DM_MODULE_PX.
-      // Bigger module size than the SIDE text dots so the DM is readable; we
-      // accept a slight visual size mismatch with B in exchange for a clearly
-      // square, scannable preview that matches "16×16 ECC200".
-      const DM_MODULE_PX = 6;
+      // Sized to roughly match the SIDE canvas height (7 dots × DOT × 2 ≈ 56px)
+      // so both previews read as siblings rather than the DM dominating the row.
+      const DM_MODULE_PX = 3;
       const QUIET_PX = DM_MODULE_PX; // 1-module quiet zone all sides per ECC200 spec
       const sizePx = 16 * DM_MODULE_PX + QUIET_PX * 2;
       c.width = sizePx;
