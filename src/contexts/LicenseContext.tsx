@@ -28,6 +28,9 @@ interface LicenseContextValue extends LicenseState {
   generatePairingCode: () => Promise<{ code: string; expiresAt: string } | null>;
   listPairedCompanions: () => Promise<CompanionDevice[]>;
   revokeCompanion: (sessionId: string) => Promise<boolean>;
+  /** Dev-only: override the current tier for testing gating. Pass null to clear. */
+  setDevTierOverride: (tier: LicenseTier | null) => void;
+  devTierOverride: LicenseTier | null;
   /** Feature gating helpers */
   canNetwork: boolean;
   canDatabase: boolean;
