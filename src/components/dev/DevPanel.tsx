@@ -50,7 +50,6 @@ import { FeedbackPanel } from '@/components/dev/FeedbackPanel';
 import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
 import { ParameterSnapshot } from '@/components/dev/ParameterSnapshot';
 import { DevInvitePanel } from '@/components/dev/DevInvitePanel';
-import { useLicense } from '@/contexts/LicenseContext';
 import { TwinPairBindDialog } from '@/twin-code/components/TwinPairBindDialog';
 import { useTwinPair } from '@/twin-code/twinPairStore';
 import { useLicense, type LicenseTier } from '@/contexts/LicenseContext';
