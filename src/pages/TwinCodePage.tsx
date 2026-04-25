@@ -262,10 +262,7 @@ function TwinCodePageInner(props: any) {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => {
-                setConfig(DEFAULT_GENERATOR_CONFIG);
-                syntheticGenerator.configure(DEFAULT_GENERATOR_CONFIG);
-              }}
+              onClick={handleResetConfig}
             >
               <RotateCcw className="mr-1 h-3 w-3" /> Reset
             </Button>
