@@ -209,6 +209,7 @@ export function OperatorHUD() {
             className="flex items-center gap-1.5 rounded px-2 py-0.5 hover:bg-background/30"
             aria-label={alarmEnabled ? "Mute miss-print alarm" : "Unmute miss-print alarm"}
             title={alarmEnabled ? "Click to mute miss-print alarm" : "Click to enable miss-print alarm"}
+            data-tour="hud-alarm-toggle"
           >
             {alarmEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
             <span>Alarm {alarmEnabled ? "ON" : "OFF"}</span>
@@ -232,7 +233,7 @@ export function OperatorHUD() {
         {/* Row 2 — Throughput + Last Printed share the row equally so they
             visually mirror each other (both are big-number readouts). */}
         <div className="grid flex-1 min-h-0 grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="flex min-h-0 flex-col items-center justify-center rounded-md border border-border bg-background/40 p-3">
+          <div className="flex min-h-0 flex-col items-center justify-center rounded-md border border-border bg-background/40 p-3" data-tour="hud-throughput">
             <div className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
               Throughput
             </div>
@@ -253,7 +254,7 @@ export function OperatorHUD() {
 
           {/* Last printed serial — matches the throughput card's structure
               (label · big mono number · subline) for visual symmetry. */}
-          <div className="flex min-h-0 flex-col items-center justify-center rounded-md border border-border bg-background/40 p-3">
+          <div className="flex min-h-0 flex-col items-center justify-center rounded-md border border-border bg-background/40 p-3" data-tour="hud-last-printed">
             <div className="flex w-full items-center justify-between">
               <div className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 Last printed
@@ -282,7 +283,7 @@ export function OperatorHUD() {
         </div>
 
         {/* Row 3 — Status lights moved below: bound A/B, mode, yield. */}
-        <div className="grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4" data-tour="hud-status-lights">
           <PrinterLight
             label="A · LID"
             sub={pair.a?.ip ?? "not bound"}
@@ -308,7 +309,7 @@ export function OperatorHUD() {
       </div>
 
       {/* Bottom batch progress strip */}
-      <div className="shrink-0">
+      <div className="shrink-0" data-tour="hud-batch-progress">
         <BatchProgress
           total={cat.total}
           nextIndex={cat.nextIndex}

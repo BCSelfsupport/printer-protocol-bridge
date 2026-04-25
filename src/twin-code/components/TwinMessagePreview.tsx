@@ -255,7 +255,7 @@ export function TwinMessagePreview() {
   }, [scaleB]);
 
   return (
-    <div className="flex w-full min-w-0 gap-3 rounded-md border border-border bg-card/60 p-3">
+    <div className="flex w-full min-w-0 gap-3 rounded-md border border-border bg-card/60 p-3" data-tour="twin-message-preview">
       <div className="flex-1 min-w-0">
         <div className="mb-2 flex items-baseline justify-between gap-2">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -296,7 +296,7 @@ export function TwinMessagePreview() {
 
       {/* Two vertical scale sliders — DM and text are sized independently
           because their baseline aspect ratios differ wildly (square vs. strip). */}
-      <div className="flex shrink-0 gap-2 border-l border-border pl-3">
+      <div className="flex shrink-0 gap-2 border-l border-border pl-3" data-tour="twin-preview-sliders">
         <ScaleSlider label="DM" value={scaleA} onChange={setScaleA} />
         <ScaleSlider label="TEXT" value={scaleB} onChange={setScaleB} />
       </div>
