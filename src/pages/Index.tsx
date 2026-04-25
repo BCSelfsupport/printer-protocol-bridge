@@ -46,6 +46,7 @@ import { useJetCountdown } from '@/hooks/useJetCountdown';
 import { useMessageStorage, isReadOnlyMessage } from '@/hooks/useMessageStorage';
 import { useConsumableStorage } from '@/hooks/useConsumableStorage';
 import { DevPanel } from '@/components/dev/DevPanel';
+import { DevSignInDialog } from '@/components/dev/DevSignInDialog';
 import { RecordingOverlay } from '@/components/dev/RecordingOverlay';
 import { useScreenRecorder } from '@/hooks/useScreenRecorder';
 import { useLicense } from '@/contexts/LicenseContext';
@@ -2280,32 +2281,11 @@ const Index = () => {
         }}
       />
       
-      {/* Dev Portal Sign In Dialog */}
-      <SignInDialog
+      {/* Dev Portal Sign In Dialog (TOTP-based; only developer-flagged licenses can open this) */}
+      <DevSignInDialog
         open={devSignInDialogOpen}
         onOpenChange={setDevSignInDialogOpen}
-        onSignIn={async (password) => {
-          try {
-            const res = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-dev-access`,
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-                body: JSON.stringify({ password }),
-              }
-            );
-            const data = await res.json();
-            if (data.valid) {
-              setIsDevSignedIn(true);
-              return true;
-            }
-            return false;
-          } catch {
-            return false;
-          }
-        }}
-        title="Dev Portal Sign In"
-        description="Enter the developer password to access the Dev Portal"
+        onSuccess={() => setIsDevSignedIn(true)}
       />
       
       {/* Adjust Dialog */}
