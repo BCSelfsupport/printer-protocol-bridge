@@ -149,9 +149,10 @@ function SideCanvas({ side }: { side: 'A' | 'B' }) {
     <canvas
       ref={ref}
       style={{
-        // LID = square DM, fixed visual size. SIDE = 7-dot strip, fills width.
-        height: side === 'A' ? undefined : TEMPLATE_DOTS_B * DOT * 2,
-        width: 'auto',
+        // LID = displayed at quarter of its native render size (36px → 9px)
+        // for a true thumbnail. SIDE = 7-dot strip, displayed at 2× dots.
+        height: side === 'A' ? 9 : TEMPLATE_DOTS_B * DOT * 2,
+        width: side === 'A' ? 9 : 'auto',
         imageRendering: 'pixelated',
       }}
       className="rounded border border-border"
