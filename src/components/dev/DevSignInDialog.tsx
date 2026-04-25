@@ -38,6 +38,8 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showRedeem, setShowRedeem] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
 
   // On open, probe status (only meaningful for prod — local dev should never see this dialog)
   useEffect(() => {
