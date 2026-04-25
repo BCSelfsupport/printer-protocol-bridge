@@ -838,6 +838,11 @@ export const MANUAL: ManualChapter[] = [
         title: 'Joining from the phone',
         body: `Once the PWA is installed (Step 1 above):\n\n1. Open CodeSync from the phone's home screen\n2. On the License Activation screen, tap **Pair with PC**\n3. Either scan the **Step 2** QR code with the phone's camera or type the 6-character PIN\n4. Tap **Pair with PC** — the phone is now bound to the PC's license as a Companion session\n\nThe phone now shares the PC's license and can monitor printers, fulfil scan requests, and remotely control polling. To leave the pairing later, open License Activation on the phone and tap **Unpair Device**.`,
         screenshot: '/manual-screenshots/46-pair-with-pc-mobile.png',
+        callouts: [
+          { label: 'Pair with PC button', text: 'opens the camera + PIN entry; only visible on phones, not desktop browsers' },
+          { label: 'Camera view', text: 'aim at the PC Step 2 QR — pairing happens automatically on a successful read' },
+          { label: 'PIN input', text: 'manual fallback when the camera fails or the QR is too small to scan' },
+        ],
       },
       {
         id: 'connect-via-pc',
