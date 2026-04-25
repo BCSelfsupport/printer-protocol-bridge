@@ -57,6 +57,34 @@ export const MANUAL: ManualChapter[] = [
         body: `The main screen has three areas:\n\n- **Network Printers** sidebar (left) — your fleet of printers with their connection status\n- **Detail panel** (right) — shows the currently selected printer's dashboard, messages, setup, etc.\n- **Top bar** — quick access to **Pair Mobile** (QR icon — opens the mobile install + pairing dialog), Theme, Fullscreen, Feedback, Training Videos, User Manual, Help, and Diagnostics\n\nClick a printer in the sidebar to connect and view its dashboard.`,
         screenshot: '/manual-screenshots/01-printers.png',
       },
+      {
+        id: 'mobile-layout',
+        title: 'Mobile layout',
+        platforms: ['mobile'],
+        body: `On a phone or tablet the same app runs as an installable PWA. Layout differences:\n\n- **Bottom navigation** replaces the desktop sidebar — Printers, Messages, Service, Reports, More\n- **Pair with PC** is the first thing you do (Chapter 13) — the phone proxies all printer traffic through the desktop\n- **Floating Scan FAB** appears on the bottom-right whenever the PC raises a scan request (Chapter 5)\n- **Polling Pause** button lets the operator on the floor stop the PC's poller while a technician works at the printer's HMI`,
+      },
+    ],
+  },
+  {
+    id: 'platforms',
+    title: '2. Platforms & Editions',
+    intro: 'CodeSync ships in several flavors — desktop, mobile, and embedded twin-pair — that share one license and one cloud backend. This chapter explains which surface to use for which job.',
+    sections: [
+      {
+        id: 'platform-overview',
+        title: 'Where CodeSync runs',
+        body: `CodeSync is delivered as three coordinated surfaces sharing a single license:\n\n- **Windows Desktop (Electron)** — the primary application. Runs as an installer with auto-update, system-tray support, and direct LAN access to printers over TCP port 23. This is where messages are authored, jobs are run, and serial data is stored.\n- **Mobile PWA (iOS Safari / Android Chrome)** — installable from the same URL the desktop uses. After pairing with a PC (Chapter 13) the phone shares the desktop's license and proxies all printer commands through it. Best for floor walks, scanning, and remote pause.\n- **Browser / Lovable Cloud preview** — the same web build, useful for demos and screenshots. No printer access; designed for evaluation and training.\n\n**One license, many devices.** A single product key activates the desktop and any number of paired phones. License state lives in Lovable Cloud (Supabase), so revoking a license from one place revokes it everywhere.`,
+      },
+      {
+        id: 'platform-tiers',
+        title: 'Editions / tiers at a glance',
+        body: `Every license is one of five tiers. The badge under the Activate button on the Printers screen shows the active tier.\n\n- **DEMO** — 30-day full-feature trial. Watermark on previews and printed messages. Auto-locks at expiry.\n- **LITE** — single printer, USB / Serial only, no network features.\n- **FULL** — unlimited network printers, all message and reporting features.\n- **DATABASE** — Full + Variable Data Printing (CSV / Hotfolder / REST / ODBC), unlocks the Data Source screen and Print Jobs.\n- **TWINCODE** — bonded 2-printer pair with catalog-fed serials. Unlocks the Twin Code screen and the catalog ledger (Chapter 16).\n\nTier gating is enforced both client-side (UI hides screens you can't use) and server-side (the cloud refuses to issue scan requests, twin code ledgers, or fleet telemetry pushes for tiers that don't include them).`,
+      },
+      {
+        id: 'platform-pick',
+        title: 'Which surface for which task?',
+        body: `| I want to… | Use |\n|---|---|\n| Author or edit a print message | Desktop |\n| Run a Print Job from a CSV | Desktop |\n| Scan a barcode into a message | Mobile (paired) — or a USB scanner on the desktop |\n| Walk the floor and check printer status | Mobile |\n| Pause the desktop's polling so I can use the printer's HMI | Mobile |\n| Run a bonded twin-pair production line | Desktop (Twin Code screen) |\n| Monitor printers across multiple sites | Desktop or mobile (Fleet Telemetry) |\n| Diagnose a connection problem | Desktop (Diagnostics page) |\n\nIf in doubt: **author on the desktop, observe and scan from the phone.**`,
+      },
     ],
   },
   {
