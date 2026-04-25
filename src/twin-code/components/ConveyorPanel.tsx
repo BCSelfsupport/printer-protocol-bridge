@@ -95,11 +95,15 @@ export function ConveyorPanel() {
     }
     conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial));
     setLiveMode(true);
+    const seedNote = res.seededA || res.seededB
+      ? ` · Seeded ${[res.seededA && 'LID', res.seededB && 'SIDE'].filter(Boolean).join(' & ')}`
+      : '';
     toast({
       title: 'LIVE bonded mode active',
       description:
         `A: ${pair.a?.messageName ?? '(current msg)'} f${pair.a?.fieldIndex ?? '2'} ^${pair.a?.subcommand ?? 'BD'} · ` +
-        `B: ${pair.b?.messageName ?? '(current msg)'} f${pair.b?.fieldIndex ?? '2'} ^${pair.b?.subcommand ?? 'TD'}`,
+        `B: ${pair.b?.messageName ?? '(current msg)'} f${pair.b?.fieldIndex ?? '2'} ^${pair.b?.subcommand ?? 'TD'}` +
+        seedNote,
     });
   };
 
