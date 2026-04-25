@@ -128,6 +128,7 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
       messageName: slotA.messageName.trim(),
       fieldIndex: Number(slotA.fieldIndex),
       subcommand: slotA.subcommand,
+      autoCreate: slotA.autoCreate,
     };
     const b: TwinPrinterBinding = {
       kind: "ip",
@@ -137,6 +138,7 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
       messageName: slotB.messageName.trim(),
       fieldIndex: Number(slotB.fieldIndex),
       subcommand: slotB.subcommand,
+      autoCreate: slotB.autoCreate,
     };
     twinPairStore.setPair(a, b);
     onOpenChange(false);
