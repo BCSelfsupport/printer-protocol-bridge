@@ -49,6 +49,7 @@ import { FleetMonitoringPanel } from '@/components/dev/FleetMonitoringPanel';
 import { FeedbackPanel } from '@/components/dev/FeedbackPanel';
 import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
 import { ParameterSnapshot } from '@/components/dev/ParameterSnapshot';
+import { DevInvitePanel } from '@/components/dev/DevInvitePanel';
 import { TwinPairBindDialog } from '@/twin-code/components/TwinPairBindDialog';
 import { useTwinPair } from '@/twin-code/twinPairStore';
 import { useLicense, type LicenseTier } from '@/contexts/LicenseContext';
@@ -136,7 +137,7 @@ interface DevPanelProps {
 
 export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinterPort, connectedPrinterId, defaultTab, showToggleButton = true, recorderState, recorderActions }: DevPanelProps) {
   const isMobile = useIsMobile();
-  const { tier: activeTier, devTierOverride, setDevTierOverride } = useLicense();
+  const { tier: activeTier, devTierOverride, setDevTierOverride, isOwnerDeveloper } = useLicense();
   
   // Resolve the correct emulator instance for the connected printer
   const getConnectedEmulator = () => {
@@ -494,6 +495,12 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   <Activity className="w-3.5 h-3.5" />
                   Twin Code
                 </TabsTrigger>
+                {isOwnerDeveloper && (
+                  <TabsTrigger value="devs" className="text-xs gap-1 flex-shrink-0">
+                    <Shield className="w-3.5 h-3.5" />
+                    Devs
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
  
@@ -1104,6 +1111,12 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                 </div>
               </div>
             </TabsContent>
+
+            {isOwnerDeveloper && (
+              <TabsContent value="devs" className="flex-1 overflow-auto m-0">
+                <DevInvitePanel />
+              </TabsContent>
+            )}
           </Tabs>
 
           {/* Build Status & Push Update Footer */}

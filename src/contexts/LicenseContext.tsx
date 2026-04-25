@@ -37,6 +37,10 @@ interface LicenseContextValue extends LicenseState {
   /** TwinCode (bonded 2-printer mode) — only the dedicated 'twincode' tier or 'dev' unlocks it. */
   canTwinCode: boolean;
   isDemo: boolean;
+  /** True if this license key is registered in developer_licenses (dev-mode bypass returns true). */
+  isDeveloper: boolean;
+  /** True if this license key is the master owner. */
+  isOwnerDeveloper: boolean;
 }
 
 export type { CompanionDevice };
@@ -340,8 +344,49 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   const canTwinCode = effectiveTier === 'twincode' || effectiveTier === 'dev';
   const isDemo = effectiveTier === 'demo';
 
+  // Developer-license probe — quietly check whether this product key is in
+  // developer_licenses. Result is cached for the session.
+  const [isDeveloper, setIsDeveloper] = useState(false);
+  const [isOwnerDeveloper, setIsOwnerDeveloper] = useState(false);
+  useEffect(() => {
+    // Local dev (vite) always counts as developer.
+    if (import.meta.env.DEV) {
+      setIsDeveloper(true);
+      setIsOwnerDeveloper(true);
+      return;
+    }
+    if (!state.productKey) {
+      setIsDeveloper(false);
+      setIsOwnerDeveloper(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-dev-access`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+            body: JSON.stringify({ product_key: state.productKey }),
+          },
+        );
+        const data = await res.json();
+        if (cancelled) return;
+        setIsDeveloper(!!data.is_developer);
+        setIsOwnerDeveloper(!!data.is_owner);
+      } catch {
+        if (!cancelled) {
+          setIsDeveloper(false);
+          setIsOwnerDeveloper(false);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [state.productKey]);
+
   return (
-    <LicenseContext.Provider value={{ ...state, tier: effectiveTier, activate, deactivate, pairAsCompanion, generatePairingCode, listPairedCompanions, revokeCompanion, setDevTierOverride, devTierOverride, canNetwork, canDatabase, canTwinCode, isDemo }}>
+    <LicenseContext.Provider value={{ ...state, tier: effectiveTier, activate, deactivate, pairAsCompanion, generatePairingCode, listPairedCompanions, revokeCompanion, setDevTierOverride, devTierOverride, canNetwork, canDatabase, canTwinCode, isDemo, isDeveloper, isOwnerDeveloper }}>
       {children}
     </LicenseContext.Provider>
   );
