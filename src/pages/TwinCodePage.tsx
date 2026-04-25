@@ -123,6 +123,7 @@ export default function TwinCodePage() {
         handleStop={handleStop}
         handleClear={handleClear}
         handleConfigChange={handleConfigChange}
+        handleResetConfig={handleResetConfig}
         handleExportCSV={handleExportCSV}
         handleExportJSON={handleExportJSON}
         handleImport={handleImport}
@@ -136,7 +137,7 @@ function TwinCodePageInner(props: any) {
   const {
     samples, running, config, fileInputRef, bindOpen, setBindOpen,
     pair, isBound, view, setView, handleStart, handleStop, handleClear,
-    handleConfigChange, handleExportCSV, handleExportJSON, handleImport,
+    handleConfigChange, handleResetConfig, handleExportCSV, handleExportJSON, handleImport,
   } = props;
   return (
     <div className="min-h-screen bg-background text-foreground">
