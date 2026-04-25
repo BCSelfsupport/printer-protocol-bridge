@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil, RotateCcw, Power, FileText, Database, SlidersHorizontal, Brush, Settings, Wrench, Filter, Cable } from 'lucide-react';
+import { Key, HelpCircle, Printer as PrinterIcon, Droplets, Palette, Play, Square, Plus, Pencil, RotateCcw, Power, FileText, Database, SlidersHorizontal, Brush, Settings, Wrench, Filter, Cable, Lock } from 'lucide-react';
+import { useLicense } from '@/contexts/LicenseContext';
 import { Wifi } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
