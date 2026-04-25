@@ -3,22 +3,46 @@ import { Printer } from '@/types/printer';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 
 const STORAGE_KEY = 'codesync-printers';
+const REMOVED_EMULATED_KEY = 'codesync-printers-removed-emulated';
+
+// Track emulated printer IP:port pairs the user has explicitly removed,
+// so they don't get re-added by the auto-sync loop.
+const getRemovedEmulatedKeys = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem(REMOVED_EMULATED_KEY);
+    if (raw) return new Set(JSON.parse(raw));
+  } catch (e) {
+    console.error('Failed to load removed emulated printers:', e);
+  }
+  return new Set();
+};
+
+const saveRemovedEmulatedKeys = (set: Set<string>) => {
+  try {
+    localStorage.setItem(REMOVED_EMULATED_KEY, JSON.stringify(Array.from(set)));
+  } catch (e) {
+    console.error('Failed to save removed emulated printers:', e);
+  }
+};
 
 // Get default printers from emulator when enabled, or single default when disabled
 const getDefaultPrinters = (): Printer[] => {
   // Check if we have emulated printers available
   const emulatedPrinters = multiPrinterEmulator.getEmulatedPrinters();
+  const removed = getRemovedEmulatedKeys();
   if (emulatedPrinters.length > 0) {
-    return emulatedPrinters.map(ep => ({
-      id: ep.id,
-      name: ep.name,
-      ipAddress: ep.ipAddress,
-      port: ep.port,
-      isConnected: false,
-      isAvailable: true,
-      status: ep.status,
-      hasActiveErrors: false,
-    }));
+    return emulatedPrinters
+      .filter(ep => !removed.has(`${ep.ipAddress}:${ep.port}`))
+      .map(ep => ({
+        id: ep.id,
+        name: ep.name,
+        ipAddress: ep.ipAddress,
+        port: ep.port,
+        isConnected: false,
+        isAvailable: true,
+        status: ep.status,
+        hasActiveErrors: false,
+      }));
   }
   
   // Default single printer when emulator is off
@@ -111,10 +135,11 @@ export function usePrinterStorage() {
           return p;
         });
         
-        // Add any missing emulated printers
+        // Add any missing emulated printers (skip those the user explicitly removed)
+        const removed = getRemovedEmulatedKeys();
         emulatedConfigs.forEach(cfg => {
           const key = `${cfg.ipAddress}:${cfg.port}`;
-          if (!existingByKey.has(key)) {
+          if (!existingByKey.has(key) && !removed.has(key)) {
             const instance = multiPrinterEmulator.getInstanceByIp(cfg.ipAddress, cfg.port);
             if (instance) {
               const state = instance.getState();
@@ -243,7 +268,17 @@ export function usePrinterStorage() {
   }, []);
 
   const removePrinter = useCallback((printerId: number) => {
-    setPrinters(prev => prev.filter(p => p.id !== printerId));
+    setPrinters(prev => {
+      const target = prev.find(p => p.id === printerId);
+      // If this is an emulated printer, remember the removal so the auto-sync
+      // loop doesn't immediately re-add it.
+      if (target && multiPrinterEmulator.isEmulatedIp(target.ipAddress, target.port)) {
+        const removed = getRemovedEmulatedKeys();
+        removed.add(`${target.ipAddress}:${target.port}`);
+        saveRemovedEmulatedKeys(removed);
+      }
+      return prev.filter(p => p.id !== printerId);
+    });
   }, []);
 
   const updatePrinter = useCallback((printerId: number, updates: Partial<Printer>) => {
