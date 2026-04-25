@@ -150,6 +150,7 @@ function SortablePrinterItem({
   onExpiryChange?: (printerId: number, days: number) => void;
   isUpdatingExpiry?: boolean;
   messageExpiryDays?: number;
+  twinPairRole?: 'A' | 'B' | null;
 }) {
   const {
     attributes,
