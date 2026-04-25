@@ -408,7 +408,7 @@ export function Dashboard({
 
             {[
               { id: 'messages' as const, label: 'Messages', icon: <FileText className="w-5 h-5 md:w-6 md:h-6" /> },
-              { id: 'datasource' as const, label: 'Data', icon: <Database className="w-5 h-5 md:w-6 md:h-6" /> },
+              { id: 'datasource' as const, label: 'Data', icon: canDatabase ? <Database className="w-5 h-5 md:w-6 md:h-6" /> : <Lock className="w-5 h-5 md:w-6 md:h-6" />, disabled: !canDatabase },
               { id: 'adjust' as const, label: 'Adjust', icon: <SlidersHorizontal className="w-5 h-5 md:w-6 md:h-6" /> },
               { id: 'wirecable' as const, label: 'Cable', icon: <Cable className="w-5 h-5 md:w-6 md:h-6" /> },
               { id: 'clean' as const, label: 'Clean', icon: <Brush className="w-5 h-5 md:w-6 md:h-6" />, disabled: true },
