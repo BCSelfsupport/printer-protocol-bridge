@@ -241,6 +241,12 @@ export function PrinterListItem({
                   <Link className="w-2.5 h-2.5" /> SLAVE
                 </span>
               )}
+              {twinPairRole && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 bg-gradient-to-r from-blue-500/20 to-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <Link2 className="w-2.5 h-2.5" />
+                  TWIN {twinPairRole}{twinPairRole === 'A' ? ' · LID' : ' · SIDE'}
+                </span>
+              )}
             </div>
             <div className={`text-xs font-mono truncate ${subTextColor}`}>
               {printer.ipAddress}:{printer.port}
