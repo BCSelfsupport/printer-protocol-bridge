@@ -19,8 +19,9 @@
  *     vs. configured drift is caught loud, not silent.
  */
 import { renderText } from '@/lib/dotMatrixFonts';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTwinPair } from '../twinPairStore';
+import { Slider } from '@/components/ui/slider';
 // @ts-ignore — bwip-js ships its own types but resolution differs across bundlers
 import bwipjs from 'bwip-js';
 
@@ -36,6 +37,8 @@ interface SidePreviewProps {
   bound: boolean;
   /** Friendly printer label from the binding (IP, name). */
   printerLabel?: string;
+  /** Operator-controlled preview scale multiplier (1 = baseline). */
+  scale: number;
 }
 
 /**
@@ -60,7 +63,7 @@ const TEMPLATE_DOTS_B = 7;  // SIDE seed runs on a 7-dot template (Standard 7×5
  * operator can visually confirm A's DM and B's text are tied to the same
  * data — exactly how the dispatcher feeds them in production.
  */
-function SideCanvas({ side }: { side: 'A' | 'B' }) {
+function SideCanvas({ side, scale }: { side: 'A' | 'B'; scale: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -145,14 +148,17 @@ function SideCanvas({ side }: { side: 'A' | 'B' }) {
     }
   }, [side]);
 
+  // Baseline display sizes — Side A is a 16×16 DM rendered as a square thumbnail,
+  // Side B is a 13-char dot-matrix strip. Multiplying by `scale` lets the operator
+  // dial both previews together while keeping their proportional relationship.
+  const baseA = 80;
+  const baseB = TEMPLATE_DOTS_B * 6;
   return (
     <canvas
       ref={ref}
       style={{
-        // Preview thumbnail — small on purpose, this is a glance check.
-        // Scale both sides together so they stay visually paired.
-        height: side === 'A' ? 80 : TEMPLATE_DOTS_B * 6,
-        width: side === 'A' ? 80 : 'auto',
+        height: side === 'A' ? baseA * scale : baseB * scale,
+        width: side === 'A' ? baseA * scale : 'auto',
         imageRendering: 'pixelated',
       }}
       className="rounded border border-border"
@@ -167,6 +173,7 @@ function SideCard({
   subcommand,
   bound,
   printerLabel,
+  scale,
 }: SidePreviewProps) {
   const expected = side === 'A' ? 'DataMatrix 16×16 (^BD)' : 'Text 7×5, 13 chars (^TD)';
   const defaultName = side === 'A' ? 'LID' : 'SIDE';
@@ -203,7 +210,7 @@ function SideCard({
         </span>
       </div>
 
-      <SideCanvas side={side} />
+      <SideCanvas side={side} scale={scale} />
 
       <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground">
         <span>Shape: {expected}</span>
@@ -217,37 +224,80 @@ function SideCard({
  * Full bonded-pair preview strip — drop in above the conveyor view so the
  * operator sees both selected messages at a glance.
  */
+const SCALE_STORAGE_KEY = 'twinCode.previewScale';
+
 export function TwinMessagePreview() {
   const pair = useTwinPair();
   const aBound = !!pair.a;
   const bBound = !!pair.b;
+
+  // Persist the operator's preferred preview size — this is a personal display
+  // preference, not a production setting, so localStorage is the right scope.
+  const [scale, setScale] = useState<number>(() => {
+    if (typeof window === 'undefined') return 1;
+    const raw = window.localStorage.getItem(SCALE_STORAGE_KEY);
+    const n = raw ? parseFloat(raw) : NaN;
+    return Number.isFinite(n) && n >= 0.5 && n <= 3 ? n : 1;
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SCALE_STORAGE_KEY, String(scale));
+    } catch {
+      // Ignore quota / private-mode failures — scale just won't persist.
+    }
+  }, [scale]);
+
   return (
-    <div className="rounded-md border border-border bg-card/60 p-3">
-      <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Selected messages
-        </h3>
-        <span className="text-[10px] text-muted-foreground">
-          Visual cross-check — must match the message shown on each printer's HMI before LIVE.
-        </span>
+    <div className="flex gap-3 rounded-md border border-border bg-card/60 p-3">
+      <div className="flex-1">
+        <div className="mb-2 flex items-baseline justify-between gap-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Selected messages
+          </h3>
+          <span className="text-[10px] text-muted-foreground">
+            Visual cross-check — must match the message shown on each printer's HMI before LIVE.
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <SideCard
+            side="A"
+            bound={aBound}
+            scale={scale}
+            messageName={pair.a?.messageName}
+            fieldIndex={pair.a?.fieldIndex}
+            subcommand={pair.a?.subcommand}
+            printerLabel={pair.a ? `${pair.a.name || 'Lid'} · ${pair.a.ip}:${pair.a.port}` : undefined}
+          />
+          <SideCard
+            side="B"
+            bound={bBound}
+            scale={scale}
+            messageName={pair.b?.messageName}
+            fieldIndex={pair.b?.fieldIndex}
+            subcommand={pair.b?.subcommand}
+            printerLabel={pair.b ? `${pair.b.name || 'Side'} · ${pair.b.ip}:${pair.b.port}` : undefined}
+          />
+        </div>
       </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <SideCard
-          side="A"
-          bound={aBound}
-          messageName={pair.a?.messageName}
-          fieldIndex={pair.a?.fieldIndex}
-          subcommand={pair.a?.subcommand}
-          printerLabel={pair.a ? `${pair.a.name || 'Lid'} · ${pair.a.ip}:${pair.a.port}` : undefined}
-        />
-        <SideCard
-          side="B"
-          bound={bBound}
-          messageName={pair.b?.messageName}
-          fieldIndex={pair.b?.fieldIndex}
-          subcommand={pair.b?.subcommand}
-          printerLabel={pair.b ? `${pair.b.name || 'Side'} · ${pair.b.ip}:${pair.b.port}` : undefined}
-        />
+
+      {/* Vertical scale slider — Paintbrush-style "grab the corner" affordance.
+          Lives on the right edge so it's always reachable without disturbing
+          the preview grid layout. */}
+      <div className="flex w-8 flex-col items-center gap-2 border-l border-border pl-3">
+        <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Size</span>
+        <div className="flex h-32 items-center">
+          <Slider
+            orientation="vertical"
+            min={0.5}
+            max={3}
+            step={0.1}
+            value={[scale]}
+            onValueChange={([v]) => setScale(v)}
+            className="h-full"
+          />
+        </div>
+        <span className="font-mono text-[9px] text-muted-foreground">{scale.toFixed(1)}×</span>
       </div>
     </div>
   );
