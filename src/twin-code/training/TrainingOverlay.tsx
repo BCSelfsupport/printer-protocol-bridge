@@ -16,7 +16,7 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, X, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Sparkles, Pause, Play } from 'lucide-react';
 import { useTraining } from './TrainingProvider';
 
 // Padding around the spotlight cutout so the highlighted element has air.
