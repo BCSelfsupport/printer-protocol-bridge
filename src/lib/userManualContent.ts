@@ -10,6 +10,8 @@ export interface ManualSection {
   body: string; // markdown-lite (paragraphs, **bold**, - bullets, ## subheadings)
   screenshot?: string; // path under /manual-screenshots/
   callouts?: { label: string; text: string }[];
+  /** Platforms this section applies to. Omit = all platforms. */
+  platforms?: Platform[];
 }
 
 export interface ManualChapter {
@@ -17,6 +19,8 @@ export interface ManualChapter {
   title: string;
   intro: string;
   sections: ManualSection[];
+  /** Platforms this whole chapter applies to. Omit = all platforms. */
+  platforms?: Platform[];
 }
 
 export const MANUAL_VERSION = 'v2.0';
