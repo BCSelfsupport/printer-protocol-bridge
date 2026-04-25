@@ -77,6 +77,38 @@ export function TrainingOverlay() {
 
   if (!stage || !step) return null;
 
+  // Paused state — render only a small floating pill so the operator can
+  // freely interact with the underlying UI to try the current step.
+  if (paused) {
+    return (
+      <div className="fixed bottom-6 right-6 z-[100] pointer-events-auto">
+        <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-card px-3 py-2 shadow-2xl">
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          <div className="flex flex-col leading-tight">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+              Training paused
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              {stage.title} · step {stepIndex + 1}/{stepCount}
+            </span>
+          </div>
+          <Button size="sm" onClick={resume} className="h-7 gap-1 text-xs">
+            <Play className="h-3.5 w-3.5" /> Resume
+          </Button>
+          <button
+            type="button"
+            onClick={exit}
+            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Exit training"
+            title="Exit training"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const hasTarget = step.target !== null && targetRect !== null;
   const tooltipPos = hasTarget && targetRect
     ? clampTooltip(targetRect, step.placement ?? 'bottom')
