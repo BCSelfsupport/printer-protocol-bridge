@@ -756,6 +756,11 @@ export const MANUAL: ManualChapter[] = [
         title: 'Add Database Connection wizard',
         body: `Click **Wizard** to walk through a 4-step import:\n\n1. **Type** — choose CSV/Text File or METRC/Retail ID\n2. **File** — name the source and drop your CSV; METRC exports are auto-mapped\n3. **Columns** — confirm detected column types\n4. **Review** — confirm and save\n\nThe wizard handles encoding detection, header normalization, and METRC's Unit Code / Retail ID column auto-mapping.`,
         screenshot: '/manual-screenshots/19-wizard-step1.png',
+        callouts: [
+          { label: 'Step indicator', text: 'shows your position in the 4-step flow (Type → File → Columns → Review)' },
+          { label: 'CSV / Text File', text: 'generic delimited file import — works for any column layout' },
+          { label: 'METRC / Retail ID', text: 'optimised path for cannabis tracking exports — pre-maps Unit Code and Retail ID columns' },
+        ],
       },
       {
         id: 'wizard-file',
