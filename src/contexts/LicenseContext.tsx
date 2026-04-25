@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { toast } from 'sonner';
 
-export type LicenseTier = 'lite' | 'full' | 'database' | 'demo' | 'dev';
+export type LicenseTier = 'lite' | 'full' | 'database' | 'demo' | 'dev' | 'twincode';
 
 interface LicenseState {
   tier: LicenseTier;
@@ -31,6 +31,8 @@ interface LicenseContextValue extends LicenseState {
   /** Feature gating helpers */
   canNetwork: boolean;
   canDatabase: boolean;
+  /** TwinCode (bonded 2-printer mode) — only the dedicated 'twincode' tier or 'dev' unlocks it. */
+  canTwinCode: boolean;
   isDemo: boolean;
 }
 
@@ -324,12 +326,14 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     setState({ tier: 'lite', isActivated: false, productKey: null, error: null, isLoading: false, isCompanion: false, companionSessionId: null });
   };
 
+  // TwinCode and dev tiers also get full network access (they manage paired printers).
   const canNetwork = state.tier !== 'lite';
   const canDatabase = state.tier === 'database' || state.tier === 'dev';
+  const canTwinCode = state.tier === 'twincode' || state.tier === 'dev';
   const isDemo = state.tier === 'demo';
 
   return (
-    <LicenseContext.Provider value={{ ...state, activate, deactivate, pairAsCompanion, generatePairingCode, listPairedCompanions, revokeCompanion, canNetwork, canDatabase, isDemo }}>
+    <LicenseContext.Provider value={{ ...state, activate, deactivate, pairAsCompanion, generatePairingCode, listPairedCompanions, revokeCompanion, canNetwork, canDatabase, canTwinCode, isDemo }}>
       {children}
     </LicenseContext.Provider>
   );
