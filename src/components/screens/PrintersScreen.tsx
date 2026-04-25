@@ -270,7 +270,20 @@ export function PrintersScreen({
   const [devTaps, setDevTaps] = useState<number[]>([]);
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
-  const { canNetwork, canDatabase, tier, isActivated } = useLicense();
+  const { canNetwork, canDatabase, canTwinCode, tier, isActivated } = useLicense();
+  const twinPair = useTwinPair();
+
+  // TwinCode pair resolution: match the bound IPs back to actual Printer records.
+  const pairPrinters = useMemo(() => {
+    if (!canTwinCode || !twinPair.a || !twinPair.b) return null;
+    const a = printers.find(p => p.ipAddress === twinPair.a!.ip);
+    const b = printers.find(p => p.ipAddress === twinPair.b!.ip);
+    if (!a || !b) return null;
+    return { a, b };
+  }, [canTwinCode, twinPair.a, twinPair.b, printers]);
+
+  // When a TwinCode pair is selected, the right pane swaps to the embedded TwinCode view.
+  const [pairSelected, setPairSelected] = useState(false);
 
   // Lite tier: only show the first printer
   const visiblePrinters = tier === 'lite' ? printers.slice(0, 1) : printers;
