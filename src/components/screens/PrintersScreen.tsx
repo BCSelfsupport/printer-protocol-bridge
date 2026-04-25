@@ -566,162 +566,200 @@ export function PrintersScreen({
         {/* Printer List with ScrollArea */}
         <ScrollArea className="flex-1">
           <div className="p-2 pr-3 space-y-2">
-            {/* TwinCode Bound Pair card — only when license allows AND a pair is bound to two known printers */}
-            {pairPrinters && (
-              <button
-                type="button"
-                onClick={() => setPairSelected(true)}
-                className={`w-full text-left rounded-lg border p-3 transition-colors ${
-                  pairSelected
-                    ? 'border-emerald-500/70 bg-gradient-to-r from-blue-500/15 via-emerald-500/10 to-emerald-500/15 shadow-lg shadow-emerald-500/10'
-                    : 'border-slate-700 bg-slate-800/40 hover:border-emerald-500/50 hover:bg-slate-800/70'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-md bg-gradient-to-br from-blue-500/30 to-emerald-500/30 flex items-center justify-center">
-                    <Link2 className="w-3.5 h-3.5 text-emerald-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-1 leading-none">
-                      <span className="text-xs font-bold italic text-blue-400">Twin</span>
-                      <span className="text-xs font-bold italic text-emerald-400">Code</span>
-                      <span className="text-[8px] text-slate-500">™</span>
-                      <span className="ml-1 text-[10px] text-slate-400">Bound Pair</span>
-                    </div>
-                    <div className="text-[10px] text-slate-500 mt-0.5 truncate">
-                      {pairPrinters.a.name} ↔ {pairPrinters.b.name}
-                    </div>
-                  </div>
-                  {pairSelected && (
-                    <span className="text-[9px] font-semibold uppercase tracking-wider text-emerald-400">Active</span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-1.5 text-[10px]">
-                  <div className={`rounded px-2 py-1 border flex items-center gap-1.5 ${pairPrinters.a.isAvailable ? 'border-blue-500/40 bg-blue-500/10 text-blue-200' : 'border-slate-700 bg-slate-900/50 text-slate-500'}`}>
-                    <span className="w-4 h-4 rounded-full bg-blue-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">A</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold leading-tight">Lid · {pairPrinters.a.name}</div>
-                      <div className="font-mono leading-tight opacity-80">{pairPrinters.a.ipAddress}</div>
-                    </div>
-                  </div>
-                  <div className={`rounded px-2 py-1 border flex items-center gap-1.5 ${pairPrinters.b.isAvailable ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200' : 'border-slate-700 bg-slate-900/50 text-slate-500'}`}>
-                    <span className="w-4 h-4 rounded-full bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">B</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold leading-tight">Side · {pairPrinters.b.name}</div>
-                      <div className="font-mono leading-tight opacity-80">{pairPrinters.b.ipAddress}</div>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            )}
-
-            {/* TwinCode license but no pair bound yet — hint card with action */}
-            {canTwinCode && !pairPrinters && (
-              <div className="rounded-lg border border-dashed border-emerald-500/40 bg-emerald-500/5 p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <Link2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-xs font-semibold text-emerald-300">TwinCode pair not bound</span>
-                </div>
-                <p className="text-[10px] text-slate-400 leading-relaxed mb-2">
-                  Bind two printers as a Lid/Side pair on the TwinCode page. Once bound, the pair appears here and selecting it opens the TwinCode workspace.
-                </p>
-                <Button
-                  size="sm"
-                  className="w-full h-7 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
-                  onClick={() => navigate('/twin-code')}
-                >
-                  <Link2 className="w-3 h-3 mr-1.5" />
-                  Configure TwinCode pair
-                </Button>
-              </div>
-            )}
-
-            {visiblePrinters.length === 0 ? (
-              <div className="flex flex-col items-center justify-center text-slate-500 py-8">
-                <PrinterIcon className="w-10 h-10 mb-3 opacity-50" />
-                <p className="font-medium text-sm">No printers configured</p>
-                <p className="text-xs text-center mt-1">
-                  Click "Add" to add your first device
-                </p>
-              </div>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={visiblePrinters.map(p => p.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {visiblePrinters.map((printer) => {
-                    // Compute original message expiry days from cached content
-                    const msgName = printer.role === 'slave'
-                      ? (masterMessageMap.get(printer.id) || printer.currentMessage)
-                      : (printer.currentMessage || masterMessageMap.get(printer.id));
-                    // Try this printer → master → connected printer → no override (current context)
-                    const msgContent = msgName && getMessageContent
-                      ? (getMessageContent(msgName, printer.id)
-                        || (printer.masterId ? getMessageContent(msgName, printer.masterId) : null)
-                        || (connectedPrinter ? getMessageContent(msgName, connectedPrinter.id) : null)
-                        || getMessageContent(msgName))
-                      : null;
-                    const expiryField = msgContent?.fields?.find(f => (
-                      f.type === 'date'
-                      && (
-                        f.autoCodeFieldType?.startsWith('date_expiry')
-                        || (f.autoCodeExpiryDays ?? 0) > 0
-                      )
-                    ));
-                    const msgExpiry = expiryField
-                      ? (expiryField.autoCodeExpiryDays ?? 0)
-                      : undefined;
-
-                    return (
-                    <SortablePrinterItem
-                      key={printer.id}
-                      printer={printer}
-                      isSelected={selectedPrinter?.id === printer.id}
-                      onSelect={() => handlePrinterClick(printer)}
-                      onConnect={() => onConnect(printer)}
-                      onEdit={() => handleEditPrinter(printer)}
-                      onService={() => handleOpenService(printer)}
-                      showConnectButton={!showRightPanel}
-                      isConnected={connectedPrinter?.id === printer.id}
-                      compact={!!showRightPanel}
-                      countdownType={getCountdown ? getCountdown(printer.id).type : (connectedPrinter?.id === printer.id ? countdownType : null)}
-                      countdownSeconds={getCountdown ? getCountdown(printer.id).seconds : (connectedPrinter?.id === printer.id ? countdownSeconds : null)}
-                      isMobile={isMobile}
-                      syncGroupIndex={syncGroupMap.get(printer.id)}
-                      slaveCount={printer.role === 'master' ? slaveCountMap.get(printer.id) ?? 0 : undefined}
-                      onSync={printer.role === 'master' && onSyncMaster ? () => onSyncMaster(printer.id) : undefined}
-                      onBroadcast={printer.role === 'master' && onBroadcastMessage ? () => {
-                        setBroadcastMaster(printer);
-                        setBroadcastDialogOpen(true);
-                      } : undefined}
-                      streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
-                      masterMessage={masterMessageMap.get(printer.id)}
-                      onExpiryChange={onSlaveExpiryChange ? async (printerId, days) => {
-                        setUpdatingExpiryPrinterId(printerId);
-                        try {
-                          await onSlaveExpiryChange(printerId, days);
-                        } finally {
-                          setUpdatingExpiryPrinterId(null);
-                        }
-                      } : undefined}
-                      isUpdatingExpiry={updatingExpiryPrinterId === printer.id}
-                      messageExpiryDays={msgExpiry}
-                      twinPairRole={
-                        pairPrinters && pairPrinters.a.id === printer.id ? 'A'
-                        : pairPrinters && pairPrinters.b.id === printer.id ? 'B'
-                        : null
+            {(() => {
+              // Render a single printer item — used both inside the bound-pair group
+              // and in the main DnD list, so we don't duplicate the long prop list.
+              const renderPrinterItem = (printer: Printer) => {
+                const msgName = printer.role === 'slave'
+                  ? (masterMessageMap.get(printer.id) || printer.currentMessage)
+                  : (printer.currentMessage || masterMessageMap.get(printer.id));
+                const msgContent = msgName && getMessageContent
+                  ? (getMessageContent(msgName, printer.id)
+                    || (printer.masterId ? getMessageContent(msgName, printer.masterId) : null)
+                    || (connectedPrinter ? getMessageContent(msgName, connectedPrinter.id) : null)
+                    || getMessageContent(msgName))
+                  : null;
+                const expiryField = msgContent?.fields?.find(f => (
+                  f.type === 'date'
+                  && (
+                    f.autoCodeFieldType?.startsWith('date_expiry')
+                    || (f.autoCodeExpiryDays ?? 0) > 0
+                  )
+                ));
+                const msgExpiry = expiryField ? (expiryField.autoCodeExpiryDays ?? 0) : undefined;
+                return (
+                  <SortablePrinterItem
+                    key={printer.id}
+                    printer={printer}
+                    isSelected={selectedPrinter?.id === printer.id}
+                    onSelect={() => handlePrinterClick(printer)}
+                    onConnect={() => onConnect(printer)}
+                    onEdit={() => handleEditPrinter(printer)}
+                    onService={() => handleOpenService(printer)}
+                    showConnectButton={!showRightPanel}
+                    isConnected={connectedPrinter?.id === printer.id}
+                    compact={!!showRightPanel}
+                    countdownType={getCountdown ? getCountdown(printer.id).type : (connectedPrinter?.id === printer.id ? countdownType : null)}
+                    countdownSeconds={getCountdown ? getCountdown(printer.id).seconds : (connectedPrinter?.id === printer.id ? countdownSeconds : null)}
+                    isMobile={isMobile}
+                    syncGroupIndex={syncGroupMap.get(printer.id)}
+                    slaveCount={printer.role === 'master' ? slaveCountMap.get(printer.id) ?? 0 : undefined}
+                    onSync={printer.role === 'master' && onSyncMaster ? () => onSyncMaster(printer.id) : undefined}
+                    onBroadcast={printer.role === 'master' && onBroadcastMessage ? () => {
+                      setBroadcastMaster(printer);
+                      setBroadcastDialogOpen(true);
+                    } : undefined}
+                    streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
+                    masterMessage={masterMessageMap.get(printer.id)}
+                    onExpiryChange={onSlaveExpiryChange ? async (printerId, days) => {
+                      setUpdatingExpiryPrinterId(printerId);
+                      try {
+                        await onSlaveExpiryChange(printerId, days);
+                      } finally {
+                        setUpdatingExpiryPrinterId(null);
                       }
-                    />
-                    );
-                  })}
-                </SortableContext>
-              </DndContext>
-            )}
+                    } : undefined}
+                    isUpdatingExpiry={updatingExpiryPrinterId === printer.id}
+                    messageExpiryDays={msgExpiry}
+                    twinPairRole={
+                      pairPrinters && pairPrinters.a.id === printer.id ? 'A'
+                      : pairPrinters && pairPrinters.b.id === printer.id ? 'B'
+                      : null
+                    }
+                  />
+                );
+              };
+
+              const pairIds = new Set<number>();
+              if (pairPrinters) {
+                pairIds.add(pairPrinters.a.id);
+                pairIds.add(pairPrinters.b.id);
+              }
+              const nonPairPrinters = visiblePrinters.filter(p => !pairIds.has(p.id));
+
+              return (
+                <>
+                  {/* TwinCode Bound Pair — strong-bordered collapsible group containing the
+                      pair header card AND its two member printer cards. */}
+                  {pairPrinters && (
+                    <div className="rounded-xl border-2 border-emerald-500/60 bg-gradient-to-b from-emerald-500/5 to-blue-500/5 shadow-lg shadow-emerald-500/10 overflow-hidden">
+                      <div className={`transition-colors ${pairSelected ? 'bg-gradient-to-r from-blue-500/15 via-emerald-500/10 to-emerald-500/15' : ''}`}>
+                        <div className="flex items-stretch">
+                          {/* Pair header — clicking the body selects the pair (opens TwinCode workspace). */}
+                          <button
+                            type="button"
+                            onClick={() => setPairSelected(true)}
+                            className="flex-1 text-left p-3 hover:bg-slate-800/30 transition-colors"
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-blue-500/30 to-emerald-500/30 flex items-center justify-center flex-shrink-0">
+                                <Link2 className="w-3.5 h-3.5 text-emerald-400" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline gap-1 leading-none">
+                                  <span className="text-xs font-bold italic text-blue-400">Twin</span>
+                                  <span className="text-xs font-bold italic text-emerald-400">Code</span>
+                                  <span className="text-[8px] text-slate-500">™</span>
+                                  <span className="ml-1 text-[10px] text-slate-400">Bound Pair</span>
+                                </div>
+                                <div className="text-[10px] text-slate-500 mt-0.5 truncate">
+                                  {pairPrinters.a.name} ↔ {pairPrinters.b.name}
+                                </div>
+                              </div>
+                              {pairSelected && (
+                                <span className="text-[9px] font-semibold uppercase tracking-wider text-emerald-400 flex-shrink-0">Active</span>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                              <div className={`rounded px-2 py-1 border flex items-center gap-1.5 ${pairPrinters.a.isAvailable ? 'border-blue-500/40 bg-blue-500/10 text-blue-200' : 'border-slate-700 bg-slate-900/50 text-slate-500'}`}>
+                                <span className="w-4 h-4 rounded-full bg-blue-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">A</span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-semibold leading-tight">Lid · {pairPrinters.a.name}</div>
+                                  <div className="font-mono leading-tight opacity-80">{pairPrinters.a.ipAddress}</div>
+                                </div>
+                              </div>
+                              <div className={`rounded px-2 py-1 border flex items-center gap-1.5 ${pairPrinters.b.isAvailable ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200' : 'border-slate-700 bg-slate-900/50 text-slate-500'}`}>
+                                <span className="w-4 h-4 rounded-full bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">B</span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-semibold leading-tight">Side · {pairPrinters.b.name}</div>
+                                  <div className="font-mono leading-tight opacity-80">{pairPrinters.b.ipAddress}</div>
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                          {/* Collapse/expand toggle for the member printers below — separate button so it doesn't trigger pair-select. */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPairExpanded(v => !v);
+                            }}
+                            className="flex-shrink-0 px-2 hover:bg-slate-700/40 transition-colors text-slate-400 hover:text-slate-200 border-l border-emerald-500/20"
+                            title={pairExpanded ? 'Collapse pair members' : 'Expand pair members'}
+                            aria-label={pairExpanded ? 'Collapse pair members' : 'Expand pair members'}
+                          >
+                            <ChevronDown className={`w-4 h-4 transition-transform ${pairExpanded ? '' : '-rotate-90'}`} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Member printer cards inside the bordered group. */}
+                      {pairExpanded && (
+                        <div className="px-2 pb-2 pt-1 space-y-2 border-t border-emerald-500/20 bg-slate-950/30">
+                          {renderPrinterItem(pairPrinters.a)}
+                          {renderPrinterItem(pairPrinters.b)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TwinCode license but no pair bound yet — hint card with action */}
+                  {canTwinCode && !pairPrinters && (
+                    <div className="rounded-lg border border-dashed border-emerald-500/40 bg-emerald-500/5 p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Link2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-xs font-semibold text-emerald-300">TwinCode pair not bound</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 leading-relaxed mb-2">
+                        Bind two printers as a Lid/Side pair on the TwinCode page. Once bound, the pair appears here and selecting it opens the TwinCode workspace.
+                      </p>
+                      <Button
+                        size="sm"
+                        className="w-full h-7 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
+                        onClick={() => navigate('/twin-code')}
+                      >
+                        <Link2 className="w-3 h-3 mr-1.5" />
+                        Configure TwinCode pair
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Remaining (non-pair) printers — keep DnD reorder behavior. */}
+                  {nonPairPrinters.length === 0 && !pairPrinters ? (
+                    <div className="flex flex-col items-center justify-center text-slate-500 py-8">
+                      <PrinterIcon className="w-10 h-10 mb-3 opacity-50" />
+                      <p className="font-medium text-sm">No printers configured</p>
+                      <p className="text-xs text-center mt-1">
+                        Click "Add" to add your first device
+                      </p>
+                    </div>
+                  ) : nonPairPrinters.length > 0 && (
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext
+                        items={nonPairPrinters.map(p => p.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {nonPairPrinters.map(renderPrinterItem)}
+                      </SortableContext>
+                    </DndContext>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </ScrollArea>
 
