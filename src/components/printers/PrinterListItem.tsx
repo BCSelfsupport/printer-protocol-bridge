@@ -217,6 +217,8 @@ export function PrinterListItem({
               onEdit?.();
             }}
             className={`relative w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:ring-2 hover:ring-primary/50 ${
+              twinColor ? `ring-2 ${twinColor.ring} ` : ''
+            }${
               printer.isAvailable ? 'bg-success/20 hover:bg-success/30' : 'bg-muted hover:bg-muted/80'
             }`}
             title="Click to edit printer"
@@ -233,6 +235,14 @@ export function PrinterListItem({
                 <WifiOff className="w-2.5 h-2.5 text-white" />
               )}
             </div>
+            {twinPairRole && (
+              <div
+                className={`absolute -bottom-1 -left-1 w-5 h-5 rounded-full border-2 border-card flex items-center justify-center text-[11px] font-black text-white shadow-md ${twinColor?.solid}`}
+                title={twinPairRole === 'A' ? 'TwinCode A · Lid printer' : 'TwinCode B · Side printer'}
+              >
+                {twinPairRole}
+              </div>
+            )}
           </button>
 
           {/* Printer info */}
