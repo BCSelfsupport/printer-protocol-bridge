@@ -111,6 +111,7 @@ Updated: now
 - [Firmware Grace](mem://architecture/firmware-processing-grace-periods) — 15s grace period for state parity
 - [Sync Matching](mem://features/message-metadata-sync-matching) — Prioritize by exact data content
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
+- [TwinCode license & pair panel](mem://features/twincode-license-and-pair-panel) — 'twincode' tier gates TwinCode; bound pair appears in Network panel and swaps the right pane to embedded TwinCodeView.
 - [TwinCode SOW](mem://features/twin-code-sow) — Authoritative scope, layered guarantees, canonical seed shapes, gating
 - [TwinCode quick-start](mem://features/twin-code-quick-start) — 10-step bring-up checklist with pass signals + failure→fix table
 - [TwinCode auto-create messages](mem://features/twin-code-auto-create-messages) — Bind seeds LID (DM 16×16) and SIDE (7×5 text) on printer if missing, removing manual HMI prep step
