@@ -29,17 +29,20 @@ const saveRemovedEmulatedKeys = (set: Set<string>) => {
 const getDefaultPrinters = (): Printer[] => {
   // Check if we have emulated printers available
   const emulatedPrinters = multiPrinterEmulator.getEmulatedPrinters();
+  const removed = getRemovedEmulatedKeys();
   if (emulatedPrinters.length > 0) {
-    return emulatedPrinters.map(ep => ({
-      id: ep.id,
-      name: ep.name,
-      ipAddress: ep.ipAddress,
-      port: ep.port,
-      isConnected: false,
-      isAvailable: true,
-      status: ep.status,
-      hasActiveErrors: false,
-    }));
+    return emulatedPrinters
+      .filter(ep => !removed.has(`${ep.ipAddress}:${ep.port}`))
+      .map(ep => ({
+        id: ep.id,
+        name: ep.name,
+        ipAddress: ep.ipAddress,
+        port: ep.port,
+        isConnected: false,
+        isAvailable: true,
+        status: ep.status,
+        hasActiveErrors: false,
+      }));
   }
   
   // Default single printer when emulator is off
