@@ -198,7 +198,7 @@ export function TrainingOverlay() {
           </div>
 
           {/* Footer — nav controls */}
-          <div className="flex items-center justify-between border-t border-border px-3 py-2">
+          <div className="flex items-center justify-between gap-1 border-t border-border px-3 py-2">
             <Button
               size="sm"
               variant="ghost"
@@ -208,13 +208,24 @@ export function TrainingOverlay() {
             >
               <ChevronLeft className="h-3.5 w-3.5" /> Back
             </Button>
-            <Button size="sm" variant="ghost" onClick={exit} className="h-7 text-xs">
-              Skip tour
-            </Button>
-            <Button size="sm" onClick={next} className="h-7 gap-1 text-xs">
-              {stepIndex + 1 === stepCount ? 'Finish' : 'Next'}
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={pause}
+                className="h-7 gap-1 text-xs"
+                title="Pause to try this step yourself — overlay hides until you resume"
+              >
+                <Pause className="h-3.5 w-3.5" /> Try it
+              </Button>
+              <Button size="sm" variant="ghost" onClick={exit} className="h-7 text-xs">
+                Skip
+              </Button>
+              <Button size="sm" onClick={next} className="h-7 gap-1 text-xs">
+                {stepIndex + 1 === stepCount ? 'Finish' : 'Next'}
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
