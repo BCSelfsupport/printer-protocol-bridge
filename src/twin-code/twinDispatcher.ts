@@ -445,6 +445,15 @@ export interface TwinDispatcherOptions {
   messageNameB?: string;
   /** When true, skip the ^LF field-index sanity check on bind (default false). */
   skipFieldCheck?: boolean;
+  /**
+   * When true, the dispatcher checks ^LM on bind and seeds a canonical
+   * LID (DM 16×16) / SIDE (Standard 7×5 text) message if missing.
+   * Per-side flags so the operator can opt out per printer when they want
+   * to run a hand-built message instead. Default false (back-compat).
+   * See `src/twin-code/messageSeeds.ts` for the exact ^NM payloads.
+   */
+  autoCreateA?: boolean;
+  autoCreateB?: boolean;
 }
 
 class TwinDispatcher {
