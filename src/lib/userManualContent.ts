@@ -783,6 +783,12 @@ export const MANUAL: ManualChapter[] = [
         title: 'API & automated ingestion',
         body: `The **Integrations** tab provides three automated ingestion paths so you don't have to manually upload files:\n\n- **API / Webhook Endpoint** — A unique HTTPS URL + API key. CANIX, METRC, or any ERP can POST JSON or CSV. Use \`?mode=append\` to add rows to an existing source.\n- **Watched Folder (Hotfolder)** — Monitor a local/network folder for new CSVs (Desktop only)\n- **Database Connection** — ODBC/MySQL polling (Desktop only)\n\nCopy the endpoint and API key directly from this screen.`,
         screenshot: '/manual-screenshots/22-integrations.png',
+        callouts: [
+          { label: 'Webhook URL', text: 'unique HTTPS endpoint — copy/paste into CANIX, METRC, or any ERP that can POST JSON/CSV' },
+          { label: 'API Key', text: 'send as Bearer token; rotate any time without disrupting the source itself' },
+          { label: 'Hotfolder path', text: 'Desktop only — point at a local or shared folder; new CSV drops auto-import' },
+          { label: 'Database connection', text: 'DATABASE tier — ODBC / MySQL polling for live ERP integration' },
+        ],
       },
       {
         id: 'print-jobs',
