@@ -36,10 +36,10 @@ Existing messages are **never overwritten** — the dispatcher only seeds when
 ### SIDE_SEED (B side)
 ```
 ^DM __NAME__
-^NM 16;0;0;0;__NAME__^AT 0;0;1;DRYRUN0000000
+^NM 7;0;0;0;__NAME__^AT 0;0;1;DRYRUN0000000
 ^SV
 ```
-- Template = 16-dot strip (parity with LID)
+- Template = **7-dot strip** (matches Standard 7×5 font height — no wasted vertical space on a side printer that only carries the human-readable serial)
 - Single field 1: text, font `1` = Standard 7×5
 - Left-aligned (x=0), bottom-anchored (y=0)
 - Sized for 13 chars (~78 dots wide at 5-wide font)

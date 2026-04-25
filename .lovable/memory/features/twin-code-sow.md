@@ -41,12 +41,13 @@ serials feed the dispatcher; cycle target ≈300ms (200 units/min).
    conveyor and offers a resume-from-bottle-N banner.
 
 ## Canonical message shapes (auto-seeded on bind)
-Both seeds use a **16-dot template** for ~200 units/min throughput parity.
+LID uses a 16-dot template (DM 16×16 needs the height); SIDE uses a 7-dot
+template (Standard 7×5 text fills it exactly — no wasted vertical pad).
 
-| Side | Field | Type | Update path | Placeholder |
-|------|-------|------|-------------|-------------|
-| A (LID)  | 1 | Native ECC200 DataMatrix 16×16 (`^AB s=5`) centered, bottom-anchored | `^MD^BD1;<serial>` | `DRYRUN0000000` |
-| B (SIDE) | 1 | Standard 7×5 text, left-aligned, sized for 13 chars (`^AT font=1`) | `^MD^TD1;<serial>` | `DRYRUN0000000` |
+| Side | Template | Field | Type | Update path | Placeholder |
+|------|----------|-------|------|-------------|-------------|
+| A (LID)  | 16-dot | 1 | Native ECC200 DataMatrix 16×16 (`^AB s=5`) centered, bottom-anchored | `^MD^BD1;<serial>` | `DRYRUN0000000` |
+| B (SIDE) |  7-dot | 1 | Standard 7×5 text, left-aligned, sized for 13 chars (`^AT font=1`) | `^MD^TD1;<serial>` | `DRYRUN0000000` |
 
 Seeds live in `src/twin-code/messageSeeds.ts`. Seeds are **never overwritten** —
 operator hand-tweaks (font swap, extra label, position nudge) survive subsequent
