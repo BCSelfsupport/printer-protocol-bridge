@@ -538,6 +538,11 @@ export const MANUAL: ManualChapter[] = [
         title: 'Reorder Settings',
         body: `The gear icon at the top opens **Reorder Settings**. Choose what happens when you click the **Order** button: open your supplier's website, send an email to a purchasing address, or copy a pre-formatted purchase request to the clipboard.`,
         screenshot: '/manual-screenshots/35-reorder-settings.png',
+        callouts: [
+          { label: 'Action mode', text: 'Open Website / Send Email / Copy to Clipboard — how the Order button behaves' },
+          { label: 'Supplier URL or email', text: 'destination for the chosen action; saved per-installation' },
+          { label: 'Smart Reorder toggle', text: 'enables the predictive banner that warns about depletion before the next reorder cycle' },
+        ],
       },
       {
         id: 'filter-tracking',
