@@ -702,6 +702,12 @@ export const MANUAL: ManualChapter[] = [
         title: 'Overview',
         body: `The Wire & Cable screen is purpose-built for marking continuous wire and cable.\n\n**Features:**\n- Metric / Imperial unit toggle\n- Distance estimation based on encoder pulses\n- Pitch (mark spacing) configuration\n- Encoder calibration wizard\n- Flip-flop mode for alternating top/bottom marks\n- Live distance counter and animated cable visualization`,
         screenshot: '/manual-screenshots/13-wire-cable.png',
+        callouts: [
+          { label: 'Unit toggle', text: 'switch the entire screen between Metric (mm/m) and Imperial (in/ft)' },
+          { label: 'Pitch input', text: 'mark spacing — the distance between consecutive prints along the cable' },
+          { label: 'Live distance counter', text: 'cumulative encoder distance since the last reset; counts in the chosen units' },
+          { label: 'Cable animation', text: 'visual confirmation of marks being deposited at the configured pitch' },
+        ],
       },
       {
         id: 'encoder',
