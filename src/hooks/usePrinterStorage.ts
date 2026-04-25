@@ -268,7 +268,17 @@ export function usePrinterStorage() {
   }, []);
 
   const removePrinter = useCallback((printerId: number) => {
-    setPrinters(prev => prev.filter(p => p.id !== printerId));
+    setPrinters(prev => {
+      const target = prev.find(p => p.id === printerId);
+      // If this is an emulated printer, remember the removal so the auto-sync
+      // loop doesn't immediately re-add it.
+      if (target && multiPrinterEmulator.isEmulatedIp(target.ipAddress, target.port)) {
+        const removed = getRemovedEmulatedKeys();
+        removed.add(`${target.ipAddress}:${target.port}`);
+        saveRemovedEmulatedKeys(removed);
+      }
+      return prev.filter(p => p.id !== printerId);
+    });
   }, []);
 
   const updatePrinter = useCallback((printerId: number, updates: Partial<Printer>) => {
