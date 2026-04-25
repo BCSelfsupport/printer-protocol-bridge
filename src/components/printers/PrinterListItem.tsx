@@ -201,8 +201,8 @@ export function PrinterListItem({
             ? 'bg-success/20 border-success ring-2 ring-success/30'
             : isSelected 
               ? 'bg-primary/20 border-primary' 
-              : groupColor
-                ? `${groupColor.bg} border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600`
+              : effectiveColor
+                ? `${effectiveColor.bg} border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600`
                 : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600'
         }`}
       >
