@@ -29,7 +29,7 @@ const VIEWPORT_PAD = 16;
 interface Rect { top: number; left: number; width: number; height: number }
 
 export function TrainingOverlay() {
-  const { stage, step, stepIndex, stepCount, next, prev, exit } = useTraining();
+  const { stage, step, stepIndex, stepCount, paused, next, prev, exit, pause, resume } = useTraining();
   const [targetRect, setTargetRect] = useState<Rect | null>(null);
 
   // Re-measure the targeted element on every step change AND on resize/scroll
