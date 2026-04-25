@@ -255,41 +255,48 @@ export function TwinMessagePreview() {
   }, [scaleB]);
 
   return (
-    <div className="flex gap-3 rounded-md border border-border bg-card/60 p-3">
-      <div className="flex-1">
+    <div className="flex w-full min-w-0 gap-3 rounded-md border border-border bg-card/60 p-3">
+      <div className="flex-1 min-w-0">
         <div className="mb-2 flex items-baseline justify-between gap-2">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Selected messages
           </h3>
-          <span className="text-[10px] text-muted-foreground">
-            Visual cross-check — must match the message shown on each printer's HMI before LIVE.
+          <span className="hidden text-[10px] text-muted-foreground xl:inline">
+            Visual cross-check — must match each printer's HMI before LIVE.
           </span>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <SideCard
-            side="A"
-            bound={aBound}
-            scale={scaleA}
-            messageName={pair.a?.messageName}
-            fieldIndex={pair.a?.fieldIndex}
-            subcommand={pair.a?.subcommand}
-            printerLabel={pair.a ? `${pair.a.name || 'Lid'} · ${pair.a.ip}:${pair.a.port}` : undefined}
-          />
-          <SideCard
-            side="B"
-            bound={bBound}
-            scale={scaleB}
-            messageName={pair.b?.messageName}
-            fieldIndex={pair.b?.fieldIndex}
-            subcommand={pair.b?.subcommand}
-            printerLabel={pair.b ? `${pair.b.name || 'Side'} · ${pair.b.ip}:${pair.b.port}` : undefined}
-          />
+          {/* min-w-0 + overflow-hidden lets the canvas grow visually via scale
+              without forcing the parent column wider than its grid slot
+              (which previously pushed the right-column status panels). */}
+          <div className="min-w-0 overflow-hidden">
+            <SideCard
+              side="A"
+              bound={aBound}
+              scale={scaleA}
+              messageName={pair.a?.messageName}
+              fieldIndex={pair.a?.fieldIndex}
+              subcommand={pair.a?.subcommand}
+              printerLabel={pair.a ? `${pair.a.name || 'Lid'} · ${pair.a.ip}:${pair.a.port}` : undefined}
+            />
+          </div>
+          <div className="min-w-0 overflow-hidden">
+            <SideCard
+              side="B"
+              bound={bBound}
+              scale={scaleB}
+              messageName={pair.b?.messageName}
+              fieldIndex={pair.b?.fieldIndex}
+              subcommand={pair.b?.subcommand}
+              printerLabel={pair.b ? `${pair.b.name || 'Side'} · ${pair.b.ip}:${pair.b.port}` : undefined}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Two vertical scale sliders — DM and text are sized independently because
-          their baseline aspect ratios differ wildly (square vs. long strip). */}
-      <div className="flex gap-3 border-l border-border pl-3">
+      {/* Two vertical scale sliders — DM and text are sized independently
+          because their baseline aspect ratios differ wildly (square vs. strip). */}
+      <div className="flex shrink-0 gap-2 border-l border-border pl-3">
         <ScaleSlider label="DM" value={scaleA} onChange={setScaleA} />
         <ScaleSlider label="TEXT" value={scaleB} onChange={setScaleB} />
       </div>
