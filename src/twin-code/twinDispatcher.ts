@@ -398,6 +398,10 @@ export interface BoundPairResult {
   /** Friendly identifiers for logging. */
   aId?: number;
   bId?: number;
+  /** True when the A-side message was auto-seeded during this bind. */
+  seededA?: boolean;
+  /** True when the B-side message was auto-seeded during this bind. */
+  seededB?: boolean;
 }
 
 export interface TwinDispatchResult {
