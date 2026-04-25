@@ -10,6 +10,7 @@ import { ConveyorView } from "./ConveyorView";
 import { CsvColumnPickerDialog } from "./CsvColumnPickerDialog";
 import { LedgerResumeBanner } from "./LedgerResumeBanner";
 import { FaultRecoveryBanner } from "./FaultRecoveryBanner";
+import { TwinMessagePreview } from "./TwinMessagePreview";
 import { conveyorSim, computeBpm, pitchFromBpm, ftPerMinFromBpm, DEFAULT_CONVEYOR_CONFIG } from "../conveyorSim";
 import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
@@ -438,6 +439,11 @@ export function ConveyorPanel() {
           display={`${cfg.wireBMean.toFixed(1)} ms`}
         />
       </div>
+
+      {/* Visual cross-check of the configured LID/SIDE messages.
+          Mirrors regular CodeSync's connect-time message preview so an
+          operator can spot a wrong field/subcommand before going LIVE. */}
+      <TwinMessagePreview />
 
       <ConveyorView />
 
