@@ -48,7 +48,7 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'splash',
         title: 'Launching CodeSync',
-        body: `When CodeSync starts, you'll see the splash screen with the current version number. The application then connects to your local network and loads the printer list.\n\n**System tray:** When installed on Windows, CodeSync runs in the system tray and starts automatically with Windows.\n\n**First launch:** The first time you open CodeSync you will be prompted to activate your license. See Chapter 2.`,
+        body: `When CodeSync starts, you'll see the splash screen with the current version number. The application then connects to your local network and loads the printer list.\n\n**System tray:** When installed on Windows, CodeSync runs in the system tray and starts automatically with Windows.\n\n**First launch:** The first time you open CodeSync you will be prompted to activate your license. See Chapter 3.`,
         screenshot: '/manual-screenshots/00-splash.png',
       },
       {
@@ -101,7 +101,7 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'activate',
         title: 'Activating a license',
-        body: `1. Click the **Activate** button at the bottom of the printers sidebar\n2. Enter the 20-character product key supplied by BestCode\n3. Click **Activate**\n\nOnce activated the dialog shows **License active**, the active tier badge, and two action buttons: **Deactivate** (release the license from this PC) and **Pair Mobile** (generate a QR/PIN to add a phone — see Chapter 12).\n\nLicenses are tied to your machine. Moving CodeSync to a new PC requires re-activation; contact BestCode support if you need to transfer.`,
+        body: `1. Click the **Activate** button at the bottom of the printers sidebar\n2. Enter the 20-character product key supplied by BestCode\n3. Click **Activate**\n\nOnce activated the dialog shows **License active**, the active tier badge, and two action buttons: **Deactivate** (release the license from this PC) and **Pair Mobile** (generate a QR/PIN to add a phone — see Chapter 13).\n\nLicenses are tied to your machine. Moving CodeSync to a new PC requires re-activation; contact BestCode support if you need to transfer.`,
         screenshot: '/manual-screenshots/47-license-active.png',
       },
     ],
@@ -248,7 +248,7 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'scanned-field',
         title: 'Scanned fields (barcode capture)',
-        body: `**Scanned Field** is a specialized prompted field whose value comes from a barcode scan instead of typed input. Use it for serialized cartons, METRC tags, lot stickers, and any workflow where the operator already has a printed code in front of them.\n\n**Creating one:**\n1. In the editor, click **+ New** and pick **Scanned Field**\n2. Set the **Prompt Label** (e.g. "SCAN UID") and **Max Length**\n3. Place the field on the canvas like any other text field\n\n**At print-select time** the operator sees a scan dialog instead of a keyboard. They can:\n\n- Scan with a **USB / wedge scanner** plugged into the PC (most reliable)\n- Scan with a **paired mobile phone's camera** — the request appears automatically on the phone, the result is pushed back to the PC and applied to the message (see Chapter 12)\n- Type the value manually as a fallback\n\nThe scanned value is baked into the message via the same atomic ^DM + ^NM + ^SV save flow used by User Define, so the printer always prints exactly what was scanned — no race conditions.\n\n**Token linking:** Scanned (and User Define) fields can be referenced from other fields using {LABEL} placeholders, so one scan can populate a barcode, a date code, and a human-readable text field at the same time. Edit any text field and type the prompt label inside curly braces, e.g. \`Lot {LOT CODE}\`.`,
+        body: `**Scanned Field** is a specialized prompted field whose value comes from a barcode scan instead of typed input. Use it for serialized cartons, METRC tags, lot stickers, and any workflow where the operator already has a printed code in front of them.\n\n**Creating one:**\n1. In the editor, click **+ New** and pick **Scanned Field**\n2. Set the **Prompt Label** (e.g. "SCAN UID") and **Max Length**\n3. Place the field on the canvas like any other text field\n\n**At print-select time** the operator sees a scan dialog instead of a keyboard. They can:\n\n- Scan with a **USB / wedge scanner** plugged into the PC (most reliable)\n- Scan with a **paired mobile phone's camera** — the request appears automatically on the phone, the result is pushed back to the PC and applied to the message (see Chapter 13)\n- Type the value manually as a fallback\n\nThe scanned value is baked into the message via the same atomic ^DM + ^NM + ^SV save flow used by User Define, so the printer always prints exactly what was scanned — no race conditions.\n\n**Token linking:** Scanned (and User Define) fields can be referenced from other fields using {LABEL} placeholders, so one scan can populate a barcode, a date code, and a human-readable text field at the same time. Edit any text field and type the prompt label inside curly braces, e.g. \`Lot {LOT CODE}\`.`,
       },
       {
         id: 'data-link',
@@ -541,7 +541,7 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'mobile-scan',
         title: 'Mobile scan companion',
-        body: `Once paired, the phone can act as a **wireless barcode scanner** for the PC. Whenever the operator selects a message that contains a Scanned Field (Chapter 5), CodeSync raises a scan request that automatically appears on every paired phone.\n\n**On the phone:**\n\n1. A floating **Scan** pill appears at the bottom-right and pulses when a request is pending\n2. Tap it (or open the **/scan** page directly) to launch the camera scanner\n3. Aim at the barcode — the value is decoded, sent to the PC, and the scan dialog on the PC closes automatically\n4. The PC bakes the scanned value into the message and selects it on the printer\n\nThe PC scan dialog also accepts USB / wedge scanners and manual typing as fallbacks, so the mobile companion is optional. Multiple paired phones can fulfil a scan — first one wins.`,
+        body: `Once paired, the phone can act as a **wireless barcode scanner** for the PC. Whenever the operator selects a message that contains a Scanned Field (Chapter 6), CodeSync raises a scan request that automatically appears on every paired phone.\n\n**On the phone:**\n\n1. A floating **Scan** pill appears at the bottom-right and pulses when a request is pending\n2. Tap it (or open the **/scan** page directly) to launch the camera scanner\n3. Aim at the barcode — the value is decoded, sent to the PC, and the scan dialog on the PC closes automatically\n4. The PC bakes the scanned value into the message and selects it on the printer\n\nThe PC scan dialog also accepts USB / wedge scanners and manual typing as fallbacks, so the mobile companion is optional. Multiple paired phones can fulfil a scan — first one wins.`,
       },
       {
         id: 'broadcast-master-slave',
