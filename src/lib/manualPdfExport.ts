@@ -365,6 +365,24 @@ function renderCallouts(s: RenderState, callouts: { label: string; text: string 
 export async function generateUserManualPdf(): Promise<Blob> {
   const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
 
+  // Sanitize every string passed to pdf.text / splitTextToSize so emoji
+  // and non-Latin-1 glyphs don't render as garbage in Helvetica.
+  const origText = pdf.text.bind(pdf);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (pdf as any).text = (text: any, x: number, y: number, options?: any) => {
+    if (Array.isArray(text)) return origText(text.map(sanitizePdfText), x, y, options);
+    return origText(sanitizePdfText(text), x, y, options);
+  };
+  const origSplit = pdf.splitTextToSize.bind(pdf);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (pdf as any).splitTextToSize = (text: any, w: number, opts?: any) => {
+    return origSplit(sanitizePdfText(text), w, opts);
+  };
+  const origGetTextWidth = pdf.getTextWidth.bind(pdf);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (pdf as any).getTextWidth = (text: any) => origGetTextWidth(sanitizePdfText(text));
+
+
   // ====== Cover ======
   // Background gradient stripe
   pdf.setFillColor(...BRAND_BLUE);
