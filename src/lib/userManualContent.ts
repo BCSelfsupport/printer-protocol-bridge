@@ -807,6 +807,12 @@ export const MANUAL: ManualChapter[] = [
         title: 'Managing active print jobs',
         body: `The **Print Jobs** tab lists every saved job with the source name, message name, current row / total rows, and status. Use **Run** to start a job and the trash icon to delete one. Job state persists across sessions — you can resume a partially-completed job after a restart.`,
         screenshot: '/manual-screenshots/23-print-jobs.png',
+        callouts: [
+          { label: 'Status pill', text: 'ready / running / paused / done — colour-coded per state' },
+          { label: 'Row progress', text: 'current row / total rows; survives a restart so you can resume mid-run' },
+          { label: 'Run / Pause', text: 'start the job (sends first row to the printer) or hold execution mid-run' },
+          { label: 'Trash icon', text: 'delete the job binding; the underlying data source and message are kept' },
+        ],
       },
     ],
   },
