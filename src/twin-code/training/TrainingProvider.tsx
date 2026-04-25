@@ -74,6 +74,7 @@ export function useTraining(): TrainingContextValue {
 export function TrainingProvider({ children }: { children: ReactNode }) {
   const [activeStageId, setActiveStageId] = useState<TrainingStageId | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
   /** Stage queue — populated when the operator runs the full tour, drained on each stage finish. */
   const queueRef = useRef<TrainingStageId[]>([]);
 
