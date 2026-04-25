@@ -83,6 +83,10 @@ export function ConveyorPanel() {
       fieldB: pair.b?.fieldIndex,
       subcommandA: pair.a?.subcommand,
       subcommandB: pair.b?.subcommand,
+      // Auto-create the LID/SIDE message if it isn't on the printer yet.
+      // Per-side flag on the binding (default true for v3+ entries).
+      autoCreateA: pair.a?.autoCreate ?? true,
+      autoCreateB: pair.b?.autoCreate ?? true,
     });
     setLiveBusy(false);
     if (!res.ok) {
