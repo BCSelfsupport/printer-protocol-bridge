@@ -47,6 +47,8 @@ interface PrinterListItemProps {
   isUpdatingExpiry?: boolean;
   /** Original expiry days from the message definition (fallback when no per-printer override) */
   messageExpiryDays?: number;
+  /** TwinCode pair role badge — 'A' (lid) or 'B' (side). Shown when this printer is part of a bound pair. */
+  twinPairRole?: 'A' | 'B' | null;
 }
 
 // Helper to get color for fluid levels
