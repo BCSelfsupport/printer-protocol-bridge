@@ -422,6 +422,8 @@ export function PrintersScreen({
 
   const handlePrinterClick = (printer: Printer) => {
     setSelectedPrinter(printer);
+    // Selecting an individual printer deselects any active TwinCode pair so the dashboard takes over.
+    setPairSelected(false);
     // Don't auto-connect on click — user can connect via the Connect button
     // This prevents accidentally switching away from the master printer
   };
