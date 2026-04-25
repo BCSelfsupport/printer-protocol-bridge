@@ -28,6 +28,9 @@ interface LicenseContextValue extends LicenseState {
   generatePairingCode: () => Promise<{ code: string; expiresAt: string } | null>;
   listPairedCompanions: () => Promise<CompanionDevice[]>;
   revokeCompanion: (sessionId: string) => Promise<boolean>;
+  /** Dev-only: override the current tier for testing gating. Pass null to clear. */
+  setDevTierOverride: (tier: LicenseTier | null) => void;
+  devTierOverride: LicenseTier | null;
   /** Feature gating helpers */
   canNetwork: boolean;
   canDatabase: boolean;
@@ -326,14 +329,19 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     setState({ tier: 'lite', isActivated: false, productKey: null, error: null, isLoading: false, isCompanion: false, companionSessionId: null });
   };
 
+  // Dev-only tier override (session-only, not persisted). Lets developers
+  // exercise gating logic across all tiers without re-activating licenses.
+  const [devTierOverride, setDevTierOverride] = useState<LicenseTier | null>(null);
+  const effectiveTier: LicenseTier = devTierOverride ?? state.tier;
+
   // TwinCode and dev tiers also get full network access (they manage paired printers).
-  const canNetwork = state.tier !== 'lite';
-  const canDatabase = state.tier === 'database' || state.tier === 'dev';
-  const canTwinCode = state.tier === 'twincode' || state.tier === 'dev';
-  const isDemo = state.tier === 'demo';
+  const canNetwork = effectiveTier !== 'lite';
+  const canDatabase = effectiveTier === 'database' || effectiveTier === 'dev';
+  const canTwinCode = effectiveTier === 'twincode' || effectiveTier === 'dev';
+  const isDemo = effectiveTier === 'demo';
 
   return (
-    <LicenseContext.Provider value={{ ...state, activate, deactivate, pairAsCompanion, generatePairingCode, listPairedCompanions, revokeCompanion, canNetwork, canDatabase, canTwinCode, isDemo }}>
+    <LicenseContext.Provider value={{ ...state, tier: effectiveTier, activate, deactivate, pairAsCompanion, generatePairingCode, listPairedCompanions, revokeCompanion, setDevTierOverride, devTierOverride, canNetwork, canDatabase, canTwinCode, isDemo }}>
       {children}
     </LicenseContext.Provider>
   );

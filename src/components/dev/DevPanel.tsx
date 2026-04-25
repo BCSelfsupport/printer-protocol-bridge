@@ -51,6 +51,8 @@ import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
 import { ParameterSnapshot } from '@/components/dev/ParameterSnapshot';
 import { TwinPairBindDialog } from '@/twin-code/components/TwinPairBindDialog';
 import { useTwinPair } from '@/twin-code/twinPairStore';
+import { useLicense, type LicenseTier } from '@/contexts/LicenseContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 function getTimeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
@@ -134,6 +136,7 @@ interface DevPanelProps {
 
 export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinterPort, connectedPrinterId, defaultTab, showToggleButton = true, recorderState, recorderActions }: DevPanelProps) {
   const isMobile = useIsMobile();
+  const { tier: activeTier, devTierOverride, setDevTierOverride } = useLicense();
   
   // Resolve the correct emulator instance for the connected printer
   const getConnectedEmulator = () => {
@@ -436,6 +439,31 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                 Emulator Active - Protocol v2.6
               </div>
             )}
+            {/* Dev-only Tier Override — exercises licensing gates without re-activating */}
+            <div className="mt-3 flex items-center gap-2">
+              <Shield className="w-3.5 h-3.5 text-muted-foreground" />
+              <Label className="text-xs text-muted-foreground">Tier override</Label>
+              <Select
+                value={devTierOverride ?? '__none'}
+                onValueChange={(v) => setDevTierOverride(v === '__none' ? null : (v as LicenseTier))}
+              >
+                <SelectTrigger className="h-7 text-xs w-[160px]">
+                  <SelectValue placeholder="No override" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none" className="text-xs">No override (dev)</SelectItem>
+                  <SelectItem value="demo" className="text-xs">Demo</SelectItem>
+                  <SelectItem value="lite" className="text-xs">Lite</SelectItem>
+                  <SelectItem value="full" className="text-xs">Full</SelectItem>
+                  <SelectItem value="database" className="text-xs">Database</SelectItem>
+                  <SelectItem value="twincode" className="text-xs">TwinCode</SelectItem>
+                  <SelectItem value="dev" className="text-xs">Dev</SelectItem>
+                </SelectContent>
+              </Select>
+              <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                {activeTier}
+              </Badge>
+            </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
