@@ -3,6 +3,27 @@ import { Printer } from '@/types/printer';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 
 const STORAGE_KEY = 'codesync-printers';
+const REMOVED_EMULATED_KEY = 'codesync-printers-removed-emulated';
+
+// Track emulated printer IP:port pairs the user has explicitly removed,
+// so they don't get re-added by the auto-sync loop.
+const getRemovedEmulatedKeys = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem(REMOVED_EMULATED_KEY);
+    if (raw) return new Set(JSON.parse(raw));
+  } catch (e) {
+    console.error('Failed to load removed emulated printers:', e);
+  }
+  return new Set();
+};
+
+const saveRemovedEmulatedKeys = (set: Set<string>) => {
+  try {
+    localStorage.setItem(REMOVED_EMULATED_KEY, JSON.stringify(Array.from(set)));
+  } catch (e) {
+    console.error('Failed to save removed emulated printers:', e);
+  }
+};
 
 // Get default printers from emulator when enabled, or single default when disabled
 const getDefaultPrinters = (): Printer[] => {
