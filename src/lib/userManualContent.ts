@@ -602,8 +602,142 @@ export const MANUAL: ManualChapter[] = [
     ],
   },
   {
-    id: 'appendix',
-    title: '20. Appendix',
+    id: 'token-linking',
+    title: '16. Token Linking',
+    intro: 'Reference one prompted or scanned value from many fields using {LABEL} placeholders. Lets a single scan or operator entry populate a barcode, a date code, and a human-readable text field at the same time — no double entry.',
+    sections: [
+      {
+        id: 'tokens-how-it-works',
+        title: 'How tokens work',
+        body: `Every **User Define** or **Scanned Field** has a **Prompt Label** (e.g. \`LOT CODE\`, \`SCAN UID\`). That label becomes a token that any other text or barcode field can embed using curly braces:\n\n- A text field with the literal value \`Lot {LOT CODE}\` resolves at print time to \`Lot ABC123\` after the operator types or scans \`ABC123\`.\n- A barcode field whose data is set to \`{SCAN UID}\` resolves to the scanned UID — so a single scan populates both the human-readable text and the barcode.\n- Tokens can be combined in one field: \`Batch {LOT CODE} / Run {RUN ID}\`.\n\n**Resolution order:** scanned values override typed values override defaults. Resolution happens in the same atomic save (^DM + ^NM + ^SV) that bakes prompted values into the message, so the printer always prints exactly the resolved value — no race conditions.`,
+      },
+      {
+        id: 'tokens-creating',
+        title: 'Creating linked fields',
+        body: `1. Add a **User Define** or **Scanned Field** to your message and give it a unique Prompt Label (uppercase by convention, e.g. \`LOT CODE\`).\n2. Add a regular **Text** or **Barcode** field.\n3. In the field's content, type the label inside curly braces: \`{LOT CODE}\`.\n4. Repeat — the same token can appear in any number of fields.\n\nThe Field Settings panel highlights tokens in blue and warns if a referenced label doesn't exist in the message. Save the message — at print-select time the operator only sees one prompt per unique label, no matter how many fields reference it.`,
+      },
+      {
+        id: 'tokens-counters',
+        title: 'Counter tokens',
+        body: `Hardware counters (Counter 1-4) are also exposed as tokens (\`{COUNTER 1}\` etc.) so you can mix counter values into text fields without using the AutoCode chooser. Useful for compound serials like \`{LOT CODE}-{COUNTER 1}\`.\n\nCounter tokens always pull the current value at print time, so they stay in sync with the printer's hardware counter (which advances on each Print Go).`,
+      },
+    ],
+  },
+  {
+    id: 'twin-code',
+    title: '17. Twin Code (Bonded Pair)',
+    intro: 'Twin Code bonds two BestCode printers as a single logical unit and applies the same 13-digit serial twice per bottle: a native ECC200 DataMatrix on the lid (printer A) and a human-readable text rendition on the side (printer B). Catalog serials feed the dispatcher; cycle target ≈300 ms (200 units / minute). Requires the TWINCODE license tier.',
+    platforms: ['desktop'],
+    sections: [
+      {
+        id: 'twin-overview',
+        title: 'When to use Twin Code',
+        body: `Twin Code is purpose-built for high-speed bottle-coding lines that need two synchronized marks per unit:\n\n- **Lid (A)** — native ECC200 Data Matrix 16×16 for machine reading\n- **Side (B)** — human-readable 13-character text rendition of the same serial\n\nIt replaces the ad-hoc "two printers running similar messages" setup with a single dispatcher that consumes one serial from a catalog and fans it out to both printers in parallel. If either side fails (jet stop, disconnect, miss-streak), the conveyor pauses and the operator gets a recovery banner.\n\nIt is **not** a generic multi-printer mode — use Master/Slave (Chapter 4) for that. Twin Code is a single bonded pair per license.`,
+      },
+      {
+        id: 'twin-binding',
+        title: 'Binding the pair',
+        body: `Open the **Twin Code** screen (visible only on TWINCODE-tier licenses) and click **Bind Pair**:\n\n1. Enter the **A (Lid)** printer IP — port 23\n2. Enter the **B (Side)** printer IP — port 23\n3. Pick the **message name** to use on each side (default: \`TWIN-LID\` / \`TWIN-SIDE\`)\n4. Pick the **field number** that will receive the serial (default: F1 on both)\n5. Choose the per-side update subcommand: \`^BD\` for the DM barcode (A), \`^TD\` for the text field (B)\n6. Leave **Auto-create messages** on — if the configured message doesn't exist on the printer, CodeSync seeds the canonical 16×16 DM template (A) or 7-dot text template (B) and saves it before selecting it\n\nThe dispatcher validates each side with a ^LF field-shape check after ^SM — if F1 isn't a barcode field on A or a text field on B, the bind aborts with a clear error.`,
+      },
+      {
+        id: 'twin-catalog',
+        title: 'Loading the serial catalog',
+        body: `The catalog is the single source of truth — every serial is consumed exactly once. Open **Catalog** from the Twin Code top bar:\n\n1. Click **Import CSV** and pick a file (one 13-digit serial per line, header optional)\n2. CodeSync computes an **FNV fingerprint** of the imported set; future imports of the same file are detected as duplicates\n3. The catalog strip bar shows total / consumed / remaining\n\nA local-storage **ledger** records every consumed serial with timestamp and bottle index. On reload, CodeSync resumes from the last consumed bottle. The ledger also pushes to Lovable Cloud (\`twin_code_ledger\` table) so the same run can be audited from another device or after a crash.`,
+      },
+      {
+        id: 'twin-preflight',
+        title: 'Pre-flight dry run',
+        body: `Before going LIVE, click **Pre-Flight** to dispatch 5 real bonded prints with the placeholder serial \`DRYRUN0000000\` (no catalog effects). The dialog shows per-cycle wire RTT, A/B skew, and full cycle time, plus a pass/fail verdict.\n\nA passing pre-flight means: both printers acked the ^MD subcommand, both reached the \`C\` (committed) state, and the bonded cycle completed under the 300 ms target. Re-run pre-flight any time you change a message, swap a printer, or move to a new line.`,
+      },
+      {
+        id: 'twin-live-run',
+        title: 'Going LIVE — the operator HUD',
+        body: `Click **Go LIVE** to open the Operator HUD. The HUD is designed for floor visibility from 2-3 meters:\n\n- **Big BPM** (bottles per minute) — current and 30-second rolling average\n- **Last serial** in monospace, with A/B status lights (green = both committed, amber = one acked, red = miss)\n- **Audible miss alarm** — sounds when a serial fails to commit on either side, configurable in HUD settings\n- **Stage histogram** at the bottom shows the last 200 cycles broken down by phase (queue → wire → R → T → C)\n- **Bottleneck callout** highlights the slowest phase so operators know whether the printer, the network, or the conveyor is the limit\n\nThe HUD doubles as a screensaver — switch to **Screen** mode for fullscreen line-side display.`,
+      },
+      {
+        id: 'twin-production-run',
+        title: 'Production runs and lot locking',
+        body: `A production run binds catalog consumption to a specific **Lot Number** and **Operator**. From the Production Run bar:\n\n1. Click **Start Run** — enter Lot, Operator, and an optional note\n2. The run is locked to the catalog fingerprint at start; a new catalog import during a run is rejected\n3. Every committed serial is appended to the cloud ledger with the run ID\n4. Click **End Run** to close it out — CodeSync offers signed CSV / JSON export with a SHA-256 of the manifest for compliance audit\n\nIf the application crashes or the PC reboots mid-run, the **Ledger Resume Banner** offers to resume from the last committed bottle.`,
+      },
+      {
+        id: 'twin-fault-recovery',
+        title: 'Fault recovery',
+        body: `Twin Code is loud about hardware errors — silence is never the right answer. The fault guard watches for:\n\n- **Jet stop** on either printer (^MB rejects with JNR)\n- **TCP disconnect** on either printer\n- **Miss-streak** — N consecutive cycles where a side fails to commit (configurable, default 3)\n\nWhen any condition trips, the conveyor pauses and the **Fault Recovery Banner** appears at the top of the screen with three actions: **Acknowledge** (clear the alarm and resume), **Resume from bottle N** (rewind the catalog cursor to the last known-good bottle), or **End Run** (close the lot). The audible alarm continues until acknowledged.`,
+      },
+      {
+        id: 'twin-training',
+        title: 'Training mode',
+        body: `New operators can practice on a simulated conveyor without touching real printers or consuming real catalog serials. Open **Training** from the Twin Code top bar — the training overlay walks through 6 stages: bind, catalog, pre-flight, going live, handling a miss, and ending a run. The simulator drives the same dispatcher and HUD code as production, so muscle memory transfers 1:1.`,
+      },
+    ],
+  },
+  {
+    id: 'fleet-telemetry',
+    title: '18. Fleet Telemetry',
+    intro: 'Monitor BestCode printers across multiple sites from one screen — status, runtime metrics, fault history, and firmware versions. Updates are pushed from each licensed CodeSync client over the cloud, so you do not need a VPN or open firewall ports between sites.',
+    sections: [
+      {
+        id: 'fleet-overview',
+        title: 'How the fleet is built',
+        body: `When a CodeSync client activates a license, it registers a **site** (one per license) and pushes printer metadata every 5 minutes and live status every 30 seconds to Lovable Cloud. The Fleet Telemetry screen aggregates that data:\n\n- **Sites** — one row per license, with company, location, printer count, and last-seen\n- **Printers** — every printer on every site, with status (READY / OFFLINE / FAULT), firmware, last-seen\n- **Telemetry rows** — modulation, pressure, viscosity, ink/makeup, temperatures, runtime hours, current message\n- **Events** — fault history, jet start/stop, message changes, firmware updates\n\nNo printer traffic ever leaves your LAN — only the metadata each client chooses to push. RLS policies in the cloud ensure each license can only read its own data.`,
+      },
+      {
+        id: 'fleet-screen',
+        title: 'Telemetry screen',
+        body: `Open **Telemetry** from the top bar (or visit \`#/telemetry\`). The screen has three views:\n\n- **Fleet view** — global status across all sites you have access to. Map / list toggle.\n- **Site view** — drill into one site to see its printers, recent events, and aggregated metrics.\n- **Printer view** — per-printer telemetry timeline (last 24 h / 7 d / 30 d) with charts for viscosity, pressure, modulation, and temperature.\n\nFault history is grouped by code and severity so recurring issues stand out. Click any event to expand the full ^SU snapshot from when it was raised.`,
+      },
+      {
+        id: 'fleet-events',
+        title: 'Event log structure',
+        body: `Events are split into 5 native tabs that map to the printer's ^TM data:\n\n- **Event** — generic events (jet start/stop, message change, firmware push)\n- **Viscosity** — viscosity excursions and corrections\n- **Phase** — phase-quality drops\n- **SmartFill** — ink/makeup refills\n- **Filter** — filter changes and warnings\n\nEach tab shows a timeline with severity icons and a downloadable CSV.`,
+      },
+      {
+        id: 'fleet-firmware',
+        title: 'Firmware tracking',
+        body: `Each printer's firmware version is reported via ^VV and stored with its telemetry. The Fleet Firmware tab lists all firmware versions seen across the fleet, with a count of printers on each version. **Firmware updates** can be staged here (pending / in-progress / complete) — the actual flash is performed by a BestCode service technician; CodeSync just tracks the rollout.`,
+      },
+      {
+        id: 'fleet-onboarding',
+        title: 'Onboarding new printers',
+        body: `Printers are auto-discovered from each licensed client — when you add a printer in CodeSync, the next telemetry push registers it on the cloud under your site. There is no separate "register on the fleet" step.\n\nIf you need to remove a printer, delete it in CodeSync; the cascading cleanup also removes its telemetry rows on the next push. Fleet identity (firmware, serial) is per-device and never copied between printer records.`,
+      },
+      {
+        id: 'fleet-expiry',
+        title: 'Per-printer expiry overrides',
+        body: `From the Fleet view you can apply a graphical expiry-offset override to any printer (slider + absolute days input). The override is sent via the non-destructive live-update protocol (Chapter 6) so the printer never stalls. Useful for centrally bumping all expiries for a regulatory change without visiting each line.`,
+      },
+    ],
+  },
+  {
+    id: 'developer-tools',
+    title: '19. Developer Tools',
+    intro: 'Hidden tools for BestCode engineering and authorized integrators. End users do not need this chapter — but if you have been given developer access, this is how to use it responsibly.',
+    platforms: ['desktop'],
+    sections: [
+      {
+        id: 'dev-access',
+        title: 'Unlocking developer access',
+        body: `Developer tools are deliberately hidden from normal operators. To reveal them:\n\n1. On the **Printers** screen, tap (or click) the **Activate / Tier** badge in the footer **5 times in quick succession**\n2. The Developer Sign-In dialog opens\n3. Enter your **TOTP** code from your authenticator app (Microsoft Authenticator, Google Authenticator, etc.)\n4. The Developer Panel slides in from the right\n\nDeveloper access is gated by three layers, all enforced server-side:\n\n- **Allowlist** — your license must be in the \`developer_licenses\` table\n- **TOTP** — a 6-digit time-based one-time password from your authenticator app\n- **Owner Invites** — only an owner-tier developer can grant access to another license\n\nA failed TOTP attempt is logged and the dialog rate-limits after 3 failures.`,
+      },
+      {
+        id: 'dev-panel',
+        title: 'Developer Panel layout',
+        body: `The Developer Panel is a 600 px sidebar with high-contrast styling so it never blends into normal UI. Tabs:\n\n- **Manual Protocol** — send raw protocol commands to the connected printer with hex-dump on/off\n- **Parameter Snapshot** — dump the printer's full ^GM parameter set to JSON for diff/compare\n- **Fleet Monitoring** — back-office view of all sites and their telemetry health\n- **License Assignment** — generate licenses, deactivate machines, transfer activations\n- **Dev Invites** — issue an invite code for another license (one-time use, 7-day expiry)\n- **Feedback** — review user-submitted bug reports and feature requests with screenshots\n- **Training Videos** — upload, retitle, reorder, or delete training videos shown to all users\n- **Recording Overlay** — capture screen recordings for the training library`,
+      },
+      {
+        id: 'dev-invites',
+        title: 'Granting developer access to another license',
+        body: `Owner-tier developers can issue invites:\n\n1. Open Developer Panel → **Dev Invites** tab\n2. Click **+ Generate Invite**\n3. CodeSync mints a one-time-use code (7-day expiry) tied to your owner license\n4. Send the code to the recipient\n5. The recipient signs into their own CodeSync, opens the Dev Sign-In dialog, switches to **Redeem Invite**, pastes the code, and enrolls a TOTP secret on first sign-in\n\nInvites are single-use and expire after 7 days. Revoke an unused invite from the same panel.`,
+      },
+      {
+        id: 'dev-recording',
+        title: 'Recording training videos',
+        body: `The Recording Overlay lets you capture an in-app screencast and upload it directly to the Training Videos library:\n\n1. Open Developer Panel → **Training Videos** tab\n2. Click **Record New** — the overlay appears with start / pause / stop controls\n3. Walk through the workflow you want to demo\n4. Stop recording — the video is auto-cropped to the app viewport, transcoded, and uploaded\n5. Set Title, Description, Category, and Sort Order\n\nThe video is immediately visible to all users in their Training Videos screen. No application update is required.`,
+      },
+    ],
+  },
+  {
+
     intro: 'Reference material.',
     sections: [
       {
