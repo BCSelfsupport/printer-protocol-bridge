@@ -159,6 +159,7 @@ function TwinCodePageInner(props: any) {
             </p>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <TrainingLauncherButton />
             {/* HUD / Debug view switcher */}
             <div className="flex items-center rounded-md border border-border bg-muted/30 p-0.5">
               <Button
