@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio, Link2 } from 'lucide-react';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
@@ -12,6 +12,8 @@ import { Dashboard } from '@/components/screens/Dashboard';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLicense } from '@/contexts/LicenseContext';
+import { useTwinPair } from '@/twin-code/twinPairStore';
+import { TwinCodeView } from '@/twin-code/components/TwinCodeView';
 import {
   DndContext,
   closestCenter,
