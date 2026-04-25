@@ -220,15 +220,19 @@ export function OperatorHUD() {
         </div>
       </div>
 
-      {/* Main HUD grid — fills the viewport, glanceable from across the room */}
-      <div className="grid flex-1 grid-cols-12 gap-4 p-4">
-        {/* === LEFT: Message preview (top) + BPM gauge (bottom) === */}
-        <div className="col-span-12 lg:col-span-5 flex flex-col gap-3 min-h-0">
-          {/* Visual cross-check — operator confirms the right messages are
-              loaded on each printer before/during a run. */}
-          <TwinMessagePreview />
+      {/* Main HUD body — fills the viewport, glanceable from across the room.
+          Layout (top → bottom):
+            1. Selected Messages — full width, visual cross-check at a glance
+            2. Throughput + Last Printed — twin big-number cards (matched size)
+            3. Status lights row — A/B bound, mode, yield */}
+      <div className="flex flex-1 min-h-0 flex-col gap-4 p-4">
+        {/* Row 1 — full-width message preview */}
+        <TwinMessagePreview />
 
-          <div className="flex flex-1 min-h-0 flex-col items-center justify-center rounded-md border border-border bg-background/40 p-3">
+        {/* Row 2 — Throughput + Last Printed share the row equally so they
+            visually mirror each other (both are big-number readouts). */}
+        <div className="grid flex-1 min-h-0 grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="flex min-h-0 flex-col items-center justify-center rounded-md border border-border bg-background/40 p-3">
             <div className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
               Throughput
             </div>
@@ -246,57 +250,55 @@ export function OperatorHUD() {
               {live.hasLiveData ? "live · last 60s" : "synthetic preview"}
             </div>
           </div>
-        </div>
 
-        {/* === RIGHT: Status lights (2x2) + Last printed (fills column) === */}
-        <div className="col-span-12 lg:col-span-7 flex flex-col gap-4">
-          {/* Status lights — 2x2 large grid */}
-          <div className="grid grid-cols-2 gap-3">
-            <PrinterLight
-              label="A · LID"
-              sub={pair.a?.ip ?? "not bound"}
-              isOnline={pairBound}
-              isLive={isLive}
-              pulse={!!printing}
-            />
-            <PrinterLight
-              label="B · SIDE"
-              sub={pair.b?.ip ?? "not bound"}
-              isOnline={pairBound}
-              isLive={isLive}
-              pulse={!!printing}
-            />
-            <ModeLight isLive={isLive} pairBound={pairBound} />
-            <YieldLight yieldPct={yieldPct} consumed={cat.consumedCount} />
-          </div>
-
-          {/* Last printed serial — huge, fills remaining vertical space */}
-          <div className="flex flex-1 flex-col rounded-md border border-border bg-background/40 px-5 py-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+          {/* Last printed serial — matches the throughput card's structure
+              (label · big mono number · subline) for visual symmetry. */}
+          <div className="flex min-h-0 flex-col items-center justify-center rounded-md border border-border bg-background/40 p-3">
+            <div className="flex w-full items-center justify-between">
+              <div className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                 Last printed
               </div>
               {lastCycle && lastCycle.outcome === "printed" && (
-                <span className="font-mono text-xs text-muted-foreground">
+                <span className="font-mono text-[10px] text-muted-foreground">
                   cycle {lastCycle.cycleMs.toFixed(0)}ms · skew {lastCycle.skewMs.toFixed(1)}ms
                 </span>
               )}
             </div>
             {lastPrinted ? (
-              <div className="flex flex-1 flex-col items-center justify-center">
-                <div className="font-mono font-bold leading-tight text-primary tabular-nums text-center break-all" style={{ fontSize: "clamp(2.5rem, 7vw, 6rem)" }}>
+              <>
+                <div className="mt-1 font-mono font-bold leading-none text-primary tabular-nums text-center break-all" style={{ fontSize: "clamp(2.5rem, 7vw, 6rem)" }}>
                   {lastPrinted.serial}
                 </div>
                 <div className="mt-3 font-mono text-base uppercase tracking-[0.3em] text-muted-foreground">
                   bottle #{lastPrinted.id}
                 </div>
-              </div>
+              </>
             ) : (
-              <div className="flex flex-1 items-center justify-center text-2xl italic text-muted-foreground">
+              <div className="flex flex-1 items-center justify-center text-xl italic text-muted-foreground">
                 awaiting first print…
               </div>
             )}
           </div>
+        </div>
+
+        {/* Row 3 — Status lights moved below: bound A/B, mode, yield. */}
+        <div className="grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
+          <PrinterLight
+            label="A · LID"
+            sub={pair.a?.ip ?? "not bound"}
+            isOnline={pairBound}
+            isLive={isLive}
+            pulse={!!printing}
+          />
+          <PrinterLight
+            label="B · SIDE"
+            sub={pair.b?.ip ?? "not bound"}
+            isOnline={pairBound}
+            isLive={isLive}
+            pulse={!!printing}
+          />
+          <ModeLight isLive={isLive} pairBound={pairBound} />
+          <YieldLight yieldPct={yieldPct} consumed={cat.consumedCount} />
         </div>
       </div>
 
