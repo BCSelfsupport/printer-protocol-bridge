@@ -64,7 +64,7 @@ export function DevInvitePanel() {
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-center gap-2">
-        <ShieldCheck className="w-4 h-4 text-emerald-500" />
+        <ShieldCheck className="w-4 h-4 text-primary" />
         <h3 className="text-sm font-semibold">Developer Invites</h3>
       </div>
       <p className="text-xs text-muted-foreground">
@@ -90,7 +90,7 @@ export function DevInvitePanel() {
       {error && <p className="text-xs text-destructive">{error}</p>}
 
       {invite && (
-        <Card className="p-3 space-y-2 border-emerald-500/40 bg-emerald-500/5">
+        <Card className="p-3 space-y-2 border-primary/40 bg-primary/5">
           <div className="text-xs text-muted-foreground">New invite (single use)</div>
           <div className="flex items-center gap-2">
             <code className="flex-1 text-base font-mono bg-background p-2 rounded border">
