@@ -205,6 +205,60 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
         )}
 
         {error && <p className="text-sm text-destructive">{error}</p>}
+
+        {/* Redeem invite — visible whenever the license isn't yet a developer */}
+        {!busy && error && (
+          <div className="border-t pt-3 mt-2 space-y-2">
+            {!showRedeem ? (
+              <Button variant="outline" size="sm" className="w-full" onClick={() => { setShowRedeem(true); setError(null); }}>
+                I have a developer invite code
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Paste the invite code your owner gave you.</p>
+                <Input
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                  placeholder="XXXX-XXXX-XXXX"
+                  className="font-mono text-center"
+                />
+                <Button
+                  size="sm"
+                  className="w-full"
+                  disabled={busy || !inviteCode.trim() || !productKey}
+                  onClick={async () => {
+                    setBusy(true); setError(null);
+                    try {
+                      const res = await fetch(`${SUPABASE_URL}/functions/v1/developer-invite`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', apikey: ANON_KEY },
+                        body: JSON.stringify({ action: 'redeem', product_key: productKey, invite_code: inviteCode.trim() }),
+                      });
+                      const data = await res.json();
+                      if (data.ok) {
+                        setShowRedeem(false);
+                        setInviteCode('');
+                        // Re-probe status — should now show enrollment.
+                        const r2 = await fetch(`${SUPABASE_URL}/functions/v1/verify-dev-access`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', apikey: ANON_KEY },
+                          body: JSON.stringify({ product_key: productKey }),
+                        });
+                        const d2 = await r2.json();
+                        setStage(d2.enrolled ? 'verify' : 'enroll');
+                      } else {
+                        setError(data.error || 'Invalid invite.');
+                      }
+                    } catch { setError('Network error.'); }
+                    finally { setBusy(false); }
+                  }}
+                >
+                  Redeem invite
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
