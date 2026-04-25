@@ -61,7 +61,7 @@ export const MANUAL: ManualChapter[] = [
         id: 'mobile-layout',
         title: 'Mobile layout',
         platforms: ['mobile'],
-        body: `On a phone or tablet the same app runs as an installable PWA. Layout differences:\n\n- **Bottom navigation** replaces the desktop sidebar — Printers, Messages, Service, Reports, More\n- **Pair with PC** is the first thing you do (Chapter 13) — the phone proxies all printer traffic through the desktop\n- **Floating Scan FAB** appears on the bottom-right whenever the PC raises a scan request (Chapter 5)\n- **Polling Pause** button lets the operator on the floor stop the PC's poller while a technician works at the printer's HMI`,
+        body: `On a phone or tablet the same app runs as an installable PWA. Layout differences:\n\n- **Bottom navigation** replaces the desktop sidebar — Printers, Messages, Service, Reports, More\n- **Pair with PC** is the first thing you do (Chapter 13) — the phone proxies all printer traffic through the desktop\n- **Floating Scan FAB** appears on the bottom-right whenever the PC raises a scan request (Chapter 6)\n- **Polling Pause** button lets the operator on the floor stop the PC's poller while a technician works at the printer's HMI`,
       },
     ],
   },
