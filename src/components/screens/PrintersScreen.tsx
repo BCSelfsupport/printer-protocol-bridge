@@ -596,13 +596,19 @@ export function PrintersScreen({
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-1.5 text-[10px]">
-                  <div className={`rounded px-2 py-1 border ${pairPrinters.a.isAvailable ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300' : 'border-slate-700 bg-slate-900/50 text-slate-500'}`}>
-                    <div className="font-semibold">A · Lid</div>
-                    <div className="font-mono">{pairPrinters.a.ipAddress}</div>
+                  <div className={`rounded px-2 py-1 border flex items-center gap-1.5 ${pairPrinters.a.isAvailable ? 'border-blue-500/40 bg-blue-500/10 text-blue-200' : 'border-slate-700 bg-slate-900/50 text-slate-500'}`}>
+                    <span className="w-4 h-4 rounded-full bg-blue-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">A</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold leading-tight">Lid · {pairPrinters.a.name}</div>
+                      <div className="font-mono leading-tight opacity-80">{pairPrinters.a.ipAddress}</div>
+                    </div>
                   </div>
-                  <div className={`rounded px-2 py-1 border ${pairPrinters.b.isAvailable ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300' : 'border-slate-700 bg-slate-900/50 text-slate-500'}`}>
-                    <div className="font-semibold">B · Side</div>
-                    <div className="font-mono">{pairPrinters.b.ipAddress}</div>
+                  <div className={`rounded px-2 py-1 border flex items-center gap-1.5 ${pairPrinters.b.isAvailable ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200' : 'border-slate-700 bg-slate-900/50 text-slate-500'}`}>
+                    <span className="w-4 h-4 rounded-full bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">B</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold leading-tight">Side · {pairPrinters.b.name}</div>
+                      <div className="font-mono leading-tight opacity-80">{pairPrinters.b.ipAddress}</div>
+                    </div>
                   </div>
                 </div>
               </button>

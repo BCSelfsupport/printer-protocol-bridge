@@ -148,10 +148,13 @@ export function PrinterListItem({
   const groupColor = syncGroupIndex !== undefined && syncGroupIndex >= 0
     ? SYNC_GROUP_COLORS[syncGroupIndex % SYNC_GROUP_COLORS.length]
     : null;
-  // TwinCode bound pair gets its own emerald/blue stripe (takes priority over master/slave grouping).
-  const twinColor = twinPairRole
-    ? { border: 'border-l-emerald-400', bg: 'bg-emerald-400/5', badge: 'bg-emerald-500/20 text-emerald-300' }
-    : null;
+  // TwinCode bound pair gets its own per-role stripe (A=blue/Lid, B=emerald/Side).
+  // Takes priority over master/slave grouping color.
+  const twinColor = twinPairRole === 'A'
+    ? { border: 'border-l-blue-400', bg: 'bg-blue-400/5', badge: 'bg-blue-500/20 text-blue-300', ring: 'ring-blue-400/50', solid: 'bg-blue-500', text: 'text-blue-300' }
+    : twinPairRole === 'B'
+      ? { border: 'border-l-emerald-400', bg: 'bg-emerald-400/5', badge: 'bg-emerald-500/20 text-emerald-300', ring: 'ring-emerald-400/50', solid: 'bg-emerald-500', text: 'text-emerald-300' }
+      : null;
   const effectiveColor = twinColor ?? groupColor;
   const groupBorderClass = effectiveColor ? `border-l-4 ${effectiveColor.border}` : '';
   
@@ -214,6 +217,8 @@ export function PrinterListItem({
               onEdit?.();
             }}
             className={`relative w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:ring-2 hover:ring-primary/50 ${
+              twinColor ? `ring-2 ${twinColor.ring} ` : ''
+            }${
               printer.isAvailable ? 'bg-success/20 hover:bg-success/30' : 'bg-muted hover:bg-muted/80'
             }`}
             title="Click to edit printer"
@@ -230,6 +235,14 @@ export function PrinterListItem({
                 <WifiOff className="w-2.5 h-2.5 text-white" />
               )}
             </div>
+            {twinPairRole && (
+              <div
+                className={`absolute -bottom-1 -left-1 w-5 h-5 rounded-full border-2 border-card flex items-center justify-center text-[11px] font-black text-white shadow-md ${twinColor?.solid}`}
+                title={twinPairRole === 'A' ? 'TwinCode A · Lid printer' : 'TwinCode B · Side printer'}
+              >
+                {twinPairRole}
+              </div>
+            )}
           </button>
 
           {/* Printer info */}
@@ -247,9 +260,11 @@ export function PrinterListItem({
                 </span>
               )}
               {twinPairRole && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 bg-gradient-to-r from-blue-500/20 to-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-1 ${twinColor?.badge} border border-current/30`}>
                   <Link2 className="w-2.5 h-2.5" />
-                  TWIN {twinPairRole}{twinPairRole === 'A' ? ' · LID' : ' · SIDE'}
+                  <span className="font-black">{twinPairRole}</span>
+                  <span className="opacity-80">·</span>
+                  <span>{twinPairRole === 'A' ? 'LID' : 'SIDE'}</span>
                 </span>
               )}
             </div>
