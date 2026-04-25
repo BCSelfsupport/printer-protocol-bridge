@@ -849,6 +849,13 @@ export const MANUAL: ManualChapter[] = [
         title: 'Connect via PC (relay mode)',
         body: `Mobile devices cannot reach factory printers directly — printer traffic is relayed through the host PC over an HTTP relay on port **8766**.\n\n1. From the mobile PWA, tap the **Smartphone** icon in the top bar (turns green when connected)\n2. Enter the **PC IP Address** (e.g. 192.168.1.50) and confirm port 8766\n3. Tap **Test Connection** — a green confirmation shows the CodeSync version detected on the PC\n4. Tap **Use This PC**\n\nBoth devices must be on the same WiFi network. To switch PCs later, tap **Disconnect from PC** at the bottom of the dialog. The Smartphone icon is hidden on desktop browsers — it only appears on actual phones/tablets.`,
         screenshot: '/manual-screenshots/49-relay-connect.png',
+        callouts: [
+          { label: 'PC IP input', text: 'IPv4 address of the PC running CodeSync (e.g. 192.168.1.50) — same WiFi required' },
+          { label: 'Port input', text: 'defaults to 8766 — only change if you customised the relay port on the PC' },
+          { label: 'Test Connection', text: 'pings the PC relay; on success shows the CodeSync version it detected' },
+          { label: 'Use This PC', text: 'persists the relay target so the phone reconnects automatically next time' },
+          { label: 'Disconnect from PC', text: 'clears the saved relay target — use when moving the phone to a different PC' },
+        ],
       },
       {
         id: 'mobile-scan',
