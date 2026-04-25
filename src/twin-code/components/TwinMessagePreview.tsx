@@ -148,14 +148,17 @@ function SideCanvas({ side, scale }: { side: 'A' | 'B'; scale: number }) {
     }
   }, [side]);
 
+  // Baseline display sizes — Side A is a 16×16 DM rendered as a square thumbnail,
+  // Side B is a 13-char dot-matrix strip. Multiplying by `scale` lets the operator
+  // dial both previews together while keeping their proportional relationship.
+  const baseA = 80;
+  const baseB = TEMPLATE_DOTS_B * 6;
   return (
     <canvas
       ref={ref}
       style={{
-        // Preview thumbnail — small on purpose, this is a glance check.
-        // Scale both sides together so they stay visually paired.
-        height: side === 'A' ? 80 : TEMPLATE_DOTS_B * 6,
-        width: side === 'A' ? 80 : 'auto',
+        height: side === 'A' ? baseA * scale : baseB * scale,
+        width: side === 'A' ? baseA * scale : 'auto',
         imageRendering: 'pixelated',
       }}
       className="rounded border border-border"
