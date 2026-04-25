@@ -1,8 +1,21 @@
 /**
  * CodeSync User Manual content.
  * Single source of truth for the in-app User Manual viewer
- * and (later) PDF export.
+ * and the branded PDF export.
  */
+
+/**
+ * Platform tags shown on chapters/sections so readers can quickly tell
+ * which surface (Windows desktop, mobile PWA, in-browser preview) a topic
+ * applies to. Used by both the in-app viewer and the PDF export.
+ */
+export type Platform = 'desktop' | 'mobile' | 'web';
+
+export const PLATFORM_LABELS: Record<Platform, string> = {
+  desktop: 'Windows Desktop',
+  mobile: 'Mobile (iOS / Android PWA)',
+  web: 'Browser',
+};
 
 export interface ManualSection {
   id: string;
@@ -25,19 +38,6 @@ export interface ManualChapter {
 
 export const MANUAL_VERSION = 'v2.0';
 export const MANUAL_TITLE = 'CodeSync User Manual';
-
-/**
- * Platform tags shown on chapters/sections so readers can quickly tell
- * which surface (Windows desktop, mobile PWA, in-browser preview) a topic
- * applies to. Used by both the in-app viewer and the PDF export.
- */
-export type Platform = 'desktop' | 'mobile' | 'web';
-
-export const PLATFORM_LABELS: Record<Platform, string> = {
-  desktop: 'Windows Desktop',
-  mobile: 'Mobile (iOS / Android PWA)',
-  web: 'Browser',
-};
 
 export const MANUAL: ManualChapter[] = [
   {
