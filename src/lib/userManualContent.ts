@@ -884,6 +884,11 @@ export const MANUAL: ManualChapter[] = [
         title: 'Training Videos',
         body: `Click the video icon (🎥) in the top bar to access a library of training videos covering setup, message creation, troubleshooting, and best practices. Videos stream from secure cloud storage.\n\nWhen no videos are available the screen shows an empty placeholder. As BestCode publishes new tutorials they appear here automatically — no application update required.`,
         screenshot: '/manual-screenshots/37-training-videos.png',
+        callouts: [
+          { label: 'Video tile', text: 'thumbnail with title, duration and category — click to stream from secure cloud storage' },
+          { label: 'Category chips', text: 'filter the library by topic (Setup, Editor, Troubleshooting, Maintenance, etc.)' },
+          { label: 'Empty state', text: 'placeholder shown when no videos are published yet — new uploads appear automatically' },
+        ],
       },
       {
         id: 'feedback',
