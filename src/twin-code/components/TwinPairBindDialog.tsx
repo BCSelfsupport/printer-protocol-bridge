@@ -189,9 +189,17 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
           <p>
             <span className="font-semibold text-foreground">Wire format on bind:</span>{" "}
             <code className="font-mono">^MB</code> →{" "}
+            <code className="font-mono">^LM</code> check →{" "}
+            <code className="font-mono">^DM/^NM/^SV</code> if missing →{" "}
             <code className="font-mono">^SM &lt;message&gt;</code> →{" "}
             <code className="font-mono">^MD^&lt;BD|TD&gt;&lt;field&gt;;&lt;serial&gt;</code> per print →{" "}
             <code className="font-mono">^ME</code> on unbind.
+          </p>
+          <p>
+            <span className="font-semibold text-foreground">Auto-create:</span>{" "}
+            With auto-create on, the printer doesn't need any prep — bind will lay down a
+            canonical message (LID = DM 16×16, SIDE = 7×5 text, both on a 16-dot template)
+            if the named one isn't already there. Existing messages are never overwritten.
           </p>
           <p>
             <span className="font-semibold text-foreground">Tip:</span>{" "}
