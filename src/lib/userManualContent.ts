@@ -50,6 +50,11 @@ export const MANUAL: ManualChapter[] = [
         title: 'Launching CodeSync',
         body: `When CodeSync starts, you'll see the splash screen with the current version number. The application then connects to your local network and loads the printer list.\n\n**System tray:** When installed on Windows, CodeSync runs in the system tray and starts automatically with Windows.\n\n**First launch:** The first time you open CodeSync you will be prompted to activate your license. See Chapter 3.`,
         screenshot: '/manual-screenshots/00-splash.png',
+        callouts: [
+          { label: 'CodeSync logo', text: 'official BestCode CodeSync brand mark — confirms the launch sequence is genuine' },
+          { label: 'Version number', text: 'current build version — quote this in any support ticket or feedback submission' },
+          { label: 'Loading indicator', text: 'shows network discovery and license validation are in progress' },
+        ],
       },
       {
         id: 'main-layout',
