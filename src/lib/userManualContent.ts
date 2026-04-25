@@ -329,6 +329,12 @@ export const MANUAL: ManualChapter[] = [
         title: 'Counter fields',
         body: `The printer maintains four hardware counters (Counter 1-4). Each can be inserted into a message as an AutoCode field. Configure starting value, increment, min/max, and reset behavior under **Setup → Counters**.`,
         screenshot: '/manual-screenshots/09f-counter-field.png',
+        callouts: [
+          { label: 'Counter selector', text: 'pick Counter 1–4; each is a separate hardware register on the printer' },
+          { label: 'Start / Min / Max', text: 'starting value plus wrap range — counter rolls over from Max back to Min' },
+          { label: 'Increment', text: 'how much to add per print (typically 1; can be negative for countdowns)' },
+          { label: 'Padding & length', text: 'leading-zero pad to a fixed width (e.g. "0042" instead of "42")' },
+        ],
       },
       {
         id: 'fonts',
