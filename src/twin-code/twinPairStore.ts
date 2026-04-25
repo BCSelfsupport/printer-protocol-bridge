@@ -41,6 +41,15 @@ export interface TwinPrinterBinding {
   messageName?: string;
   fieldIndex?: number;
   subcommand?: DispatchSubcommand;
+  /**
+   * When true, on bind the dispatcher will check ^LM and seed a canonical
+   * message (LID = DM 16×16, SIDE = 7×5 text, both on a 16-dot template) if
+   * the named message doesn't yet exist on the printer. Removes the manual
+   * step of building the message on the printer HMI before first run.
+   * Default true for new bindings — operator can opt out per side in the
+   * TwinPairBindDialog. See `src/twin-code/messageSeeds.ts`.
+   */
+  autoCreate?: boolean;
 }
 
 export interface TwinPairState {
@@ -64,6 +73,8 @@ function migrateBinding(b: any): TwinPrinterBinding | null {
     messageName: typeof b.messageName === "string" && b.messageName.trim() ? b.messageName.trim() : undefined,
     fieldIndex: Number.isInteger(b.fieldIndex) && b.fieldIndex > 0 ? b.fieldIndex : undefined,
     subcommand: b.subcommand === "BD" || b.subcommand === "TD" ? b.subcommand : undefined,
+    // v3 default: auto-create on. Legacy v1/v2 entries opt-in by re-saving from the dialog.
+    autoCreate: typeof b.autoCreate === "boolean" ? b.autoCreate : true,
   };
 }
 

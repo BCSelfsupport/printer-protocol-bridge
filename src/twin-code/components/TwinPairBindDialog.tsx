@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Loader2, CheckCircle2, XCircle, Link2, Unlink, Cpu, Wifi, FileText, Hash, Barcode, Type } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Link2, Unlink, Cpu, Wifi, FileText, Hash, Barcode, Type, Sparkles } from "lucide-react";
 import { twinPairStore, useTwinPair, type TwinPrinterBinding, type DispatchSubcommand } from "../twinPairStore";
+import { seedForSide } from "../messageSeeds";
 
 type ProbeState = "idle" | "probing" | "ok" | "fail";
 
@@ -18,6 +20,8 @@ interface SlotState {
   messageName: string;
   fieldIndex: string;
   subcommand: DispatchSubcommand;
+  /** When true, auto-seed the canonical message on bind if missing. */
+  autoCreate: boolean;
   probe: ProbeState;
   probeMs: number | null;
   probeError: string | null;
@@ -38,6 +42,9 @@ function bindingToSlot(b: TwinPrinterBinding | null, fallbackName: string, defau
     messageName: b?.messageName ?? defaults.messageName,
     fieldIndex: (b?.fieldIndex ?? defaults.fieldIndex).toString(),
     subcommand: b?.subcommand ?? defaults.subcommand,
+    // Default ON: removes the manual "build the message on the printer HMI"
+    // step before first run. Operator can opt out per side.
+    autoCreate: b?.autoCreate ?? true,
     probe: "idle",
     probeMs: null,
     probeError: null,
@@ -121,6 +128,7 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
       messageName: slotA.messageName.trim(),
       fieldIndex: Number(slotA.fieldIndex),
       subcommand: slotA.subcommand,
+      autoCreate: slotA.autoCreate,
     };
     const b: TwinPrinterBinding = {
       kind: "ip",
@@ -130,6 +138,7 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
       messageName: slotB.messageName.trim(),
       fieldIndex: Number(slotB.fieldIndex),
       subcommand: slotB.subcommand,
+      autoCreate: slotB.autoCreate,
     };
     twinPairStore.setPair(a, b);
     onOpenChange(false);
@@ -180,9 +189,17 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
           <p>
             <span className="font-semibold text-foreground">Wire format on bind:</span>{" "}
             <code className="font-mono">^MB</code> →{" "}
+            <code className="font-mono">^LM</code> check →{" "}
+            <code className="font-mono">^DM/^NM/^SV</code> if missing →{" "}
             <code className="font-mono">^SM &lt;message&gt;</code> →{" "}
             <code className="font-mono">^MD^&lt;BD|TD&gt;&lt;field&gt;;&lt;serial&gt;</code> per print →{" "}
             <code className="font-mono">^ME</code> on unbind.
+          </p>
+          <p>
+            <span className="font-semibold text-foreground">Auto-create:</span>{" "}
+            With auto-create on, the printer doesn't need any prep — bind will lay down a
+            canonical message (LID = DM 16×16, SIDE = 7×5 text, both on a 16-dot template)
+            if the named one isn't already there. Existing messages are never overwritten.
           </p>
           <p>
             <span className="font-semibold text-foreground">Tip:</span>{" "}
@@ -362,6 +379,28 @@ function SlotCard({
               ^SM {state.messageName || "?"} → ^MD^{state.subcommand}{state.fieldIndex || "?"};&lt;serial&gt;
             </span>
           </div>
+
+          {/* Auto-create on bind */}
+          <label
+            htmlFor={`auto-${slotKey}`}
+            className="flex cursor-pointer items-start gap-2 rounded-md border border-border/60 bg-background/60 p-2 hover:bg-accent/30"
+          >
+            <Checkbox
+              id={`auto-${slotKey}`}
+              checked={state.autoCreate}
+              onCheckedChange={(v) => onChange({ ...state, autoCreate: v === true })}
+              className="mt-0.5"
+            />
+            <div className="flex-1 space-y-0.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium">
+                <Sparkles className="h-3 w-3 text-primary" />
+                Auto-create on bind if missing
+              </div>
+              <div className="text-[10px] text-muted-foreground leading-snug">
+                {seedForSide(slotKey).description}
+              </div>
+            </div>
+          </label>
         </div>
       </div>
     </div>

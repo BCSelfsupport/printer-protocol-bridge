@@ -27,6 +27,7 @@ import { printerTransport } from '@/lib/printerTransport';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import type { Printer } from '@/types/printer';
 import type { TwinPairState } from '@/twin-code/twinPairStore';
+import { buildSeedCommands, seedForSide, type MessageSeed } from '@/twin-code/messageSeeds';
 
 const MAX_IN_FLIGHT = 4;
 const R_TIMEOUT_MS = 500;
@@ -68,8 +69,20 @@ class PrinterSession {
     } catch { return false; }
   }
 
-  async enter(messageName?: string): Promise<{ ok: boolean; error?: string }> {
+  /**
+   * Enter 1-1 mode on this printer. If `opts.seed` is provided AND the message
+   * named in `opts.messageName` does not yet exist on the printer (per ^LM),
+   * the seed is sent first so the dispatcher hot path always has a known-good
+   * field shape to write into.
+   *
+   * Returns `seeded: true` when seeding actually fired (operator-visible).
+   */
+  async enter(opts: {
+    messageName?: string;
+    seed?: MessageSeed;
+  } = {}): Promise<{ ok: boolean; error?: string; seeded?: boolean }> {
     this.isEmulated = this.detectEmulated();
+    const { messageName, seed } = opts;
 
     // ---- Emulator path: synthesize R/T/C entirely in-process ----
     if (this.isEmulated) {
@@ -79,6 +92,16 @@ class PrinterSession {
       if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
         return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed (emulator)` };
       }
+      // Seed-on-bind is also honored on the emulator so the dev path mirrors prod.
+      let seeded = false;
+      if (seed && messageName) {
+        const r = await this.ensureMessage(messageName, seed);
+        if (!r.ok) {
+          await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }).catch(() => {});
+          return { ok: false, error: r.error };
+        }
+        seeded = !!r.seeded;
+      }
       if (messageName) {
         const sm = await printerTransport.sendCommand(this.printerId, `^SM ${messageName}`, { maxWaitMs: 2000 });
         if (!sm?.success) {
@@ -87,7 +110,7 @@ class PrinterSession {
         }
       }
       this.active = true;
-      return { ok: true };
+      return { ok: true, seeded };
     }
 
     if (!window.electronAPI?.oneToOne) {
@@ -120,6 +143,19 @@ class PrinterSession {
       return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed` };
     }
 
+    // Seed-on-bind: if the operator opted in (passed `seed`) and the named
+    // message isn't on the printer yet, lay it down before ^SM so the
+    // dispatcher's ^MD^BD/^MD^TD path always has a correct field to write to.
+    let seeded = false;
+    if (seed && messageName) {
+      const r = await this.ensureMessage(messageName, seed);
+      if (!r.ok) {
+        await this.exit();
+        return { ok: false, error: r.error };
+      }
+      seeded = !!r.seeded;
+    }
+
     if (messageName) {
       const sm = await printerTransport.sendCommand(this.printerId, `^SM ${messageName}`, { maxWaitMs: 4000 });
       if (!sm?.success) {
@@ -129,7 +165,58 @@ class PrinterSession {
     }
 
     this.active = true;
-    return { ok: true };
+    return { ok: true, seeded };
+  }
+
+  /**
+   * Guarantee that `messageName` exists on this printer. Queries ^LM, parses
+   * the message list, and only fires the seed sequence when the name is
+   * absent. Idempotent and safe to call on every bind.
+   *
+   * Wire sequence on miss:
+   *   ^DM <name>  (defensive — ignored if message doesn't exist)
+   *   ^NM <template>;<speed>;<orient>;<mode>;<name>^A<field>...
+   *   ^SV         (commit to non-volatile storage)
+   *
+   * Returns `seeded: false` when the message was already there.
+   */
+  private async ensureMessage(
+    messageName: string,
+    seed: MessageSeed,
+  ): Promise<{ ok: boolean; error?: string; seeded?: boolean }> {
+    const target = messageName.trim().toUpperCase();
+    if (!target) return { ok: false, error: `${this.label}: empty message name` };
+
+    // ^LM check — works on both Electron and emulator paths since the regular
+    // transport handles routing. If ^LM fails outright, surface the error
+    // rather than silently re-seeding (avoids clobbering operator messages
+    // when the printer is briefly unresponsive).
+    const lm = await printerTransport.sendCommand(this.printerId, '^LM', { maxWaitMs: 4000 });
+    if (!lm?.success) {
+      return { ok: false, error: `${this.label}: ^LM failed (cannot verify message exists)` };
+    }
+    const list = lm.response || '';
+    // ^LM returns one message name per line (with optional metadata after).
+    // Match exact name, case-insensitive, surrounded by line boundaries or whitespace.
+    const exists = new RegExp(
+      `(^|[\\r\\n\\s])${target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=[\\r\\n\\s]|$)`,
+      'i',
+    ).test(list);
+    if (exists) return { ok: true, seeded: false };
+
+    // Missing → seed. Send sequentially; ^DM is best-effort (ignored if absent).
+    const cmds = buildSeedCommands(seed, target);
+    for (const cmd of cmds) {
+      const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000 });
+      // ^DM may legitimately fail if the message wasn't there — that's expected, not an error.
+      if (!r?.success && !cmd.startsWith('^DM')) {
+        return {
+          ok: false,
+          error: `${this.label}: seed cmd "${cmd.slice(0, 40)}..." failed${r?.response ? `: ${r.response.trim()}` : ''}`,
+        };
+      }
+    }
+    return { ok: true, seeded: true };
   }
 
   /**
@@ -311,6 +398,10 @@ export interface BoundPairResult {
   /** Friendly identifiers for logging. */
   aId?: number;
   bId?: number;
+  /** True when the A-side message was auto-seeded during this bind. */
+  seededA?: boolean;
+  /** True when the B-side message was auto-seeded during this bind. */
+  seededB?: boolean;
 }
 
 export interface TwinDispatchResult {
@@ -358,6 +449,15 @@ export interface TwinDispatcherOptions {
   messageNameB?: string;
   /** When true, skip the ^LF field-index sanity check on bind (default false). */
   skipFieldCheck?: boolean;
+  /**
+   * When true, the dispatcher checks ^LM on bind and seeds a canonical
+   * LID (DM 16×16) / SIDE (Standard 7×5 text) message if missing.
+   * Per-side flags so the operator can opt out per printer when they want
+   * to run a hand-built message instead. Default false (back-compat).
+   * See `src/twin-code/messageSeeds.ts` for the exact ^NM payloads.
+   */
+  autoCreateA?: boolean;
+  autoCreateB?: boolean;
 }
 
 class TwinDispatcher {
@@ -395,11 +495,13 @@ class TwinDispatcher {
 
     // Enter both in parallel for fastest startup. Per-side message name takes
     // precedence over the shared `messageName` so A and B can run different msgs.
+    // Auto-create seed is selected per side; only passed when the operator
+    // opted in via `autoCreateA` / `autoCreateB`.
     const msgA = opts.messageNameA ?? opts.messageName;
     const msgB = opts.messageNameB ?? opts.messageName;
     const [resA, resB] = await Promise.all([
-      this.a.enter(msgA),
-      this.b.enter(msgB),
+      this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? seedForSide('A') : undefined }),
+      this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? seedForSide('B') : undefined }),
     ]);
 
     if (!resA.ok || !resB.ok) {
@@ -432,7 +534,7 @@ class TwinDispatcher {
       }
     }
 
-    return { ok: true, aId, bId };
+    return { ok: true, aId, bId, seededA: !!resA.seeded, seededB: !!resB.seeded };
   }
 
   /**

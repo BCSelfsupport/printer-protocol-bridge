@@ -83,6 +83,10 @@ export function ConveyorPanel() {
       fieldB: pair.b?.fieldIndex,
       subcommandA: pair.a?.subcommand,
       subcommandB: pair.b?.subcommand,
+      // Auto-create the LID/SIDE message if it isn't on the printer yet.
+      // Per-side flag on the binding (default true for v3+ entries).
+      autoCreateA: pair.a?.autoCreate ?? true,
+      autoCreateB: pair.b?.autoCreate ?? true,
     });
     setLiveBusy(false);
     if (!res.ok) {
@@ -91,11 +95,15 @@ export function ConveyorPanel() {
     }
     conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial));
     setLiveMode(true);
+    const seedNote = res.seededA || res.seededB
+      ? ` · Seeded ${[res.seededA && 'LID', res.seededB && 'SIDE'].filter(Boolean).join(' & ')}`
+      : '';
     toast({
       title: 'LIVE bonded mode active',
       description:
         `A: ${pair.a?.messageName ?? '(current msg)'} f${pair.a?.fieldIndex ?? '2'} ^${pair.a?.subcommand ?? 'BD'} · ` +
-        `B: ${pair.b?.messageName ?? '(current msg)'} f${pair.b?.fieldIndex ?? '2'} ^${pair.b?.subcommand ?? 'TD'}`,
+        `B: ${pair.b?.messageName ?? '(current msg)'} f${pair.b?.fieldIndex ?? '2'} ^${pair.b?.subcommand ?? 'TD'}` +
+        seedNote,
     });
   };
 
