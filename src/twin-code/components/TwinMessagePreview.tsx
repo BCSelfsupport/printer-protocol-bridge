@@ -173,6 +173,7 @@ function SideCard({
   subcommand,
   bound,
   printerLabel,
+  scale,
 }: SidePreviewProps) {
   const expected = side === 'A' ? 'DataMatrix 16×16 (^BD)' : 'Text 7×5, 13 chars (^TD)';
   const defaultName = side === 'A' ? 'LID' : 'SIDE';
@@ -209,7 +210,7 @@ function SideCard({
         </span>
       </div>
 
-      <SideCanvas side={side} />
+      <SideCanvas side={side} scale={scale} />
 
       <div className="flex flex-col gap-0.5 text-[10px] text-muted-foreground">
         <span>Shape: {expected}</span>
