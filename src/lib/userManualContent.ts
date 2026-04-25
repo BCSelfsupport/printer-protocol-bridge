@@ -714,6 +714,12 @@ export const MANUAL: ManualChapter[] = [
         title: 'Encoder calibration & Flip-Flop',
         body: `**Encoder Calibration:** Set Wheel Diameter and Pulses Per Revolution (PPR). CodeSync calculates the resulting Resolution (mm/pulse and in/pulse) automatically.\n\n**Flip-Flop Rotation:** Alternates print orientation on each print so the code is readable from either side of the cable. Configure Odd Prints (e.g. Normal) and Even Prints (e.g. Flip) independently.`,
         screenshot: '/manual-screenshots/14-encoder-flipflop.png',
+        callouts: [
+          { label: 'Wheel Diameter', text: 'physical encoder wheel diameter — drives the mm-per-pulse calculation' },
+          { label: 'PPR (Pulses per Revolution)', text: 'encoder spec — combined with diameter to compute resolution' },
+          { label: 'Resolution readout', text: 'auto-calculated mm/pulse and in/pulse — sanity check before running' },
+          { label: 'Odd / Even rotation', text: 'pick the orientation applied to alternating prints (Normal / Flip / 90° / 270°)' },
+        ],
       },
     ],
   },
