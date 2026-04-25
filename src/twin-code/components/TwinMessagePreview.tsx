@@ -21,6 +21,8 @@
 import { renderText } from '@/lib/dotMatrixFonts';
 import { useEffect, useRef } from 'react';
 import { useTwinPair } from '../twinPairStore';
+// @ts-ignore — bwip-js ships its own types but resolution differs across bundlers
+import bwipjs from 'bwip-js';
 
 interface SidePreviewProps {
   side: 'A' | 'B';
@@ -36,8 +38,16 @@ interface SidePreviewProps {
   printerLabel?: string;
 }
 
+/**
+ * Single placeholder both sides render. Identical content per print is the
+ * whole point of the cross-check — A's DM and B's text must match in production
+ * (dispatcher writes the same `serial` into both via ^MD^BD1 / ^MD^TD1).
+ */
+const PLACEHOLDER_SERIAL = 'DRYRUN0000000'; // 13 chars, matches catalog serial length
+
 const DOT = 4; // px per dot — readable on 1396px viewport without dominating the panel
-const PAD_DOTS = 60; // approximate template width matching the seed's centering math
+// 13 chars × (5 wide + 1 gap) = 78 dots. Add a small right margin so the last char isn't clipped.
+const PAD_DOTS = 84;
 const TEMPLATE_DOTS_A = 16; // LID seed runs on a 16-dot template (DM 16×16)
 const TEMPLATE_DOTS_B = 7;  // SIDE seed runs on a 7-dot template (Standard 7×5 text)
 
@@ -45,6 +55,10 @@ const TEMPLATE_DOTS_B = 7;  // SIDE seed runs on a 7-dot template (Standard 7×5
  * Renders the canonical seed shape for one side of the pair onto a small
  * dot-matrix canvas — green on dark, matching the printer ink look used in
  * MessageThumbnail / MessageCanvas.
+ *
+ * Both sides render the SAME placeholder string (PLACEHOLDER_SERIAL) so the
+ * operator can visually confirm A's DM and B's text are tied to the same
+ * data — exactly how the dispatcher feeds them in production.
  */
 function SideCanvas({ side }: { side: 'A' | 'B' }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -70,37 +84,49 @@ function SideCanvas({ side }: { side: 'A' | 'B' }) {
       }
     }
 
-    ctx.fillStyle = 'hsl(160, 84%, 55%)'; // emerald — printer ink
-
     if (side === 'A') {
-      // LID seed: native 16×16 DataMatrix at x=20 (centered on a 60-dot pad),
-      // bottom-anchored. We draw a representative ECC200-style block (filled
-      // border + a fixed checker pattern) — purely indicative, not a real DM.
-      const x0 = 20 * DOT;
-      const y0 = 0; // bottom-anchored on 16-dot template = top of canvas
-      const size = 16 * DOT;
-
-      // L-shape "finder" border (left + bottom solid, top + right dashed)
-      ctx.fillRect(x0, y0, DOT, size);
-      ctx.fillRect(x0, y0 + size - DOT, size, DOT);
-      for (let i = 0; i < 16; i += 2) ctx.fillRect(x0 + i * DOT, y0, DOT, DOT);
-      for (let i = 0; i < 16; i += 2) ctx.fillRect(x0 + size - DOT, y0 + i * DOT, DOT, DOT);
-
-      // Pseudo-random module pattern (deterministic so the preview is stable)
-      let seed = 0x2a;
-      for (let r = 1; r < 15; r++) {
-        for (let col = 1; col < 15; col++) {
-          seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-          if (((seed >> 7) & 0x1) === 1) {
-            ctx.fillRect(x0 + col * DOT, y0 + r * DOT, DOT, DOT);
+      // LID: real ECC200 DM 16×16 of the SAME placeholder string the SIDE shows,
+      // rendered with bwip-js and quantized to dot pixels so it visually matches
+      // the dot-matrix style of the SIDE canvas.
+      // Centered horizontally on the 84-dot canvas, bottom-anchored on the 16-dot template.
+      const tmp = document.createElement('canvas');
+      bwipjs.toCanvas(tmp, {
+        bcid: 'datamatrix',
+        text: PLACEHOLDER_SERIAL,
+        scale: 1,
+        rows: 16,
+        columns: 16,
+        includetext: false,
+        backgroundcolor: 'ffffff',
+        paddingwidth: 0,
+        paddingheight: 0,
+      });
+      // bwip-js renders at 16x16 raw pixels — we need to plot them as `DOT`-sized squares.
+      const tctx = tmp.getContext('2d');
+      if (tctx && tmp.width > 0 && tmp.height > 0) {
+        const img = tctx.getImageData(0, 0, tmp.width, tmp.height);
+        // Sample at integer steps — assumes bwip-js produced a 16x16 pixel grid.
+        const cellW = tmp.width / 16;
+        const cellH = tmp.height / 16;
+        const x0 = Math.floor((PAD_DOTS - 16) / 2) * DOT; // center on canvas
+        ctx.fillStyle = 'hsl(160, 84%, 55%)'; // emerald — printer ink
+        for (let r = 0; r < 16; r++) {
+          for (let col = 0; col < 16; col++) {
+            const px = Math.floor(col * cellW + cellW / 2);
+            const py = Math.floor(r * cellH + cellH / 2);
+            const idx = (py * tmp.width + px) * 4;
+            // bwip-js paints modules as dark on white — pick "dark" via R channel.
+            if (img.data[idx] < 128) {
+              ctx.fillRect(x0 + col * DOT, r * DOT, DOT, DOT);
+            }
           }
         }
       }
     } else {
-      // SIDE seed: 13-character placeholder in Standard 7×5, left-aligned,
-      // bottom-anchored on the 7-dot template (text fills the full template).
+      // SIDE: 13-char placeholder in Standard 7×5, left-aligned, fills the 7-dot template.
+      ctx.fillStyle = 'hsl(160, 84%, 55%)'; // emerald — printer ink
       try {
-        renderText(ctx, 'DRYRUN0000000', 0, 0, 'Standard7High', DOT, 1);
+        renderText(ctx, PLACEHOLDER_SERIAL, 0, 0, 'Standard7High', DOT, 1);
       } catch {
         // Font load may not be ready on first paint — skip silently; the
         // canvas already has the grid background so the panel stays valid.
