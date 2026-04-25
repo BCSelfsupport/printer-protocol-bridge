@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const validTiers = ["lite", "full", "database", "demo"];
+    const validTiers = ["lite", "full", "database", "demo", "twincode"];
     if (!validTiers.includes(tier)) {
       return new Response(
         JSON.stringify({ error: `Invalid tier. Must be one of: ${validTiers.join(", ")}` }),
