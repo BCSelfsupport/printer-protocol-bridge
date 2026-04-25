@@ -733,6 +733,12 @@ export const MANUAL: ManualChapter[] = [
         title: 'Supported sources',
         body: `The Data Sources screen lists every imported dataset. Each row shows the source name, column count, and row count. Click a source to preview its data inline. Use the dashed drop zone to quickly import a CSV file.\n\n- **CSV upload** — Local file import with column auto-detection\n- **Hotfolder** — Watch a folder for new CSV drops (Desktop only)\n- **REST API / Webhook** — Push data from CANIX, METRC, or any ERP via HTTP POST\n- **ODBC / SQL** — Direct database connection (Desktop only, DATABASE tier)\n\nMETRC cannabis tracking exports are auto-detected by header keywords (Unit Quantity, Package, Tag).`,
         screenshot: '/manual-screenshots/17-data-sources.png',
+        callouts: [
+          { label: 'Source list', text: 'one row per imported dataset showing name, column count and row count' },
+          { label: 'Drop zone', text: 'drag-and-drop a CSV here for instant import with auto-detected columns' },
+          { label: 'Wizard button', text: 'launches the guided 4-step import wizard (CSV or METRC)' },
+          { label: 'Integrations tab', text: 'switches to the API / Hotfolder / ODBC automated ingestion view' },
+        ],
       },
       {
         id: 'preview',
