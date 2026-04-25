@@ -47,7 +47,7 @@ async function totpCode(secretBase32: string, time: number): Promise<string> {
   const buf = new ArrayBuffer(8);
   new DataView(buf).setUint32(4, counter, false);
   const cryptoKey = await crypto.subtle.importKey(
-    "raw", key, { name: "HMAC", hash: "SHA-1" }, false, ["sign"],
+    "raw", key as BufferSource, { name: "HMAC", hash: "SHA-1" }, false, ["sign"],
   );
   const sig = new Uint8Array(await crypto.subtle.sign("HMAC", cryptoKey, buf));
   const offset = sig[sig.length - 1] & 0x0f;
@@ -70,7 +70,7 @@ async function verifyTotp(secretBase32: string, submitted: string): Promise<bool
 async function getEncryptionKey(): Promise<CryptoKey> {
   const raw = Deno.env.get("DEV_TOTP_ENCRYPTION_KEY");
   if (!raw) throw new Error("DEV_TOTP_ENCRYPTION_KEY not configured");
-  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw) as BufferSource);
   return crypto.subtle.importKey("raw", hash, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
 }
 
@@ -79,7 +79,11 @@ async function decrypt(stored: string): Promise<string> {
   const combined = Uint8Array.from(atob(stored), (c) => c.charCodeAt(0));
   const iv = combined.slice(0, 12);
   const ct = combined.slice(12);
-  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
+  const pt = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: iv as BufferSource },
+    key,
+    ct as BufferSource,
+  );
   return new TextDecoder().decode(pt);
 }
 
