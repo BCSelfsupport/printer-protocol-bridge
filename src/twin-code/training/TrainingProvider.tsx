@@ -50,11 +50,17 @@ interface TrainingContextValue {
   completed: Set<TrainingStageId>;
   /** Whether this is the operator's first ever Twin Code visit. */
   isFirstLaunch: boolean;
+  /** When true, the spotlight/scrim is hidden so the operator can freely try the step. */
+  paused: boolean;
   startStage: (id: TrainingStageId) => void;
   startFullTour: () => void;
   next: () => void;
   prev: () => void;
   exit: () => void;
+  /** Pause the tour — overlay hides, a floating "Resume" pill is shown by the overlay. */
+  pause: () => void;
+  /** Resume a paused tour at the same step. */
+  resume: () => void;
 }
 
 const TrainingContext = createContext<TrainingContextValue | null>(null);
