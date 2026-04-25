@@ -135,10 +135,11 @@ export function usePrinterStorage() {
           return p;
         });
         
-        // Add any missing emulated printers
+        // Add any missing emulated printers (skip those the user explicitly removed)
+        const removed = getRemovedEmulatedKeys();
         emulatedConfigs.forEach(cfg => {
           const key = `${cfg.ipAddress}:${cfg.port}`;
-          if (!existingByKey.has(key)) {
+          if (!existingByKey.has(key) && !removed.has(key)) {
             const instance = multiPrinterEmulator.getInstanceByIp(cfg.ipAddress, cfg.port);
             if (instance) {
               const state = instance.getState();
