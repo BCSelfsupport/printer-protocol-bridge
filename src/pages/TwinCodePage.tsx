@@ -228,6 +228,7 @@ function TwinCodePageInner(props: any) {
       </header>
 
       <main className="mx-auto max-w-[1600px] space-y-4 px-6 py-6">
+        <FirstLaunchBanner />
         {/* Production Run bar — visible in BOTH modes; locks the line to a named batch */}
         <ProductionRunBar />
 
