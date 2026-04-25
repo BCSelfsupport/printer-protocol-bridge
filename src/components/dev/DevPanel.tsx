@@ -136,6 +136,7 @@ interface DevPanelProps {
 
 export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinterPort, connectedPrinterId, defaultTab, showToggleButton = true, recorderState, recorderActions }: DevPanelProps) {
   const isMobile = useIsMobile();
+  const { tier: activeTier, devTierOverride, setDevTierOverride } = useLicense();
   
   // Resolve the correct emulator instance for the connected printer
   const getConnectedEmulator = () => {
