@@ -289,6 +289,7 @@ export function PrintersScreen({
 
   // When a TwinCode pair is selected, the right pane swaps to the embedded TwinCode view.
   const [pairSelected, setPairSelected] = useState(false);
+  const [pairExpanded, setPairExpanded] = useState(true);
 
   // Lite tier: only show the first printer
   const visiblePrinters = tier === 'lite' ? printers.slice(0, 1) : printers;
