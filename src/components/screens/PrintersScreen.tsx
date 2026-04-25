@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio, Link2 } from 'lucide-react';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
@@ -12,6 +12,8 @@ import { Dashboard } from '@/components/screens/Dashboard';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLicense } from '@/contexts/LicenseContext';
+import { useTwinPair } from '@/twin-code/twinPairStore';
+import { TwinCodeView } from '@/twin-code/components/TwinCodeView';
 import {
   DndContext,
   closestCenter,
@@ -268,7 +270,20 @@ export function PrintersScreen({
   const [devTaps, setDevTaps] = useState<number[]>([]);
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
-  const { canNetwork, canDatabase, tier, isActivated } = useLicense();
+  const { canNetwork, canDatabase, canTwinCode, tier, isActivated } = useLicense();
+  const twinPair = useTwinPair();
+
+  // TwinCode pair resolution: match the bound IPs back to actual Printer records.
+  const pairPrinters = useMemo(() => {
+    if (!canTwinCode || !twinPair.a || !twinPair.b) return null;
+    const a = printers.find(p => p.ipAddress === twinPair.a!.ip);
+    const b = printers.find(p => p.ipAddress === twinPair.b!.ip);
+    if (!a || !b) return null;
+    return { a, b };
+  }, [canTwinCode, twinPair.a, twinPair.b, printers]);
+
+  // When a TwinCode pair is selected, the right pane swaps to the embedded TwinCode view.
+  const [pairSelected, setPairSelected] = useState(false);
 
   // Lite tier: only show the first printer
   const visiblePrinters = tier === 'lite' ? printers.slice(0, 1) : printers;
@@ -407,6 +422,8 @@ export function PrintersScreen({
 
   const handlePrinterClick = (printer: Printer) => {
     setSelectedPrinter(printer);
+    // Selecting an individual printer deselects any active TwinCode pair so the dashboard takes over.
+    setPairSelected(false);
     // Don't auto-connect on click — user can connect via the Connect button
     // This prevents accidentally switching away from the master printer
   };
@@ -444,8 +461,10 @@ export function PrintersScreen({
   };
 
   // Desktop shows split-view with Dashboard when connected (or rightPanelContent override)
-  const showDashboardInPanel = !isMobile && isConnected && connectedPrinter;
-  const showRightPanel = showDashboardInPanel || (!isMobile && rightPanelContent);
+  // Pair-selected on a TwinCode license takes priority over dashboard / external rightPanelContent.
+  const showTwinCodePanel = !isMobile && pairSelected && !!pairPrinters;
+  const showDashboardInPanel = !isMobile && isConnected && connectedPrinter && !showTwinCodePanel;
+  const showRightPanel = showTwinCodePanel || showDashboardInPanel || (!isMobile && rightPanelContent);
 
   return (
     <div className="flex-1 flex flex-col md:flex-row bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-3 md:p-4 gap-3 md:gap-4 overflow-y-auto md:overflow-hidden">
@@ -541,6 +560,62 @@ export function PrintersScreen({
         {/* Printer List with ScrollArea */}
         <ScrollArea className="flex-1">
           <div className="p-2 pr-3 space-y-2">
+            {/* TwinCode Bound Pair card — only when license allows AND a pair is bound to two known printers */}
+            {pairPrinters && (
+              <button
+                type="button"
+                onClick={() => setPairSelected(true)}
+                className={`w-full text-left rounded-lg border p-3 transition-colors ${
+                  pairSelected
+                    ? 'border-emerald-500/70 bg-gradient-to-r from-blue-500/15 via-emerald-500/10 to-emerald-500/15 shadow-lg shadow-emerald-500/10'
+                    : 'border-slate-700 bg-slate-800/40 hover:border-emerald-500/50 hover:bg-slate-800/70'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-md bg-gradient-to-br from-blue-500/30 to-emerald-500/30 flex items-center justify-center">
+                    <Link2 className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-1 leading-none">
+                      <span className="text-xs font-bold italic text-blue-400">Twin</span>
+                      <span className="text-xs font-bold italic text-emerald-400">Code</span>
+                      <span className="text-[8px] text-slate-500">™</span>
+                      <span className="ml-1 text-[10px] text-slate-400">Bound Pair</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5 truncate">
+                      {pairPrinters.a.name} ↔ {pairPrinters.b.name}
+                    </div>
+                  </div>
+                  {pairSelected && (
+                    <span className="text-[9px] font-semibold uppercase tracking-wider text-emerald-400">Active</span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                  <div className={`rounded px-2 py-1 border ${pairPrinters.a.isAvailable ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300' : 'border-slate-700 bg-slate-900/50 text-slate-500'}`}>
+                    <div className="font-semibold">A · Lid</div>
+                    <div className="font-mono">{pairPrinters.a.ipAddress}</div>
+                  </div>
+                  <div className={`rounded px-2 py-1 border ${pairPrinters.b.isAvailable ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300' : 'border-slate-700 bg-slate-900/50 text-slate-500'}`}>
+                    <div className="font-semibold">B · Side</div>
+                    <div className="font-mono">{pairPrinters.b.ipAddress}</div>
+                  </div>
+                </div>
+              </button>
+            )}
+
+            {/* TwinCode license but no pair bound yet — hint card */}
+            {canTwinCode && !pairPrinters && (
+              <div className="rounded-lg border border-dashed border-emerald-500/40 bg-emerald-500/5 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Link2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-xs font-semibold text-emerald-300">TwinCode pair not bound</span>
+                </div>
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                  Visit <span className="font-mono text-emerald-400">/twin-code</span> to bind two printers as a Lid/Side pair. Once bound, the pair will appear here and selecting it opens the TwinCode workspace.
+                </p>
+              </div>
+            )}
+
             {visiblePrinters.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-slate-500 py-8">
                 <PrinterIcon className="w-10 h-10 mb-3 opacity-50" />
@@ -674,7 +749,11 @@ export function PrintersScreen({
 
       {/* Right Panel - Dashboard, custom content, or Empty State */}
       <div className={`flex-1 flex flex-col overflow-hidden ${!showRightPanel ? 'hidden md:flex' : ''}`}>
-        {rightPanelContent ? (
+        {showTwinCodePanel ? (
+          <div className="flex-1 flex flex-col bg-background rounded-xl border border-slate-700 overflow-hidden">
+            <TwinCodeView embedded />
+          </div>
+        ) : rightPanelContent ? (
           <div className="flex-1 flex flex-col bg-background rounded-xl border border-slate-700 overflow-hidden">
             {rightPanelContent}
           </div>
