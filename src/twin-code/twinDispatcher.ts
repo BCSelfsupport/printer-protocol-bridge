@@ -534,7 +534,7 @@ class TwinDispatcher {
       }
     }
 
-    return { ok: true, aId, bId };
+    return { ok: true, aId, bId, seededA: !!resA.seeded, seededB: !!resB.seeded };
   }
 
   /**
