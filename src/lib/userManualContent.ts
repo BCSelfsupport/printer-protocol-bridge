@@ -826,6 +826,12 @@ export const MANUAL: ManualChapter[] = [
         title: 'Generating a pairing code (PC)',
         body: `On the PC there are **two ways** to open the Pair Mobile dialog:\n\n- **Top bar shortcut** — click the **QR code icon** (primary blue) in the header. This is the fastest way and is always one click away.\n- **License Activation** — open the activation dialog from the printers sidebar footer, then click **Pair Mobile**.\n\nThe Pair Mobile dialog is split into two clearly numbered steps:\n\n**Step 1 — Install the PWA on the phone.** A QR code links the phone's browser to \`https://bestcode-codesync.lovable.app\`. The dialog also shows the platform-specific "Add to Home Screen" instructions for iOS Safari and Android Chrome — operators only need to do this once per phone.\n\n**Step 2 — Pair.** A second QR code (and a 6-character PIN) is valid for 5 minutes. The same dialog lists every currently paired phone (machine ID, paired-at, last-seen) with an **Unpair** button per row, refreshing every 5 seconds.\n\nGenerating a new pairing code only expires older *pending* codes — already-paired phones stay connected.`,
         screenshot: '/manual-screenshots/48-pair-mobile-qr.png',
+        callouts: [
+          { label: 'Step 1 QR', text: 'links the phone browser to the PWA — only needed the first time per phone' },
+          { label: 'Add-to-Home instructions', text: 'platform-specific iOS Safari and Android Chrome steps' },
+          { label: 'Step 2 QR + PIN', text: '5-minute pairing code; PIN is the typed fallback if the camera misreads' },
+          { label: 'Paired devices list', text: 'live list of every bound phone with machine ID, paired-at, last-seen and an Unpair button' },
+        ],
       },
       {
         id: 'mobile-side-pairing',
