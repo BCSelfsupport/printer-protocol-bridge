@@ -1,6 +1,7 @@
 import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio, Link2 } from 'lucide-react';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PrinterListItem } from '@/components/printers/PrinterListItem';
 import { AddPrinterDialog } from '@/components/printers/AddPrinterDialog';
 import { EditPrinterDialog } from '@/components/printers/EditPrinterDialog';
@@ -271,6 +272,7 @@ export function PrintersScreen({
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
   const { canNetwork, canDatabase, canTwinCode, tier, isActivated } = useLicense();
+  const navigate = useNavigate();
   const twinPair = useTwinPair();
 
   // TwinCode pair resolution: match the bound IPs back to actual Printer records.
@@ -603,16 +605,24 @@ export function PrintersScreen({
               </button>
             )}
 
-            {/* TwinCode license but no pair bound yet — hint card */}
+            {/* TwinCode license but no pair bound yet — hint card with action */}
             {canTwinCode && !pairPrinters && (
               <div className="rounded-lg border border-dashed border-emerald-500/40 bg-emerald-500/5 p-3">
                 <div className="flex items-center gap-2 mb-1">
                   <Link2 className="w-3.5 h-3.5 text-emerald-400" />
                   <span className="text-xs font-semibold text-emerald-300">TwinCode pair not bound</span>
                 </div>
-                <p className="text-[10px] text-slate-400 leading-relaxed">
-                  Visit <span className="font-mono text-emerald-400">/twin-code</span> to bind two printers as a Lid/Side pair. Once bound, the pair will appear here and selecting it opens the TwinCode workspace.
+                <p className="text-[10px] text-slate-400 leading-relaxed mb-2">
+                  Bind two printers as a Lid/Side pair on the TwinCode page. Once bound, the pair appears here and selecting it opens the TwinCode workspace.
                 </p>
+                <Button
+                  size="sm"
+                  className="w-full h-7 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
+                  onClick={() => navigate('/twin-code')}
+                >
+                  <Link2 className="w-3 h-3 mr-1.5" />
+                  Configure TwinCode pair
+                </Button>
               </div>
             )}
 
