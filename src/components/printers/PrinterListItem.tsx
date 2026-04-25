@@ -384,8 +384,8 @@ export function PrinterListItem({
       className={`w-full text-left p-3 rounded-lg transition-all border overflow-hidden ${groupBorderClass} ${
         isSelected 
           ? 'bg-primary/20 border-primary shadow-lg' 
-          : groupColor
-            ? `${groupColor.bg} border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600`
+          : effectiveColor
+            ? `${effectiveColor.bg} border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600`
             : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600'
       }`}
     >
