@@ -78,12 +78,12 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'platform-tiers',
         title: 'Editions / tiers at a glance',
-        body: `Every license is one of five tiers. The badge under the Activate button on the Printers screen shows the active tier.\n\n- **DEMO** — 30-day full-feature trial. Watermark on previews and printed messages. Auto-locks at expiry.\n- **LITE** — single printer, USB / Serial only, no network features.\n- **FULL** — unlimited network printers, all message and reporting features.\n- **DATABASE** — Full + Variable Data Printing (CSV / Hotfolder / REST / ODBC), unlocks the Data Source screen and Print Jobs.\n- **TWINCODE** — bonded 2-printer pair with catalog-fed serials. Unlocks the Twin Code screen and the catalog ledger (Chapter 16).\n\nTier gating is enforced both client-side (UI hides screens you can't use) and server-side (the cloud refuses to issue scan requests, twin code ledgers, or fleet telemetry pushes for tiers that don't include them).`,
+        body: `Every license is one of five tiers. The badge under the Activate button on the Printers screen shows the active tier.\n\n- **DEMO** — 30-day full-feature trial. Watermark on previews and printed messages. Auto-locks at expiry.\n- **LITE** — single printer, USB / Serial only, no network features.\n- **FULL** — unlimited network printers, all message and reporting features.\n- **DATABASE** — Full + Variable Data Printing (CSV / Hotfolder / REST / ODBC), unlocks the Data Source screen and Print Jobs.\n- **TWINCODE** — bonded 2-printer pair with catalog-fed serials. Unlocks the Twin Code screen and the catalog ledger (Chapter 16).\n\nTier gating is enforced both client-side (UI hides screens you can't use) and server-side (the cloud refuses to issue scan requests or twin code ledger writes for tiers that don't include them).`,
       },
       {
         id: 'platform-pick',
         title: 'Which surface for which task?',
-        body: `| I want to… | Use |\n|---|---|\n| Author or edit a print message | Desktop |\n| Run a Print Job from a CSV | Desktop |\n| Scan a barcode into a message | Mobile (paired) — or a USB scanner on the desktop |\n| Walk the floor and check printer status | Mobile |\n| Pause the desktop's polling so I can use the printer's HMI | Mobile |\n| Run a bonded twin-pair production line | Desktop (Twin Code screen) |\n| Monitor printers across multiple sites | Desktop or mobile (Fleet Telemetry) |\n| Diagnose a connection problem | Desktop (Diagnostics page) |\n\nIf in doubt: **author on the desktop, observe and scan from the phone.**`,
+        body: `| I want to… | Use |\n|---|---|\n| Author or edit a print message | Desktop |\n| Run a Print Job from a CSV | Desktop |\n| Scan a barcode into a message | Mobile (paired) — or a USB scanner on the desktop |\n| Walk the floor and check printer status | Mobile |\n| Pause the desktop's polling so I can use the printer's HMI | Mobile |\n| Run a bonded twin-pair production line | Desktop (Twin Code screen) |\n| Diagnose a connection problem | Desktop (Diagnostics page) |\n\nIf in doubt: **author on the desktop, observe and scan from the phone.**`,
       },
     ],
   },
@@ -120,7 +120,7 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'edit-printer',
         title: 'Editing a printer (Serial, Line ID, Sync Role)',
-        body: `Click the small pencil icon on a printer card to edit its settings:\n\n- **Name / IP / Port** — basic connection details\n- **Serial Number** — optional; used for Fleet Telemetry tracking\n- **Line ID** — optional; resolves dynamically as the value of any Line ID field in messages on this printer (e.g. "Line A", "Packaging 1")\n- **Sync Role** — None / Master / Slave for multi-printer synchronization (Master propagates message content and selection to its slaves)`,
+        body: `Click the small pencil icon on a printer card to edit its settings:\n\n- **Name / IP / Port** — basic connection details\n- **Serial Number** — optional; recorded for asset tracking\n- **Line ID** — optional; resolves dynamically as the value of any Line ID field in messages on this printer (e.g. "Line A", "Packaging 1")\n- **Sync Role** — None / Master / Slave for multi-printer synchronization (Master propagates message content and selection to its slaves)`,
         screenshot: '/manual-screenshots/04-edit-printer.png',
       },
       {
@@ -738,7 +738,7 @@ export const MANUAL: ManualChapter[] = [
   },
   {
     id: 'appendix',
-    title: '20. Appendix',
+    title: '18. Appendix',
     intro: 'Reference material.',
     sections: [
       {
