@@ -164,25 +164,29 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <SlotCard
-            slotKey="A"
-            tagline="Lid · Data Matrix 16×16 · prints down"
-            state={slotA}
-            onChange={setSlotA}
-            onProbe={() => handleProbe("a")}
-            validField={validField}
-            validMessageName={validMessageName}
-          />
-          <SlotCard
-            slotKey="B"
-            tagline="Side · text · human-readable serial"
-            state={slotB}
-            onChange={setSlotB}
-            onProbe={() => handleProbe("b")}
-            validField={validField}
-            validMessageName={validMessageName}
-          />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2" data-tour="bind-ip-fields">
+          <div data-tour="bind-message-config">
+            <SlotCard
+              slotKey="A"
+              tagline="Lid · Data Matrix 16×16 · prints down"
+              state={slotA}
+              onChange={setSlotA}
+              onProbe={() => handleProbe("a")}
+              validField={validField}
+              validMessageName={validMessageName}
+            />
+          </div>
+          <div data-tour="bind-auto-create">
+            <SlotCard
+              slotKey="B"
+              tagline="Side · text · human-readable serial"
+              state={slotB}
+              onChange={setSlotB}
+              onProbe={() => handleProbe("b")}
+              validField={validField}
+              validMessageName={validMessageName}
+            />
+          </div>
         </div>
 
         <div className="rounded-md border border-border bg-muted/40 p-3 text-[11px] text-muted-foreground space-y-1">
@@ -219,7 +223,7 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleSave} disabled={!canSave}>
+          <Button type="button" onClick={handleSave} disabled={!canSave} data-tour="bind-confirm">
             <Link2 className="mr-2 h-4 w-4" />
             Bind pair
           </Button>

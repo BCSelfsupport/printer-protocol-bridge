@@ -162,7 +162,7 @@ export function PreflightDialog({
 
         {/* Per-cycle results */}
         {(liveResults.length > 0 || verdict) && (
-          <div className="space-y-1.5">
+          <div className="space-y-1.5" data-tour="preflight-results">
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Cycle results
             </div>

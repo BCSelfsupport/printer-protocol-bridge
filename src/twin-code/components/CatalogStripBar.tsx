@@ -276,6 +276,7 @@ export function CatalogStripBar() {
           onClick={runDryRun}
           disabled={!liveMode || dryBusy || liveBusy}
           title="Fire 5 real bonded dispatches and report timings — use BEFORE starting the run"
+          data-tour="preflight-button"
         >
           {dryBusy ? (
             <Loader2 className="mr-1 h-4 w-4 animate-spin" />
