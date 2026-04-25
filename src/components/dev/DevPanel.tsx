@@ -51,6 +51,8 @@ import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
 import { ParameterSnapshot } from '@/components/dev/ParameterSnapshot';
 import { TwinPairBindDialog } from '@/twin-code/components/TwinPairBindDialog';
 import { useTwinPair } from '@/twin-code/twinPairStore';
+import { useLicense, type LicenseTier } from '@/contexts/LicenseContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 function getTimeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
