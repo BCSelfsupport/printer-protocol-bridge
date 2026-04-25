@@ -471,6 +471,11 @@ export const MANUAL: ManualChapter[] = [
         title: 'Custom reports — getting started',
         body: `When you first open the **Custom** tab, no templates exist yet. Click **+ Create Template** (or **+ New Template** in the templates bar) to open the builder.\n\nSaved templates appear as chips at the top — click one to load it, or use the ⋮ menu to **Edit**, **Duplicate**, or **Delete**.`,
         screenshot: '/manual-screenshots/26-custom-empty.png',
+        callouts: [
+          { label: 'Templates bar', text: 'horizontal chip strip — empty on first use, filled with saved templates after Save' },
+          { label: '+ Create Template', text: 'launches the builder dialog (next section)' },
+          { label: 'Empty state copy', text: 'guidance text shown until at least one template exists' },
+        ],
       },
       {
         id: 'custom-builder',
