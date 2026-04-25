@@ -16,7 +16,7 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, X, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Sparkles, Pause, Play } from 'lucide-react';
 import { useTraining } from './TrainingProvider';
 
 // Padding around the spotlight cutout so the highlighted element has air.
@@ -29,7 +29,7 @@ const VIEWPORT_PAD = 16;
 interface Rect { top: number; left: number; width: number; height: number }
 
 export function TrainingOverlay() {
-  const { stage, step, stepIndex, stepCount, next, prev, exit } = useTraining();
+  const { stage, step, stepIndex, stepCount, paused, next, prev, exit, pause, resume } = useTraining();
   const [targetRect, setTargetRect] = useState<Rect | null>(null);
 
   // Re-measure the targeted element on every step change AND on resize/scroll
@@ -76,6 +76,38 @@ export function TrainingOverlay() {
   }, [step]);
 
   if (!stage || !step) return null;
+
+  // Paused state — render only a small floating pill so the operator can
+  // freely interact with the underlying UI to try the current step.
+  if (paused) {
+    return (
+      <div className="fixed bottom-6 right-6 z-[100] pointer-events-auto">
+        <div className="flex items-center gap-2 rounded-full border border-primary/40 bg-card px-3 py-2 shadow-2xl">
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          <div className="flex flex-col leading-tight">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+              Training paused
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              {stage.title} · step {stepIndex + 1}/{stepCount}
+            </span>
+          </div>
+          <Button size="sm" onClick={resume} className="h-7 gap-1 text-xs">
+            <Play className="h-3.5 w-3.5" /> Resume
+          </Button>
+          <button
+            type="button"
+            onClick={exit}
+            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Exit training"
+            title="Exit training"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const hasTarget = step.target !== null && targetRect !== null;
   const tooltipPos = hasTarget && targetRect
@@ -166,7 +198,7 @@ export function TrainingOverlay() {
           </div>
 
           {/* Footer — nav controls */}
-          <div className="flex items-center justify-between border-t border-border px-3 py-2">
+          <div className="flex items-center justify-between gap-1 border-t border-border px-3 py-2">
             <Button
               size="sm"
               variant="ghost"
@@ -176,13 +208,24 @@ export function TrainingOverlay() {
             >
               <ChevronLeft className="h-3.5 w-3.5" /> Back
             </Button>
-            <Button size="sm" variant="ghost" onClick={exit} className="h-7 text-xs">
-              Skip tour
-            </Button>
-            <Button size="sm" onClick={next} className="h-7 gap-1 text-xs">
-              {stepIndex + 1 === stepCount ? 'Finish' : 'Next'}
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={pause}
+                className="h-7 gap-1 text-xs"
+                title="Pause to try this step yourself — overlay hides until you resume"
+              >
+                <Pause className="h-3.5 w-3.5" /> Try it
+              </Button>
+              <Button size="sm" variant="ghost" onClick={exit} className="h-7 text-xs">
+                Skip
+              </Button>
+              <Button size="sm" onClick={next} className="h-7 gap-1 text-xs">
+                {stepIndex + 1 === stepCount ? 'Finish' : 'Next'}
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>

@@ -50,11 +50,17 @@ interface TrainingContextValue {
   completed: Set<TrainingStageId>;
   /** Whether this is the operator's first ever Twin Code visit. */
   isFirstLaunch: boolean;
+  /** When true, the spotlight/scrim is hidden so the operator can freely try the step. */
+  paused: boolean;
   startStage: (id: TrainingStageId) => void;
   startFullTour: () => void;
   next: () => void;
   prev: () => void;
   exit: () => void;
+  /** Pause the tour — overlay hides, a floating "Resume" pill is shown by the overlay. */
+  pause: () => void;
+  /** Resume a paused tour at the same step. */
+  resume: () => void;
 }
 
 const TrainingContext = createContext<TrainingContextValue | null>(null);
@@ -68,6 +74,7 @@ export function useTraining(): TrainingContextValue {
 export function TrainingProvider({ children }: { children: ReactNode }) {
   const [activeStageId, setActiveStageId] = useState<TrainingStageId | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
   /** Stage queue — populated when the operator runs the full tour, drained on each stage finish. */
   const queueRef = useRef<TrainingStageId[]>([]);
 
@@ -106,6 +113,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     queueRef.current = []; // single-stage run, no queue
     setActiveStageId(id);
     setStepIndex(0);
+    setPaused(false);
   }, [consumeFirstLaunch]);
 
   const startFullTour = useCallback(() => {
@@ -114,6 +122,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     queueRef.current = order.slice(1); // first stage runs immediately
     setActiveStageId(order[0]);
     setStepIndex(0);
+    setPaused(false);
   }, [consumeFirstLaunch]);
 
   const finishCurrentStage = useCallback(() => {
@@ -162,11 +171,16 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     queueRef.current = [];
     setActiveStageId(null);
     setStepIndex(0);
+    setPaused(false);
   }, []);
 
-  // Esc to exit any active tour — operators must always be able to bail.
+  const pause = useCallback(() => setPaused(true), []);
+  const resume = useCallback(() => setPaused(false), []);
+
+  // Esc/arrow keys — only when overlay is visible (i.e. not paused), so the
+  // operator can use Esc/arrows in the underlying UI while practicing.
   useEffect(() => {
-    if (!stage) return;
+    if (!stage || paused) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') exit();
       else if (e.key === 'ArrowRight') next();
@@ -174,7 +188,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [stage, exit, next, prev]);
+  }, [stage, paused, exit, next, prev]);
 
   const value: TrainingContextValue = {
     stage,
@@ -183,11 +197,14 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     stepCount,
     completed,
     isFirstLaunch,
+    paused,
     startStage,
     startFullTour,
     next,
     prev,
     exit,
+    pause,
+    resume,
   };
 
   return (
