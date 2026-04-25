@@ -230,9 +230,84 @@ async function renderSection(s: RenderState, sec: ManualSection) {
       } catch {
         // ignore image errors
       }
-      s.y += h + 16;
+      s.y += h + 12;
     }
   }
+
+  // Callout legend
+  if (sec.callouts && sec.callouts.length > 0) {
+    s.y += 4;
+    renderCallouts(s, sec.callouts);
+  }
+}
+
+function renderCallouts(s: RenderState, callouts: { label: string; text: string }[]) {
+  const { pdf } = s;
+  const fontSize = 9.5;
+  const lh = fontSize * 1.4;
+  const numW = 14;
+  const indent = 18;
+  const maxW = CONTENT_W - indent;
+
+  for (let i = 0; i < callouts.length; i++) {
+    const c = callouts[i];
+    const numStr = String(i + 1);
+    const labelText = c.label;
+    const bodyText = c.text ? ` — ${c.text}` : '';
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(fontSize);
+    const labelW = pdf.getTextWidth(labelText);
+
+    pdf.setFont('helvetica', 'normal');
+    const fullText = labelText + bodyText;
+    const lines = pdf.splitTextToSize(fullText, maxW);
+
+    const blockH = Math.max(lh, lines.length * lh);
+    ensureSpace(s, blockH + 2);
+
+    // Numbered circle
+    pdf.setFillColor(...BRAND_BLUE);
+    pdf.circle(MARGIN_X + 6, s.y - 3, 6, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8);
+    pdf.text(numStr, MARGIN_X + 6, s.y - 1, { align: 'center' });
+
+    // Render label (bold) then body (normal) on first line, then wrap
+    pdf.setTextColor(...TEXT_DARK);
+    pdf.setFontSize(fontSize);
+
+    // First line: bold label + start of body
+    let x = MARGIN_X + indent;
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(labelText, x, s.y);
+    x += labelW;
+
+    if (bodyText) {
+      pdf.setFont('helvetica', 'normal');
+      // Try to fit rest of body on first line; else wrap
+      const remainingW = MARGIN_X + indent + maxW - x;
+      const bodyLines = pdf.splitTextToSize(bodyText.trimStart() ? ' — ' + c.text : '', remainingW);
+      if (bodyLines.length <= 1 && pdf.getTextWidth(' — ' + c.text) <= remainingW) {
+        pdf.text(' — ' + c.text, x, s.y);
+        s.y += lh;
+      } else {
+        // Wrap body to full width on subsequent lines
+        s.y += lh;
+        const wrapped = pdf.splitTextToSize('— ' + c.text, maxW);
+        for (const ln of wrapped) {
+          ensureSpace(s, lh);
+          pdf.text(ln, MARGIN_X + indent, s.y);
+          s.y += lh;
+        }
+      }
+    } else {
+      s.y += lh;
+    }
+    s.y += 2;
+  }
+  s.y += 6;
 }
 
 export async function generateUserManualPdf(): Promise<Blob> {

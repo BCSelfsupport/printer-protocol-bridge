@@ -235,6 +235,7 @@ export function UserManualDialog({ open, onOpenChange }: Props) {
                   src={activeSection.screenshot}
                   alt={activeSection.title}
                   caption={activeSection.title}
+                  callouts={activeSection.callouts}
                 />
               )}
 

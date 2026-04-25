@@ -3,10 +3,16 @@ import { X, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+interface Callout {
+  label: string;
+  text: string;
+}
+
 interface Props {
   src: string;
   alt: string;
   caption?: string;
+  callouts?: Callout[];
 }
 
 /**
@@ -14,7 +20,7 @@ interface Props {
  *  - Hover over the inline image → magnifier loupe follows the cursor (2.5x)
  *  - Click the image → fullscreen lightbox with pan + scroll-to-zoom (1x–5x)
  */
-export function ScreenshotZoom({ src, alt, caption }: Props) {
+export function ScreenshotZoom({ src, alt, caption, callouts }: Props) {
   const [hovering, setHovering] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [open, setOpen] = useState(false);
@@ -69,6 +75,21 @@ export function ScreenshotZoom({ src, alt, caption }: Props) {
           <figcaption className="px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground font-bold border-t bg-card/50">
             {caption}
           </figcaption>
+        )}
+        {callouts && callouts.length > 0 && (
+          <ol className="px-4 py-3 border-t bg-card/30 space-y-1.5">
+            {callouts.map((c, i) => (
+              <li key={i} className="flex items-start gap-2.5 text-xs leading-relaxed">
+                <span className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                  {i + 1}
+                </span>
+                <span className="text-foreground/90 pt-0.5">
+                  <strong className="text-foreground">{c.label}</strong>
+                  {c.text ? <> — {c.text}</> : null}
+                </span>
+              </li>
+            ))}
+          </ol>
         )}
       </figure>
 
