@@ -745,6 +745,11 @@ export const MANUAL: ManualChapter[] = [
         title: 'Inline data preview',
         body: `Selecting a source opens a scrollable inline grid showing every column and row, including a green METRC badge when applicable. This is the same data your messages will pull from at print time — verify it before creating a print job.`,
         screenshot: '/manual-screenshots/18-inline-grid.png',
+        callouts: [
+          { label: 'METRC badge', text: 'green badge confirms CodeSync auto-detected a METRC tracking export' },
+          { label: 'Column headers', text: 'detected column names — these are what you map to message fields later' },
+          { label: 'Row count footer', text: 'total rows imported; matches what the print job will iterate through' },
+        ],
       },
       {
         id: 'wizard',
