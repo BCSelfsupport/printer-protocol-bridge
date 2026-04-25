@@ -226,29 +226,33 @@ function SideCard({
  * Full bonded-pair preview strip — drop in above the conveyor view so the
  * operator sees both selected messages at a glance.
  */
-const SCALE_STORAGE_KEY = 'twinCode.previewScale';
+const SCALE_A_STORAGE_KEY = 'twinCode.previewScale.A';
+const SCALE_B_STORAGE_KEY = 'twinCode.previewScale.B';
+
+function readScale(key: string): number {
+  if (typeof window === 'undefined') return 1;
+  const raw = window.localStorage.getItem(key);
+  const n = raw ? parseFloat(raw) : NaN;
+  return Number.isFinite(n) && n >= 0.5 && n <= 3 ? n : 1;
+}
 
 export function TwinMessagePreview() {
   const pair = useTwinPair();
   const aBound = !!pair.a;
   const bBound = !!pair.b;
 
-  // Persist the operator's preferred preview size — this is a personal display
-  // preference, not a production setting, so localStorage is the right scope.
-  const [scale, setScale] = useState<number>(() => {
-    if (typeof window === 'undefined') return 1;
-    const raw = window.localStorage.getItem(SCALE_STORAGE_KEY);
-    const n = raw ? parseFloat(raw) : NaN;
-    return Number.isFinite(n) && n >= 0.5 && n <= 3 ? n : 1;
-  });
+  // Two independent scales — DM (Side A) and text strip (Side B) have very
+  // different baseline aspect ratios, so operators usually want to size them
+  // independently to match what they actually need to glance at.
+  const [scaleA, setScaleA] = useState<number>(() => readScale(SCALE_A_STORAGE_KEY));
+  const [scaleB, setScaleB] = useState<number>(() => readScale(SCALE_B_STORAGE_KEY));
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(SCALE_STORAGE_KEY, String(scale));
-    } catch {
-      // Ignore quota / private-mode failures — scale just won't persist.
-    }
-  }, [scale]);
+    try { window.localStorage.setItem(SCALE_A_STORAGE_KEY, String(scaleA)); } catch { /* ignore */ }
+  }, [scaleA]);
+  useEffect(() => {
+    try { window.localStorage.setItem(SCALE_B_STORAGE_KEY, String(scaleB)); } catch { /* ignore */ }
+  }, [scaleB]);
 
   return (
     <div className="flex gap-3 rounded-md border border-border bg-card/60 p-3">
@@ -265,7 +269,7 @@ export function TwinMessagePreview() {
           <SideCard
             side="A"
             bound={aBound}
-            scale={scale}
+            scale={scaleA}
             messageName={pair.a?.messageName}
             fieldIndex={pair.a?.fieldIndex}
             subcommand={pair.a?.subcommand}
@@ -274,7 +278,7 @@ export function TwinMessagePreview() {
           <SideCard
             side="B"
             bound={bBound}
-            scale={scale}
+            scale={scaleB}
             messageName={pair.b?.messageName}
             fieldIndex={pair.b?.fieldIndex}
             subcommand={pair.b?.subcommand}
@@ -283,24 +287,40 @@ export function TwinMessagePreview() {
         </div>
       </div>
 
-      {/* Vertical scale slider — Paintbrush-style "grab the corner" affordance.
-          Lives on the right edge so it's always reachable without disturbing
-          the preview grid layout. */}
-      <div className="flex w-8 flex-col items-center gap-2 border-l border-border pl-3">
-        <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Size</span>
-        <div className="flex h-32 items-center">
-          <Slider
-            orientation="vertical"
-            min={0.5}
-            max={3}
-            step={0.1}
-            value={[scale]}
-            onValueChange={([v]) => setScale(v)}
-            className="h-full"
-          />
-        </div>
-        <span className="font-mono text-[9px] text-muted-foreground">{scale.toFixed(1)}×</span>
+      {/* Two vertical scale sliders — DM and text are sized independently because
+          their baseline aspect ratios differ wildly (square vs. long strip). */}
+      <div className="flex gap-3 border-l border-border pl-3">
+        <ScaleSlider label="DM" value={scaleA} onChange={setScaleA} />
+        <ScaleSlider label="TEXT" value={scaleB} onChange={setScaleB} />
       </div>
+    </div>
+  );
+}
+
+function ScaleSlider({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex w-8 flex-col items-center gap-2">
+      <span className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      <div className="flex h-32 items-center">
+        <Slider
+          orientation="vertical"
+          min={0.5}
+          max={3}
+          step={0.1}
+          value={[value]}
+          onValueChange={([v]) => onChange(v)}
+          className="h-full"
+        />
+      </div>
+      <span className="font-mono text-[9px] text-muted-foreground">{value.toFixed(1)}×</span>
     </div>
   );
 }
