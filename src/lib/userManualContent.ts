@@ -78,12 +78,12 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'platform-tiers',
         title: 'Editions / tiers at a glance',
-        body: `Every license is one of five tiers. The badge under the Activate button on the Printers screen shows the active tier.\n\n- **DEMO** — 30-day full-feature trial. Watermark on previews and printed messages. Auto-locks at expiry.\n- **LITE** — single printer, USB / Serial only, no network features.\n- **FULL** — unlimited network printers, all message and reporting features.\n- **DATABASE** — Full + Variable Data Printing (CSV / Hotfolder / REST / ODBC), unlocks the Data Source screen and Print Jobs.\n- **TWINCODE** — bonded 2-printer pair with catalog-fed serials. Unlocks the Twin Code screen and the catalog ledger (Chapter 16).\n\nTier gating is enforced both client-side (UI hides screens you can't use) and server-side (the cloud refuses to issue scan requests, twin code ledgers, or fleet telemetry pushes for tiers that don't include them).`,
+        body: `Every license is one of five tiers. The badge under the Activate button on the Printers screen shows the active tier.\n\n- **DEMO** — 30-day full-feature trial. Watermark on previews and printed messages. Auto-locks at expiry.\n- **LITE** — single printer, USB / Serial only, no network features.\n- **FULL** — unlimited network printers, all message and reporting features.\n- **DATABASE** — Full + Variable Data Printing (CSV / Hotfolder / REST / ODBC), unlocks the Data Source screen and Print Jobs.\n- **TWINCODE** — bonded 2-printer pair with catalog-fed serials. Unlocks the Twin Code screen and the catalog ledger (Chapter 16).\n\nTier gating is enforced both client-side (UI hides screens you can't use) and server-side (the cloud refuses to issue scan requests or twin code ledger writes for tiers that don't include them).`,
       },
       {
         id: 'platform-pick',
         title: 'Which surface for which task?',
-        body: `| I want to… | Use |\n|---|---|\n| Author or edit a print message | Desktop |\n| Run a Print Job from a CSV | Desktop |\n| Scan a barcode into a message | Mobile (paired) — or a USB scanner on the desktop |\n| Walk the floor and check printer status | Mobile |\n| Pause the desktop's polling so I can use the printer's HMI | Mobile |\n| Run a bonded twin-pair production line | Desktop (Twin Code screen) |\n| Monitor printers across multiple sites | Desktop or mobile (Fleet Telemetry) |\n| Diagnose a connection problem | Desktop (Diagnostics page) |\n\nIf in doubt: **author on the desktop, observe and scan from the phone.**`,
+        body: `| I want to… | Use |\n|---|---|\n| Author or edit a print message | Desktop |\n| Run a Print Job from a CSV | Desktop |\n| Scan a barcode into a message | Mobile (paired) — or a USB scanner on the desktop |\n| Walk the floor and check printer status | Mobile |\n| Pause the desktop's polling so I can use the printer's HMI | Mobile |\n| Run a bonded twin-pair production line | Desktop (Twin Code screen) |\n| Diagnose a connection problem | Desktop (Diagnostics page) |\n\nIf in doubt: **author on the desktop, observe and scan from the phone.**`,
       },
     ],
   },
@@ -120,7 +120,7 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'edit-printer',
         title: 'Editing a printer (Serial, Line ID, Sync Role)',
-        body: `Click the small pencil icon on a printer card to edit its settings:\n\n- **Name / IP / Port** — basic connection details\n- **Serial Number** — optional; used for Fleet Telemetry tracking\n- **Line ID** — optional; resolves dynamically as the value of any Line ID field in messages on this printer (e.g. "Line A", "Packaging 1")\n- **Sync Role** — None / Master / Slave for multi-printer synchronization (Master propagates message content and selection to its slaves)`,
+        body: `Click the small pencil icon on a printer card to edit its settings:\n\n- **Name / IP / Port** — basic connection details\n- **Serial Number** — optional; recorded for asset tracking\n- **Line ID** — optional; resolves dynamically as the value of any Line ID field in messages on this printer (e.g. "Line A", "Packaging 1")\n- **Sync Role** — None / Master / Slave for multi-printer synchronization (Master propagates message content and selection to its slaves)`,
         screenshot: '/manual-screenshots/04-edit-printer.png',
       },
       {
@@ -672,73 +672,8 @@ export const MANUAL: ManualChapter[] = [
     ],
   },
   {
-    id: 'fleet-telemetry',
-    title: '18. Fleet Telemetry',
-    intro: 'Monitor BestCode printers across multiple sites from one screen — status, runtime metrics, fault history, and firmware versions. Updates are pushed from each licensed CodeSync client over the cloud, so you do not need a VPN or open firewall ports between sites.',
-    sections: [
-      {
-        id: 'fleet-overview',
-        title: 'How the fleet is built',
-        body: `When a CodeSync client activates a license, it registers a **site** (one per license) and pushes printer metadata every 5 minutes and live status every 30 seconds to Lovable Cloud. The Fleet Telemetry screen aggregates that data:\n\n- **Sites** — one row per license, with company, location, printer count, and last-seen\n- **Printers** — every printer on every site, with status (READY / OFFLINE / FAULT), firmware, last-seen\n- **Telemetry rows** — modulation, pressure, viscosity, ink/makeup, temperatures, runtime hours, current message\n- **Events** — fault history, jet start/stop, message changes, firmware updates\n\nNo printer traffic ever leaves your LAN — only the metadata each client chooses to push. RLS policies in the cloud ensure each license can only read its own data.`,
-      },
-      {
-        id: 'fleet-screen',
-        title: 'Telemetry screen',
-        body: `Open **Telemetry** from the top bar (or visit \`#/telemetry\`). The screen has three views:\n\n- **Fleet view** — global status across all sites you have access to. Map / list toggle.\n- **Site view** — drill into one site to see its printers, recent events, and aggregated metrics.\n- **Printer view** — per-printer telemetry timeline (last 24 h / 7 d / 30 d) with charts for viscosity, pressure, modulation, and temperature.\n\nFault history is grouped by code and severity so recurring issues stand out. Click any event to expand the full ^SU snapshot from when it was raised.`,
-      },
-      {
-        id: 'fleet-events',
-        title: 'Event log structure',
-        body: `Events are split into 5 native tabs that map to the printer's ^TM data:\n\n- **Event** — generic events (jet start/stop, message change, firmware push)\n- **Viscosity** — viscosity excursions and corrections\n- **Phase** — phase-quality drops\n- **SmartFill** — ink/makeup refills\n- **Filter** — filter changes and warnings\n\nEach tab shows a timeline with severity icons and a downloadable CSV.`,
-      },
-      {
-        id: 'fleet-firmware',
-        title: 'Firmware tracking',
-        body: `Each printer's firmware version is reported via ^VV and stored with its telemetry. The Fleet Firmware tab lists all firmware versions seen across the fleet, with a count of printers on each version. **Firmware updates** can be staged here (pending / in-progress / complete) — the actual flash is performed by a BestCode service technician; CodeSync just tracks the rollout.`,
-      },
-      {
-        id: 'fleet-onboarding',
-        title: 'Onboarding new printers',
-        body: `Printers are auto-discovered from each licensed client — when you add a printer in CodeSync, the next telemetry push registers it on the cloud under your site. There is no separate "register on the fleet" step.\n\nIf you need to remove a printer, delete it in CodeSync; the cascading cleanup also removes its telemetry rows on the next push. Fleet identity (firmware, serial) is per-device and never copied between printer records.`,
-      },
-      {
-        id: 'fleet-expiry',
-        title: 'Per-printer expiry overrides',
-        body: `From the Fleet view you can apply a graphical expiry-offset override to any printer (slider + absolute days input). The override is sent via the non-destructive live-update protocol (Chapter 6) so the printer never stalls. Useful for centrally bumping all expiries for a regulatory change without visiting each line.`,
-      },
-    ],
-  },
-  {
-    id: 'developer-tools',
-    title: '19. Developer Tools',
-    intro: 'Hidden tools for BestCode engineering and authorized integrators. End users do not need this chapter — but if you have been given developer access, this is how to use it responsibly.',
-    platforms: ['desktop'],
-    sections: [
-      {
-        id: 'dev-access',
-        title: 'Unlocking developer access',
-        body: `Developer tools are deliberately hidden from normal operators. To reveal them:\n\n1. On the **Printers** screen, tap (or click) the **Activate / Tier** badge in the footer **5 times in quick succession**\n2. The Developer Sign-In dialog opens\n3. Enter your **TOTP** code from your authenticator app (Microsoft Authenticator, Google Authenticator, etc.)\n4. The Developer Panel slides in from the right\n\nDeveloper access is gated by three layers, all enforced server-side:\n\n- **Allowlist** — your license must be in the \`developer_licenses\` table\n- **TOTP** — a 6-digit time-based one-time password from your authenticator app\n- **Owner Invites** — only an owner-tier developer can grant access to another license\n\nA failed TOTP attempt is logged and the dialog rate-limits after 3 failures.`,
-      },
-      {
-        id: 'dev-panel',
-        title: 'Developer Panel layout',
-        body: `The Developer Panel is a 600 px sidebar with high-contrast styling so it never blends into normal UI. Tabs:\n\n- **Manual Protocol** — send raw protocol commands to the connected printer with hex-dump on/off\n- **Parameter Snapshot** — dump the printer's full ^GM parameter set to JSON for diff/compare\n- **Fleet Monitoring** — back-office view of all sites and their telemetry health\n- **License Assignment** — generate licenses, deactivate machines, transfer activations\n- **Dev Invites** — issue an invite code for another license (one-time use, 7-day expiry)\n- **Feedback** — review user-submitted bug reports and feature requests with screenshots\n- **Training Videos** — upload, retitle, reorder, or delete training videos shown to all users\n- **Recording Overlay** — capture screen recordings for the training library`,
-      },
-      {
-        id: 'dev-invites',
-        title: 'Granting developer access to another license',
-        body: `Owner-tier developers can issue invites:\n\n1. Open Developer Panel → **Dev Invites** tab\n2. Click **+ Generate Invite**\n3. CodeSync mints a one-time-use code (7-day expiry) tied to your owner license\n4. Send the code to the recipient\n5. The recipient signs into their own CodeSync, opens the Dev Sign-In dialog, switches to **Redeem Invite**, pastes the code, and enrolls a TOTP secret on first sign-in\n\nInvites are single-use and expire after 7 days. Revoke an unused invite from the same panel.`,
-      },
-      {
-        id: 'dev-recording',
-        title: 'Recording training videos',
-        body: `The Recording Overlay lets you capture an in-app screencast and upload it directly to the Training Videos library:\n\n1. Open Developer Panel → **Training Videos** tab\n2. Click **Record New** — the overlay appears with start / pause / stop controls\n3. Walk through the workflow you want to demo\n4. Stop recording — the video is auto-cropped to the app viewport, transcoded, and uploaded\n5. Set Title, Description, Category, and Sort Order\n\nThe video is immediately visible to all users in their Training Videos screen. No application update is required.`,
-      },
-    ],
-  },
-  {
     id: 'appendix',
-    title: '20. Appendix',
+    title: '18. Appendix',
     intro: 'Reference material.',
     sections: [
       {
