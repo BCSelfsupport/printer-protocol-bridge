@@ -144,6 +144,99 @@ export type Database = {
         }
         Relationships: []
       }
+      developer_invites: {
+        Row: {
+          code: string
+          consumed_at: string | null
+          consumed_by_license_id: string | null
+          created_at: string
+          created_by_license_id: string
+          expires_at: string
+          id: string
+        }
+        Insert: {
+          code: string
+          consumed_at?: string | null
+          consumed_by_license_id?: string | null
+          created_at?: string
+          created_by_license_id: string
+          expires_at?: string
+          id?: string
+        }
+        Update: {
+          code?: string
+          consumed_at?: string | null
+          consumed_by_license_id?: string | null
+          created_at?: string
+          created_by_license_id?: string
+          expires_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_invites_consumed_by_license_id_fkey"
+            columns: ["consumed_by_license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "developer_invites_created_by_license_id_fkey"
+            columns: ["created_by_license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      developer_licenses: {
+        Row: {
+          created_at: string
+          created_by_license_id: string | null
+          id: string
+          is_owner: boolean
+          last_signin_at: string | null
+          license_id: string
+          totp_enrolled_at: string | null
+          totp_secret_encrypted: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by_license_id?: string | null
+          id?: string
+          is_owner?: boolean
+          last_signin_at?: string | null
+          license_id: string
+          totp_enrolled_at?: string | null
+          totp_secret_encrypted?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by_license_id?: string | null
+          id?: string
+          is_owner?: boolean
+          last_signin_at?: string | null
+          license_id?: string
+          totp_enrolled_at?: string | null
+          totp_secret_encrypted?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_licenses_created_by_license_id_fkey"
+            columns: ["created_by_license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "developer_licenses_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: true
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback: {
         Row: {
           app_version: string | null
