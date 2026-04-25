@@ -767,6 +767,11 @@ export const MANUAL: ManualChapter[] = [
         title: 'Selecting the data file',
         body: `Step 2 of the wizard: give the source a friendly name (e.g. "METRC Tags March 2026") and either drag-and-drop your CSV/TXT file or click to browse. METRC exports are auto-detected and the Unit Code + Retail ID columns are mapped automatically — no manual configuration needed.`,
         screenshot: '/manual-screenshots/20-wizard-step2.png',
+        callouts: [
+          { label: 'Source name input', text: 'human-friendly label that appears in the source list and print job dropdown' },
+          { label: 'Drop zone', text: 'drag CSV / TXT here or click to browse — encoding and headers detected automatically' },
+          { label: 'METRC auto-detect badge', text: 'appears once the file is parsed; confirms Unit Code + Retail ID will be auto-mapped' },
+        ],
       },
       {
         id: 'mapping',
