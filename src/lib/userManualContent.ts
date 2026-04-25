@@ -502,6 +502,11 @@ export const MANUAL: ManualChapter[] = [
         title: 'Per-printer configuration',
         body: `For each printer, set the part number used for **Makeup**, **Ink**, and **Filter**. The system tracks fluid level transitions (FULL → GOOD → LOW → EMPTY) and only deducts stock when a bottle reaches LOW or EMPTY — never on a refill.\n\nFilter life is computed from the printer's ^TM (Runtime) hours against the user-configured filter rating (2,000 / 5,000 / 10,000 hours).`,
         screenshot: '/manual-screenshots/14-consumables.png',
+        callouts: [
+          { label: 'Printer card', text: 'one card per registered printer — assigns Makeup / Ink / Filter part numbers to that machine' },
+          { label: 'Set Up Filter Tracking', text: 'enables ^TM-driven filter life monitoring for the chosen rating (2k / 5k / 10k hours)' },
+          { label: 'Stock indicator', text: 'live segmented gauge mirrored from the right-hand inventory panel' },
+        ],
       },
       {
         id: 'add-consumable',
