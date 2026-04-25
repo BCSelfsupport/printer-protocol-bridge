@@ -590,6 +590,11 @@ export const MANUAL: ManualChapter[] = [
         title: 'Programmable time codes',
         body: `Same pattern as date codes but for time components — useful for shift coding. Each entry shows the YEAR / hour / minute alongside its custom CODE value.`,
         screenshot: '/manual-screenshots/12-program-year.png',
+        callouts: [
+          { label: 'Time category', text: 'Hour / Minute / Shift — choose which time component to remap' },
+          { label: 'Value column', text: 'native value as the printer would otherwise print it (e.g. 14 for 2 pm)' },
+          { label: 'Code column', text: 'your custom substitution (e.g. 14 → "B" for second shift)' },
+        ],
       },
       {
         id: 'network',
