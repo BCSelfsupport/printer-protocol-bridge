@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, Calendar, Check, X } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, Calendar, Check, X, Link2 } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
@@ -47,6 +47,8 @@ interface PrinterListItemProps {
   isUpdatingExpiry?: boolean;
   /** Original expiry days from the message definition (fallback when no per-printer override) */
   messageExpiryDays?: number;
+  /** TwinCode pair role badge — 'A' (lid) or 'B' (side). Shown when this printer is part of a bound pair. */
+  twinPairRole?: 'A' | 'B' | null;
 }
 
 // Helper to get color for fluid levels
@@ -85,6 +87,7 @@ export function PrinterListItem({
   onExpiryChange,
   isUpdatingExpiry = false,
   messageExpiryDays,
+  twinPairRole,
 }: PrinterListItemProps) {
   const [editingExpiry, setEditingExpiry] = useState(false);
   const [expiryInput, setExpiryInput] = useState('');
@@ -236,6 +239,12 @@ export function PrinterListItem({
               {printer.role === 'slave' && (
                 <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 ${groupColor?.badge ?? 'bg-blue-500/20 text-blue-400'}`}>
                   <Link className="w-2.5 h-2.5" /> SLAVE
+                </span>
+              )}
+              {twinPairRole && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5 bg-gradient-to-r from-blue-500/20 to-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <Link2 className="w-2.5 h-2.5" />
+                  TWIN {twinPairRole}{twinPairRole === 'A' ? ' · LID' : ' · SIDE'}
                 </span>
               )}
             </div>

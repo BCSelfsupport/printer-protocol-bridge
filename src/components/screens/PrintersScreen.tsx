@@ -127,6 +127,7 @@ function SortablePrinterItem({
   onExpiryChange,
   isUpdatingExpiry,
   messageExpiryDays,
+  twinPairRole,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -149,6 +150,7 @@ function SortablePrinterItem({
   onExpiryChange?: (printerId: number, days: number) => void;
   isUpdatingExpiry?: boolean;
   messageExpiryDays?: number;
+  twinPairRole?: 'A' | 'B' | null;
 }) {
   const {
     attributes,
@@ -200,6 +202,7 @@ function SortablePrinterItem({
         onExpiryChange={onExpiryChange}
         isUpdatingExpiry={isUpdatingExpiry}
         messageExpiryDays={messageExpiryDays}
+        twinPairRole={twinPairRole}
       />
     </div>
   );
@@ -701,6 +704,11 @@ export function PrintersScreen({
                       } : undefined}
                       isUpdatingExpiry={updatingExpiryPrinterId === printer.id}
                       messageExpiryDays={msgExpiry}
+                      twinPairRole={
+                        pairPrinters && pairPrinters.a.id === printer.id ? 'A'
+                        : pairPrinters && pairPrinters.b.id === printer.id ? 'B'
+                        : null
+                      }
                     />
                     );
                   })}
