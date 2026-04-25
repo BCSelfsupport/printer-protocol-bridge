@@ -42,6 +42,9 @@ function bindingToSlot(b: TwinPrinterBinding | null, fallbackName: string, defau
     messageName: b?.messageName ?? defaults.messageName,
     fieldIndex: (b?.fieldIndex ?? defaults.fieldIndex).toString(),
     subcommand: b?.subcommand ?? defaults.subcommand,
+    // Default ON: removes the manual "build the message on the printer HMI"
+    // step before first run. Operator can opt out per side.
+    autoCreate: b?.autoCreate ?? true,
     probe: "idle",
     probeMs: null,
     probeError: null,
