@@ -272,6 +272,7 @@ export function PrintersScreen({
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
   const { canNetwork, canDatabase, canTwinCode, tier, isActivated } = useLicense();
+  const navigate = useNavigate();
   const twinPair = useTwinPair();
 
   // TwinCode pair resolution: match the bound IPs back to actual Printer records.
