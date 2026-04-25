@@ -631,6 +631,12 @@ export const MANUAL: ManualChapter[] = [
         title: 'Counters dialog',
         body: `Click the **Reset** button next to the print count on the dashboard to open the **Counters** dialog. CodeSync mirrors the printer's four user counters plus Product Count and Print Count.\n\nEach counter has:\n- A **pencil** icon to manually set its value\n- A **rotate** icon to reset just that counter\n\nThe red **Reset All Counters** button at the bottom resets every counter at once.\n\nCounter values are polled via ^CN every 3 seconds and are the authoritative source.`,
         screenshot: '/manual-screenshots/30-counters-dialog.png',
+        callouts: [
+          { label: 'Counter row', text: 'one row per counter (Product, Print, User 1–4) showing the live ^CN value' },
+          { label: 'Pencil icon', text: 'manually sets that counter to a specific value (^CN n=val)' },
+          { label: 'Rotate icon', text: 'resets just that single counter to zero' },
+          { label: 'Reset All Counters', text: 'red destructive action — zeroes every counter in one ^CN burst' },
+        ],
       },
       {
         id: 'runtime',
