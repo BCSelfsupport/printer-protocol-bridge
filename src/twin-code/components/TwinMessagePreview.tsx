@@ -63,7 +63,7 @@ const TEMPLATE_DOTS_B = 7;  // SIDE seed runs on a 7-dot template (Standard 7×5
  * operator can visually confirm A's DM and B's text are tied to the same
  * data — exactly how the dispatcher feeds them in production.
  */
-function SideCanvas({ side }: { side: 'A' | 'B' }) {
+function SideCanvas({ side, scale }: { side: 'A' | 'B'; scale: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
