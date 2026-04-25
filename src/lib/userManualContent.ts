@@ -795,6 +795,12 @@ export const MANUAL: ManualChapter[] = [
         title: 'Creating and running a print job',
         body: `Click **Print Job** to bind a Data Source to a Target Message:\n\n- **Data Source** — pick any imported source\n- **Target Message** — pick any saved message that contains data-link fields\n- **Manual Print Go (^PT)** — when on, CodeSync sends a force-print after each row (no photocell needed). Turn off when using a real photocell trigger.\n\nCreated jobs appear in the **Print Jobs** tab with a status pill (ready / running / paused / done) and a Run button. Each Print Go from the printer advances to the next data row.`,
         screenshot: '/manual-screenshots/21-create-print-job.png',
+        callouts: [
+          { label: 'Data Source dropdown', text: 'any imported dataset — METRC, CSV upload, hotfolder file, or API push' },
+          { label: 'Target Message dropdown', text: 'any saved message that contains at least one Data Link field' },
+          { label: 'Manual Print Go toggle', text: 'on = CodeSync fires ^PT per row (no photocell needed); off = wait for real photocell' },
+          { label: 'Create Job', text: 'saves the binding; the job appears in the Print Jobs tab in ready state' },
+        ],
       },
       {
         id: 'job-list',
