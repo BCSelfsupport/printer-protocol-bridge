@@ -171,11 +171,16 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     queueRef.current = [];
     setActiveStageId(null);
     setStepIndex(0);
+    setPaused(false);
   }, []);
 
-  // Esc to exit any active tour — operators must always be able to bail.
+  const pause = useCallback(() => setPaused(true), []);
+  const resume = useCallback(() => setPaused(false), []);
+
+  // Esc/arrow keys — only when overlay is visible (i.e. not paused), so the
+  // operator can use Esc/arrows in the underlying UI while practicing.
   useEffect(() => {
-    if (!stage) return;
+    if (!stage || paused) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') exit();
       else if (e.key === 'ArrowRight') next();
@@ -183,7 +188,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [stage, exit, next, prev]);
+  }, [stage, paused, exit, next, prev]);
 
   const value: TrainingContextValue = {
     stage,
@@ -192,11 +197,14 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     stepCount,
     completed,
     isFirstLaunch,
+    paused,
     startStage,
     startFullTour,
     next,
     prev,
     exit,
+    pause,
+    resume,
   };
 
   return (
