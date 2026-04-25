@@ -148,10 +148,13 @@ export function PrinterListItem({
   const groupColor = syncGroupIndex !== undefined && syncGroupIndex >= 0
     ? SYNC_GROUP_COLORS[syncGroupIndex % SYNC_GROUP_COLORS.length]
     : null;
-  // TwinCode bound pair gets its own emerald/blue stripe (takes priority over master/slave grouping).
-  const twinColor = twinPairRole
-    ? { border: 'border-l-emerald-400', bg: 'bg-emerald-400/5', badge: 'bg-emerald-500/20 text-emerald-300' }
-    : null;
+  // TwinCode bound pair gets its own per-role stripe (A=blue/Lid, B=emerald/Side).
+  // Takes priority over master/slave grouping color.
+  const twinColor = twinPairRole === 'A'
+    ? { border: 'border-l-blue-400', bg: 'bg-blue-400/5', badge: 'bg-blue-500/20 text-blue-300', ring: 'ring-blue-400/50', solid: 'bg-blue-500', text: 'text-blue-300' }
+    : twinPairRole === 'B'
+      ? { border: 'border-l-emerald-400', bg: 'bg-emerald-400/5', badge: 'bg-emerald-500/20 text-emerald-300', ring: 'ring-emerald-400/50', solid: 'bg-emerald-500', text: 'text-emerald-300' }
+      : null;
   const effectiveColor = twinColor ?? groupColor;
   const groupBorderClass = effectiveColor ? `border-l-4 ${effectiveColor.border}` : '';
   
