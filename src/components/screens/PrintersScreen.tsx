@@ -459,8 +459,10 @@ export function PrintersScreen({
   };
 
   // Desktop shows split-view with Dashboard when connected (or rightPanelContent override)
-  const showDashboardInPanel = !isMobile && isConnected && connectedPrinter;
-  const showRightPanel = showDashboardInPanel || (!isMobile && rightPanelContent);
+  // Pair-selected on a TwinCode license takes priority over dashboard / external rightPanelContent.
+  const showTwinCodePanel = !isMobile && pairSelected && !!pairPrinters;
+  const showDashboardInPanel = !isMobile && isConnected && connectedPrinter && !showTwinCodePanel;
+  const showRightPanel = showTwinCodePanel || showDashboardInPanel || (!isMobile && rightPanelContent);
 
   return (
     <div className="flex-1 flex flex-col md:flex-row bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-3 md:p-4 gap-3 md:gap-4 overflow-y-auto md:overflow-hidden">
