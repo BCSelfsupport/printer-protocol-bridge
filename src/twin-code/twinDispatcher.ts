@@ -159,6 +159,12 @@ class PrinterSession {
       return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed` };
     }
 
+    const mode = await this.confirmOneToOneMode();
+    if (!mode.ok) {
+      await this.cleanup();
+      return { ok: false, error: mode.error };
+    }
+
     // Seed-on-bind: if the operator opted in (passed `seed`) and the named
     // message isn't on the printer yet, lay it down before ^SM so the
     // dispatcher's ^MD^BD/^MD^TD path always has a correct field to write to.
@@ -337,6 +343,16 @@ class PrinterSession {
     return this.ensureMessage(messageName, seed);
   }
 
+  private async confirmOneToOneMode(): Promise<{ ok: boolean; error?: string }> {
+    const ms = await printerTransport.sendCommand(this.printerId, '^MS', { maxWaitMs: 4000 });
+    if (!ms?.success) return { ok: false, error: `${this.label}: ^MS failed after ^MB` };
+    const text = (ms.response || '').replace(/\s+/g, ' ').trim();
+    if (/\b1\s*-\s*1\s*=\s*ON\b/i.test(text) || /ONETOONE\s+MODE\s*=\s*ON/i.test(text)) {
+      return { ok: true };
+    }
+    return { ok: false, error: `${this.label}: ^MB returned but ^MS did not confirm 1-1=ON (${text.slice(0, 120) || 'empty response'})` };
+  }
+
   async disconnectAfterSeed(): Promise<void> {
     await this.cleanup();
   }
@@ -406,16 +422,16 @@ class PrinterSession {
     this.abortInFlight('detached');
 
     if (this.isEmulated) {
-      try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }); } catch (_) {}
+      try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }); } catch (_) { /* best effort */ }
     } else if (window.electronAPI?.oneToOne) {
-      try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 4000 }); } catch (_) {}
-      try { await window.electronAPI.oneToOne.detach(this.printerId); } catch (_) {}
+      try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 4000 }); } catch (_) { /* best effort */ }
+      try { await window.electronAPI.oneToOne.detach(this.printerId); } catch (_) { /* best effort */ }
     }
     await this.cleanup();
   }
 
   private async cleanup() {
-    if (this.unsub) { try { this.unsub(); } catch (_) {} this.unsub = null; }
+    if (this.unsub) { try { this.unsub(); } catch (_) { /* best effort */ } this.unsub = null; }
   }
 
   private handleAck(char: AckChar, targetId?: number) {
