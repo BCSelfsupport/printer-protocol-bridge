@@ -75,12 +75,18 @@ export const LID_SEED: MessageSeed = {
     "Dispatcher overwrites the encoded data per print via ^MD^BD1.",
   commandsTemplate: [
     "^DM __NAME__",
-    // NOTE: no space between ^AB and its parameters — protocol v2.6 §5.33.2.1
-    // requires field codes inside ^NM to be tightly concatenated. A space
-    // here causes the firmware to silently drop the field and reject ^SV,
-    // which is exactly the symptom the operator hit (badge says "saved",
-    // ^LM shows nothing).
-    "^NM 16;0;0;0;__NAME__^AB20;0;7;5;DRYRUN0000000",
+    // ^AB DataMatrix syntax (per buildFieldSubcommand in usePrinterConnection,
+    // protocol v2.6 §5.33.2.1):
+    //   ^AB n;x;y;f;t;r;s;data
+    //     n=1   field number (first/only field)
+    //     x=20  x-position (centered for typical pad)
+    //     y=0   y-position (bottom-anchored on 16-dot template)
+    //     f=0   font code (2D barcodes use f=0; s controls module size)
+    //     t=7   barcode type = DataMatrix
+    //     r=0   human-readable off
+    //     s=5   DataMatrix size 5 = 16×16 (ECC200)
+    //     data  placeholder; dispatcher overwrites per print via ^MD^BD1
+    "^NM 16;0;0;0;__NAME__^AB1;20;0;0;7;0;5;DRYRUN0000000",
     "^SV",
   ],
 };
@@ -113,9 +119,15 @@ export const SIDE_SEED: MessageSeed = {
     "Dispatcher overwrites the data per print via ^MD^TD1.",
   commandsTemplate: [
     "^DM __NAME__",
-    // No space after ^AT — see LID_SEED note (firmware silently drops fields
-    // when whitespace is present between the field code and its first param).
-    "^NM 7;0;0;0;__NAME__^AT0;0;1;DRYRUN0000000",
+    // ^AT text syntax (per buildFieldSubcommand in usePrinterConnection,
+    // protocol v2.6 §5.33.x):
+    //   ^AT n;x;y;f;data
+    //     n=1   field number
+    //     x=0   left-aligned
+    //     y=0   bottom-anchored on 7-dot template
+    //     f=1   font code 1 = Standard 7×5
+    //     data  placeholder; dispatcher overwrites per print via ^MD^TD1
+    "^NM 7;0;0;0;__NAME__^AT1;0;0;1;DRYRUN0000000",
     "^SV",
   ],
 };
