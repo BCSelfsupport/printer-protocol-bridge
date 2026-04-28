@@ -302,6 +302,21 @@ class PrinterSession {
     return { ok: true };
   }
 
+  async ensureSeedMessage(messageName: string, seed: MessageSeed): Promise<{ ok: boolean; error?: string; seeded?: boolean }> {
+    this.isEmulated = this.detectEmulated();
+    if (!this.isEmulated && window.electronAPI && this.printer) {
+      const ready = await printerTransport.connect(this.printer);
+      if (!ready?.success) {
+        return { ok: false, error: `${this.label}: connect failed${ready?.error ? ` — ${ready.error}` : ''}` };
+      }
+    }
+    return this.ensureMessage(messageName, seed);
+  }
+
+  async disconnectAfterSeed(): Promise<void> {
+    await this.cleanup();
+  }
+
   async sendMD(mdCommand: string): Promise<{ ok: boolean; rttMs?: number; reason?: string }> {
     if (!this.active) return { ok: false, reason: 'not-active' };
 
