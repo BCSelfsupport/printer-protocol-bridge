@@ -130,9 +130,28 @@ function summarize(values: number[]) {
   };
 }
 
-/** Build a unique non-colliding test serial for ghost cycles. */
+/**
+ * Build a 13-char alphanumeric ghost serial.
+ *
+ * CRITICAL constraints (learned the hard way — see preflight `timeout-R` loop):
+ *   1. Length MUST match the seed placeholder ("DRYRUN0000000" = 13 chars) so
+ *      the SIDE text field (^AT, sized for 13) accepts it without truncation.
+ *   2. NO hyphens or punctuation — the LID field is a 16×16 ECC200 DataMatrix
+ *      (s=5), which only fits ~10 ASCII chars in general mode; firmware
+ *      silently discards oversize / out-of-charset ^MD payloads (per protocol
+ *      v2.6 §6.1: "Invalid characters between commands are silently discarded
+ *      — no response"), producing a `timeout-R` because no R ACK ever comes.
+ *   3. Must still be unique enough that the printer doesn't dedupe across a
+ *      single 8-cycle preflight burst — base36 of (now + index) is plenty.
+ *
+ * Format: "DRY" + 10-char base36 timestamp+index → exactly 13 alphanumeric chars,
+ * upper-cased to match the customer's catalog serial style.
+ */
 function makeGhostSerial(i: number): string {
-  return `PREFLIGHT-${Date.now().toString(36)}-${i.toString().padStart(3, "0")}`;
+  const stamp = (Date.now() + i).toString(36).toUpperCase();
+  // Pad/truncate the stamp to exactly 10 chars so total length = 3 + 10 = 13.
+  const tail = (stamp + "0000000000").slice(0, 10);
+  return `DRY${tail}`;
 }
 
 /**
