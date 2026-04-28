@@ -610,7 +610,9 @@ ipcMain.handle('oneToOne:sendMD', async (event, { printerId, command }) => {
     return { success: false, error: 'No active connection' };
   }
   try {
-    socket.write(command + '\r');
+    // Per protocol v2.6, command framing uses CRLF. Some firmware revs accept
+    // bare CR for ^MD in 1-1 mode, others require \r\n. CRLF is safe on both.
+    socket.write(command + '\r\n');
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message || 'Write failed' };
