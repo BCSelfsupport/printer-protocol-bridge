@@ -113,7 +113,9 @@ export const SIDE_SEED: MessageSeed = {
     "Dispatcher overwrites the data per print via ^MD^TD1.",
   commandsTemplate: [
     "^DM __NAME__",
-    "^NM 7;0;0;0;__NAME__^AT 0;0;1;DRYRUN0000000",
+    // No space after ^AT — see LID_SEED note (firmware silently drops fields
+    // when whitespace is present between the field code and its first param).
+    "^NM 7;0;0;0;__NAME__^AT0;0;1;DRYRUN0000000",
     "^SV",
   ],
 };
