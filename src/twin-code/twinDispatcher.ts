@@ -162,13 +162,35 @@ class PrinterSession {
         return { ok: false, error: r.error };
       }
       seeded = !!r.seeded;
+      // After ^NM+^SV the firmware needs a beat to commit before ^SM will
+      // resolve the new name. Without this, ^SM races the commit and the
+      // printer stays on whatever message was previously active.
+      if (seeded) await new Promise(res => setTimeout(res, 600));
     }
 
     if (messageName) {
-      const sm = await printerTransport.sendCommand(this.printerId, `^SM ${messageName}`, { maxWaitMs: 4000 });
+      const target = messageName.trim().toUpperCase();
+      const sm = await printerTransport.sendCommand(this.printerId, `^SM ${target}`, { maxWaitMs: 4000 });
       if (!sm?.success) {
         await this.exit();
         return { ok: false, error: `${this.label}: ^SM failed` };
+      }
+      // Verify the selection actually took. ^WM (Which Message) returns the
+      // currently-active message name. If the firmware silently kept the
+      // previous selection (common right after a fresh ^NM+^SV) we re-issue
+      // ^SM once before giving up.
+      await new Promise(res => setTimeout(res, 300));
+      const verified = await this.verifyActiveMessage(target);
+      if (!verified.ok) {
+        // One retry — sometimes ^SM lands but ^WM races it on busy firmware.
+        await new Promise(res => setTimeout(res, 400));
+        await printerTransport.sendCommand(this.printerId, `^SM ${target}`, { maxWaitMs: 4000 });
+        await new Promise(res => setTimeout(res, 300));
+        const second = await this.verifyActiveMessage(target);
+        if (!second.ok) {
+          await this.exit();
+          return { ok: false, error: `${this.label}: ^SM ${target} did not stick (active="${second.active || '?'}")` };
+        }
       }
     }
 
