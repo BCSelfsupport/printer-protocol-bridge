@@ -815,7 +815,7 @@ class TwinDispatcher {
         ? `${seedSerial}${n > 1 ? suffix : ''}`
         // Synthetic: pad to a realistic 13-char shape — "DRYRUN" + 5 digits + 2-digit run idx.
         : `${synthBase}${String(Date.now() % 100000).padStart(5, '0')}${suffix}`;
-      results.push(await this.dispatch(serial));
+      results.push(await this.dispatch(serial, { forceTrigger: true }));
     }
 
     const okResults = results.filter(r => r.ok);
