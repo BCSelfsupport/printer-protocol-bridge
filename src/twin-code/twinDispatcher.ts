@@ -710,7 +710,7 @@ class TwinDispatcher {
    * of waiting out the C-timeout). Per-side failure reasons are surfaced in
    * `aReason` / `bReason`.
    */
-  async dispatch(serial: string): Promise<TwinDispatchResult> {
+  async dispatch(serial: string, opts?: { forceTrigger?: boolean }): Promise<TwinDispatchResult> {
     if (!this.a || !this.b) return { serial, ok: false, reason: 'not-bound' };
 
     const a = this.a;
@@ -727,6 +727,17 @@ class TwinDispatcher {
     const tStart = performance.now();
     const pA = a.sendMD(mdA);
     const pB = b.sendMD(mdB);
+
+    // Pre-flight / dry-run path: there is no real product on the conveyor so the
+    // photo eye will never fire on its own. Per protocol v2.6 §6.1 / §5.16,
+    // ^FE 1 forces a single PE trigger which drives T → C through the bonded
+    // pair. We give R a moment to land first (firmware ignores PE before R).
+    if (opts?.forceTrigger) {
+      setTimeout(() => {
+        printerTransport.sendCommand(a.printerId, '^FE 1', { maxWaitMs: 1000 }).catch(() => {});
+        printerTransport.sendCommand(b.printerId, '^FE 1', { maxWaitMs: 1000 }).catch(() => {});
+      }, 50);
+    }
 
     // Whichever side fails FIRST triggers an abort on the other so we don't
     // sit on a 30s C-timeout waiting for an orphaned partner.
