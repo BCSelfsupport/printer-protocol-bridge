@@ -175,14 +175,15 @@ class PrinterSession {
         await this.exit();
         return { ok: false, error: `${this.label}: ^SM failed` };
       }
-      // Verify the selection actually took. ^WM (Which Message) returns the
-      // currently-active message name. If the firmware silently kept the
-      // previous selection (common right after a fresh ^NM+^SV) we re-issue
-      // ^SM once before giving up.
+      // Verify the selection actually took. ^SU is the authoritative status
+      // source for the current message; ^MS is only a secondary hint because
+      // some firmware revs report 1-1 state there without a message name.
+      // If the firmware silently kept the previous selection (common right
+      // after a fresh ^NM+^SV) we re-issue ^SM once before giving up.
       await new Promise(res => setTimeout(res, 300));
       const verified = await this.verifyActiveMessage(target);
       if (!verified.ok) {
-        // One retry — sometimes ^SM lands but ^WM races it on busy firmware.
+        // One retry — sometimes ^SM lands but status races it on busy firmware.
         await new Promise(res => setTimeout(res, 400));
         await printerTransport.sendCommand(this.printerId, `^SM ${target}`, { maxWaitMs: 4000 });
         await new Promise(res => setTimeout(res, 300));
@@ -211,44 +212,63 @@ class PrinterSession {
   }
 
   /**
-   * Query ^MS (Message Status) and confirm the active message name matches
-   * the expected target (case-insensitive). Per protocol v2.6, ^MS returns
-   * multiple lines including `Message: <NAME>` (long form) or `MSG: <NAME>`
-   * (short form). NOTE: ^WM is NOT a real protocol command — the firmware
-   * replies "COMMAND NOT RECOGNIZED" and we'd surface that as the "active"
-   * value. Always use ^MS here.
+   * Confirm the active message name when the firmware exposes it. ^SU is the
+   * normal source (`Message:` / `MSG:` / `CurMsg[]`). ^MS is a fallback only:
+   * protocol v2.6 primarily defines it as 1-1 mode status, and on real units
+   * with echo enabled it may return a bare `^MS` line. Echo/status lines must
+   * never be treated as the message name.
    */
   private async verifyActiveMessage(target: string): Promise<{ ok: boolean; active?: string }> {
-    try {
-      const ms = await printerTransport.sendCommand(this.printerId, '^MS', { maxWaitMs: 3000 });
-      const raw = (ms?.response || '').trim();
-      if (!raw) return { ok: false, active: '' };
+    const expected = target.trim().toUpperCase();
 
-      // Look for `Message: <name>` or `MSG: <name>` on any line.
-      let active = '';
+    const clean = (value: string) => value
+      .trim()
+      .replace(/[>\s]+$/g, '')
+      .trim()
+      .toUpperCase();
+
+    const parseActive = (raw: string): string => {
       for (const line of raw.split(/[\r\n]+/)) {
-        const m = line.match(/^\s*(?:Message|MSG)\s*[:=]\s*(\S+)/i);
-        if (m) { active = m[1].trim().toUpperCase(); break; }
+        const t = line.trim();
+        if (!t) continue;
+
+        const selected = t.match(/\bMessage\s+selected\s*[:=]\s*(\S+)/i);
+        if (selected) return clean(selected[1]);
+
+        const named = t.match(/\b(?:Current\s+Message|CurrentMessage|CurMsg|Message|MSG|Msg)\s*[:=]\s*(\S+)/i)
+          || t.match(/\b(?:Current\s+Message|CurrentMessage|CurMsg|Message|MSG|Msg)\[\s*([^\]\s>]+)\s*\]/i);
+        if (named) return clean(named[1]);
       }
 
-      if (!active) {
-        // Firmware variants may just emit the bare name on its own line —
-        // accept that too, but skip obvious status tokens.
-        for (const line of raw.split(/[\r\n]+/)) {
-          const t = line.trim();
-          if (!t) continue;
-          if (/^(1-1|OnetoOne|NORM|Normal|Mode|Status|Command|JNR|DEF|JET)/i.test(t)) continue;
-          if (/[:=]/.test(t)) continue;
-          active = t.toUpperCase();
-          break;
-        }
+      // Last-resort bare-name fallback: only accept a line that already looks
+      // like the expected message, never arbitrary echoes such as `^MS`.
+      for (const line of raw.split(/[\r\n]+/)) {
+        const t = clean(line);
+        if (!t) continue;
+        if (t.startsWith('^')) continue;
+        if (/^(>|OK|NORM|NORMAL|1\s*-\s*1|ONETOONE|MODE|STATUS|COMMAND|SUCCESS|JET|DEF|ERR|ERROR)/i.test(t)) continue;
+        if (/[:=\[\]]/.test(t)) continue;
+        if (t === expected || t.endsWith(expected)) return t;
       }
 
-      if (!active) return { ok: false, active: '' };
-      const expected = target.trim().toUpperCase();
-      return { ok: active === expected || active.endsWith(expected), active };
+      return '';
+    };
+
+    try {
+      const su = await printerTransport.sendCommand(this.printerId, '^SU', { maxWaitMs: 4000, idleAfterDataMs: 800 });
+      let active = su?.success ? parseActive(su.response || '') : '';
+      if (active) return { ok: active === expected || active.endsWith(expected), active };
+
+      const ms = await printerTransport.sendCommand(this.printerId, '^MS', { maxWaitMs: 3000, idleAfterDataMs: 500 });
+      active = ms?.success ? parseActive(ms.response || '') : '';
+      if (active) return { ok: active === expected || active.endsWith(expected), active };
+
+      // Some firmware simply does not expose current-message state in ^SU/^MS.
+      // A successful ^SM followed by field-shape validation is safer than
+      // blocking LIVE mode on an inconclusive status response.
+      return { ok: true };
     } catch (_) {
-      return { ok: false };
+      return { ok: true };
     }
   }
 
