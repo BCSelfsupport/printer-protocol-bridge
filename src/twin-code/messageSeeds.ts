@@ -16,7 +16,7 @@
  *
  * Layout (decided 2026-04-24):
  *   LID  (A): 16-dot template, single field 1 = native ECC200 DM 16×16,
- *             centered, bottom-anchored. ^MD^BD1;<serial> updates data only.
+ *             far-left, bottom-anchored. ^MD^BD1;<serial> updates data only.
  *   SIDE (B): 16-dot template, single field 1 = Standard 7×5 text,
  *             left-aligned, sized for 13 chars. ^MD^TD1;<serial> updates.
  *
@@ -58,21 +58,20 @@ export interface MessageSeed {
  *   ;__NAME__     message name (operator-configurable, default "LID")
  *
  * Field 1 (^AB DataMatrix):
- *   x=20 y=0      x roughly centered for typical 60-dot pad width; y=0 anchors
- *                  the 16-dot DM to the bottom of the 16-dot template
+ *   x=0 y=0       far-left so horizontal placement can be handled with print
+ *                  delay; y=0 anchors the 16-dot DM to the bottom of the template
  *   barcode type = 7 (DataMatrix per §5.33.2.1)
  *   s=5           DataMatrix size 5 = 16×16 (ECC200)
  *   data = "DRYRUN0000000" — 13 chars, dispatcher overwrites via ^MD^BD1
  *
  * NOTE: exact ^AB parameter ordering follows protocol v2.6 §5.33.2.1.
- * Adjust `x=20` if the real pad width differs — this is a centering choice,
- * not a correctness one. The DM data is overwritten on every print so the
- * placeholder text is irrelevant.
+ * Horizontal placement is intentionally handled by print delay, not by x-offset.
+ * The DM data is overwritten on every print so the placeholder text is irrelevant.
  */
 export const LID_SEED: MessageSeed = {
   label: "Lid · DM 16×16",
   description:
-    "16-dot template, native ECC200 DataMatrix 16×16 at field 1, centered & bottom-anchored. " +
+    "16-dot template, native ECC200 DataMatrix 16×16 at field 1, far-left & bottom-anchored. " +
     "Dispatcher overwrites the encoded data per print via ^MD^BD1.",
   commandsTemplate: [
     "^DM __NAME__",
@@ -89,7 +88,7 @@ export const LID_SEED: MessageSeed = {
     // that with "Invalid command format".
     //
     //   n=1   field number
-    //   x=20  centered for typical pad width
+    //   x=0   far-left; use print delay for horizontal placement
     //   y=0   bottom-anchored on 16-dot template
     //   f=0   font code (2D codes: s controls module size, f stays 0)
     //   t=7   barcode type = DataMatrix
@@ -97,7 +96,7 @@ export const LID_SEED: MessageSeed = {
     //   data  placeholder; dispatcher overwrites per print via ^MD^BD1
     //
     // Template code 4 = 1×16-dot strip (per templateToProtocolCode mapping).
-    "^NM 4;0;0;0;__NAME__^AB1;20;0;0;7;5;DRYRUN0000000",
+    "^NM 4;0;0;0;__NAME__^AB1;0;0;0;7;5;DRYRUN0000000",
     "^SV",
   ],
 };
