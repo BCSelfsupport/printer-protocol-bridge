@@ -119,9 +119,15 @@ export const SIDE_SEED: MessageSeed = {
     "Dispatcher overwrites the data per print via ^MD^TD1.",
   commandsTemplate: [
     "^DM __NAME__",
-    // No space after ^AT — see LID_SEED note (firmware silently drops fields
-    // when whitespace is present between the field code and its first param).
-    "^NM 7;0;0;0;__NAME__^AT0;0;1;DRYRUN0000000",
+    // ^AT text syntax (per buildFieldSubcommand in usePrinterConnection,
+    // protocol v2.6 §5.33.x):
+    //   ^AT n;x;y;f;data
+    //     n=1   field number
+    //     x=0   left-aligned
+    //     y=0   bottom-anchored on 7-dot template
+    //     f=1   font code 1 = Standard 7×5
+    //     data  placeholder; dispatcher overwrites per print via ^MD^TD1
+    "^NM 7;0;0;0;__NAME__^AT1;0;0;1;DRYRUN0000000",
     "^SV",
   ],
 };
