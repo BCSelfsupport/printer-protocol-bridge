@@ -39,6 +39,7 @@ export function LicenseActivationDialog({ open, onOpenChange }: LicenseActivatio
     lite: { label: 'LITE', color: 'bg-slate-100 text-slate-700' },
     full: { label: 'FULL', color: 'bg-blue-100 text-blue-700' },
     database: { label: 'DATABASE', color: 'bg-purple-100 text-purple-700' },
+    twincode: { label: 'TWINCODE', color: 'bg-emerald-100 text-emerald-700' },
     demo: { label: 'DEMO', color: 'bg-amber-100 text-amber-700' },
     dev: { label: 'DEVELOPER', color: 'bg-green-100 text-green-700' },
   };
@@ -219,6 +220,7 @@ export function LicenseActivationDialog({ open, onOpenChange }: LicenseActivatio
               <p><span className="font-semibold">LITE</span> — Standalone operation, no network</p>
               <p><span className="font-semibold">FULL</span> — Network printer access</p>
               <p><span className="font-semibold">DATABASE</span> — Full + Variable Data Printing</p>
+              <p><span className="font-semibold text-emerald-600 dark:text-emerald-400">TWINCODE</span> — Bonded two-printer mode for serialized 2D codes (Lid + Side), HUD, runs &amp; preflight</p>
             </div>
           </div>
         </DialogContent>
