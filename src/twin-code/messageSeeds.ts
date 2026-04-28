@@ -75,10 +75,15 @@ export const LID_SEED: MessageSeed = {
     "Dispatcher overwrites the encoded data per print via ^MD^BD1.",
   commandsTemplate: [
     "^DM __NAME__",
+    // Template code 4 = 1x16-dot strip (per templateToProtocolCode in
+    // usePrinterConnection.ts §4.2.1: '16' → 4). Passing literal "16" is
+    // an invalid template code and the printer rejects ^NM with
+    // "Invalid command format".
+    //
     // ^AB DataMatrix syntax (per buildFieldSubcommand in usePrinterConnection,
     // protocol v2.6 §5.33.2.1):
     //   ^AB n;x;y;f;t;r;s;data
-    //     n=1   field number (first/only field)
+    //     n=1   field number
     //     x=20  x-position (centered for typical pad)
     //     y=0   y-position (bottom-anchored on 16-dot template)
     //     f=0   font code (2D barcodes use f=0; s controls module size)
@@ -86,7 +91,7 @@ export const LID_SEED: MessageSeed = {
     //     r=0   human-readable off
     //     s=5   DataMatrix size 5 = 16×16 (ECC200)
     //     data  placeholder; dispatcher overwrites per print via ^MD^BD1
-    "^NM 16;0;0;0;__NAME__^AB1;20;0;0;7;0;5;DRYRUN0000000",
+    "^NM 4;0;0;0;__NAME__^AB1;20;0;0;7;0;5;DRYRUN0000000",
     "^SV",
   ],
 };
@@ -119,15 +124,19 @@ export const SIDE_SEED: MessageSeed = {
     "Dispatcher overwrites the data per print via ^MD^TD1.",
   commandsTemplate: [
     "^DM __NAME__",
+    // Template code 1 = 1x7-dot strip (per templateToProtocolCode: '7' → 1).
+    // Font code 7 = Standard 7-high (matches the working minimal ^NM at
+    // usePrinterConnection.ts:2150 which uses ^AT1;0;0;7;).
+    //
     // ^AT text syntax (per buildFieldSubcommand in usePrinterConnection,
     // protocol v2.6 §5.33.x):
     //   ^AT n;x;y;f;data
     //     n=1   field number
     //     x=0   left-aligned
     //     y=0   bottom-anchored on 7-dot template
-    //     f=1   font code 1 = Standard 7×5
+    //     f=7   font code 7 = Standard 7-high
     //     data  placeholder; dispatcher overwrites per print via ^MD^TD1
-    "^NM 7;0;0;0;__NAME__^AT1;0;0;1;DRYRUN0000000",
+    "^NM 1;0;0;0;__NAME__^AT1;0;0;7;DRYRUN0000000",
     "^SV",
   ],
 };
