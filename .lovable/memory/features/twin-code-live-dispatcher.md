@@ -49,8 +49,8 @@ separate in-flight queues, parallel ^MB/^ME). `src/lib/twinDispatcher.ts` define
 1. **Bind**: User flips the LIVE switch (only enabled when twin pair is bound + sim is stopped)
    - `twinDispatcher.bind(pair, printers)` resolves IPs → printer IDs from `usePrinterStorage`
    - Pauses global polling once for the whole bonded session
-   - Selects each side's configured message, sets its message-level print mode to `p1` (Auto / 1-to-1-ready), then enters 1-1 on A and B in parallel via `Promise.all`
-   - `^MB` must happen after `^SM <message>` + `^CM p1`; the printer HMI stores 1-to-1 readiness inside the selected message's Advanced → Print Mode settings
+   - Selects each side's configured message, then enters 1-1 on A and B in parallel via `^MB` / `Promise.all`
+   - Per protocol v2.6 §6.1, `^MB` is the 1:1 entry command. Do not send `^CM p1` here: print mode `p1` is Auto-Print, not 1:1.
    - Plugs `conveyorSim.setLiveDispatcher((s) => twinDispatcher.dispatch(s))`
 2. **Run**: Each photocell fires `dispatch(serial)`; the sim awaits real RTTs
 3. **Unbind**: Toggle off → ^ME on both, restore polling, sim reverts to synthetic
