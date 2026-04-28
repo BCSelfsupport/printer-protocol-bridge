@@ -498,9 +498,9 @@ export interface TwinDispatchResult {
 }
 
 export interface TwinDispatcherOptions {
-  /** Field index in the message that receives the lid serial (default 2). */
+  /** Field index in the message that receives the lid serial (default 1, matches seed). */
   fieldA?: number;
-  /** Field index in the message that receives the side serial (default 2). */
+  /** Field index in the message that receives the side serial (default 1, matches seed). */
   fieldB?: number;
   /**
    * Subcommand to use inside ^MD on the A (lid) side.
