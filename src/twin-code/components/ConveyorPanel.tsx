@@ -232,6 +232,20 @@ export function ConveyorPanel() {
           />
         </div>
 
+        {/* 1:1 mode active indicator — visual confirmation that ^MB succeeded on both printers */}
+        {liveMode && (
+          <div
+            className="flex items-center gap-1.5 rounded-md border border-emerald-500/50 bg-emerald-500/10 px-2 py-1 text-[11px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400"
+            title="Both printers are in 1-to-1 print mode (^MB active). Photocell trips emit R/T/C acks per print."
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            1:1 Mode
+          </div>
+        )}
+
         {/* Pre-flight dry run — only meaningful when LIVE is engaged + conveyor stopped */}
         <Button
           size="sm"
