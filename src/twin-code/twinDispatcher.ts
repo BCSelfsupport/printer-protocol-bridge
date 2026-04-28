@@ -211,6 +211,30 @@ class PrinterSession {
   }
 
   /**
+   * Query ^WM (Which Message) and confirm the active message name matches
+   * the expected target (case-insensitive). Used right after ^SM to detect
+   * silent selection drops on busy firmware.
+   */
+  private async verifyActiveMessage(target: string): Promise<{ ok: boolean; active?: string }> {
+    try {
+      const wm = await printerTransport.sendCommand(this.printerId, '^WM', { maxWaitMs: 3000 });
+      const raw = (wm?.response || '').trim();
+      // Strip command echo and common prefixes ("^WM", "WM=", "Active=", etc.)
+      const active = raw
+        .replace(/^\^?WM[\s=:]*/i, '')
+        .replace(/^Active[\s=:]*/i, '')
+        .split(/[\r\n]/)[0]
+        .trim()
+        .toUpperCase();
+      if (!active) return { ok: false, active: '' };
+      const expected = target.trim().toUpperCase();
+      return { ok: active === expected || active.endsWith(expected), active };
+    } catch (_) {
+      return { ok: false };
+    }
+  }
+
+  /**
    * Guarantee that `messageName` exists on this printer. Queries ^LM, parses
    * the message list, and only fires the seed sequence when the name is
    * absent. Idempotent and safe to call on every bind.
