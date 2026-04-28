@@ -75,23 +75,21 @@ export const LID_SEED: MessageSeed = {
     "Dispatcher overwrites the encoded data per print via ^MD^BD1.",
   commandsTemplate: [
     "^DM __NAME__",
-    // Template code 4 = 1x16-dot strip (per templateToProtocolCode in
-    // usePrinterConnection.ts §4.2.1: '16' → 4). Passing literal "16" is
-    // an invalid template code and the printer rejects ^NM with
-    // "Invalid command format".
+    // IMPORTANT: native ^AB DataMatrix field creation (t=7) is rejected by this
+    // firmware variant ("Invalid command format"). The customer confirmed
+    // ^MD^BD1;<data> works for *updating* a DataMatrix field at runtime, but
+    // *creating* one via ^NM^AB t=7 is not accepted on the bench printers.
     //
-    // ^AB DataMatrix syntax (per buildFieldSubcommand in usePrinterConnection,
-    // protocol v2.6 §5.33.2.1):
-    //   ^AB n;x;y;f;t;r;s;data
-    //     n=1   field number
-    //     x=20  x-position (centered for typical pad)
-    //     y=0   y-position (bottom-anchored on 16-dot template)
-    //     f=0   font code (2D barcodes use f=0; s controls module size)
-    //     t=7   barcode type = DataMatrix
-    //     r=0   human-readable off
-    //     s=5   DataMatrix size 5 = 16×16 (ECC200)
-    //     data  placeholder; dispatcher overwrites per print via ^MD^BD1
-    "^NM 4;0;0;0;__NAME__^AB1;20;0;0;7;0;5;DRYRUN0000000",
+    // Workaround: seed with a placeholder TEXT field using the proven minimal
+    // pattern from usePrinterConnection.ts:2150 (^NM 0;0;0;0;name^AT1;0;0;7; ).
+    // After the operator binds the pair they should open the LID message in
+    // the editor and convert field 1 to a native DataMatrix field via the
+    // BarcodeFieldDialog (which uses the ^NG bitmap-upload path that this
+    // firmware DOES accept). The dispatcher's ^MD^BD1 path then takes over.
+    //
+    // Trailing space after the data is intentional — required by the firmware
+    // parser per the working minimal example.
+    "^NM 0;0;0;0;__NAME__^AT1;0;0;7; ",
     "^SV",
   ],
 };
