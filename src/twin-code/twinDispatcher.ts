@@ -506,8 +506,19 @@ class TwinDispatcher {
     this.wasPollingPaused = isPollingPaused();
     if (!this.wasPollingPaused) setPollingPaused(true);
 
-    this.a = new PrinterSession(aId, 'A');
-    this.b = new PrinterSession(bId, 'B');
+    const printerA = knownPrinters.find(p => p.id === aId);
+    const printerB = knownPrinters.find(p => p.id === bId);
+    if (!printerA || !printerB) return { ok: false, error: 'Twin pair printer metadata unavailable' };
+
+    await Promise.all([
+      printerTransport.setMeta(printerA),
+      printerTransport.setMeta(printerB),
+    ]).catch(() => {});
+
+    await waitForPollingIdle(3000);
+
+    this.a = new PrinterSession(aId, 'A', printerA);
+    this.b = new PrinterSession(bId, 'B', printerB);
 
     // Enter both in parallel for fastest startup. Per-side message name takes
     // precedence over the shared `messageName` so A and B can run different msgs.
