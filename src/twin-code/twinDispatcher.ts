@@ -683,8 +683,8 @@ class TwinDispatcher {
     // side doesn't expose the configured field index OR if its type doesn't match
     // the chosen ^MD subcommand (^TD requires text, ^BD requires barcode).
     if (!opts.skipFieldCheck) {
-      const fieldA = opts.fieldA ?? 2;
-      const fieldB = opts.fieldB ?? 2;
+      const fieldA = opts.fieldA ?? 1;
+      const fieldB = opts.fieldB ?? 1;
       const subA = opts.subcommandA ?? 'BD';
       const subB = opts.subcommandB ?? 'TD';
       const kindA: 'text' | 'barcode' = subA === 'BD' ? 'barcode' : 'text';
