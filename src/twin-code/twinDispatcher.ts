@@ -90,18 +90,11 @@ class PrinterSession {
 
     // ---- Emulator path: synthesize R/T/C entirely in-process ----
     if (this.isEmulated) {
-      // Drive ^MB/^SM through the regular transport so emulator state stays consistent
-      // (oneToOneMode flag flips, currentMessage updates).
-      const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 2000 });
-      if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
-        return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed (emulator)` };
-      }
       // Seed-on-bind is also honored on the emulator so the dev path mirrors prod.
       let seeded = false;
       if (seed && messageName) {
         const r = await this.ensureMessage(messageName, seed);
         if (!r.ok) {
-          await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }).catch(() => {});
           return { ok: false, error: r.error };
         }
         seeded = !!r.seeded;
@@ -109,9 +102,15 @@ class PrinterSession {
       if (messageName) {
         const sm = await printerTransport.sendCommand(this.printerId, `^SM ${messageName}`, { maxWaitMs: 2000 });
         if (!sm?.success) {
-          await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }).catch(() => {});
           return { ok: false, error: `${this.label}: ^SM failed (emulator)` };
         }
+        await printerTransport.sendCommand(this.printerId, '^CM p1', { maxWaitMs: 2000 });
+      }
+      // Drive ^MB through the regular transport so emulator state stays consistent
+      // (oneToOneMode flag flips after the selected message is 1-to-1-ready).
+      const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 2000 });
+      if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
+        return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed (emulator)` };
       }
       this.active = true;
       return { ok: true, seeded };
@@ -153,18 +152,6 @@ class PrinterSession {
       return { ok: false, error: `${this.label}: 1-1 attach failed — no active socket` };
     }
 
-    const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 4000 });
-    if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
-      await this.cleanup();
-      return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed` };
-    }
-
-    const mode = await this.confirmOneToOneMode();
-    if (!mode.ok) {
-      await this.cleanup();
-      return { ok: false, error: mode.error };
-    }
-
     // Seed-on-bind: if the operator opted in (passed `seed`) and the named
     // message isn't on the printer yet, lay it down before ^SM so the
     // dispatcher's ^MD^BD/^MD^TD path always has a correct field to write to.
@@ -184,6 +171,23 @@ class PrinterSession {
         await this.exit();
         return { ok: false, error: `${this.label}: ^SM failed` };
       }
+      const cm = await printerTransport.sendCommand(this.printerId, '^CM p1', { maxWaitMs: 4000 });
+      if (!cm?.success) {
+        await this.exit();
+        return { ok: false, error: `${this.label}: could not set selected message print mode to Auto/1-to-1` };
+      }
+    }
+
+    const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 4000 });
+    if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
+      await this.cleanup();
+      return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed` };
+    }
+
+    const mode = await this.confirmOneToOneMode();
+    if (!mode.ok) {
+      await this.cleanup();
+      return { ok: false, error: mode.error };
     }
 
     this.active = true;
@@ -620,8 +624,8 @@ class TwinDispatcher {
     // precedence over the shared `messageName` so A and B can run different msgs.
     // Auto-create seed is selected per side; only passed when the operator
     // opted in via `autoCreateA` / `autoCreateB`.
-    const msgA = opts.messageNameA ?? opts.messageName;
-    const msgB = opts.messageNameB ?? opts.messageName;
+    const msgA = opts.messageNameA ?? pair.a.messageName ?? opts.messageName;
+    const msgB = opts.messageNameB ?? pair.b.messageName ?? opts.messageName;
     const [resA, resB] = await Promise.all([
       this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? seedForSide('A') : undefined }),
       this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? seedForSide('B') : undefined }),

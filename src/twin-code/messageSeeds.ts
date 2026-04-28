@@ -53,7 +53,7 @@ export interface MessageSeed {
  *                  mem://constraints/vdp-throughput-optimization)
  *   ;0            speed = Fast
  *   ;0            orientation = Normal
- *   ;0            printMode = Normal
+ *   ;1            printMode = Auto / 1-to-1-ready (required before ^MB)
  *   ;__NAME__     message name (operator-configurable, default "LID")
  *
  * Field 1 (^AB DataMatrix):
@@ -96,7 +96,7 @@ export const LID_SEED: MessageSeed = {
     //   data  placeholder; dispatcher overwrites per print via ^MD^BD1
     //
     // Template code 4 = 1×16-dot strip (per templateToProtocolCode mapping).
-    "^NM 4;0;0;0;__NAME__^AB1;20;0;0;7;5;DRYRUN0000000",
+    "^NM 4;0;0;1;__NAME__^AB1;20;0;0;7;5;DRYRUN0000000",
     "^SV",
   ],
 };
@@ -108,7 +108,7 @@ export const LID_SEED: MessageSeed = {
  *   16            template = 16-dot strip (matches LID for parity)
  *   ;0            speed = Fast
  *   ;0            orientation = Normal
- *   ;0            printMode = Normal
+ *   ;1            printMode = Auto / 1-to-1-ready (required before ^MB)
  *   ;__NAME__     message name (operator-configurable, default "SIDE")
  *
  * Field 1 (^AT text):
@@ -141,7 +141,7 @@ export const SIDE_SEED: MessageSeed = {
     //     y=0   bottom-anchored on 7-dot template
     //     f=7   font code 7 = Standard 7-high
     //     data  placeholder; dispatcher overwrites per print via ^MD^TD1
-    "^NM 1;0;0;0;__NAME__^AT1;0;0;7;DRYRUN0000000",
+    "^NM 1;0;0;1;__NAME__^AT1;0;0;7;DRYRUN0000000",
     "^SV",
   ],
 };
