@@ -683,8 +683,8 @@ class TwinDispatcher {
     // side doesn't expose the configured field index OR if its type doesn't match
     // the chosen ^MD subcommand (^TD requires text, ^BD requires barcode).
     if (!opts.skipFieldCheck) {
-      const fieldA = opts.fieldA ?? 2;
-      const fieldB = opts.fieldB ?? 2;
+      const fieldA = opts.fieldA ?? 1;
+      const fieldB = opts.fieldB ?? 1;
       const subA = opts.subcommandA ?? 'BD';
       const subB = opts.subcommandB ?? 'TD';
       const kindA: 'text' | 'barcode' = subA === 'BD' ? 'barcode' : 'text';
@@ -715,8 +715,8 @@ class TwinDispatcher {
 
     const a = this.a;
     const b = this.b;
-    const fieldA = this.opts.fieldA ?? 2;
-    const fieldB = this.opts.fieldB ?? 2;
+    const fieldA = this.opts.fieldA ?? 1;
+    const fieldB = this.opts.fieldB ?? 1;
     // Default A (lid) → ^BD (native DataMatrix update per v2.6 §5.28.1).
     // Default B (side) → ^TD (text). Both are single short ^MD frames.
     const subA = this.opts.subcommandA ?? 'BD';
