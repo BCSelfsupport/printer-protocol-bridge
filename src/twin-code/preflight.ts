@@ -175,7 +175,7 @@ async function runSyntheticCycle(
 
 async function runLiveCycle(index: number): Promise<PreflightCycleResult> {
   const t0 = performance.now();
-  const r = await twinDispatcher.dispatch(makeGhostSerial(index));
+  const r = await twinDispatcher.dispatch(makeGhostSerial(index), { forceTrigger: true });
   const cycleMs = r.cycleMs ?? performance.now() - t0;
   return {
     index,
