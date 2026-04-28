@@ -624,8 +624,8 @@ class TwinDispatcher {
     // precedence over the shared `messageName` so A and B can run different msgs.
     // Auto-create seed is selected per side; only passed when the operator
     // opted in via `autoCreateA` / `autoCreateB`.
-    const msgA = opts.messageNameA ?? opts.messageName;
-    const msgB = opts.messageNameB ?? opts.messageName;
+    const msgA = opts.messageNameA ?? pair.a.messageName ?? opts.messageName;
+    const msgB = opts.messageNameB ?? pair.b.messageName ?? opts.messageName;
     const [resA, resB] = await Promise.all([
       this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? seedForSide('A') : undefined }),
       this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? seedForSide('B') : undefined }),
