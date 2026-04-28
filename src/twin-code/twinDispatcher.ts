@@ -496,6 +496,7 @@ export async function seedTwinPairMessages(
   knownPrinters: Printer[],
   opts: Pick<TwinDispatcherOptions, 'messageNameA' | 'messageNameB' | 'autoCreateA' | 'autoCreateB'>,
 ): Promise<BoundPairResult> {
+  type SeedResult = { ok: boolean; error?: string; seeded?: boolean };
   if (!pair.a || !pair.b) return { ok: false, error: 'Twin pair not configured' };
 
   const findPrinter = (ip: string, port: number) =>
@@ -516,10 +517,10 @@ export async function seedTwinPairMessages(
       const [resA, resB] = await Promise.all([
         opts.autoCreateA
           ? a.ensureSeedMessage(opts.messageNameA ?? pair.a.messageName ?? 'LID', seedForSide('A'))
-          : Promise.resolve({ ok: true, seeded: false }),
+          : Promise.resolve<SeedResult>({ ok: true, seeded: false }),
         opts.autoCreateB
           ? b.ensureSeedMessage(opts.messageNameB ?? pair.b.messageName ?? 'SIDE', seedForSide('B'))
-          : Promise.resolve({ ok: true, seeded: false }),
+          : Promise.resolve<SeedResult>({ ok: true, seeded: false }),
       ]);
       if (!resA.ok || !resB.ok) return { ok: false, error: resA.error || resB.error || 'Message auto-create failed' };
       return { ok: true, aId: printerA.id, bId: printerB.id, seededA: !!resA.seeded, seededB: !!resB.seeded };
