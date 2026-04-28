@@ -104,10 +104,9 @@ class PrinterSession {
         if (!sm?.success) {
           return { ok: false, error: `${this.label}: ^SM failed (emulator)` };
         }
-        await printerTransport.sendCommand(this.printerId, '^CM p1', { maxWaitMs: 2000 });
       }
-      // Drive ^MB through the regular transport so emulator state stays consistent
-      // (oneToOneMode flag flips after the selected message is 1-to-1-ready).
+      // Drive ^MB through the regular transport so emulator state stays consistent.
+      // Per v2.6 §6.1, ^MB is the 1:1 entry command; ^CM p1 is Auto-Print, not 1:1.
       const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 2000 });
       if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
         return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed (emulator)` };
@@ -170,11 +169,6 @@ class PrinterSession {
       if (!sm?.success) {
         await this.exit();
         return { ok: false, error: `${this.label}: ^SM failed` };
-      }
-      const cm = await printerTransport.sendCommand(this.printerId, '^CM p1', { maxWaitMs: 4000 });
-      if (!cm?.success) {
-        await this.exit();
-        return { ok: false, error: `${this.label}: could not set selected message print mode to Auto/1-to-1` };
       }
     }
 
