@@ -222,8 +222,10 @@ class PrinterSession {
 
     // Missing → seed. Send sequentially; ^DM is best-effort (ignored if absent).
     const cmds = buildSeedCommands(seed, target);
+    const responses: string[] = [];
     for (const cmd of cmds) {
       const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000 });
+      responses.push(`${cmd.slice(0, 30)} → ${r?.success ? 'ACK' : 'NAK'}${r?.response ? ` "${r.response.trim().slice(0, 80)}"` : ''}`);
       // ^DM may legitimately fail if the message wasn't there — that's expected, not an error.
       if (!r?.success && !cmd.startsWith('^DM')) {
         return {
@@ -231,7 +233,29 @@ class PrinterSession {
           error: `${this.label}: seed cmd "${cmd.slice(0, 40)}..." failed${r?.response ? `: ${r.response.trim()}` : ''}`,
         };
       }
+      // Small delay between protocol writes — firmware needs time to commit ^NM before ^SV.
+      await new Promise(res => setTimeout(res, 300));
     }
+
+    // VERIFY: re-query ^LM to confirm the message actually persisted. If the
+    // firmware silently rejected ^NM (bad field syntax, template mismatch,
+    // out-of-range parameter), the previous loop sees ACKs but no message.
+    await new Promise(res => setTimeout(res, 500));
+    const verify = await printerTransport.sendCommand(this.printerId, '^LM', { maxWaitMs: 4000 });
+    const verifyList = verify?.response || '';
+    const persisted = new RegExp(
+      `(^|[\\r\\n\\s])${target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=[\\r\\n\\s]|$)`,
+      'i',
+    ).test(verifyList);
+    if (!persisted) {
+      console.warn('[TwinSeed] verify failed', { target, responses, lmAfter: verifyList });
+      return {
+        ok: false,
+        error: `${this.label}: "${target}" not in ^LM after seed. Wire trace: ${responses.join(' | ')}. ^LM after: "${verifyList.trim().slice(0, 120)}"`,
+      };
+    }
+
+    console.info('[TwinSeed] seeded & verified', { target, responses });
     return { ok: true, seeded: true };
   }
 
