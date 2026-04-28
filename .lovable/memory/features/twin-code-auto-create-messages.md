@@ -24,12 +24,12 @@ Existing messages are **never overwritten** — the dispatcher only seeds when
 ### LID_SEED (A side)
 ```
 ^DM __NAME__
-^NM 16;0;0;0;__NAME__^AB 20;0;7;5;DRYRUN0000000
+^NM 16;0;0;0;__NAME__^AB 0;0;7;5;DRYRUN0000000
 ^SV
 ```
 - Template = 16-dot strip (Model 88 capable; caps height for ≥200 units/min)
 - Single field 1: native ECC200 DataMatrix, size param `s=5` → 16×16
-- Centered (x=20 for typical 60-dot pad), bottom-anchored (y=0)
+- Far-left (x=0) so horizontal placement can rely on print delay, bottom-anchored (y=0)
 - Dispatcher overwrites data per print via `^MD^BD1;<serial>` — bitmap upload
   NOT used (matches `mem://integration/datamatrix-bd-vs-ng`)
 
