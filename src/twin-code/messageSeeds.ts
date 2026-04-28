@@ -75,7 +75,12 @@ export const LID_SEED: MessageSeed = {
     "Dispatcher overwrites the encoded data per print via ^MD^BD1.",
   commandsTemplate: [
     "^DM __NAME__",
-    "^NM 16;0;0;0;__NAME__^AB 20;0;7;5;DRYRUN0000000",
+    // NOTE: no space between ^AB and its parameters — protocol v2.6 §5.33.2.1
+    // requires field codes inside ^NM to be tightly concatenated. A space
+    // here causes the firmware to silently drop the field and reject ^SV,
+    // which is exactly the symptom the operator hit (badge says "saved",
+    // ^LM shows nothing).
+    "^NM 16;0;0;0;__NAME__^AB20;0;7;5;DRYRUN0000000",
     "^SV",
   ],
 };
@@ -108,7 +113,9 @@ export const SIDE_SEED: MessageSeed = {
     "Dispatcher overwrites the data per print via ^MD^TD1.",
   commandsTemplate: [
     "^DM __NAME__",
-    "^NM 7;0;0;0;__NAME__^AT 0;0;1;DRYRUN0000000",
+    // No space after ^AT — see LID_SEED note (firmware silently drops fields
+    // when whitespace is present between the field code and its first param).
+    "^NM 7;0;0;0;__NAME__^AT0;0;1;DRYRUN0000000",
     "^SV",
   ],
 };
