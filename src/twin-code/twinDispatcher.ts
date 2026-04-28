@@ -302,6 +302,21 @@ class PrinterSession {
     return { ok: true };
   }
 
+  async ensureSeedMessage(messageName: string, seed: MessageSeed): Promise<{ ok: boolean; error?: string; seeded?: boolean }> {
+    this.isEmulated = this.detectEmulated();
+    if (!this.isEmulated && window.electronAPI && this.printer) {
+      const ready = await printerTransport.connect(this.printer);
+      if (!ready?.success) {
+        return { ok: false, error: `${this.label}: connect failed${ready?.error ? ` — ${ready.error}` : ''}` };
+      }
+    }
+    return this.ensureMessage(messageName, seed);
+  }
+
+  async disconnectAfterSeed(): Promise<void> {
+    await this.cleanup();
+  }
+
   async sendMD(mdCommand: string): Promise<{ ok: boolean; rttMs?: number; reason?: string }> {
     if (!this.active) return { ok: false, reason: 'not-active' };
 
@@ -474,6 +489,47 @@ export interface TwinDispatcherOptions {
    */
   autoCreateA?: boolean;
   autoCreateB?: boolean;
+}
+
+export async function seedTwinPairMessages(
+  pair: TwinPairState,
+  knownPrinters: Printer[],
+  opts: Pick<TwinDispatcherOptions, 'messageNameA' | 'messageNameB' | 'autoCreateA' | 'autoCreateB'>,
+): Promise<BoundPairResult> {
+  type SeedResult = { ok: boolean; error?: string; seeded?: boolean };
+  if (!pair.a || !pair.b) return { ok: false, error: 'Twin pair not configured' };
+
+  const findPrinter = (ip: string, port: number) =>
+    knownPrinters.find(p => p.ipAddress === ip && p.port === port);
+  const printerA = findPrinter(pair.a.ip, pair.a.port);
+  const printerB = findPrinter(pair.b.ip, pair.b.port);
+  if (!printerA) return { ok: false, error: `Printer A (${pair.a.ip}) not found in printer list` };
+  if (!printerB) return { ok: false, error: `Printer B (${pair.b.ip}) not found in printer list` };
+
+  const wasPaused = isPollingPaused();
+  if (!wasPaused) setPollingPaused(true);
+  try {
+    await Promise.all([printerTransport.setMeta(printerA), printerTransport.setMeta(printerB)]).catch(() => {});
+    await waitForPollingIdle(3000);
+    const a = new PrinterSession(printerA.id, 'A', printerA);
+    const b = new PrinterSession(printerB.id, 'B', printerB);
+    try {
+      const [resA, resB] = await Promise.all([
+        opts.autoCreateA
+          ? a.ensureSeedMessage(opts.messageNameA ?? pair.a.messageName ?? 'LID', seedForSide('A'))
+          : Promise.resolve<SeedResult>({ ok: true, seeded: false }),
+        opts.autoCreateB
+          ? b.ensureSeedMessage(opts.messageNameB ?? pair.b.messageName ?? 'SIDE', seedForSide('B'))
+          : Promise.resolve<SeedResult>({ ok: true, seeded: false }),
+      ]);
+      if (!resA.ok || !resB.ok) return { ok: false, error: resA.error || resB.error || 'Message auto-create failed' };
+      return { ok: true, aId: printerA.id, bId: printerB.id, seededA: !!resA.seeded, seededB: !!resB.seeded };
+    } finally {
+      await Promise.all([a.disconnectAfterSeed(), b.disconnectAfterSeed()]);
+    }
+  } finally {
+    if (!wasPaused) setPollingPaused(false);
+  }
 }
 
 class TwinDispatcher {

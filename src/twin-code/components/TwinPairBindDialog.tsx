@@ -9,6 +9,9 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Loader2, CheckCircle2, XCircle, Link2, Unlink, Cpu, Wifi, FileText, Hash, Barcode, Type, Sparkles } from "lucide-react";
 import { twinPairStore, useTwinPair, type TwinPrinterBinding, type DispatchSubcommand } from "../twinPairStore";
 import { seedForSide } from "../messageSeeds";
+import { seedTwinPairMessages } from "../twinDispatcher";
+import { usePrinterStorage } from "@/hooks/usePrinterStorage";
+import { toast } from "@/hooks/use-toast";
 
 type ProbeState = "idle" | "probing" | "ok" | "fail";
 
@@ -74,8 +77,10 @@ async function probePrinter(ip: string, port: number): Promise<{ ok: boolean; ms
 
 export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const pair = useTwinPair();
+  const { printers } = usePrinterStorage();
   const [slotA, setSlotA] = useState<SlotState>(() => bindingToSlot(pair.a, "Lid printer (DM 16×16)", A_DEFAULTS));
   const [slotB, setSlotB] = useState<SlotState>(() => bindingToSlot(pair.b, "Side printer (text)", B_DEFAULTS));
+  const [saving, setSaving] = useState(false);
 
   // Re-seed when dialog opens, so user always sees current binding
   useEffect(() => {
@@ -118,8 +123,9 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canSave) return;
+    setSaving(true);
     const a: TwinPrinterBinding = {
       kind: "ip",
       name: slotA.name.trim() || "Printer A",
@@ -141,6 +147,23 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
       autoCreate: slotB.autoCreate,
     };
     twinPairStore.setPair(a, b);
+    const res = await seedTwinPairMessages({ a, b, boundAt: new Date().toISOString() }, printers, {
+      messageNameA: a.messageName,
+      messageNameB: b.messageName,
+      autoCreateA: a.autoCreate ?? true,
+      autoCreateB: b.autoCreate ?? true,
+    });
+    setSaving(false);
+    if (!res.ok) {
+      toast({ title: "Pair bound, auto-create failed", description: res.error, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: "Twin pair bound",
+      description: res.seededA || res.seededB
+        ? `Created ${[res.seededA && (a.messageName || 'LID'), res.seededB && (b.messageName || 'SIDE')].filter(Boolean).join(' & ')}`
+        : "Required messages already exist",
+    });
     onOpenChange(false);
   };
 
@@ -223,8 +246,8 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleSave} disabled={!canSave} data-tour="bind-confirm">
-            <Link2 className="mr-2 h-4 w-4" />
+          <Button type="button" onClick={handleSave} disabled={!canSave || saving} data-tour="bind-confirm">
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
             Bind pair
           </Button>
         </DialogFooter>
