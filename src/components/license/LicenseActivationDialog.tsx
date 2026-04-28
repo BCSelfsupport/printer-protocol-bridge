@@ -220,6 +220,7 @@ export function LicenseActivationDialog({ open, onOpenChange }: LicenseActivatio
               <p><span className="font-semibold">LITE</span> — Standalone operation, no network</p>
               <p><span className="font-semibold">FULL</span> — Network printer access</p>
               <p><span className="font-semibold">DATABASE</span> — Full + Variable Data Printing</p>
+              <p><span className="font-semibold text-emerald-600 dark:text-emerald-400">TWINCODE</span> — Bonded two-printer mode for serialized 2D codes (Lid + Side), HUD, runs &amp; preflight</p>
             </div>
           </div>
         </DialogContent>
