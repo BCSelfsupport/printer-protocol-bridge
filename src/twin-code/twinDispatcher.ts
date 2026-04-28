@@ -422,16 +422,16 @@ class PrinterSession {
     this.abortInFlight('detached');
 
     if (this.isEmulated) {
-      try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }); } catch (_) {}
+      try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }); } catch (_) { /* best effort */ }
     } else if (window.electronAPI?.oneToOne) {
-      try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 4000 }); } catch (_) {}
-      try { await window.electronAPI.oneToOne.detach(this.printerId); } catch (_) {}
+      try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 4000 }); } catch (_) { /* best effort */ }
+      try { await window.electronAPI.oneToOne.detach(this.printerId); } catch (_) { /* best effort */ }
     }
     await this.cleanup();
   }
 
   private async cleanup() {
-    if (this.unsub) { try { this.unsub(); } catch (_) {} this.unsub = null; }
+    if (this.unsub) { try { this.unsub(); } catch (_) { /* best effort */ } this.unsub = null; }
   }
 
   private handleAck(char: AckChar, targetId?: number) {
