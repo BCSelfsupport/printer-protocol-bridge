@@ -2118,10 +2118,14 @@ export function usePrinterConnection() {
           }
           return `^AB${fieldNum};${field.x};${field.y};${barcodeF};${typeCode};${qrSize};${rawData}`;
         } else if (typeCode === 7) {
-          // DataMatrix: ^AB n;x;y;f;t;r;s;data
-          // s: 0-15 (specific matrix sizes)
+          // DataMatrix: ^AB n;x;y;f;t;s;data  (per v2.6 §5.33.2.1 — short form,
+          // identical shape to QR Code; the `r` human-readable parameter is
+          // explicitly NOT available for DataMatrix per the spec note. Earlier
+          // versions sent ^AB n;x;y;f;t;r;s;data which the printer rejects with
+          // "Invalid command format".)
+          // s: 0-15 (specific matrix sizes; 5 = 16×16 ECC200)
           const dmSize = Number.isFinite(parsedSize) ? Math.min(Math.max(0, parsedSize), 15) : 0;
-          return `^AB${fieldNum};${field.x};${field.y};${barcodeF};${typeCode};${r};${dmSize};${rawData}`;
+          return `^AB${fieldNum};${field.x};${field.y};${barcodeF};${typeCode};${dmSize};${rawData}`;
         } else if (typeCode === 6) {
           // Code 128: ^AB n;x;y;f;t;m;r;c;data
           // c: start code (0=A, 1=B, 2=C)

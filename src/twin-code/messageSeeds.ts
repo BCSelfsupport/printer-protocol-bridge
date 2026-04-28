@@ -75,21 +75,28 @@ export const LID_SEED: MessageSeed = {
     "Dispatcher overwrites the encoded data per print via ^MD^BD1.",
   commandsTemplate: [
     "^DM __NAME__",
-    // IMPORTANT: native ^AB DataMatrix field creation (t=7) is rejected by this
-    // firmware variant ("Invalid command format"). The customer confirmed
-    // ^MD^BD1;<data> works for *updating* a DataMatrix field at runtime, but
-    // *creating* one via ^NM^AB t=7 is not accepted on the bench printers.
+    // Per protocol v2.6 §5.33.2.1, DataMatrix uses the SHORT ^AB form
+    // (same shape as QR Code), with NO `r` (human-readable) parameter:
     //
-    // Workaround: seed with a placeholder TEXT field using the proven minimal
-    // pattern from usePrinterConnection.ts:2150 (^NM 0;0;0;0;name^AT1;0;0;7; ).
-    // After the operator binds the pair they should open the LID message in
-    // the editor and convert field 1 to a native DataMatrix field via the
-    // BarcodeFieldDialog (which uses the ^NG bitmap-upload path that this
-    // firmware DOES accept). The dispatcher's ^MD^BD1 path then takes over.
+    //     ^AB n; x; y; f; t; s; data        (DataMatrix / QR)
+    //     ^AB n; x; y; f; t; m; r; data     (1D barcodes — DOES include r)
     //
-    // Trailing space after the data is intentional — required by the firmware
-    // parser per the working minimal example.
-    "^NM 0;0;0;0;__NAME__^AT1;0;0;7; ",
+    // Spec §5.33.2.1 explicitly states: "r ... Not available for QR code or
+    // DataMatrix code." Earlier versions of this seed (and the editor's
+    // buildFieldSubcommand for DataMatrix) included a spurious `r=0`
+    // segment, producing 8 segments instead of 7 — the printer rejected
+    // that with "Invalid command format".
+    //
+    //   n=1   field number
+    //   x=20  centered for typical pad width
+    //   y=0   bottom-anchored on 16-dot template
+    //   f=0   font code (2D codes: s controls module size, f stays 0)
+    //   t=7   barcode type = DataMatrix
+    //   s=5   DataMatrix size 5 = 16×16 (ECC200)
+    //   data  placeholder; dispatcher overwrites per print via ^MD^BD1
+    //
+    // Template code 4 = 1×16-dot strip (per templateToProtocolCode mapping).
+    "^NM 4;0;0;0;__NAME__^AB1;20;0;0;7;5;DRYRUN0000000",
     "^SV",
   ],
 };
