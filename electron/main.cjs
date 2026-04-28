@@ -490,15 +490,6 @@ ipcMain.handle('printer:send-command', async (event, { printerId, command, optio
 
 const oneToOneState = new Map(); // printerId → { lineBuf: '', listener: fn }
 
-function isAckLine(line) {
-  if (!line || line.length === 0 || line.length > 3) return false;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (c !== 'R' && c !== 'T' && c !== 'C') return false;
-  }
-  return true;
-}
-
 function emitOneToOneEvent(printerId, payload) {
   try {
     mainWindow?.webContents.send('oneToOne:ack', { printerId, ...payload });
@@ -514,7 +505,31 @@ function attachOneToOneDemuxer(printerId) {
   // Already attached — idempotent
   if (oneToOneState.has(printerId)) return true;
 
+  // Per protocol v2.6 §6.1, one-to-one mode ACKs are emitted as bare single
+  // bytes (R, T, C) WITHOUT a CRLF terminator. They are interleaved with
+  // normal CRLF-framed command responses and async fault lines (JET STOP,
+  // DEF OFF). The previous implementation accumulated everything into a line
+  // buffer and only inspected it on CRLF — which meant lone R/T/C bytes that
+  // arrived between newlines were either lost or glued onto the next line and
+  // misclassified, producing the "every cycle times out at R_TIMEOUT_MS with
+  // zero per-side ms" symptom seen in preflight.
+  //
+  // Fix: scan the incoming bytes character-by-character. Lone R/T/C chars are
+  // emitted as ACK events immediately. Everything else (including 'J', 'D',
+  // and the rest of "JET STOP" / "DEF OFF") goes into a line buffer that is
+  // flushed on CRLF for fault-line classification.
   const state = { lineBuf: '' };
+
+  const flushFaultLine = (line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    if (trimmed.includes('JET STOP')) {
+      emitOneToOneEvent(printerId, { kind: 'fault', code: 'JET_STOP', raw: trimmed, ts: Date.now() });
+    } else if (trimmed.includes('DEF OFF')) {
+      emitOneToOneEvent(printerId, { kind: 'fault', code: 'DEF_OFF', raw: trimmed, ts: Date.now() });
+    }
+    // Other lines (>, ?, status echoes) are ignored here — sendCommandToSocket owns them.
+  };
 
   const onData = (chunk) => {
     // Telnet bytes are stripped here too in case the printer renegotiates mid-stream.
@@ -522,35 +537,37 @@ function attachOneToOneDemuxer(printerId) {
     const stripped = stripTelnetBytes(chunk);
     if (!stripped || stripped.length === 0) return;
 
-    state.lineBuf += stripped.toString('binary');
-    // Split on CRLF (also tolerate bare LF / CR)
-    const parts = state.lineBuf.split(/\r\n|\n|\r/);
-    state.lineBuf = parts.pop() || ''; // keep trailing partial
+    const text = stripped.toString('binary');
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
 
-    for (const raw of parts) {
-      const line = raw.trim();
-      if (!line) continue;
-
-      if (isAckLine(line)) {
-        // R / T / C / RT / TC / RTC — emit each char as its own event
-        for (const c of line) {
+      // Lone ACK chars — emit immediately, do NOT buffer.
+      // Important: only treat as ACK when the surrounding bytes don't form
+      // part of a word (e.g. the 'R' in 'RUNNING' or the 'T' in 'STOP').
+      // Heuristic: ACK bytes are surrounded by whitespace, CR/LF, end-of-chunk,
+      // or other ACK chars.
+      if (c === 'R' || c === 'T' || c === 'C') {
+        const prev = i > 0 ? text[i - 1] : '';
+        const next = i < text.length - 1 ? text[i + 1] : '';
+        const isBoundary = (ch) =>
+          ch === '' || ch === '\r' || ch === '\n' || ch === ' ' || ch === '\t' ||
+          ch === 'R' || ch === 'T' || ch === 'C';
+        // Also require the line buffer is empty (we're not mid-word like "STOP" or "RUN")
+        if (state.lineBuf.length === 0 && isBoundary(prev) && isBoundary(next)) {
           emitOneToOneEvent(printerId, { kind: 'ack', char: c, ts: Date.now() });
+          continue;
+        }
+      }
+
+      if (c === '\n' || c === '\r') {
+        if (state.lineBuf.length > 0) {
+          flushFaultLine(state.lineBuf);
+          state.lineBuf = '';
         }
         continue;
       }
 
-      if (line === 'JET STOP' || line.includes('JET STOP')) {
-        emitOneToOneEvent(printerId, { kind: 'fault', code: 'JET_STOP', raw: line, ts: Date.now() });
-        continue;
-      }
-
-      if (line === 'DEF OFF' || line.includes('DEF OFF')) {
-        emitOneToOneEvent(printerId, { kind: 'fault', code: 'DEF_OFF', raw: line, ts: Date.now() });
-        continue;
-      }
-
-      // Anything else (including stray '>' or '? ...' from out-of-band commands) is ignored here.
-      // The sendCommandToSocket pipeline owns regular command-response framing.
+      state.lineBuf += c;
     }
   };
 
@@ -593,7 +610,9 @@ ipcMain.handle('oneToOne:sendMD', async (event, { printerId, command }) => {
     return { success: false, error: 'No active connection' };
   }
   try {
-    socket.write(command + '\r');
+    // Per protocol v2.6, command framing uses CRLF. Some firmware revs accept
+    // bare CR for ^MD in 1-1 mode, others require \r\n. CRLF is safe on both.
+    socket.write(command + '\r\n');
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message || 'Write failed' };
