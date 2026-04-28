@@ -22,7 +22,7 @@
  * this module spins up dedicated controller instances for A and B.
  */
 
-import { setPollingPaused, isPollingPaused } from '@/lib/pollingPause';
+import { setPollingPaused, isPollingPaused, waitForPollingIdle } from '@/lib/pollingPause';
 import { printerTransport } from '@/lib/printerTransport';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import type { Printer } from '@/types/printer';
@@ -60,7 +60,11 @@ class PrinterSession {
   private active = false;
   private isEmulated = false;
 
-  constructor(public printerId: number, public label: 'A' | 'B') {}
+  constructor(
+    public printerId: number,
+    public label: 'A' | 'B',
+    private printer?: Pick<Printer, 'id' | 'ipAddress' | 'port'>,
+  ) {}
 
   /** True when this printerId belongs to the multi-printer dev emulator. */
   private detectEmulated(): boolean {
@@ -119,6 +123,14 @@ class PrinterSession {
       return { ok: true };
     }
 
+    if (this.printer) {
+      const ready = await printerTransport.connect(this.printer);
+      if (!ready?.success) {
+        await this.cleanup();
+        return { ok: false, error: `${this.label}: connect failed${ready?.error ? ` — ${ready.error}` : ''}` };
+      }
+    }
+
     // Subscribe to ACK stream FIRST so the printer's ^MB response framing is captured.
     this.unsub = window.electronAPI.oneToOne.onAck((payload) => {
       if (payload.printerId !== this.printerId) return;
@@ -135,7 +147,11 @@ class PrinterSession {
       if (payload.kind === 'ack' && payload.char) this.handleAck(payload.char);
     });
 
-    await window.electronAPI.oneToOne.attach(this.printerId);
+    const attached = await window.electronAPI.oneToOne.attach(this.printerId);
+    if (!attached?.success) {
+      await this.cleanup();
+      return { ok: false, error: `${this.label}: 1-1 attach failed — no active socket` };
+    }
 
     const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 4000 });
     if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
