@@ -515,20 +515,22 @@ function attachOneToOneDemuxer(printerId) {
   // zero per-side ms" symptom seen in preflight.
   //
   // Fix: scan the incoming bytes character-by-character. Lone R/T/C chars are
-  // emitted as ACK events immediately. Everything else (including 'J', 'D',
-  // and the rest of "JET STOP" / "DEF OFF") goes into a line buffer that is
-  // flushed on CRLF for fault-line classification.
-  const state = { lineBuf: '' };
+  // emitted as ACK events immediately. A separate rolling text buffer watches
+  // for async fault phrases. Do NOT gate ACK detection on a CRLF line buffer:
+  // the firmware often leaves a prompt/echo byte (for example '>') with no
+  // newline after ^MB/^SM, and that stale byte would otherwise block every
+  // following bare ACK and recreate the 500ms `timeout-R` loop.
+  const state = { faultBuf: '', lastChar: '' };
 
-  const flushFaultLine = (line) => {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-    if (trimmed.includes('JET STOP')) {
-      emitOneToOneEvent(printerId, { kind: 'fault', code: 'JET_STOP', raw: trimmed, ts: Date.now() });
-    } else if (trimmed.includes('DEF OFF')) {
-      emitOneToOneEvent(printerId, { kind: 'fault', code: 'DEF_OFF', raw: trimmed, ts: Date.now() });
+  const checkFaultText = () => {
+    const upper = state.faultBuf.toUpperCase();
+    if (upper.includes('JET STOP')) {
+      emitOneToOneEvent(printerId, { kind: 'fault', code: 'JET_STOP', raw: state.faultBuf.trim(), ts: Date.now() });
+      state.faultBuf = '';
+    } else if (upper.includes('DEF OFF')) {
+      emitOneToOneEvent(printerId, { kind: 'fault', code: 'DEF_OFF', raw: state.faultBuf.trim(), ts: Date.now() });
+      state.faultBuf = '';
     }
-    // Other lines (>, ?, status echoes) are ignored here — sendCommandToSocket owns them.
   };
 
   const onData = (chunk) => {
@@ -545,29 +547,31 @@ function attachOneToOneDemuxer(printerId) {
       // Important: only treat as ACK when the surrounding bytes don't form
       // part of a word (e.g. the 'R' in 'RUNNING' or the 'T' in 'STOP').
       // Heuristic: ACK bytes are surrounded by whitespace, CR/LF, end-of-chunk,
-      // or other ACK chars.
+      // prompts, or other ACK chars.
       if (c === 'R' || c === 'T' || c === 'C') {
-        const prev = i > 0 ? text[i - 1] : '';
+        const prev = i > 0 ? text[i - 1] : state.lastChar;
         const next = i < text.length - 1 ? text[i + 1] : '';
         const isBoundary = (ch) =>
           ch === '' || ch === '\r' || ch === '\n' || ch === ' ' || ch === '\t' ||
+          ch === '>' || ch === '?' || ch === '\0' ||
           ch === 'R' || ch === 'T' || ch === 'C';
-        // Also require the line buffer is empty (we're not mid-word like "STOP" or "RUN")
-        if (state.lineBuf.length === 0 && isBoundary(prev) && isBoundary(next)) {
+        if (isBoundary(prev) && isBoundary(next)) {
           emitOneToOneEvent(printerId, { kind: 'ack', char: c, ts: Date.now() });
+          state.faultBuf = '';
+          state.lastChar = c;
           continue;
         }
       }
 
-      if (c === '\n' || c === '\r') {
-        if (state.lineBuf.length > 0) {
-          flushFaultLine(state.lineBuf);
-          state.lineBuf = '';
-        }
+      if (c === '\n' || c === '\r' || c === '>' || c === '?' || c === '\0') {
+        state.faultBuf = '';
+        state.lastChar = c;
         continue;
       }
 
-      state.lineBuf += c;
+      state.faultBuf = (state.faultBuf + c).slice(-96);
+      checkFaultText();
+      state.lastChar = c;
     }
   };
 
