@@ -211,21 +211,39 @@ class PrinterSession {
   }
 
   /**
-   * Query ^WM (Which Message) and confirm the active message name matches
-   * the expected target (case-insensitive). Used right after ^SM to detect
-   * silent selection drops on busy firmware.
+   * Query ^MS (Message Status) and confirm the active message name matches
+   * the expected target (case-insensitive). Per protocol v2.6, ^MS returns
+   * multiple lines including `Message: <NAME>` (long form) or `MSG: <NAME>`
+   * (short form). NOTE: ^WM is NOT a real protocol command — the firmware
+   * replies "COMMAND NOT RECOGNIZED" and we'd surface that as the "active"
+   * value. Always use ^MS here.
    */
   private async verifyActiveMessage(target: string): Promise<{ ok: boolean; active?: string }> {
     try {
-      const wm = await printerTransport.sendCommand(this.printerId, '^WM', { maxWaitMs: 3000 });
-      const raw = (wm?.response || '').trim();
-      // Strip command echo and common prefixes ("^WM", "WM=", "Active=", etc.)
-      const active = raw
-        .replace(/^\^?WM[\s=:]*/i, '')
-        .replace(/^Active[\s=:]*/i, '')
-        .split(/[\r\n]/)[0]
-        .trim()
-        .toUpperCase();
+      const ms = await printerTransport.sendCommand(this.printerId, '^MS', { maxWaitMs: 3000 });
+      const raw = (ms?.response || '').trim();
+      if (!raw) return { ok: false, active: '' };
+
+      // Look for `Message: <name>` or `MSG: <name>` on any line.
+      let active = '';
+      for (const line of raw.split(/[\r\n]+/)) {
+        const m = line.match(/^\s*(?:Message|MSG)\s*[:=]\s*(\S+)/i);
+        if (m) { active = m[1].trim().toUpperCase(); break; }
+      }
+
+      if (!active) {
+        // Firmware variants may just emit the bare name on its own line —
+        // accept that too, but skip obvious status tokens.
+        for (const line of raw.split(/[\r\n]+/)) {
+          const t = line.trim();
+          if (!t) continue;
+          if (/^(1-1|OnetoOne|NORM|Normal|Mode|Status|Command|JNR|DEF|JET)/i.test(t)) continue;
+          if (/[:=]/.test(t)) continue;
+          active = t.toUpperCase();
+          break;
+        }
+      }
+
       if (!active) return { ok: false, active: '' };
       const expected = target.trim().toUpperCase();
       return { ok: active === expected || active.endsWith(expected), active };
