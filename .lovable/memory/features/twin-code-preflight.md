@@ -26,16 +26,17 @@ ledger remain untouched so pre-flight can be run repeatedly without polluting
 production data.
 
 ## Force trigger behavior
-LIVE pre-flight must dispatch with `forceTrigger: true`. The dispatcher sends
-raw `^FE` (no `1` parameter) over the existing 1-1 socket, pre-arms before
-`^MD`, and re-fires after both sides report `R` so no manual photocell trip is
-required on the bench.
+LIVE pre-flight must dispatch with `forceTrigger: true`. After both printers
+accept the next code and report `R`, the dispatcher sends raw `^PT` Print Go /
+Force Print over the existing 1-1 socket on both printers. This is the same
+manual print signal the operator would otherwise press, and it must happen once
+per pre-flight/dry-run cycle so the test advances to the next code.
 
 ## Bench production simulation
 With LIVE mode active, Bench trigger can pace real printer dispatches from the
-conveyor BPM model. It uses the same forced `^FE` path after each accepted
-serial, allowing office testing into a beaker while increasing BPM until faults
-or missed cycles appear.
+conveyor BPM model. It uses the same forced `^PT` Print Go path after each
+accepted serial, allowing office testing into a beaker while increasing BPM
+until faults or missed cycles appear.
 
 ## Pass thresholds (defaults)
 - Success rate ≥ 95%
