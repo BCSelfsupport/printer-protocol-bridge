@@ -821,7 +821,6 @@ class TwinDispatcher {
         b.forcePhotoEye();
       }, 250);
     }
-    }
 
     // Whichever side fails FIRST triggers an abort on the other so we don't
     // sit on a 30s C-timeout waiting for an orphaned partner.
