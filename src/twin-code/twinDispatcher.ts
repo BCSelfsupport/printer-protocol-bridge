@@ -605,6 +605,10 @@ export interface TwinDispatchResult {
   bReason?: string;
 }
 
+export interface TwinDispatchOptions {
+  forceTrigger?: boolean;
+}
+
 export interface TwinDispatcherOptions {
   /** Field index in the message that receives the lid serial (default 1, matches seed). */
   fieldA?: number;
@@ -778,7 +782,7 @@ class TwinDispatcher {
    * of waiting out the C-timeout). Per-side failure reasons are surfaced in
    * `aReason` / `bReason`.
    */
-  async dispatch(serial: string, opts?: { forceTrigger?: boolean }): Promise<TwinDispatchResult> {
+  async dispatch(serial: string, opts?: TwinDispatchOptions): Promise<TwinDispatchResult> {
     if (!this.a || !this.b) return { serial, ok: false, reason: 'not-bound' };
 
     const a = this.a;
@@ -793,18 +797,30 @@ class TwinDispatcher {
     const mdB = `^MD^${subB}${fieldB};${serial}`;
 
     const tStart = performance.now();
-    const pA = a.sendMD(mdA);
-    const pB = b.sendMD(mdB);
+    let aReady = false;
+    let bReady = false;
+    let forceSent = false;
+    const fireWhenReady = () => {
+      if (!opts?.forceTrigger || forceSent || !aReady || !bReady) return;
+      forceSent = true;
+      a.forcePhotoEye();
+      b.forcePhotoEye();
+    };
 
-    // Pre-flight / dry-run path: there is no real product on the conveyor so the
-    // photo eye will never fire on its own. Per protocol v2.6 §6.1 / §5.16,
-    // ^FE 1 forces a single PE trigger which drives T → C through the bonded
-    // pair. We give R a moment to land first (firmware ignores PE before R).
+    const pA = a.sendMD(mdA, { onReady: () => { aReady = true; fireWhenReady(); } });
+    const pB = b.sendMD(mdB, { onReady: () => { bReady = true; fireWhenReady(); } });
+
+    // Pre-flight / bench path: no product crosses the photocell, so trigger it
+    // after BOTH printers report R. If an R ACK is missed, a later fallback raw
+    // ^FE still gives the firmware a chance to advance T→C before C-timeout.
     if (opts?.forceTrigger) {
       setTimeout(() => {
-        printerTransport.sendCommand(a.printerId, '^FE 1', { maxWaitMs: 1000 }).catch(() => {});
-        printerTransport.sendCommand(b.printerId, '^FE 1', { maxWaitMs: 1000 }).catch(() => {});
-      }, 50);
+        if (forceSent) return;
+        forceSent = true;
+        a.forcePhotoEye();
+        b.forcePhotoEye();
+      }, 250);
+    }
     }
 
     // Whichever side fails FIRST triggers an abort on the other so we don't
