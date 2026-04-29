@@ -810,9 +810,10 @@ class TwinDispatcher {
     const pA = a.sendMD(mdA, { onReady: () => { aReady = true; fireWhenReady(); } });
     const pB = b.sendMD(mdB, { onReady: () => { bReady = true; fireWhenReady(); } });
 
-    // Pre-flight / bench path: no product crosses the photocell, so trigger it
-    // after BOTH printers report R. If an R ACK is missed, a later fallback raw
-    // ^FE still gives the firmware a chance to advance T→C before C-timeout.
+    // Pre-flight / bench path: no product crosses the photocell, so send the
+    // same Print Go (^PT) signal the operator would otherwise press manually.
+    // If an R ACK is missed, a later fallback raw ^PT still gives the firmware
+    // a chance to advance T→C before C-timeout.
     if (opts?.forceTrigger) {
       setTimeout(() => {
         if (forceSent) return;
