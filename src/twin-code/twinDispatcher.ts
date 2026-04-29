@@ -47,6 +47,8 @@ interface InFlight {
   tR?: number;
   tT?: number;
   tC?: number;
+  onReady?: () => void;
+  readyNotified?: boolean;
   resolve: (r: { ok: boolean; rttMs?: number; reason?: string }) => void;
   rTimer: ReturnType<typeof setTimeout>;
   cTimer: ReturnType<typeof setTimeout>;
@@ -439,7 +441,10 @@ class PrinterSession {
     await this.cleanup();
   }
 
-  async sendMD(mdCommand: string): Promise<{ ok: boolean; rttMs?: number; reason?: string }> {
+  async sendMD(
+    mdCommand: string,
+    opts: { onReady?: () => void } = {},
+  ): Promise<{ ok: boolean; rttMs?: number; reason?: string }> {
     if (!this.active) return { ok: false, reason: 'not-active' };
 
     // Pace
@@ -454,6 +459,7 @@ class PrinterSession {
 
     const entry: InFlight = {
       id, tSent, resolve,
+      onReady: opts.onReady,
       rTimer: setTimeout(() => {
         if (!entry.tR) this.complete(entry, { ok: false, reason: 'timeout-R' });
       }, R_TIMEOUT_MS),
@@ -483,6 +489,24 @@ class PrinterSession {
     }
 
     return promise;
+  }
+
+  forcePhotoEye() {
+    const cmd = '^FE';
+    if (this.isEmulated) {
+      printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 1000 }).catch(() => {});
+      return;
+    }
+
+    // In 1-1 mode this must not go through the normal request/response path:
+    // T/C ACKs are asynchronous and can otherwise race the command reader. The
+    // IPC method name is historical; it is just a raw CRLF socket write.
+    if (window.electronAPI?.oneToOne) {
+      window.electronAPI.oneToOne.sendMD(this.printerId, cmd).catch(() => {});
+      return;
+    }
+
+    printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 1000 }).catch(() => {});
   }
 
   /**
@@ -527,7 +551,13 @@ class PrinterSession {
         });
     if (!entry) return;
     const now = performance.now();
-    if (char === 'R') entry.tR = now;
+    if (char === 'R') {
+      entry.tR = now;
+      if (entry.onReady && !entry.readyNotified) {
+        entry.readyNotified = true;
+        entry.onReady();
+      }
+    }
     if (char === 'T') entry.tT = now;
     if (char === 'C') {
       entry.tC = now;
