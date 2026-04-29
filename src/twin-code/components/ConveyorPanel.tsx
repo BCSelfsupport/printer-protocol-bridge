@@ -14,10 +14,22 @@ import { TwinMessagePreview } from "./TwinMessagePreview";
 import { conveyorSim, computeBpm, pitchFromBpm, ftPerMinFromBpm, DEFAULT_CONVEYOR_CONFIG } from "../conveyorSim";
 import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
+import { profilerBus } from "../profilerBus";
 import { useTwinPair } from "../twinPairStore";
 import { twinDispatcher, type TwinDryRunResult } from "../twinDispatcher";
 import { faultGuard } from "../faultGuard";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
+
+interface BenchCsvResult {
+  requested: number;
+  attempted: number;
+  passed: number;
+  failed: number;
+  bpm: number;
+  minCycleMs: number;
+  maxCycleMs: number;
+  meanCycleMs: number;
+}
 
 export function ConveyorPanel() {
   const catalogState = useCatalog();
@@ -42,6 +54,10 @@ export function ConveyorPanel() {
   const [liveBusy, setLiveBusy] = useState(false);
   const [dryBusy, setDryBusy] = useState(false);
   const [lastDryRun, setLastDryRun] = useState<TwinDryRunResult | null>(null);
+  const [benchBusy, setBenchBusy] = useState(false);
+  const [benchCount, setBenchCount] = useState(50);
+  const [benchResult, setBenchResult] = useState<BenchCsvResult | null>(null);
+  const benchAbortRef = useRef(false);
 
   // Mirror the conveyor config locally for the controls (simple & responsive).
   const [cfg, setCfg] = useState(DEFAULT_CONVEYOR_CONFIG);
