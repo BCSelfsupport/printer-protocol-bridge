@@ -169,6 +169,97 @@ export function ConveyorPanel() {
     }
   };
 
+  const runBenchCsvTest = async () => {
+    if (!liveMode) {
+      toast({ title: 'Enter LIVE mode first', variant: 'destructive' });
+      return;
+    }
+    const remaining = catalog.getRemaining();
+    if (remaining <= 0) {
+      toast({ title: 'Load a CSV catalog first', description: 'Bench test consumes real 13-character catalog codes.', variant: 'destructive' });
+      return;
+    }
+
+    const requested = Math.max(1, Math.min(benchCount | 0, remaining));
+    const intervalMs = Math.max(1, 60_000 / Math.max(1, bpm));
+    const sessionStart = performance.now();
+    const cycles: number[] = [];
+    let passed = 0;
+    let failed = 0;
+    benchAbortRef.current = false;
+    setBenchBusy(true);
+    setBenchResult(null);
+    profilerBus.startSession(`Twin bench ${requested} @ ${bpm.toFixed(0)} bpm`);
+
+    try {
+      for (let i = 0; i < requested; i++) {
+        if (benchAbortRef.current) break;
+        const cycleStart = performance.now();
+        const serial = catalog.dispense();
+        if (!serial) break;
+
+        const t0 = cycleStart - sessionStart;
+        const res = await twinDispatcher.dispatch(serial, { forceTrigger: true });
+        const cycleMs = res.cycleMs ?? performance.now() - cycleStart;
+        const aMs = res.aMs ?? cycleMs;
+        const bMs = res.bMs ?? cycleMs;
+        const skewMs = res.skewMs ?? Math.abs(aMs - bMs);
+        const t1 = t0;
+        const t2a = t0;
+        const t2b = t0;
+        const t3a = t2a + aMs;
+        const t3b = t2b + bMs;
+        const t4 = t0 + cycleMs;
+
+        if (res.ok) {
+          passed++;
+          cycles.push(cycleMs);
+          catalog.recordPrinted(serial, i);
+        } else {
+          failed++;
+          catalog.recordMissed(i);
+        }
+
+        profilerBus.push({
+          serial,
+          outcome: res.ok ? 'printed' : 'missed',
+          t0, t1, t2a, t2b, t3a, t3b, t4,
+          ingressMs: 0,
+          dispatchMs: 0,
+          wireAMs: aMs,
+          wireBMs: bMs,
+          skewMs,
+          cycleMs,
+        });
+
+        const elapsed = performance.now() - cycleStart;
+        if (i < requested - 1 && elapsed < intervalMs) {
+          await new Promise((resDelay) => setTimeout(resDelay, intervalMs - elapsed));
+        }
+      }
+    } finally {
+      const attempted = passed + failed;
+      const sum = cycles.reduce((acc, value) => acc + value, 0);
+      const result: BenchCsvResult = {
+        requested,
+        attempted,
+        passed,
+        failed,
+        bpm,
+        minCycleMs: cycles.length ? Math.min(...cycles) : 0,
+        maxCycleMs: cycles.length ? Math.max(...cycles) : 0,
+        meanCycleMs: cycles.length ? sum / cycles.length : 0,
+      };
+      setBenchResult(result);
+      setBenchBusy(false);
+      toast({
+        title: `Bench CSV test ${failed === 0 ? 'complete' : 'finished with misses'}`,
+        description: `${passed}/${attempted} printed @ ${bpm.toFixed(0)} bpm · cycle min ${result.minCycleMs.toFixed(1)}ms / max ${result.maxCycleMs.toFixed(1)}ms`,
+        variant: failed === 0 ? undefined : 'destructive',
+      });
+    }
+  };
+
   // Tear down on unmount
   useEffect(() => {
     return () => {
