@@ -14,10 +14,22 @@ import { TwinMessagePreview } from "./TwinMessagePreview";
 import { conveyorSim, computeBpm, pitchFromBpm, ftPerMinFromBpm, DEFAULT_CONVEYOR_CONFIG } from "../conveyorSim";
 import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
+import { profilerBus } from "../profilerBus";
 import { useTwinPair } from "../twinPairStore";
 import { twinDispatcher, type TwinDryRunResult } from "../twinDispatcher";
 import { faultGuard } from "../faultGuard";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
+
+interface BenchCsvResult {
+  requested: number;
+  attempted: number;
+  passed: number;
+  failed: number;
+  bpm: number;
+  minCycleMs: number;
+  maxCycleMs: number;
+  meanCycleMs: number;
+}
 
 export function ConveyorPanel() {
   const catalogState = useCatalog();
@@ -42,6 +54,10 @@ export function ConveyorPanel() {
   const [liveBusy, setLiveBusy] = useState(false);
   const [dryBusy, setDryBusy] = useState(false);
   const [lastDryRun, setLastDryRun] = useState<TwinDryRunResult | null>(null);
+  const [benchBusy, setBenchBusy] = useState(false);
+  const [benchCount, setBenchCount] = useState(50);
+  const [benchResult, setBenchResult] = useState<BenchCsvResult | null>(null);
+  const benchAbortRef = useRef(false);
 
   // Mirror the conveyor config locally for the controls (simple & responsive).
   const [cfg, setCfg] = useState(DEFAULT_CONVEYOR_CONFIG);
@@ -153,6 +169,97 @@ export function ConveyorPanel() {
     }
   };
 
+  const runBenchCsvTest = async () => {
+    if (!liveMode) {
+      toast({ title: 'Enter LIVE mode first', variant: 'destructive' });
+      return;
+    }
+    const remaining = catalog.getRemaining();
+    if (remaining <= 0) {
+      toast({ title: 'Load a CSV catalog first', description: 'Bench test consumes real 13-character catalog codes.', variant: 'destructive' });
+      return;
+    }
+
+    const requested = Math.max(1, Math.min(benchCount | 0, remaining));
+    const intervalMs = Math.max(1, 60_000 / Math.max(1, bpm));
+    const sessionStart = performance.now();
+    const cycles: number[] = [];
+    let passed = 0;
+    let failed = 0;
+    benchAbortRef.current = false;
+    setBenchBusy(true);
+    setBenchResult(null);
+    profilerBus.startSession(`Twin bench ${requested} @ ${bpm.toFixed(0)} bpm`);
+
+    try {
+      for (let i = 0; i < requested; i++) {
+        if (benchAbortRef.current) break;
+        const cycleStart = performance.now();
+        const serial = catalog.dispense();
+        if (!serial) break;
+
+        const t0 = cycleStart - sessionStart;
+        const res = await twinDispatcher.dispatch(serial, { forceTrigger: true });
+        const cycleMs = res.cycleMs ?? performance.now() - cycleStart;
+        const aMs = res.aMs ?? cycleMs;
+        const bMs = res.bMs ?? cycleMs;
+        const skewMs = res.skewMs ?? Math.abs(aMs - bMs);
+        const t1 = t0;
+        const t2a = t0;
+        const t2b = t0;
+        const t3a = t2a + aMs;
+        const t3b = t2b + bMs;
+        const t4 = t0 + cycleMs;
+
+        if (res.ok) {
+          passed++;
+          cycles.push(cycleMs);
+          catalog.recordPrinted(serial, i);
+        } else {
+          failed++;
+          catalog.recordMissed(i);
+        }
+
+        profilerBus.push({
+          serial,
+          outcome: res.ok ? 'printed' : 'missed',
+          t0, t1, t2a, t2b, t3a, t3b, t4,
+          ingressMs: 0,
+          dispatchMs: 0,
+          wireAMs: aMs,
+          wireBMs: bMs,
+          skewMs,
+          cycleMs,
+        });
+
+        const elapsed = performance.now() - cycleStart;
+        if (i < requested - 1 && elapsed < intervalMs) {
+          await new Promise((resDelay) => setTimeout(resDelay, intervalMs - elapsed));
+        }
+      }
+    } finally {
+      const attempted = passed + failed;
+      const sum = cycles.reduce((acc, value) => acc + value, 0);
+      const result: BenchCsvResult = {
+        requested,
+        attempted,
+        passed,
+        failed,
+        bpm,
+        minCycleMs: cycles.length ? Math.min(...cycles) : 0,
+        maxCycleMs: cycles.length ? Math.max(...cycles) : 0,
+        meanCycleMs: cycles.length ? sum / cycles.length : 0,
+      };
+      setBenchResult(result);
+      setBenchBusy(false);
+      toast({
+        title: `Bench CSV test ${failed === 0 ? 'complete' : 'finished with misses'}`,
+        description: `${passed}/${attempted} printed @ ${bpm.toFixed(0)} bpm · cycle min ${result.minCycleMs.toFixed(1)}ms / max ${result.maxCycleMs.toFixed(1)}ms`,
+        variant: failed === 0 ? undefined : 'destructive',
+      });
+    }
+  };
+
   // Tear down on unmount
   useEffect(() => {
     return () => {
@@ -173,6 +280,9 @@ export function ConveyorPanel() {
     setRunning(false);
   };
   const handleReset = () => {
+    benchAbortRef.current = true;
+    setBenchBusy(false);
+    setBenchResult(null);
     conveyorSim.reset();
     catalog.reset();
     setRunning(false);
@@ -273,21 +383,45 @@ export function ConveyorPanel() {
           </div>
         )}
 
-        {/* Pre-flight dry run — only meaningful when LIVE is engaged + conveyor stopped */}
         <Button
           size="sm"
           variant="outline"
           onClick={runDryRun}
-          disabled={!liveMode || running || dryBusy || liveBusy}
-          title="Fire 5 real bonded dispatches and report timings — use BEFORE starting the conveyor"
+          disabled={!liveMode || running || dryBusy || liveBusy || benchBusy}
+          title="Fire 5 real bonded dispatches and auto-send Print Go for each cycle"
         >
-          {dryBusy ? (
-            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-          ) : (
-            <FlaskConical className="mr-1 h-4 w-4" />
-          )}
+          {dryBusy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <FlaskConical className="mr-1 h-4 w-4" />}
           Dry run ×5
         </Button>
+
+        <div className="flex items-center gap-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-[11px]">
+          <span className="text-muted-foreground">Bench prints</span>
+          <Input
+            type="number"
+            min={1}
+            max={500}
+            value={benchCount}
+            disabled={benchBusy}
+            onChange={(e) => setBenchCount(Number(e.target.value))}
+            className="h-6 w-16 px-1.5 text-xs"
+          />
+          {benchBusy ? (
+            <Button size="sm" variant="secondary" className="h-6 px-2 text-[11px]" onClick={() => { benchAbortRef.current = true; }}>
+              <Square className="mr-1 h-3 w-3" /> Stop
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-[11px]"
+              onClick={runBenchCsvTest}
+              disabled={!liveMode || running || dryBusy || liveBusy || catalogState.total === 0}
+              title="Consume real CSV codes and auto-send Print Go at the configured BPM"
+            >
+              <Play className="mr-1 h-3 w-3" /> Run
+            </Button>
+          )}
+        </div>
 
         {/* Last dry-run result chip */}
         {lastDryRun && (
@@ -308,6 +442,19 @@ export function ConveyorPanel() {
                   ? ` · skew ${lastDryRun.skewStats.mean.toFixed(1)}ms`
                   : '')
               : `✗ ${lastDryRun.failed}/${lastDryRun.count} failed`}
+          </div>
+        )}
+
+        {benchResult && (
+          <div
+            className={`rounded-md border px-2 py-1 text-[11px] font-mono ${
+              benchResult.failed === 0
+                ? 'border-primary/40 bg-primary/10 text-primary'
+                : 'border-destructive/40 bg-destructive/10 text-destructive'
+            }`}
+            title={`Requested ${benchResult.requested} prints at ${benchResult.bpm.toFixed(0)} bpm`}
+          >
+            {benchResult.passed}/{benchResult.attempted} · min {benchResult.minCycleMs.toFixed(1)}ms · max {benchResult.maxCycleMs.toFixed(1)}ms · avg {benchResult.meanCycleMs.toFixed(1)}ms
           </div>
         )}
 
