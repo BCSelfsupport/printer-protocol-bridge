@@ -380,21 +380,45 @@ export function ConveyorPanel() {
           </div>
         )}
 
-        {/* Pre-flight dry run — only meaningful when LIVE is engaged + conveyor stopped */}
         <Button
           size="sm"
           variant="outline"
           onClick={runDryRun}
-          disabled={!liveMode || running || dryBusy || liveBusy}
-          title="Fire 5 real bonded dispatches and report timings — use BEFORE starting the conveyor"
+          disabled={!liveMode || running || dryBusy || liveBusy || benchBusy}
+          title="Fire 5 real bonded dispatches and auto-send Print Go for each cycle"
         >
-          {dryBusy ? (
-            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-          ) : (
-            <FlaskConical className="mr-1 h-4 w-4" />
-          )}
+          {dryBusy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <FlaskConical className="mr-1 h-4 w-4" />}
           Dry run ×5
         </Button>
+
+        <div className="flex items-center gap-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-[11px]">
+          <span className="text-muted-foreground">Bench prints</span>
+          <Input
+            type="number"
+            min={1}
+            max={500}
+            value={benchCount}
+            disabled={benchBusy}
+            onChange={(e) => setBenchCount(Number(e.target.value))}
+            className="h-6 w-16 px-1.5 text-xs"
+          />
+          {benchBusy ? (
+            <Button size="sm" variant="secondary" className="h-6 px-2 text-[11px]" onClick={() => { benchAbortRef.current = true; }}>
+              <Square className="mr-1 h-3 w-3" /> Stop
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-[11px]"
+              onClick={runBenchCsvTest}
+              disabled={!liveMode || running || dryBusy || liveBusy || catalogState.total === 0}
+              title="Consume real CSV codes and auto-send Print Go at the configured BPM"
+            >
+              <Play className="mr-1 h-3 w-3" /> Run
+            </Button>
+          )}
+        </div>
 
         {/* Last dry-run result chip */}
         {lastDryRun && (
@@ -415,6 +439,19 @@ export function ConveyorPanel() {
                   ? ` · skew ${lastDryRun.skewStats.mean.toFixed(1)}ms`
                   : '')
               : `✗ ${lastDryRun.failed}/${lastDryRun.count} failed`}
+          </div>
+        )}
+
+        {benchResult && (
+          <div
+            className={`rounded-md border px-2 py-1 text-[11px] font-mono ${
+              benchResult.failed === 0
+                ? 'border-primary/40 bg-primary/10 text-primary'
+                : 'border-destructive/40 bg-destructive/10 text-destructive'
+            }`}
+            title={`Requested ${benchResult.requested} prints at ${benchResult.bpm.toFixed(0)} bpm`}
+          >
+            {benchResult.passed}/{benchResult.attempted} · min {benchResult.minCycleMs.toFixed(1)}ms · max {benchResult.maxCycleMs.toFixed(1)}ms · avg {benchResult.meanCycleMs.toFixed(1)}ms
           </div>
         )}
 
