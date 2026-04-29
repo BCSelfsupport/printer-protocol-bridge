@@ -38,6 +38,12 @@ conveyor BPM model. It uses the same forced `^PT` Print Go path after each
 accepted serial, allowing office testing into a beaker while increasing BPM
 until faults or missed cycles appear.
 
+## Future comparison tests
+After wired CSV/BPM timing is validated, add network-condition comparison tests
+for hard cable vs Wi-Fi. Use the same real CSV, print-count selector, BPM ramp,
+and automatic `^PT` trigger path so min/max cycle time, jitter, misses, and max
+stable BPM can be compared apples-to-apples across connection types.
+
 ## Pass thresholds (defaults)
 - Success rate ≥ 95%
 - Cycle p95 ≤ 80 ms (LIVE) / 50 ms (SYNTH)
