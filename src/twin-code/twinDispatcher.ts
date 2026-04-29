@@ -800,6 +800,12 @@ class TwinDispatcher {
     let aReady = false;
     let bReady = false;
     let forceSent = false;
+    if (opts?.forceTrigger) {
+      // Some firmware treats ^FE as an enable/latch instead of a one-shot edge.
+      // Pre-arm before ^MD, then send it again after R on both sides below.
+      a.forcePhotoEye();
+      b.forcePhotoEye();
+    }
     const fireWhenReady = () => {
       if (!opts?.forceTrigger || forceSent || !aReady || !bReady) return;
       forceSent = true;
