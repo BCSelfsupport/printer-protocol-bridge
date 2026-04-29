@@ -47,6 +47,8 @@ interface InFlight {
   tR?: number;
   tT?: number;
   tC?: number;
+  onReady?: () => void;
+  readyNotified?: boolean;
   resolve: (r: { ok: boolean; rttMs?: number; reason?: string }) => void;
   rTimer: ReturnType<typeof setTimeout>;
   cTimer: ReturnType<typeof setTimeout>;
@@ -439,7 +441,10 @@ class PrinterSession {
     await this.cleanup();
   }
 
-  async sendMD(mdCommand: string): Promise<{ ok: boolean; rttMs?: number; reason?: string }> {
+  async sendMD(
+    mdCommand: string,
+    opts: { onReady?: () => void } = {},
+  ): Promise<{ ok: boolean; rttMs?: number; reason?: string }> {
     if (!this.active) return { ok: false, reason: 'not-active' };
 
     // Pace
@@ -454,6 +459,7 @@ class PrinterSession {
 
     const entry: InFlight = {
       id, tSent, resolve,
+      onReady: opts.onReady,
       rTimer: setTimeout(() => {
         if (!entry.tR) this.complete(entry, { ok: false, reason: 'timeout-R' });
       }, R_TIMEOUT_MS),
@@ -483,6 +489,24 @@ class PrinterSession {
     }
 
     return promise;
+  }
+
+  forcePhotoEye() {
+    const cmd = '^FE';
+    if (this.isEmulated) {
+      printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 1000 }).catch(() => {});
+      return;
+    }
+
+    // In 1-1 mode this must not go through the normal request/response path:
+    // T/C ACKs are asynchronous and can otherwise race the command reader. The
+    // IPC method name is historical; it is just a raw CRLF socket write.
+    if (window.electronAPI?.oneToOne) {
+      window.electronAPI.oneToOne.sendMD(this.printerId, cmd).catch(() => {});
+      return;
+    }
+
+    printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 1000 }).catch(() => {});
   }
 
   /**
@@ -527,7 +551,13 @@ class PrinterSession {
         });
     if (!entry) return;
     const now = performance.now();
-    if (char === 'R') entry.tR = now;
+    if (char === 'R') {
+      entry.tR = now;
+      if (entry.onReady && !entry.readyNotified) {
+        entry.readyNotified = true;
+        entry.onReady();
+      }
+    }
     if (char === 'T') entry.tT = now;
     if (char === 'C') {
       entry.tC = now;
@@ -573,6 +603,10 @@ export interface TwinDispatchResult {
   /** Per-side failure reasons — undefined when that side succeeded. */
   aReason?: string;
   bReason?: string;
+}
+
+export interface TwinDispatchOptions {
+  forceTrigger?: boolean;
 }
 
 export interface TwinDispatcherOptions {
@@ -748,7 +782,7 @@ class TwinDispatcher {
    * of waiting out the C-timeout). Per-side failure reasons are surfaced in
    * `aReason` / `bReason`.
    */
-  async dispatch(serial: string, opts?: { forceTrigger?: boolean }): Promise<TwinDispatchResult> {
+  async dispatch(serial: string, opts?: TwinDispatchOptions): Promise<TwinDispatchResult> {
     if (!this.a || !this.b) return { serial, ok: false, reason: 'not-bound' };
 
     const a = this.a;
@@ -763,18 +797,35 @@ class TwinDispatcher {
     const mdB = `^MD^${subB}${fieldB};${serial}`;
 
     const tStart = performance.now();
-    const pA = a.sendMD(mdA);
-    const pB = b.sendMD(mdB);
+    let aReady = false;
+    let bReady = false;
+    let forceSent = false;
+    if (opts?.forceTrigger) {
+      // Some firmware treats ^FE as an enable/latch instead of a one-shot edge.
+      // Pre-arm before ^MD, then send it again after R on both sides below.
+      a.forcePhotoEye();
+      b.forcePhotoEye();
+    }
+    const fireWhenReady = () => {
+      if (!opts?.forceTrigger || forceSent || !aReady || !bReady) return;
+      forceSent = true;
+      a.forcePhotoEye();
+      b.forcePhotoEye();
+    };
 
-    // Pre-flight / dry-run path: there is no real product on the conveyor so the
-    // photo eye will never fire on its own. Per protocol v2.6 §6.1 / §5.16,
-    // ^FE 1 forces a single PE trigger which drives T → C through the bonded
-    // pair. We give R a moment to land first (firmware ignores PE before R).
+    const pA = a.sendMD(mdA, { onReady: () => { aReady = true; fireWhenReady(); } });
+    const pB = b.sendMD(mdB, { onReady: () => { bReady = true; fireWhenReady(); } });
+
+    // Pre-flight / bench path: no product crosses the photocell, so trigger it
+    // after BOTH printers report R. If an R ACK is missed, a later fallback raw
+    // ^FE still gives the firmware a chance to advance T→C before C-timeout.
     if (opts?.forceTrigger) {
       setTimeout(() => {
-        printerTransport.sendCommand(a.printerId, '^FE 1', { maxWaitMs: 1000 }).catch(() => {});
-        printerTransport.sendCommand(b.printerId, '^FE 1', { maxWaitMs: 1000 }).catch(() => {});
-      }, 50);
+        if (forceSent) return;
+        forceSent = true;
+        a.forcePhotoEye();
+        b.forcePhotoEye();
+      }, 250);
     }
 
     // Whichever side fails FIRST triggers an abort on the other so we don't
