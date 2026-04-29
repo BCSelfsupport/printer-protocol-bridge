@@ -38,6 +38,7 @@ export function ConveyorPanel() {
     return () => window.clearInterval(id);
   }, []);
   const [liveMode, setLiveMode] = useState(false);
+  const [benchAutoTrigger, setBenchAutoTrigger] = useState(false);
   const [liveBusy, setLiveBusy] = useState(false);
   const [dryBusy, setDryBusy] = useState(false);
   const [lastDryRun, setLastDryRun] = useState<TwinDryRunResult | null>(null);
@@ -67,6 +68,11 @@ export function ConveyorPanel() {
 
   const pairBound = !!(pair.a && pair.b);
 
+  useEffect(() => {
+    if (!liveMode) return;
+    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial, { forceTrigger: benchAutoTrigger }));
+  }, [benchAutoTrigger, liveMode]);
+
   // ---- LIVE bonded dispatch wiring ----
   const enableLive = async () => {
     if (!pairBound) {
@@ -94,7 +100,7 @@ export function ConveyorPanel() {
       toast({ title: 'Could not enter LIVE mode', description: res.error, variant: 'destructive' });
       return;
     }
-    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial));
+    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial, { forceTrigger: benchAutoTrigger }));
     setLiveMode(true);
     const seedNote = res.seededA || res.seededB
       ? ` · Seeded ${[res.seededA && 'LID', res.seededB && 'SIDE'].filter(Boolean).join(' & ')}`
@@ -204,7 +210,9 @@ export function ConveyorPanel() {
         <h2 className="text-sm font-semibold">Conveyor visualizer</h2>
         <span className="text-[11px] text-muted-foreground">
           {liveMode
-            ? 'LIVE — real photocell trips drive prints; counts will increment as bottles pass'
+            ? benchAutoTrigger
+              ? 'LIVE bench — simulated BPM force-trips the photo eye so printers can fire into a beaker'
+              : 'LIVE — real photocell trips drive prints; counts will increment as bottles pass'
             : 'Synthetic preview — animates bottles at the configured BPM (no hardware)'}
         </span>
 
@@ -243,6 +251,25 @@ export function ConveyorPanel() {
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
             1:1 Mode
+          </div>
+        )}
+
+        {liveMode && (
+          <div
+            className={`flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] ${
+              benchAutoTrigger
+                ? 'border-primary/50 bg-primary/10 text-primary'
+                : 'border-border bg-muted/40 text-muted-foreground'
+            }`}
+            title="Bench mode runs the conveyor BPM model against real printers and force-trips the photo eye after both sides accept each serial."
+          >
+            <Zap className="h-3.5 w-3.5" />
+            <span className="font-mono uppercase tracking-wider">Bench trigger</span>
+            <Switch
+              checked={benchAutoTrigger}
+              disabled={running}
+              onCheckedChange={setBenchAutoTrigger}
+            />
           </div>
         )}
 
@@ -299,14 +326,14 @@ export function ConveyorPanel() {
             <Button
               size="sm"
               onClick={handleStart}
-              disabled={liveMode}
+              disabled={liveMode && !benchAutoTrigger}
               title={
-                liveMode
-                  ? 'In LIVE mode the real photocell drives prints — the simulator is disabled.'
+                liveMode && !benchAutoTrigger
+                  ? 'Turn on Bench trigger to pace real printer dispatches from the BPM simulator.'
                   : 'Start the on-screen bottle animation (synthetic photocell trips at the configured BPM)'
               }
             >
-              <Play className="mr-1 h-4 w-4" /> Start sim
+              <Play className="mr-1 h-4 w-4" /> {liveMode ? 'Start bench run' : 'Start sim'}
             </Button>
           ) : (
             <Button
