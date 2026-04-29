@@ -491,16 +491,16 @@ class PrinterSession {
     return promise;
   }
 
-  forcePhotoEye() {
-    const cmd = '^FE';
+  forcePrintGo() {
+    const cmd = '^PT';
     if (this.isEmulated) {
       printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 1000 }).catch(() => {});
       return;
     }
 
-    // In 1-1 mode this must not go through the normal request/response path:
-    // T/C ACKs are asynchronous and can otherwise race the command reader. The
-    // IPC method name is historical; it is just a raw CRLF socket write.
+    // Bench/pre-flight needs the same signal the operator is manually pressing:
+    // ^PT = Print Go / Force Print. In 1-1 mode send it as a raw socket write so
+    // T/C ACKs remain owned by the ACK demuxer, not the normal command reader.
     if (window.electronAPI?.oneToOne) {
       window.electronAPI.oneToOne.sendMD(this.printerId, cmd).catch(() => {});
       return;
@@ -800,17 +800,11 @@ class TwinDispatcher {
     let aReady = false;
     let bReady = false;
     let forceSent = false;
-    if (opts?.forceTrigger) {
-      // Some firmware treats ^FE as an enable/latch instead of a one-shot edge.
-      // Pre-arm before ^MD, then send it again after R on both sides below.
-      a.forcePhotoEye();
-      b.forcePhotoEye();
-    }
     const fireWhenReady = () => {
       if (!opts?.forceTrigger || forceSent || !aReady || !bReady) return;
       forceSent = true;
-      a.forcePhotoEye();
-      b.forcePhotoEye();
+      a.forcePrintGo();
+      b.forcePrintGo();
     };
 
     const pA = a.sendMD(mdA, { onReady: () => { aReady = true; fireWhenReady(); } });
@@ -823,8 +817,8 @@ class TwinDispatcher {
       setTimeout(() => {
         if (forceSent) return;
         forceSent = true;
-        a.forcePhotoEye();
-        b.forcePhotoEye();
+        a.forcePrintGo();
+        b.forcePrintGo();
       }, 250);
     }
 
