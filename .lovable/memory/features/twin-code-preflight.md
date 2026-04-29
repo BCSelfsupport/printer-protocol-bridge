@@ -34,9 +34,9 @@ per pre-flight/dry-run cycle so the test advances to the next code.
 
 ## Bench production simulation
 With LIVE mode active, Bench trigger can pace real printer dispatches from the
-conveyor BPM model. It uses the same forced `^FE` path after each accepted
-serial, allowing office testing into a beaker while increasing BPM until faults
-or missed cycles appear.
+conveyor BPM model. It uses the same forced `^PT` Print Go path after each
+accepted serial, allowing office testing into a beaker while increasing BPM
+until faults or missed cycles appear.
 
 ## Pass thresholds (defaults)
 - Success rate ≥ 95%
