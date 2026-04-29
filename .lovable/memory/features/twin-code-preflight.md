@@ -25,6 +25,18 @@ production-run ledger, and **does not** push to the profilerBus. Catalog and
 ledger remain untouched so pre-flight can be run repeatedly without polluting
 production data.
 
+## Force trigger behavior
+LIVE pre-flight must dispatch with `forceTrigger: true`. The dispatcher sends
+raw `^FE` (no `1` parameter) over the existing 1-1 socket, pre-arms before
+`^MD`, and re-fires after both sides report `R` so no manual photocell trip is
+required on the bench.
+
+## Bench production simulation
+With LIVE mode active, Bench trigger can pace real printer dispatches from the
+conveyor BPM model. It uses the same forced `^FE` path after each accepted
+serial, allowing office testing into a beaker while increasing BPM until faults
+or missed cycles appear.
+
 ## Pass thresholds (defaults)
 - Success rate ≥ 95%
 - Cycle p95 ≤ 80 ms (LIVE) / 50 ms (SYNTH)
