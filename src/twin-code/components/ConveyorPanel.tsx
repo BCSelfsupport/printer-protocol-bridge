@@ -280,6 +280,9 @@ export function ConveyorPanel() {
     setRunning(false);
   };
   const handleReset = () => {
+    benchAbortRef.current = true;
+    setBenchBusy(false);
+    setBenchResult(null);
     conveyorSim.reset();
     catalog.reset();
     setRunning(false);
