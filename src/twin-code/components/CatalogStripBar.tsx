@@ -126,10 +126,14 @@ export function CatalogStripBar() {
       });
       return;
     }
-    // In production the real photocell drives prints — the conveyor sim is
-    // not used. We still wire the dispatcher in case the operator runs a
-    // dry-run ×5 from this strip.
-    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial));
+    // In production the real photocell drives prints. When the conveyor sim
+    // is firing (Auto Print Go on the production banner, or any synthetic
+    // bottle generator), there is no real beam-break — the firmware would
+    // sit waiting forever — so we MUST pass forceTrigger: true so the bonded
+    // dispatcher injects a software trigger like Pre-flight does.
+    conveyorSim.setLiveDispatcher((serial) =>
+      twinDispatcher.dispatch(serial, { forceTrigger: true }),
+    );
     setLiveMode(true);
     toast({
       title: "LIVE bonded mode active",
