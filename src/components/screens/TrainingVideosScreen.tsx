@@ -36,11 +36,24 @@ const CATEGORY_LABELS: Record<string, string> = {
   troubleshooting: 'Troubleshooting',
 };
 
-export function TrainingVideosScreen({ onBack }: TrainingVideosScreenProps) {
+export function TrainingVideosScreen({ onBack, recorderState, recorderActions }: TrainingVideosScreenProps) {
   const [videos, setVideos] = useState<TrainingVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<TrainingVideo | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [recordDialogOpen, setRecordDialogOpen] = useState(false);
+
+  // Auto-close the dialog as soon as countdown begins or recording starts
+  // (so screen capture doesn't show this dialog), and reopen once a blob is ready
+  // so the user lands back on the preview/upload form.
+  useEffect(() => {
+    if (!recorderState) return;
+    if (recorderState.countdown > 0 || recorderState.isRecording) {
+      setRecordDialogOpen(false);
+    } else if (recorderState.recordedBlob) {
+      setRecordDialogOpen(true);
+    }
+  }, [recorderState?.countdown, recorderState?.isRecording, recorderState?.recordedBlob]);
 
   const fetchVideos = useCallback(async () => {
     try {
