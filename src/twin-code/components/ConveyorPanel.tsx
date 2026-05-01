@@ -124,7 +124,7 @@ export function ConveyorPanel() {
       toast({ title: 'Could not enter LIVE mode', description: res.error, variant: 'destructive' });
       return;
     }
-    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial, { forceTrigger: benchAutoTrigger }));
+    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial, { forceTrigger: true }));
     setLiveMode(true);
     const seedNote = res.seededA || res.seededB
       ? ` · Seeded ${[res.seededA && 'LID', res.seededB && 'SIDE'].filter(Boolean).join(' & ')}`
