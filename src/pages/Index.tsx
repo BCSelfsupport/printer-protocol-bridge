@@ -494,8 +494,11 @@ const Index = () => {
       if (syncedMessagesRef.current.has(name)) return false;
       // Skip read-only messages (hardcoded)
       if (isReadOnlyMessage(name)) return false;
-      // Skip if we already have content in localStorage
-      if (getMessage(name)) return false;
+      // NOTE: we intentionally do NOT skip when localStorage already has a
+      // cached copy — on a fresh connect the printer is authoritative, and
+      // local cache may be stale (e.g. user re-shaped the message via HMI,
+      // or a previous TwinCode seed wrote a different field shape than what
+      // the operator sees on the panel today). Always re-pull on connect.
       return true;
     });
 
