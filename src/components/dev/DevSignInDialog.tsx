@@ -8,7 +8,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Shield, Loader2, ScanLine } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import { useLicense } from '@/contexts/LicenseContext';
 
 interface DevSignInDialogProps {
@@ -17,7 +16,7 @@ interface DevSignInDialogProps {
   onSuccess: () => void;
 }
 
-type Stage = 'check' | 'enroll' | 'verify';
+type Stage = 'check' | 'verify';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -33,8 +32,6 @@ const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDialogProps) {
   const { productKey } = useLicense();
   const [stage, setStage] = useState<Stage>('check');
-  const [otpauth, setOtpauth] = useState<string | null>(null);
-  const [secret, setSecret] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -46,8 +43,6 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
     if (!open) return;
     setError(null);
     setCode('');
-    setSecret(null);
-    setOtpauth(null);
     if (!productKey) {
       setError('No license key activated.');
       return;
@@ -67,7 +62,7 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
           setStage('check');
           return;
         }
-        setStage(data.enrolled ? 'verify' : 'enroll');
+        setStage('verify');
       } catch {
         setError('Could not reach the server.');
       } finally {
@@ -75,30 +70,6 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
       }
     })();
   }, [open, productKey]);
-
-  const handleEnroll = async () => {
-    if (!productKey) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-dev-access`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: ANON_KEY },
-        body: JSON.stringify({ product_key: productKey, action: 'enroll' }),
-      });
-      const data = await res.json();
-      if (data.otpauth_uri) {
-        setSecret(data.secret);
-        setOtpauth(data.otpauth_uri);
-      } else {
-        setError(data.error || 'Enrollment failed.');
-      }
-    } catch {
-      setError('Enrollment failed.');
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,14 +80,14 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
       const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-dev-access`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: ANON_KEY },
-        body: JSON.stringify({ product_key: productKey, totp_code: code.trim() }),
+        body: JSON.stringify({ product_key: productKey, dev_password: code.trim() }),
       });
       const data = await res.json();
       if (data.valid) {
         onSuccess();
         onOpenChange(false);
       } else {
-        setError('Invalid code. Try the next one your app shows.');
+        setError('Invalid developer password.');
       }
     } catch {
       setError('Verification failed.');
