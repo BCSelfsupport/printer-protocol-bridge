@@ -61,6 +61,12 @@ export interface ProductionRunMeta {
   liveAtStart: boolean;
   /** Cloud-side run id (if successfully registered). */
   cloudRunId?: string | null;
+  /**
+   * Optional run-length cap. When set, the run auto-stops as soon as
+   * (printed + missed) reaches this number — even if the catalog still has
+   * serials available. Null/0 means "run until catalog is exhausted".
+   */
+  targetCount?: number | null;
 }
 
 export interface ProductionRunSummary {
@@ -125,7 +131,7 @@ class ProductionRunStore {
   }
 
   /** Begin a new run. Throws if one is already active. */
-  start(input: { lotNumber: string; operator: string; note?: string; liveAtStart: boolean }): ProductionRunMeta {
+  start(input: { lotNumber: string; operator: string; note?: string; liveAtStart: boolean; targetCount?: number | null }): ProductionRunMeta {
     if (this.state.active) {
       throw new Error("A production run is already active — stop it before starting another.");
     }
@@ -143,6 +149,7 @@ class ProductionRunStore {
       recordsEndIdx: null,
       liveAtStart: input.liveAtStart,
       cloudRunId: null,
+      targetCount: input.targetCount && input.targetCount > 0 ? Math.floor(input.targetCount) : null,
     };
     this.state = { ...this.state, active: meta };
     // Fresh run = fresh fault history; otherwise prior shift's incidents
