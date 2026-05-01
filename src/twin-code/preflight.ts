@@ -295,5 +295,7 @@ export async function runPreflight(
     checks,
     results,
     finishedAt: nowIso(),
+    profileLabel,
+    effectiveBudgets: { cycleP95Ms: cycleBudget, skewP95Ms: skewBudget },
   };
 }
