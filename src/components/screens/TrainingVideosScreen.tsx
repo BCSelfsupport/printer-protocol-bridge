@@ -24,6 +24,8 @@ interface TrainingVideo {
 
 interface TrainingVideosScreenProps {
   onBack: () => void;
+  recorderState?: ScreenRecorderState;
+  recorderActions?: ScreenRecorderActions;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
