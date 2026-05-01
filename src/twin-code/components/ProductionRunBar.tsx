@@ -92,6 +92,9 @@ export function ProductionRunBar() {
   // -------- ACTIVE state --------
   if (run.active && summary) {
     const liveTone = run.active.liveAtStart;
+    const target = run.active.targetCount ?? null;
+    const consumed = summary.printed + summary.missed;
+    const targetPct = target ? Math.min(100, (consumed / target) * 100) : null;
     return (
       <>
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-primary/40 bg-primary/5 px-4 py-2.5">
@@ -102,6 +105,11 @@ export function ProductionRunBar() {
               <Badge variant={liveTone ? "default" : "secondary"} className="text-[10px]">
                 {liveTone ? "LIVE" : "SYNTH"}
               </Badge>
+              {target && (
+                <Badge variant="outline" className="text-[10px] font-mono">
+                  {consumed} / {target}
+                </Badge>
+              )}
             </div>
             <div className="text-[11px] text-muted-foreground">
               operator <span className="text-foreground">{run.active.operator}</span>
