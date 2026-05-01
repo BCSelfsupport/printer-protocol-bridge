@@ -357,14 +357,37 @@ export function PrintersScreen({
     return messageContent;
   }, [selectedPrinter?.id, selectedPrinter?.currentMessage, selectedPrinter?.role, selectedPrinter?.masterId, connectedPrinter?.id, connectedPrinter?.role, messageContent, getMessageContent]);
 
+  // True only when the operator is actively viewing the printer that owns
+  // the live polling session. All "live" props (status object, countdown,
+  // streamHours, model, etc.) belong to the connected printer — when the
+  // user clicks a different card those values must NOT bleed into its panel
+  // (see mem://core: only one telnet session per printer at a time).
+  const isViewingConnected =
+    !!connectedPrinter && !!selectedPrinter && selectedPrinter.id === connectedPrinter.id;
+
   const effectiveDashboardStatus = useMemo(() => {
-    if (!selectedPrinter || !status) return status ?? null;
+    if (!selectedPrinter) return status ?? null;
+
+    if (!isViewingConnected) {
+      // Synthesize a minimal status from the selected printer's per-card
+      // fields populated by the background poller. Critically: clear
+      // `isRunning` so the green "Ready" banner / red "Starting..." banner
+      // (driven by Dashboard's `isHvOn = status.isRunning`) doesn't render
+      // the connected printer's HV state under the wrong card.
+      return {
+        ...(status ?? {}),
+        isRunning: false,
+        isReady: selectedPrinter.status === 'ready',
+        hasActiveErrors: selectedPrinter.status === 'error',
+        currentMessage: selectedPrinter.currentMessage ?? null,
+      } as typeof status;
+    }
 
     return {
-      ...status,
-      currentMessage: selectedPrinter.currentMessage ?? status.currentMessage,
+      ...status!,
+      currentMessage: selectedPrinter.currentMessage ?? status!.currentMessage,
     };
-  }, [selectedPrinter, status]);
+  }, [selectedPrinter, status, isViewingConnected]);
 
   // Build a map: slavePrinterId -> master's currentMessage
   const masterMessageMap = useMemo(() => {
@@ -844,8 +867,8 @@ export function PrintersScreen({
               onResetAllCounters={onResetAllCounters ?? (() => {})}
               onQueryCounters={onQueryCounters ?? (() => {})}
               isSignedIn={isSignedIn}
-              countdownSeconds={countdownSeconds}
-              countdownType={countdownType}
+              countdownSeconds={isViewingConnected ? countdownSeconds : null}
+              countdownType={isViewingConnected ? countdownType : null}
               messageContent={effectiveMessageContent}
               onMount={onControlMount}
               onUnmount={onControlUnmount}
