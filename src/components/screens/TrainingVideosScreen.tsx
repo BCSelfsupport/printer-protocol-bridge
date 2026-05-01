@@ -150,6 +150,23 @@ export function TrainingVideosScreen({ onBack, recorderState, recorderActions }:
     <div className="flex flex-col h-full bg-background">
       <SubPageHeader title="Training Videos" onHome={onBack} />
 
+      {/* Action bar — record your own */}
+      {recorderState && recorderActions && (
+        <div className="px-4 py-2 flex items-center justify-between border-b border-border bg-muted/20">
+          <p className="text-xs text-muted-foreground">
+            Record your own training video to share with your team.
+          </p>
+          <Button
+            size="sm"
+            onClick={() => setRecordDialogOpen(true)}
+            className="gap-2"
+          >
+            <Video className="w-4 h-4" />
+            Record Video
+          </Button>
+        </div>
+      )}
+
       {/* Category filter */}
       {categories.length > 2 && (
         <div className="px-4 py-2 flex gap-2 overflow-x-auto border-b border-border">
