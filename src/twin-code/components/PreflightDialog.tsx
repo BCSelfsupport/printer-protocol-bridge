@@ -127,20 +127,34 @@ export function PreflightDialog({
           )}
         </div>
 
-        {/* Cycle count slider */}
+        {/* Cycle count slider + presets */}
         {!verdict && !running && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-xs">Cycles</Label>
+              <Label className="text-xs">Cycles to fire</Label>
               <span className="font-mono text-xs text-muted-foreground">{cycles}</span>
             </div>
             <Slider
               value={[cycles]}
               min={5}
-              max={20}
-              step={1}
+              max={250}
+              step={5}
               onValueChange={([v]) => setCycles(v)}
             />
+            <div className="flex flex-wrap gap-1.5">
+              {[10, 25, 50, 100, 200].map((n) => (
+                <Button
+                  key={n}
+                  type="button"
+                  size="sm"
+                  variant={cycles === n ? "default" : "outline"}
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => setCycles(n)}
+                >
+                  {n} prints
+                </Button>
+              ))}
+            </div>
           </div>
         )}
 
