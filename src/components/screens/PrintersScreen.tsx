@@ -867,8 +867,8 @@ export function PrintersScreen({
               onResetAllCounters={onResetAllCounters ?? (() => {})}
               onQueryCounters={onQueryCounters ?? (() => {})}
               isSignedIn={isSignedIn}
-              countdownSeconds={countdownSeconds}
-              countdownType={countdownType}
+              countdownSeconds={isViewingConnected ? countdownSeconds : null}
+              countdownType={isViewingConnected ? countdownType : null}
               messageContent={effectiveMessageContent}
               onMount={onControlMount}
               onUnmount={onControlUnmount}
