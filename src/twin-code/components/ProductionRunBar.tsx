@@ -119,6 +119,8 @@ export function ProductionRunBar() {
             </div>
           </div>
 
+          <ConveyorAutoControls consumed={consumed} elapsedSec={summary.elapsedSec} />
+
           <div className="ml-auto flex flex-wrap items-center gap-3 text-xs">
             <Stat label="elapsed" value={formatElapsed(summary.elapsedSec)} mono />
             <Stat label="printed" value={summary.printed.toLocaleString()} tone="ok" mono />
