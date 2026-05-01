@@ -14,8 +14,9 @@
  */
 
 import { useEffect, useState } from "react";
-import { Gauge, Target } from "lucide-react";
+import { Gauge, Play, Square, Zap } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   conveyorSim,
   computeBpm,
@@ -102,9 +103,44 @@ export function LineControlsBar() {
 
 
 
+      <div className="flex items-center gap-1.5 ml-1">
+        {running ? (
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-7 px-2.5 text-[11px]"
+            onClick={() => conveyorSim.stop()}
+            title="Stop the bottle generator (Auto Print Go)"
+          >
+            <Square className="mr-1 h-3 w-3" />
+            Stop Auto Print Go
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            className="h-7 px-2.5 text-[11px]"
+            onClick={() => conveyorSim.start()}
+            title="Start the bottle generator — bottles cross the photocell at the configured BPM and trigger Print Go automatically"
+          >
+            <Play className="mr-1 h-3 w-3" />
+            Start Auto Print Go
+          </Button>
+        )}
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 px-2 text-[11px]"
+          onClick={() => conveyorSim.manualFire()}
+          title="Manually fire the photocell on the closest bottle"
+        >
+          <Zap className="mr-1 h-3 w-3" />
+          Fire 1
+        </Button>
+      </div>
+
       {running && (
-        <span className="text-[11px] text-muted-foreground">
-          stop the conveyor to change line conditions
+        <span className="text-[11px] text-emerald-500">
+          ● auto-firing at {Math.round(bpm)} bpm
         </span>
       )}
 
