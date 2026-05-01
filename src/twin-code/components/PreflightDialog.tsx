@@ -338,11 +338,16 @@ function VerdictCard({ verdict }: { verdict: PreflightVerdict }) {
 
       <Separator className="my-2" />
 
-      <div className="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-5">
         <Metric label="success" value={`${verdict.successPct.toFixed(1)}%`} tone={verdict.checks[0].ok ? "ok" : "bad"} />
         <Metric label="cycle p95" value={`${verdict.cycle.p95.toFixed(1)} ms`} tone={verdict.checks[1].ok ? "ok" : "bad"} />
         <Metric label="skew p95" value={`${verdict.skew.p95.toFixed(1)} ms`} tone={verdict.checks[2].ok ? "ok" : "bad"} />
         <Metric label="worst streak" value={String(verdict.worstStreak)} tone={verdict.checks[3].ok ? "ok" : "bad"} />
+        <Metric
+          label="effective bpm"
+          value={`${(verdict.cycle.mean > 0 ? 60000 / verdict.cycle.mean : 0).toFixed(0)}`}
+          tone="default"
+        />
       </div>
 
       <Separator className="my-2" />
