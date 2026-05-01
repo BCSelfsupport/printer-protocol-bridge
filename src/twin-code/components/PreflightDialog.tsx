@@ -99,6 +99,65 @@ export function PreflightDialog({
     setProgress({ current: 0, total: 0 });
   };
 
+  const handleExportCsv = () => {
+    if (!verdict) return;
+    const okCycles = verdict.results.filter((r) => r.ok && r.cycleMs);
+    const meanCycleMs = okCycles.length
+      ? okCycles.reduce((a, r) => a + (r.cycleMs ?? 0), 0) / okCycles.length
+      : 0;
+    const effectiveBpm = meanCycleMs > 0 ? 60000 / meanCycleMs : 0;
+
+    const header = [
+      "cycle","ok","a_ms","b_ms","cycle_ms","skew_ms","reason",
+    ].join(",");
+    const rows = verdict.results.map((r) => [
+      r.index,
+      r.ok ? "1" : "0",
+      r.aMs?.toFixed(2) ?? "",
+      r.bMs?.toFixed(2) ?? "",
+      r.cycleMs?.toFixed(2) ?? "",
+      r.skewMs?.toFixed(2) ?? "",
+      (r.reason ?? "").replace(/,/g, ";"),
+    ].join(","));
+
+    const summary = [
+      "",
+      "# SUMMARY",
+      `# finished_at,${verdict.finishedAt}`,
+      `# mode,${verdict.mode}`,
+      `# profile,${verdict.profileLabel.replace(/,/g, ";")}`,
+      `# total,${verdict.total}`,
+      `# succeeded,${verdict.succeeded}`,
+      `# failed,${verdict.failed}`,
+      `# success_pct,${verdict.successPct.toFixed(2)}`,
+      `# cycle_p50_ms,${verdict.cycle.p50.toFixed(2)}`,
+      `# cycle_p95_ms,${verdict.cycle.p95.toFixed(2)}`,
+      `# cycle_max_ms,${verdict.cycle.max.toFixed(2)}`,
+      `# cycle_mean_ms,${verdict.cycle.mean.toFixed(2)}`,
+      `# skew_p50_ms,${verdict.skew.p50.toFixed(2)}`,
+      `# skew_p95_ms,${verdict.skew.p95.toFixed(2)}`,
+      `# skew_max_ms,${verdict.skew.max.toFixed(2)}`,
+      `# worst_streak,${verdict.worstStreak}`,
+      `# effective_bpm,${effectiveBpm.toFixed(1)}`,
+      `# budget_cycle_p95_ms,${verdict.effectiveBudgets.cycleP95Ms}`,
+      `# budget_skew_p95_ms,${verdict.effectiveBudgets.skewP95Ms}`,
+      `# verdict,${verdict.pass ? "PASS" : "FAIL"}`,
+    ].join("\n");
+
+    const csv = [header, ...rows, summary].join("\n");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `preflight-${verdict.total}prints-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "Report exported", description: a.download });
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!running) onOpenChange(v); }}>
       <DialogContent className="max-w-2xl">
