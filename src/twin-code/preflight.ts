@@ -232,7 +232,30 @@ export async function runPreflight(
     else { streak++; if (streak > worst) worst = streak; }
   }
 
-  const cycleBudget = mode === "live" ? cfg.maxCycleP95Ms : Math.min(cfg.maxCycleP95Ms, 50);
+  // Pick budgets based on what kind of work each side is doing on this bind.
+  // DataMatrix encoding (^BD) costs ~100ms more firmware-side per cycle than
+  // a plain text update (^TD), so a DM-bearing pair gets realistic budgets.
+  const profile = live ? twinDispatcher.getBoundProfile() : null;
+  let cycleBudget: number;
+  let skewBudget: number;
+  let profileLabel: string;
+  if (mode === "synthetic") {
+    cycleBudget = Math.min(cfg.maxCycleP95Ms, 50);
+    skewBudget = cfg.maxSkewP95Ms;
+    profileLabel = "Synthetic (no bonded pair)";
+  } else if (profile?.hasBarcode) {
+    // ECC200 encoding adds ~100ms per cycle on the barcode side.
+    cycleBudget = Math.max(cfg.maxCycleP95Ms, 280);
+    skewBudget = Math.max(cfg.maxSkewP95Ms, 150);
+    const which = profile.subA === 'BD' && profile.subB === 'BD'
+      ? 'A & B'
+      : profile.subA === 'BD' ? 'A (lid)' : 'B (side)';
+    profileLabel = `LIVE · DataMatrix on ${which} — relaxed budgets`;
+  } else {
+    cycleBudget = cfg.maxCycleP95Ms;
+    skewBudget = cfg.maxSkewP95Ms;
+    profileLabel = "LIVE · text-only pair";
+  }
 
   const checks = [
     {
@@ -246,8 +269,8 @@ export async function runPreflight(
       detail: `${cycle.p95.toFixed(1)} ms (max ${cycle.max.toFixed(1)})`,
     },
     {
-      label: `Skew p95 ≤ ${cfg.maxSkewP95Ms} ms`,
-      ok: skew.p95 <= cfg.maxSkewP95Ms,
+      label: `Skew p95 ≤ ${skewBudget} ms`,
+      ok: skew.p95 <= skewBudget,
       detail: `${skew.p95.toFixed(1)} ms (max ${skew.max.toFixed(1)})`,
     },
     {
