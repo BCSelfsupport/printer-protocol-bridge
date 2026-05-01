@@ -21,7 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, XCircle, PlayCircle, Loader2, RotateCcw, Activity, AlertTriangle } from "lucide-react";
+import { CheckCircle2, XCircle, PlayCircle, Loader2, RotateCcw, Activity, AlertTriangle, Download } from "lucide-react";
 import {
   runPreflight,
   DEFAULT_PREFLIGHT_CONFIG,
