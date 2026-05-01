@@ -2110,7 +2110,11 @@ const Index = () => {
         );
       case 'training':
         return (
-          <TrainingVideosScreen onBack={handleHome} />
+          <TrainingVideosScreen
+            onBack={handleHome}
+            recorderState={screenRecorder.state}
+            recorderActions={screenRecorder.actions}
+          />
         );
     }
     

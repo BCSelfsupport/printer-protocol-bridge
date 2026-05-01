@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Play, Clock, Film, ChevronLeft, X, Download, Link2, Check } from 'lucide-react';
+import { Play, Clock, Film, ChevronLeft, X, Download, Link2, Check, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
+import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
+import type { ScreenRecorderState, ScreenRecorderActions } from '@/hooks/useScreenRecorder';
 
 interface TrainingVideo {
   id: string;
@@ -21,6 +24,8 @@ interface TrainingVideo {
 
 interface TrainingVideosScreenProps {
   onBack: () => void;
+  recorderState?: ScreenRecorderState;
+  recorderActions?: ScreenRecorderActions;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -31,11 +36,24 @@ const CATEGORY_LABELS: Record<string, string> = {
   troubleshooting: 'Troubleshooting',
 };
 
-export function TrainingVideosScreen({ onBack }: TrainingVideosScreenProps) {
+export function TrainingVideosScreen({ onBack, recorderState, recorderActions }: TrainingVideosScreenProps) {
   const [videos, setVideos] = useState<TrainingVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<TrainingVideo | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [recordDialogOpen, setRecordDialogOpen] = useState(false);
+
+  // Auto-close the dialog as soon as countdown begins or recording starts
+  // (so screen capture doesn't show this dialog), and reopen once a blob is ready
+  // so the user lands back on the preview/upload form.
+  useEffect(() => {
+    if (!recorderState) return;
+    if (recorderState.countdown > 0 || recorderState.isRecording) {
+      setRecordDialogOpen(false);
+    } else if (recorderState.recordedBlob) {
+      setRecordDialogOpen(true);
+    }
+  }, [recorderState?.countdown, recorderState?.isRecording, recorderState?.recordedBlob]);
 
   const fetchVideos = useCallback(async () => {
     try {
@@ -132,6 +150,23 @@ export function TrainingVideosScreen({ onBack }: TrainingVideosScreenProps) {
     <div className="flex flex-col h-full bg-background">
       <SubPageHeader title="Training Videos" onHome={onBack} />
 
+      {/* Action bar — record your own */}
+      {recorderState && recorderActions && (
+        <div className="px-4 py-2 flex items-center justify-between border-b border-border bg-muted/20">
+          <p className="text-xs text-muted-foreground">
+            Record your own training video to share with your team.
+          </p>
+          <Button
+            size="sm"
+            onClick={() => setRecordDialogOpen(true)}
+            className="gap-2"
+          >
+            <Video className="w-4 h-4" />
+            Record Video
+          </Button>
+        </div>
+      )}
+
       {/* Category filter */}
       {categories.length > 2 && (
         <div className="px-4 py-2 flex gap-2 overflow-x-auto border-b border-border">
@@ -211,6 +246,26 @@ export function TrainingVideosScreen({ onBack }: TrainingVideosScreenProps) {
           </div>
         )}
       </ScrollArea>
+
+      {/* Record-your-own dialog */}
+      {recorderState && recorderActions && (
+        <Dialog open={recordDialogOpen} onOpenChange={setRecordDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden flex flex-col">
+            <DialogHeader className="px-4 pt-4 pb-2 border-b border-border">
+              <DialogTitle className="flex items-center gap-2">
+                <Video className="w-4 h-4" />
+                Record Training Video
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 min-h-[400px] overflow-hidden">
+              <TrainingVideoRecorder
+                recorderState={recorderState}
+                recorderActions={recorderActions}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
