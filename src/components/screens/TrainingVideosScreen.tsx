@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Play, Clock, Film, ChevronLeft, X, Download, Link2, Check } from 'lucide-react';
+import { Play, Clock, Film, ChevronLeft, X, Download, Link2, Check, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
+import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
+import type { ScreenRecorderState, ScreenRecorderActions } from '@/hooks/useScreenRecorder';
 
 interface TrainingVideo {
   id: string;
