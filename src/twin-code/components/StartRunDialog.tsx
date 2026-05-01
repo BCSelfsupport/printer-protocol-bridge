@@ -47,6 +47,7 @@ export function StartRunDialog({
   const [lot, setLot] = useState("");
   const [operator, setOperator] = useState("");
   const [note, setNote] = useState("");
+  const [targetCount, setTargetCount] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [activeRuns, setActiveRuns] = useState<CloudActiveRun[]>([]);
