@@ -84,10 +84,18 @@ export function ConveyorPanel() {
 
   const pairBound = !!(pair.a && pair.b);
 
+  // The conveyor sim's photocell IS the print trigger source — there is no
+  // real beam-break upstream. We MUST always pass forceTrigger: true or the
+  // printers receive ^MD, sit waiting for a Print Go that never arrives, hit
+  // the 500ms R-timeout, fill the 4-message buffer, and the dispatcher
+  // reports per-printer "lost connection" (this is exactly what bit the
+  // production-run path while Pre-flight worked — Pre-flight always forces).
+  // The Bench-trigger toggle is now a no-op for this wiring; it remains as
+  // a UI hint for future bench-mode pacing.
   useEffect(() => {
     if (!liveMode) return;
-    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial, { forceTrigger: benchAutoTrigger }));
-  }, [benchAutoTrigger, liveMode]);
+    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial, { forceTrigger: true }));
+  }, [liveMode]);
 
   // ---- LIVE bonded dispatch wiring ----
   const enableLive = async () => {
