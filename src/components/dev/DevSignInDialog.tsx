@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Shield, Loader2, ScanLine } from 'lucide-react';
+import { Shield, Loader2 } from 'lucide-react';
 import { useLicense } from '@/contexts/LicenseContext';
 
 interface DevSignInDialogProps {
@@ -22,12 +22,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 /**
- * TOTP-based developer sign-in.
- *  - Probes the server for enrollment status when opened.
- *  - If not enrolled, generates a TOTP secret and shows a QR.
- *  - Once enrolled, asks for the 6-digit code from the authenticator app.
- *
- * Replaces the old shared-password DEV_PORTAL_PASSWORD prompt.
+ * Server-verified developer sign-in.
  */
 export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDialogProps) {
   const { productKey } = useLicense();
@@ -104,9 +99,7 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
             <Shield className="w-5 h-5" />
             Developer Sign In
           </DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Authenticator app required (Google Authenticator, 1Password, Authy, etc).
-          </p>
+          <p className="text-sm text-muted-foreground">Enter the developer password.</p>
         </DialogHeader>
 
         {busy && stage === 'check' && (
@@ -115,61 +108,17 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
           </div>
         )}
 
-        {stage === 'enroll' && !otpauth && !busy && (
-          <div className="space-y-4">
-            <p className="text-sm">
-              You haven't enrolled this license in 2-factor authentication yet. Click below
-              to generate your authenticator secret. <strong>You will only see it once.</strong>
-            </p>
-            <Button onClick={handleEnroll} disabled={busy} className="w-full">
-              <ScanLine className="w-4 h-4 mr-2" />
-              Generate authenticator QR
-            </Button>
-          </div>
-        )}
-
-        {stage === 'enroll' && otpauth && (
-          <div className="space-y-4">
-            <p className="text-sm">
-              Scan this QR with your authenticator app. If you can't scan, type the secret manually.
-            </p>
-            <div className="flex justify-center bg-white p-4 rounded-lg">
-              <QRCodeSVG value={otpauth} size={200} />
-            </div>
-            <div className="text-center text-xs font-mono break-all bg-muted p-2 rounded">
-              {secret}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Once added, enter the 6-digit code below to confirm.
-            </p>
-            <form onSubmit={handleVerify} className="space-y-2">
-              <Input
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="123456"
-                inputMode="numeric"
-                autoFocus
-                className="text-center text-2xl tracking-widest font-mono"
-              />
-              <Button type="submit" disabled={busy || code.length !== 6} className="w-full">
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm & sign in'}
-              </Button>
-            </form>
-          </div>
-        )}
-
         {stage === 'verify' && (
           <form onSubmit={handleVerify} className="space-y-4">
-            <p className="text-sm">Enter the current 6-digit code from your authenticator app.</p>
+            <p className="text-sm">Use the developer password to open the panel.</p>
             <Input
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="123456"
-              inputMode="numeric"
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Developer password"
+              type="password"
               autoFocus
-              className="text-center text-2xl tracking-widest font-mono"
             />
-            <Button type="submit" disabled={busy || code.length !== 6} className="w-full">
+            <Button type="submit" disabled={busy || !code.trim()} className="w-full">
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign in'}
             </Button>
           </form>
@@ -216,7 +165,7 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
                           body: JSON.stringify({ product_key: productKey }),
                         });
                         const d2 = await r2.json();
-                        setStage(d2.enrolled ? 'verify' : 'enroll');
+                        setStage('verify');
                       } else {
                         setError(data.error || 'Invalid invite.');
                       }
