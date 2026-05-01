@@ -282,6 +282,9 @@ export function PreflightDialog({
           {verdict ? (
             <>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Close</Button>
+              <Button type="button" variant="outline" onClick={handleExportCsv}>
+                <Download className="mr-1 h-4 w-4" /> Export CSV report
+              </Button>
               <Button type="button" variant="outline" onClick={handleReset}>
                 <RotateCcw className="mr-1 h-4 w-4" /> Run again
               </Button>
