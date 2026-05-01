@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
     const enrolled = !!dev.totp_secret_encrypted;
 
     // STATUS check
-    if (!action && !totp_code) {
+    if (!action && !totp_code && !dev_password) {
       return json({ is_developer: true, enrolled, is_owner: dev.is_owner });
     }
 
