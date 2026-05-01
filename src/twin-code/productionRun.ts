@@ -244,6 +244,32 @@ class ProductionRunStore {
     }
   }
 
+  /** Dismiss the completed-run banner WITHOUT touching the catalog ledger.
+   *  The audit artifacts have already been downloaded; this just clears the UI. */
+  dismissCompleted() {
+    if (!this.state.lastCompleted) return;
+    this.state = { ...this.state, lastCompleted: null };
+    this.notify();
+  }
+
+  /**
+   * Hard reset for "start over from scratch": ditches any active run, clears
+   * the completed banner, resets the catalog progress (so all 1,000 serials
+   * are available again), zeroes the conveyor's bottle counter, clears fault
+   * history, and stops the conveyor sim. Equivalent to a clean app boot
+   * without dropping the loaded CSV.
+   */
+  resetAll() {
+    if (this.state.active) this.cancel();
+    this.state = { ...this.state, lastCompleted: null };
+    this.notify();
+    catalog.reset();          // wipes printedSet + records, keeps loaded entries
+    faultGuard.reset();
+    liveMetrics.resetWindow();
+    conveyorSim.stop();
+    conveyorSim.resetBottleCounter();
+  }
+
   /** Live summary of the active run (or null if none). */
   liveSummary(): ProductionRunSummary | null {
     const active = this.state.active;
