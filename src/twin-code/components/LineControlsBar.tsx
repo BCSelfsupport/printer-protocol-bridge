@@ -26,7 +26,6 @@ import {
 export function LineControlsBar() {
   const [cfg, setCfg] = useState(() => conveyorSim.getConfig() ?? DEFAULT_CONVEYOR_CONFIG);
   const [running, setRunning] = useState(() => conveyorSim.isRunning());
-  const [batchLimit, setBatchLimit] = useState<number | "">(50);
 
   // Keep in sync if Debug panel changes things or conveyor state flips.
   useEffect(() => {
@@ -53,13 +52,6 @@ export function LineControlsBar() {
     if (!Number.isFinite(newBpm) || newBpm <= 0) return;
     const newFt = ftPerMinFromBpm(cfg.pitchMm, newBpm);
     update({ ftPerMin: newFt });
-  };
-
-  const handleBatchChange = (val: string) => {
-    const num = parseInt(val, 10);
-    const limit = isNaN(num) ? "" : Math.max(0, num);
-    setBatchLimit(limit);
-    conveyorSim.setBatchLimit(limit === "" ? 0 : limit);
   };
 
   return (
