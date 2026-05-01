@@ -1,5 +1,4 @@
-// Developer access — license-key + TOTP 2FA
-// Replaces the old shared DEV_PORTAL_PASSWORD scheme.
+// Developer access — developer license + server-side password, with legacy TOTP support.
 //
 // Flow:
 //  1. POST { product_key }                  → check if license is a developer
@@ -9,7 +8,10 @@
 //  2. POST { product_key, action: "enroll" } (only if !enrolled)
 //     → { secret, otpauth_uri }   (one-time, never sent again)
 //
-//  3. POST { product_key, totp_code }       → verify and "sign in"
+//  3. POST { product_key, dev_password }    → verify and "sign in"
+//     → { valid: bool, is_owner: bool }
+//
+//  4. POST { product_key, totp_code }       → legacy TOTP verify
 //     → { valid: bool, is_owner: bool }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -134,7 +136,7 @@ Deno.serve(async (req) => {
     );
 
     const body = await req.json().catch(() => ({}));
-    const { product_key, totp_code, action } = body ?? {};
+    const { product_key, totp_code, dev_password, action } = body ?? {};
 
     if (!product_key || typeof product_key !== "string") {
       return json({ error: "product_key required" }, 400);
@@ -165,6 +167,22 @@ Deno.serve(async (req) => {
     // STATUS check
     if (!action && !totp_code) {
       return json({ is_developer: true, enrolled, is_owner: dev.is_owner });
+    }
+
+    // PASSWORD VERIFY — server-side secret, so users are not blocked by authenticator drift/enrollment.
+    if (dev_password) {
+      const expected = Deno.env.get("DEV_PORTAL_PASSWORD");
+      if (!expected) return json({ error: "dev password not configured" }, 500);
+
+      const submitted = String(dev_password).trim();
+      if (submitted === expected) {
+        await supabase
+          .from("developer_licenses")
+          .update({ last_signin_at: new Date().toISOString() })
+          .eq("id", dev.id);
+        return json({ valid: true, is_owner: dev.is_owner, license_id: license.id });
+      }
+      return json({ valid: false }, 401);
     }
 
     // ENROLL — only if not yet enrolled
