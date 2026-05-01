@@ -21,7 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, XCircle, PlayCircle, Loader2, RotateCcw, Activity, AlertTriangle } from "lucide-react";
+import { CheckCircle2, XCircle, PlayCircle, Loader2, RotateCcw, Activity, AlertTriangle, Download } from "lucide-react";
 import {
   runPreflight,
   DEFAULT_PREFLIGHT_CONFIG,
@@ -99,6 +99,65 @@ export function PreflightDialog({
     setProgress({ current: 0, total: 0 });
   };
 
+  const handleExportCsv = () => {
+    if (!verdict) return;
+    const okCycles = verdict.results.filter((r) => r.ok && r.cycleMs);
+    const meanCycleMs = okCycles.length
+      ? okCycles.reduce((a, r) => a + (r.cycleMs ?? 0), 0) / okCycles.length
+      : 0;
+    const effectiveBpm = meanCycleMs > 0 ? 60000 / meanCycleMs : 0;
+
+    const header = [
+      "cycle","ok","a_ms","b_ms","cycle_ms","skew_ms","reason",
+    ].join(",");
+    const rows = verdict.results.map((r) => [
+      r.index,
+      r.ok ? "1" : "0",
+      r.aMs?.toFixed(2) ?? "",
+      r.bMs?.toFixed(2) ?? "",
+      r.cycleMs?.toFixed(2) ?? "",
+      r.skewMs?.toFixed(2) ?? "",
+      (r.reason ?? "").replace(/,/g, ";"),
+    ].join(","));
+
+    const summary = [
+      "",
+      "# SUMMARY",
+      `# finished_at,${verdict.finishedAt}`,
+      `# mode,${verdict.mode}`,
+      `# profile,${verdict.profileLabel.replace(/,/g, ";")}`,
+      `# total,${verdict.total}`,
+      `# succeeded,${verdict.succeeded}`,
+      `# failed,${verdict.failed}`,
+      `# success_pct,${verdict.successPct.toFixed(2)}`,
+      `# cycle_p50_ms,${verdict.cycle.p50.toFixed(2)}`,
+      `# cycle_p95_ms,${verdict.cycle.p95.toFixed(2)}`,
+      `# cycle_max_ms,${verdict.cycle.max.toFixed(2)}`,
+      `# cycle_mean_ms,${verdict.cycle.mean.toFixed(2)}`,
+      `# skew_p50_ms,${verdict.skew.p50.toFixed(2)}`,
+      `# skew_p95_ms,${verdict.skew.p95.toFixed(2)}`,
+      `# skew_max_ms,${verdict.skew.max.toFixed(2)}`,
+      `# worst_streak,${verdict.worstStreak}`,
+      `# effective_bpm,${effectiveBpm.toFixed(1)}`,
+      `# budget_cycle_p95_ms,${verdict.effectiveBudgets.cycleP95Ms}`,
+      `# budget_skew_p95_ms,${verdict.effectiveBudgets.skewP95Ms}`,
+      `# verdict,${verdict.pass ? "PASS" : "FAIL"}`,
+    ].join("\n");
+
+    const csv = [header, ...rows, summary].join("\n");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `preflight-${verdict.total}prints-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "Report exported", description: a.download });
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!running) onOpenChange(v); }}>
       <DialogContent className="max-w-2xl">
@@ -127,20 +186,34 @@ export function PreflightDialog({
           )}
         </div>
 
-        {/* Cycle count slider */}
+        {/* Cycle count slider + presets */}
         {!verdict && !running && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-xs">Cycles</Label>
+              <Label className="text-xs">Cycles to fire</Label>
               <span className="font-mono text-xs text-muted-foreground">{cycles}</span>
             </div>
             <Slider
               value={[cycles]}
               min={5}
-              max={20}
-              step={1}
+              max={250}
+              step={5}
               onValueChange={([v]) => setCycles(v)}
             />
+            <div className="flex flex-wrap gap-1.5">
+              {[10, 25, 50, 100, 200].map((n) => (
+                <Button
+                  key={n}
+                  type="button"
+                  size="sm"
+                  variant={cycles === n ? "default" : "outline"}
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => setCycles(n)}
+                >
+                  {n} prints
+                </Button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -209,6 +282,9 @@ export function PreflightDialog({
           {verdict ? (
             <>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Close</Button>
+              <Button type="button" variant="outline" onClick={handleExportCsv}>
+                <Download className="mr-1 h-4 w-4" /> Export CSV report
+              </Button>
               <Button type="button" variant="outline" onClick={handleReset}>
                 <RotateCcw className="mr-1 h-4 w-4" /> Run again
               </Button>
@@ -262,11 +338,16 @@ function VerdictCard({ verdict }: { verdict: PreflightVerdict }) {
 
       <Separator className="my-2" />
 
-      <div className="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-5">
         <Metric label="success" value={`${verdict.successPct.toFixed(1)}%`} tone={verdict.checks[0].ok ? "ok" : "bad"} />
         <Metric label="cycle p95" value={`${verdict.cycle.p95.toFixed(1)} ms`} tone={verdict.checks[1].ok ? "ok" : "bad"} />
         <Metric label="skew p95" value={`${verdict.skew.p95.toFixed(1)} ms`} tone={verdict.checks[2].ok ? "ok" : "bad"} />
         <Metric label="worst streak" value={String(verdict.worstStreak)} tone={verdict.checks[3].ok ? "ok" : "bad"} />
+        <Metric
+          label="effective bpm"
+          value={`${(verdict.cycle.mean > 0 ? 60000 / verdict.cycle.mean : 0).toFixed(0)}`}
+          tone="default"
+        />
       </div>
 
       <Separator className="my-2" />
