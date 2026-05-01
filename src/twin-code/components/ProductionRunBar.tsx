@@ -94,7 +94,7 @@ export function ProductionRunBar() {
     const liveTone = run.active.liveAtStart;
     const target = run.active.targetCount ?? null;
     const consumed = summary.printed + summary.missed;
-    const targetPct = target ? Math.min(100, (consumed / target) * 100) : null;
+    void target; // (chip below uses it; consumed already shown)
     return (
       <>
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-primary/40 bg-primary/5 px-4 py-2.5">
