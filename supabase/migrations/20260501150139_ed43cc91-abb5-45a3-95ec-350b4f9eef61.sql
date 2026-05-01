@@ -1,0 +1,1 @@
+UPDATE developer_licenses SET totp_secret_encrypted = NULL, totp_enrolled_at = NULL WHERE license_id = '7843795b-1ebe-4039-8d02-4b97fac6c988';
