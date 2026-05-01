@@ -100,18 +100,7 @@ export function LineControlsBar() {
         />
       </Field>
 
-      <div className="h-6 w-px bg-border mx-1" />
 
-      <Field label="Batch" suffix="items" icon={<Target className="h-3 w-3" />}>
-        <Input
-          type="number"
-          placeholder="None"
-          value={batchLimit}
-          onChange={(e) => handleBatchChange(e.target.value)}
-          onFocus={(e) => e.currentTarget.select()}
-          className="h-7 w-20 px-2 text-sm font-mono"
-        />
-      </Field>
 
       {running && (
         <span className="text-[11px] text-muted-foreground">
