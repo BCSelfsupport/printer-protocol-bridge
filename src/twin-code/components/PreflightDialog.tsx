@@ -252,7 +252,10 @@ function VerdictCard({ verdict }: { verdict: PreflightVerdict }) {
             {verdict.pass ? "Ready for production" : "Not ready — review issues"}
           </div>
           <div className="text-[11px] text-muted-foreground">
-            {verdict.mode === "live" ? "LIVE bonded path" : "Synthetic timing model"} · {verdict.succeeded}/{verdict.total} cycles ok
+            {verdict.profileLabel} · {verdict.succeeded}/{verdict.total} cycles ok
+          </div>
+          <div className="text-[10px] text-muted-foreground/80 mt-0.5">
+            Budgets: cycle p95 ≤ {verdict.effectiveBudgets.cycleP95Ms}ms · skew p95 ≤ {verdict.effectiveBudgets.skewP95Ms}ms
           </div>
         </div>
       </div>

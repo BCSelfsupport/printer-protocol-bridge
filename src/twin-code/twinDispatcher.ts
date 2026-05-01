@@ -697,6 +697,19 @@ class TwinDispatcher {
   isBound() { return !!(this.a && this.b); }
 
   /**
+   * Returns the per-side ^MD subcommand kinds for the currently bound pair, so
+   * UI consumers (e.g. pre-flight) can pick realistic latency budgets. A side
+   * doing native ^BD (DataMatrix encoding) costs ~100ms more firmware-side
+   * than a plain ^TD text update.
+   */
+  getBoundProfile(): { subA: 'TD' | 'BD'; subB: 'TD' | 'BD'; hasBarcode: boolean } | null {
+    if (!this.isBound()) return null;
+    const subA = this.opts.subcommandA ?? 'BD';
+    const subB = this.opts.subcommandB ?? 'TD';
+    return { subA, subB, hasBarcode: subA === 'BD' || subB === 'BD' };
+  }
+
+  /**
    * Resolve twin pair binding → printer IDs in storage → enter 1-1 on both.
    */
   async bind(pair: TwinPairState, knownPrinters: Printer[], opts: TwinDispatcherOptions = {}): Promise<BoundPairResult> {
