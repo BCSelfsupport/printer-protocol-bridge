@@ -77,7 +77,8 @@ async function totpCode(secretBase32: string, time: number): Promise<string> {
 
 async function verifyTotp(secretBase32: string, submitted: string): Promise<boolean> {
   const t = Math.floor(Date.now() / 1000);
-  for (const offset of [-TOTP_PERIOD, 0, TOTP_PERIOD]) {
+  // ±2 windows (±60s) tolerance for clock drift
+  for (const offset of [-2 * TOTP_PERIOD, -TOTP_PERIOD, 0, TOTP_PERIOD, 2 * TOTP_PERIOD]) {
     if ((await totpCode(secretBase32, t + offset)) === submitted) return true;
   }
   return false;
