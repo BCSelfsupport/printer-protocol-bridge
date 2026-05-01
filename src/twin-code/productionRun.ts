@@ -158,6 +158,10 @@ class ProductionRunStore {
     // Fresh run = fresh BPM rolling window so the gauge reflects this lot
     // only, not whatever happened before Start.
     liveMetrics.resetWindow();
+    // Fresh run = bottle #1, not #299 from leftover session counter.
+    // The "Resume from bottle #N" banner reads the conveyor's bottle id, so
+    // resetting here keeps the operator-facing number aligned with this lot.
+    conveyorSim.resetBottleCounter();
     this.persistActive();
     this.notify();
     // Watch the catalog so the run auto-finalizes on the last bottle.
