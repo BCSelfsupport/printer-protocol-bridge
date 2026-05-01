@@ -42,6 +42,7 @@ import { Cloud, CloudOff } from "lucide-react";
 import { useLiveMetrics } from "../useLiveMetrics";
 import { ProductionMetricsCard } from "./ProductionMetricsCard";
 import { TwinMessagePreview } from "./TwinMessagePreview";
+import { HeadroomPanel } from "./HeadroomPanel";
 
 const ALARM_PREF_KEY = "twincode.hud.alarmEnabled";
 const UNITS_PREF_KEY = "twincode.hud.units"; // "metric" | "imperial"
