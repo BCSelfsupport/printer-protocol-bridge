@@ -174,6 +174,25 @@ class ConveyorSim {
     this.notify();
   }
 
+  /**
+   * Zero the per-bottle counters WITHOUT stopping the sim or clearing in-flight
+   * bottles. Called by `productionRun.start()` so the active run's first
+   * bottle is #1 (not #299 from the prior shift's leftover counter), which
+   * lines up with the "Resume from bottle #N" guidance.
+   */
+  resetBottleCounter() {
+    this.nextBottleId = 0;
+    this.bottleCount = 0;
+    // Re-id any bottles already on the belt sequentially so the counter and
+    // visible IDs agree. Pending bottles get fresh ids; printed/missed ones
+    // are left alone (they're already in the ledger under their old id).
+    for (const b of this.bottles) {
+      if (b.state === "pending" || b.state === "printing") {
+        b.id = this.nextBottleId++;
+      }
+    }
+  }
+
   /** Manually fire the photocell — useful for one-shot debugging. */
   manualFire() {
     // Find the closest bottle to the photocell beam that hasn't triggered yet
