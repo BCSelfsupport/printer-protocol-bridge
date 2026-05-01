@@ -309,6 +309,11 @@ export function OperatorHUD() {
         <ProductionMetricsCard units={units} compact />
       </div>
 
+      {/* Throughput headroom — translates cycle p95 into BPM ceiling + % headroom */}
+      <div className="shrink-0 border-t border-border px-4 py-3" data-tour="hud-headroom">
+        <HeadroomPanel />
+      </div>
+
       {/* Bottom batch progress strip */}
       <div className="shrink-0" data-tour="hud-batch-progress">
         <BatchProgress
