@@ -43,6 +43,7 @@ import { useLiveMetrics } from "../useLiveMetrics";
 import { ProductionMetricsCard } from "./ProductionMetricsCard";
 import { TwinMessagePreview } from "./TwinMessagePreview";
 import { HeadroomPanel } from "./HeadroomPanel";
+import { LineControlsBar } from "./LineControlsBar";
 
 const ALARM_PREF_KEY = "twincode.hud.alarmEnabled";
 const UNITS_PREF_KEY = "twincode.hud.units"; // "metric" | "imperial"
@@ -307,6 +308,11 @@ export function OperatorHUD() {
       {/* Production metrics — larger inline strip */}
       <div className="shrink-0 border-t border-border px-4 py-3">
         <ProductionMetricsCard units={units} compact />
+      </div>
+
+      {/* Line conditions — operator-tunable line speed / pitch / BPM */}
+      <div className="shrink-0 border-t border-border px-4 py-3">
+        <LineControlsBar />
       </div>
 
       {/* Throughput headroom — translates cycle p95 into BPM ceiling + % headroom */}
