@@ -246,6 +246,26 @@ export function TrainingVideosScreen({ onBack, recorderState, recorderActions }:
           </div>
         )}
       </ScrollArea>
+
+      {/* Record-your-own dialog */}
+      {recorderState && recorderActions && (
+        <Dialog open={recordDialogOpen} onOpenChange={setRecordDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden flex flex-col">
+            <DialogHeader className="px-4 pt-4 pb-2 border-b border-border">
+              <DialogTitle className="flex items-center gap-2">
+                <Video className="w-4 h-4" />
+                Record Training Video
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 min-h-[400px] overflow-hidden">
+              <TrainingVideoRecorder
+                recorderState={recorderState}
+                recorderActions={recorderActions}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
