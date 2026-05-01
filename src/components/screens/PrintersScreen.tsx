@@ -858,7 +858,7 @@ export function PrintersScreen({
           <div className="flex-1 flex flex-col bg-background rounded-xl border border-slate-700 overflow-hidden">
             <Dashboard
               status={effectiveDashboardStatus}
-              isConnected={isViewingConnected}
+              isConnected={isConnected}
               onStart={onStart ?? (() => {})}
               onStop={onStop ?? (() => {})}
               onJetStop={onJetStop ?? (() => {})}
