@@ -11,7 +11,8 @@
  */
 
 import { useEffect, useState } from "react";
-import { Play, Square, Download, FileJson, FileSpreadsheet, AlertCircle, ClipboardList, X, Activity, CheckCircle2, XCircle } from "lucide-react";
+import { Play, Square, Download, FileJson, FileSpreadsheet, AlertCircle, ClipboardList, X, Activity, CheckCircle2, XCircle, FileText } from "lucide-react";
+import { downloadEnvelopeReport } from "../envelopeReport";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -271,6 +272,9 @@ function CompletedRunBanner({
           </Button>
           <Button size="sm" variant="outline" onClick={() => downloadRunJSON(exp)}>
             <FileJson className="mr-1 h-4 w-4" /> Signed JSON
+          </Button>
+          <Button size="sm" variant="default" onClick={() => downloadEnvelopeReport(exp)} title="One-page envelope report (HTML — print to PDF)">
+            <FileText className="mr-1 h-4 w-4" /> Envelope report
           </Button>
           <Button size="sm" onClick={onStartNew}>
             <Play className="mr-1 h-4 w-4" /> New run

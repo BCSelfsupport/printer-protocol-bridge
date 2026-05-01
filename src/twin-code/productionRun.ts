@@ -31,6 +31,10 @@ import { catalog, type LedgerRecord } from "./catalog";
 import { faultGuard } from "./faultGuard";
 import { cloudLedger } from "./cloudLedger";
 import { liveMetrics } from "./liveMetrics";
+import { conveyorSim } from "./conveyorSim";
+import { twinDispatcher } from "./twinDispatcher";
+import { profilerBus } from "./profilerBus";
+import { computeHeadroom, cycleBudgetForBpm, DEFAULT_SAFETY_FACTOR } from "./throughputHeadroom";
 
 const ACTIVE_RUN_KEY = "twincode.activeRun.v1";
 
@@ -352,17 +356,64 @@ export function downloadRunCSV(exp: ProductionRunExport) {
     "wallTimestampISO",
     "wallTimestampEpochMs",
   ];
+
+  // --- Snapshot the run conditions so the recipient can read them without
+  //     having to ask. These are captured at EXPORT time (after stop), which
+  //     is fine — they describe the test rig, not per-bottle state.
+  const live = liveMetrics.getSnapshot();
+  const cv = conveyorSim.getConfig();
+  const profile = twinDispatcher.getBoundProfile();
+  const samples = profilerBus.getSamples();
+  const headroom = computeHeadroom(samples, live.bpm);
+  const budget50 = cycleBudgetForBpm(50);
+  const budget100 = cycleBudgetForBpm(100);
+  const budget200 = cycleBudgetForBpm(200);
+  const budget300 = cycleBudgetForBpm(300);
+
   const lines: string[] = [
     `# Twin Code — Production Run Audit`,
+    `#`,
+    `# === Run identity ===`,
     `# Lot: ${exp.meta.lotNumber}`,
     `# Operator: ${exp.meta.operator}`,
+    `# Note: ${exp.meta.note || ""}`,
     `# Started: ${new Date(exp.meta.startedAt).toISOString()}`,
     `# Ended: ${exp.meta.endedAt ? new Date(exp.meta.endedAt).toISOString() : ""}`,
+    `# Duration: ${exp.summary.elapsedSec}s`,
     `# Mode: ${exp.meta.liveAtStart ? "LIVE bonded" : "Synthetic"}`,
-    `# Catalog fingerprint: ${exp.meta.catalogFingerprint ?? ""}`,
+    `#`,
+    `# === Line conditions ===`,
+    `# Line speed: ${cv.ftPerMin} ft/min`,
+    `# Pitch (centre-to-centre): ${cv.pitchMm} mm`,
+    `# Bottle Ø (configured): ${live.bottleDiameterMm} mm`,
+    `# Gap (pitch − Ø): ${Math.max(0, cv.pitchMm - live.bottleDiameterMm).toFixed(1)} mm`,
+    `# Conveyor BPM (model): ${((cv.ftPerMin * 304.8 / 60) / cv.pitchMm * 60).toFixed(1)}`,
+    `# Measured BPM (rolling 60s avg): ${live.bpm.toFixed(1)}`,
+    `#`,
+    `# === Twin pair binding ===`,
+    `# A side subcommand: ^MD^${profile?.subA ?? "?"} (${profile?.subA === "BD" ? "DataMatrix native" : "Text"})`,
+    `# B side subcommand: ^MD^${profile?.subB ?? "?"} (${profile?.subB === "BD" ? "DataMatrix native" : "Text"})`,
+    `# DataMatrix on either side: ${profile?.hasBarcode ? "YES" : "NO"}`,
+    `#`,
+    `# === Throughput envelope (this run) ===`,
+    `# Cycle p95 (measured, n=${headroom.sampleCount}): ${Number.isFinite(headroom.cycleP95Ms) ? headroom.cycleP95Ms.toFixed(1) + " ms" : "n/a"}`,
+    `# Max sustainable BPM (cycle p95 × ${headroom.safetyFactor}× safety): ${Number.isFinite(headroom.maxSustainableBpm) ? headroom.maxSustainableBpm.toFixed(0) : "n/a"}`,
+    `# Headroom at measured BPM: ${Number.isFinite(headroom.headroomPct) ? (headroom.headroomPct >= 0 ? "+" : "") + headroom.headroomPct.toFixed(0) + "%" : "n/a"}`,
+    `# Verdict: ${headroom.verdict.toUpperCase()}`,
+    `# ${headroom.oneLiner}`,
+    `#`,
+    `# === Reference: cycle-time budgets at common target BPMs (with ${headroom.safetyFactor}× safety) ===`,
+    `# Target  50 BPM → cycle must be ≤ ${budget50.toFixed(0)} ms`,
+    `# Target 100 BPM → cycle must be ≤ ${budget100.toFixed(0)} ms`,
+    `# Target 200 BPM → cycle must be ≤ ${budget200.toFixed(0)} ms`,
+    `# Target 300 BPM → cycle must be ≤ ${budget300.toFixed(0)} ms`,
+    `#`,
+    `# === Outcome ===`,
     `# Printed: ${exp.summary.printed}  Missed: ${exp.summary.missed}  Yield: ${exp.summary.yieldPct.toFixed(2)}%`,
+    `# Catalog fingerprint: ${exp.meta.catalogFingerprint ?? ""}`,
     `# Records SHA-256: ${exp.recordsHash}`,
     `# Document SHA-256: ${exp.documentHash}`,
+    `#`,
     headers.join(","),
   ];
   for (const r of exp.records) {

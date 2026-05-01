@@ -42,6 +42,7 @@ import { Cloud, CloudOff } from "lucide-react";
 import { useLiveMetrics } from "../useLiveMetrics";
 import { ProductionMetricsCard } from "./ProductionMetricsCard";
 import { TwinMessagePreview } from "./TwinMessagePreview";
+import { HeadroomPanel } from "./HeadroomPanel";
 
 const ALARM_PREF_KEY = "twincode.hud.alarmEnabled";
 const UNITS_PREF_KEY = "twincode.hud.units"; // "metric" | "imperial"
@@ -306,6 +307,11 @@ export function OperatorHUD() {
       {/* Production metrics — larger inline strip */}
       <div className="shrink-0 border-t border-border px-4 py-3">
         <ProductionMetricsCard units={units} compact />
+      </div>
+
+      {/* Throughput headroom — translates cycle p95 into BPM ceiling + % headroom */}
+      <div className="shrink-0 border-t border-border px-4 py-3" data-tour="hud-headroom">
+        <HeadroomPanel />
       </div>
 
       {/* Bottom batch progress strip */}
