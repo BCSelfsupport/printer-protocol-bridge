@@ -377,6 +377,11 @@ export function PrintersScreen({
       return {
         ...(status ?? {}),
         isRunning: false,
+        // jetRunning belongs to the live (connected) printer — clearing it
+        // here prevents the Start button from being disabled under a printer
+        // we're only viewing, and prevents the Stop button from being
+        // enabled under a printer that isn't actually running.
+        jetRunning: false,
         isReady: selectedPrinter.status === 'ready',
         hasActiveErrors: selectedPrinter.status === 'error',
         currentMessage: selectedPrinter.currentMessage ?? null,
