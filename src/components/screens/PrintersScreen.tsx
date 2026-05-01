@@ -878,8 +878,21 @@ export function PrintersScreen({
               onResetAllCounters={onResetAllCounters ?? (() => {})}
               onQueryCounters={onQueryCounters ?? (() => {})}
               isSignedIn={isSignedIn}
-              countdownSeconds={isViewingConnected ? countdownSeconds : null}
-              countdownType={isViewingConnected ? countdownType : null}
+              countdownSeconds={(() => {
+                // Always show the countdown for the printer whose card the
+                // operator is currently looking at — never the lingering
+                // countdown of a previously-connected printer. Falls back to
+                // the legacy single-value props only if getCountdown isn't
+                // wired.
+                const pid = selectedPrinter?.id ?? connectedPrinter?.id;
+                if (pid != null && getCountdown) return getCountdown(pid).seconds;
+                return isViewingConnected ? countdownSeconds : null;
+              })()}
+              countdownType={(() => {
+                const pid = selectedPrinter?.id ?? connectedPrinter?.id;
+                if (pid != null && getCountdown) return getCountdown(pid).type;
+                return isViewingConnected ? countdownType : null;
+              })()}
               messageContent={effectiveMessageContent}
               onMount={onControlMount}
               onUnmount={onControlUnmount}
