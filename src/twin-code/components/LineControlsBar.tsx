@@ -14,8 +14,9 @@
  */
 
 import { useEffect, useState } from "react";
-import { Gauge, Target } from "lucide-react";
+import { Gauge, Play, Square, Zap } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   conveyorSim,
   computeBpm,
