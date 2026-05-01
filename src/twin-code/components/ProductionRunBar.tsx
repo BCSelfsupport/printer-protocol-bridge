@@ -250,12 +250,14 @@ function Gate({ ok, label, required }: { ok: boolean; label: string; required?: 
 function CompletedRunBanner({
   exp,
   onDismiss,
+  onResetAll,
   onStartNew,
   startOpen,
   onStartOpenChange,
 }: {
   exp: ProductionRunExport;
   onDismiss: () => void;
+  onResetAll: () => void;
   onStartNew: () => void;
   startOpen: boolean;
   onStartOpenChange: (v: boolean) => void;
@@ -265,6 +267,7 @@ function CompletedRunBanner({
     tone === "ok" ? "border-primary/40 bg-primary/5" :
     tone === "warn" ? "border-accent bg-accent/10" :
     "border-destructive/40 bg-destructive/5";
+  const [confirmReset, setConfirmReset] = useState(false);
   return (
     <>
       <div className={`flex flex-wrap items-center gap-3 rounded-md border px-4 py-2.5 ${borderClass}`}>
@@ -297,12 +300,43 @@ function CompletedRunBanner({
           <Button size="sm" onClick={onStartNew}>
             <Play className="mr-1 h-4 w-4" /> New run
           </Button>
-          <Button size="icon" variant="ghost" onClick={onDismiss} title="Dismiss banner">
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => setConfirmReset(true)}
+            title="Wipe lot ledger, reset bottle counter & faults — keeps the loaded CSV"
+          >
+            <X className="mr-1 h-4 w-4" /> Reset &amp; clear
+          </Button>
+          <Button size="icon" variant="ghost" onClick={onDismiss} title="Dismiss banner only (keep ledger as-is)">
             <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
       <StartRunDialog open={startOpen} onOpenChange={onStartOpenChange} onStarted={() => { /* no-op */ }} />
+      <AlertDialog open={confirmReset} onOpenChange={setConfirmReset}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset and clear this lot?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will: dismiss the completed banner, reset the catalog so all{" "}
+              <span className="font-mono">{exp.meta.catalogTotalAtStart.toLocaleString()}</span>{" "}
+              serials are available again, zero the bottle counter, and clear fault history.
+              The CSV stays loaded. Make sure you've already downloaded the CSV / Signed JSON / Envelope report
+              for lot <span className="font-mono">{exp.meta.lotNumber}</span> — they will NOT be recoverable after reset.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { onResetAll(); setConfirmReset(false); }}
+            >
+              Reset everything
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
