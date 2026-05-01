@@ -159,7 +159,8 @@ export function ProductionRunBar() {
     return (
       <CompletedRunBanner
         exp={run.lastCompleted}
-        onDismiss={() => productionRun.cancel()}
+        onDismiss={() => productionRun.dismissCompleted()}
+        onResetAll={() => productionRun.resetAll()}
         onStartNew={() => setStartOpen(true)}
         startOpen={startOpen}
         onStartOpenChange={setStartOpen}
