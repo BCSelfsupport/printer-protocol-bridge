@@ -333,3 +333,66 @@ function formatElapsed(sec: number): string {
   const mm = m % 60;
   return `${h}h ${mm.toString().padStart(2, "0")}m`;
 }
+
+/**
+ * Inline conveyor controls inside the active production-run banner.
+ *
+ * The HUD already has a separate LineControlsBar (further down the page) but
+ * operators kept missing it and starting a run with the conveyor stopped —
+ * which produced "ELAPSED 30s · PRINTED 0 · MISSED 0" with no obvious cause.
+ * This row puts a one-click Start/Stop + a manual Fire 1 right next to the
+ * lot number so it's impossible to miss.
+ */
+function ConveyorAutoControls({ consumed, elapsedSec }: { consumed: number; elapsedSec: number }) {
+  const conv = useConveyor();
+  const [running, setRunning] = useState(() => conveyorSim.isRunning());
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const r = conveyorSim.isRunning();
+      setRunning((prev) => (prev === r ? prev : r));
+    }, 300);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Soft warning when run has been active for >5s but nothing has been
+  // dispatched yet — almost always means the conveyor sim isn't running.
+  const stalled = !running && consumed === 0 && elapsedSec >= 5;
+
+  return (
+    <div className="flex items-center gap-2">
+      {running ? (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 px-2.5 text-xs border-emerald-500/50 text-emerald-500 hover:text-emerald-400"
+          onClick={() => conveyorSim.stop()}
+          title={`Auto Print Go is firing at ~${Math.round(conv.bpm)} bpm`}
+        >
+          <Square className="mr-1 h-3.5 w-3.5" />
+          Stop Auto Print Go
+          <span className="ml-1.5 font-mono text-[10px] opacity-70">{Math.round(conv.bpm)} bpm</span>
+        </Button>
+      ) : (
+        <Button
+          size="sm"
+          className={stalled ? "h-8 px-2.5 text-xs animate-pulse" : "h-8 px-2.5 text-xs"}
+          variant={stalled ? "default" : "secondary"}
+          onClick={() => conveyorSim.start()}
+          title="Start the bottle generator — bottles will cross the photocell at the configured BPM and trigger Print Go"
+        >
+          <Play className="mr-1 h-3.5 w-3.5" />
+          {stalled ? "Start Auto Print Go ←" : "Start Auto Print Go"}
+        </Button>
+      )}
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-8 px-2 text-xs"
+        onClick={() => conveyorSim.manualFire()}
+        title="Fire one bottle manually — useful to confirm the dispatcher is reaching the printers"
+      >
+        <Zap className="mr-1 h-3.5 w-3.5" /> Fire 1
+      </Button>
+    </div>
+  );
+}
