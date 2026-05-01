@@ -115,16 +115,21 @@ export function StartRunDialog({
     if (!canStart) return;
     setBusy(true);
     try {
+      const parsedTarget = parseInt(targetCount, 10);
+      const target = Number.isFinite(parsedTarget) && parsedTarget > 0 ? parsedTarget : null;
       productionRun.start({
         lotNumber: lot,
         operator,
         note,
         liveAtStart: isLive,
+        targetCount: target,
       });
       try { localStorage.setItem(OPERATOR_PREF_KEY, operator.trim()); } catch { /* ignore */ }
       toast({
         title: `Run started — ${lot.trim()}`,
-        description: `${remaining.toLocaleString()} serials available · ${isLive ? "LIVE bonded" : "Synthetic"} mode`,
+        description:
+          (target ? `Will auto-stop after ${target.toLocaleString()} prints · ` : "") +
+          `${remaining.toLocaleString()} serials available · ${isLive ? "LIVE bonded" : "Synthetic"} mode`,
       });
       onOpenChange(false);
       onStarted();
@@ -205,6 +210,25 @@ export function StartRunDialog({
               placeholder="e.g. J. Doe"
               className="text-sm"
             />
+          </div>
+          <div>
+            <Label htmlFor="targetCount" className="text-xs">
+              Run length (optional) — auto-stop after N prints
+            </Label>
+            <Input
+              id="targetCount"
+              type="number"
+              min={1}
+              value={targetCount}
+              onChange={(e) => setTargetCount(e.target.value)}
+              onFocus={(e) => e.currentTarget.select()}
+              placeholder="e.g. 50 — leave blank to use the whole catalog"
+              className="font-mono text-sm"
+            />
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Run auto-finalises (with CSV/JSON/Envelope export) when printed + missed reaches this number.
+              Leave blank to consume the entire {remaining.toLocaleString()}-serial catalog.
+            </p>
           </div>
           <div>
             <Label htmlFor="note" className="text-xs">Note (optional)</Label>
