@@ -61,6 +61,10 @@ export function ProductionRunBar() {
   // operator immediately sees the end-of-lot artifacts.
   useEffect(() => {
     productionRun.setAutoStopHandler((exp) => {
+      // CRITICAL: stop the conveyor sim too. Sealing the run alone leaves
+      // Auto Print Go pacing forever, which is what produced the "BOTTLE #640"
+      // runaway after a 50-bottle lot. Halt the photocell first, then export.
+      conveyorSim.stop();
       downloadRunCSV(exp);
       downloadRunJSON(exp);
       downloadEnvelopeReport(exp);
@@ -78,6 +82,9 @@ export function ProductionRunBar() {
   const handleStop = async () => {
     setStopping(true);
     try {
+      // Manual Stop & Export must also halt Auto Print Go so the operator
+      // doesn't have to click two buttons to fully stop the line.
+      conveyorSim.stop();
       const exp = await productionRun.stop();
       setConfirmStop(false);
       if (exp) {
