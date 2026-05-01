@@ -458,8 +458,14 @@ export function PrintersScreen({
     setSelectedPrinter(printer);
     // Selecting an individual printer deselects any active TwinCode pair so the dashboard takes over.
     setPairSelected(false);
-    // Don't auto-connect on click — user can connect via the Connect button
-    // This prevents accidentally switching away from the master printer
+    // Auto-switch foreground TCP focus to the clicked printer so Start/Stop
+    // and other commands target what the operator is looking at. The Electron
+    // main process keeps a persistent socket open per printer, so this is
+    // effectively a cheap focus swap — not a fresh telnet handshake.
+    // Skip if it's already the foreground printer or if it's offline.
+    if (printer.isAvailable && printer.id !== connectedPrinter?.id) {
+      onConnect?.(printer);
+    }
   };
 
   const handleRemoveSelected = () => {
@@ -858,7 +864,7 @@ export function PrintersScreen({
           <div className="flex-1 flex flex-col bg-background rounded-xl border border-slate-700 overflow-hidden">
             <Dashboard
               status={effectiveDashboardStatus}
-              isConnected={isViewingConnected}
+              isConnected={isConnected}
               onStart={onStart ?? (() => {})}
               onStop={onStop ?? (() => {})}
               onJetStop={onJetStop ?? (() => {})}
