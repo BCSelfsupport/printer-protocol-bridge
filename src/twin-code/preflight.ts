@@ -60,6 +60,10 @@ export interface PreflightVerdict {
   results: PreflightCycleResult[];
   /** ISO timestamp of completion. */
   finishedAt: string;
+  /** Description of the latency profile applied (e.g. "DataMatrix on A"). */
+  profileLabel: string;
+  /** Effective thresholds actually used for cycle/skew checks. */
+  effectiveBudgets: { cycleP95Ms: number; skewP95Ms: number };
 }
 
 export interface PreflightConfig {
