@@ -54,15 +54,20 @@ export function ProductionRunBar() {
   }, [run.active]);
   void elapsedTick;
 
-  // Auto-stop when the catalog is exhausted: download the signed export and
-  // surface a toast so the operator immediately sees the end-of-lot artifacts.
+  // Auto-stop when the catalog is exhausted OR the run-length cap is hit:
+  // download the signed export + envelope report and surface a toast so the
+  // operator immediately sees the end-of-lot artifacts.
   useEffect(() => {
     productionRun.setAutoStopHandler((exp) => {
       downloadRunCSV(exp);
       downloadRunJSON(exp);
+      downloadEnvelopeReport(exp);
+      const reason = exp.meta.targetCount
+        ? `run length cap (${exp.meta.targetCount}) reached`
+        : "catalog exhausted";
       toast({
-        title: `Lot ${exp.meta.lotNumber} complete — catalog exhausted`,
-        description: `${exp.summary.printed.toLocaleString()} printed · ${exp.summary.missed.toLocaleString()} missed · yield ${exp.summary.yieldPct.toFixed(2)}%. Audit CSV + signed JSON downloaded.`,
+        title: `Lot ${exp.meta.lotNumber} complete — ${reason}`,
+        description: `${exp.summary.printed.toLocaleString()} printed · ${exp.summary.missed.toLocaleString()} missed · yield ${exp.summary.yieldPct.toFixed(2)}%. CSV + signed JSON + Envelope report downloaded.`,
       });
     });
     return () => productionRun.setAutoStopHandler(null);
@@ -87,6 +92,9 @@ export function ProductionRunBar() {
   // -------- ACTIVE state --------
   if (run.active && summary) {
     const liveTone = run.active.liveAtStart;
+    const target = run.active.targetCount ?? null;
+    const consumed = summary.printed + summary.missed;
+    void target; // (chip below uses it; consumed already shown)
     return (
       <>
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-primary/40 bg-primary/5 px-4 py-2.5">
@@ -97,6 +105,11 @@ export function ProductionRunBar() {
               <Badge variant={liveTone ? "default" : "secondary"} className="text-[10px]">
                 {liveTone ? "LIVE" : "SYNTH"}
               </Badge>
+              {target && (
+                <Badge variant="outline" className="text-[10px] font-mono">
+                  {consumed} / {target}
+                </Badge>
+              )}
             </div>
             <div className="text-[11px] text-muted-foreground">
               operator <span className="text-foreground">{run.active.operator}</span>
