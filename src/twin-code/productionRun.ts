@@ -263,12 +263,20 @@ class ProductionRunStore {
       const active = this.state.active;
       if (!active) return;
       if (firing) return;
-      // Need a non-zero catalog AND a fully-consumed cursor.
-      if (cs.total === 0) return;
-      if (cs.nextIndex < cs.total) return;
-      // Need at least one bottle attributed to this run.
       const recordsConsumed = catalog.getRecords().length - active.recordsStartIdx;
-      if (recordsConsumed <= 0) return;
+
+      // (1) Run-length cap reached? (printed + missed >= targetCount)
+      const targetReached =
+        active.targetCount != null &&
+        active.targetCount > 0 &&
+        recordsConsumed >= active.targetCount;
+
+      // (2) Catalog fully consumed?
+      const catalogExhausted =
+        cs.total > 0 && cs.nextIndex >= cs.total && recordsConsumed > 0;
+
+      if (!targetReached && !catalogExhausted) return;
+
       firing = true;
       // Defer one tick so the catalog notify loop completes cleanly.
       Promise.resolve().then(async () => {
