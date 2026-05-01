@@ -358,13 +358,34 @@ export function PrintersScreen({
   }, [selectedPrinter?.id, selectedPrinter?.currentMessage, selectedPrinter?.role, selectedPrinter?.masterId, connectedPrinter?.id, connectedPrinter?.role, messageContent, getMessageContent]);
 
   const effectiveDashboardStatus = useMemo(() => {
-    if (!selectedPrinter || !status) return status ?? null;
+    if (!selectedPrinter) return status ?? null;
+
+    // When the user selects a printer that isn't the actively-connected one,
+    // the live `status` object still belongs to the connected printer (only
+    // one TCP session at a time — see mem://core). Don't leak its readiness
+    // banner / startup countdown / HV state onto the selected printer's view.
+    // Fall back to the lightweight per-printer fields populated by the
+    // background network poller (Printer.status / .currentMessage), and clear
+    // anything that is meaningless without a live session.
+    const isViewingConnected =
+      !!status && !!connectedPrinter && selectedPrinter.id === connectedPrinter.id;
+
+    if (!isViewingConnected) {
+      return {
+        ...(status ?? {}),
+        // Force the readiness banner to mirror the selected printer's last
+        // known per-card status — never the connected printer's live state.
+        isReady: selectedPrinter.status === 'ready',
+        hasActiveErrors: selectedPrinter.status === 'error',
+        currentMessage: selectedPrinter.currentMessage ?? null,
+      } as typeof status;
+    }
 
     return {
-      ...status,
-      currentMessage: selectedPrinter.currentMessage ?? status.currentMessage,
+      ...status!,
+      currentMessage: selectedPrinter.currentMessage ?? status!.currentMessage,
     };
-  }, [selectedPrinter, status]);
+  }, [selectedPrinter, status, connectedPrinter]);
 
   // Build a map: slavePrinterId -> master's currentMessage
   const masterMessageMap = useMemo(() => {
