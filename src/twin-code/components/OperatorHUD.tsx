@@ -22,6 +22,8 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Circle,
   Radio,
   ShieldCheck,
@@ -229,8 +231,9 @@ export function OperatorHUD() {
             2. Throughput + Last Printed — twin big-number cards (matched size)
             3. Status lights row — A/B bound, mode, yield */}
       <div className="flex flex-1 min-h-0 flex-col gap-4 p-4">
-        {/* Row 1 — full-width message preview */}
-        <TwinMessagePreview />
+        {/* Row 1 — collapsible message preview (default collapsed to a peek
+            strip; expanded view shows the full A/B dot-matrix canvases) */}
+        <CollapsibleMessagePreview pairBoundLabel={pairBound ? `${pair.a?.ip} · ${pair.b?.ip}` : "not bound"} />
 
         {/* Row 2 — Throughput + Last Printed share the row equally so they
             visually mirror each other (both are big-number readouts). */}
@@ -305,19 +308,11 @@ export function OperatorHUD() {
         </div>
       </div>
 
-      {/* Production metrics — larger inline strip */}
-      <div className="shrink-0 border-t border-border px-4 py-3">
-        <ProductionMetricsCard units={units} compact />
-      </div>
-
-      {/* Line conditions — operator-tunable line speed / pitch / BPM */}
-      <div className="shrink-0 border-t border-border px-4 py-3">
-        <LineControlsBar />
-      </div>
-
-      {/* Throughput headroom — translates cycle p95 into BPM ceiling + % headroom */}
-      <div className="shrink-0 border-t border-border px-4 py-3" data-tour="hud-headroom">
-        <HeadroomPanel />
+      {/* Tabbed strip — Metrics / Line / Headroom share one slot. Operators
+          look at one at a time, and stacking all three eats >200px of vertical
+          space on a 900px-tall screen. Tab choice persists per session. */}
+      <div className="shrink-0 border-t border-border" data-tour="hud-tabbed-strip">
+        <HudInfoTabs units={units} />
       </div>
 
       {/* Bottom batch progress strip */}
@@ -332,7 +327,100 @@ export function OperatorHUD() {
   );
 }
 
+// ---------- Tabbed info strip ----------
+
+const HUD_TAB_KEY = "twincode.hud.infoTab";
+type HudTab = "metrics" | "line" | "headroom";
+
+function HudInfoTabs({ units }: { units: Units }) {
+  const [tab, setTab] = useState<HudTab>(() => {
+    try {
+      const v = localStorage.getItem(HUD_TAB_KEY);
+      if (v === "line" || v === "headroom") return v;
+      return "metrics";
+    } catch { return "metrics"; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(HUD_TAB_KEY, tab); } catch { /* ignore */ }
+  }, [tab]);
+
+  const tabs: { id: HudTab; label: string }[] = [
+    { id: "metrics", label: "Metrics" },
+    { id: "line", label: "Line" },
+    { id: "headroom", label: "Headroom" },
+  ];
+
+  return (
+    <div>
+      <div role="tablist" className="flex items-center gap-0.5 border-b border-border bg-muted/20 px-2">
+        {tabs.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(t.id)}
+              className={`px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
+                active
+                  ? "border-b-2 border-primary text-primary"
+                  : "border-b-2 border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="px-4 py-3">
+        {tab === "metrics" && <ProductionMetricsCard units={units} compact />}
+        {tab === "line" && <LineControlsBar />}
+        {tab === "headroom" && <HeadroomPanel />}
+      </div>
+    </div>
+  );
+}
 // ---------- Sub-components ----------
+
+const PREVIEW_OPEN_KEY = "twincode.hud.previewOpen";
+
+function CollapsibleMessagePreview({ pairBoundLabel }: { pairBoundLabel: string }) {
+  const [open, setOpen] = useState<boolean>(() => {
+    try { return localStorage.getItem(PREVIEW_OPEN_KEY) === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(PREVIEW_OPEN_KEY, open ? "1" : "0"); } catch { /* ignore */ }
+  }, [open]);
+
+  return (
+    <div className="rounded-md border border-border bg-card/60">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-left transition-colors hover:bg-muted/30"
+        aria-expanded={open}
+      >
+        {open ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Selected messages
+        </span>
+        <span className="font-mono text-[11px] text-foreground/80">A · LID</span>
+        <span className="text-muted-foreground">·</span>
+        <span className="font-mono text-[11px] text-foreground/80">B · SIDE</span>
+        <span className="ml-auto truncate font-mono text-[10px] text-muted-foreground" title={pairBoundLabel}>
+          {pairBoundLabel}
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-border p-2">
+          <TwinMessagePreview />
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 function PrinterLight({
   label,

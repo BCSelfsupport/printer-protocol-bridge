@@ -42,6 +42,7 @@ import { useTwinPair } from "../twinPairStore";
 import { twinDispatcher, type TwinDryRunResult } from "../twinDispatcher";
 import { lowCatalogChirp } from "../audioAlarm";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
+import { useProductionRun } from "../useProductionRun";
 
 const LOW_THRESHOLD_KEY = "twincode.lowCatalogThreshold.v1";
 const LOW_AUDIO_KEY = "twincode.lowCatalogAudio.v1";
@@ -51,6 +52,8 @@ export function CatalogStripBar() {
   const cat = useCatalog();
   const pair = useTwinPair();
   const { printers } = usePrinterStorage();
+  const run = useProductionRun();
+  const runActive = !!run.active;
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [csvText, setCsvText] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -359,42 +362,48 @@ export function CatalogStripBar() {
         </div>
       </div>
 
-      {/* Counter strip — large, glanceable */}
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <Counter
-          icon={<FileSpreadsheet className="h-4 w-4 text-muted-foreground" />}
-          label="Catalog total"
-          value={cat.total}
-        />
-        <Counter
-          label="Remaining"
-          value={remaining}
-          tone={remaining === 0 && cat.total > 0 ? "warn" : "default"}
-        />
-        <Counter label="Printed" value={printed} tone="ok" />
-        <Counter
-          label="Miss-prints"
-          value={cat.missCount}
-          tone={cat.missCount > 0 ? "bad" : "default"}
-          extra={
-            cat.missCount > 0 ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 px-2 text-[10px]"
-                onClick={() => {
-                  catalog.reset();
-                }}
-              >
-                <Trash2 className="mr-1 h-3 w-3" /> reset
-              </Button>
-            ) : undefined
-          }
-        />
-      </div>
+      {/* Counter strip — large, glanceable. Hidden during an active production
+          run because the same numbers (printed/missed/remaining) are already
+          shown in the Production Run bar's chips and the HUD batch progress
+          strip — duplicating them just eats vertical space. */}
+      {!runActive && (
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          <Counter
+            icon={<FileSpreadsheet className="h-4 w-4 text-muted-foreground" />}
+            label="Catalog total"
+            value={cat.total}
+          />
+          <Counter
+            label="Remaining"
+            value={remaining}
+            tone={remaining === 0 && cat.total > 0 ? "warn" : "default"}
+          />
+          <Counter label="Printed" value={printed} tone="ok" />
+          <Counter
+            label="Miss-prints"
+            value={cat.missCount}
+            tone={cat.missCount > 0 ? "bad" : "default"}
+            extra={
+              cat.missCount > 0 ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-[10px]"
+                  onClick={() => {
+                    catalog.reset();
+                  }}
+                >
+                  <Trash2 className="mr-1 h-3 w-3" /> reset
+                </Button>
+              ) : undefined
+            }
+          />
+        </div>
+      )}
 
-      {/* Persistence status — small, reassures operator the audit trail is alive */}
-      {cat.fingerprint && (
+      {/* Persistence status — small, reassures operator the audit trail is alive.
+          Also hidden during an active run (ledger info is in the run bar header). */}
+      {cat.fingerprint && !runActive && (
         <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
           <span className="font-mono">
             ledger fp <span className="text-foreground">{cat.fingerprint}</span>

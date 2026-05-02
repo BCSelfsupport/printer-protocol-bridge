@@ -50,6 +50,8 @@ import {
 } from "@/twin-code/training/TrainingLauncher";
 
 const VIEW_PREF_KEY = "twincode.view"; // "hud" | "debug"
+const DEBUG_TAB_KEY = "twincode.debugTab"; // see DebugTab below
+type DebugTab = "live" | "conveyor" | "generator" | "waterfall" | "distributions" | "heatmaps";
 
 export interface TwinCodeViewProps {
   /**
@@ -76,6 +78,14 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
     }
   });
 
+  const [debugTab, setDebugTab] = useState<DebugTab>(() => {
+    try {
+      const v = localStorage.getItem(DEBUG_TAB_KEY) as DebugTab | null;
+      const allowed: DebugTab[] = ["live", "conveyor", "generator", "waterfall", "distributions", "heatmaps"];
+      return v && allowed.includes(v) ? v : "live";
+    } catch { return "live"; }
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem(VIEW_PREF_KEY, view);
@@ -83,6 +93,10 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
       /* ignore */
     }
   }, [view]);
+
+  useEffect(() => {
+    try { localStorage.setItem(DEBUG_TAB_KEY, debugTab); } catch { /* ignore */ }
+  }, [debugTab]);
 
   // Auto-start a session on mount so samples have a session to live in.
   useEffect(() => {
@@ -251,103 +265,137 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
           )}
 
           {view === "debug" && (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto]">
-              <BottleneckCallout samples={samples} />
-              <div className="lg:w-64">
-                <ThroughputGauge samples={samples} />
-              </div>
-            </div>
-          )}
-
-          {view === "debug" && <ConveyorPanel />}
-
-          {view === "debug" && (
             <>
-              <section className="rounded-md border border-border bg-card p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">Synthetic generator</h3>
-                  <Button size="sm" variant="ghost" onClick={handleResetConfig}>
-                    <RotateCcw className="mr-1 h-3 w-3" /> Reset
-                  </Button>
+              {/* Always-visible diagnostic header — bottleneck callout + gauge.
+                  These two answer the only question that matters at a glance:
+                  "is the line healthy and where is it choking?" */}
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto]">
+                <BottleneckCallout samples={samples} />
+                <div className="lg:w-64">
+                  <ThroughputGauge samples={samples} />
                 </div>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <SliderControl
-                    label={`Rate: ${config.ratePerMin} bpm`}
-                    value={config.ratePerMin}
-                    min={20}
-                    max={400}
-                    step={10}
-                    onChange={(v) => handleConfigChange({ ratePerMin: v })}
-                  />
-                  <SliderControl
-                    label={`Wire A mean: ${config.wireAMean.toFixed(1)} ms`}
-                    value={config.wireAMean}
-                    min={1}
-                    max={40}
-                    step={0.5}
-                    onChange={(v) => handleConfigChange({ wireAMean: v })}
-                  />
-                  <SliderControl
-                    label={`Wire B mean: ${config.wireBMean.toFixed(1)} ms`}
-                    value={config.wireBMean}
-                    min={1}
-                    max={40}
-                    step={0.5}
-                    onChange={(v) => handleConfigChange({ wireBMean: v })}
-                  />
-                  <SliderControl
-                    label={`Jitter: ${(config.jitter * 100).toFixed(0)}%`}
-                    value={config.jitter * 100}
-                    min={0}
-                    max={80}
-                    step={2}
-                    onChange={(v) => handleConfigChange({ jitter: v / 100 })}
-                  />
-                  <SliderControl
-                    label={`Stall rate: ${(config.stallRate * 100).toFixed(1)}%`}
-                    value={config.stallRate * 100}
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    onChange={(v) => handleConfigChange({ stallRate: v / 100 })}
-                  />
-                  <SliderControl
-                    label={`Miss-print rate: ${(config.missRate * 100).toFixed(2)}%`}
-                    value={config.missRate * 100}
-                    min={0}
-                    max={5}
-                    step={0.05}
-                    onChange={(v) => handleConfigChange({ missRate: v / 100 })}
-                  />
+              </div>
+
+              {/* Tabbed sub-views — one viewport-height panel at a time
+                  instead of a single mega-scroll dump. */}
+              <div className="rounded-md border border-border bg-card">
+                <div role="tablist" className="flex flex-wrap items-center gap-0.5 border-b border-border bg-muted/20 px-2">
+                  {([
+                    { id: "live", label: "Live" },
+                    { id: "conveyor", label: "Conveyor" },
+                    { id: "generator", label: "Generator" },
+                    { id: "waterfall", label: "Waterfall" },
+                    { id: "distributions", label: "Distributions" },
+                    { id: "heatmaps", label: "Heatmaps" },
+                  ] as { id: DebugTab; label: string }[]).map((t) => {
+                    const active = debugTab === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setDebugTab(t.id)}
+                        className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                          active
+                            ? "border-b-2 border-primary text-primary"
+                            : "border-b-2 border-transparent text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    );
+                  })}
                 </div>
-              </section>
 
-              <section>
-                <h2 className="mb-2 text-sm font-semibold">Live waterfall — last 50 bottles</h2>
-                <WaterfallStrip samples={samples} />
-              </section>
+                <div className="p-4">
+                  {debugTab === "live" && (
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                      <RollingCycleChart samples={samples} />
+                      <SkewScatter samples={samples} />
+                    </div>
+                  )}
 
-              <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <RollingCycleChart samples={samples} />
-                <SkewScatter samples={samples} />
-              </section>
+                  {debugTab === "conveyor" && <ConveyorPanel />}
 
-              <section>
-                <h2 className="mb-2 text-sm font-semibold">Stage histograms</h2>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  <StageHistogram samples={samples} stage="cycleMs" label="Full cycle (ms)" />
-                  <StageHistogram samples={samples} stage="ingressMs" label="Ingress (ms)" />
-                  <StageHistogram samples={samples} stage="dispatchMs" label="Dispatch (ms)" />
-                  <StageHistogram samples={samples} stage="wireAMs" label="Wire A (ms)" />
-                  <StageHistogram samples={samples} stage="wireBMs" label="Wire B (ms)" />
-                  <StageHistogram samples={samples} stage="skewMs" label="A↔B skew (ms)" />
+                  {debugTab === "generator" && (
+                    <section>
+                      <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-sm font-semibold">Synthetic generator</h3>
+                        <Button size="sm" variant="ghost" onClick={handleResetConfig}>
+                          <RotateCcw className="mr-1 h-3 w-3" /> Reset
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <SliderControl
+                          label={`Rate: ${config.ratePerMin} bpm`}
+                          value={config.ratePerMin}
+                          min={20} max={400} step={10}
+                          onChange={(v) => handleConfigChange({ ratePerMin: v })}
+                        />
+                        <SliderControl
+                          label={`Wire A mean: ${config.wireAMean.toFixed(1)} ms`}
+                          value={config.wireAMean}
+                          min={1} max={40} step={0.5}
+                          onChange={(v) => handleConfigChange({ wireAMean: v })}
+                        />
+                        <SliderControl
+                          label={`Wire B mean: ${config.wireBMean.toFixed(1)} ms`}
+                          value={config.wireBMean}
+                          min={1} max={40} step={0.5}
+                          onChange={(v) => handleConfigChange({ wireBMean: v })}
+                        />
+                        <SliderControl
+                          label={`Jitter: ${(config.jitter * 100).toFixed(0)}%`}
+                          value={config.jitter * 100}
+                          min={0} max={80} step={2}
+                          onChange={(v) => handleConfigChange({ jitter: v / 100 })}
+                        />
+                        <SliderControl
+                          label={`Stall rate: ${(config.stallRate * 100).toFixed(1)}%`}
+                          value={config.stallRate * 100}
+                          min={0} max={10} step={0.1}
+                          onChange={(v) => handleConfigChange({ stallRate: v / 100 })}
+                        />
+                        <SliderControl
+                          label={`Miss-print rate: ${(config.missRate * 100).toFixed(2)}%`}
+                          value={config.missRate * 100}
+                          min={0} max={5} step={0.05}
+                          onChange={(v) => handleConfigChange({ missRate: v / 100 })}
+                        />
+                      </div>
+                    </section>
+                  )}
+
+                  {debugTab === "waterfall" && (
+                    <section>
+                      <h2 className="mb-2 text-sm font-semibold">Live waterfall — last 50 bottles</h2>
+                      <WaterfallStrip samples={samples} />
+                    </section>
+                  )}
+
+                  {debugTab === "distributions" && (
+                    <section>
+                      <h2 className="mb-2 text-sm font-semibold">Stage histograms</h2>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        <StageHistogram samples={samples} stage="cycleMs" label="Full cycle (ms)" />
+                        <StageHistogram samples={samples} stage="wireAMs" label="Wire A (ms)" />
+                        <StageHistogram samples={samples} stage="wireBMs" label="Wire B (ms)" />
+                        <StageHistogram samples={samples} stage="skewMs" label="A↔B skew (ms)" />
+                        <StageHistogram samples={samples} stage="ingressMs" label="Ingress (ms)" />
+                        <StageHistogram samples={samples} stage="dispatchMs" label="Dispatch (ms)" />
+                      </div>
+                    </section>
+                  )}
+
+                  {debugTab === "heatmaps" && (
+                    <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                      <StageHeatmap samples={samples} stage="cycleMs" label="Full cycle" />
+                      <StageHeatmap samples={samples} stage="skewMs" label="A↔B skew" />
+                    </section>
+                  )}
                 </div>
-              </section>
-
-              <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <StageHeatmap samples={samples} stage="cycleMs" label="Full cycle" />
-                <StageHeatmap samples={samples} stage="skewMs" label="A↔B skew" />
-              </section>
+              </div>
 
               {!embedded && (
                 <p className="pb-8 pt-4 text-center text-[11px] text-muted-foreground">
