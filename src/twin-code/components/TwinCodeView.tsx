@@ -78,6 +78,14 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
     }
   });
 
+  const [debugTab, setDebugTab] = useState<DebugTab>(() => {
+    try {
+      const v = localStorage.getItem(DEBUG_TAB_KEY) as DebugTab | null;
+      const allowed: DebugTab[] = ["live", "conveyor", "generator", "waterfall", "distributions", "heatmaps"];
+      return v && allowed.includes(v) ? v : "live";
+    } catch { return "live"; }
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem(VIEW_PREF_KEY, view);
@@ -85,6 +93,10 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
       /* ignore */
     }
   }, [view]);
+
+  useEffect(() => {
+    try { localStorage.setItem(DEBUG_TAB_KEY, debugTab); } catch { /* ignore */ }
+  }, [debugTab]);
 
   // Auto-start a session on mount so samples have a session to live in.
   useEffect(() => {
