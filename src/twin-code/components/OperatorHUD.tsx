@@ -22,6 +22,8 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Circle,
   Radio,
   ShieldCheck,
