@@ -231,8 +231,9 @@ export function OperatorHUD() {
             2. Throughput + Last Printed — twin big-number cards (matched size)
             3. Status lights row — A/B bound, mode, yield */}
       <div className="flex flex-1 min-h-0 flex-col gap-4 p-4">
-        {/* Row 1 — full-width message preview */}
-        <TwinMessagePreview />
+        {/* Row 1 — collapsible message preview (default collapsed to a peek
+            strip; expanded view shows the full A/B dot-matrix canvases) */}
+        <CollapsibleMessagePreview pairBoundLabel={pairBound ? `${pair.a?.ip} · ${pair.b?.ip}` : "not bound"} />
 
         {/* Row 2 — Throughput + Last Printed share the row equally so they
             visually mirror each other (both are big-number readouts). */}
