@@ -324,7 +324,62 @@ export function OperatorHUD() {
   );
 }
 
-// ---------- Sub-components ----------
+// ---------- Tabbed info strip ----------
+
+const HUD_TAB_KEY = "twincode.hud.infoTab";
+type HudTab = "metrics" | "line" | "headroom";
+
+function HudInfoTabs({ units }: { units: Units }) {
+  const [tab, setTab] = useState<HudTab>(() => {
+    try {
+      const v = localStorage.getItem(HUD_TAB_KEY);
+      if (v === "line" || v === "headroom") return v;
+      return "metrics";
+    } catch { return "metrics"; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(HUD_TAB_KEY, tab); } catch { /* ignore */ }
+  }, [tab]);
+
+  const tabs: { id: HudTab; label: string }[] = [
+    { id: "metrics", label: "Metrics" },
+    { id: "line", label: "Line" },
+    { id: "headroom", label: "Headroom" },
+  ];
+
+  return (
+    <div>
+      <div role="tablist" className="flex items-center gap-0.5 border-b border-border bg-muted/20 px-2">
+        {tabs.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(t.id)}
+              className={`px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
+                active
+                  ? "border-b-2 border-primary text-primary"
+                  : "border-b-2 border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="px-4 py-3">
+        {tab === "metrics" && <ProductionMetricsCard units={units} compact />}
+        {tab === "line" && <LineControlsBar />}
+        {tab === "headroom" && <HeadroomPanel />}
+      </div>
+    </div>
+  );
+}
+
+
 
 function PrinterLight({
   label,
