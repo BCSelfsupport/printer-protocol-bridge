@@ -383,6 +383,45 @@ function HudInfoTabs({ units }: { units: Units }) {
 }
 // ---------- Sub-components ----------
 
+const PREVIEW_OPEN_KEY = "twincode.hud.previewOpen";
+
+function CollapsibleMessagePreview({ pairBoundLabel }: { pairBoundLabel: string }) {
+  const [open, setOpen] = useState<boolean>(() => {
+    try { return localStorage.getItem(PREVIEW_OPEN_KEY) === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(PREVIEW_OPEN_KEY, open ? "1" : "0"); } catch { /* ignore */ }
+  }, [open]);
+
+  return (
+    <div className="rounded-md border border-border bg-card/60">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-left transition-colors hover:bg-muted/30"
+        aria-expanded={open}
+      >
+        {open ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Selected messages
+        </span>
+        <span className="font-mono text-[11px] text-foreground/80">A · LID</span>
+        <span className="text-muted-foreground">·</span>
+        <span className="font-mono text-[11px] text-foreground/80">B · SIDE</span>
+        <span className="ml-auto truncate font-mono text-[10px] text-muted-foreground" title={pairBoundLabel}>
+          {pairBoundLabel}
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-border p-2">
+          <TwinMessagePreview />
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function PrinterLight({
   label,
   sub,
