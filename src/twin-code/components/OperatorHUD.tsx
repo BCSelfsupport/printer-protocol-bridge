@@ -305,19 +305,11 @@ export function OperatorHUD() {
         </div>
       </div>
 
-      {/* Production metrics — larger inline strip */}
-      <div className="shrink-0 border-t border-border px-4 py-3">
-        <ProductionMetricsCard units={units} compact />
-      </div>
-
-      {/* Line conditions — operator-tunable line speed / pitch / BPM */}
-      <div className="shrink-0 border-t border-border px-4 py-3">
-        <LineControlsBar />
-      </div>
-
-      {/* Throughput headroom — translates cycle p95 into BPM ceiling + % headroom */}
-      <div className="shrink-0 border-t border-border px-4 py-3" data-tour="hud-headroom">
-        <HeadroomPanel />
+      {/* Tabbed strip — Metrics / Line / Headroom share one slot. Operators
+          look at one at a time, and stacking all three eats >200px of vertical
+          space on a 900px-tall screen. Tab choice persists per session. */}
+      <div className="shrink-0 border-t border-border" data-tour="hud-tabbed-strip">
+        <HudInfoTabs />
       </div>
 
       {/* Bottom batch progress strip */}
