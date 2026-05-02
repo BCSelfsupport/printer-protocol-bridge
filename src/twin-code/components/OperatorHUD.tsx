@@ -378,8 +378,7 @@ function HudInfoTabs({ units }: { units: Units }) {
     </div>
   );
 }
-
-
+// ---------- Sub-components ----------
 
 function PrinterLight({
   label,
