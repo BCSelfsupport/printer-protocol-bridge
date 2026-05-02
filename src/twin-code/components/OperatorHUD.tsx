@@ -309,7 +309,7 @@ export function OperatorHUD() {
           look at one at a time, and stacking all three eats >200px of vertical
           space on a 900px-tall screen. Tab choice persists per session. */}
       <div className="shrink-0 border-t border-border" data-tour="hud-tabbed-strip">
-        <HudInfoTabs />
+        <HudInfoTabs units={units} />
       </div>
 
       {/* Bottom batch progress strip */}
