@@ -50,6 +50,8 @@ import {
 } from "@/twin-code/training/TrainingLauncher";
 
 const VIEW_PREF_KEY = "twincode.view"; // "hud" | "debug"
+const DEBUG_TAB_KEY = "twincode.debugTab"; // see DebugTab below
+type DebugTab = "live" | "conveyor" | "generator" | "waterfall" | "distributions" | "heatmaps";
 
 export interface TwinCodeViewProps {
   /**
