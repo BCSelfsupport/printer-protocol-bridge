@@ -128,6 +128,7 @@ function SortablePrinterItem({
   isUpdatingExpiry,
   messageExpiryDays,
   twinPairRole,
+  hideDragHandle,
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -151,6 +152,7 @@ function SortablePrinterItem({
   isUpdatingExpiry?: boolean;
   messageExpiryDays?: number;
   twinPairRole?: 'A' | 'B' | null;
+  hideDragHandle?: boolean;
 }) {
   const {
     attributes,
@@ -170,17 +172,20 @@ function SortablePrinterItem({
 
   return (
     <div ref={setNodeRef} style={style} className="relative group select-none">
-      {/* Drag handle */}
-      <div
-        {...attributes}
-        {...listeners}
-        className={
-          "absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-10 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded touch-none select-none " +
-          (isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100")
-        }
-      >
-        <GripVertical className="w-4 h-4 text-muted-foreground" />
-      </div>
+      {/* Drag handle — hidden for bound-pair members (Lid/Side roles are
+          managed via the Bind dialog, not by reordering). */}
+      {!hideDragHandle && (
+        <div
+          {...attributes}
+          {...listeners}
+          className={
+            "absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-10 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded touch-none select-none " +
+            (isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100")
+          }
+        >
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
+        </div>
+      )}
       <PrinterListItem
         printer={printer}
         isSelected={isSelected}
@@ -603,7 +608,7 @@ export function PrintersScreen({
             {(() => {
               // Render a single printer item — used both inside the bound-pair group
               // and in the main DnD list, so we don't duplicate the long prop list.
-              const renderPrinterItem = (printer: Printer) => {
+              const renderPrinterItem = (printer: Printer, opts?: { hideDragHandle?: boolean }) => {
                 const msgName = printer.role === 'slave'
                   ? (masterMessageMap.get(printer.id) || printer.currentMessage)
                   : (printer.currentMessage || masterMessageMap.get(printer.id));
@@ -624,6 +629,7 @@ export function PrintersScreen({
                 return (
                   <SortablePrinterItem
                     key={printer.id}
+                    hideDragHandle={opts?.hideDragHandle}
                     printer={printer}
                     isSelected={selectedPrinter?.id === printer.id}
                     onSelect={() => handlePrinterClick(printer)}
@@ -740,8 +746,8 @@ export function PrintersScreen({
                       {/* Member printer cards inside the bordered group. */}
                       {pairExpanded && (
                         <div className="px-2 pb-2 pt-1 space-y-2 border-t border-emerald-500/20 bg-slate-950/30">
-                          {renderPrinterItem(pairPrinters.a)}
-                          {renderPrinterItem(pairPrinters.b)}
+                          {renderPrinterItem(pairPrinters.a, { hideDragHandle: true })}
+                          {renderPrinterItem(pairPrinters.b, { hideDragHandle: true })}
                         </div>
                       )}
                     </div>
@@ -787,7 +793,7 @@ export function PrintersScreen({
                         items={nonPairPrinters.map(p => p.id)}
                         strategy={verticalListSortingStrategy}
                       >
-                        {nonPairPrinters.map(renderPrinterItem)}
+                        {nonPairPrinters.map((p) => renderPrinterItem(p))}
                       </SortableContext>
                     </DndContext>
                   )}
