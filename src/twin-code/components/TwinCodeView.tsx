@@ -204,6 +204,16 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <TrainingLauncherButton />
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0 text-xs font-bold"
+                onClick={() => setHelpOpen(true)}
+                title="Keyboard shortcuts (press ?)"
+                aria-label="Keyboard shortcuts"
+              >
+                ?
+              </Button>
               {/* HUD / Debug view switcher */}
               <div className="flex items-center rounded-md border border-border bg-muted/30 p-0.5">
                 <Button
