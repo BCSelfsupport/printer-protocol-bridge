@@ -608,7 +608,7 @@ export function PrintersScreen({
             {(() => {
               // Render a single printer item — used both inside the bound-pair group
               // and in the main DnD list, so we don't duplicate the long prop list.
-              const renderPrinterItem = (printer: Printer) => {
+              const renderPrinterItem = (printer: Printer, opts?: { hideDragHandle?: boolean }) => {
                 const msgName = printer.role === 'slave'
                   ? (masterMessageMap.get(printer.id) || printer.currentMessage)
                   : (printer.currentMessage || masterMessageMap.get(printer.id));
@@ -629,6 +629,7 @@ export function PrintersScreen({
                 return (
                   <SortablePrinterItem
                     key={printer.id}
+                    hideDragHandle={opts?.hideDragHandle}
                     printer={printer}
                     isSelected={selectedPrinter?.id === printer.id}
                     onSelect={() => handlePrinterClick(printer)}
