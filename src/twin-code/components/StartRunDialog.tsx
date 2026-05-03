@@ -166,7 +166,7 @@ export function StartRunDialog({
               className="h-6 gap-1 px-2 text-[11px]"
               onClick={() => setPreflightOpen(true)}
             >
-              <Activity className="h-3 w-3" /> Run dry-run test
+              <Activity className="h-3 w-3" /> Run pre-flight test
             </Button>
           </div>
           {gates.map((g) => (

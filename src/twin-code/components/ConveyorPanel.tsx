@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Upload, Play, Square, RotateCcw, Zap, FileSpreadsheet, Trash2, Radio, Loader2, FlaskConical, AlertTriangle } from "lucide-react";
+import { Upload, Play, Square, RotateCcw, Zap, FileSpreadsheet, Trash2, Radio, Loader2, Activity, AlertTriangle } from "lucide-react";
+import { PreflightDialog } from "./PreflightDialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -16,7 +17,7 @@ import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
 import { profilerBus } from "../profilerBus";
 import { useTwinPair } from "../twinPairStore";
-import { twinDispatcher, type TwinDryRunResult } from "../twinDispatcher";
+import { twinDispatcher } from "../twinDispatcher";
 import { faultGuard } from "../faultGuard";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 
@@ -52,8 +53,7 @@ export function ConveyorPanel() {
   const [liveMode, setLiveMode] = useState(false);
   const [benchAutoTrigger, setBenchAutoTrigger] = useState(false);
   const [liveBusy, setLiveBusy] = useState(false);
-  const [dryBusy, setDryBusy] = useState(false);
-  const [lastDryRun, setLastDryRun] = useState<TwinDryRunResult | null>(null);
+  const [preflightOpen, setPreflightOpen] = useState(false);
   const [benchBusy, setBenchBusy] = useState(false);
   const [benchCount, setBenchCount] = useState(50);
   const [benchResult, setBenchResult] = useState<BenchCsvResult | null>(null);
@@ -147,35 +147,8 @@ export function ConveyorPanel() {
     toast({ title: 'Reverted to synthetic mode' });
   };
 
-  // ---- Pre-flight dry run: 5 real dispatches, no conveyor ----
-  const runDryRun = async () => {
-    setDryBusy(true);
-    setLastDryRun(null);
-    // Use the next catalog serial if available so the printers physically print
-    // a real (scannable) code; otherwise the dispatcher synthesises DRYRUNxxxx.
-    const seed = catalog.peek() ?? undefined;
-    const result = await twinDispatcher.dryRun(5, seed);
-    setLastDryRun(result);
-    setDryBusy(false);
-
-    if (result.ok) {
-      const a = result.aStats;
-      const b = result.bStats;
-      const skew = result.skewStats;
-      toast({
-        title: `Dry run passed (${result.passed}/${result.count})`,
-        description:
-          `A mean ${a?.mean.toFixed(1)}ms · B mean ${b?.mean.toFixed(1)}ms · ` +
-          `skew mean ${skew?.mean.toFixed(1)}ms (max ${skew?.max.toFixed(1)})`,
-      });
-    } else {
-      toast({
-        title: `Dry run failed (${result.failed}/${result.count})`,
-        description: result.reason || 'See per-side reasons',
-        variant: 'destructive',
-      });
-    }
-  };
+  // Dry-run was merged into Pre-flight (PreflightDialog) so operators have
+  // a single gate before starting a run, with raw timing stats inside.
 
   const runBenchCsvTest = async () => {
     if (!liveMode) {
@@ -394,12 +367,12 @@ export function ConveyorPanel() {
         <Button
           size="sm"
           variant="outline"
-          onClick={runDryRun}
-          disabled={!liveMode || running || dryBusy || liveBusy || benchBusy}
-          title="Fire 5 real bonded dispatches and auto-send Print Go for each cycle"
+          onClick={() => setPreflightOpen(true)}
+          disabled={running || liveBusy || benchBusy}
+          title="Pre-flight test — fires ghost cycles and reports timings + ready/not-ready verdict"
         >
-          {dryBusy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <FlaskConical className="mr-1 h-4 w-4" />}
-          Dry run ×5
+          <Activity className="mr-1 h-4 w-4" />
+          Pre-flight
         </Button>
 
         <div className="flex items-center gap-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-[11px]">
@@ -423,35 +396,13 @@ export function ConveyorPanel() {
               variant="outline"
               className="h-6 px-2 text-[11px]"
               onClick={runBenchCsvTest}
-              disabled={!liveMode || running || dryBusy || liveBusy || catalogState.total === 0}
+              disabled={!liveMode || running || liveBusy || catalogState.total === 0}
               title="Consume real CSV codes and auto-send Print Go at the configured BPM"
             >
               <Play className="mr-1 h-3 w-3" /> Run
             </Button>
           )}
         </div>
-
-        {/* Last dry-run result chip */}
-        {lastDryRun && (
-          <div
-            className={`rounded-md border px-2 py-1 text-[11px] font-mono ${
-              lastDryRun.ok
-                ? 'border-primary/40 bg-primary/10 text-primary'
-                : 'border-destructive/40 bg-destructive/10 text-destructive'
-            }`}
-            title={lastDryRun.reason || 'All shots completed cleanly'}
-          >
-            {lastDryRun.ok
-              ? `✓ ${lastDryRun.passed}/${lastDryRun.count}` +
-                (lastDryRun.cycleStats
-                  ? ` · cycle ${lastDryRun.cycleStats.mean.toFixed(0)}ms`
-                  : '') +
-                (lastDryRun.skewStats
-                  ? ` · skew ${lastDryRun.skewStats.mean.toFixed(1)}ms`
-                  : '')
-              : `✗ ${lastDryRun.failed}/${lastDryRun.count} failed`}
-          </div>
-        )}
 
         {benchResult && (
           <div
@@ -649,6 +600,7 @@ export function ConveyorPanel() {
         onCancel={() => { setPickerOpen(false); setCsvText(null); }}
         onConfirm={handleConfirmCsv}
       />
+      <PreflightDialog open={preflightOpen} onOpenChange={setPreflightOpen} />
     </section>
   );
 }

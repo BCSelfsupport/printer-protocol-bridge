@@ -6,7 +6,7 @@
  *   - Load CSV catalog
  *   - Live counters: Total / Remaining / Printed / Miss-prints
  *   - LIVE / SYNTH toggle (with bound-pair guard)
- *   - Dry run ×5 (pre-flight)
+ *   - Pre-flight (ghost cycles + ready/not-ready verdict)
  *   - Reset (end-of-lot housekeeping)
  *   - Ledger fingerprint + auto-save heartbeat
  *
@@ -21,12 +21,13 @@ import {
   Trash2,
   Radio,
   Loader2,
-  FlaskConical,
+  Activity,
   RotateCcw,
   Volume2,
   VolumeX,
   AlertTriangle,
 } from "lucide-react";
+import { PreflightDialog } from "./PreflightDialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,7 @@ import { conveyorSim } from "../conveyorSim";
 import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
 import { useTwinPair } from "../twinPairStore";
-import { twinDispatcher, type TwinDryRunResult } from "../twinDispatcher";
+import { twinDispatcher } from "../twinDispatcher";
 import { lowCatalogChirp } from "../audioAlarm";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 import { useProductionRun } from "../useProductionRun";
@@ -59,8 +60,7 @@ export function CatalogStripBar() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [liveBusy, setLiveBusy] = useState(false);
-  const [dryBusy, setDryBusy] = useState(false);
-  const [lastDryRun, setLastDryRun] = useState<TwinDryRunResult | null>(null);
+  const [preflightOpen, setPreflightOpen] = useState(false);
 
   // ---- Low-catalog warning settings (persisted) ----
   const [lowThreshold, setLowThreshold] = useState<number>(() => {
@@ -153,32 +153,8 @@ export function CatalogStripBar() {
     toast({ title: "LIVE mode disengaged" });
   };
 
-  const runDryRun = async () => {
-    setDryBusy(true);
-    setLastDryRun(null);
-    const seed = catalog.peek() ?? undefined;
-    const result = await twinDispatcher.dryRun(5, seed);
-    setLastDryRun(result);
-    setDryBusy(false);
-
-    if (result.ok) {
-      const a = result.aStats;
-      const b = result.bStats;
-      const skew = result.skewStats;
-      toast({
-        title: `Dry run passed (${result.passed}/${result.count})`,
-        description:
-          `A mean ${a?.mean.toFixed(1)}ms · B mean ${b?.mean.toFixed(1)}ms · ` +
-          `skew mean ${skew?.mean.toFixed(1)}ms (max ${skew?.max.toFixed(1)})`,
-      });
-    } else {
-      toast({
-        title: `Dry run failed (${result.failed}/${result.count})`,
-        description: result.reason || "See per-side reasons",
-        variant: "destructive",
-      });
-    }
-  };
+  // Dry-run was merged into Pre-flight (PreflightDialog) — one operator
+  // gate before starting a real run, with raw timing stats inside.
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -276,44 +252,18 @@ export function CatalogStripBar() {
           />
         </div>
 
-        {/* Pre-flight dry run */}
+        {/* Pre-flight (merged dry-run + verdict) */}
         <Button
           size="sm"
           variant="outline"
-          onClick={runDryRun}
-          disabled={!liveMode || dryBusy || liveBusy}
-          title="Fire 5 real bonded dispatches and report timings — use BEFORE starting the run"
+          onClick={() => setPreflightOpen(true)}
+          disabled={liveBusy}
+          title="Pre-flight test — fires ghost cycles and reports timings + ready/not-ready verdict before starting a run"
           data-tour="preflight-button"
         >
-          {dryBusy ? (
-            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-          ) : (
-            <FlaskConical className="mr-1 h-4 w-4" />
-          )}
-          Dry run ×5
+          <Activity className="mr-1 h-4 w-4" />
+          Pre-flight
         </Button>
-
-        {/* Last dry-run result chip */}
-        {lastDryRun && (
-          <div
-            className={`rounded-md border px-2 py-1 text-[11px] font-mono ${
-              lastDryRun.ok
-                ? "border-primary/40 bg-primary/10 text-primary"
-                : "border-destructive/40 bg-destructive/10 text-destructive"
-            }`}
-            title={lastDryRun.reason || "All shots completed cleanly"}
-          >
-            {lastDryRun.ok
-              ? `✓ ${lastDryRun.passed}/${lastDryRun.count}` +
-                (lastDryRun.cycleStats
-                  ? ` · cycle ${lastDryRun.cycleStats.mean.toFixed(0)}ms`
-                  : "") +
-                (lastDryRun.skewStats
-                  ? ` · skew ${lastDryRun.skewStats.mean.toFixed(1)}ms`
-                  : "")
-              : `✗ ${lastDryRun.failed}/${lastDryRun.count} failed`}
-          </div>
-        )}
 
         <div className="ml-auto flex items-center gap-2">
           {/* Low-catalog warning settings */}
@@ -428,6 +378,7 @@ export function CatalogStripBar() {
         }}
         onConfirm={handleConfirmCsv}
       />
+      <PreflightDialog open={preflightOpen} onOpenChange={setPreflightOpen} />
     </div>
   );
 }
