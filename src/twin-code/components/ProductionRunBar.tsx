@@ -36,6 +36,7 @@ import { twinDispatcher } from "../twinDispatcher";
 import { StartRunDialog } from "./StartRunDialog";
 import { PreflightDialog } from "./PreflightDialog";
 import { toast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 
 export function ProductionRunBar() {
   const run = useProductionRun();
