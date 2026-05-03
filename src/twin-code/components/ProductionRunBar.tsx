@@ -340,7 +340,8 @@ function Step({
       : "border-border bg-muted/40 text-muted-foreground";
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 ${tone}`}
+      data-step={n}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 transition-shadow ${tone}`}
       title={label}
     >
       <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-background/60 text-[10px] font-bold">
