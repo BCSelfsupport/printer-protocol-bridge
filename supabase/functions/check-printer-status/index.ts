@@ -1,9 +1,42 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-license-key, x-admin-token',
 };
+
+const supabaseAdmin = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+);
+
+async function authorize(req: Request): Promise<Response | null> {
+  const adminExpected = Deno.env.get("DEV_PORTAL_PASSWORD");
+  const adminProvided = req.headers.get("x-admin-token") ?? "";
+  if (adminExpected && adminProvided && adminExpected.length === adminProvided.length) {
+    let mismatch = 0;
+    for (let i = 0; i < adminExpected.length; i++) {
+      mismatch |= adminExpected.charCodeAt(i) ^ adminProvided.charCodeAt(i);
+    }
+    if (mismatch === 0) return null;
+  }
+  const licenseKey = req.headers.get("x-license-key") ?? "";
+  if (/^[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$/.test(licenseKey)) {
+    const { data: license } = await supabaseAdmin
+      .from("licenses")
+      .select("is_active, expires_at")
+      .eq("product_key", licenseKey)
+      .maybeSingle();
+    if (license && license.is_active && (!license.expires_at || new Date(license.expires_at) > new Date())) {
+      return null;
+    }
+  }
+  return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    status: 401,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
 
 interface PrinterStatus {
   id: number;
