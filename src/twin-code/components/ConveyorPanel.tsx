@@ -600,6 +600,7 @@ export function ConveyorPanel() {
         onCancel={() => { setPickerOpen(false); setCsvText(null); }}
         onConfirm={handleConfirmCsv}
       />
+      <PreflightDialog open={preflightOpen} onOpenChange={setPreflightOpen} />
     </section>
   );
 }
