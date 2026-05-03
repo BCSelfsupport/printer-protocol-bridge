@@ -226,16 +226,18 @@ export function ProductionRunBar() {
     },
     {
       n: 3,
-      label: isLive ? "Sending to real printer (LIVE)" : "Switch to LIVE printing — optional",
+      label: isLive ? "Sending to real printer (LIVE)" : "Switch to LIVE printing",
       ok: isLive,
-      required: false,
-      hint: "Optional: flip SYNTH → LIVE to send codes to the connected printer. SYNTH = dry run, no ink. LIVE = real prints.",
+      required: true,
+      hint: "Flip SYNTH → LIVE in the bar below so codes actually print on the connected printer. (SYNTH = dry test only, no ink fired.)",
     },
   ];
   const nextStep = steps.find((s) => s.required && !s.ok) ?? steps.find((s) => !s.ok);
   const startBlockedReason = !catalogReady
     ? "Step 1 first: load a CSV catalog so the printer has serials to fire."
-    : null;
+    : !isLive
+      ? "Step 3: switch SYNTH → LIVE so codes actually print. SYNTH is a dry test only."
+      : null;
 
   const [shake, setShake] = useState(false);
   const flashBlockedStep = () => {
@@ -341,14 +343,14 @@ function Step({
   return (
     <span
       data-step={n}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 transition-shadow ${tone}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-shadow ${tone}`}
       title={label}
     >
-      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-background/60 text-[10px] font-bold">
+      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-background/60 text-[11px] font-bold">
         {n}
       </span>
-      {ok && <CheckCircle2 className="h-3 w-3" />}
-      <span className="text-[11px] font-medium">{label}</span>
+      {ok && <CheckCircle2 className="h-3.5 w-3.5" />}
+      <span className="text-[12px] font-medium">{label}</span>
     </span>
   );
 }
