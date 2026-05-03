@@ -252,18 +252,7 @@ export function CatalogStripBar() {
           />
         </div>
 
-        {/* Pre-flight (merged dry-run + verdict) */}
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setPreflightOpen(true)}
-          disabled={liveBusy}
-          title="Pre-flight test — fires ghost cycles and reports timings + ready/not-ready verdict before starting a run"
-          data-tour="preflight-button"
-        >
-          <Activity className="mr-1 h-4 w-4" />
-          Pre-flight
-        </Button>
+        {/* Pre-flight lives next to Start Run in ProductionRunBar — single entry point. */}
 
         <div className="ml-auto flex items-center gap-2">
           {/* Low-catalog warning settings */}
