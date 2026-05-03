@@ -209,63 +209,6 @@ export function ProductionRunBar() {
   return null;
 }
 
-/** Numbered step chip used by the IDLE readiness flow. Highlights the
- *  next unmet step with a pulsing ring so the operator's eye lands on it. */
-function Step({
-  n, label, ok, required, isNext, tip,
-}: {
-  n: number; label: string; ok: boolean; required?: boolean; isNext?: boolean; tip?: string;
-}) {
-  const tone = ok
-    ? "border-primary/40 bg-primary/10 text-primary"
-    : isNext
-      ? required
-        ? "border-destructive/60 bg-destructive/10 text-destructive ring-2 ring-destructive/30 animate-pulse"
-        : "border-primary/60 bg-primary/10 text-primary ring-2 ring-primary/30"
-      : "border-border bg-muted/40 text-muted-foreground";
-  const chip = (
-    <span
-      data-step={n}
-      className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 transition-shadow cursor-help ${tone}`}
-    >
-      <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-background/70 text-[11px] font-bold">
-        {n}
-      </span>
-      {ok && <CheckCircle2 className="h-4 w-4" />}
-      <span className="text-[13px] font-medium leading-none">{label}</span>
-      {!required && (
-        <span className="ml-1 rounded-sm bg-background/60 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Optional
-        </span>
-      )}
-    </span>
-  );
-  if (!tip) return chip;
-  return (
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>{chip}</TooltipTrigger>
-      <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed">
-        {tip}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-/** @deprecated Replaced by Step() — kept temporarily for any external import. */
-function Gate({ ok, label, required }: { ok: boolean; label: string; required?: boolean }) {
-  const Icon = ok ? CheckCircle2 : XCircle;
-  const tone = ok
-    ? "text-primary"
-    : required
-      ? "text-destructive"
-      : "text-muted-foreground";
-  return (
-    <span className={`inline-flex items-center gap-1 ${tone}`}>
-      <Icon className="h-3 w-3" />
-      <span>{label}</span>
-    </span>
-  );
-}
 
 // ---------- Sub-components ----------
 
