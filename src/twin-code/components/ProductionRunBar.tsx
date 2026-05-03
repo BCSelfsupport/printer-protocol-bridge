@@ -391,16 +391,33 @@ function CompletedRunBanner({
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => downloadRunCSV(exp)}>
-            <FileSpreadsheet className="mr-1 h-4 w-4" /> CSV
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => downloadRunJSON(exp)}>
-            <FileJson className="mr-1 h-4 w-4" /> Signed JSON
-          </Button>
-          <Button size="sm" variant="default" onClick={() => downloadEnvelopeReport(exp)} title="One-page envelope report (HTML — print to PDF)">
-            <FileText className="mr-1 h-4 w-4" /> Envelope report
-          </Button>
-          <Button size="sm" onClick={onStartNew}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline">
+                <Download className="mr-1 h-4 w-4" /> Download
+                <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Audit artifacts
+              </DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => downloadEnvelopeReport(exp)}>
+                <FileText className="mr-2 h-4 w-4" />
+                Envelope report (HTML)
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => downloadRunCSV(exp)}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                CSV export
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => downloadRunJSON(exp)}>
+                <FileJson className="mr-2 h-4 w-4" />
+                Signed JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button size="sm" onClick={onStartNew} className="shadow-md ring-2 ring-primary/30">
             <Play className="mr-1 h-4 w-4" /> New run
           </Button>
           <Button
