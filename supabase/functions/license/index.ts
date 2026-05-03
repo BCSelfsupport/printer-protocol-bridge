@@ -92,11 +92,11 @@ Deno.serve(async (req) => {
     // ── ACTIVATE: client sends product_key + machine_id ──
     if (action === "activate") {
       const { product_key, machine_id } = await req.json();
-      if (!product_key || !machine_id) {
-        return new Response(
-          JSON.stringify({ error: "product_key and machine_id required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (typeof product_key !== "string" || !PRODUCT_KEY_RE.test(product_key)) {
+        return badRequest("invalid product_key format");
+      }
+      if (typeof machine_id !== "string" || !MACHINE_ID_RE.test(machine_id)) {
+        return badRequest("invalid machine_id");
       }
 
       const { data: license, error: licErr } = await supabaseAdmin
