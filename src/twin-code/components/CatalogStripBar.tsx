@@ -252,44 +252,18 @@ export function CatalogStripBar() {
           />
         </div>
 
-        {/* Pre-flight dry run */}
+        {/* Pre-flight (merged dry-run + verdict) */}
         <Button
           size="sm"
           variant="outline"
-          onClick={runDryRun}
-          disabled={!liveMode || dryBusy || liveBusy}
-          title="Fire 5 real bonded dispatches and report timings — use BEFORE starting the run"
+          onClick={() => setPreflightOpen(true)}
+          disabled={liveBusy}
+          title="Pre-flight test — fires ghost cycles and reports timings + ready/not-ready verdict before starting a run"
           data-tour="preflight-button"
         >
-          {dryBusy ? (
-            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-          ) : (
-            <FlaskConical className="mr-1 h-4 w-4" />
-          )}
-          Dry run ×5
+          <Activity className="mr-1 h-4 w-4" />
+          Pre-flight
         </Button>
-
-        {/* Last dry-run result chip */}
-        {lastDryRun && (
-          <div
-            className={`rounded-md border px-2 py-1 text-[11px] font-mono ${
-              lastDryRun.ok
-                ? "border-primary/40 bg-primary/10 text-primary"
-                : "border-destructive/40 bg-destructive/10 text-destructive"
-            }`}
-            title={lastDryRun.reason || "All shots completed cleanly"}
-          >
-            {lastDryRun.ok
-              ? `✓ ${lastDryRun.passed}/${lastDryRun.count}` +
-                (lastDryRun.cycleStats
-                  ? ` · cycle ${lastDryRun.cycleStats.mean.toFixed(0)}ms`
-                  : "") +
-                (lastDryRun.skewStats
-                  ? ` · skew ${lastDryRun.skewStats.mean.toFixed(1)}ms`
-                  : "")
-              : `✗ ${lastDryRun.failed}/${lastDryRun.count} failed`}
-          </div>
-        )}
 
         <div className="ml-auto flex items-center gap-2">
           {/* Low-catalog warning settings */}
