@@ -40,7 +40,7 @@ import { conveyorSim } from "../conveyorSim";
 import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
 import { useTwinPair } from "../twinPairStore";
-import { twinDispatcher, type TwinDryRunResult } from "../twinDispatcher";
+import { twinDispatcher } from "../twinDispatcher";
 import { lowCatalogChirp } from "../audioAlarm";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 import { useProductionRun } from "../useProductionRun";
