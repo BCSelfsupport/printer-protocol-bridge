@@ -226,10 +226,10 @@ export function ProductionRunBar() {
     },
     {
       n: 3,
-      label: isLive ? "Sending to real printer (LIVE)" : "Switch to LIVE printing — optional",
+      label: isLive ? "Sending to real printer (LIVE)" : "Switch to LIVE printing",
       ok: isLive,
-      required: false,
-      hint: "Optional: flip SYNTH → LIVE to send codes to the connected printer. SYNTH = dry run, no ink. LIVE = real prints.",
+      required: true,
+      hint: "Flip SYNTH → LIVE in the bar below so codes actually print on the connected printer. (SYNTH = dry test only, no ink fired.)",
     },
   ];
   const nextStep = steps.find((s) => s.required && !s.ok) ?? steps.find((s) => !s.ok);
