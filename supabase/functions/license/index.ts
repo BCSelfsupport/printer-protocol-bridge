@@ -11,29 +11,74 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-function generateKey(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const segments = 4;
-  const segLen = 5;
-  const parts: string[] = [];
-  for (let s = 0; s < segments; s++) {
-    let seg = "";
-    for (let i = 0; i < segLen; i++) {
-      seg += chars[Math.floor(Math.random() * chars.length)];
-    }
-    parts.push(seg);
+// --- Crypto-secure key generation (replaces Math.random) ---
+const KEY_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function pickFromAlphabet(alphabet: string, length: number): string {
+  const out = new Array<string>(length);
+  const buf = new Uint8Array(length);
+  crypto.getRandomValues(buf);
+  for (let i = 0; i < length; i++) {
+    out[i] = alphabet[buf[i] % alphabet.length];
   }
-  return parts.join("-");
+  return out.join("");
+}
+function generateKey(): string {
+  // 4 segments × 5 chars = "AAAAA-BBBBB-CCCCC-DDDDD"
+  return [0, 1, 2, 3].map(() => pickFromAlphabet(KEY_ALPHABET, 5)).join("-");
+}
+function generatePairingCode(): string {
+  return pickFromAlphabet(KEY_ALPHABET, 6);
 }
 
-function generatePairingCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
+// --- Input validation helpers ---
+const PRODUCT_KEY_RE = /^[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$/;
+const PAIRING_CODE_RE = /^[A-Z0-9]{6}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ALLOWED_TIERS = new Set(["lite", "full", "database", "demo"]);
+const MACHINE_ID_RE = /^[A-Za-z0-9._:\-]{6,128}$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function badRequest(msg: string) {
+  return new Response(
+    JSON.stringify({ error: msg }),
+    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
 }
+
+// --- Admin gate. The desktop app does not have user accounts, so admin
+//     actions (create/list/deactivate/delete licenses) are protected by a
+//     shared secret matching DEV_PORTAL_PASSWORD. Clients send it in the
+//     `x-admin-token` header. Without this gate anyone with the public
+//     anon key could mint or delete licenses. ---
+function requireAdmin(req: Request): Response | null {
+  const expected = Deno.env.get("DEV_PORTAL_PASSWORD");
+  if (!expected) {
+    return new Response(
+      JSON.stringify({ error: "Admin actions are not configured" }),
+      { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+  const provided = req.headers.get("x-admin-token") ?? "";
+  // Constant-time-ish comparison
+  if (provided.length !== expected.length) {
+    return new Response(
+      JSON.stringify({ error: "Forbidden" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+  let mismatch = 0;
+  for (let i = 0; i < expected.length; i++) {
+    mismatch |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
+  }
+  if (mismatch !== 0) {
+    return new Response(
+      JSON.stringify({ error: "Forbidden" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+  return null;
+}
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -47,11 +92,11 @@ Deno.serve(async (req) => {
     // ── ACTIVATE: client sends product_key + machine_id ──
     if (action === "activate") {
       const { product_key, machine_id } = await req.json();
-      if (!product_key || !machine_id) {
-        return new Response(
-          JSON.stringify({ error: "product_key and machine_id required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (typeof product_key !== "string" || !PRODUCT_KEY_RE.test(product_key)) {
+        return badRequest("invalid product_key format");
+      }
+      if (typeof machine_id !== "string" || !MACHINE_ID_RE.test(machine_id)) {
+        return badRequest("invalid machine_id");
       }
 
       const { data: license, error: licErr } = await supabaseAdmin
@@ -104,6 +149,12 @@ Deno.serve(async (req) => {
     // ── VALIDATE: heartbeat from client ──
     if (action === "validate") {
       const { product_key, machine_id } = await req.json();
+      if (typeof product_key !== "string" || !PRODUCT_KEY_RE.test(product_key)) {
+        return badRequest("invalid product_key format");
+      }
+      if (typeof machine_id !== "string" || !MACHINE_ID_RE.test(machine_id)) {
+        return badRequest("invalid machine_id");
+      }
 
       const { data: license } = await supabaseAdmin
         .from("licenses")
@@ -403,7 +454,31 @@ Deno.serve(async (req) => {
     }
 
     if (action === "create") {
-      const { tier, customer_name, customer_email, customer_company, expires_in_days } = await req.json();
+      const adminFail = requireAdmin(req);
+      if (adminFail) return adminFail;
+      const body = await req.json();
+      const { tier, customer_name, customer_email, customer_company, expires_in_days } = body ?? {};
+
+      const safeTier = typeof tier === "string" && ALLOWED_TIERS.has(tier) ? tier : "lite";
+      if (customer_email !== undefined && customer_email !== null && customer_email !== "") {
+        if (typeof customer_email !== "string" || !EMAIL_RE.test(customer_email) || customer_email.length > 255) {
+          return badRequest("invalid customer_email");
+        }
+      }
+      if (customer_name !== undefined && customer_name !== null && typeof customer_name === "string" && customer_name.length > 200) {
+        return badRequest("customer_name too long");
+      }
+      if (customer_company !== undefined && customer_company !== null && typeof customer_company === "string" && customer_company.length > 200) {
+        return badRequest("customer_company too long");
+      }
+      let safeExpiresInDays: number | null = null;
+      if (expires_in_days !== undefined && expires_in_days !== null) {
+        const n = Number(expires_in_days);
+        if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 36500) {
+          return badRequest("expires_in_days must be an integer between 1 and 36500");
+        }
+        safeExpiresInDays = n;
+      }
 
       let customerId: string | null = null;
       if (customer_email) {
@@ -426,14 +501,14 @@ Deno.serve(async (req) => {
       }
 
       const product_key = generateKey();
-      const expiresAt = expires_in_days
-        ? new Date(Date.now() + expires_in_days * 86400000).toISOString()
+      const expiresAt = safeExpiresInDays
+        ? new Date(Date.now() + safeExpiresInDays * 86400000).toISOString()
         : null;
       const { data: license, error } = await supabaseAdmin
         .from("licenses")
         .insert({
           product_key,
-          tier: tier || "lite",
+          tier: safeTier,
           customer_id: customerId,
           expires_at: expiresAt,
         })
@@ -441,8 +516,9 @@ Deno.serve(async (req) => {
         .single();
 
       if (error) {
+        console.error("license create error:", error);
         return new Response(
-          JSON.stringify({ error: error.message }),
+          JSON.stringify({ error: "Could not create license" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -455,6 +531,8 @@ Deno.serve(async (req) => {
 
     // ── ADMIN: list licenses ──
     if (action === "list") {
+      const adminFail = requireAdmin(req);
+      if (adminFail) return adminFail;
       const { data: licenses } = await supabaseAdmin
         .from("licenses")
         .select("*, customers(*), license_activations(*)");
@@ -467,7 +545,12 @@ Deno.serve(async (req) => {
 
     // ── ADMIN: deactivate license ──
     if (action === "deactivate") {
+      const adminFail = requireAdmin(req);
+      if (adminFail) return adminFail;
       const { license_id } = await req.json();
+      if (typeof license_id !== "string" || !UUID_RE.test(license_id)) {
+        return badRequest("invalid license_id");
+      }
       await supabaseAdmin
         .from("licenses")
         .update({ is_active: false })
@@ -481,15 +564,18 @@ Deno.serve(async (req) => {
 
     // ── ADMIN: delete license ──
     if (action === "delete") {
+      const adminFail = requireAdmin(req);
+      if (adminFail) return adminFail;
       const { license_id } = await req.json();
+      if (typeof license_id !== "string" || !UUID_RE.test(license_id)) {
+        return badRequest("invalid license_id");
+      }
 
-      // Delete companion sessions first
       await supabaseAdmin
         .from("companion_sessions")
         .delete()
         .eq("license_id", license_id);
 
-      // Delete activations (FK constraint)
       await supabaseAdmin
         .from("license_activations")
         .delete()
