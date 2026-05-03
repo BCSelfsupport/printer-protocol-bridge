@@ -793,7 +793,7 @@ export function PrintersScreen({
                         items={nonPairPrinters.map(p => p.id)}
                         strategy={verticalListSortingStrategy}
                       >
-                        {nonPairPrinters.map(renderPrinterItem)}
+                        {nonPairPrinters.map((p) => renderPrinterItem(p))}
                       </SortableContext>
                     </DndContext>
                   )}
