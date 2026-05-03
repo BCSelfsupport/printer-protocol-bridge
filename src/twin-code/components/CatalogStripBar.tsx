@@ -21,7 +21,7 @@ import {
   Trash2,
   Radio,
   Loader2,
-  Activity,
+  
   RotateCcw,
   Volume2,
   VolumeX,
