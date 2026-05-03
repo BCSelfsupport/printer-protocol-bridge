@@ -454,6 +454,25 @@ function Stat({
   );
 }
 
+/** Glance-sized stat for the active production run banner — readable across the room. */
+function BigStat({
+  label, value, tone = "default",
+}: {
+  label: string; value: string; tone?: "default" | "ok" | "warn" | "bad";
+}) {
+  const valueClass =
+    tone === "ok"   ? "text-primary" :
+    tone === "warn" ? "text-yellow-500 dark:text-yellow-400" :
+    tone === "bad"  ? "text-destructive" :
+    "text-foreground";
+  return (
+    <div className="flex flex-col items-end gap-0.5 leading-none">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className={`font-mono text-2xl font-bold tabular-nums ${valueClass}`}>{value}</span>
+    </div>
+  );
+}
+
 function formatElapsed(sec: number): string {
   if (sec < 60) return `${sec}s`;
   const m = Math.floor(sec / 60);
