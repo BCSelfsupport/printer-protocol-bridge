@@ -429,6 +429,7 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
         </main>
 
         <TwinPairBindDialog open={bindOpen} onOpenChange={setBindOpen} />
+        <ShortcutHelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
       </div>
     </TrainingProvider>
   );
