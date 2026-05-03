@@ -11,29 +11,74 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-function generateKey(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const segments = 4;
-  const segLen = 5;
-  const parts: string[] = [];
-  for (let s = 0; s < segments; s++) {
-    let seg = "";
-    for (let i = 0; i < segLen; i++) {
-      seg += chars[Math.floor(Math.random() * chars.length)];
-    }
-    parts.push(seg);
+// --- Crypto-secure key generation (replaces Math.random) ---
+const KEY_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function pickFromAlphabet(alphabet: string, length: number): string {
+  const out = new Array<string>(length);
+  const buf = new Uint8Array(length);
+  crypto.getRandomValues(buf);
+  for (let i = 0; i < length; i++) {
+    out[i] = alphabet[buf[i] % alphabet.length];
   }
-  return parts.join("-");
+  return out.join("");
+}
+function generateKey(): string {
+  // 4 segments × 5 chars = "AAAAA-BBBBB-CCCCC-DDDDD"
+  return [0, 1, 2, 3].map(() => pickFromAlphabet(KEY_ALPHABET, 5)).join("-");
+}
+function generatePairingCode(): string {
+  return pickFromAlphabet(KEY_ALPHABET, 6);
 }
 
-function generatePairingCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
+// --- Input validation helpers ---
+const PRODUCT_KEY_RE = /^[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$/;
+const PAIRING_CODE_RE = /^[A-Z0-9]{6}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ALLOWED_TIERS = new Set(["lite", "full", "database", "demo"]);
+const MACHINE_ID_RE = /^[A-Za-z0-9._:\-]{6,128}$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function badRequest(msg: string) {
+  return new Response(
+    JSON.stringify({ error: msg }),
+    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
 }
+
+// --- Admin gate. The desktop app does not have user accounts, so admin
+//     actions (create/list/deactivate/delete licenses) are protected by a
+//     shared secret matching DEV_PORTAL_PASSWORD. Clients send it in the
+//     `x-admin-token` header. Without this gate anyone with the public
+//     anon key could mint or delete licenses. ---
+function requireAdmin(req: Request): Response | null {
+  const expected = Deno.env.get("DEV_PORTAL_PASSWORD");
+  if (!expected) {
+    return new Response(
+      JSON.stringify({ error: "Admin actions are not configured" }),
+      { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+  const provided = req.headers.get("x-admin-token") ?? "";
+  // Constant-time-ish comparison
+  if (provided.length !== expected.length) {
+    return new Response(
+      JSON.stringify({ error: "Forbidden" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+  let mismatch = 0;
+  for (let i = 0; i < expected.length; i++) {
+    mismatch |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
+  }
+  if (mismatch !== 0) {
+    return new Response(
+      JSON.stringify({ error: "Forbidden" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+  return null;
+}
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
