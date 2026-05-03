@@ -343,14 +343,14 @@ function Step({
   return (
     <span
       data-step={n}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 transition-shadow ${tone}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-shadow ${tone}`}
       title={label}
     >
-      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-background/60 text-[10px] font-bold">
+      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-background/60 text-[11px] font-bold">
         {n}
       </span>
-      {ok && <CheckCircle2 className="h-3 w-3" />}
-      <span className="text-[11px] font-medium">{label}</span>
+      {ok && <CheckCircle2 className="h-3.5 w-3.5" />}
+      <span className="text-[12px] font-medium">{label}</span>
     </span>
   );
 }
