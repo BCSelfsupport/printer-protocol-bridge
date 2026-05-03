@@ -136,13 +136,22 @@ export function ProductionRunBar() {
 
           <ConveyorAutoControls consumed={consumed} elapsedSec={summary.elapsedSec} />
 
-          <div className="ml-auto flex flex-wrap items-center gap-3 text-xs">
-            <Stat label="elapsed" value={formatElapsed(summary.elapsedSec)} mono />
-            <Stat label="printed" value={summary.printed.toLocaleString()} tone="ok" mono />
-            <Stat label="missed" value={summary.missed.toLocaleString()} tone={summary.missed > 0 ? "bad" : "default"} mono />
-            <Stat label="yield" value={`${summary.yieldPct.toFixed(2)}%`} tone={summary.yieldPct >= 99.5 ? "ok" : summary.yieldPct >= 98 ? "warn" : "bad"} mono />
-            <Button size="sm" variant="destructive" onClick={() => setConfirmStop(true)} disabled={stopping}>
-              <Square className="mr-1 h-4 w-4" /> Stop &amp; export
+          <div className="ml-auto flex flex-wrap items-center gap-5">
+            <BigStat label="Printed" value={summary.printed.toLocaleString()} tone="ok" />
+            <BigStat label="Missed" value={summary.missed.toLocaleString()} tone={summary.missed > 0 ? "bad" : "default"} />
+            <BigStat
+              label="Yield"
+              value={`${summary.yieldPct.toFixed(2)}%`}
+              tone={summary.yieldPct >= 99.5 ? "ok" : summary.yieldPct >= 98 ? "warn" : "bad"}
+            />
+            <div className="flex flex-col items-end gap-0.5">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Elapsed</span>
+              <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+                {formatElapsed(summary.elapsedSec)}
+              </span>
+            </div>
+            <Button size="lg" variant="destructive" onClick={() => setConfirmStop(true)} disabled={stopping}>
+              <Square className="mr-1.5 h-4 w-4" /> Stop &amp; export
             </Button>
           </div>
         </div>
