@@ -42,6 +42,9 @@ import { ConveyorPanel } from "@/twin-code/components/ConveyorPanel";
 import { OperatorHUD } from "@/twin-code/components/OperatorHUD";
 import { ProductionRunBar } from "@/twin-code/components/ProductionRunBar";
 import { CatalogStripBar } from "@/twin-code/components/CatalogStripBar";
+import { StatusRibbon } from "@/twin-code/components/StatusRibbon";
+import { ShortcutHelpOverlay, useTwinCodeShortcuts } from "@/twin-code/components/ShortcutHelp";
+import { useWhileAwayRecap } from "@/twin-code/useWhileAwayRecap";
 import { TrainingProvider } from "@/twin-code/training/TrainingProvider";
 import { TrainingOverlay } from "@/twin-code/training/TrainingOverlay";
 import {
@@ -146,6 +149,22 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
     }
   };
 
+  // ---- UX features (pure presentation) ----
+  // While-away recap toast on tab refocus
+  useWhileAwayRecap();
+  // Keyboard shortcuts + help overlay (?, Space, H, D, 1-6)
+  const debugTabIds: DebugTab[] = ["live", "conveyor", "generator", "waterfall", "distributions", "heatmaps"];
+  const { helpOpen, setHelpOpen } = useTwinCodeShortcuts({
+    toggleGenerator: () => (running ? handleStop() : handleStart()),
+    showHud: () => setView("hud"),
+    showDebug: () => setView("debug"),
+    pickDebugTab: (idx) => {
+      const id = debugTabIds[idx];
+      if (id) setDebugTab(id);
+    },
+    inDebug: view === "debug",
+  });
+
   const shellClass = embedded
     ? "flex h-full flex-col bg-background text-foreground"
     : "min-h-screen bg-background text-foreground";
@@ -185,6 +204,16 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <TrainingLauncherButton />
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0 text-xs font-bold"
+                onClick={() => setHelpOpen(true)}
+                title="Keyboard shortcuts (press ?)"
+                aria-label="Keyboard shortcuts"
+              >
+                ?
+              </Button>
               {/* HUD / Debug view switcher */}
               <div className="flex items-center rounded-md border border-border bg-muted/30 p-0.5">
                 <Button
@@ -251,6 +280,9 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
             </div>
           </div>
         </header>
+
+        {/* At-a-glance status ribbon — pinned beneath header in both views */}
+        <StatusRibbon />
 
         <main className={mainClass}>
           <FirstLaunchBanner />
@@ -407,6 +439,7 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
         </main>
 
         <TwinPairBindDialog open={bindOpen} onOpenChange={setBindOpen} />
+        <ShortcutHelpOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
       </div>
     </TrainingProvider>
   );
