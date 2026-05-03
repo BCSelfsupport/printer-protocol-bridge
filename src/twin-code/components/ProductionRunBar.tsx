@@ -219,17 +219,17 @@ export function ProductionRunBar() {
     },
     {
       n: 2,
-      label: pairBound ? "Twin pair bound" : "Bind twin pair (optional)",
+      label: pairBound ? "Two printers paired (A/B)" : "Pair two printers — optional",
       ok: pairBound,
       required: false,
-      hint: "Pair two printers if you're running A/B redundancy. Single-printer runs work fine without this.",
+      hint: "Optional: pair two printers to run the same job side-by-side (A/B redundancy). Skip this for single-printer jobs.",
     },
     {
       n: 3,
-      label: isLive ? "LIVE bonded to printer" : "Bond LIVE printer (optional)",
+      label: isLive ? "Sending to real printer (LIVE)" : "Switch to LIVE printing — optional",
       ok: isLive,
       required: false,
-      hint: "Toggle SYNTH→LIVE in the bar below to push real codes to a connected printer. Synthetic mode is fine for dry tests.",
+      hint: "Optional: flip SYNTH → LIVE to send codes to the connected printer. SYNTH = dry run, no ink. LIVE = real prints.",
     },
   ];
   const nextStep = steps.find((s) => s.required && !s.ok) ?? steps.find((s) => !s.ok);
