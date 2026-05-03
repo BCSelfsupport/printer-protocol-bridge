@@ -27,7 +27,7 @@ import {
   VolumeX,
   AlertTriangle,
 } from "lucide-react";
-import { PreflightDialog } from "./PreflightDialog";
+
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -60,7 +60,7 @@ export function CatalogStripBar() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [liveBusy, setLiveBusy] = useState(false);
-  const [preflightOpen, setPreflightOpen] = useState(false);
+  
 
   // ---- Low-catalog warning settings (persisted) ----
   const [lowThreshold, setLowThreshold] = useState<number>(() => {
