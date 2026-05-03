@@ -454,7 +454,31 @@ Deno.serve(async (req) => {
     }
 
     if (action === "create") {
-      const { tier, customer_name, customer_email, customer_company, expires_in_days } = await req.json();
+      const adminFail = requireAdmin(req);
+      if (adminFail) return adminFail;
+      const body = await req.json();
+      const { tier, customer_name, customer_email, customer_company, expires_in_days } = body ?? {};
+
+      const safeTier = typeof tier === "string" && ALLOWED_TIERS.has(tier) ? tier : "lite";
+      if (customer_email !== undefined && customer_email !== null && customer_email !== "") {
+        if (typeof customer_email !== "string" || !EMAIL_RE.test(customer_email) || customer_email.length > 255) {
+          return badRequest("invalid customer_email");
+        }
+      }
+      if (customer_name !== undefined && customer_name !== null && typeof customer_name === "string" && customer_name.length > 200) {
+        return badRequest("customer_name too long");
+      }
+      if (customer_company !== undefined && customer_company !== null && typeof customer_company === "string" && customer_company.length > 200) {
+        return badRequest("customer_company too long");
+      }
+      let safeExpiresInDays: number | null = null;
+      if (expires_in_days !== undefined && expires_in_days !== null) {
+        const n = Number(expires_in_days);
+        if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 36500) {
+          return badRequest("expires_in_days must be an integer between 1 and 36500");
+        }
+        safeExpiresInDays = n;
+      }
 
       let customerId: string | null = null;
       if (customer_email) {
@@ -477,14 +501,14 @@ Deno.serve(async (req) => {
       }
 
       const product_key = generateKey();
-      const expiresAt = expires_in_days
-        ? new Date(Date.now() + expires_in_days * 86400000).toISOString()
+      const expiresAt = safeExpiresInDays
+        ? new Date(Date.now() + safeExpiresInDays * 86400000).toISOString()
         : null;
       const { data: license, error } = await supabaseAdmin
         .from("licenses")
         .insert({
           product_key,
-          tier: tier || "lite",
+          tier: safeTier,
           customer_id: customerId,
           expires_at: expiresAt,
         })
@@ -492,8 +516,9 @@ Deno.serve(async (req) => {
         .single();
 
       if (error) {
+        console.error("license create error:", error);
         return new Response(
-          JSON.stringify({ error: error.message }),
+          JSON.stringify({ error: "Could not create license" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -506,6 +531,8 @@ Deno.serve(async (req) => {
 
     // ── ADMIN: list licenses ──
     if (action === "list") {
+      const adminFail = requireAdmin(req);
+      if (adminFail) return adminFail;
       const { data: licenses } = await supabaseAdmin
         .from("licenses")
         .select("*, customers(*), license_activations(*)");
@@ -518,7 +545,12 @@ Deno.serve(async (req) => {
 
     // ── ADMIN: deactivate license ──
     if (action === "deactivate") {
+      const adminFail = requireAdmin(req);
+      if (adminFail) return adminFail;
       const { license_id } = await req.json();
+      if (typeof license_id !== "string" || !UUID_RE.test(license_id)) {
+        return badRequest("invalid license_id");
+      }
       await supabaseAdmin
         .from("licenses")
         .update({ is_active: false })
@@ -532,15 +564,18 @@ Deno.serve(async (req) => {
 
     // ── ADMIN: delete license ──
     if (action === "delete") {
+      const adminFail = requireAdmin(req);
+      if (adminFail) return adminFail;
       const { license_id } = await req.json();
+      if (typeof license_id !== "string" || !UUID_RE.test(license_id)) {
+        return badRequest("invalid license_id");
+      }
 
-      // Delete companion sessions first
       await supabaseAdmin
         .from("companion_sessions")
         .delete()
         .eq("license_id", license_id);
 
-      // Delete activations (FK constraint)
       await supabaseAdmin
         .from("license_activations")
         .delete()
