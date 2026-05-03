@@ -235,7 +235,9 @@ export function ProductionRunBar() {
   const nextStep = steps.find((s) => s.required && !s.ok) ?? steps.find((s) => !s.ok);
   const startBlockedReason = !catalogReady
     ? "Step 1 first: load a CSV catalog so the printer has serials to fire."
-    : null;
+    : !isLive
+      ? "Step 3: switch SYNTH → LIVE so codes actually print. SYNTH is a dry test only."
+      : null;
 
   const [shake, setShake] = useState(false);
   const flashBlockedStep = () => {
