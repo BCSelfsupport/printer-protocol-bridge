@@ -211,8 +211,32 @@ export function CatalogStripBar() {
         </div>
       )}
 
-      {/* Action row + LIVE toggle */}
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-card px-3 py-2">
+      {/* Action row + LIVE toggle. When the catalog is empty, the whole row
+          becomes a dashed drop target so operators have an obvious place to
+          drop their CSV instead of hunting for a small button. */}
+      <div
+        className={`flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 transition-colors ${
+          cat.total === 0
+            ? "border-dashed border-primary/50 bg-primary/5 hover:bg-primary/10"
+            : "border-border bg-card"
+        }`}
+        onDragOver={(e) => {
+          if (e.dataTransfer.types.includes("Files")) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "copy";
+          }
+        }}
+        onDrop={async (e) => {
+          const file = Array.from(e.dataTransfer.files).find(
+            (f) => f.name.toLowerCase().endsWith(".csv") || f.type === "text/csv",
+          );
+          if (!file) return;
+          e.preventDefault();
+          const text = await file.text();
+          setCsvText(text);
+          setPickerOpen(true);
+        }}
+      >
         <input
           ref={fileRef}
           type="file"
@@ -220,8 +244,14 @@ export function CatalogStripBar() {
           className="hidden"
           onChange={handleFile}
         />
-        <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
-          <Upload className="mr-1 h-4 w-4" /> Load CSV catalog
+        <Button
+          size="sm"
+          variant={cat.total === 0 ? "default" : "outline"}
+          onClick={() => fileRef.current?.click()}
+          className={cat.total === 0 ? "shadow-md" : ""}
+        >
+          <Upload className="mr-1 h-4 w-4" />
+          {cat.total === 0 ? "Drop CSV here or click to browse" : "Load CSV catalog"}
         </Button>
 
         {/* LIVE / SYNTH mode toggle */}

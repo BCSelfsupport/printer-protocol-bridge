@@ -11,7 +11,15 @@
  */
 
 import { useEffect, useState } from "react";
-import { Play, Square, Download, FileJson, FileSpreadsheet, AlertCircle, ClipboardList, X, Activity, CheckCircle2, XCircle, FileText, Zap } from "lucide-react";
+import { Play, Square, Download, FileJson, FileSpreadsheet, AlertCircle, ClipboardList, X, Activity, CheckCircle2, XCircle, FileText, Zap, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { downloadEnvelopeReport } from "../envelopeReport";
 import { conveyorSim } from "../conveyorSim";
 import { useConveyor } from "../useConveyor";
@@ -136,13 +144,22 @@ export function ProductionRunBar() {
 
           <ConveyorAutoControls consumed={consumed} elapsedSec={summary.elapsedSec} />
 
-          <div className="ml-auto flex flex-wrap items-center gap-3 text-xs">
-            <Stat label="elapsed" value={formatElapsed(summary.elapsedSec)} mono />
-            <Stat label="printed" value={summary.printed.toLocaleString()} tone="ok" mono />
-            <Stat label="missed" value={summary.missed.toLocaleString()} tone={summary.missed > 0 ? "bad" : "default"} mono />
-            <Stat label="yield" value={`${summary.yieldPct.toFixed(2)}%`} tone={summary.yieldPct >= 99.5 ? "ok" : summary.yieldPct >= 98 ? "warn" : "bad"} mono />
-            <Button size="sm" variant="destructive" onClick={() => setConfirmStop(true)} disabled={stopping}>
-              <Square className="mr-1 h-4 w-4" /> Stop &amp; export
+          <div className="ml-auto flex flex-wrap items-center gap-5">
+            <BigStat label="Printed" value={summary.printed.toLocaleString()} tone="ok" />
+            <BigStat label="Missed" value={summary.missed.toLocaleString()} tone={summary.missed > 0 ? "bad" : "default"} />
+            <BigStat
+              label="Yield"
+              value={`${summary.yieldPct.toFixed(2)}%`}
+              tone={summary.yieldPct >= 99.5 ? "ok" : summary.yieldPct >= 98 ? "warn" : "bad"}
+            />
+            <div className="flex flex-col items-end gap-0.5">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Elapsed</span>
+              <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+                {formatElapsed(summary.elapsedSec)}
+              </span>
+            </div>
+            <Button size="lg" variant="destructive" onClick={() => setConfirmStop(true)} disabled={stopping}>
+              <Square className="mr-1.5 h-4 w-4" /> Stop &amp; export
             </Button>
           </div>
         </div>
@@ -220,9 +237,23 @@ export function ProductionRunBar() {
     ? "Step 1 first: load a CSV catalog so the printer has serials to fire."
     : null;
 
+  const [shake, setShake] = useState(false);
+  const flashBlockedStep = () => {
+    const el = document.querySelector<HTMLElement>(`[data-step="${nextStep?.n ?? 1}"]`);
+    if (el) {
+      el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      el.classList.add("ring-4", "ring-destructive/60");
+      window.setTimeout(() => {
+        el.classList.remove("ring-4", "ring-destructive/60");
+      }, 1500);
+    }
+    setShake(true);
+    window.setTimeout(() => setShake(false), 600);
+  };
+
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed border-border bg-muted/30 px-4 py-2.5">
+      <div className={`flex flex-wrap items-center gap-3 rounded-md border border-dashed border-border bg-muted/30 px-4 py-2.5 ${shake ? "animate-pulse" : ""}`}>
         <ClipboardList className="h-4 w-4 shrink-0 text-muted-foreground" />
         <div className="flex min-w-0 flex-col gap-1.5">
           <div className="text-xs text-muted-foreground">
@@ -261,8 +292,10 @@ export function ProductionRunBar() {
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
-                {/* span wrapper so tooltip works even when button is disabled */}
-                <span className="inline-flex">
+                <span
+                  className="relative inline-flex"
+                  onClick={() => { if (!catalogReady) flashBlockedStep(); }}
+                >
                   <Button
                     size="sm"
                     onClick={() => setStartOpen(true)}
@@ -271,6 +304,9 @@ export function ProductionRunBar() {
                   >
                     <Play className="mr-1 h-4 w-4" /> Start production run
                   </Button>
+                  {!catalogReady && (
+                    <span className="absolute inset-0 cursor-not-allowed" aria-hidden />
+                  )}
                 </span>
               </TooltipTrigger>
               {startBlockedReason && (
@@ -304,7 +340,8 @@ function Step({
       : "border-border bg-muted/40 text-muted-foreground";
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 ${tone}`}
+      data-step={n}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 transition-shadow ${tone}`}
       title={label}
     >
       <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-background/60 text-[10px] font-bold">
@@ -374,16 +411,33 @@ function CompletedRunBanner({
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => downloadRunCSV(exp)}>
-            <FileSpreadsheet className="mr-1 h-4 w-4" /> CSV
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => downloadRunJSON(exp)}>
-            <FileJson className="mr-1 h-4 w-4" /> Signed JSON
-          </Button>
-          <Button size="sm" variant="default" onClick={() => downloadEnvelopeReport(exp)} title="One-page envelope report (HTML — print to PDF)">
-            <FileText className="mr-1 h-4 w-4" /> Envelope report
-          </Button>
-          <Button size="sm" onClick={onStartNew}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline">
+                <Download className="mr-1 h-4 w-4" /> Download
+                <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Audit artifacts
+              </DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => downloadEnvelopeReport(exp)}>
+                <FileText className="mr-2 h-4 w-4" />
+                Envelope report (HTML)
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => downloadRunCSV(exp)}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                CSV export
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => downloadRunJSON(exp)}>
+                <FileJson className="mr-2 h-4 w-4" />
+                Signed JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button size="sm" onClick={onStartNew} className="shadow-md ring-2 ring-primary/30">
             <Play className="mr-1 h-4 w-4" /> New run
           </Button>
           <Button
@@ -441,6 +495,25 @@ function Stat({
     <div className="flex items-baseline gap-1.5">
       <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
       <span className={`${mono ? "font-mono" : ""} font-semibold ${valueClass}`}>{value}</span>
+    </div>
+  );
+}
+
+/** Glance-sized stat for the active production run banner — readable across the room. */
+function BigStat({
+  label, value, tone = "default",
+}: {
+  label: string; value: string; tone?: "default" | "ok" | "warn" | "bad";
+}) {
+  const valueClass =
+    tone === "ok"   ? "text-primary" :
+    tone === "warn" ? "text-yellow-500 dark:text-yellow-400" :
+    tone === "bad"  ? "text-destructive" :
+    "text-foreground";
+  return (
+    <div className="flex flex-col items-end gap-0.5 leading-none">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className={`font-mono text-2xl font-bold tabular-nums ${valueClass}`}>{value}</span>
     </div>
   );
 }
