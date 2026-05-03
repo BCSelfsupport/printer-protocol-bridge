@@ -152,6 +152,7 @@ function SortablePrinterItem({
   isUpdatingExpiry?: boolean;
   messageExpiryDays?: number;
   twinPairRole?: 'A' | 'B' | null;
+  hideDragHandle?: boolean;
 }) {
   const {
     attributes,
