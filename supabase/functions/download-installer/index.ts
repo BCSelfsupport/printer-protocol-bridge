@@ -1,6 +1,6 @@
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-license-key, x-admin-token, x-license-key, x-admin-token",
 };
 
 const GITHUB_OWNER = "BCSelfsupport";
