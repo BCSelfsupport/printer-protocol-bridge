@@ -307,11 +307,11 @@ export function ConveyorPanel() {
             : 'Synthetic preview — animates bottles at the configured BPM (no hardware)'}
         </span>
 
-        {/* LIVE / SYNTHETIC mode toggle */}
+        {/* LIVE mode toggle */}
         <div
           className={`ml-2 flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] ${
             liveMode
-              ? 'border-primary/50 bg-primary/10 text-primary'
+              ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-500'
               : 'border-border bg-muted/40 text-muted-foreground'
           }`}
           title={pairBound ? 'Toggle real bonded dispatch via 1-1 mode' : 'Bind a twin pair to enable LIVE mode'}
@@ -319,11 +319,16 @@ export function ConveyorPanel() {
           {liveBusy ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
-            <Radio className={`h-3.5 w-3.5 ${liveMode ? 'text-primary' : ''}`} />
+            <span
+              className={`inline-block h-2.5 w-2.5 rounded-full ${
+                liveMode
+                  ? 'bg-emerald-500 shadow-[0_0_6px_2px_hsl(142_76%_45%/0.7)] animate-pulse'
+                  : 'bg-muted-foreground/40'
+              }`}
+              aria-hidden
+            />
           )}
-          <span className="font-mono uppercase tracking-wider">
-            {liveMode ? 'LIVE' : 'SYNTH'}
-          </span>
+          <span className="font-mono uppercase tracking-wider">LIVE</span>
           <Switch
             checked={liveMode}
             disabled={liveBusy || !pairBound || running}
