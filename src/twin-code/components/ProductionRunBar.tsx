@@ -237,9 +237,23 @@ export function ProductionRunBar() {
     ? "Step 1 first: load a CSV catalog so the printer has serials to fire."
     : null;
 
+  const [shake, setShake] = useState(false);
+  const flashBlockedStep = () => {
+    const el = document.querySelector<HTMLElement>(`[data-step="${nextStep?.n ?? 1}"]`);
+    if (el) {
+      el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      el.classList.add("ring-4", "ring-destructive/60");
+      window.setTimeout(() => {
+        el.classList.remove("ring-4", "ring-destructive/60");
+      }, 1500);
+    }
+    setShake(true);
+    window.setTimeout(() => setShake(false), 600);
+  };
+
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed border-border bg-muted/30 px-4 py-2.5">
+      <div className={`flex flex-wrap items-center gap-3 rounded-md border border-dashed border-border bg-muted/30 px-4 py-2.5 ${shake ? "animate-pulse" : ""}`}>
         <ClipboardList className="h-4 w-4 shrink-0 text-muted-foreground" />
         <div className="flex min-w-0 flex-col gap-1.5">
           <div className="text-xs text-muted-foreground">
@@ -278,8 +292,10 @@ export function ProductionRunBar() {
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
-                {/* span wrapper so tooltip works even when button is disabled */}
-                <span className="inline-flex">
+                <span
+                  className="relative inline-flex"
+                  onClick={() => { if (!catalogReady) flashBlockedStep(); }}
+                >
                   <Button
                     size="sm"
                     onClick={() => setStartOpen(true)}
@@ -288,6 +304,9 @@ export function ProductionRunBar() {
                   >
                     <Play className="mr-1 h-4 w-4" /> Start production run
                   </Button>
+                  {!catalogReady && (
+                    <span className="absolute inset-0 cursor-not-allowed" aria-hidden />
+                  )}
                 </span>
               </TooltipTrigger>
               {startBlockedReason && (
@@ -299,11 +318,6 @@ export function ProductionRunBar() {
           </TooltipProvider>
         </div>
       </div>
-      <StartRunDialog open={startOpen} onOpenChange={setStartOpen} onStarted={() => { /* no-op */ }} />
-      <PreflightDialog open={preflightOpen} onOpenChange={setPreflightOpen} />
-    </>
-  );
-}
 
 /** Numbered step chip used by the IDLE readiness flow. Highlights the
  *  next unmet step with a pulsing ring so the operator's eye lands on it. */
