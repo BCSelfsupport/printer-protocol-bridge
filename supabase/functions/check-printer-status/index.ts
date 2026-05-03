@@ -155,6 +155,9 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  const denied = await authorize(req);
+  if (denied) return denied;
+
   try {
     const body = await req.json().catch(() => null) as { printers?: unknown } | null;
     if (!body || !Array.isArray(body.printers)) {
