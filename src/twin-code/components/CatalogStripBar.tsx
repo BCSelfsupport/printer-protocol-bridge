@@ -153,32 +153,8 @@ export function CatalogStripBar() {
     toast({ title: "LIVE mode disengaged" });
   };
 
-  const runDryRun = async () => {
-    setDryBusy(true);
-    setLastDryRun(null);
-    const seed = catalog.peek() ?? undefined;
-    const result = await twinDispatcher.dryRun(5, seed);
-    setLastDryRun(result);
-    setDryBusy(false);
-
-    if (result.ok) {
-      const a = result.aStats;
-      const b = result.bStats;
-      const skew = result.skewStats;
-      toast({
-        title: `Dry run passed (${result.passed}/${result.count})`,
-        description:
-          `A mean ${a?.mean.toFixed(1)}ms · B mean ${b?.mean.toFixed(1)}ms · ` +
-          `skew mean ${skew?.mean.toFixed(1)}ms (max ${skew?.max.toFixed(1)})`,
-      });
-    } else {
-      toast({
-        title: `Dry run failed (${result.failed}/${result.count})`,
-        description: result.reason || "See per-side reasons",
-        variant: "destructive",
-      });
-    }
-  };
+  // Dry-run was merged into Pre-flight (PreflightDialog) — one operator
+  // gate before starting a real run, with raw timing stats inside.
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
