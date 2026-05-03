@@ -746,8 +746,8 @@ export function PrintersScreen({
                       {/* Member printer cards inside the bordered group. */}
                       {pairExpanded && (
                         <div className="px-2 pb-2 pt-1 space-y-2 border-t border-emerald-500/20 bg-slate-950/30">
-                          {renderPrinterItem(pairPrinters.a)}
-                          {renderPrinterItem(pairPrinters.b)}
+                          {renderPrinterItem(pairPrinters.a, { hideDragHandle: true })}
+                          {renderPrinterItem(pairPrinters.b, { hideDragHandle: true })}
                         </div>
                       )}
                     </div>
