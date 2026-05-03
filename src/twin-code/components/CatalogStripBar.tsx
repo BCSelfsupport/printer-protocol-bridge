@@ -21,12 +21,16 @@ import {
   Trash2,
   Radio,
   Loader2,
-  
   RotateCcw,
   Volume2,
   VolumeX,
   AlertTriangle,
+  Play,
+  Activity,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { StartRunDialog } from "./StartRunDialog";
+import { PreflightDialog } from "./PreflightDialog";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
