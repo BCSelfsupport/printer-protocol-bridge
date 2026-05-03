@@ -128,6 +128,7 @@ function SortablePrinterItem({
   isUpdatingExpiry,
   messageExpiryDays,
   twinPairRole,
+  hideDragHandle,
 }: {
   printer: Printer;
   isSelected: boolean;
