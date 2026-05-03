@@ -17,7 +17,7 @@ import { catalog } from "../catalog";
 import { useCatalog } from "../useCatalog";
 import { profilerBus } from "../profilerBus";
 import { useTwinPair } from "../twinPairStore";
-import { twinDispatcher, type TwinDryRunResult } from "../twinDispatcher";
+import { twinDispatcher } from "../twinDispatcher";
 import { faultGuard } from "../faultGuard";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 
