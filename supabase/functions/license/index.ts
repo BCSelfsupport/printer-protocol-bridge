@@ -149,6 +149,12 @@ Deno.serve(async (req) => {
     // ── VALIDATE: heartbeat from client ──
     if (action === "validate") {
       const { product_key, machine_id } = await req.json();
+      if (typeof product_key !== "string" || !PRODUCT_KEY_RE.test(product_key)) {
+        return badRequest("invalid product_key format");
+      }
+      if (typeof machine_id !== "string" || !MACHINE_ID_RE.test(machine_id)) {
+        return badRequest("invalid machine_id");
+      }
 
       const { data: license } = await supabaseAdmin
         .from("licenses")
