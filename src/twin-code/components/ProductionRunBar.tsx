@@ -220,11 +220,11 @@ export function ProductionRunBar() {
     },
     {
       n: 2,
-      label: isLive ? "LIVE — printing for real" : "Switch SYNTH → LIVE",
+      label: isLive ? "Mode: LIVE (real prints)" : "Mode: SYNTH (test only)",
       ok: isLive,
       required: true,
-      hint: "Flip SYNTH → LIVE in the bar below so codes actually print on the connected printer.",
-      tip: "Required for real production. SYNTH = dry test, codes are only logged to screen, no ink fired. LIVE = codes are sent to the connected printer and physically printed. Use SYNTH for setup tests, LIVE for actual production runs.",
+      hint: "Use the SYNTH / LIVE toggle below to switch into LIVE so the printer fires real codes.",
+      tip: "Required for real production. SYNTH = dry test, codes are only logged, no ink fired. LIVE = codes are sent to the connected printer and physically printed. Toggle it with the SYNTH / LIVE switch in the bar below.",
     },
   ];
   const nextStep = steps.find((s) => s.required && !s.ok) ?? steps.find((s) => !s.ok);
