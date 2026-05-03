@@ -216,20 +216,23 @@ export function ProductionRunBar() {
       ok: catalogReady,
       required: true,
       hint: "Drop a CSV in the bar below to load the lot's serial numbers.",
+      tip: "Required. Loads the list of unique serial numbers (from a CSV file) that this production run will print. Without serials there's nothing for the printer to fire.",
     },
     {
       n: 2,
-      label: pairBound ? "Two printers paired (A/B)" : "Pair two printers — optional",
+      label: pairBound ? "Two printers paired" : "Pair two printers",
       ok: pairBound,
       required: false,
-      hint: "Optional: pair two printers to run the same job side-by-side (A/B redundancy). Skip this for single-printer jobs.",
+      hint: "Optional: pair two printers so each serial prints on both (lid + side, or A/B redundancy). Skip for single-printer jobs.",
+      tip: "Optional. Pairs two physical printers so each serial number is printed on both at the same time — used for two-sided codes (lid + side) or A/B redundancy. Single-printer jobs don't need this.",
     },
     {
       n: 3,
-      label: isLive ? "Sending to real printer (LIVE)" : "Switch to LIVE printing",
+      label: isLive ? "LIVE — printing for real" : "Switch SYNTH → LIVE",
       ok: isLive,
       required: true,
-      hint: "Flip SYNTH → LIVE in the bar below so codes actually print on the connected printer. (SYNTH = dry test only, no ink fired.)",
+      hint: "Flip SYNTH → LIVE in the bar below so codes actually print on the connected printer.",
+      tip: "Required for real production. SYNTH = dry test, codes are only logged to screen, no ink fired. LIVE = codes are sent to the connected printer and physically printed. Use SYNTH for setup tests, LIVE for actual production runs.",
     },
   ];
   const nextStep = steps.find((s) => s.required && !s.ok) ?? steps.find((s) => !s.ok);
@@ -272,6 +275,7 @@ export function ProductionRunBar() {
                   ok={s.ok}
                   required={s.required}
                   isNext={nextStep?.n === s.n}
+                  tip={s.tip}
                 />
                 {i < steps.length - 1 && (
                   <span className="text-muted-foreground/50">→</span>
@@ -329,9 +333,9 @@ export function ProductionRunBar() {
 /** Numbered step chip used by the IDLE readiness flow. Highlights the
  *  next unmet step with a pulsing ring so the operator's eye lands on it. */
 function Step({
-  n, label, ok, required, isNext,
+  n, label, ok, required, isNext, tip,
 }: {
-  n: number; label: string; ok: boolean; required?: boolean; isNext?: boolean;
+  n: number; label: string; ok: boolean; required?: boolean; isNext?: boolean; tip?: string;
 }) {
   const tone = ok
     ? "border-primary/40 bg-primary/10 text-primary"
@@ -340,18 +344,31 @@ function Step({
         ? "border-destructive/60 bg-destructive/10 text-destructive ring-2 ring-destructive/30 animate-pulse"
         : "border-primary/60 bg-primary/10 text-primary ring-2 ring-primary/30"
       : "border-border bg-muted/40 text-muted-foreground";
-  return (
+  const chip = (
     <span
       data-step={n}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-shadow ${tone}`}
-      title={label}
+      className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 transition-shadow cursor-help ${tone}`}
     >
-      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-background/60 text-[11px] font-bold">
+      <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-background/70 text-[11px] font-bold">
         {n}
       </span>
-      {ok && <CheckCircle2 className="h-3.5 w-3.5" />}
-      <span className="text-[12px] font-medium">{label}</span>
+      {ok && <CheckCircle2 className="h-4 w-4" />}
+      <span className="text-[13px] font-medium leading-none">{label}</span>
+      {!required && (
+        <span className="ml-1 rounded-sm bg-background/60 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Optional
+        </span>
+      )}
     </span>
+  );
+  if (!tip) return chip;
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>{chip}</TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed">
+        {tip}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
