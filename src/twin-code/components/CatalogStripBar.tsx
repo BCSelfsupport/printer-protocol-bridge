@@ -6,7 +6,7 @@
  *   - Load CSV catalog
  *   - Live counters: Total / Remaining / Printed / Miss-prints
  *   - LIVE / SYNTH toggle (with bound-pair guard)
- *   - Dry run ×5 (pre-flight)
+ *   - Pre-flight (ghost cycles + ready/not-ready verdict)
  *   - Reset (end-of-lot housekeeping)
  *   - Ledger fingerprint + auto-save heartbeat
  *
