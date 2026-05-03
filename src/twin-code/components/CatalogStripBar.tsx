@@ -259,11 +259,11 @@ export function CatalogStripBar() {
           {cat.total === 0 ? "Drop CSV here or click to browse" : "Load CSV catalog"}
         </Button>
 
-        {/* LIVE / SYNTH mode toggle */}
+        {/* LIVE mode toggle */}
         <div
           className={`flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] ${
             liveMode
-              ? "border-primary/50 bg-primary/10 text-primary"
+              ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-500"
               : "border-border bg-muted/40 text-muted-foreground"
           }`}
           title={
@@ -275,11 +275,16 @@ export function CatalogStripBar() {
           {liveBusy ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
-            <Radio className={`h-3.5 w-3.5 ${liveMode ? "text-primary" : ""}`} />
+            <span
+              className={`inline-block h-2.5 w-2.5 rounded-full ${
+                liveMode
+                  ? "bg-emerald-500 shadow-[0_0_6px_2px_hsl(142_76%_45%/0.7)] animate-pulse"
+                  : "bg-muted-foreground/40"
+              }`}
+              aria-hidden
+            />
           )}
-          <span className="font-mono uppercase tracking-wider">
-            {liveMode ? "LIVE" : "SYNTH"}
-          </span>
+          <span className="font-mono uppercase tracking-wider">LIVE</span>
           <Switch
             checked={liveMode}
             disabled={liveBusy || !pairBound}
