@@ -1,53 +1,66 @@
 // Injects the active license key as the `x-license-key` header on every
-// Supabase request. The shared data tables (`data_sources`, `data_source_rows`,
-// `print_jobs`) require this header to satisfy their RLS policies. Without an
-// activated license, calls return empty / are rejected — by design.
-import { supabase } from "./client";
+// outgoing Supabase REST/Functions request. Required by the RLS policies
+// on `data_sources`, `data_source_rows`, and `print_jobs`, and by the
+// gated edge functions (check-printer-status, github-build-status,
+// trigger-build).
+//
+// Implementation: a one-time global `fetch` patch. We only attach the
+// header to requests targeting our Supabase project, never to third-party
+// URLs.
 
 const LICENSE_STORAGE_KEY = "codesync-license";
+const SUPABASE_HOST = (() => {
+  try {
+    return new URL(import.meta.env.VITE_SUPABASE_URL ?? "").host;
+  } catch {
+    return "";
+  }
+})();
 
 function readKey(): string | null {
   try {
     const raw = localStorage.getItem(LICENSE_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return typeof parsed?.productKey === "string" ? parsed.productKey : null;
+    const k = parsed?.productKey;
+    return typeof k === "string" && k.length > 0 ? k : null;
   } catch {
     return null;
   }
 }
 
-function applyHeader(key: string | null) {
-  // The supabase-js client exposes an internal `headers` object on its REST
-  // and Realtime clients via `(supabase as any).rest.headers`. Setting it here
-  // mutates the headers used for every subsequent request.
-  const anyClient = supabase as unknown as {
-    rest?: { headers?: Record<string, string> };
-    realtime?: { setAuth?: (token: string) => void };
-  };
-  if (anyClient.rest && anyClient.rest.headers) {
-    if (key) {
-      anyClient.rest.headers["x-license-key"] = key;
-    } else {
-      delete anyClient.rest.headers["x-license-key"];
-    }
-  }
-  // Functions client uses the same internal headers; supabase-js v2 reads
-  // from a single `headers` map on the underlying fetch, so this covers it.
-}
-
-let started = false;
+let installed = false;
 export function initLicenseHeaderSync() {
-  if (started) return;
-  started = true;
-  applyHeader(readKey());
-  // Re-sync whenever the stored license changes (activation, deactivation,
-  // multi-tab updates).
-  window.addEventListener("storage", (e) => {
-    if (e.key === LICENSE_STORAGE_KEY) applyHeader(readKey());
-  });
-}
+  if (installed || typeof window === "undefined" || !SUPABASE_HOST) return;
+  installed = true;
+  const originalFetch = window.fetch.bind(window);
 
-export function setLicenseHeader(key: string | null) {
-  applyHeader(key);
+  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    let urlStr = "";
+    try {
+      if (typeof input === "string") urlStr = input;
+      else if (input instanceof URL) urlStr = input.toString();
+      else urlStr = (input as Request).url;
+    } catch {
+      // ignore
+    }
+
+    let isSupabase = false;
+    try {
+      isSupabase = !!urlStr && new URL(urlStr, window.location.href).host === SUPABASE_HOST;
+    } catch {
+      isSupabase = false;
+    }
+
+    if (!isSupabase) return originalFetch(input as RequestInfo, init);
+
+    const key = readKey();
+    if (!key) return originalFetch(input as RequestInfo, init);
+
+    // Merge headers from init or the Request object.
+    const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+    if (!headers.has("x-license-key")) headers.set("x-license-key", key);
+
+    return originalFetch(input as RequestInfo, { ...init, headers });
+  };
 }
