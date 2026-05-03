@@ -21,12 +21,16 @@ import {
   Trash2,
   Radio,
   Loader2,
-  
   RotateCcw,
   Volume2,
   VolumeX,
   AlertTriangle,
+  Play,
+  Activity,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { StartRunDialog } from "./StartRunDialog";
+import { PreflightDialog } from "./PreflightDialog";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -60,7 +64,8 @@ export function CatalogStripBar() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [liveBusy, setLiveBusy] = useState(false);
-  
+  const [startOpen, setStartOpen] = useState(false);
+  const [preflightOpen, setPreflightOpen] = useState(false);
 
   // ---- Low-catalog warning settings (persisted) ----
   const [lowThreshold, setLowThreshold] = useState<number>(() => {
@@ -328,8 +333,48 @@ export function CatalogStripBar() {
           >
             <RotateCcw className="mr-1 h-4 w-4" /> Reset lot
           </Button>
+
+          {!runActive && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setPreflightOpen(true)}
+                disabled={cat.total === 0}
+                title="Fire ghost cycles to verify timing and connectivity before the real run."
+              >
+                <Activity className="mr-1 h-4 w-4" /> Pre-flight
+              </Button>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex">
+                      <Button
+                        size="sm"
+                        onClick={() => setStartOpen(true)}
+                        disabled={cat.total === 0 || !liveMode}
+                        className={cat.total > 0 && liveMode ? "shadow-md ring-2 ring-primary/30" : ""}
+                      >
+                        <Play className="mr-1 h-4 w-4" /> Start production run
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {(cat.total === 0 || !liveMode) && (
+                    <TooltipContent side="bottom" className="max-w-xs text-xs">
+                      {cat.total === 0
+                        ? "Load a CSV catalog first so the printer has serials to fire."
+                        : "Switch SYNTH → LIVE so codes actually print on the connected printer."}
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+            </>
+          )}
         </div>
       </div>
+
+      <StartRunDialog open={startOpen} onOpenChange={setStartOpen} onStarted={() => { /* no-op */ }} />
+      <PreflightDialog open={preflightOpen} onOpenChange={setPreflightOpen} />
 
       {/* Counter strip — large, glanceable. Hidden during an active production
           run because the same numbers (printed/missed/remaining) are already
