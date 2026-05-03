@@ -60,8 +60,7 @@ export function CatalogStripBar() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [liveBusy, setLiveBusy] = useState(false);
-  const [dryBusy, setDryBusy] = useState(false);
-  const [lastDryRun, setLastDryRun] = useState<TwinDryRunResult | null>(null);
+  const [preflightOpen, setPreflightOpen] = useState(false);
 
   // ---- Low-catalog warning settings (persisted) ----
   const [lowThreshold, setLowThreshold] = useState<number>(() => {
