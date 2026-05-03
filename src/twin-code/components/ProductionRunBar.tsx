@@ -333,9 +333,9 @@ export function ProductionRunBar() {
 /** Numbered step chip used by the IDLE readiness flow. Highlights the
  *  next unmet step with a pulsing ring so the operator's eye lands on it. */
 function Step({
-  n, label, ok, required, isNext,
+  n, label, ok, required, isNext, tip,
 }: {
-  n: number; label: string; ok: boolean; required?: boolean; isNext?: boolean;
+  n: number; label: string; ok: boolean; required?: boolean; isNext?: boolean; tip?: string;
 }) {
   const tone = ok
     ? "border-primary/40 bg-primary/10 text-primary"
@@ -344,18 +344,31 @@ function Step({
         ? "border-destructive/60 bg-destructive/10 text-destructive ring-2 ring-destructive/30 animate-pulse"
         : "border-primary/60 bg-primary/10 text-primary ring-2 ring-primary/30"
       : "border-border bg-muted/40 text-muted-foreground";
-  return (
+  const chip = (
     <span
       data-step={n}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-shadow ${tone}`}
-      title={label}
+      className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 transition-shadow cursor-help ${tone}`}
     >
-      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-background/60 text-[11px] font-bold">
+      <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-background/70 text-[11px] font-bold">
         {n}
       </span>
-      {ok && <CheckCircle2 className="h-3.5 w-3.5" />}
-      <span className="text-[12px] font-medium">{label}</span>
+      {ok && <CheckCircle2 className="h-4 w-4" />}
+      <span className="text-[13px] font-medium leading-none">{label}</span>
+      {!required && (
+        <span className="ml-1 rounded-sm bg-background/60 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Optional
+        </span>
+      )}
     </span>
+  );
+  if (!tip) return chip;
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>{chip}</TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed">
+        {tip}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
