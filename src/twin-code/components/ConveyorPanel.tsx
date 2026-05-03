@@ -53,8 +53,7 @@ export function ConveyorPanel() {
   const [liveMode, setLiveMode] = useState(false);
   const [benchAutoTrigger, setBenchAutoTrigger] = useState(false);
   const [liveBusy, setLiveBusy] = useState(false);
-  const [dryBusy, setDryBusy] = useState(false);
-  const [lastDryRun, setLastDryRun] = useState<TwinDryRunResult | null>(null);
+  const [preflightOpen, setPreflightOpen] = useState(false);
   const [benchBusy, setBenchBusy] = useState(false);
   const [benchCount, setBenchCount] = useState(50);
   const [benchResult, setBenchResult] = useState<BenchCsvResult | null>(null);
