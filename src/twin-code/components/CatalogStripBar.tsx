@@ -21,12 +21,13 @@ import {
   Trash2,
   Radio,
   Loader2,
-  FlaskConical,
+  Activity,
   RotateCcw,
   Volume2,
   VolumeX,
   AlertTriangle,
 } from "lucide-react";
+import { PreflightDialog } from "./PreflightDialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
