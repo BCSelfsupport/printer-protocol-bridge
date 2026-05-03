@@ -1,14 +1,52 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-license-key, x-admin-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
+
+const supabaseAdmin = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+);
+
+async function authorize(req: Request): Promise<Response | null> {
+  const adminExpected = Deno.env.get("DEV_PORTAL_PASSWORD");
+  const adminProvided = req.headers.get("x-admin-token") ?? "";
+  if (adminExpected && adminProvided && adminExpected.length === adminProvided.length) {
+    let mismatch = 0;
+    for (let i = 0; i < adminExpected.length; i++) {
+      mismatch |= adminExpected.charCodeAt(i) ^ adminProvided.charCodeAt(i);
+    }
+    if (mismatch === 0) return null;
+  }
+  const licenseKey = req.headers.get("x-license-key") ?? "";
+  if (/^[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$/.test(licenseKey)) {
+    const { data: license } = await supabaseAdmin
+      .from("licenses")
+      .select("is_active, expires_at")
+      .eq("product_key", licenseKey)
+      .maybeSingle();
+    if (license && license.is_active && (!license.expires_at || new Date(license.expires_at) > new Date())) {
+      return null;
+    }
+  }
+  return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    status: 401,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const denied = await authorize(req);
+  if (denied) return denied;
+
   try {
+
     const githubPat = Deno.env.get('GITHUB_PAT');
     if (!githubPat) {
       console.error('GITHUB_PAT not configured');

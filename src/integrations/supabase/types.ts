@@ -890,7 +890,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_valid_license_header: { Args: never; Returns: boolean }
     }
     Enums: {
       license_tier: "lite" | "full" | "database" | "demo" | "twincode"
