@@ -367,7 +367,7 @@ export function CatalogStripBar() {
         }}
         onConfirm={handleConfirmCsv}
       />
-      <PreflightDialog open={preflightOpen} onOpenChange={setPreflightOpen} />
+      
     </div>
   );
 }
