@@ -275,6 +275,7 @@ export function ProductionRunBar() {
                   ok={s.ok}
                   required={s.required}
                   isNext={nextStep?.n === s.n}
+                  tip={s.tip}
                 />
                 {i < steps.length - 1 && (
                   <span className="text-muted-foreground/50">→</span>
