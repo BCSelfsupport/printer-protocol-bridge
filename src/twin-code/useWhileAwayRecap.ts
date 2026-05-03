@@ -8,9 +8,9 @@
 
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { useCatalog } from "../useCatalog";
-import { useProductionRun } from "../useProductionRun";
-import { fmtInt, fmtDuration } from "../format";
+import { useCatalog } from "./useCatalog";
+import { useProductionRun } from "./useProductionRun";
+import { fmtInt, fmtDuration } from "./format";
 
 const MIN_AWAY_MS = 8_000; // ignore quick alt-tabs
 
