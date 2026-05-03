@@ -216,20 +216,23 @@ export function ProductionRunBar() {
       ok: catalogReady,
       required: true,
       hint: "Drop a CSV in the bar below to load the lot's serial numbers.",
+      tip: "Required. Loads the list of unique serial numbers (from a CSV file) that this production run will print. Without serials there's nothing for the printer to fire.",
     },
     {
       n: 2,
-      label: pairBound ? "Two printers paired (A/B)" : "Pair two printers — optional",
+      label: pairBound ? "Two printers paired" : "Pair two printers",
       ok: pairBound,
       required: false,
-      hint: "Optional: pair two printers to run the same job side-by-side (A/B redundancy). Skip this for single-printer jobs.",
+      hint: "Optional: pair two printers so each serial prints on both (lid + side, or A/B redundancy). Skip for single-printer jobs.",
+      tip: "Optional. Pairs two physical printers so each serial number is printed on both at the same time — used for two-sided codes (lid + side) or A/B redundancy. Single-printer jobs don't need this.",
     },
     {
       n: 3,
-      label: isLive ? "Sending to real printer (LIVE)" : "Switch to LIVE printing",
+      label: isLive ? "LIVE — printing for real" : "Switch SYNTH → LIVE",
       ok: isLive,
       required: true,
-      hint: "Flip SYNTH → LIVE in the bar below so codes actually print on the connected printer. (SYNTH = dry test only, no ink fired.)",
+      hint: "Flip SYNTH → LIVE in the bar below so codes actually print on the connected printer.",
+      tip: "Required for real production. SYNTH = dry test, codes are only logged to screen, no ink fired. LIVE = codes are sent to the connected printer and physically printed. Use SYNTH for setup tests, LIVE for actual production runs.",
     },
   ];
   const nextStep = steps.find((s) => s.required && !s.ok) ?? steps.find((s) => !s.ok);
