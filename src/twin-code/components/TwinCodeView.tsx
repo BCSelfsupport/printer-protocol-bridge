@@ -149,6 +149,22 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
     }
   };
 
+  // ---- UX features (pure presentation) ----
+  // While-away recap toast on tab refocus
+  useWhileAwayRecap();
+  // Keyboard shortcuts + help overlay (?, Space, H, D, 1-6)
+  const debugTabIds: DebugTab[] = ["live", "conveyor", "generator", "waterfall", "distributions", "heatmaps"];
+  const { helpOpen, setHelpOpen } = useTwinCodeShortcuts({
+    toggleGenerator: () => (running ? handleStop() : handleStart()),
+    showHud: () => setView("hud"),
+    showDebug: () => setView("debug"),
+    pickDebugTab: (idx) => {
+      const id = debugTabIds[idx];
+      if (id) setDebugTab(id);
+    },
+    inDebug: view === "debug",
+  });
+
   const shellClass = embedded
     ? "flex h-full flex-col bg-background text-foreground"
     : "min-h-screen bg-background text-foreground";
