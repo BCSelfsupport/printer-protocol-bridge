@@ -271,6 +271,9 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
           </div>
         </header>
 
+        {/* At-a-glance status ribbon — pinned beneath header in both views */}
+        <StatusRibbon />
+
         <main className={mainClass}>
           <FirstLaunchBanner />
           {/* Production Run bar — visible in BOTH modes */}
