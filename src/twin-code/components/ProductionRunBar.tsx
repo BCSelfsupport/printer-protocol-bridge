@@ -206,9 +206,9 @@ export function ProductionRunBar() {
   const isLive = twinDispatcher.isBound();
   const catalogReady = remaining > 0;
 
-  // Numbered stepper — first unmet step is the "next action" and pulses.
-  // Optional steps don't block Start but still appear so operators know
-  // they exist. The "next" highlight always lands on a required step.
+  // Numbered stepper. Pairing is shown elsewhere (status ribbon + Bound
+  // Pair card), so we only surface the two run-blocking steps here to
+  // avoid three competing "pair" surfaces.
   const steps = [
     {
       n: 1,
@@ -220,14 +220,6 @@ export function ProductionRunBar() {
     },
     {
       n: 2,
-      label: pairBound ? "Two printers paired" : "Pair two printers",
-      ok: pairBound,
-      required: false,
-      hint: "Optional: pair two printers so each serial prints on both (lid + side, or A/B redundancy). Skip for single-printer jobs.",
-      tip: "Optional. Pairs two physical printers so each serial number is printed on both at the same time — used for two-sided codes (lid + side) or A/B redundancy. Single-printer jobs don't need this.",
-    },
-    {
-      n: 3,
       label: isLive ? "LIVE — printing for real" : "Switch SYNTH → LIVE",
       ok: isLive,
       required: true,
