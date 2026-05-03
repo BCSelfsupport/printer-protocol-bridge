@@ -188,33 +188,76 @@ export function ProductionRunBar() {
   const pairBound = !!(pair.a && pair.b);
   const isLive = twinDispatcher.isBound();
   const catalogReady = remaining > 0;
+
+  // Numbered stepper — first unmet step is the "next action" and pulses.
+  // Optional steps don't block Start but still appear so operators know
+  // they exist. The "next" highlight always lands on a required step.
+  const steps = [
+    {
+      n: 1,
+      label: catalogReady ? `Serials loaded · ${remaining.toLocaleString()}` : "Load serials (CSV)",
+      ok: catalogReady,
+      required: true,
+      hint: "Drop a CSV in the bar below to load the lot's serial numbers.",
+    },
+    {
+      n: 2,
+      label: pairBound ? "Twin pair bound" : "Bind twin pair (optional)",
+      ok: pairBound,
+      required: false,
+      hint: "Pair two printers if you're running A/B redundancy. Single-printer runs work fine without this.",
+    },
+    {
+      n: 3,
+      label: isLive ? "LIVE bonded to printer" : "Bond LIVE printer (optional)",
+      ok: isLive,
+      required: false,
+      hint: "Toggle SYNTH→LIVE in the bar below to push real codes to a connected printer. Synthetic mode is fine for dry tests.",
+    },
+  ];
+  const nextStep = steps.find((s) => s.required && !s.ok) ?? steps.find((s) => !s.ok);
   const startBlockedReason = !catalogReady
-    ? "Load a CSV catalog first — the Start Production button unlocks once serials are available."
+    ? "Step 1 first: load a CSV catalog so the printer has serials to fire."
     : null;
 
   return (
     <>
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed border-border bg-muted/30 px-4 py-2.5">
         <ClipboardList className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <div className="text-xs text-muted-foreground">
-            No active production run. Lock the line to a lot # to capture an auditable trail of every printed serial.
+            {nextStep
+              ? <>Next: <span className="font-medium text-foreground">{nextStep.hint}</span></>
+              : <>Ready to lock a lot # and start an auditable production run.</>}
           </div>
-          {/* Inline readiness checklist — glanceable, mirrors StartRunDialog gates */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-            <Gate ok={catalogReady} required label={
-              catalogReady
-                ? `Catalog · ${remaining.toLocaleString()} serials`
-                : "Catalog · load CSV"
-            } />
-            <Gate ok={pairBound} label={pairBound ? "Twin pair bound" : "Twin pair · optional"} />
-            <Gate ok={isLive} label={isLive ? "LIVE bonded" : "LIVE · optional"} />
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            {steps.map((s, i) => (
+              <span key={s.n} className="inline-flex items-center gap-1.5">
+                <Step
+                  n={s.n}
+                  label={s.label}
+                  ok={s.ok}
+                  required={s.required}
+                  isNext={nextStep?.n === s.n}
+                />
+                {i < steps.length - 1 && (
+                  <span className="text-muted-foreground/50">→</span>
+                )}
+              </span>
+            ))}
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => setPreflightOpen(true)}>
-            <Activity className="mr-1 h-4 w-4" /> Pre-flight
-          </Button>
+          {catalogReady && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPreflightOpen(true)}
+              title="Fire ghost cycles to verify timing and connectivity before the real run."
+            >
+              <Activity className="mr-1 h-4 w-4" /> Pre-flight
+            </Button>
+          )}
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -224,6 +267,7 @@ export function ProductionRunBar() {
                     size="sm"
                     onClick={() => setStartOpen(true)}
                     disabled={!catalogReady}
+                    className={catalogReady ? "shadow-md ring-2 ring-primary/30" : ""}
                   >
                     <Play className="mr-1 h-4 w-4" /> Start production run
                   </Button>
@@ -244,7 +288,34 @@ export function ProductionRunBar() {
   );
 }
 
-/** Tiny inline gate chip (✓ / ✗) used by the IDLE readiness row. */
+/** Numbered step chip used by the IDLE readiness flow. Highlights the
+ *  next unmet step with a pulsing ring so the operator's eye lands on it. */
+function Step({
+  n, label, ok, required, isNext,
+}: {
+  n: number; label: string; ok: boolean; required?: boolean; isNext?: boolean;
+}) {
+  const tone = ok
+    ? "border-primary/40 bg-primary/10 text-primary"
+    : isNext
+      ? required
+        ? "border-destructive/60 bg-destructive/10 text-destructive ring-2 ring-destructive/30 animate-pulse"
+        : "border-primary/60 bg-primary/10 text-primary ring-2 ring-primary/30"
+      : "border-border bg-muted/40 text-muted-foreground";
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 ${tone}`}
+      title={label}
+    >
+      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-background/60 text-[10px] font-bold">
+        {ok ? <CheckCircle2 className="h-3 w-3" /> : n}
+      </span>
+      <span className="text-[11px] font-medium">{label}</span>
+    </span>
+  );
+}
+
+/** @deprecated Replaced by Step() — kept temporarily for any external import. */
 function Gate({ ok, label, required }: { ok: boolean; label: string; required?: boolean }) {
   const Icon = ok ? CheckCircle2 : XCircle;
   const tone = ok
