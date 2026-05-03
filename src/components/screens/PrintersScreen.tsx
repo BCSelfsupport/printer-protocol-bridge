@@ -172,17 +172,20 @@ function SortablePrinterItem({
 
   return (
     <div ref={setNodeRef} style={style} className="relative group select-none">
-      {/* Drag handle */}
-      <div
-        {...attributes}
-        {...listeners}
-        className={
-          "absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-10 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded touch-none select-none " +
-          (isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100")
-        }
-      >
-        <GripVertical className="w-4 h-4 text-muted-foreground" />
-      </div>
+      {/* Drag handle — hidden for bound-pair members (Lid/Side roles are
+          managed via the Bind dialog, not by reordering). */}
+      {!hideDragHandle && (
+        <div
+          {...attributes}
+          {...listeners}
+          className={
+            "absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 z-10 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded touch-none select-none " +
+            (isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100")
+          }
+        >
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
+        </div>
+      )}
       <PrinterListItem
         printer={printer}
         isSelected={isSelected}
