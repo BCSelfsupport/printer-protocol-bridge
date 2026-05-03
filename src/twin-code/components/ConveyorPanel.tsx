@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Upload, Play, Square, RotateCcw, Zap, FileSpreadsheet, Trash2, Radio, Loader2, FlaskConical, AlertTriangle } from "lucide-react";
+import { Upload, Play, Square, RotateCcw, Zap, FileSpreadsheet, Trash2, Radio, Loader2, Activity, AlertTriangle } from "lucide-react";
+import { PreflightDialog } from "./PreflightDialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
