@@ -1,6 +1,11 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { initLicenseHeaderSync } from "./integrations/supabase/licenseHeader";
+
+// Attach the active license key to every Supabase request as early as
+// possible — RLS on shared data tables requires it.
+initLicenseHeaderSync();
 
 declare const __APP_VERSION__: string;
 
