@@ -345,8 +345,9 @@ function Step({
       title={label}
     >
       <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-background/60 text-[10px] font-bold">
-        {ok ? <CheckCircle2 className="h-3 w-3" /> : n}
+        {n}
       </span>
+      {ok && <CheckCircle2 className="h-3 w-3" />}
       <span className="text-[11px] font-medium">{label}</span>
     </span>
   );
