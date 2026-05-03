@@ -318,6 +318,11 @@ export function ProductionRunBar() {
           </TooltipProvider>
         </div>
       </div>
+      <StartRunDialog open={startOpen} onOpenChange={setStartOpen} onStarted={() => { /* no-op */ }} />
+      <PreflightDialog open={preflightOpen} onOpenChange={setPreflightOpen} />
+    </>
+  );
+}
 
 /** Numbered step chip used by the IDLE readiness flow. Highlights the
  *  next unmet step with a pulsing ring so the operator's eye lands on it. */
