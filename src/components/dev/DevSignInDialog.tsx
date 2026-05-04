@@ -74,7 +74,7 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productKey || !code.trim()) return;
+    if (!code.trim() || (!productKey && !import.meta.env.DEV)) return;
     setBusy(true);
     setError(null);
     if (import.meta.env.DEV) {
