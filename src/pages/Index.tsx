@@ -734,25 +734,45 @@ const Index = () => {
     );
     if (!commands || commands.length === 0) return;
 
-    console.log(`[MasterSlaveSync] Pushing message "${messageName}" content to ${availableSlaves.length} slave(s)`);
+    console.log(`[MasterSlaveSync] Pushing message "${messageName}" content to ${availableSlaves.length} slave(s) (template=${details.templateValue ?? '32'})`);
     for (const slave of availableSlaves) {
-      const sequencedCommands = commands.map((command) => ({
-        command,
-        delayAfterMs: getSaveCommandDelay(command, details.fields.length),
-      }));
-      const result = await sendVerifiedCommandSequence(slave, sequencedCommands, 300);
-      if (!result.success) {
-        const failedCommand = sequencedCommands[result.failedIndex ?? 0]?.command ?? 'unknown command';
-        console.warn(`[MasterSlaveSync] Command failed on ${slave.name}: ${failedCommand.substring(0, 40)}...`);
+      // If this message is currently SELECTED on the slave, a plain ^DM is
+      // rejected by firmware ("cannot delete the printing message") and the
+      // slave keeps its previously-saved template — which is what causes
+      // overlapping lines when master is on a taller template (e.g. 32-dot)
+      // and slave was saved on 16-dot. replaceMessageWithoutDelete does
+      // deselect → rewrite → reselect so the master's template (encoded in
+      // ^NM) actually takes effect on the slave.
+      const slaveCurrent = slave.currentMessage?.trim().toUpperCase();
+      const targetUpper = messageName.trim().toUpperCase();
+
+      let ok = false;
+      if (slaveCurrent === targetUpper) {
+        const result = await replaceMessageWithoutDelete(slave, messageName, {
+          fields: details.fields,
+          templateValue: details.templateValue,
+        });
+        ok = result.success;
+        if (!ok) {
+          console.warn(`[MasterSlaveSync] In-place template rewrite failed on ${slave.name}: ${result.reason}`);
+        }
+      } else {
+        const sequencedCommands = commands.map((command) => ({
+          command,
+          delayAfterMs: getSaveCommandDelay(command, details.fields.length),
+        }));
+        const result = await sendVerifiedCommandSequence(slave, sequencedCommands, 300);
+        ok = result.success;
+        if (!ok) {
+          const failedCommand = sequencedCommands[result.failedIndex ?? 0]?.command ?? 'unknown command';
+          console.warn(`[MasterSlaveSync] Command failed on ${slave.name}: ${failedCommand.substring(0, 40)}...`);
+        }
       }
-      // Do NOT auto-select on the slave here. Per user spec, saving on the
-      // master pushes content (^DM/^NM/^SV) to slaves so they have the message,
-      // but the slave only switches to it when the operator explicitly presses
-      // Select on the master (which fires ^SM via useMasterSlaveSync's
-      // currentMessage effect).
-      console.log(`[MasterSlaveSync] Pushed content "${messageName}" → ${slave.name}: ${result.success ? 'OK' : 'PARTIAL'} (no ^SM)`);
+      // Do NOT auto-^SM here for non-selected slaves — operator's explicit
+      // Select on the master triggers ^SM via useMasterSlaveSync.
+      console.log(`[MasterSlaveSync] Pushed "${messageName}" → ${slave.name}: ${ok ? 'OK' : 'PARTIAL'}`);
     }
-  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence]);
+  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence, replaceMessageWithoutDelete]);
 
   const replaceMessageWithoutDelete = useCallback(async (
     targetPrinter: Printer,
