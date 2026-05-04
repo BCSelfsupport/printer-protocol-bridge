@@ -950,10 +950,9 @@ const Index = () => {
 
     if (shouldReloadFromPrinter && connectionState.isConnected) {
       try {
-        // Wait for the printer to settle before querying — prevents lockups
-        // from sending ^GM/^LF immediately after a settings sequence.
-        await new Promise(r => setTimeout(r, 500));
-        await waitForPollingIdle(3000);
+        // No 500ms sleep + waitForPollingIdle here — forbidden by
+        // mem://features/message-persistence/dozen12-validation. The reload is
+        // best-effort and races nothing critical (5s Promise.race protects us).
 
         const refreshed = await Promise.race([
           fetchMessageContent(targetName),
