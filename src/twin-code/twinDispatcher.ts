@@ -704,13 +704,10 @@ export async function seedTwinPairMessages(
       // delay is 100. ^DA = print delay, ^PW = print width, ^CM s = speed.
       // Defaults: Delay 100, Width 1, Speed Ultra Fast (3) — minimum cycle
       // time baseline; operator can tune up via Adjust if print quality needs it.
-      const TWIN_DEFAULT_DELAY = 100;
-      const TWIN_DEFAULT_WIDTH = 1;
-      const TWIN_DEFAULT_SPEED = 3; // Ultra Fast
       for (const pid of [printerA.id, printerB.id]) {
         await printerTransport.sendCommand(pid, `^DA ${TWIN_DEFAULT_DELAY}`, { maxWaitMs: 3000 }).catch(() => {});
         await printerTransport.sendCommand(pid, `^PW ${TWIN_DEFAULT_WIDTH}`, { maxWaitMs: 3000 }).catch(() => {});
-        await printerTransport.sendCommand(pid, `^CM s${TWIN_DEFAULT_SPEED}`, { maxWaitMs: 3000 }).catch(() => {});
+        await printerTransport.sendCommand(pid, `^CM s${TWIN_DEFAULT_SPEED_CODE}`, { maxWaitMs: 3000 }).catch(() => {});
         await new Promise(res => setTimeout(res, 200));
         await printerTransport.sendCommand(pid, '^SV', { maxWaitMs: 3000 }).catch(() => {});
         await new Promise(res => setTimeout(res, 150));
