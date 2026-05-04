@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Shield, Loader2 } from 'lucide-react';
 import { useLicense } from '@/contexts/LicenseContext';
+import { isDevPanelPreviewRuntime } from '@/lib/runtimeEnvironment';
 
 interface DevSignInDialogProps {
   open: boolean;
@@ -27,6 +28,7 @@ const PREVIEW_DEV_PASSWORD = 'CITEC';
  */
 export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDialogProps) {
   const { productKey } = useLicense();
+  const allowPreviewPassword = isDevPanelPreviewRuntime();
   const [stage, setStage] = useState<Stage>('check');
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
     if (!open) return;
     setError(null);
     setCode('');
-    if (import.meta.env.DEV) {
+    if (allowPreviewPassword) {
       setStage('verify');
       setBusy(false);
       return;
@@ -70,14 +72,14 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
         setBusy(false);
       }
     })();
-  }, [open, productKey]);
+  }, [open, productKey, allowPreviewPassword]);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim() || (!productKey && !import.meta.env.DEV)) return;
+    if (!code.trim() || (!productKey && !allowPreviewPassword)) return;
     setBusy(true);
     setError(null);
-    if (import.meta.env.DEV) {
+    if (allowPreviewPassword) {
       if (code.trim().toUpperCase() === PREVIEW_DEV_PASSWORD) {
         onSuccess();
         onOpenChange(false);
