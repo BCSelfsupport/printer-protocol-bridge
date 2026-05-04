@@ -765,7 +765,61 @@ const Index = () => {
     return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | null };
   }, [buildMessageCommands, sendVerifiedCommandSequence]);
 
-  const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
+  // After saving a message on the master, duplicate the full content to all
+  // slaves. If the message is currently SELECTED on a slave with a different
+  // template, ^DM is rejected and the slave keeps its old template (causing
+  // overlapping lines). replaceMessageWithoutDelete handles deselect → rewrite
+  // → reselect so the master's template (encoded in ^NM) takes effect.
+  const syncMessageToSlaves = useCallback(async (
+    messageName: string,
+    details: MessageDetails,
+    isNew?: boolean,
+  ) => {
+    if (!isMaster || !connectionState.connectedPrinter) return;
+    const slaves = getSlavesForMaster(connectionState.connectedPrinter.id);
+    const availableSlaves = slaves.filter(s => s.isAvailable);
+    if (availableSlaves.length === 0) return;
+
+    const { perMessageSettings } = buildEffectiveMessageDependentSettings(details);
+    const commands = await buildMessageCommands(
+      messageName,
+      details.fields,
+      details.templateValue,
+      isNew,
+      perMessageSettings,
+    );
+    if (!commands || commands.length === 0) return;
+
+    console.log(`[MasterSlaveSync] Pushing "${messageName}" to ${availableSlaves.length} slave(s) (template=${details.templateValue ?? '32'})`);
+    const targetUpper = messageName.trim().toUpperCase();
+    for (const slave of availableSlaves) {
+      const slaveCurrent = slave.currentMessage?.trim().toUpperCase();
+      let ok = false;
+      if (slaveCurrent === targetUpper) {
+        const result = await replaceMessageWithoutDelete(slave, messageName, {
+          fields: details.fields,
+          templateValue: details.templateValue,
+        });
+        ok = result.success;
+        if (!ok) {
+          console.warn(`[MasterSlaveSync] In-place rewrite failed on ${slave.name}: ${result.reason}`);
+        }
+      } else {
+        const sequencedCommands = commands.map((command) => ({
+          command,
+          delayAfterMs: getSaveCommandDelay(command, details.fields.length),
+        }));
+        const result = await sendVerifiedCommandSequence(slave, sequencedCommands, 300);
+        ok = result.success;
+        if (!ok) {
+          const failedCommand = sequencedCommands[result.failedIndex ?? 0]?.command ?? 'unknown command';
+          console.warn(`[MasterSlaveSync] Command failed on ${slave.name}: ${failedCommand.substring(0, 40)}...`);
+        }
+      }
+      console.log(`[MasterSlaveSync] Pushed "${messageName}" → ${slave.name}: ${ok ? 'OK' : 'PARTIAL'}`);
+    }
+  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence, replaceMessageWithoutDelete]);
+
     if (!editingMessage) return null;
 
     const targetName = isNew ? details.name : editingMessage.name;
