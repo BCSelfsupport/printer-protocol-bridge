@@ -293,24 +293,6 @@ const Index = () => {
     includeMessageSettings: boolean;
   }): SequencedPrinterCommand[] => {
     const commands: SequencedPrinterCommand[] = [];
-    const printModeMap: Record<string, number> = {
-      'Normal': 0,
-      'Auto': 1,
-      'Repeat': 2,
-      'Reverse': 3,
-      'Auto Encoder': 5,
-      'Auto Encoder Reverse': 6,
-    };
-    const speedMap: Record<string, number> = {
-      'Fast': 0,
-      'Faster': 1,
-      'Fastest': 2,
-      'Ultra Fast': 3,
-    };
-    const orientationMap: Record<string, number> = {
-      'Normal': 0, 'Flip': 1, 'Mirror': 2, 'Mirror Flip': 3,
-      'Tower': 4, 'Tower Flip': 5, 'Tower Mirror': 6, 'Tower Mirror Flip': 7,
-    };
 
     // Speed, orientation, and print mode are already embedded atomically in the
     // ^NM header. Do not send a follow-up ^CM after ^NM/^SV: firmware v01.09
