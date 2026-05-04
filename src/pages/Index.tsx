@@ -81,6 +81,14 @@ type SequencedPrinterCommand = string | {
 };
 
 const MESSAGE_RELOAD_SETTLE_MS = 900;
+const SAVE_PUSH_SETTLE_MS = 1500;
+
+const getSaveCommandDelay = (command: string, fieldCount: number) => {
+  const trimmed = command.trim().toUpperCase();
+  if (trimmed.startsWith('^NM ')) return Math.min(3000, 300 + fieldCount * 60);
+  if (trimmed === '^SV') return SAVE_PUSH_SETTLE_MS;
+  return 300;
+};
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
