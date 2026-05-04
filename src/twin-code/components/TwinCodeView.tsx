@@ -42,6 +42,7 @@ import { ConveyorPanel } from "@/twin-code/components/ConveyorPanel";
 import { OperatorHUD } from "@/twin-code/components/OperatorHUD";
 import { ProductionRunBar } from "@/twin-code/components/ProductionRunBar";
 import { CatalogStripBar } from "@/twin-code/components/CatalogStripBar";
+import { LineControlsBar } from "@/twin-code/components/LineControlsBar";
 import { StatusRibbon } from "@/twin-code/components/StatusRibbon";
 import { ShortcutHelpOverlay, useTwinCodeShortcuts } from "@/twin-code/components/ShortcutHelp";
 import { useWhileAwayRecap } from "@/twin-code/useWhileAwayRecap";
@@ -292,6 +293,10 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
           {view === "hud" && (
             <>
               <CatalogStripBar />
+              {/* Line conditions live up top during bench-test phase.
+                  Once real bottles + photocell drive the line this can be
+                  removed — speed/pitch will come from the encoder. */}
+              <LineControlsBar />
               <OperatorHUD />
             </>
           )}
