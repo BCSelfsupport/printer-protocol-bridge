@@ -667,12 +667,13 @@ const Index = () => {
           : undefined;
       const validateResult = (result: { success?: boolean; response?: string; error?: string }) => {
         const response = result?.response ?? result?.error ?? '';
-        const missingSaveAck = (trimmed.startsWith('^NM ') || trimmed === '^SV') && !hasCompleteSaveAck(response);
+        const requiresSaveAck = (window.electronAPI || isRelayMode()) && (trimmed.startsWith('^NM ') || trimmed === '^SV');
+        const missingSaveAck = requiresSaveAck && !hasCompleteSaveAck(response);
         return { success: !!result?.success && !isTransportCommandFailure(response) && !missingSaveAck };
       };
 
       if (targetPrinter.id === connectionState.connectedPrinter?.id) {
-        const result = saveOptions
+        const result = saveOptions && (window.electronAPI || isRelayMode())
           ? await printerTransport.sendCommand(targetPrinter.id, command, saveOptions)
           : await sendCommand(command);
         return validateResult(result);
