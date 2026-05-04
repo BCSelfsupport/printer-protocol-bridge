@@ -414,10 +414,11 @@ function ConveyorAutoControls({ consumed, elapsedSec }: { consumed: number; elap
           className={stalled ? "h-8 px-2.5 text-xs animate-pulse" : "h-8 px-2.5 text-xs"}
           variant={stalled ? "default" : "secondary"}
           onClick={() => conveyorSim.start()}
-          title="Start the bottle generator — bottles will cross the photocell at the configured BPM and trigger Print Go"
+          title={`Start the bottle generator — bottles cross the photocell at ${Math.round(conv.bpm)} BPM and trigger Print Go. Adjust speed/pitch in the Line tab.`}
         >
           <Play className="mr-1 h-3.5 w-3.5" />
           {stalled ? "Start Auto Print Go ←" : "Start Auto Print Go"}
+          <span className="ml-1.5 font-mono text-[10px] opacity-70">{Math.round(conv.bpm)} bpm</span>
         </Button>
       )}
       <Button
