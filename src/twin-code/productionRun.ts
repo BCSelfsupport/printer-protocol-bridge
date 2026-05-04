@@ -493,7 +493,10 @@ export function downloadRunCSV(exp: ProductionRunExport) {
   //     having to ask. These are captured at EXPORT time (after stop), which
   //     is fine — they describe the test rig, not per-bottle state.
   const live = liveMetrics.getSnapshot();
-  const cv = conveyorSim.getConfig();
+  const cvLive = conveyorSim.getConfig();
+  const cv = exp.meta.lineSnapshot
+    ? { ...cvLive, ftPerMin: exp.meta.lineSnapshot.ftPerMin, pitchMm: exp.meta.lineSnapshot.pitchMm }
+    : cvLive;
   const profile = twinDispatcher.getBoundProfile();
   const samples = profilerBus.getSamples();
   const headroom = computeHeadroom(samples, live.bpm);
