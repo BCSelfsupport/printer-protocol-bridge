@@ -198,14 +198,35 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
   }, [defaultTab]);
 
   const fetchBuildStatus = async () => {
+    // The github-build-status edge function is gated by the x-license-key
+    // header (auto-injected by licenseHeader.ts). If the license isn't
+    // hydrated/active yet, skip the call to avoid a 401 that surfaces as
+    // a blank-screen runtime error in the global reporter.
+    try {
+      const raw = localStorage.getItem('codesync-license');
+      const key = raw ? JSON.parse(raw)?.productKey : null;
+      if (!key || typeof key !== 'string' || key.length < 20) return;
+    } catch { return; }
+
     setBuildRunsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('github-build-status');
-      if (error) throw error;
+      if (error) {
+        // Swallow auth races (401) silently — they self-heal on next license
+        // validation tick. Anything else gets logged for diagnostics.
+        const msg = String(error?.message ?? error);
+        if (!/401|Unauthorized/i.test(msg)) {
+          console.warn('[DevPanel] build status fetch failed:', msg);
+        }
+        return;
+      }
       setBuildRuns(data?.runs || []);
       setDevBuildRuns(data?.devRuns || []);
-    } catch (err) {
-      console.error('Failed to fetch build status:', err);
+    } catch (err: any) {
+      const msg = String(err?.message ?? err);
+      if (!/401|Unauthorized/i.test(msg)) {
+        console.warn('[DevPanel] build status fetch failed:', msg);
+      }
     } finally {
       setBuildRunsLoading(false);
     }
