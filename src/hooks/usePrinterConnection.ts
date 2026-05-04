@@ -129,6 +129,20 @@ const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCOD
 // Without this, ^DM and ^NM changes are only queued in RAM until a manual save
 // or shutdown occurs on the printer HMI.
 const FLUSH_COMMAND = '^SV';
+const SAVE_ACK_MAX_WAIT_MS = 15000;
+const SAVE_NM_IDLE_AFTER_DATA_MS = 5000;
+const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 1500;
+
+const getNmDigestPauseMs = (fieldCount: number) => {
+  if (fieldCount >= 6) return Math.min(6000, Math.max(2000, fieldCount * 200));
+  return Math.min(2000, 500 + fieldCount * 120);
+};
+
+const hasCompleteSaveAck = (rawResponse?: string): boolean => {
+  const cleaned = (rawResponse ?? '').replace(/[\x00-\x1F\x7F]/g, '').trim();
+  const upper = cleaned.toUpperCase();
+  return upper.includes('COMMAND SUCCESSFUL') || upper === 'OK' || upper === 'SUCCESS' || cleaned.endsWith('>');
+};
 
 
 const isProtocolCommandFailure = (rawResponse?: string): boolean => {
