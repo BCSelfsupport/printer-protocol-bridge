@@ -118,7 +118,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
 
   const startFullTour = useCallback(() => {
     consumeFirstLaunch();
-    const order: TrainingStageId[] = ['bind', 'preview', 'preflight', 'live'];
+    const order: TrainingStageId[] = ['catalog', 'bind', 'preview', 'preflight', 'live'];
     queueRef.current = order.slice(1); // first stage runs immediately
     setActiveStageId(order[0]);
     setStepIndex(0);

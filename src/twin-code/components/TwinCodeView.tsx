@@ -238,6 +238,7 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
                 variant={isBound ? "outline" : "default"}
                 onClick={() => setBindOpen(true)}
                 className="gap-1"
+                data-tour="bind-button"
               >
                 <Link2 className="mr-1 h-4 w-4" />
                 {isBound ? "Twin pair bound" : "Bind two printers"}

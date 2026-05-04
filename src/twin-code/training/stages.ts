@@ -1,19 +1,23 @@
 /**
- * Twin Code — Operator Training stages
- * ------------------------------------
- * Authoritative content for the 4-stage end-to-end tour. Each stage maps to
- * one section of the SOW (mem://features/twin-code-sow):
+ * Twin Code — Operator Training stages (final-build aligned)
+ * ----------------------------------------------------------
+ * Five stages mirroring the real production path in the shipping build:
  *
- *   1. bind      — TwinPairBindDialog: IP/port + per-side message + auto-create + ^LF
- *   2. preview   — TwinMessagePreview: HMI cross-check + scaling sliders
- *   3. preflight — PreflightDialog: 5-dispatch dry run + reading pass/fail
- *   4. live      — OperatorHUD + fault recovery: going LIVE, alarm, resume-from-N
+ *   1. catalog   — Load CSV, low-warning threshold, ledger persistence
+ *   2. bind      — TwinPairBindDialog: IP/port + per-side message + auto-create + ^LF
+ *   3. preview   — TwinMessagePreview (collapsible): HMI cross-check + scaling sliders
+ *   4. preflight — PreflightDialog: 5-dispatch dry run + reading pass/fail
+ *   5. live      — LIVE toggle, OperatorHUD, Production Run (lot/operator,
+ *                  signed CSV/JSON/Envelope exports), fault recovery
  *
  * Step targets reference `data-tour` attributes declared in the components.
  * Where a step needs the operator to open a dialog/panel first, we DON'T try
  * to programmatically open it — we tell them to ("Try it · ...") and let the
- * spotlight wait for the element to appear. This keeps the tour honest:
- * operators learn the actual click sequence, not a scripted demo.
+ * spotlight wait for the element to appear.
+ *
+ * The training simulation loads the bundled 1000-serial sample CSV so every
+ * artifact the operator generates during the tour (signed exports, envelope
+ * report, ledger fingerprint) is real practice output.
  */
 
 import { startTrainingSimulation, stopTrainingSimulation } from './simulation';
@@ -21,11 +25,68 @@ import type { TrainingStage, TrainingStageId } from './types';
 
 export const TRAINING_STAGES: TrainingStage[] = [
   // ---------------------------------------------------------------------------
-  // Stage 1 — Bind & auto-create
+  // Stage 1 — Catalog
+  // ---------------------------------------------------------------------------
+  {
+    id: 'catalog',
+    title: 'Stage 1 · Load the catalog',
+    blurb: 'CSV in, ledger armed, low-stock threshold set.',
+    estimateMin: 3,
+    steps: [
+      {
+        id: 'catalog-intro',
+        title: 'Catalog = the source of truth',
+        body:
+          'Twin Code never invents serials. Every code printed comes from a CSV catalog you load up-front, and every dispense is written to a tamper-evident ledger so the same serial can NEVER print twice.\n\nFor this tour we\'ll load a bundled 1000-serial sample CSV so you can practice the full Catalog → Bind → Preview → Pre-flight → LIVE → Production Run path without touching real printers or burning real serials.',
+        target: null,
+        placement: 'center',
+        onEnter: () => {
+          // Loads /sample-data/twin-code-serials-1000.csv into the catalog
+          // unless the operator already has a real CSV staged.
+          void startTrainingSimulation();
+        },
+      },
+      {
+        id: 'catalog-strip',
+        title: 'The catalog strip',
+        body:
+          'This is the single horizontal control row for everything pre-run: load CSV, LIVE toggle, low-stock warn threshold, Pre-flight, and Start production run all live here. Once you bind a pair and load a catalog, this is your entire pre-run cockpit.',
+        target: 'catalog-strip',
+        placement: 'bottom',
+      },
+      {
+        id: 'catalog-upload',
+        title: 'Load CSV catalog',
+        body:
+          'Click here (or drag-drop a CSV onto the strip) to open the column picker. The picker shows a preview of your rows so you can confirm which column holds the serial — it auto-detects 13-digit columns.\n\nThe sample CSV has been pre-loaded for this tour; in production you\'d drop your own here.',
+        target: 'catalog-upload',
+        placement: 'bottom',
+      },
+      {
+        id: 'catalog-counters',
+        title: 'Live counters + ledger fingerprint',
+        body:
+          'Catalog total / Remaining / Printed / Miss-prints update live as the line runs. Below the row, the ledger fingerprint and "auto-saved" timestamp confirm your audit trail is being persisted to disk every 250ms — survives PC reboot, Electron crash, accidental refresh.',
+        target: 'catalog-counters',
+        placement: 'top',
+      },
+      {
+        id: 'catalog-finish',
+        title: 'Catalog loaded ✓',
+        body:
+          'With a catalog loaded, the dispatcher knows what to print. Next we bind the pair so it knows where to print.',
+        target: null,
+        placement: 'center',
+      },
+    ],
+  },
+
+  // ---------------------------------------------------------------------------
+  // Stage 2 — Bind & auto-create
   // ---------------------------------------------------------------------------
   {
     id: 'bind',
-    title: 'Stage 1 · Bind & auto-create',
+    title: 'Stage 2 · Bind & auto-create',
     blurb: 'Pair two printers as one logical unit (LID + SIDE).',
     estimateMin: 3,
     steps: [
@@ -36,11 +97,6 @@ export const TRAINING_STAGES: TrainingStage[] = [
           'Twin Code bonds two BestCode printers into a single logical unit. Side A prints a 16×16 DataMatrix on the lid, Side B prints the same 13-digit serial as readable text on the side of the bottle.\n\nEvery serial comes from the catalog and is consumed exactly once — the dispatcher fans out one ^MD command per side in parallel and only counts the cycle done when both printers acknowledge.',
         target: null,
         placement: 'center',
-        onEnter: () => {
-          // Spin up a safe simulated pair so the operator can practice without
-          // touching real hardware. Cleaned up in the live-stage final step.
-          startTrainingSimulation();
-        },
       },
       {
         id: 'bind-button',
@@ -87,7 +143,7 @@ export const TRAINING_STAGES: TrainingStage[] = [
         id: 'bind-finish',
         title: 'Bind confirmed',
         body:
-          'Once both sides are bound, the button collapses to "Twin pair bound" with the two IPs as a badge. The dispatcher is now ready — but you still need to load a catalog and confirm the previews before going LIVE.',
+          'Once both sides are bound, the button collapses to "Twin pair bound" with the two IPs as a badge. The dispatcher is now ready — but you still need to confirm the previews and pass pre-flight before going LIVE.',
         target: null,
         placement: 'center',
       },
@@ -95,11 +151,11 @@ export const TRAINING_STAGES: TrainingStage[] = [
   },
 
   // ---------------------------------------------------------------------------
-  // Stage 2 — Message preview cross-check
+  // Stage 3 — Message preview cross-check
   // ---------------------------------------------------------------------------
   {
     id: 'preview',
-    title: 'Stage 2 · Message preview cross-check',
+    title: 'Stage 3 · Message preview cross-check',
     blurb: 'Confirm A and B are loaded with the right messages.',
     estimateMin: 2,
     steps: [
@@ -110,6 +166,15 @@ export const TRAINING_STAGES: TrainingStage[] = [
           'Even with the ^LF check, an operator can mistakenly bind to the wrong message name (e.g. "LID-A1" instead of "LID-B2"). The preview is your eyeball-confirmation that the messages currently selected on each printer match what you expect to print.',
         target: null,
         placement: 'center',
+      },
+      {
+        id: 'preview-expand',
+        title: 'Expand "Selected messages"',
+        body:
+          'The preview lives inside a collapsible panel at the top of the HUD — collapsed by default to save vertical space on small monitors. Click the chevron row to expand it whenever you want to do a visual cross-check.',
+        target: 'hud-preview-collapsible',
+        action: 'Click the "Selected messages" row to expand the previews.',
+        placement: 'bottom',
       },
       {
         id: 'preview-strip',
@@ -139,29 +204,29 @@ export const TRAINING_STAGES: TrainingStage[] = [
   },
 
   // ---------------------------------------------------------------------------
-  // Stage 3 — Preflight dry run
+  // Stage 4 — Pre-flight dry run
   // ---------------------------------------------------------------------------
   {
     id: 'preflight',
-    title: 'Stage 3 · Preflight dry run',
+    title: 'Stage 4 · Pre-flight dry run',
     blurb: '5 real bonded dispatches before going LIVE.',
     estimateMin: 2,
     steps: [
       {
         id: 'preflight-intro',
-        title: 'Preflight = 5 real dispatches, zero catalog effects',
+        title: 'Pre-flight = 5 real dispatches, zero catalog effects',
         body:
-          'The dry run sends 5 actual ^MD commands to both printers using throwaway placeholder serials. The catalog index is NOT advanced and the ledger is NOT written — you can run preflight as many times as you want without burning serials.\n\nWhat you\'re measuring: round-trip time per side, A↔B skew, and whether either printer faults out (jet not running, disconnect, timeout).',
+          'Pre-flight sends 5 actual ^MD commands to both printers using throwaway placeholder serials. The catalog index is NOT advanced and the ledger is NOT written — you can run pre-flight as many times as you want without burning serials.\n\nWhat you\'re measuring: round-trip time per side, A↔B skew, and whether either printer faults out (jet not running, disconnect, timeout).',
         target: null,
         placement: 'center',
       },
       {
         id: 'preflight-button',
-        title: 'Run preflight',
+        title: 'Run Pre-flight',
         body:
-          'The "Dry run" button lives in the catalog/lot strip at the top of the HUD. Click it once the pair is bound — it disables itself if either side is unreachable.',
+          'The "Pre-flight" button lives on the catalog strip, right next to "Start production run". It\'s also surfaced inside the Start Run dialog itself so you have a second chance to retest from the lot-naming step.\n\nIt disables itself if no catalog is loaded.',
         target: 'preflight-button',
-        action: 'Click "Dry run" to open the preflight dialog.',
+        action: 'Click "Pre-flight" to open the dialog.',
         placement: 'bottom',
       },
       {
@@ -174,7 +239,7 @@ export const TRAINING_STAGES: TrainingStage[] = [
       },
       {
         id: 'preflight-finish',
-        title: 'Pre-flight passed → go LIVE',
+        title: 'Pre-flight passed → ready for LIVE',
         body:
           'A passed pre-flight means the bonded pair is ready for production. Close the dialog and toggle LIVE on the catalog strip when you\'re ready.',
         target: null,
@@ -184,21 +249,54 @@ export const TRAINING_STAGES: TrainingStage[] = [
   },
 
   // ---------------------------------------------------------------------------
-  // Stage 4 — Live run + fault recovery
+  // Stage 5 — LIVE + Production Run + fault recovery
   // ---------------------------------------------------------------------------
   {
     id: 'live',
-    title: 'Stage 4 · Live run + fault recovery',
-    blurb: 'Go LIVE, watch the HUD, recover from faults.',
-    estimateMin: 4,
+    title: 'Stage 5 · LIVE + Production Run',
+    blurb: 'Engage LIVE, start a lot, watch the HUD, recover from faults, export.',
+    estimateMin: 5,
     steps: [
       {
         id: 'live-intro',
-        title: 'Going LIVE',
+        title: 'LIVE = real bonded ^MD',
         body:
-          'LIVE mode hands the conveyor over to the real bonded dispatcher. Every photocell trigger pulls the next serial from the catalog and fires ^MD to both printers in parallel. Once both ack, the catalog index advances and the ledger commits.',
+          'Flipping LIVE ON hands the line over to the real bonded dispatcher. Every photocell trigger (or Auto Print Go pulse) pulls the next serial from the catalog and fires ^MD to both printers in parallel. Once both ack, the catalog index advances and the ledger commits.',
         target: null,
         placement: 'center',
+      },
+      {
+        id: 'live-toggle',
+        title: 'LIVE / SYNTH toggle',
+        body:
+          'The LIVE switch on the catalog strip is the line-engagement gate. SYNTH = synthetic timings (good for showing the HUD without printing), LIVE = real bonded ^MD to both printers.\n\nThe switch is disabled until a twin pair is bound — that\'s the safety interlock that prevents you from "going LIVE" with no actual printers attached.',
+        target: 'live-toggle',
+        placement: 'bottom',
+      },
+      {
+        id: 'live-start-run',
+        title: 'Start production run',
+        body:
+          'Going LIVE lets the line print, but a Production Run wraps the prints into a named, auditable batch. This is what gives you the signed CSV/JSON/Envelope artifacts QA needs.\n\nYou cannot start a run without LIVE engaged AND a catalog loaded.',
+        target: 'start-run-button',
+        action: 'Click "Start production run" to open the dialog.',
+        placement: 'bottom',
+      },
+      {
+        id: 'live-run-dialog',
+        title: 'Lot, operator, run length',
+        body:
+          'The Start Run dialog asks for:\n  • Lot # / batch ID (auto-suggested as LOT-YYYYMMDD-HHMM)\n  • Operator name (remembered across runs)\n  • Optional run length — auto-stops + auto-exports when printed+missed reaches N\n\nPre-flight checks at the top show catalog/pair/LIVE status. Operator is remembered so the next shift just types their lot.',
+        target: null,
+        placement: 'center',
+      },
+      {
+        id: 'live-active-banner',
+        title: 'Active production run banner',
+        body:
+          'Once started, this banner replaces the catalog counter strip. Lot, operator, elapsed clock, printed/missed/yield counters update live. Auto Print Go controls live INSIDE the banner so you can\'t accidentally start a run with the conveyor stopped.',
+        target: 'production-run-active',
+        placement: 'bottom',
       },
       {
         id: 'live-bpm',
@@ -242,9 +340,9 @@ export const TRAINING_STAGES: TrainingStage[] = [
       },
       {
         id: 'live-batch-progress',
-        title: 'Batch progress + lot-locked exports',
+        title: 'Batch progress strip',
         body:
-          'The bottom strip shows printed / missed / remaining for the active batch. When you stop a production run, you get a signed CSV/JSON export with the full ledger — every serial, every outcome, every timestamp — ready for your QA records.',
+          'The bottom strip shows printed / missed / remaining for the active batch. When the run hits its target count (or you hit Stop & export), it auto-finalises and downloads three artifacts: CSV, signed JSON, and HTML envelope report.',
         target: 'hud-batch-progress',
         placement: 'top',
       },
@@ -252,7 +350,7 @@ export const TRAINING_STAGES: TrainingStage[] = [
         id: 'live-outro',
         title: 'You are trained ✓',
         body:
-          'You now know the full Twin Code production flow: bind → preview → preflight → live → recover.\n\nReplay any stage from the Help button (top-right) at any time. The simulated pair we used for training has been stopped — you\'re back to the real binding.',
+          'You now know the full Twin Code production flow:\n  Catalog → Bind → Preview → Pre-flight → LIVE → Production Run → Signed exports → Fault recovery.\n\nReplay any stage from the Training button at the top of the page. The sample catalog we loaded for this tour is being cleared now — you\'re back to a clean slate, ready for your real CSV.',
         target: null,
         placement: 'center',
         onEnter: () => {
