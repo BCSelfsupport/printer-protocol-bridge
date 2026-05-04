@@ -59,8 +59,11 @@ export interface ConveyorConfig {
 }
 
 export const DEFAULT_CONVEYOR_CONFIG: ConveyorConfig = {
-  ftPerMin: 250,
-  pitchMm: 80,
+  // Realistic small-bottle line defaults: 60 ft/min × 152 mm pitch ≈ 120 BPM.
+  // Previous defaults (250 ft/min × 80 mm = ~950 BPM) made dry-test runs
+  // burn through 50 bottles in ~3 seconds, which felt broken to operators.
+  ftPerMin: 60,
+  pitchMm: 152,
   bottleDiameterMm: 60,
   photocellPos: 0.6,
   wireAMean: 8,
@@ -68,6 +71,16 @@ export const DEFAULT_CONVEYOR_CONFIG: ConveyorConfig = {
   jitter: 0.25,
   stallRate: 0.01,
 };
+
+/** Common bottling-line presets surfaced in the Start Run dialog so operators
+ *  can pace a no-product dry run at a realistic speed without hunting through
+ *  the Debug panel. Values are conveyor (ftPerMin, pitchMm) → resulting BPM. */
+export const LINE_SPEED_PRESETS: { label: string; ftPerMin: number; pitchMm: number; description: string }[] = [
+  { label: "Slow (60 BPM)",   ftPerMin: 30,  pitchMm: 152, description: "Bench / hand-fed test, 1 per second" },
+  { label: "Medium (120 BPM)", ftPerMin: 60,  pitchMm: 152, description: "Typical small-bottle line" },
+  { label: "Fast (240 BPM)",  ftPerMin: 120, pitchMm: 152, description: "High-speed bottling" },
+  { label: "Stress (480 BPM)", ftPerMin: 240, pitchMm: 152, description: "Push the printer pair to its envelope" },
+];
 
 export interface Bottle {
   id: number;

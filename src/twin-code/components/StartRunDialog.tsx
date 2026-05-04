@@ -23,6 +23,7 @@ import { useTwinPair } from "../twinPairStore";
 import { twinDispatcher } from "../twinDispatcher";
 import { productionRun } from "../productionRun";
 import { catalog } from "../catalog";
+import { conveyorSim, computeBpm, LINE_SPEED_PRESETS } from "../conveyorSim";
 import { cloudLedger, type CloudActiveRun } from "../cloudLedger";
 import { PreflightDialog } from "./PreflightDialog";
 import { toast } from "@/hooks/use-toast";
@@ -52,6 +53,20 @@ export function StartRunDialog({
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [activeRuns, setActiveRuns] = useState<CloudActiveRun[]>([]);
   const [resuming, setResuming] = useState(false);
+
+  // Live mirror of the conveyor config so the dialog reflects whatever the
+  // operator picked last time / via Debug. Edits here write through to the
+  // singleton so the run starts at the chosen pace.
+  const [lineCfg, setLineCfg] = useState(() => conveyorSim.getConfig());
+  useEffect(() => {
+    if (open) setLineCfg(conveyorSim.getConfig());
+  }, [open]);
+  const livePresetBpm = computeBpm(lineCfg.ftPerMin, lineCfg.pitchMm);
+  const applyLineCfg = (patch: Partial<typeof lineCfg>) => {
+    const next = { ...lineCfg, ...patch };
+    setLineCfg(next);
+    conveyorSim.configure(patch);
+  };
 
   // Restore last operator name on open
   useEffect(() => {
@@ -230,6 +245,71 @@ export function StartRunDialog({
               Leave blank to consume the entire {remaining.toLocaleString()}-serial catalog.
             </p>
           </div>
+
+          {/* Line conditions — let the operator pick a realistic dry-run pace.
+              Without this, the conveyor runs at whatever was last set, which
+              defaulted to ~950 BPM and burned through 50 bottles in 3 seconds. */}
+          <div className="rounded-md border border-border bg-muted/30 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Line conditions (dry-run pace)
+              </Label>
+              <span className="font-mono text-[11px] text-primary">
+                ≈ {Math.round(livePresetBpm)} BPM
+              </span>
+            </div>
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {LINE_SPEED_PRESETS.map((p) => {
+                const isActive =
+                  Math.round(p.ftPerMin) === Math.round(lineCfg.ftPerMin) &&
+                  Math.round(p.pitchMm) === Math.round(lineCfg.pitchMm);
+                return (
+                  <Button
+                    key={p.label}
+                    type="button"
+                    size="sm"
+                    variant={isActive ? "default" : "outline"}
+                    className="h-7 px-2 text-[11px]"
+                    onClick={() => applyLineCfg({ ftPerMin: p.ftPerMin, pitchMm: p.pitchMm })}
+                    title={p.description}
+                  >
+                    {p.label}
+                  </Button>
+                );
+              })}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Line speed (ft/min)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={Math.round(lineCfg.ftPerMin)}
+                  onChange={(e) => applyLineCfg({ ftPerMin: Number(e.target.value) || 0 })}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="h-7 px-2 text-sm font-mono"
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Pitch (mm centre-to-centre)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={Math.round(lineCfg.pitchMm)}
+                  onChange={(e) => applyLineCfg({ pitchMm: Number(e.target.value) || 0 })}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="h-7 px-2 text-sm font-mono"
+                />
+              </div>
+            </div>
+            <p className="mt-1.5 text-[10px] text-muted-foreground">
+              Pick a realistic pace for your dry-run — the conveyor model uses these to space bottles past the photocell.
+              Real product on a real line will override this; this only matters when there's no actual product flowing.
+            </p>
+          </div>
+
           <div>
             <Label htmlFor="note" className="text-xs">Note (optional)</Label>
             <Textarea
