@@ -162,6 +162,12 @@ class ProductionRunStore {
     // The "Resume from bottle #N" banner reads the conveyor's bottle id, so
     // resetting here keeps the operator-facing number aligned with this lot.
     conveyorSim.resetBottleCounter();
+    // Install the pre-dispatch gate so the conveyor stops issuing serials the
+    // INSTANT the target is reached — keeps A and B printer counters in
+    // lock-step at end-of-lot (no extra ^MD slips through to A while B is
+    // being torn down). When targetCount is null/0, no gate is installed and
+    // the run runs until the catalog itself is exhausted.
+    this.installDispatchGate(meta);
     this.persistActive();
     this.notify();
     // Watch the catalog so the run auto-finalizes on the last bottle.
