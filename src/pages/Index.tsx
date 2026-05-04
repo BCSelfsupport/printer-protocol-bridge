@@ -922,8 +922,10 @@ const Index = () => {
 
       setPollingPaused(true);
       try {
-        await new Promise((resolve) => setTimeout(resolve, followUpSettleMs));
-        await waitForPollingIdle(3000);
+        // No pre-sequence sleep / waitForPollingIdle: forbidden by
+        // mem://features/message-persistence/dozen12-validation. saveMessageContent
+        // already paused polling and added the ^NM digest pause; the firmware is
+        // ready for the settings sequence as soon as ^NM/^SV ack returns.
         const result = await sendVerifiedCommandSequence(connectionState.connectedPrinter, commandSequence, followUpSettleMs);
         if (!result.success) {
           toast.error(`Saved "${targetName}", but failed to apply the message settings on the printer.`);
