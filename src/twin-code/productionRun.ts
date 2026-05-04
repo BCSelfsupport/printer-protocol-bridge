@@ -366,6 +366,30 @@ class ProductionRunStore {
     }
   }
 
+  /**
+   * Install a pre-dispatch gate on the conveyor sim that lets exactly
+   * `targetCount` bottles through (or unlimited when not set). The gate
+   * accounts internally so a stop-latency on the watcher cannot leak an
+   * extra ^MD to printer A.
+   */
+  private installDispatchGate(meta: ProductionRunMeta) {
+    if (!meta.targetCount || meta.targetCount <= 0) {
+      conveyorSim.setDispatchGate(null);
+      return;
+    }
+    let issued = 0;
+    const cap = meta.targetCount;
+    conveyorSim.setDispatchGate(() => {
+      if (issued >= cap) return false;
+      issued++;
+      return true;
+    });
+  }
+
+  private clearDispatchGate() {
+    try { conveyorSim.setDispatchGate(null); } catch { /* ignore */ }
+  }
+
   private persistActive() {
     try {
       if (this.state.active) {
