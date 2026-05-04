@@ -168,6 +168,10 @@ class ProductionRunStore {
       liveAtStart: input.liveAtStart,
       cloudRunId: null,
       targetCount: input.targetCount && input.targetCount > 0 ? Math.floor(input.targetCount) : null,
+      lineSnapshot: (() => {
+        const cv = conveyorSim.getConfig();
+        return cv ? { ftPerMin: cv.ftPerMin, pitchMm: cv.pitchMm } : null;
+      })(),
     };
     this.state = { ...this.state, active: meta };
     // Fresh run = fresh fault history; otherwise prior shift's incidents
