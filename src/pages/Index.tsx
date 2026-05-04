@@ -713,66 +713,8 @@ const Index = () => {
     }
   }, [connectionState.connectedPrinter?.id, sendCommand, sendCommandToPrinter]);
 
-  // After saving a message on the master, duplicate the full content to all slaves
-  const syncMessageToSlaves = useCallback(async (
-    messageName: string,
-    details: MessageDetails,
-    isNew?: boolean,
-  ) => {
-    if (!isMaster || !connectionState.connectedPrinter) return;
-    const slaves = getSlavesForMaster(connectionState.connectedPrinter.id);
-    const availableSlaves = slaves.filter(s => s.isAvailable);
-    if (availableSlaves.length === 0) return;
-
-    const { perMessageSettings } = buildEffectiveMessageDependentSettings(details);
-    const commands = await buildMessageCommands(
-      messageName,
-      details.fields,
-      details.templateValue,
-      isNew,
-      perMessageSettings,
-    );
-    if (!commands || commands.length === 0) return;
-
-    console.log(`[MasterSlaveSync] Pushing message "${messageName}" content to ${availableSlaves.length} slave(s) (template=${details.templateValue ?? '32'})`);
-    for (const slave of availableSlaves) {
-      // If this message is currently SELECTED on the slave, a plain ^DM is
-      // rejected by firmware ("cannot delete the printing message") and the
-      // slave keeps its previously-saved template — which is what causes
-      // overlapping lines when master is on a taller template (e.g. 32-dot)
-      // and slave was saved on 16-dot. replaceMessageWithoutDelete does
-      // deselect → rewrite → reselect so the master's template (encoded in
-      // ^NM) actually takes effect on the slave.
-      const slaveCurrent = slave.currentMessage?.trim().toUpperCase();
-      const targetUpper = messageName.trim().toUpperCase();
-
-      let ok = false;
-      if (slaveCurrent === targetUpper) {
-        const result = await replaceMessageWithoutDelete(slave, messageName, {
-          fields: details.fields,
-          templateValue: details.templateValue,
-        });
-        ok = result.success;
-        if (!ok) {
-          console.warn(`[MasterSlaveSync] In-place template rewrite failed on ${slave.name}: ${result.reason}`);
-        }
-      } else {
-        const sequencedCommands = commands.map((command) => ({
-          command,
-          delayAfterMs: getSaveCommandDelay(command, details.fields.length),
-        }));
-        const result = await sendVerifiedCommandSequence(slave, sequencedCommands, 300);
-        ok = result.success;
-        if (!ok) {
-          const failedCommand = sequencedCommands[result.failedIndex ?? 0]?.command ?? 'unknown command';
-          console.warn(`[MasterSlaveSync] Command failed on ${slave.name}: ${failedCommand.substring(0, 40)}...`);
-        }
-      }
-      // Do NOT auto-^SM here for non-selected slaves — operator's explicit
-      // Select on the master triggers ^SM via useMasterSlaveSync.
-      console.log(`[MasterSlaveSync] Pushed "${messageName}" → ${slave.name}: ${ok ? 'OK' : 'PARTIAL'}`);
-    }
-  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence, replaceMessageWithoutDelete]);
+  // syncMessageToSlaves is declared after replaceMessageWithoutDelete (below)
+  // because it depends on that helper.
 
   const replaceMessageWithoutDelete = useCallback(async (
     targetPrinter: Printer,
