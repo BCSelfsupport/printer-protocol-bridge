@@ -111,3 +111,4 @@ Updated: today
 - [Firmware Grace](mem://architecture/firmware-processing-grace-periods) — 15s grace period for state parity
 - [Sync Matching](mem://features/message-metadata-sync-matching) — Prioritize by exact data content
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
+- [^NM Digest Pause](mem://features/message-persistence/nm-digest-pause) — Scale ^NM→^SV delay (300+60ms/field, cap 3s) to fix Dozen12 12-field lockup
