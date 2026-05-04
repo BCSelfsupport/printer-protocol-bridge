@@ -82,10 +82,28 @@ type SequencedPrinterCommand = string | {
 
 const MESSAGE_RELOAD_SETTLE_MS = 900;
 const SAVE_PUSH_SETTLE_MS = 1500;
+const SAVE_ACK_MAX_WAIT_MS = 15000;
+const SAVE_NM_IDLE_AFTER_DATA_MS = 5000;
+const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 1500;
+
+const hasCompleteSaveAck = (rawResponse?: string): boolean => {
+  const cleaned = Array.from(rawResponse ?? '')
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code >= 32 && code !== 127;
+    })
+    .join('')
+    .trim();
+  const upper = cleaned.toUpperCase();
+  return upper.includes('COMMAND SUCCESSFUL') || upper === 'OK' || upper === 'SUCCESS' || cleaned.endsWith('>');
+};
 
 const getSaveCommandDelay = (command: string, fieldCount: number) => {
   const trimmed = command.trim().toUpperCase();
-  if (trimmed.startsWith('^NM ')) return Math.min(3000, 300 + fieldCount * 60);
+  if (trimmed.startsWith('^NM ')) {
+    if (fieldCount >= 6) return Math.min(6000, Math.max(2000, fieldCount * 200));
+    return Math.min(2000, 500 + fieldCount * 120);
+  }
   if (trimmed === '^SV') return SAVE_PUSH_SETTLE_MS;
   return 300;
 };
@@ -647,10 +665,24 @@ const Index = () => {
       && multiPrinterEmulator.isEmulatedIp(targetPrinter.ipAddress, targetPrinter.port);
 
     const runCommand = async (command: string) => {
+      const trimmed = command.trim().toUpperCase();
+      const saveOptions = trimmed.startsWith('^NM ')
+        ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_NM_IDLE_AFTER_DATA_MS }
+        : trimmed === '^SV'
+          ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS }
+          : undefined;
+      const validateResult = (result: { success?: boolean; response?: string; error?: string }) => {
+        const response = result?.response ?? result?.error ?? '';
+        const requiresSaveAck = (window.electronAPI || isRelayMode()) && (trimmed.startsWith('^NM ') || trimmed === '^SV');
+        const missingSaveAck = requiresSaveAck && !hasCompleteSaveAck(response);
+        return { success: !!result?.success && !isTransportCommandFailure(response) && !missingSaveAck };
+      };
+
       if (targetPrinter.id === connectionState.connectedPrinter?.id) {
-        const result = await sendCommand(command);
-        const response = result?.response ?? '';
-        return { success: !!result?.success && !isTransportCommandFailure(response) };
+        const result = saveOptions && (window.electronAPI || isRelayMode())
+          ? await printerTransport.sendCommand(targetPrinter.id, command, saveOptions)
+          : await sendCommand(command);
+        return validateResult(result);
       }
 
       if (emulatorHandles) {
@@ -660,9 +692,8 @@ const Index = () => {
       }
 
       // Real hardware: use shared session opened below
-      const result = await printerTransport.sendCommand(targetPrinter.id, command);
-      const response = result?.response ?? result?.error ?? '';
-      return { success: !!result?.success && !isTransportCommandFailure(response) };
+      const result = await printerTransport.sendCommand(targetPrinter.id, command, saveOptions);
+      return validateResult(result);
     };
 
     // Only open a shared TCP session for real (non-emulated) non-connected printers
