@@ -299,6 +299,18 @@ class ConveyorSim {
     const c = this.config;
     const t0 = performance.now() - this.startedAtPerf;
 
+    // Pre-dispatch gate (e.g. ProductionRun target-count cap). When the gate
+    // denies, the bottle simply rolls past — no serial dispensed, no miss
+    // recorded, no ^MD issued. This keeps A and B counters in lock-step at
+    // end-of-lot regardless of conveyor stop-latency.
+    if (this.dispatchGate && !this.dispatchGate()) {
+      bottle.serial = null;
+      bottle.state = "pending"; // visually unprinted, will be culled
+      bottle.cycleMs = 0;
+      bottle.skewMs = 0;
+      return;
+    }
+
     // Catalog dispense
     const serial = catalog.dispense();
     if (serial === null) {
