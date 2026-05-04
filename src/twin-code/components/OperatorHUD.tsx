@@ -272,9 +272,21 @@ export function OperatorHUD() {
             </div>
             {lastPrinted ? (
               <>
-                <div className="mt-1 font-mono font-bold leading-none text-primary tabular-nums text-center break-all" style={{ fontSize: "clamp(2.5rem, 7vw, 6rem)" }}>
-                  {lastPrinted.serial}
-                </div>
+                {(() => {
+                  // Auto-fit: long serials shrink so they fit on a single line
+                  // inside the card (avoids the wrap shown in the screenshot).
+                  const len = lastPrinted.serial.length;
+                  const maxRem = len <= 8 ? 5 : len <= 12 ? 3.75 : len <= 16 ? 2.75 : 2.25;
+                  const vw = len <= 8 ? 6 : len <= 12 ? 4.5 : len <= 16 ? 3.5 : 2.75;
+                  return (
+                    <div
+                      className="mt-1 w-full font-mono font-bold leading-none text-primary tabular-nums text-center whitespace-nowrap overflow-hidden"
+                      style={{ fontSize: `clamp(1.5rem, ${vw}vw, ${maxRem}rem)` }}
+                    >
+                      {lastPrinted.serial}
+                    </div>
+                  );
+                })()}
                 <div className="mt-3 font-mono text-base uppercase tracking-[0.3em] text-muted-foreground">
                   bottle #{lastPrinted.id}
                 </div>
