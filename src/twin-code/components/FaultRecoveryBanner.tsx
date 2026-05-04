@@ -54,10 +54,12 @@ export function FaultRecoveryBanner() {
 
   const handleResume = () => {
     faultGuard.acknowledge();
-    // Kick the conveyor back on — anti-duplicate is enforced by the catalog
-    // ledger, so even if the operator hits resume on a phantom fault, no
-    // already-printed serial can be re-issued.
-    if (!conveyorSim.isRunning()) conveyorSim.start();
+    // Only restart the conveyor if a production run is still active. After a
+    // run has auto-finalized (target reached / catalog exhausted), restarting
+    // the line would dispatch unbatched bottles with no audit boundary.
+    if (productionRun.getState().active && !conveyorSim.isRunning()) {
+      conveyorSim.start();
+    }
   };
 
   const handleStandDown = () => {
