@@ -192,6 +192,12 @@ export function CatalogStripBar() {
     ) {
       return;
     }
+    // Stop the line and clear in-flight bottles BEFORE resetting the catalog,
+    // otherwise the conveyor's RAF immediately re-dispenses the freshly-zeroed
+    // serials and you're back where you started within ~50ms.
+    conveyorSim.stop();
+    conveyorSim.reset();
+    faultGuard.reset();
     catalog.reset();
   };
 
