@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Shield, Loader2 } from 'lucide-react';
 import { useLicense } from '@/contexts/LicenseContext';
-import { isDevPanelPreviewRuntime } from '@/lib/runtimeEnvironment';
 
 interface DevSignInDialogProps {
   open: boolean;
@@ -21,14 +20,12 @@ type Stage = 'check' | 'verify';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-const PREVIEW_DEV_PASSWORD = 'CITEC';
 
 /**
  * Server-verified developer sign-in.
  */
 export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDialogProps) {
   const { productKey } = useLicense();
-  const allowPreviewPassword = isDevPanelPreviewRuntime();
   const [stage, setStage] = useState<Stage>('check');
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -41,11 +38,6 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
     if (!open) return;
     setError(null);
     setCode('');
-    if (allowPreviewPassword) {
-      setStage('verify');
-      setBusy(false);
-      return;
-    }
     if (!productKey) {
       setError('No license key activated.');
       return;
@@ -72,23 +64,13 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
         setBusy(false);
       }
     })();
-  }, [open, productKey, allowPreviewPassword]);
+  }, [open, productKey]);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim() || (!productKey && !allowPreviewPassword)) return;
+    if (!code.trim() || !productKey) return;
     setBusy(true);
     setError(null);
-    if (allowPreviewPassword) {
-      if (code.trim().toUpperCase() === PREVIEW_DEV_PASSWORD) {
-        onSuccess();
-        onOpenChange(false);
-      } else {
-        setError('Invalid developer password.');
-      }
-      setBusy(false);
-      return;
-    }
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-dev-access`, {
         method: 'POST',
