@@ -29,6 +29,17 @@ import type { Printer } from '@/types/printer';
 import type { TwinPairState } from '@/twin-code/twinPairStore';
 import { buildSeedCommands, seedForSide, type MessageSeed } from '@/twin-code/messageSeeds';
 
+/**
+ * Twin Code default print parameters pushed to both printers on bind/seed.
+ * Exposed so the production-run audit can record the *exact* values that
+ * applied at run time — Width/Speed/Delay have a massive bearing on cycle
+ * time and therefore the BPM ceiling, so they belong in the envelope report.
+ */
+export const TWIN_DEFAULT_WIDTH = 1;
+export const TWIN_DEFAULT_DELAY = 100;
+export const TWIN_DEFAULT_SPEED_CODE = 3; // ^CM s3 = Ultra Fast
+export const TWIN_DEFAULT_SPEED_LABEL = 'Ultra Fast';
+
 const MAX_IN_FLIGHT = 4;
 const R_TIMEOUT_MS = 500;
 const C_TIMEOUT_MS = 30_000;
