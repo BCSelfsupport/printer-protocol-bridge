@@ -781,6 +781,8 @@ const Index = () => {
     }
 
     sequence.push(...commands);
+    // Persist the recreated message (with new template) before reselecting.
+    sequence.push('^SV');
     const reselectCommandIndex = sequence.length;
     sequence.push(`^SM ${messageName}`);
 
