@@ -78,6 +78,19 @@ export interface ProductionRunMeta {
     ftPerMin: number;
     pitchMm: number;
   } | null;
+  /**
+   * Snapshot of the printer print-parameter defaults applied at bind time.
+   * These three settings dominate cycle time (Speed sets dot rate, Width
+   * stretches/compresses the print, Delay is dead time before each strike),
+   * so they're recorded with the run for proper apples-to-apples comparison
+   * across BPM tests.
+   */
+  printSnapshot?: {
+    widthDots: number;
+    delayDots: number;
+    speedCode: number;
+    speedLabel: string;
+  } | null;
 }
 
 export interface ProductionRunSummary {
