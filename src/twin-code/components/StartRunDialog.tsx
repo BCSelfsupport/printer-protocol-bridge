@@ -54,6 +54,20 @@ export function StartRunDialog({
   const [activeRuns, setActiveRuns] = useState<CloudActiveRun[]>([]);
   const [resuming, setResuming] = useState(false);
 
+  // Live mirror of the conveyor config so the dialog reflects whatever the
+  // operator picked last time / via Debug. Edits here write through to the
+  // singleton so the run starts at the chosen pace.
+  const [lineCfg, setLineCfg] = useState(() => conveyorSim.getConfig());
+  useEffect(() => {
+    if (open) setLineCfg(conveyorSim.getConfig());
+  }, [open]);
+  const livePresetBpm = computeBpm(lineCfg.ftPerMin, lineCfg.pitchMm);
+  const applyLineCfg = (patch: Partial<typeof lineCfg>) => {
+    const next = { ...lineCfg, ...patch };
+    setLineCfg(next);
+    conveyorSim.configure(patch);
+  };
+
   // Restore last operator name on open
   useEffect(() => {
     if (open) {
