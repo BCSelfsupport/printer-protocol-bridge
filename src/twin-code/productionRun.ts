@@ -276,7 +276,25 @@ class ProductionRunStore {
     faultGuard.reset();
     const endedAt = Date.now();
     const recordsEndIdx = catalog.getRecords().length;
-    const meta: ProductionRunMeta = { ...active, endedAt, recordsEndIdx };
+    // Snapshot live ^PW / ^DA off the printers BEFORE we tear down the bond,
+    // so the report shows the values the operator actually settled on for this
+    // lot — not just the defaults pushed at bind. Best-effort; failure leaves
+    // the report falling back to the bind baseline.
+    let liveAtStop: NonNullable<NonNullable<ProductionRunMeta['printSnapshot']>['liveAtStop']> = null;
+    if (active.liveAtStart && twinDispatcher.isBound()) {
+      try {
+        const live = await twinDispatcher.fetchLivePrintParams();
+        if (live) liveAtStop = { a: live.a, b: live.b };
+      } catch { /* ignore */ }
+    }
+    const meta: ProductionRunMeta = {
+      ...active,
+      endedAt,
+      recordsEndIdx,
+      printSnapshot: active.printSnapshot
+        ? { ...active.printSnapshot, liveAtStop }
+        : active.printSnapshot,
+    };
     const records = catalog.getRecords().slice(meta.recordsStartIdx, recordsEndIdx);
     const summary = computeSummary(meta, records, endedAt);
     const recordsHash = await sha256Hex(JSON.stringify(records));
