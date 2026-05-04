@@ -181,7 +181,22 @@ export function AdjustDialog({
   isConnected,
   title = 'Adjust Settings',
 }: AdjustDialogProps) {
-  
+
+  // Debounced ^SV — every Adjust change writes to the live setting (^PW etc.),
+  // but committing to non-volatile storage on every nudge would burn flash.
+  // Coalesce a single ^SV ~800ms after the last edit so settings actually
+  // survive a printer reboot. (Was: edits were "live but not saved" — width
+  // would revert to 15 after a power cycle.)
+  const saveTimerRef = useState<{ t: ReturnType<typeof setTimeout> | null }>(() => ({ t: null }))[0];
+  const scheduleSave = () => {
+    if (saveTimerRef.t) clearTimeout(saveTimerRef.t);
+    saveTimerRef.t = setTimeout(() => {
+      saveTimerRef.t = null;
+      onSendCommand('^SV').catch(() => {});
+    }, 800);
+  };
+  useEffect(() => () => { if (saveTimerRef.t) clearTimeout(saveTimerRef.t); }, [saveTimerRef]);
+
   // Helper to update a numeric setting and send the command immediately
   const handleLiveUpdate = async (key: SettingKey, newValue: number) => {
     const constraint = CONSTRAINTS[key];
@@ -193,6 +208,7 @@ export function AdjustDialog({
     // Send command to printer immediately
     const command = `^${constraint.cmd} ${clampedValue}`;
     await onSendCommand(command);
+    scheduleSave();
   };
 
   // Handle rotation change via ^CM command
@@ -200,6 +216,7 @@ export function AdjustDialog({
     onUpdate({ rotation: value as PrintSettings['rotation'] });
     const orientationValue = ORIENTATION_MAP[value] ?? 0;
     await onSendCommand(`^CM o${orientationValue}`);
+    scheduleSave();
   };
 
   // Handle speed change via ^CM command
@@ -207,6 +224,7 @@ export function AdjustDialog({
     onUpdate({ speed: value });
     const speedValue = SPEED_MAP[value];
     await onSendCommand(`^CM s${speedValue}`);
+    scheduleSave();
   };
 
   return (

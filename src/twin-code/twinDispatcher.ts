@@ -670,15 +670,34 @@ export async function seedTwinPairMessages(
     const a = new PrinterSession(printerA.id, 'A', printerA);
     const b = new PrinterSession(printerB.id, 'B', printerB);
     try {
+      const nameA = opts.messageNameA ?? pair.a.messageName ?? 'LID';
+      const nameB = opts.messageNameB ?? pair.b.messageName ?? 'SIDE';
       const [resA, resB] = await Promise.all([
         opts.autoCreateA
-          ? a.ensureSeedMessage(opts.messageNameA ?? pair.a.messageName ?? 'LID', seedForSide('A'))
+          ? a.ensureSeedMessage(nameA, seedForSide('A'))
           : Promise.resolve<SeedResult>({ ok: true, seeded: false }),
         opts.autoCreateB
-          ? b.ensureSeedMessage(opts.messageNameB ?? pair.b.messageName ?? 'SIDE', seedForSide('B'))
+          ? b.ensureSeedMessage(nameB, seedForSide('B'))
           : Promise.resolve<SeedResult>({ ok: true, seeded: false }),
       ]);
       if (!resA.ok || !resB.ok) return { ok: false, error: resA.error || resB.error || 'Message auto-create failed' };
+
+      // After seeding (or even when the message already existed), explicitly
+      // ^SM-select the bound LID/SIDE messages so the printers come out of the
+      // bind flow already pointing at the right message. Otherwise the operator
+      // has to manually select them on the HMI before the first run, or LIVE
+      // mode silently dispatches against whatever message the keypad last picked.
+      // Give freshly-seeded ^NM/^SV a beat to commit before ^SM resolves the name.
+      if (resA.seeded || resB.seeded) await new Promise(res => setTimeout(res, 600));
+      const selA = await printerTransport.sendCommand(printerA.id, `^SM ${nameA.trim().toUpperCase()}`, { maxWaitMs: 4000 });
+      const selB = await printerTransport.sendCommand(printerB.id, `^SM ${nameB.trim().toUpperCase()}`, { maxWaitMs: 4000 });
+      if (!selA?.success || !selB?.success) {
+        return {
+          ok: false,
+          error: `Message ^SM-select failed${!selA?.success ? ` on A (${nameA})` : ''}${!selB?.success ? ` on B (${nameB})` : ''}`,
+        };
+      }
+
       return { ok: true, aId: printerA.id, bId: printerB.id, seededA: !!resA.seeded, seededB: !!resB.seeded };
     } finally {
       await Promise.all([a.disconnectAfterSeed(), b.disconnectAfterSeed()]);
