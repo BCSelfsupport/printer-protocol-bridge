@@ -724,11 +724,13 @@ const Index = () => {
     const availableSlaves = slaves.filter(s => s.isAvailable);
     if (availableSlaves.length === 0) return;
 
+    const { perMessageSettings } = buildEffectiveMessageDependentSettings(details);
     const commands = await buildMessageCommands(
       messageName,
       details.fields,
       details.templateValue,
       isNew,
+      perMessageSettings,
     );
     if (!commands || commands.length === 0) return;
 
@@ -750,7 +752,7 @@ const Index = () => {
       // currentMessage effect).
       console.log(`[MasterSlaveSync] Pushed content "${messageName}" → ${slave.name}: ${result.success ? 'OK' : 'PARTIAL'} (no ^SM)`);
     }
-  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildMessageCommands, sendVerifiedCommandSequence]);
+  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence]);
 
   const replaceMessageWithoutDelete = useCallback(async (
     targetPrinter: Printer,
