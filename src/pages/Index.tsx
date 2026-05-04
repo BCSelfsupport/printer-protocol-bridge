@@ -728,7 +728,7 @@ const Index = () => {
           return { success: false, failedIndex: index };
         }
 
-        const pendingAckDelay = result.partialPendingSave ? SAVE_PENDING_ACK_EXTRA_SETTLE_MS : 0;
+        const pendingAckDelay = 'partialPendingSave' in result && result.partialPendingSave ? SAVE_PENDING_ACK_EXTRA_SETTLE_MS : 0;
         const isFinalFlush = index === commandsToRun.length - 1 && command.trim().toUpperCase() === '^SV';
         if ((index < commandsToRun.length - 1 || isFinalFlush) && delayAfterMs + pendingAckDelay > 0) {
           await new Promise(resolve => setTimeout(resolve, delayAfterMs + pendingAckDelay));
