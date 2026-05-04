@@ -190,10 +190,23 @@ class ProductionRunStore {
   /**
    * Stop the active run, slice out its audit window, and produce a
    * tamper-evident export. The active slot is cleared.
+   *
+   * CRITICAL: this halts the conveyor sim FIRST, before any await, so no
+   * additional bottles can cross the photocell while we're sealing the run.
+   * Previously the bar's onAutoStop handler was responsible for stopping
+   * the conveyor, which left a window where 100+ extra bottles could fly
+   * past the beam (causing the "50-print run, 174 bottles dispatched" bug).
    */
   async stop(): Promise<ProductionRunExport | null> {
     const active = this.state.active;
     if (!active) return null;
+    // Halt the bottle generator IMMEDIATELY, synchronously, before we await
+    // anything. This guarantees no more photocell crossings between "run is
+    // ending" and "run is sealed".
+    try { conveyorSim.stop(); } catch { /* ignore */ }
+    // Also disarm the fault-recovery auto-resume — when the run is over,
+    // an inbound fault must NOT silently restart the line.
+    faultGuard.reset();
     const endedAt = Date.now();
     const recordsEndIdx = catalog.getRecords().length;
     const meta: ProductionRunMeta = { ...active, endedAt, recordsEndIdx };
@@ -295,11 +308,19 @@ class ProductionRunStore {
       if (firing) return;
       const recordsConsumed = catalog.getRecords().length - active.recordsStartIdx;
 
-      // (1) Run-length cap reached? (printed + missed >= targetCount)
+      // (1) Run-length cap reached?
+      // Count PRINTS only toward the target — operators ask for "50 codes",
+      // not "50 attempts". A run with target=50 + 5 misses must produce 50
+      // valid prints, not stop at 45 prints just because 5 bottles missed.
+      let printedInRun = 0;
+      if (active.targetCount != null && active.targetCount > 0) {
+        const slice = catalog.getRecords().slice(active.recordsStartIdx);
+        for (const r of slice) if (r.outcome === "printed") printedInRun++;
+      }
       const targetReached =
         active.targetCount != null &&
         active.targetCount > 0 &&
-        recordsConsumed >= active.targetCount;
+        printedInRun >= active.targetCount;
 
       // (2) Catalog fully consumed?
       const catalogExhausted =
@@ -308,6 +329,11 @@ class ProductionRunStore {
       if (!targetReached && !catalogExhausted) return;
 
       firing = true;
+      // Stop the conveyor synchronously RIGHT NOW so no more bottles cross
+      // the beam while we await the SHA-256 export. (stop() will also call
+      // this, but doing it here closes the gap between "watcher fires" and
+      // "stop() actually runs.")
+      try { conveyorSim.stop(); } catch { /* ignore */ }
       // Defer one tick so the catalog notify loop completes cleanly.
       Promise.resolve().then(async () => {
         try {
