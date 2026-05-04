@@ -716,7 +716,8 @@ const Index = () => {
           return { success: false, failedIndex: index };
         }
 
-        if (index < commandsToRun.length - 1 && delayAfterMs > 0) {
+        const isFinalFlush = index === commandsToRun.length - 1 && command.trim().toUpperCase() === '^SV';
+        if ((index < commandsToRun.length - 1 || isFinalFlush) && delayAfterMs > 0) {
           await new Promise(resolve => setTimeout(resolve, delayAfterMs));
         }
       }
