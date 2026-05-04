@@ -114,7 +114,14 @@ class ProductionRunStore {
   constructor() {
     this.restoreActive();
     // If a run was restored from disk, re-arm the catalog watcher.
-    if (this.state.active) this.armCatalogWatcher();
+    if (this.state.active) {
+      this.armCatalogWatcher();
+      // NOTE: gate counter starts fresh — on a refresh mid-run we cannot
+      // recover how many bottles were already issued, so the gate would
+      // allow up to `targetCount` MORE bottles. Acceptable tradeoff: the
+      // catalog ledger is still authoritative for accounting.
+      this.installDispatchGate(this.state.active);
+    }
   }
 
   /** Register a callback for "run auto-stopped because catalog is empty". */
