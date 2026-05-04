@@ -145,12 +145,29 @@ class ConveyorSim {
   private bottleCount = 0;
   /** Live dispatcher — when set, wire latencies are real; when null, synthesized. */
   private liveDispatcher: LiveDispatcher | null = null;
+  /**
+   * Optional pre-dispatch gate. Called once per photocell crossing BEFORE the
+   * catalog is dispensed. Return `false` to let the bottle roll past silently
+   * (no serial issued, no miss recorded, no ^MD sent to either printer). Used
+   * by ProductionRun to enforce an exact target-count cut-off so the bonded
+   * printers' hardware counters stay in lock-step at end-of-lot.
+   *
+   * Gate is expected to atomically check-and-account on each call (i.e. count
+   * its own issued tokens internally), so the conveyor doesn't need to know
+   * about the run's target.
+   */
+  private dispatchGate: (() => boolean) | null = null;
 
   /** Plug a real bonded-pair dispatcher (LIVE mode) or pass null to revert to synthetic. */
   setLiveDispatcher(fn: LiveDispatcher | null) {
     this.liveDispatcher = fn;
   }
   isLive(): boolean { return this.liveDispatcher !== null; }
+
+  /** Install/clear the pre-dispatch gate (see field comment). */
+  setDispatchGate(fn: (() => boolean) | null) {
+    this.dispatchGate = fn;
+  }
 
   configure(patch: Partial<ConveyorConfig>) {
     this.config = { ...this.config, ...patch };
