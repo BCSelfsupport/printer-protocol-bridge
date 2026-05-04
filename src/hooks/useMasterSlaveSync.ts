@@ -146,43 +146,13 @@ export function useMasterSlaveSync({
     });
   }, [isMaster, currentMessage, getSlaves, sendCommandToPrinter, getMessageContent, buildMessageCommands]);
 
-  // Sync message list: when master gets new messages, push them to slaves via ^NM
+  // Message content is pushed by Index.syncMessageToSlaves after save using the
+  // full ^DM → ^NM → ^SV sequence. Do not also send a bare ^NM here: that can
+  // leave slaves RAM-yellow and can race the master's save/restore flow.
   useEffect(() => {
-    if (!isMaster || syncingRef.current) return;
-
     const currentNames = messages.map(m => m.name).sort();
-    const prevNames = prevMessageListRef.current;
-
-    // Find new messages (in current but not in previous)
-    const newMessages = currentNames.filter(n => !prevNames.includes(n));
     prevMessageListRef.current = currentNames;
-
-    if (newMessages.length === 0) return;
-    // Skip on first load (when prevNames was empty)
-    if (prevNames.length === 0) return;
-
-    const slaves = getSlaves();
-    if (slaves.length === 0) return;
-
-    syncingRef.current = true;
-    console.log(`[MasterSlaveSync] Syncing ${newMessages.length} new message(s) to ${slaves.length} slave(s):`, newMessages);
-
-    // For each new message, send a basic ^NM command to each slave
-    // The message content sync uses a simple ^NM with just the name
-    // (full field content would require reading from localStorage and building the full command)
-    Promise.all(
-      slaves.flatMap(slave =>
-        newMessages.map(msgName =>
-          sendCommandToPrinter(slave, `^NM ${msgName}`)
-            .then(ok => {
-              console.log(`[MasterSlaveSync] ^NM ${msgName} → ${slave.name}: ${ok ? 'OK' : 'FAIL'}`);
-            })
-        )
-      )
-    ).finally(() => {
-      syncingRef.current = false;
-    });
-  }, [isMaster, messages, getSlaves, sendCommandToPrinter]);
+  }, [messages]);
 
   return {
     isMaster,
