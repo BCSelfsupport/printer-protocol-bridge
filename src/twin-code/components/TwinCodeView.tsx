@@ -250,18 +250,8 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
                   </Badge>
                 )}
               </Button>
-              {!running ? (
-                <Button size="sm" onClick={handleStart}>
-                  <Play className="mr-1 h-4 w-4" /> Start generator
-                </Button>
-              ) : (
-                <Button size="sm" variant="secondary" onClick={handleStop}>
-                  <Square className="mr-1 h-4 w-4" /> Stop
-                </Button>
-              )}
-              <Button size="sm" variant="outline" onClick={handleClear}>
-                <Trash2 className="mr-1 h-4 w-4" /> Clear
-              </Button>
+              {/* Synthetic generator buttons removed — real CSV upload + Auto Print Go
+                  drives all production-run data now. */}
               <Button size="sm" variant="outline" onClick={handleExportCSV} disabled={samples.length === 0}>
                 <Download className="mr-1 h-4 w-4" /> CSV
               </Button>
