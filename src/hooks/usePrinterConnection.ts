@@ -17,7 +17,6 @@ import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
 import { setPollingPaused, isPollingPaused } from '@/lib/pollingPause';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
-import { isDevPanelPreviewRuntime } from '@/lib/runtimeEnvironment';
 
 /**
  * Parse printer ^SD date/time response into a local Date.
@@ -1853,14 +1852,6 @@ export function usePrinterConnection() {
   const signIn = useCallback(async (password: string): Promise<boolean> => {
     console.log('[signIn] Called, isConnected:', connectionState.isConnected, 'printer:', connectionState.connectedPrinter?.id);
     const normalizedPassword = password.trim().toUpperCase();
-
-    // Preview/dev safety net: older cached Dev Portal flows can still route
-    // through this shared printer sign-in function. Keep CITEC available there
-    // so Dev Panel access is not blocked by stale UI state.
-  if (isDevPanelPreviewRuntime() && normalizedPassword === 'CITEC') {
-      console.log('[signIn] Dev preview CITEC override accepted');
-      return true;
-    }
 
     if (!connectionState.isConnected || !connectionState.connectedPrinter) {
       console.log('[signIn] Not connected, aborting');
