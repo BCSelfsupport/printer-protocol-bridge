@@ -995,6 +995,59 @@ class TwinDispatcher {
     };
   }
 
+  /** Currently bound printer IDs, or null when not bound. */
+  getBoundIds(): { aId: number; bId: number } | null {
+    if (!this.a || !this.b) return null;
+    return { aId: this.a.printerId, bId: this.b.printerId };
+  }
+
+  /**
+   * Query the live Width / Delay actually programmed on each printer right now.
+   * Operators tune ^DA (and sometimes ^PW) on the line after bind to nail the
+   * print position relative to the photocell — what they end up at is the value
+   * that will dominate cycle time in real production, so the report needs the
+   * AS-RUN values, not just the AS-BOUND defaults.
+   *
+   * Speed (^CM s) is intentionally NOT re-queried: bind locked it to Ultra Fast
+   * and there's no read-only ^CM query that returns the speed code reliably
+   * across firmware revs. The bind-time value is authoritative for it.
+   *
+   * Best-effort: any side that fails to respond simply yields nulls — the
+   * report falls back to the bind defaults for that side. Never throws.
+   */
+  async fetchLivePrintParams(): Promise<{
+    a: { widthDots: number | null; delayDots: number | null };
+    b: { widthDots: number | null; delayDots: number | null };
+  } | null> {
+    if (!this.a || !this.b) return null;
+    const parseInt1 = (raw: string | undefined, key: 'PW' | 'DA'): number | null => {
+      if (!raw) return null;
+      // Tolerant patterns: "PW: 1", "Print Width: 1", "DA: 100", "Delay: 100".
+      const patterns = key === 'PW'
+        ? [/Print\s*Width\s*[:=]\s*(\d+)/i, /\bPW\s*[:=]\s*(\d+)/i, /\b(\d+)\b/]
+        : [/Delay\s*(?:Adjust)?\s*[:=]\s*(\d+)/i, /\bDA\s*[:=]\s*(\d+)/i, /\b(\d+)\b/];
+      for (const p of patterns) {
+        const m = raw.match(p);
+        if (m) return parseInt(m[1], 10);
+      }
+      return null;
+    };
+    const querySide = async (pid: number) => {
+      const pw = await printerTransport.sendCommand(pid, '^PW', { maxWaitMs: 2000 }).catch(() => null);
+      const da = await printerTransport.sendCommand(pid, '^DA', { maxWaitMs: 2000 }).catch(() => null);
+      return {
+        widthDots: pw?.success ? parseInt1(pw.response, 'PW') : null,
+        delayDots: da?.success ? parseInt1(da.response, 'DA') : null,
+      };
+    };
+    try {
+      const [a, b] = await Promise.all([querySide(this.a.printerId), querySide(this.b.printerId)]);
+      return { a, b };
+    } catch {
+      return null;
+    }
+  }
+
   async unbind(): Promise<void> {
     const a = this.a; const b = this.b;
     this.a = null; this.b = null;
