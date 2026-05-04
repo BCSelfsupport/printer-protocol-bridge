@@ -1528,7 +1528,7 @@ const Index = () => {
       })
       .filter((alert): alert is LowStockAlertData => alert !== null)
     );
-  }, [consumableStorage.consumables, consumableStorage]);
+  }, [consumableStorage.consumables, consumableStorage.getConsumable]);
 
   // Auto-downtime detection: track jet/HV state transitions for active production runs
   const prevPrinterStateRef = useRef<{ jetRunning: boolean; isRunning: boolean }>({ jetRunning: false, isRunning: false });
