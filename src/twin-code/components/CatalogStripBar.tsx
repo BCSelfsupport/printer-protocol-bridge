@@ -42,6 +42,7 @@ import { LedgerResumeBanner } from "./LedgerResumeBanner";
 import { FaultRecoveryBanner } from "./FaultRecoveryBanner";
 import { conveyorSim } from "../conveyorSim";
 import { catalog } from "../catalog";
+import { faultGuard } from "../faultGuard";
 import { useCatalog } from "../useCatalog";
 import { useTwinPair } from "../twinPairStore";
 import { twinDispatcher } from "../twinDispatcher";
@@ -191,6 +192,12 @@ export function CatalogStripBar() {
     ) {
       return;
     }
+    // Stop the line and clear in-flight bottles BEFORE resetting the catalog,
+    // otherwise the conveyor's RAF immediately re-dispenses the freshly-zeroed
+    // serials and you're back where you started within ~50ms.
+    conveyorSim.stop();
+    conveyorSim.reset();
+    faultGuard.reset();
     catalog.reset();
   };
 
@@ -409,6 +416,9 @@ export function CatalogStripBar() {
                   variant="ghost"
                   className="h-6 px-2 text-[10px]"
                   onClick={() => {
+                    conveyorSim.stop();
+                    conveyorSim.reset();
+                    faultGuard.reset();
                     catalog.reset();
                   }}
                 >
