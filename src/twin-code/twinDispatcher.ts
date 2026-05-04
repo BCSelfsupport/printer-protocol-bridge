@@ -698,6 +698,22 @@ export async function seedTwinPairMessages(
         };
       }
 
+      // Push Twin Code default print parameters so the printer's stored values
+      // match what the TwinCode UI assumes. Without this, an HMI-set delay of
+      // 2300 silently bloats cycle time even though the dispatcher thinks
+      // delay is 100. ^DA = print delay, ^PW = print width. ^SV commits to
+      // non-volatile storage so values survive a reboot.
+      // (Operator can still tune via Adjust → values then live-update with ^SV.)
+      const TWIN_DEFAULT_DELAY = 100;
+      const TWIN_DEFAULT_WIDTH = 15;
+      for (const pid of [printerA.id, printerB.id]) {
+        await printerTransport.sendCommand(pid, `^DA ${TWIN_DEFAULT_DELAY}`, { maxWaitMs: 3000 }).catch(() => {});
+        await printerTransport.sendCommand(pid, `^PW ${TWIN_DEFAULT_WIDTH}`, { maxWaitMs: 3000 }).catch(() => {});
+        await new Promise(res => setTimeout(res, 200));
+        await printerTransport.sendCommand(pid, '^SV', { maxWaitMs: 3000 }).catch(() => {});
+        await new Promise(res => setTimeout(res, 150));
+      }
+
       return { ok: true, aId: printerA.id, bId: printerB.id, seededA: !!resA.seeded, seededB: !!resB.seeded };
     } finally {
       await Promise.all([a.disconnectAfterSeed(), b.disconnectAfterSeed()]);
