@@ -123,28 +123,15 @@ export function useMasterSlaveSync({
     syncingRef.current = true;
     console.log(`[MasterSlaveSync] Syncing message selection "${currentMessage}" to ${slaves.length} slave(s)`);
 
-    const masterDetails = getMessageContent?.(currentMessage) ?? null;
-
     (async () => {
-      const commands = masterDetails && buildMessageCommands
-        ? await Promise.resolve(buildMessageCommands(currentMessage, masterDetails.fields, masterDetails.templateValue, false))
-        : null;
-
       for (const slave of slaves) {
-        if (commands && commands.length > 0) {
-          for (const cmd of commands) {
-            const ok = await sendCommandToPrinter(slave, cmd);
-            console.log(`[MasterSlaveSync] ${cmd.split(' ')[0]} ${currentMessage} → ${slave.name}: ${ok ? 'OK' : 'FAIL'}`);
-          }
-        }
-
         const ok = await sendCommandToPrinter(slave, `^SM ${currentMessage}`);
         console.log(`[MasterSlaveSync] ^SM ${currentMessage} → ${slave.name}: ${ok ? 'OK' : 'FAIL'}`);
       }
     })().finally(() => {
       syncingRef.current = false;
     });
-  }, [isMaster, currentMessage, getSlaves, sendCommandToPrinter, getMessageContent, buildMessageCommands]);
+  }, [isMaster, currentMessage, getSlaves, sendCommandToPrinter]);
 
   // Message content is pushed by Index.syncMessageToSlaves after save using the
   // full ^DM → ^NM → ^SV sequence. Do not also send a bare ^NM here: that can
