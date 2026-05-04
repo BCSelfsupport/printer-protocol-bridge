@@ -242,6 +242,10 @@ class ProductionRunStore {
   cancel() {
     const active = this.state.active;
     if (!active) return;
+    // Halt the line BEFORE clearing the active marker, otherwise the conveyor
+    // keeps spawning bottles into a "no run active" void.
+    try { conveyorSim.stop(); } catch { /* ignore */ }
+    try { faultGuard.reset(); } catch { /* ignore */ }
     this.state = { ...this.state, active: null };
     this.clearPersistedActive();
     this.disarmCatalogWatcher();
