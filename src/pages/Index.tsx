@@ -312,15 +312,9 @@ const Index = () => {
       'Tower': 4, 'Tower Flip': 5, 'Tower Mirror': 6, 'Tower Mirror Flip': 7,
     };
 
-    if (includeMessageSettings || adjustSettings?.speed !== undefined || adjustSettings?.rotation !== undefined) {
-      const s = speedMap[perMessageSettings.speed] ?? 2;
-      const o = orientationMap[perMessageSettings.rotation] ?? 0;
-      const p = printModeMap[perMessageSettings.printMode] ?? 0;
-      commands.push({
-        command: `^CM s${s};o${o};p${p}`,
-        delayAfterMs: MESSAGE_RELOAD_SETTLE_MS,
-      });
-    }
+    // Speed, orientation, and print mode are already embedded atomically in the
+    // ^NM header. Do not send a follow-up ^CM after ^NM/^SV: firmware v01.09
+    // rejects it with "Save Message failed" and can wedge prompt/autocode saves.
 
     if (adjustSettings?.width !== undefined) commands.push({ command: `^PW ${fullAdjustSettings.width}`, delayAfterMs: 1200 });
     if (adjustSettings?.height !== undefined) commands.push({ command: `^PH ${fullAdjustSettings.height}`, delayAfterMs: 900 });
