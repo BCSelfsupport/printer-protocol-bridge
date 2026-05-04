@@ -375,7 +375,13 @@ function HudInfoTabs({ units }: { units: Units }) {
       </div>
       <div className="px-4 py-3">
         {tab === "metrics" && <ProductionMetricsCard units={units} compact />}
-        {tab === "line" && <LineControlsBar />}
+        {tab === "line" && (
+          <div className="rounded-md border border-dashed border-border bg-muted/20 px-3 py-4 text-[11px] text-muted-foreground">
+            Line conditions (speed / pitch / BPM) have moved to the top of the
+            page, just under the CSV catalog card. Once live photocell + encoder
+            data is wired up these controls will be removed entirely.
+          </div>
+        )}
         {tab === "headroom" && <HeadroomPanel />}
       </div>
     </div>
