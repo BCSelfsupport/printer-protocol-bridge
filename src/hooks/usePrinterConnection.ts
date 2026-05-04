@@ -2455,6 +2455,7 @@ export function usePrinterConnection() {
       } catch (e) {
         console.error('[saveMessageContent] Failed:', e);
         (saveMessageContent as any).__lastError = e instanceof Error ? e.message : 'Unknown error';
+        await new Promise(resolve => setTimeout(resolve, SAVE_RECOVERY_QUIET_MS));
         setPollingPaused(false);
         return false;
       }
