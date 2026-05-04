@@ -190,10 +190,23 @@ class ProductionRunStore {
   /**
    * Stop the active run, slice out its audit window, and produce a
    * tamper-evident export. The active slot is cleared.
+   *
+   * CRITICAL: this halts the conveyor sim FIRST, before any await, so no
+   * additional bottles can cross the photocell while we're sealing the run.
+   * Previously the bar's onAutoStop handler was responsible for stopping
+   * the conveyor, which left a window where 100+ extra bottles could fly
+   * past the beam (causing the "50-print run, 174 bottles dispatched" bug).
    */
   async stop(): Promise<ProductionRunExport | null> {
     const active = this.state.active;
     if (!active) return null;
+    // Halt the bottle generator IMMEDIATELY, synchronously, before we await
+    // anything. This guarantees no more photocell crossings between "run is
+    // ending" and "run is sealed".
+    try { conveyorSim.stop(); } catch { /* ignore */ }
+    // Also disarm the fault-recovery auto-resume — when the run is over,
+    // an inbound fault must NOT silently restart the line.
+    faultGuard.reset();
     const endedAt = Date.now();
     const recordsEndIdx = catalog.getRecords().length;
     const meta: ProductionRunMeta = { ...active, endedAt, recordsEndIdx };
