@@ -29,6 +29,17 @@ import type { Printer } from '@/types/printer';
 import type { TwinPairState } from '@/twin-code/twinPairStore';
 import { buildSeedCommands, seedForSide, type MessageSeed } from '@/twin-code/messageSeeds';
 
+/**
+ * Twin Code default print parameters pushed to both printers on bind/seed.
+ * Exposed so the production-run audit can record the *exact* values that
+ * applied at run time — Width/Speed/Delay have a massive bearing on cycle
+ * time and therefore the BPM ceiling, so they belong in the envelope report.
+ */
+export const TWIN_DEFAULT_WIDTH = 1;
+export const TWIN_DEFAULT_DELAY = 100;
+export const TWIN_DEFAULT_SPEED_CODE = 3; // ^CM s3 = Ultra Fast
+export const TWIN_DEFAULT_SPEED_LABEL = 'Ultra Fast';
+
 const MAX_IN_FLIGHT = 4;
 const R_TIMEOUT_MS = 500;
 const C_TIMEOUT_MS = 30_000;
@@ -704,13 +715,10 @@ export async function seedTwinPairMessages(
       // delay is 100. ^DA = print delay, ^PW = print width, ^CM s = speed.
       // Defaults: Delay 100, Width 1, Speed Ultra Fast (3) — minimum cycle
       // time baseline; operator can tune up via Adjust if print quality needs it.
-      const TWIN_DEFAULT_DELAY = 100;
-      const TWIN_DEFAULT_WIDTH = 1;
-      const TWIN_DEFAULT_SPEED = 3; // Ultra Fast
       for (const pid of [printerA.id, printerB.id]) {
         await printerTransport.sendCommand(pid, `^DA ${TWIN_DEFAULT_DELAY}`, { maxWaitMs: 3000 }).catch(() => {});
         await printerTransport.sendCommand(pid, `^PW ${TWIN_DEFAULT_WIDTH}`, { maxWaitMs: 3000 }).catch(() => {});
-        await printerTransport.sendCommand(pid, `^CM s${TWIN_DEFAULT_SPEED}`, { maxWaitMs: 3000 }).catch(() => {});
+        await printerTransport.sendCommand(pid, `^CM s${TWIN_DEFAULT_SPEED_CODE}`, { maxWaitMs: 3000 }).catch(() => {});
         await new Promise(res => setTimeout(res, 200));
         await printerTransport.sendCommand(pid, '^SV', { maxWaitMs: 3000 }).catch(() => {});
         await new Promise(res => setTimeout(res, 150));

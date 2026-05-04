@@ -351,6 +351,20 @@ export function buildEnvelopeReportHTML(exp: ProductionRunExport): string {
     <tr><td>B side · ${profile?.subB === "BD" ? "DataMatrix (^MD^BD)" : "Text (^MD^TD)"}</td><td class="num">side printer</td></tr>
   </table>
 
+  ${exp.meta.printSnapshot ? `
+  <h2>Print parameters (applied at bind)</h2>
+  <p style="margin:0 0 8px 0;color:var(--muted);font-size:12px">
+    These three settings dominate cycle time and therefore the maximum sustainable BPM.
+    Lower Width and higher Speed shorten each strike; Delay is the dead time before each print fires.
+    Compare runs with identical Width / Speed / Delay for apples-to-apples throughput verdicts.
+  </p>
+  <table>
+    <tr><td>Width (^PW)</td><td class="num">${exp.meta.printSnapshot.widthDots} dot${exp.meta.printSnapshot.widthDots === 1 ? "" : "s"}</td></tr>
+    <tr><td>Delay (^DA)</td><td class="num">${exp.meta.printSnapshot.delayDots} dot${exp.meta.printSnapshot.delayDots === 1 ? "" : "s"}</td></tr>
+    <tr><td>Speed (^CM s${exp.meta.printSnapshot.speedCode})</td><td class="num">${escapeHtml(exp.meta.printSnapshot.speedLabel)}</td></tr>
+  </table>
+  ` : ""}
+
   <h2>Cycle-time distribution</h2>
   <div class="grid" style="grid-template-columns: repeat(5, 1fr);">
     <div class="stat"><div class="stat-label">min</div><div class="stat-value" style="font-size:16px">${stats.count > 0 ? stats.min.toFixed(0) + "ms" : "—"}</div></div>

@@ -32,7 +32,13 @@ import { faultGuard } from "./faultGuard";
 import { cloudLedger } from "./cloudLedger";
 import { liveMetrics } from "./liveMetrics";
 import { conveyorSim } from "./conveyorSim";
-import { twinDispatcher } from "./twinDispatcher";
+import {
+  twinDispatcher,
+  TWIN_DEFAULT_WIDTH,
+  TWIN_DEFAULT_DELAY,
+  TWIN_DEFAULT_SPEED_CODE,
+  TWIN_DEFAULT_SPEED_LABEL,
+} from "./twinDispatcher";
 import { profilerBus } from "./profilerBus";
 import { computeHeadroom, cycleBudgetForBpm, DEFAULT_SAFETY_FACTOR } from "./throughputHeadroom";
 
@@ -77,6 +83,19 @@ export interface ProductionRunMeta {
   lineSnapshot?: {
     ftPerMin: number;
     pitchMm: number;
+  } | null;
+  /**
+   * Snapshot of the printer print-parameter defaults applied at bind time.
+   * These three settings dominate cycle time (Speed sets dot rate, Width
+   * stretches/compresses the print, Delay is dead time before each strike),
+   * so they're recorded with the run for proper apples-to-apples comparison
+   * across BPM tests.
+   */
+  printSnapshot?: {
+    widthDots: number;
+    delayDots: number;
+    speedCode: number;
+    speedLabel: string;
   } | null;
 }
 
@@ -172,6 +191,15 @@ class ProductionRunStore {
         const cv = conveyorSim.getConfig();
         return cv ? { ftPerMin: cv.ftPerMin, pitchMm: cv.pitchMm } : null;
       })(),
+      // Twin Code defaults pushed to both printers on bind. Snapshotted so
+      // the report can show the print params that were ACTUALLY in effect —
+      // critical for tying cycle-time numbers back to a hardware config.
+      printSnapshot: input.liveAtStart ? {
+        widthDots: TWIN_DEFAULT_WIDTH,
+        delayDots: TWIN_DEFAULT_DELAY,
+        speedCode: TWIN_DEFAULT_SPEED_CODE,
+        speedLabel: TWIN_DEFAULT_SPEED_LABEL,
+      } : null,
     };
     this.state = { ...this.state, active: meta };
     // Fresh run = fresh fault history; otherwise prior shift's incidents
@@ -529,6 +557,11 @@ export function downloadRunCSV(exp: ProductionRunExport) {
     `# A side subcommand: ^MD^${profile?.subA ?? "?"} (${profile?.subA === "BD" ? "DataMatrix native" : "Text"})`,
     `# B side subcommand: ^MD^${profile?.subB ?? "?"} (${profile?.subB === "BD" ? "DataMatrix native" : "Text"})`,
     `# DataMatrix on either side: ${profile?.hasBarcode ? "YES" : "NO"}`,
+    `#`,
+    `# === Print parameters (applied at bind — affect cycle time / max BPM) ===`,
+    `# Width (^PW): ${exp.meta.printSnapshot?.widthDots ?? "n/a"} dots`,
+    `# Delay (^DA): ${exp.meta.printSnapshot?.delayDots ?? "n/a"} dots`,
+    `# Speed (^CM s): ${exp.meta.printSnapshot?.speedCode ?? "n/a"} (${exp.meta.printSnapshot?.speedLabel ?? "n/a"})`,
     `#`,
     `# === Throughput envelope (this run) ===`,
     `# Cycle p95 (measured, n=${headroom.sampleCount}): ${Number.isFinite(headroom.cycleP95Ms) ? headroom.cycleP95Ms.toFixed(1) + " ms" : "n/a"}`,
