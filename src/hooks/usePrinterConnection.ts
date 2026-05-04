@@ -2370,45 +2370,43 @@ export function usePrinterConnection() {
       try {
         for (let cmdIdx = 0; cmdIdx < commands.length; cmdIdx++) {
           const cmd = commands[cmdIdx];
+          const isNmCommand = cmd.startsWith('^NM ');
+          const isFlushCommand = cmd === FLUSH_COMMAND;
           console.log('[saveMessageContent] Sending:', cmd);
-          const result = await printerTransport.sendCommand(printer.id, cmd);
+          const result = await printerTransport.sendCommand(
+            printer.id,
+            cmd,
+            isNmCommand
+              ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_NM_IDLE_AFTER_DATA_MS }
+              : isFlushCommand
+                ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS }
+                : undefined,
+          );
           console.log('[saveMessageContent] Result:', JSON.stringify(result));
           const responseText = result?.response ?? '';
           const errorText = result?.error ?? '';
           const rejectedByPrinter = isProtocolCommandFailure(responseText);
+          const missingSaveAck = (isNmCommand || isFlushCommand) && !hasCompleteSaveAck(responseText);
 
           // Don't fail on ^DM error (message might not exist yet)
-          if ((!result?.success || rejectedByPrinter) && !cmd.startsWith('^DM')) {
-            const reason = responseText || errorText || 'Unknown error';
+          if ((!result?.success || rejectedByPrinter || missingSaveAck) && !cmd.startsWith('^DM')) {
+            const reason = responseText || errorText || (missingSaveAck ? 'Save acknowledgement was incomplete' : 'Unknown error');
             console.error('[saveMessageContent] Command rejected:', cmd, reason);
             (saveMessageContent as any).__lastError = reason;
             setPollingPaused(false);
             return false;
           }
 
-          // Inter-command delay.
-          //
-          // The only size-sensitive step is ^NM → ^SV: at ~12 fields the ^NM
-          // payload is large enough that the firmware is still parsing/persisting
-          // it when ^SV arrives 300 ms later, which wedges the printer (observed
-          // with Dozen12 / 12-field user-prompt messages; 9–10 fields are fine).
-          //
-          // Fix is local to this single transition — NOT a write lock, NOT a
-          // waitForPollingIdle guard, NOT scaled timeouts on selectMessage. Those
-          // are explicitly forbidden by mem://features/message-persistence/dozen12-validation.
-          //
-          // Scaling: 300 ms base + 60 ms per field, capped at 3 s.
-          //   1 field  →  360 ms     (was 300, negligible regression risk)
-          //   9 fields →  840 ms
-          //   12       → 1020 ms     (Dozen12 — the failure case)
-          //   24       → 1740 ms
-          //   50+      → 3000 ms cap
+          // Inter-command delay: ^NM must fully acknowledge before ^SV, then
+          // heavy multi-field saves get a firmware digest floor before flush.
           let delayAfterCommand = 300;
           if (cmd.startsWith('^SM ') && needsSwitchAwayBeforeRewrite) {
             delayAfterCommand = 800;
-          } else if (cmd.startsWith('^NM ')) {
-            delayAfterCommand = Math.min(3000, 300 + validFields.length * 60);
+          } else if (isNmCommand) {
+            delayAfterCommand = getNmDigestPauseMs(validFields.length);
             console.log(`[saveMessageContent] ^NM digest pause: ${delayAfterCommand}ms (${validFields.length} fields)`);
+          } else if (isFlushCommand) {
+            delayAfterCommand = 1000;
           }
           await new Promise(resolve => setTimeout(resolve, delayAfterCommand));
         }
