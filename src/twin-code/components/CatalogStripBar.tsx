@@ -42,6 +42,7 @@ import { LedgerResumeBanner } from "./LedgerResumeBanner";
 import { FaultRecoveryBanner } from "./FaultRecoveryBanner";
 import { conveyorSim } from "../conveyorSim";
 import { catalog } from "../catalog";
+import { faultGuard } from "../faultGuard";
 import { useCatalog } from "../useCatalog";
 import { useTwinPair } from "../twinPairStore";
 import { twinDispatcher } from "../twinDispatcher";
