@@ -293,34 +293,10 @@ const Index = () => {
     includeMessageSettings: boolean;
   }): SequencedPrinterCommand[] => {
     const commands: SequencedPrinterCommand[] = [];
-    const printModeMap: Record<string, number> = {
-      'Normal': 0,
-      'Auto': 1,
-      'Repeat': 2,
-      'Reverse': 3,
-      'Auto Encoder': 5,
-      'Auto Encoder Reverse': 6,
-    };
-    const speedMap: Record<string, number> = {
-      'Fast': 0,
-      'Faster': 1,
-      'Fastest': 2,
-      'Ultra Fast': 3,
-    };
-    const orientationMap: Record<string, number> = {
-      'Normal': 0, 'Flip': 1, 'Mirror': 2, 'Mirror Flip': 3,
-      'Tower': 4, 'Tower Flip': 5, 'Tower Mirror': 6, 'Tower Mirror Flip': 7,
-    };
 
-    if (includeMessageSettings || adjustSettings?.speed !== undefined || adjustSettings?.rotation !== undefined) {
-      const s = speedMap[perMessageSettings.speed] ?? 2;
-      const o = orientationMap[perMessageSettings.rotation] ?? 0;
-      const p = printModeMap[perMessageSettings.printMode] ?? 0;
-      commands.push({
-        command: `^CM s${s};o${o};p${p}`,
-        delayAfterMs: MESSAGE_RELOAD_SETTLE_MS,
-      });
-    }
+    // Speed, orientation, and print mode are already embedded atomically in the
+    // ^NM header. Do not send a follow-up ^CM after ^NM/^SV: firmware v01.09
+    // rejects it with "Save Message failed" and can wedge prompt/autocode saves.
 
     if (adjustSettings?.width !== undefined) commands.push({ command: `^PW ${fullAdjustSettings.width}`, delayAfterMs: 1200 });
     if (adjustSettings?.height !== undefined) commands.push({ command: `^PH ${fullAdjustSettings.height}`, delayAfterMs: 900 });
@@ -748,11 +724,13 @@ const Index = () => {
     const availableSlaves = slaves.filter(s => s.isAvailable);
     if (availableSlaves.length === 0) return;
 
+    const { perMessageSettings } = buildEffectiveMessageDependentSettings(details);
     const commands = await buildMessageCommands(
       messageName,
       details.fields,
       details.templateValue,
       isNew,
+      perMessageSettings,
     );
     if (!commands || commands.length === 0) return;
 
@@ -774,7 +752,7 @@ const Index = () => {
       // currentMessage effect).
       console.log(`[MasterSlaveSync] Pushed content "${messageName}" → ${slave.name}: ${result.success ? 'OK' : 'PARTIAL'} (no ^SM)`);
     }
-  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildMessageCommands, sendVerifiedCommandSequence]);
+  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence]);
 
   const replaceMessageWithoutDelete = useCallback(async (
     targetPrinter: Printer,
