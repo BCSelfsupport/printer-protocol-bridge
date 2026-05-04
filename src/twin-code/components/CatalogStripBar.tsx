@@ -416,6 +416,9 @@ export function CatalogStripBar() {
                   variant="ghost"
                   className="h-6 px-2 text-[10px]"
                   onClick={() => {
+                    conveyorSim.stop();
+                    conveyorSim.reset();
+                    faultGuard.reset();
                     catalog.reset();
                   }}
                 >
