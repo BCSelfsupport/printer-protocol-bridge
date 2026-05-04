@@ -54,7 +54,7 @@ export function TrainingLauncherButton() {
           className="cursor-pointer font-semibold"
         >
           Run full end-to-end tour
-          <span className="ml-auto text-[10px] text-muted-foreground">~11 min</span>
+          <span className="ml-auto text-[10px] text-muted-foreground">~15 min</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -109,7 +109,7 @@ export function FirstLaunchBanner() {
       <div className="flex-1">
         <div className="font-semibold text-primary">First time here?</div>
         <div className="text-xs text-muted-foreground">
-          Twin Code bonds two printers as one logical unit. The 11-minute end-to-end tour walks you through binding, preview cross-check, preflight, and live operation — using a safe simulated pair so you don\'t need real hardware.
+          Twin Code bonds two printers as one logical unit. The 15-minute end-to-end tour walks you through catalog upload, binding, preview cross-check, pre-flight, and live production runs — using a bundled sample CSV so you don't need real hardware.
         </div>
       </div>
       <Button
