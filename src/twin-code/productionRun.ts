@@ -277,13 +277,16 @@ class ProductionRunStore {
    * without dropping the loaded CSV.
    */
   resetAll() {
+    // Stop the line FIRST and clear in-flight bottles so a stale belt can't
+    // spew prints the moment something restarts the conveyor.
+    try { conveyorSim.stop(); } catch { /* ignore */ }
+    try { conveyorSim.reset(); } catch { /* ignore */ }
     if (this.state.active) this.cancel();
     this.state = { ...this.state, lastCompleted: null };
     this.notify();
     catalog.reset();          // wipes printedSet + records, keeps loaded entries
     faultGuard.reset();
     liveMetrics.resetWindow();
-    conveyorSim.stop();
     conveyorSim.resetBottleCounter();
   }
 
