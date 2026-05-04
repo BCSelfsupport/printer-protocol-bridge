@@ -757,9 +757,12 @@ const Index = () => {
           console.warn(`[MasterSlaveSync] Command failed on ${slave.name}: ${cmd.substring(0, 40)}...`);
         }
       }
-      // Also select the message on the slave
-      await sendCommandToPrinter(slave, `^SM ${messageName}`);
-      console.log(`[MasterSlaveSync] Message "${messageName}" → ${slave.name}: ${allOk ? 'OK' : 'PARTIAL'}`);
+      // Do NOT auto-select on the slave here. Per user spec, saving on the
+      // master pushes content (^DM/^NM/^SV) to slaves so they have the message,
+      // but the slave only switches to it when the operator explicitly presses
+      // Select on the master (which fires ^SM via useMasterSlaveSync's
+      // currentMessage effect).
+      console.log(`[MasterSlaveSync] Pushed content "${messageName}" → ${slave.name}: ${allOk ? 'OK' : 'PARTIAL'} (no ^SM)`);
     }
   }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildMessageCommands, sendCommandToPrinter, updatePrinter]);
 
