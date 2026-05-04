@@ -474,6 +474,19 @@ ipcMain.handle('printer:send-command', async (event, { printerId, command, optio
   }
 });
 
+// Atomic batch write: send N commands joined by \r\n in a single socket.write,
+// then wait for the printer's stream to settle. The firmware drains its input
+// buffer line-by-line, so there is zero JS-side gap between commands. Use this
+// for ^DM → ^NM → ^SV save sequences where any inter-command JS delay risks
+// landing ^SV mid-commit and wedging the firmware (observed at 12+ fields).
+ipcMain.handle('printer:send-command-batch', async (event, { printerId, commands, options }) => {
+  try {
+    return await sendBatchToSocket(printerId, commands, options);
+  } catch (err) {
+    return { success: false, error: err.message || 'Batch command failed' };
+  }
+});
+
 // ============================================================
 // One-to-One Print Mode (Protocol v2.6 §6.1)
 // ------------------------------------------------------------
