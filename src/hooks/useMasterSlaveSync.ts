@@ -30,8 +30,6 @@ export function useMasterSlaveSync({
   connectedPrinterId,
   currentMessage,
   messages = [],
-  getMessageContent,
-  buildMessageCommands,
 }: UseMasterSlaveSyncOptions) {
   const prevMessageRef = useRef<string | null>(null);
   const prevMessageListRef = useRef<string[]>([]);
