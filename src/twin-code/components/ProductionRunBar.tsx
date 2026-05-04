@@ -122,7 +122,7 @@ export function ProductionRunBar() {
     void target; // (chip below uses it; consumed already shown)
     return (
       <>
-        <div className="flex flex-wrap items-center gap-3 rounded-md border border-primary/40 bg-primary/5 px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-primary/40 bg-primary/5 px-4 py-2.5" data-tour="production-run-active">
           <ClipboardList className="h-4 w-4 shrink-0 text-primary" />
           <div className="flex flex-col">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">

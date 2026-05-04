@@ -412,7 +412,7 @@ function CollapsibleMessagePreview({ pairBoundLabel }: { pairBoundLabel: string 
   }, [open]);
 
   return (
-    <div className="rounded-md border border-border bg-card/60">
+    <div className="rounded-md border border-border bg-card/60" data-tour="hud-preview-collapsible">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
