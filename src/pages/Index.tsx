@@ -835,27 +835,19 @@ const Index = () => {
         || fieldType.startsWith('date_rollover')
         || fieldType.startsWith('date_expiry_rollover');
     });
-    // Scale settle times based on field count — firmware needs more time
-    // to process large ^NM payloads before accepting follow-up commands.
+    // Per mem://features/message-persistence/dozen12-validation:
+    // NO scaled timeout math based on field count, NO settleBefore/After delays,
+    // NO waitForPollingIdle around the save handoff. The ^NM digest pause inside
+    // saveMessageContent already gives the firmware its size-scaled headroom; the
+    // HMI confirms saves complete in <1s, so anything more on this side just
+    // re-enters mid-grace and wedges the printer.
     const fieldCount = localDetails.fields.length;
-    const isHeavyMessage = fieldCount >= 4;
-    const hasVeryHeavyMessage = fieldCount >= 5;
-    const baseFollowUpMs = hasExtendedDateFields
-      ? 3500
-      : hasVeryHeavyMessage
-        ? 3000
-        : isHeavyMessage
-          ? 2200
-          : 300;
-    const followUpSettleMs = baseFollowUpMs + Math.max(0, fieldCount - 3) * 300;
-    const reloadSettleMs = hasExtendedDateFields
-      ? 3200
-      : hasVeryHeavyMessage
-        ? 3000
-        : isHeavyMessage
-          ? 2400
-          : MESSAGE_RELOAD_SETTLE_MS;
-    const shouldReloadFromPrinter = !hasExtendedDateFields && !isHeavyMessage;
+    const followUpSettleMs = MESSAGE_RELOAD_SETTLE_MS;
+    const reloadSettleMs = MESSAGE_RELOAD_SETTLE_MS;
+    // Heavy messages (≥6 fields) and extended-date messages skip the post-save
+    // ^GM/^LF reload — the local merged copy is already authoritative and the
+    // reload was the step that historically raced with firmware grace windows.
+    const shouldReloadFromPrinter = !hasExtendedDateFields && fieldCount < 6;
 
     console.log('[AdjustDebug][saveEditedMessage.start]', {
       editingMessageName: editingMessage.name,
