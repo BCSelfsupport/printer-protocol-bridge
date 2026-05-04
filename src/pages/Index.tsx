@@ -820,7 +820,9 @@ const Index = () => {
     }
   }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence, replaceMessageWithoutDelete]);
 
+  const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
     if (!editingMessage) return null;
+
 
     const targetName = isNew ? details.name : editingMessage.name;
     const localDetails = normalizeMessageForPrinter({
