@@ -23,6 +23,7 @@ import { useTwinPair } from "../twinPairStore";
 import { twinDispatcher } from "../twinDispatcher";
 import { productionRun } from "../productionRun";
 import { catalog } from "../catalog";
+import { conveyorSim, computeBpm, LINE_SPEED_PRESETS } from "../conveyorSim";
 import { cloudLedger, type CloudActiveRun } from "../cloudLedger";
 import { PreflightDialog } from "./PreflightDialog";
 import { toast } from "@/hooks/use-toast";
