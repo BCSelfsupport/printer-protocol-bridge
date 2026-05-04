@@ -227,6 +227,7 @@ export function CatalogStripBar() {
           becomes a dashed drop target so operators have an obvious place to
           drop their CSV instead of hunting for a small button. */}
       <div
+        data-tour="catalog-strip"
         className={`flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 transition-colors ${
           cat.total === 0
             ? "border-dashed border-primary/50 bg-primary/5 hover:bg-primary/10"
@@ -261,6 +262,7 @@ export function CatalogStripBar() {
           variant={cat.total === 0 ? "default" : "outline"}
           onClick={() => fileRef.current?.click()}
           className={cat.total === 0 ? "shadow-md" : ""}
+          data-tour="catalog-upload"
         >
           <Upload className="mr-1 h-4 w-4" />
           {cat.total === 0 ? "Drop CSV here or click to browse" : "Load CSV catalog"}
@@ -268,6 +270,7 @@ export function CatalogStripBar() {
 
         {/* LIVE mode toggle */}
         <div
+          data-tour="live-toggle"
           className={`flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] ${
             liveMode
               ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-500"
@@ -354,6 +357,7 @@ export function CatalogStripBar() {
                 onClick={() => setPreflightOpen(true)}
                 disabled={cat.total === 0}
                 title="Fire ghost cycles to verify timing and connectivity before the real run."
+                data-tour="preflight-button"
               >
                 <Activity className="mr-1 h-4 w-4" /> Pre-flight
               </Button>
@@ -366,6 +370,7 @@ export function CatalogStripBar() {
                         onClick={() => setStartOpen(true)}
                         disabled={cat.total === 0 || !liveMode}
                         className={cat.total > 0 && liveMode ? "shadow-md ring-2 ring-primary/30" : ""}
+                        data-tour="start-run-button"
                       >
                         <Play className="mr-1 h-4 w-4" /> Start production run
                       </Button>
@@ -393,7 +398,7 @@ export function CatalogStripBar() {
           shown in the Production Run bar's chips and the HUD batch progress
           strip — duplicating them just eats vertical space. */}
       {!runActive && (
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4" data-tour="catalog-counters">
           <Counter
             icon={<FileSpreadsheet className="h-4 w-4 text-muted-foreground" />}
             label="Catalog total"
