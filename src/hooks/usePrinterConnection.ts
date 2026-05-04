@@ -1851,6 +1851,16 @@ export function usePrinterConnection() {
   // Printer sign-in: send ^LG password command
   const signIn = useCallback(async (password: string): Promise<boolean> => {
     console.log('[signIn] Called, isConnected:', connectionState.isConnected, 'printer:', connectionState.connectedPrinter?.id);
+    const normalizedPassword = password.trim().toUpperCase();
+
+    // Preview/dev safety net: older cached Dev Portal flows can still route
+    // through this shared printer sign-in function. Keep CITEC available there
+    // so Dev Panel access is not blocked by stale UI state.
+    if (import.meta.env.DEV && normalizedPassword === 'CITEC') {
+      console.log('[signIn] Dev preview CITEC override accepted');
+      return true;
+    }
+
     if (!connectionState.isConnected || !connectionState.connectedPrinter) {
       console.log('[signIn] Not connected, aborting');
       return false;
@@ -1868,7 +1878,7 @@ export function usePrinterConnection() {
       // ^LG is not part of the BestCode Remote Protocol V2.6.
       // Sign-in is a local HMI feature only. Gate access locally with password.
       console.log('[signIn] Local password check (^LG not supported by protocol)');
-      return password.toUpperCase() === 'TEXAS';
+      return normalizedPassword === 'TEXAS';
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
