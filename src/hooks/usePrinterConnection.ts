@@ -2395,14 +2395,23 @@ export function usePrinterConnection() {
           const errorText = result?.error ?? '';
           const rejectedByPrinter = isProtocolCommandFailure(responseText);
           const missingSaveAck = (isNmCommand || isFlushCommand) && !hasCompleteSaveAck(responseText);
+          const echoOnlySaveResponse = missingSaveAck && !!responseText.trim();
 
           // Don't fail on ^DM error (message might not exist yet)
-          if ((!result?.success || rejectedByPrinter || missingSaveAck) && !cmd.startsWith('^DM')) {
+          if ((!result?.success || rejectedByPrinter || (missingSaveAck && !echoOnlySaveResponse)) && !cmd.startsWith('^DM')) {
             const reason = responseText || errorText || (missingSaveAck ? 'Save acknowledgement was incomplete' : 'Unknown error');
             console.error('[saveMessageContent] Command rejected:', cmd, reason);
             (saveMessageContent as any).__lastError = reason;
+            await new Promise(resolve => setTimeout(resolve, SAVE_RECOVERY_QUIET_MS));
             setPollingPaused(false);
             return false;
+          }
+
+          if (echoOnlySaveResponse) {
+            console.warn('[saveMessageContent] Save command returned partial ack; treating as pending and extending settle:', {
+              command: isNmCommand ? '^NM' : '^SV',
+              response: responseText,
+            });
           }
 
           // Inter-command delay: ^NM must fully acknowledge before ^SV, then
@@ -2415,6 +2424,9 @@ export function usePrinterConnection() {
             console.log(`[saveMessageContent] ^NM digest pause: ${delayAfterCommand}ms (${validFields.length} fields)`);
           } else if (isFlushCommand) {
             delayAfterCommand = 1000;
+          }
+          if (echoOnlySaveResponse) {
+            delayAfterCommand += SAVE_PENDING_ACK_EXTRA_SETTLE_MS;
           }
           await new Promise(resolve => setTimeout(resolve, delayAfterCommand));
         }
