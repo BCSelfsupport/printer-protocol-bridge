@@ -67,6 +67,17 @@ export interface ProductionRunMeta {
    * serials available. Null/0 means "run until catalog is exhausted".
    */
   targetCount?: number | null;
+  /**
+   * Snapshot of the conveyor / line conditions at the moment of Start.
+   * The envelope report reads from this so the audit always shows what the
+   * line was actually doing for THIS lot — not whatever the conveyorSim
+   * happens to be configured to when the operator later clicks Download.
+   * (Fixes report showing stale ft/min after operator nudges line speed.)
+   */
+  lineSnapshot?: {
+    ftPerMin: number;
+    pitchMm: number;
+  } | null;
 }
 
 export interface ProductionRunSummary {
