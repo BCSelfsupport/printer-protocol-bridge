@@ -87,7 +87,13 @@ const SAVE_NM_IDLE_AFTER_DATA_MS = 5000;
 const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 1500;
 
 const hasCompleteSaveAck = (rawResponse?: string): boolean => {
-  const cleaned = (rawResponse ?? '').replace(/[\x00-\x1F\x7F]/g, '').trim();
+  const cleaned = Array.from(rawResponse ?? '')
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code >= 32 && code !== 127;
+    })
+    .join('')
+    .trim();
   const upper = cleaned.toUpperCase();
   return upper.includes('COMMAND SUCCESSFUL') || upper === 'OK' || upper === 'SUCCESS' || cleaned.endsWith('>');
 };
