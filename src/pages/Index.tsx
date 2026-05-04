@@ -676,7 +676,11 @@ const Index = () => {
         const response = result?.response ?? result?.error ?? '';
         const requiresSaveAck = (window.electronAPI || isRelayMode()) && (trimmed.startsWith('^NM ') || trimmed === '^SV');
         const missingSaveAck = requiresSaveAck && !hasCompleteSaveAck(response);
-        return { success: !!result?.success && !isTransportCommandFailure(response) && !missingSaveAck };
+        const partialPendingSave = missingSaveAck && !!response.trim();
+        return {
+          success: !!result?.success && !isTransportCommandFailure(response) && (!missingSaveAck || partialPendingSave),
+          partialPendingSave,
+        };
       };
 
       if (targetPrinter.id === connectionState.connectedPrinter?.id) {
@@ -724,9 +728,10 @@ const Index = () => {
           return { success: false, failedIndex: index };
         }
 
+        const pendingAckDelay = result.partialPendingSave ? SAVE_PENDING_ACK_EXTRA_SETTLE_MS : 0;
         const isFinalFlush = index === commandsToRun.length - 1 && command.trim().toUpperCase() === '^SV';
-        if ((index < commandsToRun.length - 1 || isFinalFlush) && delayAfterMs > 0) {
-          await new Promise(resolve => setTimeout(resolve, delayAfterMs));
+        if ((index < commandsToRun.length - 1 || isFinalFlush) && delayAfterMs + pendingAckDelay > 0) {
+          await new Promise(resolve => setTimeout(resolve, delayAfterMs + pendingAckDelay));
         }
       }
 
