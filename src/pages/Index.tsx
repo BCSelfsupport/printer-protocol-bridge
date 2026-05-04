@@ -1506,7 +1506,10 @@ const Index = () => {
       };
       persistPrevLevels(prevLevelsRef.current);
     });
-  }, [printers, consumableStorage]);
+    // Depend only on the specific stable fields — not the whole consumableStorage
+    // object (which is a new reference every render and would cause an infinite
+    // setState loop via adjustStock → re-render → effect re-fires).
+  }, [printers, consumableStorage.consumables, consumableStorage.assignments, consumableStorage.adjustStock]);
 
   // Drop stale queued alerts after manual stock replenishment and keep card stock in sync.
   useEffect(() => {
