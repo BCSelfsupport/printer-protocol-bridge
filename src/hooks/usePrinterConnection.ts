@@ -129,13 +129,15 @@ const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCOD
 // Without this, ^DM and ^NM changes are only queued in RAM until a manual save
 // or shutdown occurs on the printer HMI.
 const FLUSH_COMMAND = '^SV';
-const SAVE_ACK_MAX_WAIT_MS = 15000;
-const SAVE_NM_IDLE_AFTER_DATA_MS = 5000;
-const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 1500;
+const SAVE_ACK_MAX_WAIT_MS = 30000;
+const SAVE_NM_IDLE_AFTER_DATA_MS = 12000;
+const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 5000;
+const SAVE_PENDING_ACK_EXTRA_SETTLE_MS = 3000;
+const SAVE_RECOVERY_QUIET_MS = 10000;
 
 const getNmDigestPauseMs = (fieldCount: number) => {
-  if (fieldCount >= 6) return Math.min(6000, Math.max(2000, fieldCount * 200));
-  return Math.min(2000, 500 + fieldCount * 120);
+  if (fieldCount >= 6) return Math.min(12000, Math.max(6000, fieldCount * 800));
+  return Math.min(4000, 1000 + fieldCount * 250);
 };
 
 const hasCompleteSaveAck = (rawResponse?: string): boolean => {
@@ -147,7 +149,7 @@ const hasCompleteSaveAck = (rawResponse?: string): boolean => {
     .join('')
     .trim();
   const upper = cleaned.toUpperCase();
-  return upper.includes('COMMAND SUCCESSFUL') || upper === 'OK' || upper === 'SUCCESS' || cleaned.endsWith('>');
+  return upper.includes('COMMAND SUCCESSFUL') || upper === 'OK' || upper === 'SUCCESS';
 };
 
 
@@ -2393,14 +2395,23 @@ export function usePrinterConnection() {
           const errorText = result?.error ?? '';
           const rejectedByPrinter = isProtocolCommandFailure(responseText);
           const missingSaveAck = (isNmCommand || isFlushCommand) && !hasCompleteSaveAck(responseText);
+          const echoOnlySaveResponse = missingSaveAck && !!responseText.trim();
 
           // Don't fail on ^DM error (message might not exist yet)
-          if ((!result?.success || rejectedByPrinter || missingSaveAck) && !cmd.startsWith('^DM')) {
+          if ((!result?.success || rejectedByPrinter || (missingSaveAck && !echoOnlySaveResponse)) && !cmd.startsWith('^DM')) {
             const reason = responseText || errorText || (missingSaveAck ? 'Save acknowledgement was incomplete' : 'Unknown error');
             console.error('[saveMessageContent] Command rejected:', cmd, reason);
             (saveMessageContent as any).__lastError = reason;
+            await new Promise(resolve => setTimeout(resolve, SAVE_RECOVERY_QUIET_MS));
             setPollingPaused(false);
             return false;
+          }
+
+          if (echoOnlySaveResponse) {
+            console.warn('[saveMessageContent] Save command returned partial ack; treating as pending and extending settle:', {
+              command: isNmCommand ? '^NM' : '^SV',
+              response: responseText,
+            });
           }
 
           // Inter-command delay: ^NM must fully acknowledge before ^SV, then
@@ -2413,6 +2424,9 @@ export function usePrinterConnection() {
             console.log(`[saveMessageContent] ^NM digest pause: ${delayAfterCommand}ms (${validFields.length} fields)`);
           } else if (isFlushCommand) {
             delayAfterCommand = 1000;
+          }
+          if (echoOnlySaveResponse) {
+            delayAfterCommand += SAVE_PENDING_ACK_EXTRA_SETTLE_MS;
           }
           await new Promise(resolve => setTimeout(resolve, delayAfterCommand));
         }
@@ -2441,6 +2455,7 @@ export function usePrinterConnection() {
       } catch (e) {
         console.error('[saveMessageContent] Failed:', e);
         (saveMessageContent as any).__lastError = e instanceof Error ? e.message : 'Unknown error';
+        await new Promise(resolve => setTimeout(resolve, SAVE_RECOVERY_QUIET_MS));
         setPollingPaused(false);
         return false;
       }

@@ -82,9 +82,10 @@ type SequencedPrinterCommand = string | {
 
 const MESSAGE_RELOAD_SETTLE_MS = 900;
 const SAVE_PUSH_SETTLE_MS = 1500;
-const SAVE_ACK_MAX_WAIT_MS = 15000;
-const SAVE_NM_IDLE_AFTER_DATA_MS = 5000;
-const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 1500;
+const SAVE_ACK_MAX_WAIT_MS = 30000;
+const SAVE_NM_IDLE_AFTER_DATA_MS = 12000;
+const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 5000;
+const SAVE_PENDING_ACK_EXTRA_SETTLE_MS = 3000;
 
 const hasCompleteSaveAck = (rawResponse?: string): boolean => {
   const cleaned = Array.from(rawResponse ?? '')
@@ -95,14 +96,14 @@ const hasCompleteSaveAck = (rawResponse?: string): boolean => {
     .join('')
     .trim();
   const upper = cleaned.toUpperCase();
-  return upper.includes('COMMAND SUCCESSFUL') || upper === 'OK' || upper === 'SUCCESS' || cleaned.endsWith('>');
+  return upper.includes('COMMAND SUCCESSFUL') || upper === 'OK' || upper === 'SUCCESS';
 };
 
 const getSaveCommandDelay = (command: string, fieldCount: number) => {
   const trimmed = command.trim().toUpperCase();
   if (trimmed.startsWith('^NM ')) {
-    if (fieldCount >= 6) return Math.min(6000, Math.max(2000, fieldCount * 200));
-    return Math.min(2000, 500 + fieldCount * 120);
+    if (fieldCount >= 6) return Math.min(12000, Math.max(6000, fieldCount * 800));
+    return Math.min(4000, 1000 + fieldCount * 250);
   }
   if (trimmed === '^SV') return SAVE_PUSH_SETTLE_MS;
   return 300;
@@ -675,7 +676,11 @@ const Index = () => {
         const response = result?.response ?? result?.error ?? '';
         const requiresSaveAck = (window.electronAPI || isRelayMode()) && (trimmed.startsWith('^NM ') || trimmed === '^SV');
         const missingSaveAck = requiresSaveAck && !hasCompleteSaveAck(response);
-        return { success: !!result?.success && !isTransportCommandFailure(response) && !missingSaveAck };
+        const partialPendingSave = missingSaveAck && !!response.trim();
+        return {
+          success: !!result?.success && !isTransportCommandFailure(response) && (!missingSaveAck || partialPendingSave),
+          partialPendingSave,
+        };
       };
 
       if (targetPrinter.id === connectionState.connectedPrinter?.id) {
@@ -723,9 +728,10 @@ const Index = () => {
           return { success: false, failedIndex: index };
         }
 
+        const pendingAckDelay = 'partialPendingSave' in result && result.partialPendingSave ? SAVE_PENDING_ACK_EXTRA_SETTLE_MS : 0;
         const isFinalFlush = index === commandsToRun.length - 1 && command.trim().toUpperCase() === '^SV';
-        if ((index < commandsToRun.length - 1 || isFinalFlush) && delayAfterMs > 0) {
-          await new Promise(resolve => setTimeout(resolve, delayAfterMs));
+        if ((index < commandsToRun.length - 1 || isFinalFlush) && delayAfterMs + pendingAckDelay > 0) {
+          await new Promise(resolve => setTimeout(resolve, delayAfterMs + pendingAckDelay));
         }
       }
 
