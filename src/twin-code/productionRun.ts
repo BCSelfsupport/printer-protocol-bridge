@@ -67,6 +67,17 @@ export interface ProductionRunMeta {
    * serials available. Null/0 means "run until catalog is exhausted".
    */
   targetCount?: number | null;
+  /**
+   * Snapshot of the conveyor / line conditions at the moment of Start.
+   * The envelope report reads from this so the audit always shows what the
+   * line was actually doing for THIS lot — not whatever the conveyorSim
+   * happens to be configured to when the operator later clicks Download.
+   * (Fixes report showing stale ft/min after operator nudges line speed.)
+   */
+  lineSnapshot?: {
+    ftPerMin: number;
+    pitchMm: number;
+  } | null;
 }
 
 export interface ProductionRunSummary {
@@ -157,6 +168,10 @@ class ProductionRunStore {
       liveAtStart: input.liveAtStart,
       cloudRunId: null,
       targetCount: input.targetCount && input.targetCount > 0 ? Math.floor(input.targetCount) : null,
+      lineSnapshot: (() => {
+        const cv = conveyorSim.getConfig();
+        return cv ? { ftPerMin: cv.ftPerMin, pitchMm: cv.pitchMm } : null;
+      })(),
     };
     this.state = { ...this.state, active: meta };
     // Fresh run = fresh fault history; otherwise prior shift's incidents
@@ -478,7 +493,10 @@ export function downloadRunCSV(exp: ProductionRunExport) {
   //     having to ask. These are captured at EXPORT time (after stop), which
   //     is fine — they describe the test rig, not per-bottle state.
   const live = liveMetrics.getSnapshot();
-  const cv = conveyorSim.getConfig();
+  const cvLive = conveyorSim.getConfig();
+  const cv = exp.meta.lineSnapshot
+    ? { ...cvLive, ftPerMin: exp.meta.lineSnapshot.ftPerMin, pitchMm: exp.meta.lineSnapshot.pitchMm }
+    : cvLive;
   const profile = twinDispatcher.getBoundProfile();
   const samples = profilerBus.getSamples();
   const headroom = computeHeadroom(samples, live.bpm);

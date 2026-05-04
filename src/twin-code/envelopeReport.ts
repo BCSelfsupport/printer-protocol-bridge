@@ -86,7 +86,13 @@ function escapeHtml(s: string): string {
  * Build the HTML string. Self-contained — no external assets.
  */
 export function buildEnvelopeReportHTML(exp: ProductionRunExport): string {
-  const cv = conveyorSim.getConfig();
+  // Prefer the line-conditions snapshot captured at Start so the report shows
+  // what the line was doing for THIS lot, not whatever conveyorSim is set to
+  // at the moment the operator clicks Download.
+  const cvLive = conveyorSim.getConfig();
+  const cv = exp.meta.lineSnapshot
+    ? { ...cvLive, ftPerMin: exp.meta.lineSnapshot.ftPerMin, pitchMm: exp.meta.lineSnapshot.pitchMm }
+    : cvLive;
   const live = liveMetrics.getSnapshot();
   const profile = twinDispatcher.getBoundProfile();
   const samples = profilerBus.getSamples();
