@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { toast } from 'sonner';
+import { isDevPanelPreviewRuntime } from '@/lib/runtimeEnvironment';
 
 export type LicenseTier = 'lite' | 'full' | 'database' | 'demo' | 'dev' | 'twincode';
 
@@ -64,7 +65,7 @@ function getMachineId(): string {
 export function LicenseProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<LicenseState>(() => {
     // In dev mode, default to full dev access
-    if (import.meta.env.DEV) {
+    if (isDevPanelPreviewRuntime()) {
       return { tier: 'dev', isActivated: true, productKey: null, error: null, isLoading: false, isCompanion: false, companionSessionId: null };
     }
     
@@ -88,7 +89,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   });
 
   const validate = useCallback(async () => {
-    if (import.meta.env.DEV) return;
+    if (isDevPanelPreviewRuntime()) return;
 
     // Companion validation
     if (state.isCompanion && state.companionSessionId) {
@@ -154,7 +155,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
 
   // Validate on mount and periodically
   useEffect(() => {
-    if (import.meta.env.DEV) return;
+    if (isDevPanelPreviewRuntime()) return;
     if (state.productKey || (state.isCompanion && state.companionSessionId)) {
       validate();
       const interval = setInterval(validate, VALIDATE_INTERVAL_MS);
@@ -350,7 +351,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   const [isOwnerDeveloper, setIsOwnerDeveloper] = useState(false);
   useEffect(() => {
     // Local dev (vite) always counts as developer.
-    if (import.meta.env.DEV) {
+    if (isDevPanelPreviewRuntime()) {
       setIsDeveloper(true);
       setIsOwnerDeveloper(true);
       return;
