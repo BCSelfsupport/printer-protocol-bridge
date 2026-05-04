@@ -96,6 +96,17 @@ export interface ProductionRunMeta {
     delayDots: number;
     speedCode: number;
     speedLabel: string;
+    /**
+     * Live AS-RUN values queried from each printer at Stop. In real production
+     * the operator nails Delay/Width on the line after bind (Delay positions
+     * the print on the bottle relative to the photocell, Width tunes strike
+     * width to line speed) — these are the values that actually shaped THIS
+     * lot's cycle time. The bind defaults stay alongside as the baseline.
+     */
+    liveAtStop?: {
+      a: { widthDots: number | null; delayDots: number | null } | null;
+      b: { widthDots: number | null; delayDots: number | null } | null;
+    } | null;
   } | null;
 }
 
