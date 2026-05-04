@@ -659,10 +659,23 @@ const Index = () => {
       && multiPrinterEmulator.isEmulatedIp(targetPrinter.ipAddress, targetPrinter.port);
 
     const runCommand = async (command: string) => {
+      const trimmed = command.trim().toUpperCase();
+      const saveOptions = trimmed.startsWith('^NM ')
+        ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_NM_IDLE_AFTER_DATA_MS }
+        : trimmed === '^SV'
+          ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS }
+          : undefined;
+      const validateResult = (result: { success?: boolean; response?: string; error?: string }) => {
+        const response = result?.response ?? result?.error ?? '';
+        const missingSaveAck = (trimmed.startsWith('^NM ') || trimmed === '^SV') && !hasCompleteSaveAck(response);
+        return { success: !!result?.success && !isTransportCommandFailure(response) && !missingSaveAck };
+      };
+
       if (targetPrinter.id === connectionState.connectedPrinter?.id) {
-        const result = await sendCommand(command);
-        const response = result?.response ?? '';
-        return { success: !!result?.success && !isTransportCommandFailure(response) };
+        const result = saveOptions
+          ? await printerTransport.sendCommand(targetPrinter.id, command, saveOptions)
+          : await sendCommand(command);
+        return validateResult(result);
       }
 
       if (emulatorHandles) {
@@ -672,9 +685,8 @@ const Index = () => {
       }
 
       // Real hardware: use shared session opened below
-      const result = await printerTransport.sendCommand(targetPrinter.id, command);
-      const response = result?.response ?? result?.error ?? '';
-      return { success: !!result?.success && !isTransportCommandFailure(response) };
+      const result = await printerTransport.sendCommand(targetPrinter.id, command, saveOptions);
+      return validateResult(result);
     };
 
     // Only open a shared TCP session for real (non-emulated) non-connected printers
