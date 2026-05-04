@@ -122,7 +122,11 @@ export function getProtocolFieldInfo(
   const dateType = parts[1]; // normal, expiry, rollover, expiry_rollover
   const codeType = parts.slice(2).join('_'); // yyyy, doy, program_doy, etc.
 
-  const useExpiry = dateType === 'expiry' || dateType === 'expiry_rollover';
+  // Only use ^AE when there is an actual expiry offset. A date_expiry field
+  // with 0/blank days has no D/W/M/Y extension and some firmware revs leave
+  // the message in RAM-only/yellow state or wedge during ^SV.
+  const hasExpiryOffset = Number.isFinite(autoCodeExpiryDays) && (autoCodeExpiryDays ?? 0) > 0;
+  const useExpiry = (dateType === 'expiry' || dateType === 'expiry_rollover') && hasExpiryOffset;
   const useRollover = dateType === 'rollover' || dateType === 'expiry_rollover';
 
   // Build expiry/rollover extension params for ^AE / ^AP
