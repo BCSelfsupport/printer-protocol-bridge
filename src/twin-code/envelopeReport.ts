@@ -352,17 +352,43 @@ export function buildEnvelopeReportHTML(exp: ProductionRunExport): string {
   </table>
 
   ${exp.meta.printSnapshot ? `
-  <h2>Print parameters (applied at bind)</h2>
+  <h2>Print parameters · bind defaults vs as-run</h2>
   <p style="margin:0 0 8px 0;color:var(--muted);font-size:12px">
     These three settings dominate cycle time and therefore the maximum sustainable BPM.
     Lower Width and higher Speed shorten each strike; Delay is the dead time before each print fires.
-    Compare runs with identical Width / Speed / Delay for apples-to-apples throughput verdicts.
+    <strong>Bind defaults</strong> are pushed to both printers when the pair is bonded.
+    <strong>As-run</strong> values are read back from each printer at Stop — in production, operators
+    set Delay live from the conveyor (placement on the bottle after the photocell) and tune Width to
+    line speed / pitch, so live production cycle-time and BPM ceiling will track the as-run values, not the defaults.
   </p>
   <table>
-    <tr><td>Width (^PW)</td><td class="num">${exp.meta.printSnapshot.widthDots} dot${exp.meta.printSnapshot.widthDots === 1 ? "" : "s"}</td></tr>
-    <tr><td>Delay (^DA)</td><td class="num">${exp.meta.printSnapshot.delayDots} dot${exp.meta.printSnapshot.delayDots === 1 ? "" : "s"}</td></tr>
-    <tr><td>Speed (^CM s${exp.meta.printSnapshot.speedCode})</td><td class="num">${escapeHtml(exp.meta.printSnapshot.speedLabel)}</td></tr>
+    <thead>
+      <tr><th>Parameter</th><th class="num">Bind default</th><th class="num">A side (as-run)</th><th class="num">B side (as-run)</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Width (^PW)</td>
+        <td class="num">${exp.meta.printSnapshot.widthDots} dot${exp.meta.printSnapshot.widthDots === 1 ? "" : "s"}</td>
+        <td class="num">${exp.meta.printSnapshot.liveAtStop?.a?.widthDots ?? "—"}</td>
+        <td class="num">${exp.meta.printSnapshot.liveAtStop?.b?.widthDots ?? "—"}</td>
+      </tr>
+      <tr>
+        <td>Delay (^DA)</td>
+        <td class="num">${exp.meta.printSnapshot.delayDots} dots</td>
+        <td class="num">${exp.meta.printSnapshot.liveAtStop?.a?.delayDots ?? "—"}</td>
+        <td class="num">${exp.meta.printSnapshot.liveAtStop?.b?.delayDots ?? "—"}</td>
+      </tr>
+      <tr>
+        <td>Speed (^CM s${exp.meta.printSnapshot.speedCode})</td>
+        <td class="num">${escapeHtml(exp.meta.printSnapshot.speedLabel)}</td>
+        <td class="num" colspan="2" style="text-align:left;color:var(--muted)">locked at bind on both sides</td>
+      </tr>
+    </tbody>
   </table>
+  ${!exp.meta.printSnapshot.liveAtStop ? `
+  <p style="margin:6px 0 0 0;color:var(--muted);font-size:11px;font-style:italic">
+    As-run values not captured (synthetic run, or printers unreachable at Stop). Defaults shown represent the full applied configuration.
+  </p>` : ""}
   ` : ""}
 
   <h2>Cycle-time distribution</h2>

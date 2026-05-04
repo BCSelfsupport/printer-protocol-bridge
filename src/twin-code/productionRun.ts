@@ -96,6 +96,17 @@ export interface ProductionRunMeta {
     delayDots: number;
     speedCode: number;
     speedLabel: string;
+    /**
+     * Live AS-RUN values queried from each printer at Stop. In real production
+     * the operator nails Delay/Width on the line after bind (Delay positions
+     * the print on the bottle relative to the photocell, Width tunes strike
+     * width to line speed) — these are the values that actually shaped THIS
+     * lot's cycle time. The bind defaults stay alongside as the baseline.
+     */
+    liveAtStop?: {
+      a: { widthDots: number | null; delayDots: number | null } | null;
+      b: { widthDots: number | null; delayDots: number | null } | null;
+    } | null;
   } | null;
 }
 
@@ -265,7 +276,25 @@ class ProductionRunStore {
     faultGuard.reset();
     const endedAt = Date.now();
     const recordsEndIdx = catalog.getRecords().length;
-    const meta: ProductionRunMeta = { ...active, endedAt, recordsEndIdx };
+    // Snapshot live ^PW / ^DA off the printers BEFORE we tear down the bond,
+    // so the report shows the values the operator actually settled on for this
+    // lot — not just the defaults pushed at bind. Best-effort; failure leaves
+    // the report falling back to the bind baseline.
+    let liveAtStop: NonNullable<NonNullable<ProductionRunMeta['printSnapshot']>['liveAtStop']> = null;
+    if (active.liveAtStart && twinDispatcher.isBound()) {
+      try {
+        const live = await twinDispatcher.fetchLivePrintParams();
+        if (live) liveAtStop = { a: live.a, b: live.b };
+      } catch { /* ignore */ }
+    }
+    const meta: ProductionRunMeta = {
+      ...active,
+      endedAt,
+      recordsEndIdx,
+      printSnapshot: active.printSnapshot
+        ? { ...active.printSnapshot, liveAtStop }
+        : active.printSnapshot,
+    };
     const records = catalog.getRecords().slice(meta.recordsStartIdx, recordsEndIdx);
     const summary = computeSummary(meta, records, endedAt);
     const recordsHash = await sha256Hex(JSON.stringify(records));
@@ -559,9 +588,19 @@ export function downloadRunCSV(exp: ProductionRunExport) {
     `# DataMatrix on either side: ${profile?.hasBarcode ? "YES" : "NO"}`,
     `#`,
     `# === Print parameters (applied at bind — affect cycle time / max BPM) ===`,
-    `# Width (^PW): ${exp.meta.printSnapshot?.widthDots ?? "n/a"} dots`,
-    `# Delay (^DA): ${exp.meta.printSnapshot?.delayDots ?? "n/a"} dots`,
-    `# Speed (^CM s): ${exp.meta.printSnapshot?.speedCode ?? "n/a"} (${exp.meta.printSnapshot?.speedLabel ?? "n/a"})`,
+    `# Width (^PW) [bind default]: ${exp.meta.printSnapshot?.widthDots ?? "n/a"} dots`,
+    `# Delay (^DA) [bind default]: ${exp.meta.printSnapshot?.delayDots ?? "n/a"} dots`,
+    `# Speed (^CM s)              : ${exp.meta.printSnapshot?.speedCode ?? "n/a"} (${exp.meta.printSnapshot?.speedLabel ?? "n/a"})`,
+    ...(exp.meta.printSnapshot?.liveAtStop ? [
+      `#`,
+      `# === Live AS-RUN print parameters (queried from printers at Stop) ===`,
+      `# A side  Width: ${exp.meta.printSnapshot.liveAtStop.a?.widthDots ?? "n/a"} dots  Delay: ${exp.meta.printSnapshot.liveAtStop.a?.delayDots ?? "n/a"} dots`,
+      `# B side  Width: ${exp.meta.printSnapshot.liveAtStop.b?.widthDots ?? "n/a"} dots  Delay: ${exp.meta.printSnapshot.liveAtStop.b?.delayDots ?? "n/a"} dots`,
+      `# Note: in production Delay is set live from the conveyor (placement of`,
+      `#   the print on the bottle after the photocell) and Width is tuned to`,
+      `#   the line speed / pitch — so these may differ from the bind defaults.`,
+      `#   Cycle-time numbers in this run reflect the AS-RUN values above.`,
+    ] : []),
     `#`,
     `# === Throughput envelope (this run) ===`,
     `# Cycle p95 (measured, n=${headroom.sampleCount}): ${Number.isFinite(headroom.cycleP95Ms) ? headroom.cycleP95Ms.toFixed(1) + " ms" : "n/a"}`,
