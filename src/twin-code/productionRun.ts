@@ -256,6 +256,7 @@ class ProductionRunStore {
     this.state = { ...this.state, active: null };
     this.clearPersistedActive();
     this.disarmCatalogWatcher();
+    this.clearDispatchGate();
     this.notify();
     catalog.setActiveRunId(null);
     if (active.cloudRunId) {
