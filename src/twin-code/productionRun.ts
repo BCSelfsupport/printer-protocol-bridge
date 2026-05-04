@@ -32,7 +32,13 @@ import { faultGuard } from "./faultGuard";
 import { cloudLedger } from "./cloudLedger";
 import { liveMetrics } from "./liveMetrics";
 import { conveyorSim } from "./conveyorSim";
-import { twinDispatcher } from "./twinDispatcher";
+import {
+  twinDispatcher,
+  TWIN_DEFAULT_WIDTH,
+  TWIN_DEFAULT_DELAY,
+  TWIN_DEFAULT_SPEED_CODE,
+  TWIN_DEFAULT_SPEED_LABEL,
+} from "./twinDispatcher";
 import { profilerBus } from "./profilerBus";
 import { computeHeadroom, cycleBudgetForBpm, DEFAULT_SAFETY_FACTOR } from "./throughputHeadroom";
 
