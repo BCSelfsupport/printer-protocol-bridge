@@ -757,22 +757,23 @@ const Index = () => {
 
     console.log(`[MasterSlaveSync] Pushing message "${messageName}" content to ${availableSlaves.length} slave(s)`);
     for (const slave of availableSlaves) {
-      let allOk = true;
-      for (const cmd of commands) {
-        const ok = await sendCommandToPrinter(slave, cmd);
-        if (!ok) {
-          allOk = false;
-          console.warn(`[MasterSlaveSync] Command failed on ${slave.name}: ${cmd.substring(0, 40)}...`);
-        }
+      const sequencedCommands = commands.map((command) => ({
+        command,
+        delayAfterMs: getSaveCommandDelay(command, details.fields.length),
+      }));
+      const result = await sendVerifiedCommandSequence(slave, sequencedCommands, 300);
+      if (!result.success) {
+        const failedCommand = sequencedCommands[result.failedIndex ?? 0]?.command ?? 'unknown command';
+        console.warn(`[MasterSlaveSync] Command failed on ${slave.name}: ${failedCommand.substring(0, 40)}...`);
       }
       // Do NOT auto-select on the slave here. Per user spec, saving on the
       // master pushes content (^DM/^NM/^SV) to slaves so they have the message,
       // but the slave only switches to it when the operator explicitly presses
       // Select on the master (which fires ^SM via useMasterSlaveSync's
       // currentMessage effect).
-      console.log(`[MasterSlaveSync] Pushed content "${messageName}" → ${slave.name}: ${allOk ? 'OK' : 'PARTIAL'} (no ^SM)`);
+      console.log(`[MasterSlaveSync] Pushed content "${messageName}" → ${slave.name}: ${result.success ? 'OK' : 'PARTIAL'} (no ^SM)`);
     }
-  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildMessageCommands, sendCommandToPrinter, updatePrinter]);
+  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildMessageCommands, sendVerifiedCommandSequence]);
 
   const replaceMessageWithoutDelete = useCallback(async (
     targetPrinter: Printer,
