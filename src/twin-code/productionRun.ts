@@ -191,6 +191,15 @@ class ProductionRunStore {
         const cv = conveyorSim.getConfig();
         return cv ? { ftPerMin: cv.ftPerMin, pitchMm: cv.pitchMm } : null;
       })(),
+      // Twin Code defaults pushed to both printers on bind. Snapshotted so
+      // the report can show the print params that were ACTUALLY in effect —
+      // critical for tying cycle-time numbers back to a hardware config.
+      printSnapshot: input.liveAtStart ? {
+        widthDots: TWIN_DEFAULT_WIDTH,
+        delayDots: TWIN_DEFAULT_DELAY,
+        speedCode: TWIN_DEFAULT_SPEED_CODE,
+        speedLabel: TWIN_DEFAULT_SPEED_LABEL,
+      } : null,
     };
     this.state = { ...this.state, active: meta };
     // Fresh run = fresh fault history; otherwise prior shift's incidents
