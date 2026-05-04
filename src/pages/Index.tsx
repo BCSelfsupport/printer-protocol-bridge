@@ -763,22 +763,26 @@ const Index = () => {
       return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | null };
     }
 
-    const commands = rawCommands.filter((cmd) => {
-      const trimmed = cmd.trim().toUpperCase();
-      return trimmed !== '^SV' && !trimmed.startsWith('^DM ');
-    });
+    // Keep ^DM in the sequence: when the stored message has a different template
+    // (e.g. slave currently has 16-dot, master saved 25-dot), firmware will not
+    // change the template on a plain ^NM update — the old template/header is
+    // preserved. Deleting first forces ^NM to recreate with the new template.
+    const commands = rawCommands.filter((cmd) => cmd.trim().toUpperCase() !== '^SV');
 
     const normalizedMessageName = messageName.trim().toUpperCase();
     const targetCurrentMessage = targetPrinter.currentMessage?.trim().toUpperCase();
     const sequence: string[] = [];
     let switchCommandIndex: number | null = null;
     if (targetCurrentMessage === normalizedMessageName) {
+      // ^DM on the active message is rejected — deselect first.
       const fallbackMessage = normalizedMessageName === 'BESTCODE' ? 'BESTCODE AUTO' : 'BESTCODE';
       switchCommandIndex = sequence.length;
       sequence.push(`^SM ${fallbackMessage}`);
     }
 
     sequence.push(...commands);
+    // Persist the recreated message (with new template) before reselecting.
+    sequence.push('^SV');
     const reselectCommandIndex = sequence.length;
     sequence.push(`^SM ${messageName}`);
 
