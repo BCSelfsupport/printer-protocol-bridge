@@ -114,7 +114,14 @@ class ProductionRunStore {
   constructor() {
     this.restoreActive();
     // If a run was restored from disk, re-arm the catalog watcher.
-    if (this.state.active) this.armCatalogWatcher();
+    if (this.state.active) {
+      this.armCatalogWatcher();
+      // NOTE: gate counter starts fresh — on a refresh mid-run we cannot
+      // recover how many bottles were already issued, so the gate would
+      // allow up to `targetCount` MORE bottles. Acceptable tradeoff: the
+      // catalog ledger is still authoritative for accounting.
+      this.installDispatchGate(this.state.active);
+    }
   }
 
   /** Register a callback for "run auto-stopped because catalog is empty". */
@@ -162,6 +169,12 @@ class ProductionRunStore {
     // The "Resume from bottle #N" banner reads the conveyor's bottle id, so
     // resetting here keeps the operator-facing number aligned with this lot.
     conveyorSim.resetBottleCounter();
+    // Install the pre-dispatch gate so the conveyor stops issuing serials the
+    // INSTANT the target is reached — keeps A and B printer counters in
+    // lock-step at end-of-lot (no extra ^MD slips through to A while B is
+    // being torn down). When targetCount is null/0, no gate is installed and
+    // the run runs until the catalog itself is exhausted.
+    this.installDispatchGate(meta);
     this.persistActive();
     this.notify();
     // Watch the catalog so the run auto-finalizes on the last bottle.
@@ -226,6 +239,7 @@ class ProductionRunStore {
     this.state = { active: null, lastCompleted: exportObj };
     this.clearPersistedActive();
     this.disarmCatalogWatcher();
+    this.clearDispatchGate();
     this.notify();
     catalog.setActiveRunId(null);
     if (active.cloudRunId) {
@@ -249,6 +263,7 @@ class ProductionRunStore {
     this.state = { ...this.state, active: null };
     this.clearPersistedActive();
     this.disarmCatalogWatcher();
+    this.clearDispatchGate();
     this.notify();
     catalog.setActiveRunId(null);
     if (active.cloudRunId) {
@@ -358,6 +373,30 @@ class ProductionRunStore {
       this.catalogUnsub();
       this.catalogUnsub = null;
     }
+  }
+
+  /**
+   * Install a pre-dispatch gate on the conveyor sim that lets exactly
+   * `targetCount` bottles through (or unlimited when not set). The gate
+   * accounts internally so a stop-latency on the watcher cannot leak an
+   * extra ^MD to printer A.
+   */
+  private installDispatchGate(meta: ProductionRunMeta) {
+    if (!meta.targetCount || meta.targetCount <= 0) {
+      conveyorSim.setDispatchGate(null);
+      return;
+    }
+    let issued = 0;
+    const cap = meta.targetCount;
+    conveyorSim.setDispatchGate(() => {
+      if (issued >= cap) return false;
+      issued++;
+      return true;
+    });
+  }
+
+  private clearDispatchGate() {
+    try { conveyorSim.setDispatchGate(null); } catch { /* ignore */ }
   }
 
   private persistActive() {
