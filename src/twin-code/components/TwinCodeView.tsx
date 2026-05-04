@@ -11,11 +11,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
-  Play,
-  Square,
   Download,
   Upload,
-  Trash2,
   RotateCcw,
   Link2,
   Gauge,
