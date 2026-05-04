@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { useFaultGuard } from "../useFaultGuard";
 import { faultGuard, type FaultEvent } from "../faultGuard";
 import { conveyorSim } from "../conveyorSim";
+import { productionRun } from "../productionRun";
 import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
