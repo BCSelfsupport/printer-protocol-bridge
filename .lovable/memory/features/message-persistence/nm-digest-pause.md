@@ -1,39 +1,48 @@
 ---
-name: ^NM → ^SV digest pause (size-scaled)
-description: Pause between ^NM and ^SV must scale with field count. 300 ms base + 60 ms/field, cap 3 s. Fixes Dozen12 (12-field) lockup without violating frozen v0.1.166 baseline.
+name: ^NM → ^SV digest pause + saveEditedMessage settle stripping
+description: The ONLY size-scaled delay in the save flow is the per-^NM digest pause inside saveMessageContent. saveEditedMessage in Index.tsx must NOT scale settle/reload by field count and must NOT call waitForPollingIdle around the save handoff. Heavy messages (≥6 fields) and extended-date messages skip the post-save ^GM/^LF reload entirely.
 type: feature
 ---
 
-# ^NM → ^SV digest pause
+# ^NM digest pause + post-save settle policy
 
-## Rule
-Between `^NM` and the following `^SV` in `saveMessageContent` (usePrinterConnection.ts):
+## The only legitimate size-scaled delay
+Inside `saveMessageContent` (usePrinterConnection.ts), between `^NM` and `^SV`:
 
 ```
 delay = min(3000, 300 + validFields.length * 60)  // ms
 ```
 
-All other inter-command delays stay at 300 ms (or 800 ms after the switch-away `^SM`).
+All other inter-command delays in that function stay at 300 ms (or 800 ms after
+the switch-away `^SM`).
 
-## Why
-Observed on real hardware: messages with ≤10 fields save fine at 300 ms.
-At 12 fields (Dozen12) the firmware is still parsing/persisting the long `^NM`
-payload when `^SV` arrives, and the printer wedges (jet stays on, HMI stops
-responding). Scaling only this one transition gives the firmware enough
-headroom without slowing small saves.
+## What saveEditedMessage in Index.tsx MUST NOT do
+Per mem://features/message-persistence/dozen12-validation (frozen baseline):
 
-## What this fix is NOT
-This is **not** a re-introduction of any forbidden guard from
-mem://features/message-persistence/dozen12-validation:
-- No `writeLockRef` / `waitForWriteLockToClear`
-- No `waitForPollingIdle` around save
-- No `getWriteTimingProfile` / scaled timeouts on `selectMessage`
-- No `settleBeforeSelectMs` / `settleAfterSelectMs` in MessagesScreen
+- ❌ NO `followUpSettleMs` / `reloadSettleMs` scaled by `fieldCount`
+- ❌ NO `await new Promise(r => setTimeout(r, 500))` before the post-save reload
+- ❌ NO `await waitForPollingIdle(3000)` around the settings sequence or reload
+- ❌ NO `settleBeforeSelectMs` / `settleAfterSelectMs` in MessagesScreen
 
-It is a **single per-command delay** that only fires when the command we
-just sent starts with `^NM `. The save → select handoff stays untouched.
+These were re-introduced after v0.1.166 and caused the **exact symptom** the user
+reported: "the printer HMI shows the save completed, but the Codesync spinner
+keeps spinning, and eventually the printer locks up." That spinner = us still
+holding `setPollingPaused(true)` while sleeping/idle-waiting; the lockup =
+`^GM`/`^LF`/`^SM` re-entering the firmware mid-grace.
+
+## Current rules (post-fix)
+- `followUpSettleMs = MESSAGE_RELOAD_SETTLE_MS` (constant, NOT scaled)
+- `reloadSettleMs   = MESSAGE_RELOAD_SETTLE_MS` (constant, NOT scaled)
+- Settings sequence runs immediately after `^NM`/`^SV` ack — no pre-sleep, no
+  `waitForPollingIdle`. The ^NM digest pause already covered firmware headroom.
+- Post-save reload (`^GM`/`^LF`) is SKIPPED for messages with `fields.length >= 6`
+  or any extended-date field. The local merged copy is authoritative.
+- Heavy messages still get the right behaviour because:
+  1. saveMessageContent's per-^NM pause scales 300 + 60ms × fieldCount
+  2. We don't re-enter with reads/writes while the firmware is committing
 
 ## Validation
-- 1–10 field messages: no observable regression (extra 60–600 ms is invisible)
-- 12-field prompt message (Dozen12): saves and selects without lockup
-- Cap of 3 s protects against pathological 50+ field messages
+- 1–5 field messages: full save + reload, completes in <2s
+- 6–11 field messages: save + skip reload, completes when ^NM/^SV acks
+- 12-field prompt message (Dozen12): saves and selects without lockup, spinner
+  releases as soon as ^NM/^SV ack returns
