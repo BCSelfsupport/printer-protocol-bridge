@@ -2391,12 +2391,13 @@ export function usePrinterConnection() {
         for (let cmdIdx = 0; cmdIdx < commands.length; cmdIdx++) {
           const cmd = commands[cmdIdx];
           const isNmCommand = cmd.startsWith('^NM ');
+          const isNfCommand = cmd.startsWith('^NF ');
           const isFlushCommand = cmd === FLUSH_COMMAND;
           console.log('[saveMessageContent] Sending:', cmd);
           const result = await printerTransport.sendCommand(
             printer.id,
             cmd,
-            isNmCommand
+            (isNmCommand || isNfCommand)
               ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_NM_IDLE_AFTER_DATA_MS }
               : isFlushCommand
                 ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS }
@@ -2406,7 +2407,7 @@ export function usePrinterConnection() {
           const responseText = result?.response ?? '';
           const errorText = result?.error ?? '';
           const rejectedByPrinter = isProtocolCommandFailure(responseText);
-          const missingSaveAck = (isNmCommand || isFlushCommand) && !hasCompleteSaveAck(responseText);
+          const missingSaveAck = (isNmCommand || isNfCommand || isFlushCommand) && !hasCompleteSaveAck(responseText);
           const echoOnlySaveResponse = missingSaveAck && !!responseText.trim();
 
           // Don't fail on ^DM error (message might not exist yet)
