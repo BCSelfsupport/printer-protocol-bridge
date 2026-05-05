@@ -760,11 +760,13 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, customCoun
     // state instead of fabricating a time/date preview that doesn't reflect
     // what's actually on the printer.
     if (message) {
+      const dotCount = (Math.floor(nowMs / 500) % 4); // 0..3 animated dots
+      const dots = '.'.repeat(dotCount);
       ctx.fillStyle = '#888';
       ctx.font = '14px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`Loading "${message}"…`, width / 2, height / 2);
+      ctx.fillText(`Loading "${message}"${dots}`, width / 2, height / 2);
       return;
     }
 
