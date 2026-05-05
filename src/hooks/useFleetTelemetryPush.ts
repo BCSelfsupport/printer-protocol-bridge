@@ -109,6 +109,10 @@ export function useFleetTelemetryPush(options: {
     if (!connectedPrinterId || !status) return;
 
     const pushTelemetry = async () => {
+      if (isSaveBusy()) {
+        console.log('[FleetPush] Skipping push — printer save in flight');
+        return;
+      }
       const fleetPrinterId = registeredPrinters.current.get(connectedPrinterId);
       if (!fleetPrinterId) {
         console.log('[FleetPush] No fleet ID for printer', connectedPrinterId, '— skipping push');
