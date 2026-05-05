@@ -498,7 +498,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                 size="sm"
                 variant={telemetryPaused ? 'destructive' : 'outline'}
                 className="h-7 text-xs"
-                onClick={() => setTelemetryPaused(!telemetryPaused)}
+                onClick={() => setTelemetryPausedGlobal(!telemetryPaused)}
               >
                 {telemetryPaused ? 'Paused — Resume' : 'Pause Fleet Push'}
               </Button>
