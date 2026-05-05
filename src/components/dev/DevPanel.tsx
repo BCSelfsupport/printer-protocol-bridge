@@ -161,6 +161,8 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
   const [buildRunsLoading, setBuildRunsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab || 'status');
   const [twinPairOpen, setTwinPairOpen] = useState(false);
+  const [telemetryPaused, setTelemetryPausedState] = useState(isTelemetryPaused());
+  useEffect(() => onTelemetryPauseChange(setTelemetryPausedState), []);
   const twinPair = useTwinPair();
 
   // Whether we can send commands: either via emulator or via real printer
@@ -485,6 +487,20 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
               <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
                 {activeTier}
               </Badge>
+            </div>
+            {/* Telemetry pause — silences Fleet Push register/push so the
+                save path can be diagnosed without background HTTP noise. */}
+            <div className="mt-2 flex items-center gap-2">
+              <Activity className="w-3.5 h-3.5 text-muted-foreground" />
+              <Label className="text-xs text-muted-foreground flex-1">Fleet telemetry</Label>
+              <Button
+                size="sm"
+                variant={telemetryPaused ? 'destructive' : 'outline'}
+                className="h-7 text-xs"
+                onClick={() => setTelemetryPaused(!telemetryPaused)}
+              >
+                {telemetryPaused ? 'Paused — Resume' : 'Pause Fleet Push'}
+              </Button>
             </div>
           </div>
 
