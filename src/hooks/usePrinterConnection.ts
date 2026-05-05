@@ -2245,9 +2245,8 @@ export function usePrinterConnection() {
 
     const printer = connectionState.connectedPrinter;
     const normalizedMessageName = messageName.trim().toUpperCase();
-    const currentSelectedMessage = connectionState.status?.currentMessage?.trim().toUpperCase();
-    const needsSwitchAwayBeforeRewrite = currentSelectedMessage === normalizedMessageName;
-    const fallbackMessage = normalizedMessageName === 'BESTCODE' ? 'BESTCODE AUTO' : 'BESTCODE';
+    // Fast-path save no longer parks on a fallback message before rewriting,
+    // so we no longer compute the previously-selected message or a fallback name.
     const templateCode = templateToProtocolCode(templateValue);
     
     // Convert absolute 32-dot canvas Y coordinates to printer Y coordinates.
@@ -2345,19 +2344,16 @@ export function usePrinterConnection() {
       console.log(`[saveMessageContent] DataMatrix ECC200: ${dmUploadCmds.length} ^NG upload command(s)`);
     }
 
-    // For existing messages, delete first then recreate
-    // DataMatrix bitmap uploads must happen before the ^NM command
+    // Fast path: ^NM updates fields in place on an existing message without
+    // needing ^DM. The park-on-BESTCODE + ^DM dance was only required when
+    // the destructive delete-recreate flow was used (^DM is rejected on the
+    // active message). Since the editor constrains template height to the
+    // printer's capability, plain ^NM → ^SV is sufficient and shaves ~3s
+    // per save by avoiding the parking ^SM and the delete handshake.
+    //
+    // NOTE: If a future change ever needs to alter template height, restore
+    // the park → delete → recreate sequence here.
     const commands: string[] = [];
-    if (needsSwitchAwayBeforeRewrite) {
-      // Rewriting the currently selected message via ^DM/^NM can wedge the firmware.
-      // Switch to a safe fallback first, then perform the destructive rewrite.
-      console.log('[saveMessageContent] Active message rewrite detected; switching away first:', {
-        messageName,
-        fallbackMessage,
-      });
-      commands.push(`^SM ${fallbackMessage}`);
-    }
-    commands.push(`^DM ${messageName}`);
     // Insert ^NG (graphic upload) commands before ^NM
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
@@ -2449,7 +2445,7 @@ export function usePrinterConnection() {
           // Inter-command delay: ^NM must fully acknowledge before ^SV, then
           // heavy multi-field saves get a firmware digest floor before flush.
           let delayAfterCommand = 300;
-          if (cmd.startsWith('^SM ') && needsSwitchAwayBeforeRewrite) {
+          if (cmd.startsWith('^SM ')) {
             delayAfterCommand = 800;
           } else if (isNmCommand) {
             delayAfterCommand = getNmDigestPauseMs(validFields.length);
