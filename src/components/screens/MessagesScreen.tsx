@@ -125,6 +125,8 @@ export function MessagesScreen({
   swapSlotName,
   onSetSwapSlot,
   liveCounters,
+  isSlave = false,
+  onSlaveBlocked,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
