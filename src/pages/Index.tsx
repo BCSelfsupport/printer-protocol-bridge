@@ -484,6 +484,14 @@ const Index = () => {
 
 
   const recentlySavedRef = useRef<Map<string, number>>(new Map());
+  const isRecentlySavedForPrinter = useCallback((messageName: string, printerId?: number | null) => {
+    const now = Date.now();
+    const unscopedSavedAt = recentlySavedRef.current.get(messageName);
+    const scopedSavedAt = printerId !== undefined && printerId !== null
+      ? recentlySavedRef.current.get(`${printerId}:${messageName}`)
+      : undefined;
+    return [unscopedSavedAt, scopedSavedAt].some((savedAt) => !!savedAt && now - savedAt < 30_000);
+  }, []);
   
   // Reset synced set when printer changes
   useEffect(() => {
@@ -524,7 +532,7 @@ const Index = () => {
           ]);
           if (details && details.fields.length > 0) {
             const cached = getMessage(msg.name) ?? null;
-            const merged = mergeAutoCodeMeta(details, cached, !!cached?.templateValue);
+            const merged = mergeAutoCodeMeta(details, cached, !!cached?.templateValue && isRecentlySavedForPrinter(msg.name, connectedPrinterId));
             saveMessage(merged);
             console.log('[MessageSync] Saved content for', msg.name, ':', merged.fields.length, 'fields');
           }
@@ -571,8 +579,7 @@ const Index = () => {
     // Skip re-fetching from printer if this message was recently saved from the editor.
     // The localStorage version is authoritative for 30s after a save to prevent
     // the printer's (potentially stale/filtered) version from overwriting user edits.
-    const savedAt = recentlySavedRef.current.get(currentMessageName);
-    if (savedAt && Date.now() - savedAt < 30_000) {
+    if (isRecentlySavedForPrinter(currentMessageName, connectedPrinterId)) {
       console.log('[CurrentMessagePreview] skipping fetch — recently saved:', currentMessageName);
       // Use the cached (localStorage) version which has the latest metadata (e.g. autoCodeExpiryDays)
       if (cached) setActiveMessageContent(cached);
@@ -590,7 +597,7 @@ const Index = () => {
 
         if (!cancelled && fetched && fetched.fields.length > 0) {
           const cached = getMessage(currentMessageName) ?? null;
-          const merged = mergeAutoCodeMeta(fetched, cached, !!cached?.templateValue);
+          const merged = mergeAutoCodeMeta(fetched, cached, !!cached?.templateValue && isRecentlySavedForPrinter(currentMessageName, connectedPrinterId));
           saveMessage(merged);
           setActiveMessageContent(merged);
         }
