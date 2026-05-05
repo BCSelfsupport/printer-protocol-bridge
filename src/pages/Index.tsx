@@ -1309,6 +1309,29 @@ const Index = () => {
     // entered values) → reselect. ^MD^TD is unreliable on this firmware.
     console.log(`[PromptWrite] Using replaceMessageWithoutDelete for "${message.name}" on ${targetPrinter.name}`);
 
+    // Helper: also push the resolved (baked) values to all slaves of this master.
+    const pushToSlaves = async () => {
+      if (targetPrinter.role !== 'master') return;
+      const slaves = getSlavesForMaster(targetPrinter.id).filter(s => s.isAvailable);
+      if (slaves.length === 0) return;
+      console.log(`[PromptWrite] Pushing baked prompt values to ${slaves.length} slave(s)`);
+      for (const slave of slaves) {
+        try {
+          const r = await replaceMessageWithoutDelete(slave, message.name, {
+            fields: resolvedDetails.fields,
+            templateValue: resolvedDetails.templateValue,
+          });
+          if (!r.success) {
+            console.warn(`[PromptWrite] Slave ${slave.name} rewrite failed: ${r.reason}`);
+            continue;
+          }
+          updatePrinter(slave.id, { currentMessage: message.name });
+        } catch (e) {
+          console.error(`[PromptWrite] Slave ${slave.name} push error:`, e);
+        }
+      }
+    };
+
     if (isConnected) {
       setPollingPaused(true);
       try {
@@ -1332,6 +1355,7 @@ const Index = () => {
         if (selected) {
           clearAllExpiryOverrides();
         }
+        await pushToSlaves();
         return selected;
       } finally {
         setPollingPaused(false);
@@ -1354,8 +1378,9 @@ const Index = () => {
       updatePrinter(targetPrinter.id, { currentMessage: message.name });
       clearAllExpiryOverrides();
     }
+    await pushToSlaves();
     return ok;
-  }, [clearAllExpiryOverrides, connectionState.connectedPrinter?.id, replaceMessageWithoutDelete, selectMessage, sendCommandToPrinter, updatePrinter]);
+  }, [clearAllExpiryOverrides, connectionState.connectedPrinter?.id, getSlavesForMaster, replaceMessageWithoutDelete, selectMessage, sendCommandToPrinter, updatePrinter]);
 
   // Per-printer expiry offset change — uses switch-away flow to rewrite ^NM with new ^AE offset
   const handleExpiryOffsetChange = useCallback(async (printerId: number, newDays: number) => {
