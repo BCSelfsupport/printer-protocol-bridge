@@ -2335,11 +2335,7 @@ export function usePrinterConnection() {
     const nmPrintMode = printModeMap[messageSettings?.printMode ?? 'Normal'] ?? 0;
 
     const nmHeaderCommand = `^NM ${templateCode};${nmSpeed};${nmOrientation};${nmPrintMode};${messageName}`;
-    const nfFieldCommands = validFields.slice(1).map((field, offset) => `^NF ${messageName}${buildPositionedFieldSubcommand(field, offset + 1)}`);
-    const useFieldAppendFlow = validFields.length > NM_INLINE_FIELD_LIMIT;
-    const nmCommand = useFieldAppendFlow
-      ? `${nmHeaderCommand}${buildPositionedFieldSubcommand(validFields[0], 0)}`
-      : `${nmHeaderCommand}${fieldSubcommands}`;
+    const nmCommand = `${nmHeaderCommand}${fieldSubcommands}`;
     
     console.log('[saveMessageContent] ^NM command:', nmCommand);
     
@@ -2364,9 +2360,6 @@ export function usePrinterConnection() {
     // Insert ^NG (graphic upload) commands before ^NM
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
-    if (useFieldAppendFlow) {
-      commands.push(...nfFieldCommands);
-    }
     commands.push(FLUSH_COMMAND);
 
     if (shouldUseEmulator()) {
@@ -2431,12 +2424,6 @@ export function usePrinterConnection() {
           } else if (isNmCommand) {
             delayAfterCommand = getNmDigestPauseMs(validFields.length);
             console.log(`[saveMessageContent] ^NM digest pause: ${delayAfterCommand}ms (${validFields.length} fields)`);
-          } else if (isNfCommand) {
-            // ^NF appends one field at a time. Firmware needs a per-field
-            // digest window or the next ^NF arrives before it's ready and
-            // times out (observed at field 8/9 on 25-dot DOZEN12).
-            delayAfterCommand = 1500;
-            console.log(`[saveMessageContent] ^NF digest pause: ${delayAfterCommand}ms`);
           } else if (isFlushCommand) {
             delayAfterCommand = 1000;
           }
