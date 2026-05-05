@@ -760,13 +760,15 @@ const Index = () => {
   const replaceMessageWithoutDelete = useCallback(async (
     targetPrinter: Printer,
     messageName: string,
-    details: Pick<MessageDetails, 'fields' | 'templateValue'>,
+    details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings'>,
   ) => {
+    const { perMessageSettings } = buildEffectiveMessageDependentSettings(details as MessageDetails);
     const rawCommands = await buildMessageCommands(
       messageName,
       details.fields,
       details.templateValue,
       false,
+      perMessageSettings,
     );
 
     if (!rawCommands || rawCommands.length === 0) {
@@ -796,7 +798,12 @@ const Index = () => {
     const reselectCommandIndex = sequence.length;
     sequence.push(`^SM ${messageName}`);
 
-    const result = await sendVerifiedCommandSequence(targetPrinter, sequence, 300);
+    const sequencedCommands = sequence.map((command) => ({
+      command,
+      delayAfterMs: getSaveCommandDelay(command, details.fields.length),
+    }));
+
+    const result = await sendVerifiedCommandSequence(targetPrinter, sequencedCommands, 300);
     if (!result.success) {
       if (result.failedIndex === switchCommandIndex) {
         return { success: false as const, reason: 'switch' as const };
@@ -808,7 +815,7 @@ const Index = () => {
     }
 
     return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | null };
-  }, [buildMessageCommands, sendVerifiedCommandSequence]);
+  }, [buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence]);
 
   // After saving a message on the master, duplicate the full content to all
   // slaves. If the message is currently SELECTED on a slave with a different
