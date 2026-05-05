@@ -82,11 +82,39 @@ const MODEL_MAP: Record<string, ModelCapabilities> = {
  * Resolve the capabilities for a given printer model string (from ^VV response).
  * Returns null if the model is unknown — the editor should then show everything (no restrictions).
  */
-export function getModelCapabilities(printerModel: string | null | undefined): ModelCapabilities | null {
+// High-speed (HS1) variants physically can't sustain the taller templates
+// at their rated throughput — the printer's HMI only exposes templates up
+// to 16-dot. Mirror that limit in the editor so users can't pick a
+// template the firmware will refuse.
+const MODEL_88_HS1: ModelCapabilities = {
+  templates: [
+    '16', '12', '9', '7', '7s', '5', '5s',
+    'multi-2x7', 'multi-2x5',
+  ],
+  fonts: [
+    'Standard5High', 'Standard7High', 'Narrow7High',
+    'Standard9High', 'Standard12High', 'Standard16High',
+  ],
+};
+
+export function getModelCapabilities(
+  printerModel: string | null | undefined,
+  printerVariant?: string | null,
+): ModelCapabilities | null {
   if (!printerModel) return null;
 
   // Normalise: strip whitespace, try direct match first
   const model = printerModel.trim();
+  const variant = (printerVariant ?? '').trim().toUpperCase();
+
+  // HS1 variant overrides — only confirmed for Model 88 family so far
+  const isHS1 = /\bHS1\b/.test(variant);
+  const is88Family =
+    model === '88' ||
+    /^88/.test(model) ||
+    /^Q/i.test(model); // Quantum/Qx share Model 88 hardware class
+  if (isHS1 && is88Family) return MODEL_88_HS1;
+
   if (MODEL_MAP[model]) return MODEL_MAP[model];
 
   // Try numeric-only match (e.g. "88S" → "88")
