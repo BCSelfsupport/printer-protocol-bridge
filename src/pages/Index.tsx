@@ -2030,6 +2030,7 @@ const Index = () => {
             connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
             isConnected={connectionState.isConnected}
             printerModel={connectionState.status?.printerModel}
+            printerVariant={connectionState.status?.printerVariant}
             currentAdjustSettings={connectionState.settings}
             onSendCommand={sendCommand}
           onSave={saveEditedMessage}
