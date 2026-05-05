@@ -2311,7 +2311,16 @@ const Index = () => {
             const idx = stored.fields.findIndex(f => f.promptBeforePrint);
             if (idx >= 0) userDefineFieldNum = idx + 1; // 1-indexed
           }
-          await broadcastMessage(masterId, messageName, slaveValues, userDefineFieldNum);
+          // Pause polling while we push ^SM + ^MD^TD to all slaves to avoid
+          // TCP contention on port 23 (single-session limit per printer).
+          setPollingPaused(true);
+          try {
+            const idle = await waitForPollingIdle(3000);
+            if (!idle) console.warn('[Broadcast] Polling still active, proceeding anyway');
+            await broadcastMessage(masterId, messageName, slaveValues, userDefineFieldNum);
+          } finally {
+            setTimeout(() => setPollingPaused(false), 1000);
+          }
         }}
         getSlavesForMaster={getSlavesForMaster}
         connectedMessages={connectionState.messages}
