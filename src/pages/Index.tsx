@@ -851,6 +851,8 @@ const Index = () => {
         const result = await replaceMessageWithoutDelete(slave, messageName, {
           fields: details.fields,
           templateValue: details.templateValue,
+          settings: details.settings,
+          adjustSettings: details.adjustSettings,
         });
         ok = result.success;
         if (!ok) {
@@ -867,6 +869,12 @@ const Index = () => {
           const failedCommand = sequencedCommands[result.failedIndex ?? 0]?.command ?? 'unknown command';
           console.warn(`[MasterSlaveSync] Command failed on ${slave.name}: ${failedCommand.substring(0, 40)}...`);
         }
+      }
+      if (ok) {
+        const slaveDetails = normalizeMessageForPrinter({ ...details, name: messageName });
+        saveMessage(slaveDetails, slave.id);
+        recentlySavedRef.current.set(`${slave.id}:${messageName}`, Date.now());
+        updatePrinter(slave.id, { currentMessage: messageName });
       }
       console.log(`[MasterSlaveSync] Pushed "${messageName}" → ${slave.name}: ${ok ? 'OK' : 'PARTIAL'}`);
     }
