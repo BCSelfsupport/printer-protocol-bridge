@@ -673,18 +673,25 @@ export function MessagesScreen({
 
           <button 
             onClick={() => {
+              if (isSlave) { onSlaveBlocked?.(); return; }
               setNewMessageName('');
               setNewDialogOpen(true);
             }}
-            className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px]"
+            disabled={isSlave}
+            title={isSlave ? 'Slave printer — create messages on the master' : undefined}
+            className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
           >
             <Plus className="w-8 h-8 mb-1" />
             <span className="font-medium">New</span>
           </button>
 
           <button 
-            onClick={() => selectedMessage && onEdit(selectedMessage)}
-            disabled={!selectedMessage}
+            onClick={() => {
+              if (isSlave) { onSlaveBlocked?.(); return; }
+              selectedMessage && onEdit(selectedMessage);
+            }}
+            disabled={!selectedMessage || isSlave}
+            title={isSlave ? 'Slave printer — edit messages on the master' : undefined}
             className="industrial-button-gray text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
           >
             <Pencil className="w-8 h-8 mb-1" />
@@ -705,13 +712,15 @@ export function MessagesScreen({
 
           <button 
             onClick={() => {
+              if (isSlave) { onSlaveBlocked?.(); return; }
               if (selectedMessage && selectedMessage.name === currentMessageName) {
                 toast.error("Can't delete this message — it is currently selected for printing on the printer.");
                 return;
               }
               selectedMessage && setDeleteConfirmOpen(true);
             }}
-            disabled={!selectedMessage}
+            disabled={!selectedMessage || isSlave}
+            title={isSlave ? 'Slave printer — delete messages on the master' : undefined}
             className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
           >
             <Trash2 className="w-8 h-8 mb-1" />
