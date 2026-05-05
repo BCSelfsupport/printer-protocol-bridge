@@ -2246,8 +2246,8 @@ export function usePrinterConnection() {
     const printer = connectionState.connectedPrinter;
     const normalizedMessageName = messageName.trim().toUpperCase();
     const currentSelectedMessage = connectionState.status?.currentMessage?.trim().toUpperCase();
-    const needsSwitchAwayBeforeRewrite = currentSelectedMessage === normalizedMessageName;
-    const fallbackMessage = normalizedMessageName === 'BESTCODE' ? 'BESTCODE AUTO' : 'BESTCODE';
+    // Fast-path save no longer parks on a fallback message before rewriting,
+    // so we no longer compute needsSwitchAwayBeforeRewrite / fallbackMessage.
     const templateCode = templateToProtocolCode(templateValue);
     
     // Convert absolute 32-dot canvas Y coordinates to printer Y coordinates.
