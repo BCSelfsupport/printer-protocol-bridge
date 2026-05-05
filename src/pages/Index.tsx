@@ -874,11 +874,13 @@ const Index = () => {
         const slaveDetails = normalizeMessageForPrinter({ ...details, name: messageName });
         saveMessage(slaveDetails, slave.id);
         recentlySavedRef.current.set(`${slave.id}:${messageName}`, Date.now());
-        updatePrinter(slave.id, { currentMessage: messageName });
+        if (slaveCurrent === targetUpper) {
+          updatePrinter(slave.id, { currentMessage: messageName });
+        }
       }
       console.log(`[MasterSlaveSync] Pushed "${messageName}" → ${slave.name}: ${ok ? 'OK' : 'PARTIAL'}`);
     }
-  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence, replaceMessageWithoutDelete]);
+  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence, replaceMessageWithoutDelete, normalizeMessageForPrinter, saveMessage, updatePrinter]);
 
   const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
     if (!editingMessage) return null;
