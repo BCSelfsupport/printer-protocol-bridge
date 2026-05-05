@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLicense } from '@/contexts/LicenseContext';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { isTelemetryPaused, onTelemetryPauseChange } from '@/lib/telemetryPause';
+import { isSaveBusy } from '@/lib/saveBusy';
 import type { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 
 const PUSH_INTERVAL_MS = 30_000; // Push every 30 seconds
