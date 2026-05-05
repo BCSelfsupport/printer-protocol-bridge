@@ -524,7 +524,7 @@ const Index = () => {
           ]);
           if (details && details.fields.length > 0) {
             const cached = getMessage(msg.name) ?? null;
-            const merged = mergeAutoCodeMeta(details, cached);
+            const merged = mergeAutoCodeMeta(details, cached, !!cached?.templateValue);
             saveMessage(merged);
             console.log('[MessageSync] Saved content for', msg.name, ':', merged.fields.length, 'fields');
           }
@@ -590,7 +590,7 @@ const Index = () => {
 
         if (!cancelled && fetched && fetched.fields.length > 0) {
           const cached = getMessage(currentMessageName) ?? null;
-          const merged = mergeAutoCodeMeta(fetched, cached);
+          const merged = mergeAutoCodeMeta(fetched, cached, !!cached?.templateValue);
           saveMessage(merged);
           setActiveMessageContent(merged);
         }
