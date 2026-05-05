@@ -113,3 +113,4 @@ Updated: today
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
 - [^NM Digest Pause](mem://features/message-persistence/nm-digest-pause) — Scale ^NM→^SV delay (300+60ms/field, cap 3s) to fix Dozen12 12-field lockup
 - [Protocol ^NM/^NF Flow](mem://features/message-persistence/nm-nf-field-append-flow) — Use ^NF after field 7; avoid F8 ^NM lockup; deselect slaves before rewrite.
+- [Save Busy Defers Fleet Push](mem://features/message-persistence/save-busy-defers-fleet-push) — Concurrent Fleet HTTP pushes locked up F8/F9 saves; saveBusy flag gates uploaders.

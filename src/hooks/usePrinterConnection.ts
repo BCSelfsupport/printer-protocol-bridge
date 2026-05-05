@@ -16,6 +16,7 @@ import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
 import { setPollingPaused, isPollingPaused } from '@/lib/pollingPause';
+import { beginSaveBusy } from '@/lib/saveBusy';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
 
 /**
@@ -2376,6 +2377,9 @@ export function usePrinterConnection() {
       // Pause status polling to prevent ^SU commands from interleaving
       // with the ^DM → ^NM → ^SV save sequence on the shared TCP socket.
       setPollingPaused(true);
+      // Also signal background uploaders (Fleet telemetry) to defer — concurrent
+      // HTTP pushes during the ^NM digest window were locking up F8/F9 saves.
+      const releaseSaveBusy = beginSaveBusy();
       try {
         for (let cmdIdx = 0; cmdIdx < commands.length; cmdIdx++) {
           const cmd = commands[cmdIdx];
@@ -2406,6 +2410,7 @@ export function usePrinterConnection() {
             (saveMessageContent as any).__lastError = reason;
             await new Promise(resolve => setTimeout(resolve, SAVE_RECOVERY_QUIET_MS));
             setPollingPaused(false);
+            releaseSaveBusy();
             return false;
           }
 
@@ -2435,6 +2440,7 @@ export function usePrinterConnection() {
 
         // Resume polling before optional verification
         setPollingPaused(false);
+        releaseSaveBusy();
 
         // Post-save verification: wait for firmware to flush, then check ^LM.
         if (isNew) {
@@ -2459,6 +2465,7 @@ export function usePrinterConnection() {
         (saveMessageContent as any).__lastError = e instanceof Error ? e.message : 'Unknown error';
         await new Promise(resolve => setTimeout(resolve, SAVE_RECOVERY_QUIET_MS));
         setPollingPaused(false);
+        releaseSaveBusy();
         return false;
       }
     } else {

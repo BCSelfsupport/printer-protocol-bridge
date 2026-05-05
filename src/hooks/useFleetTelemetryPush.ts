@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLicense } from '@/contexts/LicenseContext';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { isTelemetryPaused, onTelemetryPauseChange } from '@/lib/telemetryPause';
+import { isSaveBusy } from '@/lib/saveBusy';
 import type { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 
 const PUSH_INTERVAL_MS = 30_000; // Push every 30 seconds
@@ -43,6 +44,7 @@ export function useFleetTelemetryPush(options: {
     if (!isActivated || !productKey || tier === 'lite') return;
 
     const registerAll = async () => {
+      if (isSaveBusy()) return; // Defer while a printer save is in flight
       const now = Date.now();
       if (now - lastRegisterTime.current < REGISTER_INTERVAL_MS && registeredPrinters.current.size > 0) return;
 
@@ -107,6 +109,10 @@ export function useFleetTelemetryPush(options: {
     if (!connectedPrinterId || !status) return;
 
     const pushTelemetry = async () => {
+      if (isSaveBusy()) {
+        console.log('[FleetPush] Skipping push — printer save in flight');
+        return;
+      }
       const fleetPrinterId = registeredPrinters.current.get(connectedPrinterId);
       if (!fleetPrinterId) {
         console.log('[FleetPush] No fleet ID for printer', connectedPrinterId, '— skipping push');
