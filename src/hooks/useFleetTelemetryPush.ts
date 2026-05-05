@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLicense } from '@/contexts/LicenseContext';
 import { getFilterStatus } from '@/lib/filterTracker';
+import { isTelemetryPaused, onTelemetryPauseChange } from '@/lib/telemetryPause';
 import type { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 
 const PUSH_INTERVAL_MS = 30_000; // Push every 30 seconds
@@ -32,8 +33,13 @@ export function useFleetTelemetryPush(options: {
   const fleetUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fleet-monitoring`;
   const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+  // Subscribe to dev-panel telemetry pause toggle so register/push effects re-run
+  const [paused, setPaused] = useState(isTelemetryPaused());
+  useEffect(() => onTelemetryPauseChange(setPaused), []);
+
   // Register printers with fleet
   useEffect(() => {
+    if (paused) return;
     if (!isActivated || !productKey || tier === 'lite') return;
 
     const registerAll = async () => {
@@ -92,10 +98,11 @@ export function useFleetTelemetryPush(options: {
     registerAll();
     const interval = setInterval(registerAll, REGISTER_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [isActivated, productKey, tier, printers, connectedPrinterId, fleetUrl, apiKey]);
+  }, [paused, isActivated, productKey, tier, printers, connectedPrinterId, fleetUrl, apiKey]);
 
   // Push telemetry for the connected printer
   useEffect(() => {
+    if (paused) return;
     if (!isActivated || !productKey || tier === 'lite') return;
     if (!connectedPrinterId || !status) return;
 
@@ -181,5 +188,5 @@ export function useFleetTelemetryPush(options: {
     pushTelemetry();
     const interval = setInterval(pushTelemetry, PUSH_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [isActivated, productKey, tier, connectedPrinterId, status, metrics, printers, fleetUrl, apiKey]);
+  }, [paused, isActivated, productKey, tier, connectedPrinterId, status, metrics, printers, fleetUrl, apiKey]);
 }
