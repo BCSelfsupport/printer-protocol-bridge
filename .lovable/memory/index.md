@@ -112,3 +112,4 @@ Updated: today
 - [Sync Matching](mem://features/message-metadata-sync-matching) — Prioritize by exact data content
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
 - [^NM Digest Pause](mem://features/message-persistence/nm-digest-pause) — Scale ^NM→^SV delay (300+60ms/field, cap 3s) to fix Dozen12 12-field lockup
+- [Protocol ^NM/^NF Flow](mem://features/message-persistence/nm-nf-field-append-flow) — Use ^NF after field 7; avoid F8 ^NM lockup; deselect slaves before rewrite.

@@ -134,6 +134,7 @@ const SAVE_NM_IDLE_AFTER_DATA_MS = 1500;
 const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 5000;
 const SAVE_PENDING_ACK_EXTRA_SETTLE_MS = 3000;
 const SAVE_RECOVERY_QUIET_MS = 10000;
+const NM_INLINE_FIELD_LIMIT = 7;
 
 const getNmDigestPauseMs = (fieldCount: number) => {
   if (fieldCount >= 10) return 12000;
@@ -2284,7 +2285,7 @@ export function usePrinterConnection() {
 
     // Build field subcommands with inverted Y coordinates
     // Canvas Y (top-origin) → template-relative → printer Y (bottom-origin)
-    const fieldSubcommands = validFields.map((field, index) => {
+    const buildPositionedFieldSubcommand = (field: typeof validFields[number], index: number) => {
       // For barcode fields, use actual field height; for text, use font dot height
       const fieldHeight = field.type === 'barcode' && field.height 
         ? field.height 
@@ -2295,7 +2296,8 @@ export function usePrinterConnection() {
         ...field,
         y: Math.max(0, printerY),
       }, index + 1, templateHeight, dmGraphicMap);
-    }).join('');
+    };
+    const fieldSubcommands = validFields.map(buildPositionedFieldSubcommand).join('');
 
     console.log('[saveMessageContent] Valid fields for upload:', validFields.map((field, index) => ({
       uploadFieldNum: index + 1,
@@ -2336,7 +2338,12 @@ export function usePrinterConnection() {
     const nmOrientation = orientationMap[messageSettings?.rotation ?? 'Normal'] ?? 0;
     const nmPrintMode = printModeMap[messageSettings?.printMode ?? 'Normal'] ?? 0;
 
-    const nmCommand = `^NM ${templateCode};${nmSpeed};${nmOrientation};${nmPrintMode};${messageName}${fieldSubcommands}`;
+    const nmHeaderCommand = `^NM ${templateCode};${nmSpeed};${nmOrientation};${nmPrintMode};${messageName}`;
+    const nfFieldCommands = validFields.slice(1).map((field, offset) => `^NF ${messageName}${buildPositionedFieldSubcommand(field, offset + 1)}`);
+    const useFieldAppendFlow = validFields.length > NM_INLINE_FIELD_LIMIT;
+    const nmCommand = useFieldAppendFlow
+      ? `${nmHeaderCommand}${buildPositionedFieldSubcommand(validFields[0], 0)}`
+      : `${nmHeaderCommand}${fieldSubcommands}`;
     
     console.log('[saveMessageContent] ^NM command:', nmCommand);
     
@@ -2361,6 +2368,9 @@ export function usePrinterConnection() {
     // Insert ^NG (graphic upload) commands before ^NM
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
+    if (useFieldAppendFlow) {
+      commands.push(...nfFieldCommands);
+    }
     commands.push(FLUSH_COMMAND);
 
     if (shouldUseEmulator()) {
@@ -2521,7 +2531,7 @@ export function usePrinterConnection() {
     // Generate DataMatrix ECC200 bitmap upload commands
     const { uploadCommands: dmUploadCmds, graphicMap: dmGraphicMap } = await generateDataMatrixCommands(validFields, templateHeight);
 
-    const fieldSubcommands = validFields.map((field, index) => {
+    const buildPositionedFieldSubcommand = (field: typeof validFields[number], index: number) => {
       const fieldHeight = field.type === 'barcode' && field.height 
         ? field.height 
         : fontToDotHeight(field.fontSize);
@@ -2531,7 +2541,8 @@ export function usePrinterConnection() {
         ...field,
         y: Math.max(0, printerY),
       }, index + 1, templateHeight, dmGraphicMap);
-    }).join('');
+    };
+    const fieldSubcommands = validFields.map(buildPositionedFieldSubcommand).join('');
 
     const orientationMap: Record<string, number> = {
       'Normal': 0,
@@ -2562,11 +2573,18 @@ export function usePrinterConnection() {
     const nmOrientation = orientationMap[messageSettings?.rotation ?? 'Normal'] ?? 0;
     const nmPrintMode = printModeMap[messageSettings?.printMode ?? 'Normal'] ?? 0;
 
-    const nmCommand = `^NM ${templateCode};${nmSpeed};${nmOrientation};${nmPrintMode};${messageName}${fieldSubcommands}`;
+    const nmHeaderCommand = `^NM ${templateCode};${nmSpeed};${nmOrientation};${nmPrintMode};${messageName}`;
+    const useFieldAppendFlow = validFields.length > NM_INLINE_FIELD_LIMIT;
+    const nmCommand = useFieldAppendFlow
+      ? `${nmHeaderCommand}${buildPositionedFieldSubcommand(validFields[0], 0)}`
+      : `${nmHeaderCommand}${fieldSubcommands}`;
     const commands: string[] = [`^DM ${messageName}`];
     // Insert ^NG commands before ^NM
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
+    if (useFieldAppendFlow) {
+      commands.push(...validFields.slice(1).map((field, offset) => `^NF ${messageName}${buildPositionedFieldSubcommand(field, offset + 1)}`));
+    }
     commands.push(FLUSH_COMMAND);
     return commands;
   }, []);
