@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { printerEmulator } from "@/lib/printerEmulator";
 import { multiPrinterEmulator } from "@/lib/multiPrinterEmulator";
 import { beginPollingActivity, isPollingPaused, onPollingPauseChange } from "@/lib/pollingPause";
+import { isSaveBusy } from "@/lib/saveBusy";
 import { printerTransport, isRelayMode } from "@/lib/printerTransport";
 
 /**
@@ -80,6 +81,7 @@ export function useSerializedPolling(options: {
 
     const tick = async () => {
       if (cancelled || inFlightRef.current) return;
+      if (isSaveBusy()) return; // Defer all polling while a save is in flight
       inFlightRef.current = true;
       const endPollingActivity = beginPollingActivity();
 

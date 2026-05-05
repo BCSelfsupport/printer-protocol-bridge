@@ -30,3 +30,19 @@ export function beginSaveBusy(): () => void {
 export function isSaveBusy(): boolean {
   return _busyCount > 0 || Date.now() < _busyUntil;
 }
+
+/**
+ * Awaits until no save is in flight (and the grace window has passed).
+ * Returns true if idle, false on timeout. Use to defer non-critical
+ * writes (master→slave sync, broadcasts) so they don't collide with
+ * the active ^NM/^SV digest window on the same TCP socket.
+ */
+export async function waitForSaveIdle(timeoutMs = 15000, pollMs = 150): Promise<boolean> {
+  if (!isSaveBusy()) return true;
+  const start = Date.now();
+  while (isSaveBusy()) {
+    if (Date.now() - start > timeoutMs) return false;
+    await new Promise((r) => setTimeout(r, pollMs));
+  }
+  return true;
+}
