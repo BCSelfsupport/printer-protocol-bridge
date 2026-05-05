@@ -2079,6 +2079,14 @@ const Index = () => {
             onDeleteFromPcLibrary={(name, sourcePrinterId) => deleteFromPcLibrary(name, sourcePrinterId)}
             swapSlotName={getSwapSlot((selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
             onSetSwapSlot={(name) => setSwapSlot(name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
+            isSlave={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.role === 'slave'}
+            onSlaveBlocked={() => {
+              const tp = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+              if (tp) {
+                setSlaveBlockPrinterName(tp.name);
+                setSlaveBlockDialogOpen(true);
+              }
+            }}
           />
         );
       case 'wirecable':
