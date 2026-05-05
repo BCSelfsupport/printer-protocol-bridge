@@ -2422,7 +2422,7 @@ export function usePrinterConnection() {
 
           if (echoOnlySaveResponse) {
             console.warn('[saveMessageContent] Save command returned partial ack; treating as pending and extending settle:', {
-              command: isNmCommand ? '^NM' : '^SV',
+              command: isNmCommand ? '^NM' : isNfCommand ? '^NF' : '^SV',
               response: responseText,
             });
           }
@@ -2435,6 +2435,12 @@ export function usePrinterConnection() {
           } else if (isNmCommand) {
             delayAfterCommand = getNmDigestPauseMs(validFields.length);
             console.log(`[saveMessageContent] ^NM digest pause: ${delayAfterCommand}ms (${validFields.length} fields)`);
+          } else if (isNfCommand) {
+            // ^NF appends one field at a time. Firmware needs a per-field
+            // digest window or the next ^NF arrives before it's ready and
+            // times out (observed at field 8/9 on 25-dot DOZEN12).
+            delayAfterCommand = 1500;
+            console.log(`[saveMessageContent] ^NF digest pause: ${delayAfterCommand}ms`);
           } else if (isFlushCommand) {
             delayAfterCommand = 1000;
           }
