@@ -107,6 +107,7 @@ const getSaveCommandDelay = (command: string, fieldCount: number) => {
     if (fieldCount >= 6) return 7000;
     return Math.min(4000, 1000 + fieldCount * 250);
   }
+  if (trimmed.startsWith('^NF ')) return 1500;
   if (trimmed === '^SV') return SAVE_PUSH_SETTLE_MS;
   return 300;
 };
