@@ -1391,10 +1391,14 @@ const Index = () => {
     }
 
     // Determine which message is active on this printer
+    // ALWAYS use the slave's own currentMessage — the master may be sitting on a
+    // different message (e.g. master=DOZEN12, slave=BESTCODE). Using the master's
+    // name caused the slave's switch-away ^SM to target a message it wasn't on,
+    // and broke the preview by loading a phantom message under the slave card.
+    const messageName = targetPrinter.currentMessage;
     const syncedMasterMessage = targetPrinter.role === 'slave' && targetPrinter.masterId !== undefined
       ? printers.find(p => p.id === targetPrinter.masterId)?.currentMessage
       : undefined;
-    const messageName = syncedMasterMessage ?? targetPrinter.currentMessage;
     if (!messageName) {
       toast.error('No active message on this printer');
       return;
