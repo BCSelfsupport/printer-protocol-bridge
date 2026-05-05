@@ -1851,6 +1851,10 @@ const Index = () => {
             const normalized = normalizeMessageForPrinter(details);
             setActiveMessageContent(normalized);
             recentlySavedRef.current.set(normalized.name, Date.now());
+            // Push the baked prompt values (e.g. ZZZ) to all slaves so their
+            // User Define field updates too — saveMessageContent itself only
+            // writes to the connected master.
+            syncMessageToSlaves(normalized.name, normalized, false);
           }}
           onEdit={(message) => {
             setIsCreatingNewMessage(false);
