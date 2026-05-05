@@ -3,6 +3,7 @@ import { printerEmulator } from "@/lib/printerEmulator";
 import { multiPrinterEmulator } from "@/lib/multiPrinterEmulator";
 import { printerTransport, isRelayMode } from "@/lib/printerTransport";
 import { beginPollingActivity, isPollingPaused, onPollingPauseChange } from "@/lib/pollingPause";
+import { isSaveBusy } from "@/lib/saveBusy";
 
 /**
  * Polls a connected printer with a command (default: ^SU) at a fixed interval.
