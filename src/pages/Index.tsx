@@ -807,10 +807,21 @@ const Index = () => {
     const reselectCommandIndex = sequence.length;
     sequence.push(`^SM ${messageName}`);
 
-    const sequencedCommands = sequence.map((command) => ({
-      command,
-      delayAfterMs: getSaveCommandDelay(command, details.fields.length),
-    }));
+    // Slave rewrite needs longer settles after the parking ^SM and ^DM —
+    // 300ms (default) is enough for the response to return but NOT for the
+    // firmware to fully release/delete the message. If ^NM fires too soon
+    // after ^DM, the firmware treats it as an "update existing" and KEEPS
+    // the old template (e.g. slave stays at H:16 even though we sent code 6).
+    const sequencedCommands = sequence.map((command, idx) => {
+      const upper = command.trim().toUpperCase();
+      let delayAfterMs = getSaveCommandDelay(command, details.fields.length);
+      if (idx === switchCommandIndex) {
+        delayAfterMs = Math.max(delayAfterMs, 1500); // parking ^SM BESTCODE
+      } else if (upper.startsWith('^DM ')) {
+        delayAfterMs = Math.max(delayAfterMs, 1500); // commit delete before ^NM
+      }
+      return { command, delayAfterMs };
+    });
 
     const result = await sendVerifiedCommandSequence(targetPrinter, sequencedCommands, 300);
     if (!result.success) {
