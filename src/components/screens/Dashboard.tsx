@@ -83,6 +83,7 @@ export function Dashboard({
   printerExpiryOffset,
   printerModel,
   printerVariant,
+  isSlave = false,
 }: DashboardProps) {
   const [countersDialogOpen, setCountersDialogOpen] = useState(false);
   const { canDatabase } = useLicense();
