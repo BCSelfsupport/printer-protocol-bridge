@@ -1954,6 +1954,7 @@ const Index = () => {
             printerVariant={connectionState.status?.printerVariant}
             selectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
             printerExpiryOffset={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.expiryOffsetDays : undefined}
+            isSlave={connectionState.connectedPrinter?.role === 'slave'}
           />
         );
       case 'editMessage':
