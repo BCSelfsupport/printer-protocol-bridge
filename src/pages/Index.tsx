@@ -1842,6 +1842,13 @@ const Index = () => {
           onDeleteFromPcLibrary={(name, sourcePrinterId) => deleteFromPcLibrary(name, sourcePrinterId)}
           swapSlotName={getSwapSlot(messageTargetPrinter?.id)}
           onSetSwapSlot={(name) => setSwapSlot(name, messageTargetPrinter?.id)}
+          isSlave={messageTargetPrinter?.role === 'slave'}
+          onSlaveBlocked={() => {
+            if (messageTargetPrinter) {
+              setSlaveBlockPrinterName(messageTargetPrinter.name);
+              setSlaveBlockDialogOpen(true);
+            }
+          }}
         />
       );
     }
@@ -1911,6 +1918,12 @@ const Index = () => {
             onHvOn={startPrint}
             onHvOff={stopPrint}
             onNewMessage={() => {
+              const tp = connectionState.connectedPrinter;
+              if (tp?.role === 'slave') {
+                setSlaveBlockPrinterName(tp.name);
+                setSlaveBlockDialogOpen(true);
+                return;
+              }
               setOpenNewDialogOnMount(true);
               setCurrentScreen('messages');
             }}
@@ -1941,6 +1954,7 @@ const Index = () => {
             printerVariant={connectionState.status?.printerVariant}
             selectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
             printerExpiryOffset={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.expiryOffsetDays : undefined}
+            isSlave={connectionState.connectedPrinter?.role === 'slave'}
           />
         );
       case 'editMessage':
@@ -2072,6 +2086,14 @@ const Index = () => {
             onDeleteFromPcLibrary={(name, sourcePrinterId) => deleteFromPcLibrary(name, sourcePrinterId)}
             swapSlotName={getSwapSlot((selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
             onSetSwapSlot={(name) => setSwapSlot(name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
+            isSlave={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.role === 'slave'}
+            onSlaveBlocked={() => {
+              const tp = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+              if (tp) {
+                setSlaveBlockPrinterName(tp.name);
+                setSlaveBlockDialogOpen(true);
+              }
+            }}
           />
         );
       case 'wirecable':
@@ -2187,6 +2209,12 @@ const Index = () => {
         onHvOn={startPrint}
         onHvOff={stopPrint}
         onNewMessage={() => {
+          const tp = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+          if (tp?.role === 'slave') {
+            setSlaveBlockPrinterName(tp.name);
+            setSlaveBlockDialogOpen(true);
+            return;
+          }
           setOpenNewDialogOnMount(true);
           setCurrentScreen('messages');
         }}
@@ -2417,9 +2445,9 @@ const Index = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Slave Printer</AlertDialogTitle>
             <AlertDialogDescription className="text-sm leading-relaxed">
-              <strong>{slaveBlockPrinterName}</strong> is a slave printer and automatically follows the master's message selection.
+              <strong>{slaveBlockPrinterName}</strong> is a slave printer. It automatically follows the master's message library and selection — new messages, edits, and deletions must be performed on the master printer and will sync to this slave.
               <br /><br />
-              To select a different message on this printer, remove it from the sync group first by editing the printer and setting its role to <strong>Standalone</strong>.
+              To manage messages directly on this printer, edit it and change its role to <strong>Standalone</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

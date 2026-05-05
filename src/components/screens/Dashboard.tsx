@@ -49,6 +49,8 @@ interface DashboardProps {
   streamHours?: string;
   selectedPrinterLineId?: string;
   printerExpiryOffset?: number;
+  /** True when the active printer is a slave — disables New Message creation. */
+  isSlave?: boolean;
 }
 
 export function Dashboard({
@@ -81,6 +83,7 @@ export function Dashboard({
   printerExpiryOffset,
   printerModel,
   printerVariant,
+  isSlave = false,
 }: DashboardProps) {
   const [countersDialogOpen, setCountersDialogOpen] = useState(false);
   const { canDatabase } = useLicense();
@@ -214,7 +217,9 @@ export function Dashboard({
                 </div>
                 <button 
                   onClick={onNewMessage}
-                  className="industrial-button text-white py-1.5 md:py-1.5 rounded-lg flex items-center justify-center gap-1.5 w-[80px] md:w-[90px]"
+                  disabled={isSlave}
+                  title={isSlave ? 'Slave printer — create new messages on the master' : undefined}
+                  className="industrial-button text-white py-1.5 md:py-1.5 rounded-lg flex items-center justify-center gap-1.5 w-[80px] md:w-[90px] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-4 h-4 md:w-5 md:h-5" />
                   <span className="text-sm md:text-base font-medium">New</span>
