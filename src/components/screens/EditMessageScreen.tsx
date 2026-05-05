@@ -151,6 +151,7 @@ interface EditMessageScreenProps {
   isConnected?: boolean;
   startEmpty?: boolean;
   printerModel?: string | null;
+  printerVariant?: string | null;
   preset?: 'metrc-retail-id';
   currentAdjustSettings?: PrintSettings;
   onSendCommand?: (command: string) => Promise<any>;
