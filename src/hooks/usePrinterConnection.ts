@@ -2386,17 +2386,42 @@ export function usePrinterConnection() {
           const isNmCommand = cmd.startsWith('^NM ');
           const isNfCommand = cmd.startsWith('^NF ');
           const isFlushCommand = cmd === FLUSH_COMMAND;
+          const cmdOptions = (isNmCommand || isNfCommand)
+            ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_NM_IDLE_AFTER_DATA_MS }
+            : isFlushCommand
+              ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS }
+              : undefined;
           console.log('[saveMessageContent] Sending:', cmd);
-          const result = await printerTransport.sendCommand(
-            printer.id,
-            cmd,
-            (isNmCommand || isNfCommand)
-              ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_NM_IDLE_AFTER_DATA_MS }
-              : isFlushCommand
-                ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS }
-                : undefined,
-          );
+          let result = await printerTransport.sendCommand(printer.id, cmd, cmdOptions);
           console.log('[saveMessageContent] Result:', JSON.stringify(result));
+          // Firmware sometimes drops the TCP socket during heavy ^NM digests.
+          // If the very next command (typically ^SV) hits ECONNRESET/EPIPE,
+          // reconnect once and retry — the message data is already in firmware
+          // RAM, ^SV just commits to NOR.
+          const transportErr = String(result?.error || '').toLowerCase();
+          const socketDropped = !result?.success && (
+            transportErr.includes('econnreset') ||
+            transportErr.includes('epipe') ||
+            transportErr.includes('not connected') ||
+            transportErr.includes('socket')
+          );
+          if (socketDropped) {
+            console.warn('[saveMessageContent] Socket dropped on', cmd, '— reconnecting and retrying once');
+            try { await printerTransport.disconnect(printer.id); } catch {}
+            await new Promise(r => setTimeout(r, 400));
+            const reconnect = await printerTransport.connect({
+              id: printer.id,
+              ipAddress: printer.ipAddress,
+              port: printer.port,
+            });
+            if (reconnect?.success) {
+              await new Promise(r => setTimeout(r, 200));
+              result = await printerTransport.sendCommand(printer.id, cmd, cmdOptions);
+              console.log('[saveMessageContent] Retry result:', JSON.stringify(result));
+            } else {
+              console.error('[saveMessageContent] Reconnect failed:', reconnect?.error);
+            }
+          }
           const responseText = result?.response ?? '';
           const errorText = result?.error ?? '';
           const rejectedByPrinter = isProtocolCommandFailure(responseText);
