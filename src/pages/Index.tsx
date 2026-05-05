@@ -792,8 +792,9 @@ const Index = () => {
     const targetCurrentMessage = targetPrinter.currentMessage?.trim().toUpperCase();
     const sequence: string[] = [];
     let switchCommandIndex: number | null = null;
-    if (targetCurrentMessage === normalizedMessageName) {
-      // ^DM on the active message is rejected — deselect first.
+    if (targetCurrentMessage === normalizedMessageName || targetPrinter.role === 'slave') {
+      // ^DM on the active message is rejected. Slave currentMessage can be stale
+      // during sync, so always deselect slaves before destructive rewrite.
       const fallbackMessage = normalizedMessageName === 'BESTCODE' ? 'BESTCODE AUTO' : 'BESTCODE';
       switchCommandIndex = sequence.length;
       sequence.push(`^SM ${fallbackMessage}`);
@@ -854,28 +855,15 @@ const Index = () => {
     for (const slave of availableSlaves) {
       const slaveCurrent = slave.currentMessage?.trim().toUpperCase();
       let ok = false;
-      if (slaveCurrent === targetUpper) {
-        const result = await replaceMessageWithoutDelete(slave, messageName, {
-          fields: details.fields,
-          templateValue: details.templateValue,
-          settings: details.settings,
-          adjustSettings: details.adjustSettings,
-        });
-        ok = result.success;
-        if (!ok) {
-          console.warn(`[MasterSlaveSync] In-place rewrite failed on ${slave.name}: ${result.reason}`);
-        }
-      } else {
-        const sequencedCommands = commands.map((command) => ({
-          command,
-          delayAfterMs: getSaveCommandDelay(command, details.fields.length),
-        }));
-        const result = await sendVerifiedCommandSequence(slave, sequencedCommands, 300);
-        ok = result.success;
-        if (!ok) {
-          const failedCommand = sequencedCommands[result.failedIndex ?? 0]?.command ?? 'unknown command';
-          console.warn(`[MasterSlaveSync] Command failed on ${slave.name}: ${failedCommand.substring(0, 40)}...`);
-        }
+      const result = await replaceMessageWithoutDelete(slave, messageName, {
+        fields: details.fields,
+        templateValue: details.templateValue,
+        settings: details.settings,
+        adjustSettings: details.adjustSettings,
+      });
+      ok = result.success;
+      if (!ok) {
+        console.warn(`[MasterSlaveSync] Slave rewrite failed on ${slave.name}: ${result.reason}`);
       }
       if (ok) {
         const slaveDetails = normalizeMessageForPrinter({ ...details, name: messageName });
