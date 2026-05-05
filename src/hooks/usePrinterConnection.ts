@@ -2564,17 +2564,11 @@ export function usePrinterConnection() {
     const nmPrintMode = printModeMap[messageSettings?.printMode ?? 'Normal'] ?? 0;
 
     const nmHeaderCommand = `^NM ${templateCode};${nmSpeed};${nmOrientation};${nmPrintMode};${messageName}`;
-    const useFieldAppendFlow = validFields.length > NM_INLINE_FIELD_LIMIT;
-    const nmCommand = useFieldAppendFlow
-      ? `${nmHeaderCommand}${buildPositionedFieldSubcommand(validFields[0], 0)}`
-      : `${nmHeaderCommand}${fieldSubcommands}`;
+    const nmCommand = `${nmHeaderCommand}${fieldSubcommands}`;
     const commands: string[] = [`^DM ${messageName}`];
     // Insert ^NG commands before ^NM
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
-    if (useFieldAppendFlow) {
-      commands.push(...validFields.slice(1).map((field, offset) => `^NF ${messageName}${buildPositionedFieldSubcommand(field, offset + 1)}`));
-    }
     commands.push(FLUSH_COMMAND);
     return commands;
   }, []);
