@@ -2285,7 +2285,7 @@ export function usePrinterConnection() {
 
     // Build field subcommands with inverted Y coordinates
     // Canvas Y (top-origin) → template-relative → printer Y (bottom-origin)
-    const fieldSubcommands = validFields.map((field, index) => {
+    const buildPositionedFieldSubcommand = (field: typeof validFields[number], index: number) => {
       // For barcode fields, use actual field height; for text, use font dot height
       const fieldHeight = field.type === 'barcode' && field.height 
         ? field.height 
@@ -2296,7 +2296,8 @@ export function usePrinterConnection() {
         ...field,
         y: Math.max(0, printerY),
       }, index + 1, templateHeight, dmGraphicMap);
-    }).join('');
+    };
+    const fieldSubcommands = validFields.map(buildPositionedFieldSubcommand).join('');
 
     console.log('[saveMessageContent] Valid fields for upload:', validFields.map((field, index) => ({
       uploadFieldNum: index + 1,
@@ -2338,21 +2339,10 @@ export function usePrinterConnection() {
     const nmPrintMode = printModeMap[messageSettings?.printMode ?? 'Normal'] ?? 0;
 
     const nmHeaderCommand = `^NM ${templateCode};${nmSpeed};${nmOrientation};${nmPrintMode};${messageName}`;
-    const nfFieldCommands = validFields.slice(1).map((field, offset) => {
-      const index = offset + 1;
-      const fieldHeight = field.type === 'barcode' && field.height 
-        ? field.height 
-        : fontToDotHeight(field.fontSize);
-      const templateRelativeY = field.y - blockedRows;
-      const printerY = templateHeight - templateRelativeY - fieldHeight;
-      return `^NF ${messageName}${buildFieldSubcommand({
-        ...field,
-        y: Math.max(0, printerY),
-      }, index + 1, templateHeight, dmGraphicMap)}`;
-    });
+    const nfFieldCommands = validFields.slice(1).map((field, offset) => `^NF ${messageName}${buildPositionedFieldSubcommand(field, offset + 1)}`);
     const useFieldAppendFlow = validFields.length > NM_INLINE_FIELD_LIMIT;
     const nmCommand = useFieldAppendFlow
-      ? `${nmHeaderCommand}${fieldSubcommands[0] ?? ''}`
+      ? `${nmHeaderCommand}${buildPositionedFieldSubcommand(validFields[0], 0)}`
       : `${nmHeaderCommand}${fieldSubcommands}`;
     
     console.log('[saveMessageContent] ^NM command:', nmCommand);
