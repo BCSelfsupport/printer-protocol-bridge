@@ -44,6 +44,7 @@ export function useFleetTelemetryPush(options: {
     if (!isActivated || !productKey || tier === 'lite') return;
 
     const registerAll = async () => {
+      if (isSaveBusy()) return; // Defer while a printer save is in flight
       const now = Date.now();
       if (now - lastRegisterTime.current < REGISTER_INTERVAL_MS && registeredPrinters.current.size > 0) return;
 
