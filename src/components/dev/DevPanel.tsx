@@ -162,8 +162,6 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
   const [buildRunsLoading, setBuildRunsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab || 'status');
   const [twinPairOpen, setTwinPairOpen] = useState(false);
-  const [telemetryPaused, setTelemetryPausedState] = useState(isTelemetryPaused());
-  useEffect(() => onTelemetryPauseChange(setTelemetryPausedState), []);
   const twinPair = useTwinPair();
 
   // Whether we can send commands: either via emulator or via real printer
