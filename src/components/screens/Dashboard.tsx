@@ -49,6 +49,8 @@ interface DashboardProps {
   streamHours?: string;
   selectedPrinterLineId?: string;
   printerExpiryOffset?: number;
+  /** True when the active printer is a slave — disables New Message creation. */
+  isSlave?: boolean;
 }
 
 export function Dashboard({
