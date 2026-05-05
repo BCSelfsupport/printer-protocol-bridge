@@ -16,6 +16,7 @@ import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
 import { setPollingPaused, isPollingPaused } from '@/lib/pollingPause';
+import { beginSaveBusy } from '@/lib/saveBusy';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
 
 /**
@@ -2409,6 +2410,7 @@ export function usePrinterConnection() {
             (saveMessageContent as any).__lastError = reason;
             await new Promise(resolve => setTimeout(resolve, SAVE_RECOVERY_QUIET_MS));
             setPollingPaused(false);
+            releaseSaveBusy();
             return false;
           }
 
@@ -2438,6 +2440,7 @@ export function usePrinterConnection() {
 
         // Resume polling before optional verification
         setPollingPaused(false);
+        releaseSaveBusy();
 
         // Post-save verification: wait for firmware to flush, then check ^LM.
         if (isNew) {
@@ -2462,6 +2465,7 @@ export function usePrinterConnection() {
         (saveMessageContent as any).__lastError = e instanceof Error ? e.message : 'Unknown error';
         await new Promise(resolve => setTimeout(resolve, SAVE_RECOVERY_QUIET_MS));
         setPollingPaused(false);
+        releaseSaveBusy();
         return false;
       }
     } else {
