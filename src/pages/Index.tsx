@@ -107,6 +107,7 @@ const getSaveCommandDelay = (command: string, fieldCount: number) => {
     if (fieldCount >= 6) return 7000;
     return Math.min(4000, 1000 + fieldCount * 250);
   }
+  if (trimmed.startsWith('^NF ')) return 1500;
   if (trimmed === '^SV') return SAVE_PUSH_SETTLE_MS;
   return 300;
 };
@@ -678,14 +679,14 @@ const Index = () => {
 
     const runCommand = async (command: string) => {
       const trimmed = command.trim().toUpperCase();
-      const saveOptions = trimmed.startsWith('^NM ')
+      const saveOptions = (trimmed.startsWith('^NM ') || trimmed.startsWith('^NF '))
         ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_NM_IDLE_AFTER_DATA_MS }
         : trimmed === '^SV'
           ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS }
           : undefined;
       const validateResult = (result: { success?: boolean; response?: string; error?: string }) => {
         const response = result?.response ?? result?.error ?? '';
-        const requiresSaveAck = (window.electronAPI || isRelayMode()) && (trimmed.startsWith('^NM ') || trimmed === '^SV');
+        const requiresSaveAck = (window.electronAPI || isRelayMode()) && (trimmed.startsWith('^NM ') || trimmed.startsWith('^NF ') || trimmed === '^SV');
         const missingSaveAck = requiresSaveAck && !hasCompleteSaveAck(response);
         const partialPendingSave = missingSaveAck && !!response.trim();
         return {
