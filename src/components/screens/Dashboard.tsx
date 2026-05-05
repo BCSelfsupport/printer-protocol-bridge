@@ -756,43 +756,15 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, customCoun
       return;
     }
 
+    // If we have a message name but content hasn't loaded yet, show a loading
+    // state instead of fabricating a time/date preview that doesn't reflect
+    // what's actually on the printer.
     if (message) {
-      ctx.fillStyle = '#1a1a1a';
-
-      const previewYOffsetDots = 0;
-
-      // System messages use known default content from the printer
-      const upperMessage = message.toUpperCase();
-      const isSystemMessage = upperMessage === 'BESTCODE' || upperMessage === 'BESTCODE-AUTO';
-      const displayText = isSystemMessage ? 'BC-GEN2' : message;
-
-      const mainFontName = 'Standard16High';
-      const mainFontInfo = getFontInfo(mainFontName);
-
-      const mainYDots = Math.max(0, (32 - mainFontInfo.height) - previewYOffsetDots);
-      const mainY = mainYDots * effectiveDotSize;
-      const padding = 10;
-
-      renderText(ctx, displayText, padding, mainY, mainFontName, effectiveDotSize);
-
-      const time = tickingTime;
-      const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-      const dateStr = time.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
-
-      const smallFontName = 'Standard7High';
-      const smallFontInfo = getFontInfo(smallFontName);
-
-      const timeWidth = timeStr.length * (smallFontInfo.charWidth + 1) * effectiveDotSize;
-      const timeX = width - timeWidth - padding;
-
-      const timeYDots = Math.max(0, 16 - previewYOffsetDots);
-      const dateYDots = Math.max(0, (16 + smallFontInfo.height + 1) - previewYOffsetDots);
-
-      const timeY = timeYDots * effectiveDotSize;
-      const dateY = dateYDots * effectiveDotSize;
-
-      renderText(ctx, timeStr, timeX, timeY, smallFontName, effectiveDotSize);
-      renderText(ctx, dateStr, timeX, dateY, smallFontName, effectiveDotSize);
+      ctx.fillStyle = '#888';
+      ctx.font = '14px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`Loading "${message}"…`, width / 2, height / 2);
       return;
     }
 
@@ -800,7 +772,8 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, customCoun
     ctx.fillStyle = '#888';
     ctx.font = '16px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('No message selected', width / 2, height / 2 + 5);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('No message preview', width / 2, height / 2);
   }, [message, tickingTime, messageContent, renderWidth, effectiveDotSize, barcodeImages, selectedPrinterLineId, printerExpiryOffset]);
 
   const canvasHeight = (TOTAL_ROWS + PREVIEW_BOTTOM_PADDING_ROWS) * effectiveDotSize + 1;
