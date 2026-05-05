@@ -2338,7 +2338,8 @@ export function usePrinterConnection() {
     const nmPrintMode = printModeMap[messageSettings?.printMode ?? 'Normal'] ?? 0;
 
     const nmHeaderCommand = `^NM ${templateCode};${nmSpeed};${nmOrientation};${nmPrintMode};${messageName}`;
-    const nfFieldCommands = validFields.map((field, index) => {
+    const nfFieldCommands = validFields.slice(1).map((field, offset) => {
+      const index = offset + 1;
       const fieldHeight = field.type === 'barcode' && field.height 
         ? field.height 
         : fontToDotHeight(field.fontSize);
@@ -2351,7 +2352,7 @@ export function usePrinterConnection() {
     });
     const useFieldAppendFlow = validFields.length > NM_INLINE_FIELD_LIMIT;
     const nmCommand = useFieldAppendFlow
-      ? nmHeaderCommand
+      ? `${nmHeaderCommand}${fieldSubcommands[0] ?? ''}`
       : `${nmHeaderCommand}${fieldSubcommands}`;
     
     console.log('[saveMessageContent] ^NM command:', nmCommand);
