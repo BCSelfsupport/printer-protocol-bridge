@@ -260,10 +260,15 @@ export function MessagesScreen({
   // Auto-open the new dialog when navigating from Dashboard "New" button
   useEffect(() => {
     if (openNewDialogOnMount) {
+      if (isSlave) {
+        onSlaveBlocked?.();
+        onNewDialogOpened?.();
+        return;
+      }
       setNewDialogOpen(true);
       onNewDialogOpened?.();
     }
-  }, [openNewDialogOnMount, onNewDialogOpened]);
+  }, [openNewDialogOnMount, onNewDialogOpened, isSlave, onSlaveBlocked]);
 
   const handleMessageClick = (message: PrintMessage) => {
     // Single click only highlights/selects the message
