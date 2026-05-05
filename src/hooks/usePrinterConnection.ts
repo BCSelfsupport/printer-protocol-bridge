@@ -2337,7 +2337,22 @@ export function usePrinterConnection() {
     const nmOrientation = orientationMap[messageSettings?.rotation ?? 'Normal'] ?? 0;
     const nmPrintMode = printModeMap[messageSettings?.printMode ?? 'Normal'] ?? 0;
 
-    const nmCommand = `^NM ${templateCode};${nmSpeed};${nmOrientation};${nmPrintMode};${messageName}${fieldSubcommands}`;
+    const nmHeaderCommand = `^NM ${templateCode};${nmSpeed};${nmOrientation};${nmPrintMode};${messageName}`;
+    const nfFieldCommands = validFields.map((field, index) => {
+      const fieldHeight = field.type === 'barcode' && field.height 
+        ? field.height 
+        : fontToDotHeight(field.fontSize);
+      const templateRelativeY = field.y - blockedRows;
+      const printerY = templateHeight - templateRelativeY - fieldHeight;
+      return `^NF ${messageName}${buildFieldSubcommand({
+        ...field,
+        y: Math.max(0, printerY),
+      }, index + 1, templateHeight, dmGraphicMap)}`;
+    });
+    const useFieldAppendFlow = validFields.length > NM_INLINE_FIELD_LIMIT;
+    const nmCommand = useFieldAppendFlow
+      ? nmHeaderCommand
+      : `${nmHeaderCommand}${fieldSubcommands}`;
     
     console.log('[saveMessageContent] ^NM command:', nmCommand);
     
@@ -2362,6 +2377,9 @@ export function usePrinterConnection() {
     // Insert ^NG (graphic upload) commands before ^NM
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
+    if (useFieldAppendFlow) {
+      commands.push(...nfFieldCommands);
+    }
     commands.push(FLUSH_COMMAND);
 
     if (shouldUseEmulator()) {
