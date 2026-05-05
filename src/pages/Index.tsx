@@ -1918,6 +1918,12 @@ const Index = () => {
             onHvOn={startPrint}
             onHvOff={stopPrint}
             onNewMessage={() => {
+              const tp = connectionState.connectedPrinter;
+              if (tp?.role === 'slave') {
+                setSlaveBlockPrinterName(tp.name);
+                setSlaveBlockDialogOpen(true);
+                return;
+              }
               setOpenNewDialogOnMount(true);
               setCurrentScreen('messages');
             }}
