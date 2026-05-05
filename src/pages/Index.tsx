@@ -783,51 +783,34 @@ const Index = () => {
       return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | null };
     }
 
-    // Keep ^DM in the sequence: when the stored message has a different template
-    // (e.g. slave currently has 16-dot, master saved 25-dot), firmware will not
-    // change the template on a plain ^NM update — the old template/header is
-    // preserved. Deleting first forces ^NM to recreate with the new template.
-    const commands = rawCommands.filter((cmd) => cmd.trim().toUpperCase() !== '^SV');
+    // Fast path: ^NM on an existing message updates fields in place without
+    // needing ^DM. We only needed delete-recreate when the template height
+    // changed (firmware preserves the old template on a plain ^NM update).
+    // Since the editor now constrains templates to the printer's capabilities
+    // and the master's template matches what the slave already has, skip the
+    // ^DM entirely — and skip the parking ^SM (which was only needed because
+    // ^DM is rejected on the active message). This shaves ~3s per slave sync.
+    //
+    // NOTE: If a future change ever needs to alter template height on a
+    // slave, restore the park → delete → recreate flow in this branch.
+    const commands = rawCommands.filter((cmd) => {
+      const upper = cmd.trim().toUpperCase();
+      return upper !== '^SV' && !upper.startsWith('^DM ');
+    });
 
-    const normalizedMessageName = messageName.trim().toUpperCase();
-    const targetCurrentMessage = targetPrinter.currentMessage?.trim().toUpperCase();
     const sequence: string[] = [];
-    let switchCommandIndex: number | null = null;
-    if (targetCurrentMessage === normalizedMessageName || targetPrinter.role === 'slave') {
-      // ^DM on the active message is rejected. Slave currentMessage can be stale
-      // during sync, so always deselect slaves before destructive rewrite.
-      const fallbackMessage = normalizedMessageName === 'BESTCODE' ? 'BESTCODE AUTO' : 'BESTCODE';
-      switchCommandIndex = sequence.length;
-      sequence.push(`^SM ${fallbackMessage}`);
-    }
-
     sequence.push(...commands);
-    // Persist the recreated message (with new template) before reselecting.
     sequence.push('^SV');
     const reselectCommandIndex = sequence.length;
     sequence.push(`^SM ${messageName}`);
 
-    // Slave rewrite needs longer settles after the parking ^SM and ^DM —
-    // 300ms (default) is enough for the response to return but NOT for the
-    // firmware to fully release/delete the message. If ^NM fires too soon
-    // after ^DM, the firmware treats it as an "update existing" and KEEPS
-    // the old template (e.g. slave stays at H:16 even though we sent code 6).
-    const sequencedCommands = sequence.map((command, idx) => {
-      const upper = command.trim().toUpperCase();
-      let delayAfterMs = getSaveCommandDelay(command, details.fields.length);
-      if (idx === switchCommandIndex) {
-        delayAfterMs = Math.max(delayAfterMs, 1500); // parking ^SM BESTCODE
-      } else if (upper.startsWith('^DM ')) {
-        delayAfterMs = Math.max(delayAfterMs, 1500); // commit delete before ^NM
-      }
-      return { command, delayAfterMs };
-    });
+    const sequencedCommands = sequence.map((command) => ({
+      command,
+      delayAfterMs: getSaveCommandDelay(command, details.fields.length),
+    }));
 
     const result = await sendVerifiedCommandSequence(targetPrinter, sequencedCommands, 300);
     if (!result.success) {
-      if (result.failedIndex === switchCommandIndex) {
-        return { success: false as const, reason: 'switch' as const };
-      }
       if (result.failedIndex === reselectCommandIndex) {
         return { success: false as const, reason: 'reselect' as const };
       }
