@@ -151,6 +151,7 @@ interface EditMessageScreenProps {
   isConnected?: boolean;
   startEmpty?: boolean;
   printerModel?: string | null;
+  printerVariant?: string | null;
   preset?: 'metrc-retail-id';
   currentAdjustSettings?: PrintSettings;
   onSendCommand?: (command: string) => Promise<any>;
@@ -168,12 +169,13 @@ export function EditMessageScreen({
   isConnected = false,
   startEmpty = false,
   printerModel,
+  printerVariant,
   preset,
   currentAdjustSettings,
   onSendCommand,
 }: EditMessageScreenProps) {
-  // Filter templates and fonts based on connected printer model
-  const capabilities = getModelCapabilities(printerModel);
+  // Filter templates and fonts based on connected printer model + variant
+  const capabilities = getModelCapabilities(printerModel, printerVariant);
   const availableSingleTemplates = capabilities
     ? SINGLE_TEMPLATES.filter(t => capabilities.templates.includes(t.value as any))
     : SINGLE_TEMPLATES;

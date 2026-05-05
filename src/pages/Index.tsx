@@ -1133,7 +1133,8 @@ const Index = () => {
 
     // Validate template compatibility with target printer model
     const model = connectionState.status?.printerModel;
-    const capabilities = getModelCapabilities(model);
+    const variant = connectionState.status?.printerVariant;
+    const capabilities = getModelCapabilities(model, variant);
     if (capabilities && libraryMessage.templateValue) {
       const templateId = libraryMessage.templateValue as import('@/lib/modelCapabilities').TemplateId;
       if (!capabilities.templates.includes(templateId)) {
@@ -1919,6 +1920,7 @@ const Index = () => {
           connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
           isConnected={connectionState.isConnected}
           printerModel={connectionState.status?.printerModel}
+          printerVariant={connectionState.status?.printerVariant}
           currentAdjustSettings={connectionState.settings}
           onSendCommand={sendCommand}
           onSave={saveEditedMessage}
@@ -2029,6 +2031,7 @@ const Index = () => {
             connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
             isConnected={connectionState.isConnected}
             printerModel={connectionState.status?.printerModel}
+            printerVariant={connectionState.status?.printerVariant}
             currentAdjustSettings={connectionState.settings}
             onSendCommand={sendCommand}
           onSave={saveEditedMessage}
