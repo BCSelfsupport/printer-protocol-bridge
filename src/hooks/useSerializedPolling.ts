@@ -81,6 +81,7 @@ export function useSerializedPolling(options: {
 
     const tick = async () => {
       if (cancelled || inFlightRef.current) return;
+      if (isSaveBusy()) return; // Defer all polling while a save is in flight
       inFlightRef.current = true;
       const endPollingActivity = beginPollingActivity();
 
