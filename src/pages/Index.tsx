@@ -102,7 +102,9 @@ const hasCompleteSaveAck = (rawResponse?: string): boolean => {
 const getSaveCommandDelay = (command: string, fieldCount: number) => {
   const trimmed = command.trim().toUpperCase();
   if (trimmed.startsWith('^NM ')) {
-    if (fieldCount >= 6) return Math.min(12000, Math.max(6000, fieldCount * 800));
+    if (fieldCount >= 10) return 12000;
+    if (fieldCount >= 8) return 9000;
+    if (fieldCount >= 6) return 7000;
     return Math.min(4000, 1000 + fieldCount * 250);
   }
   if (trimmed === '^SV') return SAVE_PUSH_SETTLE_MS;
@@ -342,7 +344,7 @@ const Index = () => {
   // Merge autoCode metadata (expiryDays, fieldType, format) from a cached
   // message into a freshly-fetched one. The printer's ^LF response doesn't
   // include this metadata, so we preserve it from the locally stored version.
-  const mergeAutoCodeMeta = useCallback((fetched: MessageDetails, cached: MessageDetails | null): MessageDetails => {
+  const mergeAutoCodeMeta = useCallback((fetched: MessageDetails, cached: MessageDetails | null, preferCachedTemplate = false): MessageDetails => {
     if (!cached) return fetched;
     const cachedIdsAreCanonical = cached.fields.every((field, index) => field.id === index + 1);
     const fetchedIdsAreCanonical = fetched.fields.every((field, index) => field.id === index + 1);
@@ -354,6 +356,8 @@ const Index = () => {
     // that the printer fetch doesn't carry
     const merged = {
       ...fetched,
+      templateValue: preferCachedTemplate ? cached.templateValue ?? fetched.templateValue : fetched.templateValue,
+      height: preferCachedTemplate ? cached.height ?? fetched.height : fetched.height,
       adjustSettings: fetched.adjustSettings ?? cached.adjustSettings,
       settings: fetched.settings ?? cached.settings,
       advancedSettings: fetched.advancedSettings ?? cached.advancedSettings,
