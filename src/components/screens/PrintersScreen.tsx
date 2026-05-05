@@ -910,6 +910,7 @@ export function PrintersScreen({
               printerVariant={status?.printerVariant}
               selectedPrinterLineId={selectedPrinter?.lineId ?? connectedPrinter?.lineId}
               printerExpiryOffset={selectedPrinter?.expiryOffsetDays}
+              isSlave={(selectedPrinter ?? connectedPrinter)?.role === 'slave'}
             />
           </div>
         ) : (
