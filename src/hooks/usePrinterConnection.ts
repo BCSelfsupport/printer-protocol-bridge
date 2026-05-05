@@ -134,6 +134,7 @@ const SAVE_NM_IDLE_AFTER_DATA_MS = 1500;
 const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 5000;
 const SAVE_PENDING_ACK_EXTRA_SETTLE_MS = 3000;
 const SAVE_RECOVERY_QUIET_MS = 10000;
+const NM_INLINE_FIELD_LIMIT = 7;
 
 const getNmDigestPauseMs = (fieldCount: number) => {
   if (fieldCount >= 10) return 12000;
