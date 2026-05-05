@@ -2345,19 +2345,16 @@ export function usePrinterConnection() {
       console.log(`[saveMessageContent] DataMatrix ECC200: ${dmUploadCmds.length} ^NG upload command(s)`);
     }
 
-    // For existing messages, delete first then recreate
-    // DataMatrix bitmap uploads must happen before the ^NM command
+    // Fast path: ^NM updates fields in place on an existing message without
+    // needing ^DM. The park-on-BESTCODE + ^DM dance was only required when
+    // the destructive delete-recreate flow was used (^DM is rejected on the
+    // active message). Since the editor constrains template height to the
+    // printer's capability, plain ^NM → ^SV is sufficient and shaves ~3s
+    // per save by avoiding the parking ^SM and the delete handshake.
+    //
+    // NOTE: If a future change ever needs to alter template height, restore
+    // the park → delete → recreate sequence here.
     const commands: string[] = [];
-    if (needsSwitchAwayBeforeRewrite) {
-      // Rewriting the currently selected message via ^DM/^NM can wedge the firmware.
-      // Switch to a safe fallback first, then perform the destructive rewrite.
-      console.log('[saveMessageContent] Active message rewrite detected; switching away first:', {
-        messageName,
-        fallbackMessage,
-      });
-      commands.push(`^SM ${fallbackMessage}`);
-    }
-    commands.push(`^DM ${messageName}`);
     // Insert ^NG (graphic upload) commands before ^NM
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
