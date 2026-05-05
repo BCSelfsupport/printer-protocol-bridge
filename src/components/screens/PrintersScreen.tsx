@@ -341,11 +341,16 @@ export function PrintersScreen({
       return messageContent;
     }
 
-    // For slaves of the connected master, always use the master's message content
+    // For slaves of the connected master: only reuse the master's live messageContent
+    // when the slave is actually selected on the SAME message as the master. Otherwise
+    // we'd render the master's preview under a slave sitting on a different message.
     if (
       selectedPrinter?.role === 'slave' &&
       connectedPrinter?.role === 'master' &&
-      selectedPrinter.masterId === connectedPrinter.id
+      selectedPrinter.masterId === connectedPrinter.id &&
+      selectedPrinter.currentMessage &&
+      messageContent?.name &&
+      selectedPrinter.currentMessage.trim().toUpperCase() === messageContent.name.trim().toUpperCase()
     ) {
       return messageContent;
     }
