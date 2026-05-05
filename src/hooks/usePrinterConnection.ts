@@ -2376,6 +2376,9 @@ export function usePrinterConnection() {
       // Pause status polling to prevent ^SU commands from interleaving
       // with the ^DM → ^NM → ^SV save sequence on the shared TCP socket.
       setPollingPaused(true);
+      // Also signal background uploaders (Fleet telemetry) to defer — concurrent
+      // HTTP pushes during the ^NM digest window were locking up F8/F9 saves.
+      const releaseSaveBusy = beginSaveBusy();
       try {
         for (let cmdIdx = 0; cmdIdx < commands.length; cmdIdx++) {
           const cmd = commands[cmdIdx];
