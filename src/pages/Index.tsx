@@ -1842,6 +1842,13 @@ const Index = () => {
           onDeleteFromPcLibrary={(name, sourcePrinterId) => deleteFromPcLibrary(name, sourcePrinterId)}
           swapSlotName={getSwapSlot(messageTargetPrinter?.id)}
           onSetSwapSlot={(name) => setSwapSlot(name, messageTargetPrinter?.id)}
+          isSlave={messageTargetPrinter?.role === 'slave'}
+          onSlaveBlocked={() => {
+            if (messageTargetPrinter) {
+              setSlaveBlockPrinterName(messageTargetPrinter.name);
+              setSlaveBlockDialogOpen(true);
+            }
+          }}
         />
       );
     }
