@@ -130,13 +130,15 @@ const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCOD
 // or shutdown occurs on the printer HMI.
 const FLUSH_COMMAND = '^SV';
 const SAVE_ACK_MAX_WAIT_MS = 30000;
-const SAVE_NM_IDLE_AFTER_DATA_MS = 12000;
+const SAVE_NM_IDLE_AFTER_DATA_MS = 1500;
 const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 5000;
 const SAVE_PENDING_ACK_EXTRA_SETTLE_MS = 3000;
 const SAVE_RECOVERY_QUIET_MS = 10000;
 
 const getNmDigestPauseMs = (fieldCount: number) => {
-  if (fieldCount >= 6) return Math.min(12000, Math.max(6000, fieldCount * 800));
+  if (fieldCount >= 10) return 12000;
+  if (fieldCount >= 8) return 9000;
+  if (fieldCount >= 6) return 7000;
   return Math.min(4000, 1000 + fieldCount * 250);
 };
 

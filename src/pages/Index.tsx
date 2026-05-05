@@ -83,7 +83,7 @@ type SequencedPrinterCommand = string | {
 const MESSAGE_RELOAD_SETTLE_MS = 900;
 const SAVE_PUSH_SETTLE_MS = 1500;
 const SAVE_ACK_MAX_WAIT_MS = 30000;
-const SAVE_NM_IDLE_AFTER_DATA_MS = 12000;
+const SAVE_NM_IDLE_AFTER_DATA_MS = 1500;
 const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 5000;
 const SAVE_PENDING_ACK_EXTRA_SETTLE_MS = 3000;
 
@@ -102,7 +102,9 @@ const hasCompleteSaveAck = (rawResponse?: string): boolean => {
 const getSaveCommandDelay = (command: string, fieldCount: number) => {
   const trimmed = command.trim().toUpperCase();
   if (trimmed.startsWith('^NM ')) {
-    if (fieldCount >= 6) return Math.min(12000, Math.max(6000, fieldCount * 800));
+    if (fieldCount >= 10) return 12000;
+    if (fieldCount >= 8) return 9000;
+    if (fieldCount >= 6) return 7000;
     return Math.min(4000, 1000 + fieldCount * 250);
   }
   if (trimmed === '^SV') return SAVE_PUSH_SETTLE_MS;
@@ -342,7 +344,7 @@ const Index = () => {
   // Merge autoCode metadata (expiryDays, fieldType, format) from a cached
   // message into a freshly-fetched one. The printer's ^LF response doesn't
   // include this metadata, so we preserve it from the locally stored version.
-  const mergeAutoCodeMeta = useCallback((fetched: MessageDetails, cached: MessageDetails | null): MessageDetails => {
+  const mergeAutoCodeMeta = useCallback((fetched: MessageDetails, cached: MessageDetails | null, preferCachedTemplate = false): MessageDetails => {
     if (!cached) return fetched;
     const cachedIdsAreCanonical = cached.fields.every((field, index) => field.id === index + 1);
     const fetchedIdsAreCanonical = fetched.fields.every((field, index) => field.id === index + 1);
@@ -354,6 +356,8 @@ const Index = () => {
     // that the printer fetch doesn't carry
     const merged = {
       ...fetched,
+      templateValue: preferCachedTemplate ? cached.templateValue ?? fetched.templateValue : fetched.templateValue,
+      height: preferCachedTemplate ? cached.height ?? fetched.height : fetched.height,
       adjustSettings: fetched.adjustSettings ?? cached.adjustSettings,
       settings: fetched.settings ?? cached.settings,
       advancedSettings: fetched.advancedSettings ?? cached.advancedSettings,
@@ -480,6 +484,14 @@ const Index = () => {
 
 
   const recentlySavedRef = useRef<Map<string, number>>(new Map());
+  const isRecentlySavedForPrinter = useCallback((messageName: string, printerId?: number | null) => {
+    const now = Date.now();
+    const unscopedSavedAt = recentlySavedRef.current.get(messageName);
+    const scopedSavedAt = printerId !== undefined && printerId !== null
+      ? recentlySavedRef.current.get(`${printerId}:${messageName}`)
+      : undefined;
+    return [unscopedSavedAt, scopedSavedAt].some((savedAt) => !!savedAt && now - savedAt < 30_000);
+  }, []);
   
   // Reset synced set when printer changes
   useEffect(() => {
@@ -520,7 +532,7 @@ const Index = () => {
           ]);
           if (details && details.fields.length > 0) {
             const cached = getMessage(msg.name) ?? null;
-            const merged = mergeAutoCodeMeta(details, cached);
+            const merged = mergeAutoCodeMeta(details, cached, !!cached?.templateValue && isRecentlySavedForPrinter(msg.name, connectedPrinterId));
             saveMessage(merged);
             console.log('[MessageSync] Saved content for', msg.name, ':', merged.fields.length, 'fields');
           }
@@ -567,8 +579,7 @@ const Index = () => {
     // Skip re-fetching from printer if this message was recently saved from the editor.
     // The localStorage version is authoritative for 30s after a save to prevent
     // the printer's (potentially stale/filtered) version from overwriting user edits.
-    const savedAt = recentlySavedRef.current.get(currentMessageName);
-    if (savedAt && Date.now() - savedAt < 30_000) {
+    if (isRecentlySavedForPrinter(currentMessageName, connectedPrinterId)) {
       console.log('[CurrentMessagePreview] skipping fetch — recently saved:', currentMessageName);
       // Use the cached (localStorage) version which has the latest metadata (e.g. autoCodeExpiryDays)
       if (cached) setActiveMessageContent(cached);
@@ -586,7 +597,7 @@ const Index = () => {
 
         if (!cancelled && fetched && fetched.fields.length > 0) {
           const cached = getMessage(currentMessageName) ?? null;
-          const merged = mergeAutoCodeMeta(fetched, cached);
+          const merged = mergeAutoCodeMeta(fetched, cached, !!cached?.templateValue && isRecentlySavedForPrinter(currentMessageName, connectedPrinterId));
           saveMessage(merged);
           setActiveMessageContent(merged);
         }
@@ -756,13 +767,15 @@ const Index = () => {
   const replaceMessageWithoutDelete = useCallback(async (
     targetPrinter: Printer,
     messageName: string,
-    details: Pick<MessageDetails, 'fields' | 'templateValue'>,
+    details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings'>,
   ) => {
+    const { perMessageSettings } = buildEffectiveMessageDependentSettings(details as MessageDetails);
     const rawCommands = await buildMessageCommands(
       messageName,
       details.fields,
       details.templateValue,
       false,
+      perMessageSettings,
     );
 
     if (!rawCommands || rawCommands.length === 0) {
@@ -792,7 +805,12 @@ const Index = () => {
     const reselectCommandIndex = sequence.length;
     sequence.push(`^SM ${messageName}`);
 
-    const result = await sendVerifiedCommandSequence(targetPrinter, sequence, 300);
+    const sequencedCommands = sequence.map((command) => ({
+      command,
+      delayAfterMs: getSaveCommandDelay(command, details.fields.length),
+    }));
+
+    const result = await sendVerifiedCommandSequence(targetPrinter, sequencedCommands, 300);
     if (!result.success) {
       if (result.failedIndex === switchCommandIndex) {
         return { success: false as const, reason: 'switch' as const };
@@ -804,7 +822,7 @@ const Index = () => {
     }
 
     return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | null };
-  }, [buildMessageCommands, sendVerifiedCommandSequence]);
+  }, [buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence]);
 
   // After saving a message on the master, duplicate the full content to all
   // slaves. If the message is currently SELECTED on a slave with a different
@@ -840,6 +858,8 @@ const Index = () => {
         const result = await replaceMessageWithoutDelete(slave, messageName, {
           fields: details.fields,
           templateValue: details.templateValue,
+          settings: details.settings,
+          adjustSettings: details.adjustSettings,
         });
         ok = result.success;
         if (!ok) {
@@ -857,9 +877,17 @@ const Index = () => {
           console.warn(`[MasterSlaveSync] Command failed on ${slave.name}: ${failedCommand.substring(0, 40)}...`);
         }
       }
+      if (ok) {
+        const slaveDetails = normalizeMessageForPrinter({ ...details, name: messageName });
+        saveMessage(slaveDetails, slave.id);
+        recentlySavedRef.current.set(`${slave.id}:${messageName}`, Date.now());
+        if (slaveCurrent === targetUpper) {
+          updatePrinter(slave.id, { currentMessage: messageName });
+        }
+      }
       console.log(`[MasterSlaveSync] Pushed "${messageName}" → ${slave.name}: ${ok ? 'OK' : 'PARTIAL'}`);
     }
-  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence, replaceMessageWithoutDelete]);
+  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence, replaceMessageWithoutDelete, normalizeMessageForPrinter, saveMessage, updatePrinter]);
 
   const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
     if (!editingMessage) return null;
@@ -1009,7 +1037,7 @@ const Index = () => {
           new Promise<null>(r => setTimeout(() => r(null), 5000)),
         ]);
         if (refreshed && refreshed.fields.length > 0) {
-          const merged = mergeAutoCodeMeta(refreshed, localDetails);
+          const merged = mergeAutoCodeMeta(refreshed, localDetails, !!localDetails.templateValue);
           console.log('[AdjustDebug][saveEditedMessage.refreshed]', {
             targetName,
             refreshedAdjustSettings: refreshed.adjustSettings ?? null,
@@ -1885,7 +1913,8 @@ const Index = () => {
                   new Promise<null>(r => setTimeout(() => r(null), 10000)),
                 ]);
                 if (fetched && fetched.fields.length > 0) {
-                  const merged = mergeAutoCodeMeta(fetched, getStoredMessageForPrinter(name, messageTargetPrinter));
+                  const cached = getStoredMessageForPrinter(name, messageTargetPrinter);
+                  const merged = mergeAutoCodeMeta(fetched, cached, !!cached?.templateValue);
                   saveMessage(merged, messageTargetPrinter?.id);
                   return merged;
                 }
@@ -1992,7 +2021,8 @@ const Index = () => {
                     new Promise<null>(r => setTimeout(() => r(null), 10000)),
                   ]);
                   if (fetched && fetched.fields.length > 0) {
-                    const merged = mergeAutoCodeMeta(fetched, getMessage(name) ?? null);
+                    const cached = getMessage(name) ?? null;
+                    const merged = mergeAutoCodeMeta(fetched, cached, !!cached?.templateValue);
                     saveMessage(merged);
                     return merged;
                   }
