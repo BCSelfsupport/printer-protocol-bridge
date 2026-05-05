@@ -92,6 +92,10 @@ interface MessagesScreenProps {
   onDeleteFromPcLibrary?: (messageName: string, sourcePrinterId?: number) => void;
   swapSlotName?: string | null;
   onSetSwapSlot?: (messageName: string | null) => void;
+  /** When true, target printer is a slave — block create/edit/delete (master owns content). */
+  isSlave?: boolean;
+  /** Called when a blocked action is attempted on a slave (Index renders the explainer dialog). */
+  onSlaveBlocked?: () => void;
 }
 
 export function MessagesScreen({ 
