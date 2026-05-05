@@ -2446,7 +2446,7 @@ export function usePrinterConnection() {
           // Inter-command delay: ^NM must fully acknowledge before ^SV, then
           // heavy multi-field saves get a firmware digest floor before flush.
           let delayAfterCommand = 300;
-          if (cmd.startsWith('^SM ') && needsSwitchAwayBeforeRewrite) {
+          if (cmd.startsWith('^SM ')) {
             delayAfterCommand = 800;
           } else if (isNmCommand) {
             delayAfterCommand = getNmDigestPauseMs(validFields.length);
