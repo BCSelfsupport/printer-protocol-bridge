@@ -2445,9 +2445,9 @@ const Index = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Slave Printer</AlertDialogTitle>
             <AlertDialogDescription className="text-sm leading-relaxed">
-              <strong>{slaveBlockPrinterName}</strong> is a slave printer and automatically follows the master's message selection.
+              <strong>{slaveBlockPrinterName}</strong> is a slave printer. It automatically follows the master's message library and selection — new messages, edits, and deletions must be performed on the master printer and will sync to this slave.
               <br /><br />
-              To select a different message on this printer, remove it from the sync group first by editing the printer and setting its role to <strong>Standalone</strong>.
+              To manage messages directly on this printer, edit it and change its role to <strong>Standalone</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
