@@ -65,6 +65,7 @@ export function useServiceStatusPolling(options: {
     const tick = async () => {
       if (cancelled) return;
       if (inFlightRef.current) return;
+      if (isSaveBusy()) return; // Defer status polling while a save is in flight
       inFlightRef.current = true;
       const endPollingActivity = beginPollingActivity();
 
