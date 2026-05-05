@@ -840,15 +840,7 @@ const Index = () => {
     const availableSlaves = slaves.filter(s => s.isAvailable);
     if (availableSlaves.length === 0) return;
 
-    const { perMessageSettings } = buildEffectiveMessageDependentSettings(details);
-    const commands = await buildMessageCommands(
-      messageName,
-      details.fields,
-      details.templateValue,
-      isNew,
-      perMessageSettings,
-    );
-    if (!commands || commands.length === 0) return;
+    if (details.fields.length === 0) return;
 
     console.log(`[MasterSlaveSync] Pushing "${messageName}" to ${availableSlaves.length} slave(s) (template=${details.templateValue ?? '32'})`);
     const targetUpper = messageName.trim().toUpperCase();
@@ -875,7 +867,7 @@ const Index = () => {
       }
       console.log(`[MasterSlaveSync] Pushed "${messageName}" → ${slave.name}: ${ok ? 'OK' : 'PARTIAL'}`);
     }
-  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence, replaceMessageWithoutDelete, normalizeMessageForPrinter, saveMessage, updatePrinter]);
+  }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, replaceMessageWithoutDelete, normalizeMessageForPrinter, saveMessage, updatePrinter]);
 
   const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
     if (!editingMessage) return null;
