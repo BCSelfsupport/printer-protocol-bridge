@@ -1030,7 +1030,7 @@ const Index = () => {
           new Promise<null>(r => setTimeout(() => r(null), 5000)),
         ]);
         if (refreshed && refreshed.fields.length > 0) {
-          const merged = mergeAutoCodeMeta(refreshed, localDetails);
+          const merged = mergeAutoCodeMeta(refreshed, localDetails, !!localDetails.templateValue);
           console.log('[AdjustDebug][saveEditedMessage.refreshed]', {
             targetName,
             refreshedAdjustSettings: refreshed.adjustSettings ?? null,
@@ -1906,7 +1906,8 @@ const Index = () => {
                   new Promise<null>(r => setTimeout(() => r(null), 10000)),
                 ]);
                 if (fetched && fetched.fields.length > 0) {
-                  const merged = mergeAutoCodeMeta(fetched, getStoredMessageForPrinter(name, messageTargetPrinter));
+                  const cached = getStoredMessageForPrinter(name, messageTargetPrinter);
+                  const merged = mergeAutoCodeMeta(fetched, cached, !!cached?.templateValue);
                   saveMessage(merged, messageTargetPrinter?.id);
                   return merged;
                 }
@@ -2013,7 +2014,8 @@ const Index = () => {
                     new Promise<null>(r => setTimeout(() => r(null), 10000)),
                   ]);
                   if (fetched && fetched.fields.length > 0) {
-                    const merged = mergeAutoCodeMeta(fetched, getMessage(name) ?? null);
+                    const cached = getMessage(name) ?? null;
+                    const merged = mergeAutoCodeMeta(fetched, cached, !!cached?.templateValue);
                     saveMessage(merged);
                     return merged;
                   }
