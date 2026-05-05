@@ -2206,7 +2206,28 @@ const Index = () => {
         onAddPrinter={addPrinter}
         onRemovePrinter={removePrinter}
         onReorderPrinters={reorderPrinters}
-        onUpdatePrinter={updatePrinter}
+        onUpdatePrinter={async (printerId, updates) => {
+          const existing = printers.find(p => p.id === printerId);
+          const ipOrPortChanged = !!existing && (
+            (updates.ipAddress !== undefined && updates.ipAddress !== existing.ipAddress) ||
+            (updates.port !== undefined && updates.port !== existing.port)
+          );
+          if (ipOrPortChanged) {
+            // Tear down the cached TCP socket so the next command opens a fresh
+            // connection to the new IP/port. Without this, the renderer keeps
+            // talking to the old printer even though the UI shows the new IP.
+            try {
+              if (connectionState.connectedPrinter?.id === printerId) {
+                await disconnect();
+              } else {
+                await printerTransport.disconnect(printerId);
+              }
+            } catch (e) {
+              console.warn('[updatePrinter] disconnect-on-IP-change failed:', e);
+            }
+          }
+          updatePrinter(printerId, updates);
+        }}
         onQueryPrinterMetrics={queryPrinterMetrics}
         isDevSignedIn={isDevSignedIn}
         onDevSignIn={() => setDevSignInDialogOpen(true)}
