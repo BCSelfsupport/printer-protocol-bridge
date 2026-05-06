@@ -1,8 +1,9 @@
-import { defineConfig } from "vite";
+import { defineConfig, type ViteDevServer } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import pkg from "./package.json";
+import type { IncomingMessage, ServerResponse } from "node:http";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -27,8 +28,8 @@ export default defineConfig(({ mode }) => {
     plugins: [
       {
         name: "codesync-live-version-endpoint",
-        configureServer(server) {
-          server.middlewares.use("/__codesync_version.json", (_req, res) => {
+        configureServer(server: ViteDevServer) {
+          server.middlewares.use("/__codesync_version.json", (_req: IncomingMessage, res: ServerResponse) => {
             res.setHeader("Content-Type", "application/json");
             res.setHeader("Cache-Control", "no-store, max-age=0, must-revalidate");
             res.end(JSON.stringify({ version: pkg.version }));
