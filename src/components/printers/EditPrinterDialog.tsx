@@ -193,7 +193,6 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
 
 
           {(() => {
-            const pair = useTwinPair();
             const ip = ipAddress.trim();
             const portNum = parseInt(port, 10);
             const inTwinPair = !!(
