@@ -78,12 +78,18 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       return;
     }
     
+    const ip = ipAddress.trim();
+    const inTwinPair = !!(
+      (pair.a && pair.a.ip === ip && pair.a.port === portNum) ||
+      (pair.b && pair.b.ip === ip && pair.b.port === portNum)
+    );
+    const effectiveRole: PrinterRole = inTwinPair ? 'none' : role;
     onSave(printer.id, {
       name: name.trim(),
-      ipAddress: ipAddress.trim(),
+      ipAddress: ip,
       port: portNum,
-      role,
-      masterId: role === 'slave' && masterId ? parseInt(masterId, 10) : undefined,
+      role: effectiveRole,
+      masterId: effectiveRole === 'slave' && masterId ? parseInt(masterId, 10) : undefined,
       serialNumber: serialNumber.trim() || undefined,
       
       lineId: lineId.trim() || undefined,
