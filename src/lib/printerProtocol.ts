@@ -70,19 +70,33 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
     extract(/Viscosity\[\s*([\d.]+)\s*\]/i) || extract(/\bVis\[\s*([\d.]+)\s*\]/i) || '0'
   );
 
-  // INK:FULL MAKEUP:GOOD (allow optional spaces, colons, brackets, "Level" suffix, etc.)
-  // Some firmware returns numeric codes: 0=EMPTY, 1=LOW, 2=GOOD, 3=FULL
-  const mapFluidLevel = (raw: string | null): string => {
+  // Numeric scales differ by fluid (per BestCode firmware author, Nov 2026):
+  //   INK:    0=UNKNOWN 1=EMPTY 2=LOW 4=FULL 5=HIGH        (no GOOD, no 3 — only two ink floats)
+  //   MAKEUP: 0=UNKNOWN 1=EMPTY 2=LOW 3=GOOD 4=FULL 5=HIGH
+  // Word form ("INK:FULL MAKEUP:GOOD") appears with echo on or after `^MF l`.
+  // Numeric form appears with echo off / short message format.
+  // We collapse HIGH → FULL because the UI only renders FULL/GOOD/LOW/EMPTY.
+  const mapFluidLevel = (raw: string | null, fluid: 'ink' | 'makeup'): string => {
     if (!raw) return 'UNKNOWN';
     const upper = raw.toUpperCase().trim();
-    if (['FULL', 'GOOD', 'LOW', 'EMPTY', 'UNKNOWN'].includes(upper)) return upper;
-    // Numeric mapping per V2.6 protocol
+    if (['FULL', 'GOOD', 'LOW', 'EMPTY', 'UNKNOWN', 'HIGH'].includes(upper)) {
+      return upper === 'HIGH' ? 'FULL' : upper;
+    }
     const num = parseInt(raw.trim(), 10);
     if (!isNaN(num)) {
-      if (num >= 3) return 'FULL';
-      if (num === 2) return 'GOOD';
-      if (num === 1) return 'LOW';
-      return 'EMPTY';
+      if (fluid === 'ink') {
+        // Ink float-based scale, no GOOD bucket
+        if (num >= 4) return 'FULL';   // 4=FULL, 5=HIGH
+        if (num === 2) return 'LOW';
+        if (num === 1) return 'EMPTY';
+        return 'UNKNOWN';              // 0 or 3 (3 is undefined for ink)
+      }
+      // Makeup full 0–5 scale
+      if (num >= 4) return 'FULL';     // 4=FULL, 5=HIGH
+      if (num === 3) return 'GOOD';
+      if (num === 2) return 'LOW';
+      if (num === 1) return 'EMPTY';
+      return 'UNKNOWN';                // 0
     }
     return 'UNKNOWN';
   };
