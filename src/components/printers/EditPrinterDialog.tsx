@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Printer, PrinterRole } from '@/types/printer';
+import { useTwinPair } from '@/twin-code/twinPairStore';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ interface EditPrinterDialogProps {
 }
 
 export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelete, allPrinters = [] }: EditPrinterDialogProps) {
+  const pair = useTwinPair();
   const [name, setName] = useState('');
   const [ipAddress, setIpAddress] = useState('');
   const [port, setPort] = useState('23');
@@ -76,12 +78,18 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       return;
     }
     
+    const ip = ipAddress.trim();
+    const inTwinPair = !!(
+      (pair.a && pair.a.ip === ip && pair.a.port === portNum) ||
+      (pair.b && pair.b.ip === ip && pair.b.port === portNum)
+    );
+    const effectiveRole: PrinterRole = inTwinPair ? 'none' : role;
     onSave(printer.id, {
       name: name.trim(),
-      ipAddress: ipAddress.trim(),
+      ipAddress: ip,
       port: portNum,
-      role,
-      masterId: role === 'slave' && masterId ? parseInt(masterId, 10) : undefined,
+      role: effectiveRole,
+      masterId: effectiveRole === 'slave' && masterId ? parseInt(masterId, 10) : undefined,
       serialNumber: serialNumber.trim() || undefined,
       
       lineId: lineId.trim() || undefined,
@@ -190,27 +198,42 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
           </div>
 
 
-          <div className="space-y-2">
-            <Label className="text-slate-300 flex items-center gap-1.5">
-              <Crown className="w-3.5 h-3.5" />
-              Sync Role
-            </Label>
-            <Select value={role} onValueChange={(v) => setRole(v as PrinterRole)}>
-              <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                <SelectItem value="master">Master</SelectItem>
-                <SelectItem value="slave">Slave</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[10px] text-slate-500">
-              {role === 'master' && 'Messages and selections will sync to slave printers.'}
-              {role === 'slave' && 'This printer will receive messages and selections from its master.'}
-              {role === 'none' && 'No message synchronization.'}
-            </p>
-          </div>
+          {(() => {
+            const ip = ipAddress.trim();
+            const portNum = parseInt(port, 10);
+            const inTwinPair = !!(
+              (pair.a && pair.a.ip === ip && pair.a.port === portNum) ||
+              (pair.b && pair.b.ip === ip && pair.b.port === portNum)
+            );
+            return (
+              <div className="space-y-2">
+                <Label className="text-slate-300 flex items-center gap-1.5">
+                  <Crown className="w-3.5 h-3.5" />
+                  Sync Role
+                </Label>
+                <Select
+                  value={inTwinPair ? 'none' : role}
+                  onValueChange={(v) => setRole(v as PrinterRole)}
+                  disabled={inTwinPair}
+                >
+                  <SelectTrigger className="bg-slate-800 border-slate-600 text-white disabled:opacity-60">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="master">Master</SelectItem>
+                    <SelectItem value="slave">Slave</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-slate-500">
+                  {inTwinPair && 'This printer is part of an active Twin Pair — Master/Slave sync is disabled while bound.'}
+                  {!inTwinPair && role === 'master' && 'Messages and selections will sync to slave printers.'}
+                  {!inTwinPair && role === 'slave' && 'This printer will receive messages and selections from its master.'}
+                  {!inTwinPair && role === 'none' && 'No message synchronization.'}
+                </p>
+              </div>
+            );
+          })()}
 
           {/* Master selection (only shown for slaves) */}
           {role === 'slave' && (
