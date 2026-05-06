@@ -437,6 +437,16 @@ export function usePrinterConnection() {
         const inkLevel = (inkEmpty ? 'EMPTY' : (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN')) as Printer['inkLevel'];
         const makeupLevel = (makeupEmpty ? 'EMPTY' : (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN')) as Printer['makeupLevel'];
 
+        // DIAGNOSTIC: log raw fluid lines so we can see what the printer
+        // actually reports vs. what we display on the card. Cheap (1 line per
+        // printer per poll) and only fires when an SU response was received.
+        const inkLine = (suRaw.match(/[^\r\n]*\bINK[^\r\n]*/i) || [''])[0].trim();
+        const makeupLine = (suRaw.match(/[^\r\n]*\bMAKEUP[^\r\n]*/i) || [''])[0].trim();
+        console.log(
+          `[quick-status] printer ${r.id} fluids → ink="${inkLine}" → ${inkLevel} | makeup="${makeupLine}" → ${makeupLevel}${makeupEmpty ? ' (LE override: EMPTY)' : ''}`
+        );
+
+
         // Parse ^SM response for current message name
         // ^SM response format: "^SM\r\nMESSAGE_NAME\r\nSuccess\r\n>"
         const smRaw = r.smRaw || '';
