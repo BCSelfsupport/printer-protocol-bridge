@@ -191,27 +191,43 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
           </div>
 
 
-          <div className="space-y-2">
-            <Label className="text-slate-300 flex items-center gap-1.5">
-              <Crown className="w-3.5 h-3.5" />
-              Sync Role
-            </Label>
-            <Select value={role} onValueChange={(v) => setRole(v as PrinterRole)}>
-              <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                <SelectItem value="master">Master</SelectItem>
-                <SelectItem value="slave">Slave</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[10px] text-slate-500">
-              {role === 'master' && 'Messages and selections will sync to slave printers.'}
-              {role === 'slave' && 'This printer will receive messages and selections from its master.'}
-              {role === 'none' && 'No message synchronization.'}
-            </p>
-          </div>
+          {(() => {
+            const pair = useTwinPair();
+            const ip = ipAddress.trim();
+            const portNum = parseInt(port, 10);
+            const inTwinPair = !!(
+              (pair.a && pair.a.ip === ip && pair.a.port === portNum) ||
+              (pair.b && pair.b.ip === ip && pair.b.port === portNum)
+            );
+            return (
+              <div className="space-y-2">
+                <Label className="text-slate-300 flex items-center gap-1.5">
+                  <Crown className="w-3.5 h-3.5" />
+                  Sync Role
+                </Label>
+                <Select
+                  value={inTwinPair ? 'none' : role}
+                  onValueChange={(v) => setRole(v as PrinterRole)}
+                  disabled={inTwinPair}
+                >
+                  <SelectTrigger className="bg-slate-800 border-slate-600 text-white disabled:opacity-60">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="master">Master</SelectItem>
+                    <SelectItem value="slave">Slave</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-slate-500">
+                  {inTwinPair && 'This printer is part of an active Twin Pair — Master/Slave sync is disabled while bound.'}
+                  {!inTwinPair && role === 'master' && 'Messages and selections will sync to slave printers.'}
+                  {!inTwinPair && role === 'slave' && 'This printer will receive messages and selections from its master.'}
+                  {!inTwinPair && role === 'none' && 'No message synchronization.'}
+                </p>
+              </div>
+            );
+          })()}
 
           {/* Master selection (only shown for slaves) */}
           {role === 'slave' && (
