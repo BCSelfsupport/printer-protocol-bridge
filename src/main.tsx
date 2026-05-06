@@ -8,8 +8,10 @@ import { initLicenseHeaderSync } from "./integrations/supabase/licenseHeader";
 initLicenseHeaderSync();
 
 declare const __APP_VERSION__: string;
+declare const __APP_BUILD_TOKEN__: string;
 
 const APP_VERSION_STORAGE_KEY = "codesync-app-version";
+const APP_BOOT_TOKEN_STORAGE_KEY = "codesync-preview-boot-token";
 const STALE_GITHUB_STORAGE_KEYS = [
   "github_token",
   "github_token_expires_at",
@@ -41,12 +43,22 @@ const getCurrentAppCacheToken = () => {
     typeof __APP_VERSION__ !== "undefined" && __APP_VERSION__ !== "undefined"
       ? __APP_VERSION__
       : "";
+  const buildToken =
+    typeof __APP_BUILD_TOKEN__ !== "undefined" && __APP_BUILD_TOKEN__ !== "undefined"
+      ? __APP_BUILD_TOKEN__
+      : "";
   const buildStamp =
     typeof window !== "undefined"
       ? String((window as any).__CS_BUILD_STAMP ?? "").trim()
       : "";
 
-  return [version, buildStamp].filter(Boolean).join("::");
+  return [version, buildToken, buildStamp].filter(Boolean).join("::");
+};
+
+const reloadWithFreshPreviewBundle = () => {
+  const url = new URL(window.location.href);
+  url.searchParams.set("cs_v", getCurrentAppCacheToken() || String(Date.now()));
+  window.location.replace(url.toString());
 };
 
 const clearElectronPwaCaches = async () => {
@@ -87,6 +99,7 @@ const clearStaleWebPublishState = async (): Promise<boolean> => {
     const hadCachedState = previousVersion !== null || registrations.length > 0 || cacheKeys.length > 0;
 
     localStorage.setItem(APP_VERSION_STORAGE_KEY, currentVersion);
+    sessionStorage.setItem(APP_BOOT_TOKEN_STORAGE_KEY, currentVersion);
     sessionStorage.clear();
 
     await Promise.all(registrations.map((registration) => registration.unregister()));
@@ -98,6 +111,40 @@ const clearStaleWebPublishState = async (): Promise<boolean> => {
     }
   } catch (error) {
     console.warn("[main.tsx] Failed to clear stale published cache state:", error);
+  }
+
+  return false;
+};
+
+const clearStalePreviewState = async (): Promise<boolean> => {
+  if (typeof window === "undefined" || window.electronAPI || !import.meta.env.DEV) return false;
+
+  const currentVersion = getCurrentAppCacheToken();
+  if (!currentVersion) return false;
+
+  const bootToken = sessionStorage.getItem(APP_BOOT_TOKEN_STORAGE_KEY);
+  sessionStorage.setItem(APP_BOOT_TOKEN_STORAGE_KEY, currentVersion);
+  localStorage.setItem(APP_VERSION_STORAGE_KEY, currentVersion);
+
+  if (bootToken === currentVersion) return false;
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+    }
+
+    if ("caches" in window) {
+      const cacheKeys = await caches.keys();
+      await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+    }
+  } catch (error) {
+    console.warn("[main.tsx] Failed to clear stale preview cache state:", error);
+  }
+
+  if (!new URL(window.location.href).searchParams.has("cs_v")) {
+    reloadWithFreshPreviewBundle();
+    return true;
   }
 
   return false;
@@ -142,6 +189,9 @@ if (import.meta.env.DEV) {
 }
 
 const bootstrap = async () => {
+  const reloadingAfterPreviewReset = await clearStalePreviewState();
+  if (reloadingAfterPreviewReset) return;
+
   const reloadingAfterCacheReset = await clearStaleWebPublishState();
   if (reloadingAfterCacheReset) return;
 
