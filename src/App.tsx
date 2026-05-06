@@ -22,7 +22,8 @@ import { CompanionScanFab } from "./components/CompanionScanFab";
 // Build stamp — bump to force a fresh module graph in the Lovable preview when
 // HMR gets stuck serving an old bundle. Imported (not just a sidecar file) so
 // Vite actually invalidates downstream modules when this changes.
-const BUILD_STAMP = "2026-05-04-devpanel-citec-refresh";
+declare const __APP_BUILD_TOKEN__: string;
+const BUILD_STAMP = typeof __APP_BUILD_TOKEN__ !== "undefined" ? __APP_BUILD_TOKEN__ : "dev";
 if (typeof window !== "undefined") {
   (window as any).__CS_BUILD_STAMP = BUILD_STAMP;
 }
