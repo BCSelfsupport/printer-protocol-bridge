@@ -126,8 +126,8 @@ export function parseStatusResponse(response: string): Partial<PrinterMetrics> &
 
   console.log('[parseStatusResponse] ink raw match:', inkRaw, '| makeup raw match:', makeupRaw);
 
-  const inkLevel = mapFluidLevel(inkRaw);
-  const makeupLevel = mapFluidLevel(makeupRaw);
+  const inkLevel = mapFluidLevel(inkRaw, 'ink');
+  const makeupLevel = mapFluidLevel(makeupRaw, 'makeup');
 
   // V300UP:1 VLT_ON:1 GUT_ON:1 MOD_ON:1 (or MLT_ON in some firmware)
   // Note: Per v2.0 protocol, these flags use NORMAL logic: 1 = ON, 0 = OFF.
