@@ -148,6 +148,29 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
       autoCreate: slotB.autoCreate,
     };
     twinPairStore.setPair(a, b);
+
+    // TwinCode pairing supersedes any prior Master/Slave configuration.
+    // Clear role + masterId on the two bound printers (matched by IP:port) so
+    // Master→Slave selection sync does not overwrite the Twin Pair's per-side
+    // LID/SIDE message selection. Also clear any slaves still pointing at a
+    // now-demoted printer.
+    const matchesBinding = (p: Printer, bind: TwinPrinterBinding) =>
+      p.ipAddress.trim() === bind.ip && p.port === bind.port;
+    const demotedIds = new Set<number>();
+    for (const p of printers) {
+      if ((matchesBinding(p, a) || matchesBinding(p, b)) && ((p.role && p.role !== 'none') || p.masterId !== undefined)) {
+        updatePrinter(p.id, { role: 'none', masterId: undefined });
+        demotedIds.add(p.id);
+      }
+    }
+    if (demotedIds.size > 0) {
+      for (const p of printers) {
+        if (p.role === 'slave' && p.masterId !== undefined && demotedIds.has(p.masterId)) {
+          updatePrinter(p.id, { role: 'none', masterId: undefined });
+        }
+      }
+    }
+
     const res = await seedTwinPairMessages({ a, b, boundAt: new Date().toISOString() }, printers, {
       messageNameA: a.messageName,
       messageNameB: b.messageName,
