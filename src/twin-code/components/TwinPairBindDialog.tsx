@@ -11,6 +11,7 @@ import { twinPairStore, useTwinPair, type TwinPrinterBinding, type DispatchSubco
 import { seedForSide } from "../messageSeeds";
 import { seedTwinPairMessages } from "../twinDispatcher";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
+import type { Printer } from "@/types/printer";
 import { toast } from "@/hooks/use-toast";
 
 type ProbeState = "idle" | "probing" | "ok" | "fail";
