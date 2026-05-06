@@ -78,7 +78,7 @@ async function probePrinter(ip: string, port: number): Promise<{ ok: boolean; ms
 
 export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const pair = useTwinPair();
-  const { printers } = usePrinterStorage();
+  const { printers, updatePrinter } = usePrinterStorage();
   const [slotA, setSlotA] = useState<SlotState>(() => bindingToSlot(pair.a, "Lid printer (DM 16×16)", A_DEFAULTS));
   const [slotB, setSlotB] = useState<SlotState>(() => bindingToSlot(pair.b, "Side printer (text)", B_DEFAULTS));
   const [saving, setSaving] = useState(false);
