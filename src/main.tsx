@@ -98,9 +98,9 @@ const clearStaleWebPublishState = async (): Promise<boolean> => {
     const cacheKeys = "caches" in window ? await caches.keys() : [];
     const hadCachedState = previousVersion !== null || registrations.length > 0 || cacheKeys.length > 0;
 
+    sessionStorage.clear();
     localStorage.setItem(APP_VERSION_STORAGE_KEY, currentVersion);
     sessionStorage.setItem(APP_BOOT_TOKEN_STORAGE_KEY, currentVersion);
-    sessionStorage.clear();
 
     await Promise.all(registrations.map((registration) => registration.unregister()));
     await Promise.all(cacheKeys.map((key) => caches.delete(key)));
@@ -142,7 +142,8 @@ const clearStalePreviewState = async (): Promise<boolean> => {
     console.warn("[main.tsx] Failed to clear stale preview cache state:", error);
   }
 
-  if (!new URL(window.location.href).searchParams.has("cs_v")) {
+  const currentUrl = new URL(window.location.href);
+  if (currentUrl.searchParams.get("cs_v") !== currentVersion) {
     reloadWithFreshPreviewBundle();
     return true;
   }
