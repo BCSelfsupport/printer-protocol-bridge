@@ -29,6 +29,7 @@ interface EditPrinterDialogProps {
 }
 
 export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelete, allPrinters = [] }: EditPrinterDialogProps) {
+  const pair = useTwinPair();
   const [name, setName] = useState('');
   const [ipAddress, setIpAddress] = useState('');
   const [port, setPort] = useState('23');
