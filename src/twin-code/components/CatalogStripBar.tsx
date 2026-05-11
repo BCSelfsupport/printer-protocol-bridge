@@ -50,6 +50,7 @@ import { useTwinPair } from "../twinPairStore";
 import { twinDispatcher } from "../twinDispatcher";
 import { lowCatalogChirp } from "../audioAlarm";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
+import { useProductionMode } from "../printGoMode";
 import { useProductionRun } from "../useProductionRun";
 
 const LOW_THRESHOLD_KEY = "twincode.lowCatalogThreshold.v1";
