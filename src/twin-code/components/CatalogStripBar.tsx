@@ -306,6 +306,46 @@ export function CatalogStripBar() {
           />
         </div>
 
+        {/* Print Go source: Auto (software ^PT, for testing) vs Production
+            (wait for the real photocell wired to the printer's input). */}
+        <div
+          className={`flex items-stretch overflow-hidden rounded-md border text-[11px] font-mono uppercase tracking-wider ${
+            productionMode
+              ? 'border-amber-500/60 bg-amber-500/10'
+              : 'border-sky-500/50 bg-sky-500/10'
+          }`}
+          title={
+            productionMode
+              ? 'PRODUCTION — software pre-loads ^MD; the physical photocell wired to the printer triggers each print.'
+              : 'AUTO (TEST) — software fires Print Go (^PT) immediately after both sides ACK ^MD.'
+          }
+        >
+          <button
+            type="button"
+            onClick={() => setProductionMode(false)}
+            className={`flex items-center gap-1 px-2 py-1 transition-colors ${
+              !productionMode
+                ? 'bg-sky-500/30 text-sky-700 dark:text-sky-300'
+                : 'text-muted-foreground hover:bg-muted/50'
+            }`}
+          >
+            <FlaskConical className="h-3.5 w-3.5" />
+            Auto
+          </button>
+          <button
+            type="button"
+            onClick={() => setProductionMode(true)}
+            className={`flex items-center gap-1 border-l px-2 py-1 transition-colors ${
+              productionMode
+                ? 'bg-amber-500/30 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                : 'text-muted-foreground hover:bg-muted/50 border-border'
+            }`}
+          >
+            <Factory className="h-3.5 w-3.5" />
+            Production
+          </button>
+        </div>
+
         {/* Pre-flight lives next to Start Run in ProductionRunBar — single entry point. */}
 
         <div className="ml-auto flex items-center gap-2">
