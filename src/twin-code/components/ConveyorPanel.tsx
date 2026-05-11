@@ -489,14 +489,16 @@ export function ConveyorPanel() {
             <Button
               size="sm"
               onClick={handleStart}
-              disabled={liveMode && !benchAutoTrigger}
+              disabled={liveMode && !benchAutoTrigger && !productionMode}
               title={
-                liveMode && !benchAutoTrigger
-                  ? 'Turn on Bench trigger to pace real printer dispatches from the BPM simulator.'
-                  : 'Start the on-screen bottle animation (synthetic photocell trips at the configured BPM)'
+                liveMode && !benchAutoTrigger && !productionMode
+                  ? 'Turn on Bench trigger (or switch to Production mode) to pace real printer dispatches.'
+                  : productionMode
+                    ? 'Start the run — printers wait for the real photocell signal to fire each print.'
+                    : 'Start the on-screen bottle animation (synthetic photocell trips at the configured BPM)'
               }
             >
-              <Play className="mr-1 h-4 w-4" /> {liveMode ? 'Start bench run' : 'Start sim'}
+              <Play className="mr-1 h-4 w-4" /> {liveMode ? (productionMode ? 'Start production run' : 'Start bench run') : 'Start sim'}
             </Button>
           ) : (
             <Button
