@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Upload, Play, Square, RotateCcw, Zap, FileSpreadsheet, Trash2, Radio, Loader2, Activity, AlertTriangle } from "lucide-react";
+import { Upload, Play, Square, RotateCcw, Zap, FileSpreadsheet, Trash2, Radio, Loader2, Activity, AlertTriangle, Factory, FlaskConical } from "lucide-react";
 import { PreflightDialog } from "./PreflightDialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -52,6 +52,17 @@ export function ConveyorPanel() {
   }, []);
   const [liveMode, setLiveMode] = useState(false);
   const [benchAutoTrigger, setBenchAutoTrigger] = useState(false);
+  // Production mode: when true, the dispatcher does NOT send a software
+  // Print Go (^PT) — the real photocell wired to the printer must trigger
+  // each print. When false (Test mode), the software auto-fires Print Go
+  // so prints complete without external hardware. Persisted so production
+  // floors don't lose the setting on refresh / Electron restart.
+  const [productionMode, setProductionMode] = useState<boolean>(() => {
+    try { return localStorage.getItem('twincode.productionMode') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('twincode.productionMode', productionMode ? '1' : '0'); } catch {}
+  }, [productionMode]);
   const [liveBusy, setLiveBusy] = useState(false);
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [benchBusy, setBenchBusy] = useState(false);
@@ -84,18 +95,17 @@ export function ConveyorPanel() {
 
   const pairBound = !!(pair.a && pair.b);
 
-  // The conveyor sim's photocell IS the print trigger source — there is no
-  // real beam-break upstream. We MUST always pass forceTrigger: true or the
-  // printers receive ^MD, sit waiting for a Print Go that never arrives, hit
-  // the 500ms R-timeout, fill the 4-message buffer, and the dispatcher
-  // reports per-printer "lost connection" (this is exactly what bit the
-  // production-run path while Pre-flight worked — Pre-flight always forces).
-  // The Bench-trigger toggle is now a no-op for this wiring; it remains as
-  // a UI hint for future bench-mode pacing.
+  // The conveyor sim's photocell IS the print trigger source for TEST mode —
+  // we forceTrigger so printers don't sit waiting for a Print Go that never
+  // arrives. In PRODUCTION mode we deliberately omit forceTrigger: the real
+  // photocell wired to the printer's input fires each print, and the
+  // software simply pre-loads ^MD frames into the firmware buffer.
   useEffect(() => {
     if (!liveMode) return;
-    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial, { forceTrigger: true }));
-  }, [liveMode]);
+    conveyorSim.setLiveDispatcher((serial) =>
+      twinDispatcher.dispatch(serial, { forceTrigger: !productionMode })
+    );
+  }, [liveMode, productionMode]);
 
   // ---- LIVE bonded dispatch wiring ----
   const enableLive = async () => {
@@ -124,7 +134,7 @@ export function ConveyorPanel() {
       toast({ title: 'Could not enter LIVE mode', description: res.error, variant: 'destructive' });
       return;
     }
-    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial, { forceTrigger: true }));
+    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial, { forceTrigger: !productionMode }));
     setLiveMode(true);
     const seedNote = res.seededA || res.seededB
       ? ` · Seeded ${[res.seededA && 'LID', res.seededB && 'SIDE'].filter(Boolean).join(' & ')}`
@@ -336,6 +346,48 @@ export function ConveyorPanel() {
           />
         </div>
 
+        {/* Print Go source: Auto (software ^PT, for testing) vs Production
+            (wait for the real photocell wired to the printer's input). */}
+        <div
+          className={`flex items-stretch overflow-hidden rounded-md border text-[11px] font-mono uppercase tracking-wider ${
+            productionMode
+              ? 'border-amber-500/60 bg-amber-500/10'
+              : 'border-sky-500/50 bg-sky-500/10'
+          }`}
+          title={
+            productionMode
+              ? 'PRODUCTION — software pre-loads ^MD; the physical photocell wired to the printer triggers each print.'
+              : 'AUTO (TEST) — software fires Print Go (^PT) immediately after both sides ACK ^MD. Use for bench tests with no real photocell.'
+          }
+        >
+          <button
+            type="button"
+            onClick={() => setProductionMode(false)}
+            disabled={running || liveBusy}
+            className={`flex items-center gap-1 px-2 py-1 transition-colors ${
+              !productionMode
+                ? 'bg-sky-500/30 text-sky-700 dark:text-sky-300'
+                : 'text-muted-foreground hover:bg-muted/50'
+            } disabled:cursor-not-allowed disabled:opacity-60`}
+          >
+            <FlaskConical className="h-3.5 w-3.5" />
+            Auto Print Go
+          </button>
+          <button
+            type="button"
+            onClick={() => setProductionMode(true)}
+            disabled={running || liveBusy}
+            className={`flex items-center gap-1 border-l px-2 py-1 transition-colors ${
+              productionMode
+                ? 'bg-amber-500/30 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                : 'text-muted-foreground hover:bg-muted/50 border-border'
+            } disabled:cursor-not-allowed disabled:opacity-60`}
+          >
+            <Factory className="h-3.5 w-3.5" />
+            Production
+          </button>
+        </div>
+
         {/* 1:1 mode active indicator — visual confirmation that ^MB succeeded on both printers */}
         {liveMode && (
           <div
@@ -437,14 +489,16 @@ export function ConveyorPanel() {
             <Button
               size="sm"
               onClick={handleStart}
-              disabled={liveMode && !benchAutoTrigger}
+              disabled={liveMode && !benchAutoTrigger && !productionMode}
               title={
-                liveMode && !benchAutoTrigger
-                  ? 'Turn on Bench trigger to pace real printer dispatches from the BPM simulator.'
-                  : 'Start the on-screen bottle animation (synthetic photocell trips at the configured BPM)'
+                liveMode && !benchAutoTrigger && !productionMode
+                  ? 'Turn on Bench trigger (or switch to Production mode) to pace real printer dispatches.'
+                  : productionMode
+                    ? 'Start the run — printers wait for the real photocell signal to fire each print.'
+                    : 'Start the on-screen bottle animation (synthetic photocell trips at the configured BPM)'
               }
             >
-              <Play className="mr-1 h-4 w-4" /> {liveMode ? 'Start bench run' : 'Start sim'}
+              <Play className="mr-1 h-4 w-4" /> {liveMode ? (productionMode ? 'Start production run' : 'Start bench run') : 'Start sim'}
             </Button>
           ) : (
             <Button
