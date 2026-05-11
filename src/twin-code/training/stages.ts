@@ -310,7 +310,7 @@ export const TRAINING_STAGES: TrainingStage[] = [
         id: 'live-active-banner',
         title: 'Active production run banner',
         body:
-          'Once started, this banner replaces the catalog counter strip. Lot, operator, elapsed clock, printed/missed/yield counters update live. Auto Print Go controls live INSIDE the banner so you can\'t accidentally start a run with the conveyor stopped.',
+          'Once started, this banner replaces the catalog counter strip. Lot, operator, elapsed clock, printed/missed/yield counters update live. In AUTO mode the Start/Stop Auto Print Go controls live INSIDE the banner so you can\'t accidentally start a run with the conveyor stopped. In PRODUCTION mode those controls are hidden — the real photocell drives every print.',
         target: 'production-run-active',
         placement: 'bottom',
       },
