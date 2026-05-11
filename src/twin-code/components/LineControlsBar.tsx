@@ -129,7 +129,7 @@ export function LineControlsBar() {
     : 0;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-muted/30 px-3 py-2">
+    <div data-tour="line-conditions" className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-muted/30 px-3 py-2">
       <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         {productionMode ? <Radio className="h-3.5 w-3.5 text-amber-500" /> : <Gauge className="h-3.5 w-3.5" />}
         {productionMode ? 'Live photocell' : 'Line conditions'}

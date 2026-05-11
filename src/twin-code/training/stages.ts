@@ -261,7 +261,7 @@ export const TRAINING_STAGES: TrainingStage[] = [
         id: 'live-intro',
         title: 'LIVE = real bonded ^MD',
         body:
-          'Flipping LIVE ON hands the line over to the real bonded dispatcher. Every photocell trigger (or Auto Print Go pulse) pulls the next serial from the catalog and fires ^MD to both printers in parallel. Once both ack, the catalog index advances and the ledger commits.',
+          'Flipping LIVE ON hands the line over to the real bonded dispatcher. Every Print Go (real photocell trip in PRODUCTION mode, or a software ^PT pulse in AUTO mode) pulls the next serial from the catalog and fires ^MD to both printers in parallel. Once both ack, the catalog index advances and the ledger commits.',
         target: null,
         placement: 'center',
       },
@@ -272,6 +272,22 @@ export const TRAINING_STAGES: TrainingStage[] = [
           'The LIVE switch on the catalog strip is the line-engagement gate. SYNTH = synthetic timings (good for showing the HUD without printing), LIVE = real bonded ^MD to both printers.\n\nThe switch is disabled until a twin pair is bound — that\'s the safety interlock that prevents you from "going LIVE" with no actual printers attached.',
         target: 'live-toggle',
         placement: 'bottom',
+      },
+      {
+        id: 'print-go-mode',
+        title: 'Print Go source — AUTO (test) vs PRODUCTION',
+        body:
+          'Right next to LIVE is the Print Go source toggle. This is the single most important production switch on the page:\n\n  • AUTO (sky) — software fires Print Go (^PT) immediately after both sides ACK ^MD. Use this for bench testing, demos, training, and pre-flight where there is no bottle on the line.\n\n  • PRODUCTION (amber) — software pre-loads the next serial with ^MD but does NOT fire ^PT. The physical photocell wired into the printer\'s input fires the actual print, exactly when a real bottle crosses the beam.\n\nFor a real production line you MUST be in PRODUCTION before flipping LIVE — otherwise every ^MD will print into thin air the moment the printer acks.',
+        target: 'print-go-mode',
+        placement: 'bottom',
+      },
+      {
+        id: 'live-line-conditions',
+        title: 'Line conditions — set in AUTO, measured in PRODUCTION',
+        body:
+          'The Line Conditions row behaves differently depending on the Print Go source:\n\n  • In AUTO, you enter ft/min, pitch and BPM by hand — the simulator uses these to pace synthetic photocell pulses.\n\n  • In PRODUCTION, ft/min, BPM and interval go read-only and update LIVE from the actual photocell trips arriving on the wire (rolling 12-sample window). Pitch stays operator-set because we still need it to derive belt speed from a photocell-only signal.\n\nIf you see "—" or a stale indicator in PRODUCTION, the line is stopped or no bottle has crossed yet.',
+        target: 'line-conditions',
+        placement: 'top',
       },
       {
         id: 'live-start-run',
@@ -294,7 +310,7 @@ export const TRAINING_STAGES: TrainingStage[] = [
         id: 'live-active-banner',
         title: 'Active production run banner',
         body:
-          'Once started, this banner replaces the catalog counter strip. Lot, operator, elapsed clock, printed/missed/yield counters update live. Auto Print Go controls live INSIDE the banner so you can\'t accidentally start a run with the conveyor stopped.',
+          'Once started, this banner replaces the catalog counter strip. Lot, operator, elapsed clock, printed/missed/yield counters update live. In AUTO mode the Start/Stop Auto Print Go controls live INSIDE the banner so you can\'t accidentally start a run with the conveyor stopped. In PRODUCTION mode those controls are hidden — the real photocell drives every print.',
         target: 'production-run-active',
         placement: 'bottom',
       },

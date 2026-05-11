@@ -309,6 +309,7 @@ export function CatalogStripBar() {
         {/* Print Go source: Auto (software ^PT, for testing) vs Production
             (wait for the real photocell wired to the printer's input). */}
         <div
+          data-tour="print-go-mode"
           className={`flex items-stretch overflow-hidden rounded-md border text-[11px] font-mono uppercase tracking-wider ${
             productionMode
               ? 'border-amber-500/60 bg-amber-500/10'
