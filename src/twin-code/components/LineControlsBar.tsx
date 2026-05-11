@@ -28,6 +28,7 @@ import { useProductionMode } from "../printGoMode";
 export function LineControlsBar() {
   const [cfg, setCfg] = useState(() => conveyorSim.getConfig() ?? DEFAULT_CONVEYOR_CONFIG);
   const [running, setRunning] = useState(() => conveyorSim.isRunning());
+  const [productionMode, setProductionMode] = useProductionMode();
 
   // Keep in sync if Debug panel changes things or conveyor state flips.
   useEffect(() => {
