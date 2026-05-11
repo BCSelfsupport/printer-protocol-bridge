@@ -14,7 +14,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Gauge, Play, Square, Zap } from "lucide-react";
+import { Gauge, Play, Square, Zap, Factory, FlaskConical } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,7 @@ import {
   ftPerMinFromBpm,
   DEFAULT_CONVEYOR_CONFIG,
 } from "../conveyorSim";
+import { useProductionMode } from "../printGoMode";
 
 export function LineControlsBar() {
   const [cfg, setCfg] = useState(() => conveyorSim.getConfig() ?? DEFAULT_CONVEYOR_CONFIG);
