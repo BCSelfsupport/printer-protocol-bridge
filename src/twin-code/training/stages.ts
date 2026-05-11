@@ -261,7 +261,7 @@ export const TRAINING_STAGES: TrainingStage[] = [
         id: 'live-intro',
         title: 'LIVE = real bonded ^MD',
         body:
-          'Flipping LIVE ON hands the line over to the real bonded dispatcher. Every photocell trigger (or Auto Print Go pulse) pulls the next serial from the catalog and fires ^MD to both printers in parallel. Once both ack, the catalog index advances and the ledger commits.',
+          'Flipping LIVE ON hands the line over to the real bonded dispatcher. Every Print Go (real photocell trip in PRODUCTION mode, or a software ^PT pulse in AUTO mode) pulls the next serial from the catalog and fires ^MD to both printers in parallel. Once both ack, the catalog index advances and the ledger commits.',
         target: null,
         placement: 'center',
       },
