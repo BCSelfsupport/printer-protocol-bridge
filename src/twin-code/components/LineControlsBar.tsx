@@ -202,52 +202,52 @@ export function LineControlsBar() {
       {/* Print Go source toggle (Auto/Production) lives next to the LIVE
           toggle in CatalogStripBar so it's in the operator's primary sightline. */}
 
-      <div className="flex items-center gap-1.5 ml-1">
-        {running ? (
+      {/* Simulator-only controls. In PRODUCTION mode the real photocell drives
+          every print and the operator starts a run via "Start production run"
+          in the catalog strip — so we hide these to avoid duplicate buttons. */}
+      {!productionMode && (
+        <div className="flex items-center gap-1.5 ml-1">
+          {running ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-7 px-2.5 text-[11px]"
+              onClick={() => conveyorSim.stop()}
+              title="Stop the bottle generator (Auto Print Go)"
+            >
+              <Square className="mr-1 h-3 w-3" />
+              Stop Auto Print Go
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              className="h-7 px-2.5 text-[11px]"
+              onClick={() => conveyorSim.start()}
+              title="Start the bottle generator — bottles cross the photocell at the configured BPM and trigger Print Go automatically"
+            >
+              <Play className="mr-1 h-3 w-3" />
+              Start Auto Print Go
+            </Button>
+          )}
           <Button
             size="sm"
-            variant="destructive"
-            className="h-7 px-2.5 text-[11px]"
-            onClick={() => conveyorSim.stop()}
-            title={productionMode ? "Stop the production run" : "Stop the bottle generator (Auto Print Go)"}
+            variant="outline"
+            className="h-7 px-2 text-[11px]"
+            onClick={() => conveyorSim.manualFire()}
+            title="Manually fire the photocell on the closest bottle"
           >
-            <Square className="mr-1 h-3 w-3" />
-            {productionMode ? 'Stop run' : 'Stop Auto Print Go'}
+            <Zap className="mr-1 h-3 w-3" />
+            Fire 1
           </Button>
-        ) : (
-          <Button
-            size="sm"
-            className="h-7 px-2.5 text-[11px]"
-            onClick={() => conveyorSim.start()}
-            title={
-              productionMode
-                ? "Start the production run — printers wait for the real photocell signal to fire each print"
-                : "Start the bottle generator — bottles cross the photocell at the configured BPM and trigger Print Go automatically"
-            }
-          >
-            <Play className="mr-1 h-3 w-3" />
-            {productionMode ? 'Start production' : 'Start Auto Print Go'}
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 px-2 text-[11px]"
-          onClick={() => conveyorSim.manualFire()}
-          title="Manually fire the photocell on the closest bottle"
-          disabled={productionMode}
-        >
-          <Zap className="mr-1 h-3 w-3" />
-          Fire 1
-        </Button>
-      </div>
+        </div>
+      )}
 
       {running && !productionMode && (
         <span className="text-[11px] text-emerald-500">
           ● auto-firing at {Math.round(bpm)} bpm
         </span>
       )}
-      {running && productionMode && (
+      {productionMode && (
         <span className={`text-[11px] ${live.bpm > 0 && !live.stale ? 'text-emerald-500' : 'text-amber-500'}`}>
           {live.bpm > 0 && !live.stale
             ? `● live ${live.bpm.toFixed(0)} bpm from photocell`
