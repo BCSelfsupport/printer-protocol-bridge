@@ -20,6 +20,7 @@ import { useTwinPair } from "../twinPairStore";
 import { twinDispatcher } from "../twinDispatcher";
 import { faultGuard } from "../faultGuard";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
+import { useProductionMode } from "../printGoMode";
 
 interface BenchCsvResult {
   requested: number;
