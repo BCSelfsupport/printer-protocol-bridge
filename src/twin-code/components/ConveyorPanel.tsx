@@ -52,17 +52,8 @@ export function ConveyorPanel() {
   }, []);
   const [liveMode, setLiveMode] = useState(false);
   const [benchAutoTrigger, setBenchAutoTrigger] = useState(false);
-  // Production mode: when true, the dispatcher does NOT send a software
-  // Print Go (^PT) — the real photocell wired to the printer must trigger
-  // each print. When false (Test mode), the software auto-fires Print Go
-  // so prints complete without external hardware. Persisted so production
-  // floors don't lose the setting on refresh / Electron restart.
-  const [productionMode, setProductionMode] = useState<boolean>(() => {
-    try { return localStorage.getItem('twincode.productionMode') === '1'; } catch { return false; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem('twincode.productionMode', productionMode ? '1' : '0'); } catch {}
-  }, [productionMode]);
+  // Production mode is shared with the Hub's LineControlsBar via printGoMode store.
+  const [productionMode, setProductionMode] = useProductionMode();
   const [liveBusy, setLiveBusy] = useState(false);
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [benchBusy, setBenchBusy] = useState(false);
