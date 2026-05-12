@@ -203,14 +203,14 @@ export function CatalogStripBar() {
       const res = catalogQueue.enqueue(serials, filename);
       setPickerOpen(false);
       setCsvText(null);
-      if (!res.ok) {
+      if (res.ok) {
+        toast({
+          title: `Staged on deck: ${filename}`,
+          description: `${serials.length.toLocaleString()} serials. Will auto-promote when remaining \u2264 ${queueState.lowWater.toLocaleString()}.`,
+        });
+      } else {
         toast({ title: "Couldn't stage on deck", description: res.reason, variant: "destructive" });
-        return;
       }
-      toast({
-        title: `Staged on deck: ${filename}`,
-        description: `${serials.length.toLocaleString()} serials. Will auto-promote when remaining \u2264 ${queueState.lowWater.toLocaleString()}.`,
-      });
       return;
     }
     const { matchesPersisted } = catalog.load(serials);
