@@ -2022,7 +2022,7 @@ export function usePrinterConnection() {
     autoCodeFieldType?: string;
     autoCodeFormat?: string;
     autoCodeExpiryDays?: number;
-  }, fieldNum: number, fieldTemplateHeight?: number, graphicMap?: Map<number, { graphicName: string; width: number; height: number }>): string => {
+  }, fieldNum: number, fieldTemplateHeight?: number, graphicMap?: Map<number, { graphicName: string; width: number; height: number }>, counterSlotConfigs?: Map<number, { digits: number; leadingZeroes: boolean }>): string => {
     const fontCode = fontToProtocolCode(field.fontSize);
 
     // DataMatrix ECC200 (software-generated): use ^AL logo reference instead of ^AB
@@ -2076,11 +2076,24 @@ export function usePrinterConnection() {
         // Fallback: ^AH with type 7 (HH:MM:SS with delimiters)
         return `^AH${fieldNum};${field.x};${field.y};${fontCode};7`;
       }
-      case 'counter':
-        // ^AC n; x; y; s; c where c = hardware counter slot
-        // 0 = print count, 1-4 = custom counters. Respect the field's selected
-        // counter slot so Force Print increments the correct value on-printer.
-        return `^AC${fieldNum};${field.x};${field.y};${fontCode};${Math.min(4, Math.max(0, parseInt(field.autoCodeFieldType?.match(/^counter_(\d+)$/i)?.[1] ?? '0', 10) || 0))}`;
+      case 'counter': {
+        // ^AC n;x;y;f;c[;d;l] — c=hardware counter slot (0=print,1-4=custom),
+        // d=digit count, l=leading-zero flag (1=pad zeros, 0=blanks).
+        // Protocol v2.6 §5.33: digit/leading-zero formatting is baked into the
+        // FIELD itself, NOT a separate counter-slot config command. Without
+        // these the printer falls back to the slot's HMI defaults (typically
+        // 9 digits, no leading zeros) — which is exactly the "max numbers,
+        // no leading zeros" symptom users hit when Advanced settings appear
+        // to do nothing.
+        const slot = Math.min(4, Math.max(0, parseInt(field.autoCodeFieldType?.match(/^counter_(\d+)$/i)?.[1] ?? '0', 10) || 0));
+        const cfg = slot >= 1 ? counterSlotConfigs?.get(slot) : undefined;
+        if (cfg && cfg.digits >= 1) {
+          const d = Math.min(9, Math.max(1, Math.trunc(cfg.digits)));
+          const l = cfg.leadingZeroes ? 1 : 0;
+          return `^AC${fieldNum};${field.x};${field.y};${fontCode};${slot};${d};${l}`;
+        }
+        return `^AC${fieldNum};${field.x};${field.y};${fontCode};${slot}`;
+      }
       case 'barcode': {
         // ^AB syntax varies by barcode type (per v2.0 protocol section 5.27.2.1):
         //   1D (non-Code128): ^AB n;x;y;f;t;m;r;data
@@ -2236,6 +2249,7 @@ export function usePrinterConnection() {
       rotation?: string;
       printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
     },
+    counterConfigs?: Array<{ id: number; startCount: number; endCount: number; leadingZeroes: boolean }>,
   ): Promise<boolean> => {
     console.log('[saveMessageContent] Called with:', messageName, fields, 'template:', templateValue, 'isNew:', isNew);
     (saveMessageContent as any).__lastError = '';
@@ -2291,6 +2305,19 @@ export function usePrinterConnection() {
 
     // Build field subcommands with inverted Y coordinates
     // Canvas Y (top-origin) → template-relative → printer Y (bottom-origin)
+    // Build a slot→{digits,leadingZeroes} map from the message's advanced
+    // counter settings. Digits are derived from the configured End Count
+    // width (e.g. End=9999 → 4 digits) so the printer formats the counter
+    // exactly as the editor preview shows.
+    const counterSlotConfigs = new Map<number, { digits: number; leadingZeroes: boolean }>();
+    for (const c of counterConfigs ?? []) {
+      const slot = Math.trunc(c.id);
+      if (slot < 1 || slot > 4) continue;
+      const end = Math.max(0, Math.trunc(c.endCount));
+      const digits = Math.min(9, Math.max(1, String(end).length));
+      counterSlotConfigs.set(slot, { digits, leadingZeroes: !!c.leadingZeroes });
+    }
+
     const buildPositionedFieldSubcommand = (field: typeof validFields[number], index: number) => {
       // For barcode fields, use actual field height; for text, use font dot height
       const fieldHeight = field.type === 'barcode' && field.height 
@@ -2301,7 +2328,7 @@ export function usePrinterConnection() {
       return buildFieldSubcommand({
         ...field,
         y: Math.max(0, printerY),
-      }, index + 1, templateHeight, dmGraphicMap);
+      }, index + 1, templateHeight, dmGraphicMap, counterSlotConfigs);
     };
     const fieldSubcommands = validFields.map(buildPositionedFieldSubcommand).join('');
 
@@ -2532,6 +2559,7 @@ export function usePrinterConnection() {
       rotation?: string;
       printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
     },
+    counterConfigs?: Array<{ id: number; startCount: number; endCount: number; leadingZeroes: boolean }>,
   ): Promise<string[] | null> => {
     if (fields.length === 0) return null;
 
@@ -2559,6 +2587,15 @@ export function usePrinterConnection() {
     // Generate DataMatrix ECC200 bitmap upload commands
     const { uploadCommands: dmUploadCmds, graphicMap: dmGraphicMap } = await generateDataMatrixCommands(validFields, templateHeight);
 
+    const counterSlotConfigs = new Map<number, { digits: number; leadingZeroes: boolean }>();
+    for (const c of counterConfigs ?? []) {
+      const slot = Math.trunc(c.id);
+      if (slot < 1 || slot > 4) continue;
+      const end = Math.max(0, Math.trunc(c.endCount));
+      const digits = Math.min(9, Math.max(1, String(end).length));
+      counterSlotConfigs.set(slot, { digits, leadingZeroes: !!c.leadingZeroes });
+    }
+
     const buildPositionedFieldSubcommand = (field: typeof validFields[number], index: number) => {
       const fieldHeight = field.type === 'barcode' && field.height 
         ? field.height 
@@ -2568,7 +2605,7 @@ export function usePrinterConnection() {
       return buildFieldSubcommand({
         ...field,
         y: Math.max(0, printerY),
-      }, index + 1, templateHeight, dmGraphicMap);
+      }, index + 1, templateHeight, dmGraphicMap, counterSlotConfigs);
     };
     const fieldSubcommands = validFields.map(buildPositionedFieldSubcommand).join('');
 

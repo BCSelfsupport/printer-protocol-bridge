@@ -810,6 +810,7 @@ const Index = () => {
       details.templateValue,
       false,
       perMessageSettings,
+      details.advancedSettings?.counters,
     );
 
     if (!rawCommands || rawCommands.length === 0) {
@@ -832,7 +833,9 @@ const Index = () => {
     });
 
     const sequence: string[] = [];
-    sequence.push(...buildCounterConfigCommandSequence(details as MessageDetails).map((item) => item.command));
+    // Counter formatting (digits + leading zeros) is now baked into each ^AC
+    // field by buildMessageCommands per protocol v2.6 §5.33 — no separate
+    // ^CC slot config command needed (and the firmware does not accept one).
     sequence.push(...commands);
     sequence.push('^SV');
     const reselectCommandIndex = sequence.length;
@@ -967,6 +970,7 @@ const Index = () => {
       localDetails.templateValue,
       isNew,
       perMessageSettings,
+      localDetails.advancedSettings?.counters,
     );
     if (!success) {
       const reason = (saveMessageContent as any).__lastError || '';
@@ -988,18 +992,19 @@ const Index = () => {
       perMessageSettings,
       includeMessageSettings: hasMessagePrinterSettings,
     });
-    const counterConfigCommands = buildCounterConfigCommandSequence(localDetails);
+    // Counter formatting is now embedded in each ^AC field by saveMessageContent
+    // (protocol v2.6 §5.33), so no separate post-save counter-config sequence
+    // is needed here.
 
     let restoredByCommandSequence = false;
-    if ((messageDependentCommands.length > 0 || counterConfigCommands.length > 0) && connectionState.connectedPrinter) {
+    if (messageDependentCommands.length > 0 && connectionState.connectedPrinter) {
       const commandSequence: SequencedPrinterCommand[] = [];
 
       // ^NM already leaves the just-saved message selected on the printer,
       // so avoid sending an immediate redundant ^SM on heavy saves.
-      commandSequence.push(...counterConfigCommands);
       commandSequence.push(...messageDependentCommands);
 
-      if (hasAdjustSettings || hasMessagePrinterSettings || counterConfigCommands.length > 0) {
+      if (hasAdjustSettings || hasMessagePrinterSettings) {
         commandSequence.push('^SV');
       }
 
