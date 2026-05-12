@@ -992,18 +992,19 @@ const Index = () => {
       perMessageSettings,
       includeMessageSettings: hasMessagePrinterSettings,
     });
-    const counterConfigCommands = buildCounterConfigCommandSequence(localDetails);
+    // Counter formatting is now embedded in each ^AC field by saveMessageContent
+    // (protocol v2.6 §5.33), so no separate post-save counter-config sequence
+    // is needed here.
 
     let restoredByCommandSequence = false;
-    if ((messageDependentCommands.length > 0 || counterConfigCommands.length > 0) && connectionState.connectedPrinter) {
+    if (messageDependentCommands.length > 0 && connectionState.connectedPrinter) {
       const commandSequence: SequencedPrinterCommand[] = [];
 
       // ^NM already leaves the just-saved message selected on the printer,
       // so avoid sending an immediate redundant ^SM on heavy saves.
-      commandSequence.push(...counterConfigCommands);
       commandSequence.push(...messageDependentCommands);
 
-      if (hasAdjustSettings || hasMessagePrinterSettings || counterConfigCommands.length > 0) {
+      if (hasAdjustSettings || hasMessagePrinterSettings) {
         commandSequence.push('^SV');
       }
 
