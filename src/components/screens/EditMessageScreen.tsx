@@ -1633,6 +1633,7 @@ export function EditMessageScreen({
                 advancedSettings: { ...(prev.advancedSettings || defaultAdvancedSettings), ...newSettings },
               }));
             }}
+            onSendCommand={onSendCommand}
           />
 
           <Dialog open={saveAsDialogOpen} onOpenChange={setSaveAsDialogOpen}>
