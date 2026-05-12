@@ -131,8 +131,9 @@ export const SIDE_SEED: MessageSeed = {
   commandsTemplate: [
     "^DM __NAME__",
     // Template code 1 = 1x7-dot strip (per templateToProtocolCode: '7' → 1).
-    // Font code 7 = Standard 7-high (matches the working minimal ^NM at
-    // usePrinterConnection.ts:2150 which uses ^AT1;0;0;7;).
+    // Font code 2 = Standard 7-high per protocol v2.6 §4.2.5.
+    // Font code 7 is Standard 25-high and is invalid on a 1×7 template; real
+    // firmware ACKs the ^NM line but silently refuses to create the message.
     //
     // ^AT text syntax (per buildFieldSubcommand in usePrinterConnection,
     // protocol v2.6 §5.33.x):
@@ -140,9 +141,9 @@ export const SIDE_SEED: MessageSeed = {
     //     n=1   field number
     //     x=0   left-aligned
     //     y=0   bottom-anchored on 7-dot template
-    //     f=7   font code 7 = Standard 7-high
+    //     f=2   font code 2 = Standard 7-high
     //     data  placeholder; dispatcher overwrites per print via ^MD^TD1
-    "^NM 1;0;0;0;__NAME__^AT1;0;0;7;DRYRUN0000000",
+    "^NM 1;0;0;0;__NAME__^AT1;0;0;2;DRYRUN0000000",
     "^SV",
   ],
 };
@@ -260,8 +261,9 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts): MessageSeed {
   //   §5.33.2.x ^AC — counter field (c = hardware slot 1..4)
   //
   // Template code 1 = 1×7-dot strip (matches SIDE_SEED).
-  // Font code 7 = Standard 7-high.
-  const FONT = 7;
+  // Font code 2 = Standard 7-high. Code 7 is Standard25High and makes the
+  // 1×7 template invalid, which was the root cause of the bind seed failure.
+  const FONT = 2;
   const TEMPLATE = 1;
 
   const fields = [
