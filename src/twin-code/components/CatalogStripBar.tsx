@@ -68,13 +68,30 @@ export function CatalogStripBar() {
   const run = useProductionRun();
   const runActive = !!run.active;
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const queueFileRef = useRef<HTMLInputElement | null>(null);
   const [csvText, setCsvText] = useState<string | null>(null);
+  const [csvFilename, setCsvFilename] = useState<string>("catalog.csv");
+  const [csvTarget, setCsvTarget] = useState<"active" | "queue">("active");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [liveBusy, setLiveBusy] = useState(false);
   const [productionMode, setProductionMode] = useProductionMode();
   const [startOpen, setStartOpen] = useState(false);
   const [preflightOpen, setPreflightOpen] = useState(false);
+  const [queueState, setQueueState] = useState<CatalogQueueState>(() => catalogQueue.getState());
+
+  useEffect(() => catalogQueue.subscribe(setQueueState), []);
+
+  // Toast on auto-promotion so the operator sees the seamless handover.
+  useEffect(() => {
+    catalogQueue.setOnPromote((q, appended, skipped) => {
+      toast({
+        title: `On-deck catalog promoted: ${q.filename}`,
+        description: `${appended.toLocaleString()} serials appended${skipped > 0 ? ` (${skipped.toLocaleString()} skipped — already printed)` : ""}.`,
+      });
+    });
+    return () => catalogQueue.setOnPromote(null);
+  }, []);
 
   // ---- Low-catalog warning settings (persisted) ----
   const [lowThreshold, setLowThreshold] = useState<number>(() => {
