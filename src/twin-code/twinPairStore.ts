@@ -153,7 +153,16 @@ export const twinPairStore = {
     emit();
   },
   setPair(a: TwinPrinterBinding | null, b: TwinPrinterBinding | null) {
-    state = { a, b, boundAt: a && b ? new Date().toISOString() : state.boundAt };
+    state = { ...state, a, b, boundAt: a && b ? new Date().toISOString() : state.boundAt };
+    persist();
+    emit();
+  },
+  /**
+   * Persist (or clear) the auto-code mode + opts. Pass `mode=false` to flip
+   * the pair back to catalog/CSV mode without touching the IP bindings.
+   */
+  setAutoCode(mode: boolean, opts?: TwinPairState["autoCodeOpts"]) {
+    state = { ...state, autoCodeMode: mode, autoCodeOpts: mode ? opts : undefined };
     persist();
     emit();
   },
