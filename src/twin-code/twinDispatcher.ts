@@ -839,6 +839,24 @@ export async function seedTwinPairMessages(
         await printerTransport.sendCommand(pid, `^DA ${TWIN_DEFAULT_DELAY}`, { maxWaitMs: 3000 }).catch(() => {});
         await printerTransport.sendCommand(pid, `^PW ${TWIN_DEFAULT_WIDTH}`, { maxWaitMs: 3000 }).catch(() => {});
         await printerTransport.sendCommand(pid, `^CM s${TWIN_DEFAULT_SPEED_CODE}`, { maxWaitMs: 3000 }).catch(() => {});
+
+        // Hardware counter config — named-parameter ^CC form per protocol v2.6
+        // §5.5 (mem://integration/cc-named-parameters). The positional form
+        // silently swaps L and E, so we use I/S/E/L/T explicitly. ^CN <slot>;<v>
+        // sets the live counter so the next print starts AT `start` (handles
+        // re-coding after rejects without touching the HMI).
+        if (opts.counterConfig) {
+          const { slot, start, digits, leadingZero } = opts.counterConfig;
+          const end = Math.max(start, Math.pow(10, Math.max(1, digits)) - 1);
+          await printerTransport.sendCommand(pid, `^CC ${slot};I1`, { maxWaitMs: 3000 }).catch(() => {});
+          await printerTransport.sendCommand(pid, `^CC ${slot};S${start}`, { maxWaitMs: 3000 }).catch(() => {});
+          await printerTransport.sendCommand(pid, `^CC ${slot};E${end}`, { maxWaitMs: 3000 }).catch(() => {});
+          await printerTransport.sendCommand(pid, `^CC ${slot};L${leadingZero ? 1 : 0}`, { maxWaitMs: 3000 }).catch(() => {});
+          await printerTransport.sendCommand(pid, `^CC ${slot};T0`, { maxWaitMs: 3000 }).catch(() => {});
+          await printerTransport.sendCommand(pid, `^CN ${slot};${start}`, { maxWaitMs: 3000 }).catch(() => {});
+          await new Promise(res => setTimeout(res, 150));
+        }
+
         await new Promise(res => setTimeout(res, 200));
         await printerTransport.sendCommand(pid, '^SV', { maxWaitMs: 3000 }).catch(() => {});
         await new Promise(res => setTimeout(res, 150));
