@@ -2022,7 +2022,7 @@ export function usePrinterConnection() {
     autoCodeFieldType?: string;
     autoCodeFormat?: string;
     autoCodeExpiryDays?: number;
-  }, fieldNum: number, fieldTemplateHeight?: number, graphicMap?: Map<number, { graphicName: string; width: number; height: number }>): string => {
+  }, fieldNum: number, fieldTemplateHeight?: number, graphicMap?: Map<number, { graphicName: string; width: number; height: number }>, counterSlotConfigs?: Map<number, { digits: number; leadingZeroes: boolean }>): string => {
     const fontCode = fontToProtocolCode(field.fontSize);
 
     // DataMatrix ECC200 (software-generated): use ^AL logo reference instead of ^AB
