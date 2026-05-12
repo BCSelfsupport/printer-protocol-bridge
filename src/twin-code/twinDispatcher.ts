@@ -661,7 +661,12 @@ export interface TwinDispatcherOptions {
 export async function seedTwinPairMessages(
   pair: TwinPairState,
   knownPrinters: Printer[],
-  opts: Pick<TwinDispatcherOptions, 'messageNameA' | 'messageNameB' | 'autoCreateA' | 'autoCreateB'>,
+  opts: Pick<TwinDispatcherOptions, 'messageNameA' | 'messageNameB' | 'autoCreateA' | 'autoCreateB'> & {
+    /** Optional seed override for side A — replaces the default LID seed. */
+    seedA?: MessageSeed;
+    /** Optional seed override for side B — replaces the default SIDE seed. */
+    seedB?: MessageSeed;
+  },
 ): Promise<BoundPairResult> {
   type SeedResult = { ok: boolean; error?: string; seeded?: boolean };
   if (!pair.a || !pair.b) return { ok: false, error: 'Twin pair not configured' };
@@ -683,12 +688,14 @@ export async function seedTwinPairMessages(
     try {
       const nameA = opts.messageNameA ?? pair.a.messageName ?? 'LID';
       const nameB = opts.messageNameB ?? pair.b.messageName ?? 'SIDE';
+      const seedAUsed = opts.seedA ?? seedForSide('A');
+      const seedBUsed = opts.seedB ?? seedForSide('B');
       const [resA, resB] = await Promise.all([
         opts.autoCreateA
-          ? a.ensureSeedMessage(nameA, seedForSide('A'))
+          ? a.ensureSeedMessage(nameA, seedAUsed)
           : Promise.resolve<SeedResult>({ ok: true, seeded: false }),
         opts.autoCreateB
-          ? b.ensureSeedMessage(nameB, seedForSide('B'))
+          ? b.ensureSeedMessage(nameB, seedBUsed)
           : Promise.resolve<SeedResult>({ ok: true, seeded: false }),
       ]);
       if (!resA.ok || !resB.ok) return { ok: false, error: resA.error || resB.error || 'Message auto-create failed' };
