@@ -284,7 +284,7 @@ export function previewAutoCodeSerial(
 ): string {
   const line = (opts.line || "").trim();
   const unit = (opts.unit || "").trim();
-  const y = (sample.yearChar ?? "A").slice(0, 1).toUpperCase();
+  const y = (sample.yearChar ?? letterForCurrentYear(opts.yearMap)).slice(0, 1).toUpperCase();
   const d = (sample.doy ?? 132).toString().padStart(3, "0");
   const c = (sample.counter ?? 1).toString().padStart(6, "0");
   return `${line}${y}${d}${c}${unit}`;
