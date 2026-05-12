@@ -91,6 +91,7 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
     line: "27",
     unit: "U",
     counterSlot: 1,
+    counterStart: 1,
     yearMap: defaultYearMap(6),
   });
   const autoCodePreview = previewAutoCodeSerial(autoCodeOpts);
