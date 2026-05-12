@@ -205,12 +205,12 @@ export function CatalogStripBar() {
       setCsvText(null);
       if (!res.ok) {
         toast({ title: "Couldn't stage on deck", description: res.reason, variant: "destructive" });
-      } else {
-        toast({
-          title: `Staged on deck: ${filename}`,
-          description: `${serials.length.toLocaleString()} serials. Will auto-promote when remaining \u2264 ${queueState.lowWater.toLocaleString()}.`,
-        });
+        return;
       }
+      toast({
+        title: `Staged on deck: ${filename}`,
+        description: `${serials.length.toLocaleString()} serials. Will auto-promote when remaining \u2264 ${queueState.lowWater.toLocaleString()}.`,
+      });
       return;
     }
     const { matchesPersisted } = catalog.load(serials);
