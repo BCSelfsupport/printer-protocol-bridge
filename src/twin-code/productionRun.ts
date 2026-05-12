@@ -108,6 +108,23 @@ export interface ProductionRunMeta {
       b: { widthDots: number | null; delayDots: number | null } | null;
     } | null;
   } | null;
+  /**
+   * Catalog segments consumed by this run. The first segment is captured at
+   * Start. Each subsequent on-deck CSV that auto-promotes mid-run appends a
+   * new segment with the bottle index at which the swap took effect, so the
+   * audit export can show "bottles 1–998_412 came from CSV-A (fp=…), bottles
+   * 998_413–1_996_775 came from CSV-B (fp=…)" without losing forensic detail
+   * across midnight rollover.
+   */
+  catalogSegments?: Array<{
+    fingerprint: string;
+    /** Catalog total at the moment this segment was active. */
+    catalogTotalAtSwap: number;
+    /** Records-array index when this segment took effect. */
+    recordsIdxAtSwap: number;
+    /** Wall-clock ms when this segment took effect. */
+    swappedAtMs: number;
+  }>;
 }
 
 export interface ProductionRunSummary {
