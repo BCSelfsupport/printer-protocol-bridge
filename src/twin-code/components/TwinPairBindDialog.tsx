@@ -83,6 +83,13 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
   const [slotB, setSlotB] = useState<SlotState>(() => bindingToSlot(pair.b, "Side printer (text)", B_DEFAULTS));
   const [saving, setSaving] = useState(false);
 
+  // Auto-Code Mode: build a fully-native 5-field message on BOTH printers
+  // (line + programmable year A-Z + Julian DDD + counter slot + unit). No CSV,
+  // no per-bottle host traffic — printers self-generate every serial.
+  const [autoCodeMode, setAutoCodeMode] = useState(false);
+  const [autoCodeOpts, setAutoCodeOpts] = useState<AutoCodeSeedOpts>({ line: "27", unit: "U", counterSlot: 1 });
+  const autoCodePreview = previewAutoCodeSerial(autoCodeOpts);
+
   // Re-seed when dialog opens, so user always sees current binding
   useEffect(() => {
     if (open) {
