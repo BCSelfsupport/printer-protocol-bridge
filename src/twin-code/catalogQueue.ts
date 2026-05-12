@@ -90,17 +90,17 @@ class CatalogQueue {
    * fingerprint of the active catalog or anything already queued.
    */
   enqueue(serials: string[], filename: string): { ok: true } | { ok: false; reason: string } {
-    if (serials.length === 0) return { ok: false, reason: "CSV is empty." };
+    if (serials.length === 0) return { ok: false as const, reason: "CSV is empty." };
     const bad = serials.findIndex((s) => !SERIAL_FORMAT.test(s));
     if (bad !== -1) {
-      return { ok: false, reason: `Row ${bad + 1} ("${serials[bad]}") doesn't match the expected LL Y JJJ NNNNNN U shape.` };
+      return { ok: false as const, reason: `Row ${bad + 1} ("${serials[bad]}") doesn't match the expected LL Y JJJ NNNNNN U shape.` };
     }
     const fp = fingerprint(serials);
     if (catalog.getState().fingerprint === fp) {
-      return { ok: false, reason: "This file matches the currently-active catalog." };
+      return { ok: false as const, reason: "This file matches the currently-active catalog." };
     }
     if (this.state.items.some((q) => q.fingerprint === fp)) {
-      return { ok: false, reason: "This file is already on deck." };
+      return { ok: false as const, reason: "This file is already on deck." };
     }
     const item: QueuedCatalog = { fingerprint: fp, filename, serials, addedAt: Date.now() };
     this.state = { ...this.state, items: [...this.state.items, item] };
