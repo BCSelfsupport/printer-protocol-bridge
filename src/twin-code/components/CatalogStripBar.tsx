@@ -499,6 +499,75 @@ export function CatalogStripBar() {
         </div>
       </div>
 
+      {/* On-deck queue — visible whenever there's at least one staged file or
+          the operator changed the low-water mark. Stays out of the way otherwise. */}
+      {queueState.items.length > 0 && (
+        <div className="rounded-md border border-primary/30 bg-primary/5 p-2.5" data-tour="catalog-queue">
+          <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px]">
+            <div className="flex items-center gap-1.5 font-semibold text-primary">
+              <Layers className="h-3.5 w-3.5" />
+              On deck ({queueState.items.length})
+              <span className="font-normal text-muted-foreground">
+                · auto-promote at remaining \u2264
+              </span>
+              <Input
+                type="number"
+                min={0}
+                step={500}
+                value={queueState.lowWater}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value, 10);
+                  catalogQueue.setLowWater(Number.isFinite(n) ? n : 0);
+                }}
+                className="h-6 w-20 px-1.5 text-xs"
+              />
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-[10px]"
+              onClick={() => catalogQueue.clear()}
+            >
+              <Trash2 className="mr-1 h-3 w-3" /> clear all
+            </Button>
+          </div>
+          <ul className="space-y-1">
+            {queueState.items.map((q, i) => (
+              <li
+                key={q.fingerprint}
+                className="flex items-center gap-2 rounded border border-border bg-card px-2 py-1 text-[11px]"
+              >
+                <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+                <span className="font-mono text-muted-foreground">#{i + 1}</span>
+                <span className="truncate font-medium" title={q.filename}>{q.filename}</span>
+                <span className="font-mono text-muted-foreground">
+                  {q.serials.length.toLocaleString()} serials
+                </span>
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  fp <span className="text-foreground">{q.fingerprint}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => catalogQueue.removeAt(i)}
+                  className="ml-auto rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                  aria-label="Remove from queue"
+                  title="Remove from queue"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+          {queueState.lastPromotion && (
+            <div className="mt-1.5 text-[10px] text-muted-foreground">
+              Last promoted: <span className="font-medium text-foreground">{queueState.lastPromotion.filename}</span>
+              {' '}\u00b7 +{queueState.lastPromotion.appended.toLocaleString()} serials
+              {queueState.lastPromotion.skipped > 0 && ` (${queueState.lastPromotion.skipped} skipped)`}
+            </div>
+          )}
+        </div>
+      )}
+
       <StartRunDialog open={startOpen} onOpenChange={setStartOpen} onStarted={() => { /* no-op */ }} />
       <PreflightDialog open={preflightOpen} onOpenChange={setPreflightOpen} />
 
