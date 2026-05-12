@@ -297,6 +297,109 @@ class PrinterSession {
    *
    * Returns `seeded: false` when the message was already there.
    */
+  /**
+   * Build a normalized signature of the seed's fields for content comparison.
+   * Extracts ordered field-command kinds (AT/AB/AP/AD/AC/NF) and field count
+   * from the seed's ^NM + ^NF lines. Two seeds with the same signature share
+   * the same field topology — that's what we compare against the printer's
+   * ^LF response to decide whether the on-printer message needs refreshing.
+   */
+  private seedSignature(seed: MessageSeed): { count: number; kinds: string[] } {
+    const kinds: string[] = [];
+    for (const cmd of seed.commandsTemplate) {
+      // Match every ^Axn occurrence (AT, AB, AP, AD, AC) inside ^NM/^NF lines.
+      const re = /\^(A[TBPDC])\d+;/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(cmd)) !== null) kinds.push(m[1].toUpperCase());
+    }
+    return { count: kinds.length, kinds };
+  }
+
+  /**
+   * Query ^LF for the currently-selected message and derive a comparable
+   * signature (field count + ordered kinds where parseable). ^LF format
+   * varies by firmware so we degrade gracefully: if we can't parse types,
+   * we still get a count for a coarse mismatch check.
+   */
+  private async printerSignature(
+    messageName: string,
+  ): Promise<{ count: number; kinds: string[] } | null> {
+    // Select the message first so ^LF reports its fields, not whatever was active.
+    const sm = await printerTransport.sendCommand(this.printerId, `^SM ${messageName}`, { maxWaitMs: 4000 });
+    if (!sm?.success) return null;
+    await new Promise(res => setTimeout(res, 200));
+    const lf = await printerTransport.sendCommand(this.printerId, '^LF', { maxWaitMs: 4000 });
+    if (!lf?.success) return null;
+    const text = (lf.response || '').replace(/^\^LF\s*/i, '');
+    const kinds: string[] = [];
+    // Try to extract per-field type tokens. Map firmware labels back to the
+    // ^Ax command letter we use in seedSignature so the two are comparable.
+    const typeMap: Record<string, string> = {
+      text: 'AT', barcode: 'AB', datamatrix: 'AB', dm: 'AB', qr: 'AB',
+      code128: 'AB', code39: 'AB', ean: 'AB', upc: 'AB',
+      programmable: 'AP', programyear: 'AP', programday: 'AP',
+      date: 'AD', time: 'AD', julian: 'AD', day: 'AD',
+      counter: 'AC', count: 'AC',
+    };
+    const lineRe = /(?:field|fld)\s*[:#]?\s*(\d+)[^\r\n]*?\b(text|barcode|datamatrix|dm|qr|code\s*128|code\s*39|ean|upc|programmable|program\s*year|program\s*day|date|time|julian|day|counter|count)\b/gi;
+    const byIdx = new Map<number, string>();
+    let m: RegExpExecArray | null;
+    while ((m = lineRe.exec(text)) !== null) {
+      const key = m[2].toLowerCase().replace(/\s+/g, '');
+      if (typeMap[key]) byIdx.set(parseInt(m[1], 10), typeMap[key]);
+    }
+    if (byIdx.size > 0) {
+      const sorted = [...byIdx.entries()].sort((a, b) => a[0] - b[0]);
+      for (const [, k] of sorted) kinds.push(k);
+      return { count: kinds.length, kinds };
+    }
+    // Fallback: count parseable field lines.
+    const idx = new Set<number>();
+    const idxRe = /(?:field|fld)\s*[:#]?\s*(\d+)/gi;
+    while ((m = idxRe.exec(text)) !== null) idx.add(parseInt(m[1], 10));
+    if (idx.size === 0) {
+      const lineCount = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean).length;
+      return { count: lineCount, kinds: [] };
+    }
+    return { count: idx.size, kinds: [] };
+  }
+
+  /** True when the printer's signature is recoverable AND clearly differs from the seed's. */
+  private signatureMismatch(
+    expected: { count: number; kinds: string[] },
+    actual: { count: number; kinds: string[] } | null,
+  ): boolean {
+    if (!actual) return false; // can't tell — don't clobber
+    if (actual.count !== expected.count) return true;
+    if (actual.kinds.length === expected.kinds.length && actual.kinds.length > 0) {
+      for (let i = 0; i < expected.kinds.length; i++) {
+        if (actual.kinds[i] !== expected.kinds[i]) return true;
+      }
+    }
+    return false;
+  }
+
+  private async runSeedCommands(
+    target: string,
+    seed: MessageSeed,
+  ): Promise<{ ok: boolean; error?: string; responses: string[] }> {
+    const cmds = buildSeedCommands(seed, target);
+    const responses: string[] = [];
+    for (const cmd of cmds) {
+      const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000 });
+      responses.push(`${cmd.slice(0, 30)} → ${r?.success ? 'ACK' : 'NAK'}${r?.response ? ` "${r.response.trim().slice(0, 80)}"` : ''}`);
+      if (!r?.success && !cmd.startsWith('^DM')) {
+        return {
+          ok: false,
+          error: `${this.label}: seed cmd "${cmd.slice(0, 40)}..." failed${r?.response ? `: ${r.response.trim()}` : ''}`,
+          responses,
+        };
+      }
+      await new Promise(res => setTimeout(res, 300));
+    }
+    return { ok: true, responses };
+  }
+
   private async ensureMessage(
     messageName: string,
     seed: MessageSeed,
@@ -313,34 +416,31 @@ class PrinterSession {
       return { ok: false, error: `${this.label}: ^LM failed (cannot verify message exists)` };
     }
     const list = lm.response || '';
-    // ^LM returns one message name per line (with optional metadata after).
-    // Match exact name, case-insensitive, surrounded by line boundaries or whitespace.
     const exists = new RegExp(
       `(^|[\\r\\n\\s])${target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=[\\r\\n\\s]|$)`,
       'i',
     ).test(list);
-    if (exists) return { ok: true, seeded: false };
 
-    // Missing → seed. Send sequentially; ^DM is best-effort (ignored if absent).
-    const cmds = buildSeedCommands(seed, target);
-    const responses: string[] = [];
-    for (const cmd of cmds) {
-      const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000 });
-      responses.push(`${cmd.slice(0, 30)} → ${r?.success ? 'ACK' : 'NAK'}${r?.response ? ` "${r.response.trim().slice(0, 80)}"` : ''}`);
-      // ^DM may legitimately fail if the message wasn't there — that's expected, not an error.
-      if (!r?.success && !cmd.startsWith('^DM')) {
-        return {
-          ok: false,
-          error: `${this.label}: seed cmd "${cmd.slice(0, 40)}..." failed${r?.response ? `: ${r.response.trim()}` : ''}`,
-        };
+    const expectedSig = this.seedSignature(seed);
+
+    if (exists) {
+      // Compare on-printer field topology against the seed. If they don't
+      // match (e.g. the printer still has an old single-field LID but we now
+      // want the 5-field auto-code), delete + recreate so both printers run
+      // exactly the message the bind dialog asked for.
+      const actualSig = await this.printerSignature(target);
+      if (!this.signatureMismatch(expectedSig, actualSig)) {
+        return { ok: true, seeded: false };
       }
-      // Small delay between protocol writes — firmware needs time to commit ^NM before ^SV.
-      await new Promise(res => setTimeout(res, 300));
+      console.info('[TwinSeed] content mismatch — refreshing', { target, expected: expectedSig, actual: actualSig });
     }
 
-    // VERIFY: re-query ^LM to confirm the message actually persisted. If the
-    // firmware silently rejected ^NM (bad field syntax, template mismatch,
-    // out-of-range parameter), the previous loop sees ACKs but no message.
+    // Missing OR mismatched → seed (the seed's first ^DM handles overwrite).
+    const seedRun = await this.runSeedCommands(target, seed);
+    if (!seedRun.ok) return { ok: false, error: seedRun.error };
+    const responses = seedRun.responses;
+
+    // VERIFY: re-query ^LM to confirm the message actually persisted.
     await new Promise(res => setTimeout(res, 500));
     const verify = await printerTransport.sendCommand(this.printerId, '^LM', { maxWaitMs: 4000 });
     const verifyList = verify?.response || '';
