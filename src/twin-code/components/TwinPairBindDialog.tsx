@@ -277,14 +277,15 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
                 </div>
               </div>
 
-              {/* Programmable Year setup — table that drives ^AP t=8 (1 letter / year).
-                  MUST match the table configured on each printer (Setup → Program
-                  Date Codes → Program Year) or the live serial will use a different
-                  letter than this preview shows. */}
-              <div className="rounded border border-dashed border-border bg-background/40 p-2 space-y-1.5">
+              {/* Programmable Year setup — REFERENCE ONLY. Protocol v2.6 has no remote
+                  command to push the Program Year table; this editor is a preview/checklist
+                  to remind the operator what to enter on each printer's HMI. The seed sends
+                  ^AP …;9 (date type 9 = "Year 2-digit") which the printer resolves through
+                  whatever mapping is currently configured on the device. */}
+              <div className="rounded border border-dashed border-amber-500/50 bg-amber-500/5 p-2 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[11px] font-semibold">
-                    Program Year setup <span className="text-muted-foreground font-normal">(year → letter)</span>
+                  <Label className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                    Program Year reference <span className="text-muted-foreground font-normal">(must be entered on each printer's HMI)</span>
                   </Label>
                   <button
                     type="button"
@@ -321,11 +322,11 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
                       );
                     })}
                 </div>
-                <p className="text-[10px] text-muted-foreground leading-snug">
-                  This year ({thisYear}) prints as <span className="font-mono font-semibold text-primary">{todaysYearLetter}</span>.
-                  This same table must be configured on BOTH printers via{" "}
-                  <span className="font-medium">Setup → Program Date Codes → Program Year</span>{" "}
-                  so the lid DM and side text resolve identically.
+                <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-snug">
+                  ⚠ This year ({thisYear}) should print as <span className="font-mono font-semibold">{todaysYearLetter}</span>.
+                  v2.6 has no remote command to push this table — you MUST enter it on each printer
+                  via <span className="font-medium">Setup → Program Date Codes → Program Year</span> before binding,
+                  or <code>^NM</code> will be silently rejected and bind will fail.
                 </p>
               </div>
 
