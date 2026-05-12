@@ -442,14 +442,14 @@ class ConveyorSim {
 
     setTimeout(() => {
       try {
-        catalog.recordPrinted(serial, bottle.id);
+        if (!autoCodeMode) catalog.recordPrinted(serial, bottle.id);
         bottle.state = "printed";
         bottle.cycleMs = cycleMs;
         bottle.skewMs = skewMs;
       } catch (err) {
         console.error('[twin-sim] duplicate-serial guard:', err);
         bottle.state = "missed";
-        catalog.recordMissed(bottle.id);
+        if (!autoCodeMode) catalog.recordMissed(bottle.id);
       }
     }, settleAfterMs);
 
