@@ -187,16 +187,32 @@ export function CatalogStripBar() {
   // Dry-run was merged into Pre-flight (PreflightDialog) — one operator
   // gate before starting a real run, with raw timing stats inside.
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>, target: "active" | "queue") => {
     const file = e.target.files?.[0];
     if (!file) return;
     const text = await file.text();
     setCsvText(text);
+    setCsvFilename(file.name || "catalog.csv");
+    setCsvTarget(target);
     setPickerOpen(true);
     e.target.value = "";
   };
 
-  const handleConfirmCsv = (serials: string[]) => {
+  const handleConfirmCsv = (serials: string[], target: "active" | "queue", filename: string) => {
+    if (target === "queue") {
+      const res = catalogQueue.enqueue(serials, filename);
+      setPickerOpen(false);
+      setCsvText(null);
+      if (!res.ok) {
+        toast({ title: "Couldn't stage on deck", description: res.reason, variant: "destructive" });
+      } else {
+        toast({
+          title: `Staged on deck: ${filename}`,
+          description: `${serials.length.toLocaleString()} serials. Will auto-promote when remaining \u2264 ${queueState.lowWater.toLocaleString()}.`,
+        });
+      }
+      return;
+    }
     const { matchesPersisted } = catalog.load(serials);
     setPickerOpen(false);
     setCsvText(null);
