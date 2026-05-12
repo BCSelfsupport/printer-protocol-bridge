@@ -43,6 +43,7 @@ export function StartRunDialog({
   const pair = useTwinPair();
   const isLive = twinDispatcher.isBound();
   const pairBound = !!(pair.a && pair.b);
+  const autoCodeMode = !!pair.autoCodeMode;
   const remaining = Math.max(0, cat.total - cat.nextIndex);
 
   const [lot, setLot] = useState("");
