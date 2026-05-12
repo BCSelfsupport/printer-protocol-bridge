@@ -187,6 +187,13 @@ export interface AutoCodeSeedOpts {
    */
   counterSlot: 1 | 2 | 3 | 4;
   /**
+   * Optional starting value for the counter slot. Pushed via ^CC S<n> + ^CN
+   * to BOTH printers when the pair is bound, so an operator can re-zero (or
+   * re-seed mid-run after rejects) without touching either printer's HMI.
+   * Defaults to 1.
+   */
+  counterStart?: number;
+  /**
    * Programmable Year table — calendar year → single letter (A-Z) printed
    * by the ^AP t=8 field. Must be configured IDENTICALLY on both printers
    * via Setup → Program Date Codes → Program Year before this mode prints
