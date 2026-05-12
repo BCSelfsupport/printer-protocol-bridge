@@ -87,8 +87,15 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
   // (line + programmable year A-Z + Julian DDD + counter slot + unit). No CSV,
   // no per-bottle host traffic — printers self-generate every serial.
   const [autoCodeMode, setAutoCodeMode] = useState(false);
-  const [autoCodeOpts, setAutoCodeOpts] = useState<AutoCodeSeedOpts>({ line: "27", unit: "U", counterSlot: 1 });
+  const [autoCodeOpts, setAutoCodeOpts] = useState<AutoCodeSeedOpts>({
+    line: "27",
+    unit: "U",
+    counterSlot: 1,
+    yearMap: defaultYearMap(6),
+  });
   const autoCodePreview = previewAutoCodeSerial(autoCodeOpts);
+  const todaysYearLetter = letterForCurrentYear(autoCodeOpts.yearMap);
+  const thisYear = new Date().getFullYear();
 
   // Re-seed when dialog opens, so user always sees current binding
   useEffect(() => {
