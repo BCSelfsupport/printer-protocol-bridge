@@ -718,6 +718,12 @@ export interface TwinDispatchResult {
 
 export interface TwinDispatchOptions {
   forceTrigger?: boolean;
+  /**
+   * Auto-Code Mode: SIDE printer auto-counts natively, so we MUST NOT push
+   * ^MD to B (would overwrite a static text field). Only LID gets the ^MD^BD
+   * push so its DataMatrix encodes the same serial. B just gets a Print Go.
+   */
+  autoCode?: boolean;
 }
 
 export interface TwinDispatcherOptions {
