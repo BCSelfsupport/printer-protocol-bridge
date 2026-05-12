@@ -105,10 +105,23 @@ function read(): TwinPairState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw);
+    const slot = parsed?.autoCodeOpts?.counterSlot;
+    const slotNum = (slot === 1 || slot === 2 || slot === 3 || slot === 4) ? slot : undefined;
     return {
       a: migrateBinding(parsed.a),
       b: migrateBinding(parsed.b),
       boundAt: parsed.boundAt ?? null,
+      autoCodeMode: parsed.autoCodeMode === true,
+      autoCodeOpts: parsed.autoCodeOpts && slotNum
+        ? {
+            line: typeof parsed.autoCodeOpts.line === "string" ? parsed.autoCodeOpts.line : "27",
+            unit: typeof parsed.autoCodeOpts.unit === "string" ? parsed.autoCodeOpts.unit : "U",
+            counterSlot: slotNum,
+            yearMap: parsed.autoCodeOpts.yearMap && typeof parsed.autoCodeOpts.yearMap === "object"
+              ? parsed.autoCodeOpts.yearMap
+              : undefined,
+          }
+        : undefined,
     };
   } catch {
     return EMPTY;
