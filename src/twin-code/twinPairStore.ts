@@ -57,6 +57,28 @@ export interface TwinPairState {
   b: TwinPrinterBinding | null;
   /** ISO timestamp of the last successful bind. */
   boundAt: string | null;
+  /**
+   * When true, the bound pair is in **Auto-Code Mode**: both printers were
+   * seeded with the 5-field native auto-code message (line + program year +
+   * Julian DDD + counter slot + unit) and serials are NOT supplied via CSV.
+   *
+   * Side B (text) prints natively from its own counter; the dispatcher
+   * only pushes a host-computed serial to side A so the LID DataMatrix
+   * encodes exactly what side B physically prints. See
+   * `mem://features/twin-code-auto-create-messages`.
+   */
+  autoCodeMode?: boolean;
+  /**
+   * Snapshot of the AutoCodeSeedOpts used at the moment of bind — needed
+   * by the dispatcher to compute the live LID serial each cycle and by the
+   * StartRunDialog to skip the catalog gate.
+   */
+  autoCodeOpts?: {
+    line: string;
+    unit: string;
+    counterSlot: 1 | 2 | 3 | 4;
+    yearMap?: Record<number, string>;
+  };
 }
 
 const STORAGE_KEY = "twin-code:pair-binding:v1";
