@@ -106,6 +106,9 @@ class CatalogQueue {
     this.state = { ...this.state, items: [...this.state.items, item] };
     this.persist();
     this.notify();
+    // If active catalog already at/below low-water, promote immediately —
+    // otherwise we'd have to wait for the next catalog tick.
+    this.tryPromote(false);
     return { ok: true };
   }
 
