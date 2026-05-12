@@ -245,7 +245,7 @@ export function CatalogStripBar() {
 
   const printed = cat.consumedCount - cat.missCount;
   // `remaining` is computed above (used by the low-catalog watcher); reused here.
-  const lowActive = cat.total > 0 && remaining > 0 && remaining <= lowThreshold;
+  const lowActive = !autoCodeMode && cat.total > 0 && remaining > 0 && remaining <= lowThreshold;
 
   return (
     <div className="space-y-2">
