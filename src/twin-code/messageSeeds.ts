@@ -179,6 +179,28 @@ export interface AutoCodeSeedOpts {
    * with leading zeros, rolling over at 999999.
    */
   counterSlot: 1 | 2 | 3 | 4;
+  /**
+   * Programmable Year table — calendar year → single letter (A-Z) printed
+   * by the ^AP t=8 field. Must be configured IDENTICALLY on both printers
+   * via Setup → Program Date Codes → Program Year before this mode prints
+   * a real serial. The dialog ships with a default A=current year, B=+1, etc.
+   */
+  yearMap?: Record<number, string>;
+}
+
+/** Build a default A=thisYear, B=+1, ... mapping spanning N years. */
+export function defaultYearMap(years = 6, startYear = new Date().getFullYear()): Record<number, string> {
+  const map: Record<number, string> = {};
+  for (let i = 0; i < years && i < 26; i++) {
+    map[startYear + i] = String.fromCharCode(65 + i); // A, B, C, ...
+  }
+  return map;
+}
+
+/** Look up today's programmable-year letter from a year map (fallback "A"). */
+export function letterForCurrentYear(map?: Record<number, string>): string {
+  const y = new Date().getFullYear();
+  return (map?.[y] || "A").slice(0, 1).toUpperCase();
 }
 
 /**
