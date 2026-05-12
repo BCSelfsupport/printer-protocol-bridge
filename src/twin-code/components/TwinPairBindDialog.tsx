@@ -277,57 +277,27 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
                 </div>
               </div>
 
-              {/* Programmable Year setup — REFERENCE ONLY. Protocol v2.6 has no remote
-                  command to push the Program Year table; this editor is a preview/checklist
-                  to remind the operator what to enter on each printer's HMI. The seed sends
-                  ^AP …;8 (programmable 1-digit year) which the printer resolves through
-                  whatever mapping is currently configured on the device. */}
-              <div className="rounded border border-dashed border-amber-500/50 bg-amber-500/5 p-2 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
-                    Program Year reference <span className="text-muted-foreground font-normal">(must be entered on each printer's HMI)</span>
-                  </Label>
-                  <button
-                    type="button"
-                    onClick={() => setAutoCodeOpts({ ...autoCodeOpts, yearMap: defaultYearMap(6) })}
-                    className="text-[10px] text-muted-foreground hover:text-foreground underline"
-                  >
-                    Reset (A = {thisYear})
-                  </button>
+              {/* HMI prerequisites — neither the Program Year table nor the Counter
+                  configuration can be pushed remotely (protocol v2.6 limitation).
+                  Both MUST be entered on each printer's HMI before binding. */}
+              <div className="rounded border border-dashed border-amber-500/50 bg-amber-500/5 p-2.5 space-y-2">
+                <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                  ⚠ Set up on each printer's HMI first
                 </div>
-                <div className="grid grid-cols-6 gap-1">
-                  {Object.entries(autoCodeOpts.yearMap ?? {})
-                    .sort(([a], [b]) => Number(a) - Number(b))
-                    .map(([year, letter]) => {
-                      const yNum = Number(year);
-                      const isCurrent = yNum === thisYear;
-                      return (
-                        <div key={year} className="flex flex-col items-center">
-                          <span className={`text-[9px] ${isCurrent ? "text-primary font-semibold" : "text-muted-foreground"}`}>
-                            {year}
-                          </span>
-                          <Input
-                            value={letter}
-                            onChange={(e) => {
-                              const v = e.target.value.replace(/[^A-Za-z]/g, "").slice(0, 1).toUpperCase();
-                              setAutoCodeOpts({
-                                ...autoCodeOpts,
-                                yearMap: { ...(autoCodeOpts.yearMap ?? {}), [yNum]: v },
-                              });
-                            }}
-                            className={`h-7 px-1 text-center font-mono text-xs ${isCurrent ? "border-primary" : ""}`}
-                            maxLength={1}
-                          />
-                        </div>
-                      );
-                    })}
-                </div>
-                <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-snug">
-                  ⚠ This year ({thisYear}) should print as <span className="font-mono font-semibold">{todaysYearLetter}</span>.
-                  v2.6 has no remote command to push this table — you MUST enter it on each printer
-                  via <span className="font-medium">Setup → Program Date Codes → Program Year</span> before binding.
-                  The bind wire trace must show <code>^AP…;8</code>; <code>^AP…;9</code> is invalid for Program Year and will fail.
-                </p>
+                <ul className="space-y-1.5 text-[10px] text-amber-700 dark:text-amber-400 leading-snug list-none">
+                  <li>
+                    <span className="font-semibold">1. Programmable Year</span> —{" "}
+                    <span className="font-medium">Setup → Program Date Codes → Program Year</span>.
+                    Map this year ({thisYear}) to a letter (e.g. <span className="font-mono font-semibold">{todaysYearLetter}</span>),
+                    next year to the next letter, etc. Both printers must have an IDENTICAL table.
+                  </li>
+                  <li>
+                    <span className="font-semibold">2. Counter slot {autoCodeOpts.counterSlot}</span> —{" "}
+                    <span className="font-medium">Setup → Counters</span>. Configure 6 digits, leading
+                    zeros, start at 000001, rollover at 999999. Both printers must use the same slot
+                    and start value, then Reset to zero them before the run.
+                  </li>
+                </ul>
               </div>
 
               <div className="rounded bg-background/80 p-2 text-center font-mono text-base tracking-wider">
