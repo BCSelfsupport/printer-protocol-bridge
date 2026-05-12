@@ -77,6 +77,8 @@ export interface TwinPairState {
     line: string;
     unit: string;
     counterSlot: 1 | 2 | 3 | 4;
+    /** Starting value for the counter slot — pushed via ^CC/^CN on bind. */
+    counterStart?: number;
     yearMap?: Record<number, string>;
   };
 }
@@ -117,6 +119,9 @@ function read(): TwinPairState {
             line: typeof parsed.autoCodeOpts.line === "string" ? parsed.autoCodeOpts.line : "27",
             unit: typeof parsed.autoCodeOpts.unit === "string" ? parsed.autoCodeOpts.unit : "U",
             counterSlot: slotNum,
+            counterStart: Number.isFinite(parsed.autoCodeOpts.counterStart) && parsed.autoCodeOpts.counterStart >= 0
+              ? Math.floor(parsed.autoCodeOpts.counterStart)
+              : undefined,
             yearMap: parsed.autoCodeOpts.yearMap && typeof parsed.autoCodeOpts.yearMap === "object"
               ? parsed.autoCodeOpts.yearMap
               : undefined,

@@ -91,6 +91,7 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
     line: "27",
     unit: "U",
     counterSlot: 1,
+    counterStart: 1,
     yearMap: defaultYearMap(6),
   });
   const autoCodePreview = previewAutoCodeSerial(autoCodeOpts);
@@ -111,6 +112,7 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
             line: pair.autoCodeOpts.line,
             unit: pair.autoCodeOpts.unit,
             counterSlot: pair.autoCodeOpts.counterSlot,
+            counterStart: pair.autoCodeOpts.counterStart ?? 1,
             yearMap: pair.autoCodeOpts.yearMap ?? defaultYearMap(6),
           });
         }
@@ -206,6 +208,12 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
       autoCreateB: b.autoCreate ?? true,
       seedA: autoCodeMode ? buildAutoCodeSeed(autoCodeOpts, "A") : undefined,
       seedB: autoCodeMode ? buildAutoCodeSeed(autoCodeOpts, "B") : undefined,
+      counterConfig: autoCodeMode ? {
+        slot: autoCodeOpts.counterSlot,
+        start: Math.max(0, Math.floor(autoCodeOpts.counterStart ?? 1)),
+        digits: 6,
+        leadingZero: true,
+      } : undefined,
     });
     setSaving(false);
     if (!res.ok) {
@@ -291,25 +299,52 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
                 </div>
               </div>
 
-              {/* HMI prerequisites — neither the Program Year table nor the Counter
-                  configuration can be pushed remotely (protocol v2.6 limitation).
-                  Both MUST be entered on each printer's HMI before binding. */}
+              {/* Start count — pushed via ^CC S<n> + ^CN <slot>;<n> to BOTH
+                  printers on bind, so the operator can re-zero (or re-seed
+                  mid-run after rejects) without touching either HMI. */}
+              <div className="grid grid-cols-3 gap-2 items-end">
+                <div className="col-span-1">
+                  <Label htmlFor="ac-start" className="text-[11px]">Start count</Label>
+                  <Input
+                    id="ac-start"
+                    type="number"
+                    min={0}
+                    max={999999}
+                    step={1}
+                    value={autoCodeOpts.counterStart ?? 1}
+                    onChange={(e) => {
+                      const n = Math.max(0, Math.min(999999, Math.floor(Number(e.target.value) || 0)));
+                      setAutoCodeOpts({ ...autoCodeOpts, counterStart: n });
+                    }}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className="h-8 font-mono text-xs"
+                    placeholder="1"
+                  />
+                </div>
+                <div className="col-span-2 text-[10px] text-muted-foreground leading-snug pb-1">
+                  Pushed to both printers on bind via{" "}
+                  <span className="font-mono">^CC {autoCodeOpts.counterSlot};S{autoCodeOpts.counterStart ?? 1}</span> +{" "}
+                  <span className="font-mono">^CN</span>. Use this to re-code after rejects — set to the next serial you want and re-bind.
+                </div>
+              </div>
+
+              {/* HMI prerequisite — Program Year table cannot be pushed remotely
+                  (protocol v2.6 limitation). Counter config IS now pushed via ^CC. */}
               <div className="rounded border border-dashed border-amber-500/50 bg-amber-500/5 p-2.5 space-y-2">
                 <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
                   ⚠ Set up on each printer's HMI first
                 </div>
                 <ul className="space-y-1.5 text-[10px] text-amber-700 dark:text-amber-400 leading-snug list-none">
                   <li>
-                    <span className="font-semibold">1. Programmable Year</span> —{" "}
+                    <span className="font-semibold">Programmable Year</span> —{" "}
                     <span className="font-medium">Setup → Program Date Codes → Program Year</span>.
                     Map this year ({thisYear}) to a letter (e.g. <span className="font-mono font-semibold">{todaysYearLetter}</span>),
                     next year to the next letter, etc. Both printers must have an IDENTICAL table.
                   </li>
                   <li>
-                    <span className="font-semibold">2. Counter slot {autoCodeOpts.counterSlot}</span> —{" "}
-                    <span className="font-medium">Setup → Counters</span>. Configure 6 digits, leading
-                    zeros, start at 000001, rollover at 999999. Both printers must use the same slot
-                    and start value, then Reset to zero them before the run.
+                    <span className="font-semibold">Counter slot {autoCodeOpts.counterSlot}</span> is configured automatically
+                    on bind: 6 digits, leading zeros, start at {(autoCodeOpts.counterStart ?? 1).toString().padStart(6, "0")},
+                    rollover at 999999. No HMI setup needed.
                   </li>
                 </ul>
               </div>
