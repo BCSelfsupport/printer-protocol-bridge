@@ -970,6 +970,7 @@ const Index = () => {
       localDetails.templateValue,
       isNew,
       perMessageSettings,
+      localDetails.advancedSettings?.counters,
     );
     if (!success) {
       const reason = (saveMessageContent as any).__lastError || '';
