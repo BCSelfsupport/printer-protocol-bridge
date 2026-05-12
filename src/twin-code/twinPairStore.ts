@@ -77,6 +77,8 @@ export interface TwinPairState {
     line: string;
     unit: string;
     counterSlot: 1 | 2 | 3 | 4;
+    /** Starting value for the counter slot — pushed via ^CC/^CN on bind. */
+    counterStart?: number;
     yearMap?: Record<number, string>;
   };
 }
