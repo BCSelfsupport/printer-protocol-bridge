@@ -2559,6 +2559,7 @@ export function usePrinterConnection() {
       rotation?: string;
       printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
     },
+    counterConfigs?: Array<{ id: number; startCount: number; endCount: number; leadingZeroes: boolean }>,
   ): Promise<string[] | null> => {
     if (fields.length === 0) return null;
 
