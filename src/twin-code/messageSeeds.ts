@@ -245,7 +245,11 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts): MessageSeed {
 
   // Protocol v2.6 references:
   //   §5.33.2.1 ^AT — text field
-  //   §5.33.2.7 ^AP — programmable date code (t=9 = "Year 2-digit" via Program Year HMI table → A/B/C…)
+  //   §5.33.2.7 ^AP — programmable date code (t=8 = "Year 1-digit" via Program Year HMI table → A/B/C…)
+  //   NOTE: ^AP only accepts PROGRAM table codes (5/7/8/23/24/25). Non-program
+  //   codes like t=9 (year 2-digit) are NOT valid for ^AP — the firmware silently
+  //   rejects the entire ^NM, which is the failure that breaks Auto-Code bind
+  //   when the Program Year table isn't populated AND when t≠8 is used here.
   //   §5.33.2.3 ^AD — date code (t=4 = day-of-year DDD / "Julian day")
   //   §5.33.2.x ^AC — counter field (c = hardware slot 1..4)
   //
