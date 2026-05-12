@@ -203,7 +203,7 @@ export function CatalogStripBar() {
       const res = catalogQueue.enqueue(serials, filename);
       setPickerOpen(false);
       setCsvText(null);
-      if (!res.ok) {
+      if ("reason" in res) {
         toast({ title: "Couldn't stage on deck", description: res.reason, variant: "destructive" });
         return;
       }
