@@ -330,7 +330,7 @@ const Index = () => {
     return commands;
   }, []);
 
-  const buildCounterConfigCommandSequence = useCallback((details: MessageDetails): SequencedPrinterCommand[] => {
+  const buildCounterConfigCommandSequence = useCallback((details: MessageDetails): Array<{ command: string; delayAfterMs: number }> => {
     const counters = details.advancedSettings?.counters ?? [];
     if (counters.length === 0) return [];
 
