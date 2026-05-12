@@ -23,20 +23,23 @@ describe("messageSeeds — protocol v2.6 conformance", () => {
     expect(cmds[1]).not.toMatch(/\^AT1;0;0;7;/);
   });
 
-  it("Auto-code seed uses ^AP type 8 (program year) and font 2 on template 1", () => {
+  it("Auto-code seed uses ^NM + ^NF append flow (DOZEN12 pattern), font 2, ^AP type 8", () => {
     const seed = buildAutoCodeSeed({ line: "27", unit: "U", counterSlot: 1 });
     const cmds = buildSeedCommands(seed, "AUTO");
-    const nm = cmds[1];
-    // template + name
-    expect(nm.startsWith("^NM 1;0;0;0;AUTO")).toBe(true);
-    // last segment of ^AP must be 8, never 9
-    expect(nm).toMatch(/\^AP2;\d+;0;2;8(?=\^|$)/);
-    expect(nm).not.toMatch(/\^AP\d+;\d+;\d+;\d+;9(?=\^|$)/);
-    // font 2 used in every field
-    expect(nm).toMatch(/\^AT1;0;0;2;27/);
-    expect(nm).toMatch(/\^AD3;\d+;0;2;4/);
-    expect(nm).toMatch(/\^AC4;\d+;0;2;1/);
-    expect(cmds[2]).toBe("^SV");
+    // ^DM, ^NM (header + first field), ^NF x4, ^SV  =  7 commands
+    expect(cmds.length).toBe(7);
+    expect(cmds[0]).toBe("^DM AUTO");
+    expect(cmds[1].startsWith("^NM 1;0;0;0;AUTO^AT1;0;0;2;27")).toBe(true);
+    // No additional inline fields after the first one in ^NM
+    expect(cmds[1]).not.toMatch(/\^AP/);
+    expect(cmds[1]).not.toMatch(/\^AD/);
+    expect(cmds[1]).not.toMatch(/\^AC/);
+    // The remaining four fields each get their own ^NF line
+    expect(cmds[2]).toMatch(/^\^NF \^AP2;\d+;0;2;8$/);
+    expect(cmds[3]).toMatch(/^\^NF \^AD3;\d+;0;2;4$/);
+    expect(cmds[4]).toMatch(/^\^NF \^AC4;\d+;0;2;1$/);
+    expect(cmds[5]).toMatch(/^\^NF \^AT5;\d+;0;2;U$/);
+    expect(cmds[6]).toBe("^SV");
   });
 
   it("buildSeedCommands rewrites stale ^AP …;9 → ;8 safety net", () => {
