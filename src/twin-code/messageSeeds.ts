@@ -156,11 +156,7 @@ export const SIDE_SEED: MessageSeed = {
 export function buildSeedCommands(seed: MessageSeed, messageName: string): string[] {
   const safe = messageName.trim().toUpperCase();
   return seed.commandsTemplate.map((cmd) =>
-    cmd
-      .replace(/__NAME__/g, safe)
-      // Safety net for older cached/generated Auto-Code seeds: Program Year must
-      // use ^AP type 8. Hardware rejects ^AP type 9 and then ^SV returns CmdNotRec.
-      .replace(/(\^AP\d+;\d+;\d+;\d+;)9(?=\^|$)/g, (_match, prefix) => `${prefix}8`),
+    cmd.replace(/__NAME__/g, safe),
   );
 }
 
