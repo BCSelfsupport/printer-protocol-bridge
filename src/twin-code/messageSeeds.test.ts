@@ -12,9 +12,9 @@ describe("messageSeeds — protocol v2.6 conformance", () => {
     expect(cmds[0]).toBe("^DM LID");
     expect(cmds[1]).toBe("^NM 4;0;0;0;LID^AB1;0;0;0;7;5;DRYRUN0000000");
     expect(cmds[2]).toBe("^SV");
-    // ^AB DataMatrix must be exactly 7 segments (no `r`)
+    // ^AB DataMatrix must be exactly 6 segments after `n` (x;y;f;t;s;data) — no `r`
     const ab = cmds[1].split("^AB1;")[1];
-    expect(ab.split(";").length).toBe(7);
+    expect(ab.split(";").length).toBe(6);
   });
 
   it("SIDE seed uses template 1 (7-dot) + font 2 (Standard 7-high), not font 7", () => {
