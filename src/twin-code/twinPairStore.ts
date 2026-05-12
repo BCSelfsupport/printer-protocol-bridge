@@ -57,6 +57,28 @@ export interface TwinPairState {
   b: TwinPrinterBinding | null;
   /** ISO timestamp of the last successful bind. */
   boundAt: string | null;
+  /**
+   * When true, the bound pair is in **Auto-Code Mode**: both printers were
+   * seeded with the 5-field native auto-code message (line + program year +
+   * Julian DDD + counter slot + unit) and serials are NOT supplied via CSV.
+   *
+   * Side B (text) prints natively from its own counter; the dispatcher
+   * only pushes a host-computed serial to side A so the LID DataMatrix
+   * encodes exactly what side B physically prints. See
+   * `mem://features/twin-code-auto-create-messages`.
+   */
+  autoCodeMode?: boolean;
+  /**
+   * Snapshot of the AutoCodeSeedOpts used at the moment of bind — needed
+   * by the dispatcher to compute the live LID serial each cycle and by the
+   * StartRunDialog to skip the catalog gate.
+   */
+  autoCodeOpts?: {
+    line: string;
+    unit: string;
+    counterSlot: 1 | 2 | 3 | 4;
+    yearMap?: Record<number, string>;
+  };
 }
 
 const STORAGE_KEY = "twin-code:pair-binding:v1";
@@ -83,10 +105,23 @@ function read(): TwinPairState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw);
+    const slot = parsed?.autoCodeOpts?.counterSlot;
+    const slotNum = (slot === 1 || slot === 2 || slot === 3 || slot === 4) ? slot : undefined;
     return {
       a: migrateBinding(parsed.a),
       b: migrateBinding(parsed.b),
       boundAt: parsed.boundAt ?? null,
+      autoCodeMode: parsed.autoCodeMode === true,
+      autoCodeOpts: parsed.autoCodeOpts && slotNum
+        ? {
+            line: typeof parsed.autoCodeOpts.line === "string" ? parsed.autoCodeOpts.line : "27",
+            unit: typeof parsed.autoCodeOpts.unit === "string" ? parsed.autoCodeOpts.unit : "U",
+            counterSlot: slotNum,
+            yearMap: parsed.autoCodeOpts.yearMap && typeof parsed.autoCodeOpts.yearMap === "object"
+              ? parsed.autoCodeOpts.yearMap
+              : undefined,
+          }
+        : undefined,
     };
   } catch {
     return EMPTY;
@@ -118,7 +153,16 @@ export const twinPairStore = {
     emit();
   },
   setPair(a: TwinPrinterBinding | null, b: TwinPrinterBinding | null) {
-    state = { a, b, boundAt: a && b ? new Date().toISOString() : state.boundAt };
+    state = { ...state, a, b, boundAt: a && b ? new Date().toISOString() : state.boundAt };
+    persist();
+    emit();
+  },
+  /**
+   * Persist (or clear) the auto-code mode + opts. Pass `mode=false` to flip
+   * the pair back to catalog/CSV mode without touching the IP bindings.
+   */
+  setAutoCode(mode: boolean, opts?: TwinPairState["autoCodeOpts"]) {
+    state = { ...state, autoCodeMode: mode, autoCodeOpts: mode ? opts : undefined };
     persist();
     emit();
   },
