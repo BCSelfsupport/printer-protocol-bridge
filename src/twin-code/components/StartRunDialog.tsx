@@ -341,15 +341,25 @@ export function StartRunDialog({
 }
 
 interface Gate { label: string; ok: boolean; required: boolean; }
-function buildGates(s: { remaining: number; pairBound: boolean; isLive: boolean }): Gate[] {
+function buildGates(s: { remaining: number; pairBound: boolean; isLive: boolean; autoCodeMode: boolean }): Gate[] {
+  // In Auto-Code Mode the printers self-generate every serial natively from
+  // their own counter slots — no CSV catalog is needed or used. The catalog
+  // gate would otherwise block start-up with "Catalog is empty — load a CSV first".
+  const catalogGate: Gate = s.autoCodeMode
+    ? {
+        label: "Auto-Code Mode armed — printers will self-generate serials (no CSV needed)",
+        ok: true,
+        required: true,
+      }
+    : {
+        label: s.remaining > 0
+          ? `Catalog has ${s.remaining.toLocaleString()} serials remaining`
+          : "Catalog is empty — load a CSV first",
+        ok: s.remaining > 0,
+        required: true,
+      };
   return [
-    {
-      label: s.remaining > 0
-        ? `Catalog has ${s.remaining.toLocaleString()} serials remaining`
-        : "Catalog is empty — load a CSV first",
-      ok: s.remaining > 0,
-      required: true,
-    },
+    catalogGate,
     {
       label: s.pairBound ? "Twin pair bound" : "Twin pair not bound — bind two printers",
       ok: s.pairBound,
