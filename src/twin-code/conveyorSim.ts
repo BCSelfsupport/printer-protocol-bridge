@@ -368,7 +368,7 @@ class ConveyorSim {
 
         if (res.ok) {
           try {
-            catalog.recordPrinted(serial, bottle.id);
+            if (!autoCodeMode) catalog.recordPrinted(serial, bottle.id);
             bottle.state = "printed";
             bottle.cycleMs = cycleMs;
             bottle.skewMs = skewMs;
@@ -379,13 +379,13 @@ class ConveyorSim {
             bottle.state = "missed";
             bottle.cycleMs = cycleMs;
             bottle.skewMs = skewMs;
-            catalog.recordMissed(bottle.id);
+            if (!autoCodeMode) catalog.recordMissed(bottle.id);
           }
         } else {
           bottle.state = "missed";
           bottle.cycleMs = cycleMs;
           bottle.skewMs = skewMs;
-          catalog.recordMissed(bottle.id);
+          if (!autoCodeMode) catalog.recordMissed(bottle.id);
         }
 
         // Wire the result through the fault guard — it may auto-pause the
@@ -407,7 +407,7 @@ class ConveyorSim {
       }).catch((err) => {
         // Silent fault — record as miss-print
         bottle.state = "missed";
-        catalog.recordMissed(bottle.id);
+        if (!autoCodeMode) catalog.recordMissed(bottle.id);
         console.warn('[twin-live] dispatch error', err);
       });
       // Avoid blocking the next photocell — measurements arrive async via .then
