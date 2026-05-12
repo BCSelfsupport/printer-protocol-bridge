@@ -508,7 +508,7 @@ export function CatalogStripBar() {
               <Layers className="h-3.5 w-3.5" />
               On deck ({queueState.items.length})
               <span className="font-normal text-muted-foreground">
-                · auto-promote at remaining \u2264
+                · auto-promote at remaining ≤
               </span>
               <Input
                 type="number"
@@ -561,7 +561,7 @@ export function CatalogStripBar() {
           {queueState.lastPromotion && (
             <div className="mt-1.5 text-[10px] text-muted-foreground">
               Last promoted: <span className="font-medium text-foreground">{queueState.lastPromotion.filename}</span>
-              {' '}\u00b7 +{queueState.lastPromotion.appended.toLocaleString()} serials
+              {' '}· +{queueState.lastPromotion.appended.toLocaleString()} serials
               {queueState.lastPromotion.skipped > 0 && ` (${queueState.lastPromotion.skipped} skipped)`}
             </div>
           )}
