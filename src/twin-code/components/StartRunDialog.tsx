@@ -122,7 +122,7 @@ export function StartRunDialog({
     }
   };
 
-  const gates = useMemo(() => buildGates({ remaining, pairBound, isLive }), [remaining, pairBound, isLive]);
+  const gates = useMemo(() => buildGates({ remaining, pairBound, isLive, autoCodeMode }), [remaining, pairBound, isLive, autoCodeMode]);
   const blocking = gates.some((g) => g.required && !g.ok);
   const formValid = lot.trim().length > 0 && operator.trim().length > 0;
   const canStart = formValid && !blocking && !busy;
