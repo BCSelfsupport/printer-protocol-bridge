@@ -666,7 +666,14 @@ export function downloadRunCSV(exp: ProductionRunExport) {
     `#`,
     `# === Outcome ===`,
     `# Printed: ${exp.summary.printed}  Missed: ${exp.summary.missed}  Yield: ${exp.summary.yieldPct.toFixed(2)}%`,
-    `# Catalog fingerprint: ${exp.meta.catalogFingerprint ?? ""}`,
+    `# Catalog fingerprint (final): ${exp.meta.catalogFingerprint ?? ""}`,
+    ...((exp.meta.catalogSegments && exp.meta.catalogSegments.length > 1) ? [
+      `#`,
+      `# === Catalog segments (on-deck promotions consumed by this run) ===`,
+      ...exp.meta.catalogSegments.map((s, i) =>
+        `# [${i + 1}] fp=${s.fingerprint} catalogTotal=${s.catalogTotalAtSwap} swappedAtRecordIdx=${s.recordsIdxAtSwap} swappedAtISO=${new Date(s.swappedAtMs).toISOString()}`
+      ),
+    ] : []),
     `# Records SHA-256: ${exp.recordsHash}`,
     `# Document SHA-256: ${exp.documentHash}`,
     `#`,
