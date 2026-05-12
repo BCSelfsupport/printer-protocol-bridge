@@ -208,6 +208,12 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
       autoCreateB: b.autoCreate ?? true,
       seedA: autoCodeMode ? buildAutoCodeSeed(autoCodeOpts, "A") : undefined,
       seedB: autoCodeMode ? buildAutoCodeSeed(autoCodeOpts, "B") : undefined,
+      counterConfig: autoCodeMode ? {
+        slot: autoCodeOpts.counterSlot,
+        start: Math.max(0, Math.floor(autoCodeOpts.counterStart ?? 1)),
+        digits: 6,
+        leadingZero: true,
+      } : undefined,
     });
     setSaving(false);
     if (!res.ok) {
