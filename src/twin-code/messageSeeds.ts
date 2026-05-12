@@ -260,7 +260,7 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts): MessageSeed {
 
   const fields = [
     `^AT1;${xLine};0;${FONT};${line}`,
-    `^AP2;${xYear};0;${FONT};9`,
+    `^AP2;${xYear};0;${FONT};8`,
     `^AD3;${xJulian};0;${FONT};4`,
     `^AC4;${xCounter};0;${FONT};${slot}`,
     `^AT5;${xUnit};0;${FONT};${unit}`,
