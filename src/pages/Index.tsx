@@ -833,7 +833,9 @@ const Index = () => {
     });
 
     const sequence: string[] = [];
-    sequence.push(...buildCounterConfigCommandSequence(details as MessageDetails).map((item) => item.command));
+    // Counter formatting (digits + leading zeros) is now baked into each ^AC
+    // field by buildMessageCommands per protocol v2.6 §5.33 — no separate
+    // ^CC slot config command needed (and the firmware does not accept one).
     sequence.push(...commands);
     sequence.push('^SV');
     const reselectCommandIndex = sequence.length;
