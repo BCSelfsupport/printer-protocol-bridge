@@ -288,6 +288,8 @@ export function CatalogStripBar() {
           e.preventDefault();
           const text = await file.text();
           setCsvText(text);
+          setCsvFilename(file.name || "catalog.csv");
+          setCsvTarget(cat.total === 0 ? "active" : "queue");
           setPickerOpen(true);
         }}
       >
@@ -296,7 +298,14 @@ export function CatalogStripBar() {
           type="file"
           accept=".csv,text/csv"
           className="hidden"
-          onChange={handleFile}
+          onChange={(e) => handleFile(e, "active")}
+        />
+        <input
+          ref={queueFileRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={(e) => handleFile(e, "queue")}
         />
         <Button
           size="sm"
@@ -308,6 +317,24 @@ export function CatalogStripBar() {
           <Upload className="mr-1 h-4 w-4" />
           {cat.total === 0 ? "Drop CSV here or click to browse" : "Load CSV catalog"}
         </Button>
+
+        {cat.total > 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => queueFileRef.current?.click()}
+            title="Pre-stage the next CSV. It will auto-promote when the active catalog drops below the low-water mark \u2014 keeps the line printing across midnight without operator intervention."
+            data-tour="catalog-queue-add"
+          >
+            <Layers className="mr-1 h-4 w-4" />
+            Stage next CSV
+            {queueState.items.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-mono text-primary">
+                {queueState.items.length}
+              </span>
+            )}
+          </Button>
+        )}
 
         {/* LIVE mode toggle */}
         <div
