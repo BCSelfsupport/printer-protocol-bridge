@@ -109,7 +109,7 @@ class CatalogQueue {
     // If active catalog already at/below low-water, promote immediately —
     // otherwise we'd have to wait for the next catalog tick.
     this.tryPromote(false);
-    return { ok: true };
+    return { ok: true as const };
   }
 
   removeAt(idx: number) {
