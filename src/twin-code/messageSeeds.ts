@@ -237,10 +237,38 @@ export function letterForCurrentYear(map?: Record<number, string>): string {
  * surfaces this as a counter-skew alert; the operator can re-zero both with
  * a single Reset Counters command.
  */
-export function buildAutoCodeSeed(opts: AutoCodeSeedOpts): MessageSeed {
+export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B"): MessageSeed {
   const line = (opts.line || "").trim();
   const unit = (opts.unit || "").trim();
   const slot = Math.min(4, Math.max(1, opts.counterSlot)) | 0;
+
+  // ---------------------------------------------------------------------
+  // LID (A) — single ECC200 DataMatrix 16×16 field that ENCODES the same
+  // 13-char serial the SIDE (B) printer auto-generates natively. The
+  // dispatcher's hot path pushes the live serial via ^MD^BD1;<serial>
+  // (see mem://integration/datamatrix-bd-vs-ng) — DataMatrix barcode
+  // fields are static-data only per protocol v2.6 §5.33.2.1, so the
+  // host computes the serial once per print and writes it to the lid.
+  // The placeholder data here is overwritten on the first print.
+  // ---------------------------------------------------------------------
+  if (side === "A") {
+    const sample = `${line}A132${"1".padStart(6, "0")}${unit}`;
+    return {
+      label: `Auto-code LID · DM 16×16 (${sample})`,
+      description:
+        `Single ECC200 DataMatrix 16×16 barcode field encoding the same 13-char serial ` +
+        `the SIDE printer auto-generates (line "${line}" + year + DDD + counter + "${unit}"). ` +
+        `Dispatcher overwrites the encoded data per print via ^MD^BD1.`,
+      commandsTemplate: [
+        "^DM __NAME__",
+        // Template 4 = 1×16-dot strip (matches LID_SEED). ^AB short form
+        // (DataMatrix has NO `r` segment): n;x;y;f;t;s;data
+        // t=7 DataMatrix, s=5 16×16 ECC200.
+        `^NM 4;0;0;0;__NAME__^AB1;0;0;0;7;5;${sample}`,
+        "^SV",
+      ],
+    };
+  }
 
   // Standard 7-high font: 5 dots wide + 1 dot gap = 6 dots per character.
   const W = 6;
