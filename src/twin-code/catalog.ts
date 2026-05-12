@@ -373,6 +373,48 @@ class Catalog {
     return added;
   }
 
+  /**
+   * Append more serials onto the running catalog WITHOUT touching the
+   * printedSet, records, or the cursor. Used by the on-deck queue so we can
+   * cross midnight (or any catalog-exhaustion boundary) without a
+   * `dispense() === null` ever being observed by the dispatcher.
+   *
+   * Serials already present in `printedSet` are silently skipped (with a
+   * console warn) — same posture as `dispense()`'s defensive duplicate skip.
+   * Returns counts so the UI can surface a meaningful toast.
+   *
+   * The fingerprint is recomputed over the FULL combined serial list so that
+   * peekPersisted()/resumePersisted() still detect a re-import correctly.
+   */
+  appendSerials(serials: string[]): { appended: number; skipped: number } {
+    if (serials.length === 0) return { appended: 0, skipped: 0 };
+    let appended = 0;
+    let skipped = 0;
+    let nextRowIdx = this.entries.length;
+    for (const s of serials) {
+      if (this.printedSet.has(s)) {
+        skipped++;
+        continue;
+      }
+      this.entries.push({ rowIndex: ++nextRowIdx, serial: s });
+      appended++;
+    }
+    if (appended === 0) {
+      // Still notify — the queue UI relies on the catalog tick to react.
+      this.notify();
+      return { appended: 0, skipped };
+    }
+    const fp = fingerprint(this.entries.map((e) => e.serial));
+    this.state = {
+      ...this.state,
+      total: this.entries.length,
+      fingerprint: fp,
+    };
+    this.scheduleSave();
+    this.notify();
+    return { appended, skipped };
+  }
+
   /** Reset run progress but keep the loaded catalog (and its fingerprint). */
   reset() {
     this.printedSet = new Set();

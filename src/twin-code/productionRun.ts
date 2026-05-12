@@ -108,6 +108,23 @@ export interface ProductionRunMeta {
       b: { widthDots: number | null; delayDots: number | null } | null;
     } | null;
   } | null;
+  /**
+   * Catalog segments consumed by this run. The first segment is captured at
+   * Start. Each subsequent on-deck CSV that auto-promotes mid-run appends a
+   * new segment with the bottle index at which the swap took effect, so the
+   * audit export can show "bottles 1–998_412 came from CSV-A (fp=…), bottles
+   * 998_413–1_996_775 came from CSV-B (fp=…)" without losing forensic detail
+   * across midnight rollover.
+   */
+  catalogSegments?: Array<{
+    fingerprint: string;
+    /** Catalog total at the moment this segment was active. */
+    catalogTotalAtSwap: number;
+    /** Records-array index when this segment took effect. */
+    recordsIdxAtSwap: number;
+    /** Wall-clock ms when this segment took effect. */
+    swappedAtMs: number;
+  }>;
 }
 
 export interface ProductionRunSummary {
@@ -211,6 +228,14 @@ class ProductionRunStore {
         speedCode: TWIN_DEFAULT_SPEED_CODE,
         speedLabel: TWIN_DEFAULT_SPEED_LABEL,
       } : null,
+      catalogSegments: cs.fingerprint
+        ? [{
+            fingerprint: cs.fingerprint,
+            catalogTotalAtSwap: cs.total,
+            recordsIdxAtSwap: catalog.getRecords().length,
+            swappedAtMs: Date.now(),
+          }]
+        : [],
     };
     this.state = { ...this.state, active: meta };
     // Fresh run = fresh fault history; otherwise prior shift's incidents
@@ -400,6 +425,30 @@ class ProductionRunStore {
       const active = this.state.active;
       if (!active) return;
       if (firing) return;
+
+      // Detect mid-run catalog promotions (on-deck queue auto-appended a new
+      // CSV). The fingerprint changes whenever appendSerials() runs; record a
+      // new segment so the audit can show which bottles came from which file.
+      const segs = active.catalogSegments ?? [];
+      const lastSegFp = segs.length > 0 ? segs[segs.length - 1].fingerprint : null;
+      if (cs.fingerprint && cs.fingerprint !== lastSegFp) {
+        const updated: ProductionRunMeta = {
+          ...active,
+          catalogSegments: [
+            ...segs,
+            {
+              fingerprint: cs.fingerprint,
+              catalogTotalAtSwap: cs.total,
+              recordsIdxAtSwap: catalog.getRecords().length,
+              swappedAtMs: Date.now(),
+            },
+          ],
+        };
+        this.state = { ...this.state, active: updated };
+        this.persistActive();
+        this.notify();
+      }
+
       const recordsConsumed = catalog.getRecords().length - active.recordsStartIdx;
 
       // (1) Run-length cap reached?
@@ -617,7 +666,14 @@ export function downloadRunCSV(exp: ProductionRunExport) {
     `#`,
     `# === Outcome ===`,
     `# Printed: ${exp.summary.printed}  Missed: ${exp.summary.missed}  Yield: ${exp.summary.yieldPct.toFixed(2)}%`,
-    `# Catalog fingerprint: ${exp.meta.catalogFingerprint ?? ""}`,
+    `# Catalog fingerprint (final): ${exp.meta.catalogFingerprint ?? ""}`,
+    ...((exp.meta.catalogSegments && exp.meta.catalogSegments.length > 1) ? [
+      `#`,
+      `# === Catalog segments (on-deck promotions consumed by this run) ===`,
+      ...exp.meta.catalogSegments.map((s, i) =>
+        `# [${i + 1}] fp=${s.fingerprint} catalogTotal=${s.catalogTotalAtSwap} swappedAtRecordIdx=${s.recordsIdxAtSwap} swappedAtISO=${new Date(s.swappedAtMs).toISOString()}`
+      ),
+    ] : []),
     `# Records SHA-256: ${exp.recordsHash}`,
     `# Document SHA-256: ${exp.documentHash}`,
     `#`,

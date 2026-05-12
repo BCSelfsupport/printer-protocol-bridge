@@ -4,20 +4,31 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { detectHeader, parseCSV } from "../catalog";
+import { SERIAL_FORMAT } from "../catalogQueue";
 
 interface Props {
   open: boolean;
   rawText: string | null;
+  /**
+   * "active" — replace the current catalog (initial load / new lot).
+   * "queue"  — add this CSV to the on-deck queue (continuous-run shifts).
+   */
+  target?: "active" | "queue";
+  filename?: string;
   onCancel: () => void;
-  onConfirm: (serials: string[]) => void;
+  onConfirm: (serials: string[], target: "active" | "queue", filename: string) => void;
 }
 
 /**
- * Multi-column CSV picker. Lets the user pick which column holds the serial
- * and toggle the "first row is a header" flag. Previews the first 8 rows so
- * the user can sanity-check the parse.
+ * CSV picker — column + header detection + STRICT serial-format validation.
+ *
+ * The expected shape is `LL Y JJJ NNNNNN U` (line, year, julian, serial, unit
+ * marker — Authentix-confirmed 2026-05). Rows that don't match are blocking
+ * errors: the operator must fix the source file before TwinCode will accept
+ * it. This is intentional — a malformed batch silently mixed into a live
+ * production line is a bigger problem than a rejected upload.
  */
-export function CsvColumnPickerDialog({ open, rawText, onCancel, onConfirm }: Props) {
+export function CsvColumnPickerDialog({ open, rawText, target = "active", filename = "catalog.csv", onCancel, onConfirm }: Props) {
   const rows = rawText ? parseCSV(rawText) : [];
   const [hasHeader, setHasHeader] = useState<boolean>(rows.length > 0 ? detectHeader(rows) : false);
   const [colIdx, setColIdx] = useState<number>(0);
@@ -28,33 +39,41 @@ export function CsvColumnPickerDialog({ open, rawText, onCancel, onConfirm }: Pr
   const headers = hasHeader && rows.length > 0 ? rows[0] : (rows[0] ?? []).map((_, i) => `col ${i + 1}`);
   const preview = dataRows.slice(0, 8);
   const colCount = Math.max(0, ...rows.map((r) => r.length));
-  const serialCount = dataRows.filter((r) => (r[colIdx] ?? "").trim() !== "").length;
 
-  // Customer-confirmed payload shape (Authentix): 13-char uppercase alphanumeric,
-  // identical on lid + side. We sample up to 200 rows to flag mismatches early —
-  // the most common real-world cause is Excel stripping leading zeros from a
-  // numeric-looking column, or the wrong column being picked.
-  const SERIAL_FORMAT = /^[A-Z0-9]{13}$/;
-  const sample = dataRows.slice(0, 200).map((r) => (r[colIdx] ?? "").trim()).filter(Boolean);
-  const mismatched = sample.filter((s) => !SERIAL_FORMAT.test(s));
-  const mismatchPct = sample.length === 0 ? 0 : (mismatched.length / sample.length) * 100;
-  const mismatchExample = mismatched[0];
+  // Validate EVERY non-empty row in the selected column against the customer-
+  // confirmed format. We don't sample-and-warn anymore — it's pass-or-fail.
+  const allCells = dataRows.map((r) => (r[colIdx] ?? "").trim()).filter((s) => s !== "");
+  const badIdx: number[] = [];
+  for (let i = 0; i < allCells.length; i++) {
+    if (!SERIAL_FORMAT.test(allCells[i])) badIdx.push(i);
+  }
+  const badCount = badIdx.length;
+  const badExamples = badIdx.slice(0, 3).map((i) => allCells[i]);
+  const valid = badCount === 0 && allCells.length > 0;
 
   const handleConfirm = () => {
-    const serials = dataRows
-      .map((r) => (r[colIdx] ?? "").trim())
-      .filter((s) => s !== "");
-    onConfirm(serials);
+    if (!valid) return;
+    onConfirm(allCells, target, filename);
   };
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Import catalog from CSV</DialogTitle>
+          <DialogTitle>
+            {target === "queue" ? "Stage next catalog (on-deck)" : "Import catalog from CSV"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
+          {target === "queue" && (
+            <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-[11px] text-foreground">
+              This file will sit on deck and auto-promote when the active catalog
+              drops to the low-water mark, so the line keeps printing across
+              shift changes / midnight without an operator intervention.
+            </div>
+          )}
+
           <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 p-3">
             <div className="space-y-0.5">
               <Label htmlFor="has-header" className="text-sm">First row is a header</Label>
@@ -62,15 +81,11 @@ export function CsvColumnPickerDialog({ open, rawText, onCancel, onConfirm }: Pr
                 Auto-detected: <span className="font-mono">{detectHeader(rows) ? "yes" : "no"}</span>
               </p>
             </div>
-            <Switch
-              id="has-header"
-              checked={hasHeader}
-              onCheckedChange={setHasHeader}
-            />
+            <Switch id="has-header" checked={hasHeader} onCheckedChange={setHasHeader} />
           </div>
 
           <div>
-            <Label className="text-sm">Which column holds the 13-digit serial?</Label>
+            <Label className="text-sm">Which column holds the serial?</Label>
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {Array.from({ length: colCount }, (_, i) => (
                 <Button
@@ -123,31 +138,40 @@ export function CsvColumnPickerDialog({ open, rawText, onCancel, onConfirm }: Pr
             </div>
           </div>
 
-          {mismatched.length > 0 && (
-            <div className="rounded-md border border-warning/40 bg-warning/10 p-2.5 text-[11px] text-warning">
+          {/* Format gate. Hard block — operators have to fix the CSV upstream. */}
+          {badCount > 0 ? (
+            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-[11px] text-destructive">
               <div className="font-semibold">
-                {mismatched.length} of {sample.length} sampled rows don't match the expected
-                {' '}<span className="font-mono">^[A-Z0-9]{'{13}'}$</span> serial format
-                {' '}({mismatchPct.toFixed(0)}%).
+                {badCount.toLocaleString()} of {allCells.length.toLocaleString()} rows don't match the
+                expected serial shape <span className="font-mono">LL Y JJJ NNNNNN U</span>
+                {' '}(<span className="font-mono">^\d{'{2}'}[A-Z]\d{'{3}'}\d{'{6}'}U$</span>, 13 chars).
               </div>
               <div className="mt-1 opacity-90">
-                Example: <span className="font-mono">"{mismatchExample}"</span>.
-                {' '}Common causes: wrong column selected, Excel stripped leading zeros,
-                {' '}or lower-case letters in the source. You can still load — but the
-                {' '}printers may reject these rows at dispatch.
+                Examples: {badExamples.map((s, i) => (
+                  <span key={i} className="font-mono">"{s}"{i < badExamples.length - 1 ? ', ' : ''}</span>
+                ))}
+              </div>
+              <div className="mt-2 opacity-80">
+                Common causes: wrong column selected, Excel stripped leading zeros,
+                lower-case letters in the source, or this file is for a different line.
+                Fix the source and re-upload.
               </div>
             </div>
+          ) : valid ? (
+            <p className="text-xs text-muted-foreground">
+              {target === "queue" ? "Will queue " : "Will load "}
+              <span className="font-mono font-semibold text-foreground">{allCells.length.toLocaleString()}</span> serials
+              {target === "active" && ". Existing catalog state will be cleared."}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Pick the column containing your serials.</p>
           )}
-
-          <p className="text-xs text-muted-foreground">
-            Will load <span className="font-mono font-semibold text-foreground">{serialCount}</span> serial{serialCount === 1 ? "" : "s"} into the catalog. Existing catalog state will be cleared.
-          </p>
         </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-          <Button onClick={handleConfirm} disabled={serialCount === 0}>
-            Load {serialCount} serial{serialCount === 1 ? "" : "s"}
+          <Button onClick={handleConfirm} disabled={!valid}>
+            {target === "queue" ? "Stage on deck" : `Load ${allCells.length.toLocaleString()} serials`}
           </Button>
         </DialogFooter>
       </DialogContent>

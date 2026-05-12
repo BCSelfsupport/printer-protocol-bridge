@@ -29,6 +29,9 @@ import {
   Activity,
   Factory,
   FlaskConical,
+  Layers,
+  X,
+  ChevronRight,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { StartRunDialog } from "./StartRunDialog";
@@ -44,6 +47,7 @@ import { LedgerResumeBanner } from "./LedgerResumeBanner";
 import { FaultRecoveryBanner } from "./FaultRecoveryBanner";
 import { conveyorSim } from "../conveyorSim";
 import { catalog } from "../catalog";
+import { catalogQueue, type CatalogQueueState } from "../catalogQueue";
 import { faultGuard } from "../faultGuard";
 import { useCatalog } from "../useCatalog";
 import { useTwinPair } from "../twinPairStore";
@@ -64,13 +68,30 @@ export function CatalogStripBar() {
   const run = useProductionRun();
   const runActive = !!run.active;
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const queueFileRef = useRef<HTMLInputElement | null>(null);
   const [csvText, setCsvText] = useState<string | null>(null);
+  const [csvFilename, setCsvFilename] = useState<string>("catalog.csv");
+  const [csvTarget, setCsvTarget] = useState<"active" | "queue">("active");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   const [liveBusy, setLiveBusy] = useState(false);
   const [productionMode, setProductionMode] = useProductionMode();
   const [startOpen, setStartOpen] = useState(false);
   const [preflightOpen, setPreflightOpen] = useState(false);
+  const [queueState, setQueueState] = useState<CatalogQueueState>(() => catalogQueue.getState());
+
+  useEffect(() => catalogQueue.subscribe(setQueueState), []);
+
+  // Toast on auto-promotion so the operator sees the seamless handover.
+  useEffect(() => {
+    catalogQueue.setOnPromote((q, appended, skipped) => {
+      toast({
+        title: `On-deck catalog promoted: ${q.filename}`,
+        description: `${appended.toLocaleString()} serials appended${skipped > 0 ? ` (${skipped.toLocaleString()} skipped — already printed)` : ""}.`,
+      });
+    });
+    return () => catalogQueue.setOnPromote(null);
+  }, []);
 
   // ---- Low-catalog warning settings (persisted) ----
   const [lowThreshold, setLowThreshold] = useState<number>(() => {
@@ -166,16 +187,32 @@ export function CatalogStripBar() {
   // Dry-run was merged into Pre-flight (PreflightDialog) — one operator
   // gate before starting a real run, with raw timing stats inside.
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>, target: "active" | "queue") => {
     const file = e.target.files?.[0];
     if (!file) return;
     const text = await file.text();
     setCsvText(text);
+    setCsvFilename(file.name || "catalog.csv");
+    setCsvTarget(target);
     setPickerOpen(true);
     e.target.value = "";
   };
 
-  const handleConfirmCsv = (serials: string[]) => {
+  const handleConfirmCsv = (serials: string[], target: "active" | "queue", filename: string) => {
+    if (target === "queue") {
+      const res = catalogQueue.enqueue(serials, filename);
+      setPickerOpen(false);
+      setCsvText(null);
+      if ("reason" in res) {
+        toast({ title: "Couldn't stage on deck", description: res.reason, variant: "destructive" });
+        return;
+      }
+      toast({
+        title: `Staged on deck: ${filename}`,
+        description: `${serials.length.toLocaleString()} serials. Will auto-promote when remaining \u2264 ${queueState.lowWater.toLocaleString()}.`,
+      });
+      return;
+    }
     const { matchesPersisted } = catalog.load(serials);
     setPickerOpen(false);
     setCsvText(null);
@@ -251,6 +288,8 @@ export function CatalogStripBar() {
           e.preventDefault();
           const text = await file.text();
           setCsvText(text);
+          setCsvFilename(file.name || "catalog.csv");
+          setCsvTarget(cat.total === 0 ? "active" : "queue");
           setPickerOpen(true);
         }}
       >
@@ -259,7 +298,14 @@ export function CatalogStripBar() {
           type="file"
           accept=".csv,text/csv"
           className="hidden"
-          onChange={handleFile}
+          onChange={(e) => handleFile(e, "active")}
+        />
+        <input
+          ref={queueFileRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={(e) => handleFile(e, "queue")}
         />
         <Button
           size="sm"
@@ -271,6 +317,24 @@ export function CatalogStripBar() {
           <Upload className="mr-1 h-4 w-4" />
           {cat.total === 0 ? "Drop CSV here or click to browse" : "Load CSV catalog"}
         </Button>
+
+        {cat.total > 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => queueFileRef.current?.click()}
+            title="Pre-stage the next CSV. It will auto-promote when the active catalog drops below the low-water mark \u2014 keeps the line printing across midnight without operator intervention."
+            data-tour="catalog-queue-add"
+          >
+            <Layers className="mr-1 h-4 w-4" />
+            Stage next CSV
+            {queueState.items.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-mono text-primary">
+                {queueState.items.length}
+              </span>
+            )}
+          </Button>
+        )}
 
         {/* LIVE mode toggle */}
         <div
@@ -435,6 +499,75 @@ export function CatalogStripBar() {
         </div>
       </div>
 
+      {/* On-deck queue — visible whenever there's at least one staged file or
+          the operator changed the low-water mark. Stays out of the way otherwise. */}
+      {queueState.items.length > 0 && (
+        <div className="rounded-md border border-primary/30 bg-primary/5 p-2.5" data-tour="catalog-queue">
+          <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px]">
+            <div className="flex items-center gap-1.5 font-semibold text-primary">
+              <Layers className="h-3.5 w-3.5" />
+              On deck ({queueState.items.length})
+              <span className="font-normal text-muted-foreground">
+                · auto-promote at remaining ≤
+              </span>
+              <Input
+                type="number"
+                min={0}
+                step={500}
+                value={queueState.lowWater}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value, 10);
+                  catalogQueue.setLowWater(Number.isFinite(n) ? n : 0);
+                }}
+                className="h-6 w-20 px-1.5 text-xs"
+              />
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-[10px]"
+              onClick={() => catalogQueue.clear()}
+            >
+              <Trash2 className="mr-1 h-3 w-3" /> clear all
+            </Button>
+          </div>
+          <ul className="space-y-1">
+            {queueState.items.map((q, i) => (
+              <li
+                key={q.fingerprint}
+                className="flex items-center gap-2 rounded border border-border bg-card px-2 py-1 text-[11px]"
+              >
+                <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+                <span className="font-mono text-muted-foreground">#{i + 1}</span>
+                <span className="truncate font-medium" title={q.filename}>{q.filename}</span>
+                <span className="font-mono text-muted-foreground">
+                  {q.serials.length.toLocaleString()} serials
+                </span>
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  fp <span className="text-foreground">{q.fingerprint}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => catalogQueue.removeAt(i)}
+                  className="ml-auto rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                  aria-label="Remove from queue"
+                  title="Remove from queue"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+          {queueState.lastPromotion && (
+            <div className="mt-1.5 text-[10px] text-muted-foreground">
+              Last promoted: <span className="font-medium text-foreground">{queueState.lastPromotion.filename}</span>
+              {' '}· +{queueState.lastPromotion.appended.toLocaleString()} serials
+              {queueState.lastPromotion.skipped > 0 && ` (${queueState.lastPromotion.skipped} skipped)`}
+            </div>
+          )}
+        </div>
+      )}
+
       <StartRunDialog open={startOpen} onOpenChange={setStartOpen} onStarted={() => { /* no-op */ }} />
       <PreflightDialog open={preflightOpen} onOpenChange={setPreflightOpen} />
 
@@ -501,6 +634,8 @@ export function CatalogStripBar() {
       <CsvColumnPickerDialog
         open={pickerOpen}
         rawText={csvText}
+        target={csvTarget}
+        filename={csvFilename}
         onCancel={() => {
           setPickerOpen(false);
           setCsvText(null);
