@@ -64,6 +64,7 @@ const DEFAULT_LOW_THRESHOLD = 50;
 export function CatalogStripBar() {
   const cat = useCatalog();
   const pair = useTwinPair();
+  const autoCodeMode = !!pair.autoCodeMode;
   const { printers } = usePrinterStorage();
   const run = useProductionRun();
   const runActive = !!run.active;
@@ -244,7 +245,7 @@ export function CatalogStripBar() {
 
   const printed = cat.consumedCount - cat.missCount;
   // `remaining` is computed above (used by the low-catalog watcher); reused here.
-  const lowActive = cat.total > 0 && remaining > 0 && remaining <= lowThreshold;
+  const lowActive = !autoCodeMode && cat.total > 0 && remaining > 0 && remaining <= lowThreshold;
 
   return (
     <div className="space-y-2">
@@ -270,17 +271,19 @@ export function CatalogStripBar() {
       <div
         data-tour="catalog-strip"
         className={`flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 transition-colors ${
-          cat.total === 0
+          !autoCodeMode && cat.total === 0
             ? "border-dashed border-primary/50 bg-primary/5 hover:bg-primary/10"
             : "border-border bg-card"
         }`}
         onDragOver={(e) => {
+          if (autoCodeMode) return;
           if (e.dataTransfer.types.includes("Files")) {
             e.preventDefault();
             e.dataTransfer.dropEffect = "copy";
           }
         }}
         onDrop={async (e) => {
+          if (autoCodeMode) return;
           const file = Array.from(e.dataTransfer.files).find(
             (f) => f.name.toLowerCase().endsWith(".csv") || f.type === "text/csv",
           );
@@ -307,33 +310,45 @@ export function CatalogStripBar() {
           className="hidden"
           onChange={(e) => handleFile(e, "queue")}
         />
-        <Button
-          size="sm"
-          variant={cat.total === 0 ? "default" : "outline"}
-          onClick={() => fileRef.current?.click()}
-          className={cat.total === 0 ? "shadow-md" : ""}
-          data-tour="catalog-upload"
-        >
-          <Upload className="mr-1 h-4 w-4" />
-          {cat.total === 0 ? "Drop CSV here or click to browse" : "Load CSV catalog"}
-        </Button>
-
-        {cat.total > 0 && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => queueFileRef.current?.click()}
-            title="Pre-stage the next CSV. It will auto-promote when the active catalog drops below the low-water mark \u2014 keeps the line printing across midnight without operator intervention."
-            data-tour="catalog-queue-add"
+        {autoCodeMode ? (
+          <div
+            className="flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider text-amber-700 dark:text-amber-300"
+            title="Auto-Code Mode is engaged — both printers generate serials natively from their counter slots. No CSV catalog is needed."
           >
-            <Layers className="mr-1 h-4 w-4" />
-            Stage next CSV
-            {queueState.items.length > 0 && (
-              <span className="ml-1.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-mono text-primary">
-                {queueState.items.length}
-              </span>
+            <Factory className="h-3.5 w-3.5" />
+            Auto-Code Mode — no CSV needed
+          </div>
+        ) : (
+          <>
+            <Button
+              size="sm"
+              variant={cat.total === 0 ? "default" : "outline"}
+              onClick={() => fileRef.current?.click()}
+              className={cat.total === 0 ? "shadow-md" : ""}
+              data-tour="catalog-upload"
+            >
+              <Upload className="mr-1 h-4 w-4" />
+              {cat.total === 0 ? "Drop CSV here or click to browse" : "Load CSV catalog"}
+            </Button>
+
+            {cat.total > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => queueFileRef.current?.click()}
+                title="Pre-stage the next CSV. It will auto-promote when the active catalog drops below the low-water mark — keeps the line printing across midnight without operator intervention."
+                data-tour="catalog-queue-add"
+              >
+                <Layers className="mr-1 h-4 w-4" />
+                Stage next CSV
+                {queueState.items.length > 0 && (
+                  <span className="ml-1.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-mono text-primary">
+                    {queueState.items.length}
+                  </span>
+                )}
+              </Button>
             )}
-          </Button>
+          </>
         )}
 
         {/* LIVE mode toggle */}
@@ -464,7 +479,7 @@ export function CatalogStripBar() {
                 size="sm"
                 variant="outline"
                 onClick={() => setPreflightOpen(true)}
-                disabled={cat.total === 0}
+                disabled={!autoCodeMode && cat.total === 0}
                 title="Fire ghost cycles to verify timing and connectivity before the real run."
                 data-tour="preflight-button"
               >
@@ -477,17 +492,17 @@ export function CatalogStripBar() {
                       <Button
                         size="sm"
                         onClick={() => setStartOpen(true)}
-                        disabled={cat.total === 0 || !liveMode}
-                        className={cat.total > 0 && liveMode ? "shadow-md ring-2 ring-primary/30" : ""}
+                        disabled={(!autoCodeMode && cat.total === 0) || !liveMode}
+                        className={(autoCodeMode || cat.total > 0) && liveMode ? "shadow-md ring-2 ring-primary/30" : ""}
                         data-tour="start-run-button"
                       >
                         <Play className="mr-1 h-4 w-4" /> Start production run
                       </Button>
                     </span>
                   </TooltipTrigger>
-                  {(cat.total === 0 || !liveMode) && (
+                  {((!autoCodeMode && cat.total === 0) || !liveMode) && (
                     <TooltipContent side="bottom" className="max-w-xs text-xs">
-                      {cat.total === 0
+                      {!autoCodeMode && cat.total === 0
                         ? "Load a CSV catalog first so the printer has serials to fire."
                         : "Switch SYNTH → LIVE so codes actually print on the connected printer."}
                     </TooltipContent>
