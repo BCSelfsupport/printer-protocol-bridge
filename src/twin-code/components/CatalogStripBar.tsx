@@ -64,6 +64,7 @@ const DEFAULT_LOW_THRESHOLD = 50;
 export function CatalogStripBar() {
   const cat = useCatalog();
   const pair = useTwinPair();
+  const autoCodeMode = !!pair.autoCodeMode;
   const { printers } = usePrinterStorage();
   const run = useProductionRun();
   const runActive = !!run.active;
