@@ -801,7 +801,7 @@ const Index = () => {
   const replaceMessageWithoutDelete = useCallback(async (
     targetPrinter: Printer,
     messageName: string,
-    details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings'>,
+    details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings' | 'advancedSettings'>,
   ) => {
     const { perMessageSettings } = buildEffectiveMessageDependentSettings(details as MessageDetails);
     const rawCommands = await buildMessageCommands(
@@ -832,6 +832,7 @@ const Index = () => {
     });
 
     const sequence: string[] = [];
+    sequence.push(...buildCounterConfigCommandSequence(details as MessageDetails).map((item) => item.command));
     sequence.push(...commands);
     sequence.push('^SV');
     const reselectCommandIndex = sequence.length;
@@ -851,7 +852,7 @@ const Index = () => {
     }
 
     return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | null };
-  }, [buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence]);
+  }, [buildCounterConfigCommandSequence, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence]);
 
   // After saving a message on the master, duplicate the full content to all
   // slaves. If the message is currently SELECTED on a slave with a different
@@ -880,6 +881,7 @@ const Index = () => {
         templateValue: details.templateValue,
         settings: details.settings,
         adjustSettings: details.adjustSettings,
+        advancedSettings: details.advancedSettings,
       });
       ok = result.success;
       if (!ok) {
