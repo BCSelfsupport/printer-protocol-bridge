@@ -1190,6 +1190,7 @@ const Index = () => {
           rotation: libraryMessage.settings.rotation,
           printMode: libraryMessage.settings.printMode,
         } : undefined,
+        libraryMessage.advancedSettings?.counters,
       );
 
       if (!ok) {
