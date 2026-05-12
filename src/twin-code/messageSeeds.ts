@@ -300,11 +300,22 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
   // rejected by the firmware; ^SV then returns CmdNotRec (nothing pending).
   // This is the same fix used for the 12-field DOZEN12 message — see
   // mem://features/message-persistence/nm-nf-field-append-flow.
+  // ^AC extended form (protocol v2.6 §5.33 counter field):
+  //   ^AC n;x;y;f;c;d;l
+  //     d = digit count (here 6 → "000001"…"999999")
+  //     l = leading-zero flag (1 = pad with zeros; 0 = blanks)
+  //
+  // We bake the format into the FIELD itself so a manually-edited ^CC slot
+  // config can't change what gets printed — the customer's serial format
+  // `27A132xxxxxxU` requires exactly 6 zero-padded counter digits.
+  const COUNTER_DIGITS = 6;
+  const COUNTER_LEADING_ZERO = 1;
+
   const firstField = `^AT1;${xLine};0;${FONT};${line}`;
   const appendFields = [
     `^AP2;${xYear};0;${FONT};8`,
     `^AD3;${xJulian};0;${FONT};4`,
-    `^AC4;${xCounter};0;${FONT};${slot}`,
+    `^AC4;${xCounter};0;${FONT};${slot};${COUNTER_DIGITS};${COUNTER_LEADING_ZERO}`,
     `^AT5;${xUnit};0;${FONT};${unit}`,
   ];
 
