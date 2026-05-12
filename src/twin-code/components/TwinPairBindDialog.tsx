@@ -162,6 +162,7 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
       autoCreate: slotB.autoCreate,
     };
     twinPairStore.setPair(a, b);
+    twinPairStore.setAutoCode(autoCodeMode, autoCodeMode ? autoCodeOpts : undefined);
 
     // TwinCode pairing supersedes any prior Master/Slave configuration.
     // Clear role + masterId on the two bound printers (matched by IP:port) so
