@@ -313,15 +313,27 @@ class ConveyorSim {
       return;
     }
 
-    // Catalog dispense
-    const serial = catalog.dispense();
+    // Auto-Code Mode: serials are computed natively (no CSV catalog). The
+    // host mirrors the printer's counter so the LID DataMatrix always encodes
+    // the same string the SIDE prints natively this same cycle.
+    const autoCodeMode = !!twinPairStore.getState().autoCodeMode;
+
+    let serial: string | null;
+    if (autoCodeMode) {
+      const r = autoCodeSerial.next();
+      serial = r ? r.serial : null;
+    } else {
+      // Catalog dispense
+      serial = catalog.dispense();
+    }
     if (serial === null) {
-      // Miss-print: catalog exhausted
+      // Miss-print: catalog exhausted (autoCode never reaches here unless
+      // pair config is incomplete).
       bottle.serial = null;
       bottle.state = "missed";
       bottle.cycleMs = 0;
       bottle.skewMs = 0;
-      catalog.recordMissed(bottle.id);
+      if (!autoCodeMode) catalog.recordMissed(bottle.id);
 
       profilerBus.push({
         serial: null,
