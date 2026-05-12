@@ -356,8 +356,11 @@ const Index = () => {
         const end = Math.min(999999999, Math.max(0, Math.trunc(counter.endCount)));
         const increment = Math.min(20, Math.max(-20, Math.trunc(counter.incrementation)));
         const leadingZeroes = counter.leadingZeroes ? 1 : 0;
+        // Use NAMED parameters per protocol v2.6 §5.5: ^CC C;V;S;L;T;I;E;R
+        // Positional form had L/E swapped historically (firmware returned
+        // InvYesNo/CmdFormat). Named form is unambiguous and confirmed working.
         return {
-          command: `^CC ${id};${start};${start};${end};${increment};${leadingZeroes}`,
+          command: `^CC ${id};V${start};S${start};L${leadingZeroes};I${increment};E${end}`,
           delayAfterMs: 700,
         };
       });
