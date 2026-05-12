@@ -21,6 +21,8 @@
 import { profilerBus } from "./profilerBus";
 import { catalog } from "./catalog";
 import { faultGuard } from "./faultGuard";
+import { twinPairStore } from "./twinPairStore";
+import { autoCodeSerial } from "./autoCodeSerial";
 
 /**
  * Pluggable per-bottle dispatcher. When set (e.g. via `setLiveDispatcher`),
@@ -311,15 +313,27 @@ class ConveyorSim {
       return;
     }
 
-    // Catalog dispense
-    const serial = catalog.dispense();
+    // Auto-Code Mode: serials are computed natively (no CSV catalog). The
+    // host mirrors the printer's counter so the LID DataMatrix always encodes
+    // the same string the SIDE prints natively this same cycle.
+    const autoCodeMode = !!twinPairStore.getState().autoCodeMode;
+
+    let serial: string | null;
+    if (autoCodeMode) {
+      const r = autoCodeSerial.next();
+      serial = r ? r.serial : null;
+    } else {
+      // Catalog dispense
+      serial = catalog.dispense();
+    }
     if (serial === null) {
-      // Miss-print: catalog exhausted
+      // Miss-print: catalog exhausted (autoCode never reaches here unless
+      // pair config is incomplete).
       bottle.serial = null;
       bottle.state = "missed";
       bottle.cycleMs = 0;
       bottle.skewMs = 0;
-      catalog.recordMissed(bottle.id);
+      if (!autoCodeMode) catalog.recordMissed(bottle.id);
 
       profilerBus.push({
         serial: null,
@@ -354,7 +368,7 @@ class ConveyorSim {
 
         if (res.ok) {
           try {
-            catalog.recordPrinted(serial, bottle.id);
+            if (!autoCodeMode) catalog.recordPrinted(serial, bottle.id);
             bottle.state = "printed";
             bottle.cycleMs = cycleMs;
             bottle.skewMs = skewMs;
@@ -365,13 +379,13 @@ class ConveyorSim {
             bottle.state = "missed";
             bottle.cycleMs = cycleMs;
             bottle.skewMs = skewMs;
-            catalog.recordMissed(bottle.id);
+            if (!autoCodeMode) catalog.recordMissed(bottle.id);
           }
         } else {
           bottle.state = "missed";
           bottle.cycleMs = cycleMs;
           bottle.skewMs = skewMs;
-          catalog.recordMissed(bottle.id);
+          if (!autoCodeMode) catalog.recordMissed(bottle.id);
         }
 
         // Wire the result through the fault guard — it may auto-pause the
@@ -393,7 +407,7 @@ class ConveyorSim {
       }).catch((err) => {
         // Silent fault — record as miss-print
         bottle.state = "missed";
-        catalog.recordMissed(bottle.id);
+        if (!autoCodeMode) catalog.recordMissed(bottle.id);
         console.warn('[twin-live] dispatch error', err);
       });
       // Avoid blocking the next photocell — measurements arrive async via .then
@@ -428,14 +442,14 @@ class ConveyorSim {
 
     setTimeout(() => {
       try {
-        catalog.recordPrinted(serial, bottle.id);
+        if (!autoCodeMode) catalog.recordPrinted(serial, bottle.id);
         bottle.state = "printed";
         bottle.cycleMs = cycleMs;
         bottle.skewMs = skewMs;
       } catch (err) {
         console.error('[twin-sim] duplicate-serial guard:', err);
         bottle.state = "missed";
-        catalog.recordMissed(bottle.id);
+        if (!autoCodeMode) catalog.recordMissed(bottle.id);
       }
     }, settleAfterMs);
 

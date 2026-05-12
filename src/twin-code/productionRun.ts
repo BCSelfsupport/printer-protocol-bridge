@@ -41,6 +41,8 @@ import {
 } from "./twinDispatcher";
 import { profilerBus } from "./profilerBus";
 import { computeHeadroom, cycleBudgetForBpm, DEFAULT_SAFETY_FACTOR } from "./throughputHeadroom";
+import { twinPairStore } from "./twinPairStore";
+import { autoCodeSerial } from "./autoCodeSerial";
 
 const ACTIVE_RUN_KEY = "twincode.activeRun.v1";
 
@@ -248,6 +250,12 @@ class ProductionRunStore {
     // The "Resume from bottle #N" banner reads the conveyor's bottle id, so
     // resetting here keeps the operator-facing number aligned with this lot.
     conveyorSim.resetBottleCounter();
+    // Auto-Code Mode: align the host counter mirror with the printer's freshly-
+    // seeded counter slot start so the LID DataMatrix encodes the same serial
+    // the SIDE prints natively for bottle #1.
+    if (twinPairStore.getState().autoCodeMode) {
+      autoCodeSerial.reset();
+    }
     // Install the pre-dispatch gate so the conveyor stops issuing serials the
     // INSTANT the target is reached — keeps A and B printer counters in
     // lock-step at end-of-lot (no extra ^MD slips through to A while B is

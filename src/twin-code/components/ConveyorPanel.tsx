@@ -95,9 +95,9 @@ export function ConveyorPanel() {
   useEffect(() => {
     if (!liveMode) return;
     conveyorSim.setLiveDispatcher((serial) =>
-      twinDispatcher.dispatch(serial, { forceTrigger: !productionMode })
+      twinDispatcher.dispatch(serial, { forceTrigger: !productionMode, autoCode: !!pair.autoCodeMode })
     );
-  }, [liveMode, productionMode]);
+  }, [liveMode, productionMode, pair.autoCodeMode]);
 
   // ---- LIVE bonded dispatch wiring ----
   const enableLive = async () => {
@@ -126,7 +126,7 @@ export function ConveyorPanel() {
       toast({ title: 'Could not enter LIVE mode', description: res.error, variant: 'destructive' });
       return;
     }
-    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial, { forceTrigger: !productionMode }));
+    conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial, { forceTrigger: !productionMode, autoCode: !!pair.autoCodeMode }));
     setLiveMode(true);
     const seedNote = res.seededA || res.seededB
       ? ` · Seeded ${[res.seededA && 'LID', res.seededB && 'SIDE'].filter(Boolean).join(' & ')}`
