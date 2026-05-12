@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Loader2, CheckCircle2, XCircle, Link2, Unlink, Cpu, Wifi, FileText, Hash, Barcode, Type, Sparkles, Zap } from "lucide-react";
 import { twinPairStore, useTwinPair, type TwinPrinterBinding, type DispatchSubcommand } from "../twinPairStore";
-import { seedForSide, buildAutoCodeSeed, previewAutoCodeSerial, type AutoCodeSeedOpts } from "../messageSeeds";
+import { seedForSide, buildAutoCodeSeed, previewAutoCodeSerial, defaultYearMap, letterForCurrentYear, type AutoCodeSeedOpts } from "../messageSeeds";
 import { seedTwinPairMessages } from "../twinDispatcher";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 import type { Printer } from "@/types/printer";
