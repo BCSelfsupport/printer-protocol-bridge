@@ -322,11 +322,11 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
                       );
                     })}
                 </div>
-                <p className="text-[10px] text-muted-foreground leading-snug">
-                  This year ({thisYear}) prints as <span className="font-mono font-semibold text-primary">{todaysYearLetter}</span>.
-                  This same table must be configured on BOTH printers via{" "}
-                  <span className="font-medium">Setup → Program Date Codes → Program Year</span>{" "}
-                  so the lid DM and side text resolve identically.
+                <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-snug">
+                  ⚠ This year ({thisYear}) should print as <span className="font-mono font-semibold">{todaysYearLetter}</span>.
+                  v2.6 has no remote command to push this table — you MUST enter it on each printer
+                  via <span className="font-medium">Setup → Program Date Codes → Program Year</span> before binding,
+                  or <code>^NM</code> will be silently rejected and bind will fail.
                 </p>
               </div>
 
