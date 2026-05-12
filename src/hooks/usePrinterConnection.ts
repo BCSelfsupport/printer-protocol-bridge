@@ -2305,6 +2305,19 @@ export function usePrinterConnection() {
 
     // Build field subcommands with inverted Y coordinates
     // Canvas Y (top-origin) → template-relative → printer Y (bottom-origin)
+    // Build a slot→{digits,leadingZeroes} map from the message's advanced
+    // counter settings. Digits are derived from the configured End Count
+    // width (e.g. End=9999 → 4 digits) so the printer formats the counter
+    // exactly as the editor preview shows.
+    const counterSlotConfigs = new Map<number, { digits: number; leadingZeroes: boolean }>();
+    for (const c of counterConfigs ?? []) {
+      const slot = Math.trunc(c.id);
+      if (slot < 1 || slot > 4) continue;
+      const end = Math.max(0, Math.trunc(c.endCount));
+      const digits = Math.min(9, Math.max(1, String(end).length));
+      counterSlotConfigs.set(slot, { digits, leadingZeroes: !!c.leadingZeroes });
+    }
+
     const buildPositionedFieldSubcommand = (field: typeof validFields[number], index: number) => {
       // For barcode fields, use actual field height; for text, use font dot height
       const fieldHeight = field.type === 'barcode' && field.height 
@@ -2315,7 +2328,7 @@ export function usePrinterConnection() {
       return buildFieldSubcommand({
         ...field,
         y: Math.max(0, printerY),
-      }, index + 1, templateHeight, dmGraphicMap);
+      }, index + 1, templateHeight, dmGraphicMap, counterSlotConfigs);
     };
     const fieldSubcommands = validFields.map(buildPositionedFieldSubcommand).join('');
 
