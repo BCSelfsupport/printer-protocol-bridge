@@ -330,6 +330,39 @@ const Index = () => {
     return commands;
   }, []);
 
+  const buildCounterConfigCommandSequence = useCallback((details: MessageDetails): Array<{ command: string; delayAfterMs: number }> => {
+    const counters = details.advancedSettings?.counters ?? [];
+    if (counters.length === 0) return [];
+
+    const referencedCounterIds = new Set<number>();
+    details.fields.forEach((field) => {
+      const match = field.autoCodeFieldType?.match(/^counter_(\d+)$/i);
+      const slot = match ? Number.parseInt(match[1], 10) : NaN;
+      if (Number.isInteger(slot) && slot >= 1 && slot <= 4) referencedCounterIds.add(slot);
+    });
+
+    return counters
+      .filter((counter) => referencedCounterIds.has(counter.id))
+      .filter((counter) => {
+        const defaultEnd = 999999999;
+        return counter.startCount !== 0
+          || counter.endCount !== defaultEnd
+          || counter.incrementation !== 1
+          || counter.leadingZeroes;
+      })
+      .map((counter) => {
+        const id = Math.min(4, Math.max(1, Math.trunc(counter.id)));
+        const start = Math.min(999999999, Math.max(0, Math.trunc(counter.startCount)));
+        const end = Math.min(999999999, Math.max(0, Math.trunc(counter.endCount)));
+        const increment = Math.min(20, Math.max(-20, Math.trunc(counter.incrementation)));
+        const leadingZeroes = counter.leadingZeroes ? 1 : 0;
+        return {
+          command: `^CC ${id};${start};${start};${end};${increment};${leadingZeroes}`,
+          delayAfterMs: 700,
+        };
+      });
+  }, []);
+
   const stripPromptMetadata = useCallback((details: MessageDetails): MessageDetails => ({
     ...details,
     fields: details.fields.map(({ promptBeforePrint, promptLabel, promptLength, ...field }) => field),
@@ -768,7 +801,7 @@ const Index = () => {
   const replaceMessageWithoutDelete = useCallback(async (
     targetPrinter: Printer,
     messageName: string,
-    details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings'>,
+    details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings' | 'advancedSettings'>,
   ) => {
     const { perMessageSettings } = buildEffectiveMessageDependentSettings(details as MessageDetails);
     const rawCommands = await buildMessageCommands(
@@ -799,6 +832,7 @@ const Index = () => {
     });
 
     const sequence: string[] = [];
+    sequence.push(...buildCounterConfigCommandSequence(details as MessageDetails).map((item) => item.command));
     sequence.push(...commands);
     sequence.push('^SV');
     const reselectCommandIndex = sequence.length;
@@ -818,7 +852,7 @@ const Index = () => {
     }
 
     return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | null };
-  }, [buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence]);
+  }, [buildCounterConfigCommandSequence, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence]);
 
   // After saving a message on the master, duplicate the full content to all
   // slaves. If the message is currently SELECTED on a slave with a different
@@ -847,6 +881,7 @@ const Index = () => {
         templateValue: details.templateValue,
         settings: details.settings,
         adjustSettings: details.adjustSettings,
+        advancedSettings: details.advancedSettings,
       });
       ok = result.success;
       if (!ok) {
@@ -953,16 +988,18 @@ const Index = () => {
       perMessageSettings,
       includeMessageSettings: hasMessagePrinterSettings,
     });
+    const counterConfigCommands = buildCounterConfigCommandSequence(localDetails);
 
     let restoredByCommandSequence = false;
-    if (messageDependentCommands.length > 0 && connectionState.connectedPrinter) {
+    if ((messageDependentCommands.length > 0 || counterConfigCommands.length > 0) && connectionState.connectedPrinter) {
       const commandSequence: SequencedPrinterCommand[] = [];
 
       // ^NM already leaves the just-saved message selected on the printer,
       // so avoid sending an immediate redundant ^SM on heavy saves.
+      commandSequence.push(...counterConfigCommands);
       commandSequence.push(...messageDependentCommands);
 
-      if (hasAdjustSettings || hasMessagePrinterSettings) {
+      if (hasAdjustSettings || hasMessagePrinterSettings || counterConfigCommands.length > 0) {
         commandSequence.push('^SV');
       }
 
@@ -1055,6 +1092,7 @@ const Index = () => {
   }, [
     buildEffectiveMessageDependentSettings,
     buildMessageDependentCommandSequence,
+    buildCounterConfigCommandSequence,
     editingMessage,
     normalizeMessageForPrinter,
     getMessage,
