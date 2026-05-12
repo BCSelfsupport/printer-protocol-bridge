@@ -997,10 +997,11 @@ class TwinDispatcher {
     const subB = this.opts.subcommandB ?? 'TD';
     const mdA = `^MD^${subA}${fieldA};${serial}`;
     const mdB = `^MD^${subB}${fieldB};${serial}`;
+    const autoCode = !!opts?.autoCode;
 
     const tStart = performance.now();
     let aReady = false;
-    let bReady = false;
+    let bReady = autoCode; // No ^MD on B in autoCode — treat B as ready immediately.
     let forceSent = false;
     const fireWhenReady = () => {
       if (!opts?.forceTrigger || forceSent || !aReady || !bReady) return;
@@ -1010,7 +1011,12 @@ class TwinDispatcher {
     };
 
     const pA = a.sendMD(mdA, { onReady: () => { aReady = true; fireWhenReady(); } });
-    const pB = b.sendMD(mdB, { onReady: () => { bReady = true; fireWhenReady(); } });
+    // In autoCode, skip the ^MD push on B (printer auto-counts via ^AC slot).
+    // Synthesize a successful side-B result so the bonded result aggregator
+    // doesn't fault out and so the conveyor still records a clean print.
+    const pB: Promise<{ ok: boolean; rttMs?: number; reason?: string }> = autoCode
+      ? Promise.resolve({ ok: true, rttMs: 0 })
+      : b.sendMD(mdB, { onReady: () => { bReady = true; fireWhenReady(); } });
 
     // Pre-flight / bench path: no product crosses the photocell, so send the
     // same Print Go (^PT) signal the operator would otherwise press manually.
