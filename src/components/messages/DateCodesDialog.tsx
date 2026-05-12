@@ -47,7 +47,7 @@ const YEAR_CODES = [
   { id: 'y', label: 'One-Digit Year (Y)', protocolCode: 8 },
   { id: 'doy', label: 'Day of Year (DDD)', protocolCode: 4 },
   { id: 'julian', label: 'Julian Date (YDDD)', protocolCode: null }, // Composite: 1-digit year + day-of-year
-  { id: 'program_year', label: 'Program Year', protocolCode: 9 },   // Uses ^AP
+  { id: 'program_year', label: 'Program Year', protocolCode: 8 },   // Uses ^AP programmable 1-digit year table
   { id: 'program_doy', label: 'Program Day of Year', protocolCode: 4 }, // Uses ^AP
 ];
 

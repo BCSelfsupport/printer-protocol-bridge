@@ -280,7 +280,7 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
               {/* Programmable Year setup — REFERENCE ONLY. Protocol v2.6 has no remote
                   command to push the Program Year table; this editor is a preview/checklist
                   to remind the operator what to enter on each printer's HMI. The seed sends
-                  ^AP …;9 (date type 9 = "Year 2-digit") which the printer resolves through
+                  ^AP …;8 (programmable 1-digit year) which the printer resolves through
                   whatever mapping is currently configured on the device. */}
               <div className="rounded border border-dashed border-amber-500/50 bg-amber-500/5 p-2 space-y-1.5">
                 <div className="flex items-center justify-between">
@@ -325,8 +325,8 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
                 <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-snug">
                   ⚠ This year ({thisYear}) should print as <span className="font-mono font-semibold">{todaysYearLetter}</span>.
                   v2.6 has no remote command to push this table — you MUST enter it on each printer
-                  via <span className="font-medium">Setup → Program Date Codes → Program Year</span> before binding,
-                  or <code>^NM</code> will be silently rejected and bind will fail.
+                  via <span className="font-medium">Setup → Program Date Codes → Program Year</span> before binding.
+                  The bind wire trace must show <code>^AP…;8</code>; <code>^AP…;9</code> is invalid for Program Year and will fail.
                 </p>
               </div>
 

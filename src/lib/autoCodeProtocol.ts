@@ -77,7 +77,14 @@ export function isProgram(codeType: string): boolean {
 
 /** Strip "program_" prefix to get the base code type for protocol lookup */
 export function baseCodeType(codeType: string): string {
-  return codeType.replace(/^program_/, '');
+  const base = codeType.replace(/^program_/, '');
+  const programAliases: Record<string, string> = {
+    year: 'y',
+    month: 'mm',
+    week: 'ww',
+    dow: 'dow_num',
+  };
+  return programAliases[base] ?? base;
 }
 
 // ── Determine protocol command and date/time type code ──────────────────────
