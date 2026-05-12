@@ -161,3 +161,109 @@ export function buildSeedCommands(seed: MessageSeed, messageName: string): strin
 export function seedForSide(side: "A" | "B"): MessageSeed {
   return side === "A" ? LID_SEED : SIDE_SEED;
 }
+
+// ---------------------------------------------------------------------------
+//  Auto-Code seed (Phase 3 — no CSV required)
+// ---------------------------------------------------------------------------
+
+/** Operator-configurable knobs for the auto-coded multi-field seed. */
+export interface AutoCodeSeedOpts {
+  /** Line number prefix, e.g. "27" — fixed text. */
+  line: string;
+  /** Unit / suffix character, e.g. "U" — fixed text. */
+  unit: string;
+  /**
+   * Hardware counter slot 1..4. The Counter (digit count, leading zeros,
+   * start/stop/reset) must already be configured on each printer via ^CN —
+   * for the customer's `27A132xxxxxxU` format that means a 6-digit counter
+   * with leading zeros, rolling over at 999999.
+   */
+  counterSlot: 1 | 2 | 3 | 4;
+}
+
+/**
+ * Build a self-printing, fully-native auto-coded message that resolves to the
+ * customer's serial format `<line><Y><DDD><cnt><unit>` (e.g. `27A132000001U`).
+ *
+ * Both LID and SIDE printers run an IDENTICAL message — the year, Julian day
+ * and counter are computed natively on each printer so the host never has to
+ * push a per-bottle ^MD. Cycle time is bounded only by the printer firmware.
+ *
+ * Five fields, all on a 1×7-dot template using the Standard 7×5 font (5 dots
+ * wide + 1-dot gap = 6 dots/char):
+ *
+ *   F1  ^AT  text  "<line>"            x = 0
+ *   F2  ^AP  programmable year (A-Z)   x = after F1     (t=8, 1-digit year)
+ *   F3  ^AD  Julian DDD (day of year)  x = after F2     (t=4, doy)
+ *   F4  ^AC  counter slot N            x = after F3     (6 digits via ^CN)
+ *   F5  ^AT  text  "<unit>"            x = after F4
+ *
+ * Parity guarantee with the LID DataMatrix and SIDE text:
+ *   - Identical message on both printers
+ *   - Identical Counter slot, identical programmable-year table
+ *   - Counters tick on the printer's own photocell — no host clock involved
+ *
+ * Drift is only possible if one printer misses a print the other captures
+ * (jet-stop, missed photocell, etc). The dashboard's existing ^CN poll
+ * surfaces this as a counter-skew alert; the operator can re-zero both with
+ * a single Reset Counters command.
+ */
+export function buildAutoCodeSeed(opts: AutoCodeSeedOpts): MessageSeed {
+  const line = (opts.line || "").trim();
+  const unit = (opts.unit || "").trim();
+  const slot = Math.min(4, Math.max(1, opts.counterSlot)) | 0;
+
+  // Standard 7-high font: 5 dots wide + 1 dot gap = 6 dots per character.
+  const W = 6;
+  const xLine    = 0;
+  const xYear    = xLine    + line.length * W + 1;
+  const xJulian  = xYear    + 1 * W + 1;
+  const xCounter = xJulian  + 3 * W + 1;
+  const xUnit    = xCounter + 6 * W + 1;
+
+  // Protocol v2.6 references:
+  //   §5.33.2.1 ^AT — text field
+  //   §5.33.2.7 ^AP — programmable date code (t=8 = 1-digit programmable year)
+  //   §5.33.2.3 ^AD — date code (t=4 = day-of-year DDD / "Julian day")
+  //   §5.33.2.x ^AC — counter field (c = hardware slot 1..4)
+  //
+  // Template code 1 = 1×7-dot strip (matches SIDE_SEED).
+  // Font code 7 = Standard 7-high.
+  const FONT = 7;
+  const TEMPLATE = 1;
+
+  const fields = [
+    `^AT1;${xLine};0;${FONT};${line}`,
+    `^AP2;${xYear};0;${FONT};8`,
+    `^AD3;${xJulian};0;${FONT};4`,
+    `^AC4;${xCounter};0;${FONT};${slot}`,
+    `^AT5;${xUnit};0;${FONT};${unit}`,
+  ].join("");
+
+  const sample = `${line}A132${"1".padStart(6, "0")}${unit}`;
+  return {
+    label: `Auto-code · ${sample}`,
+    description:
+      `5-field native auto-coded message — text "${line}" + programmable year (A-Z) + ` +
+      `Julian DDD + counter slot ${slot} (6-digit) + text "${unit}". Sample: ${sample}. ` +
+      `No CSV, no per-bottle host traffic — printers self-generate every serial.`,
+    commandsTemplate: [
+      "^DM __NAME__",
+      `^NM ${TEMPLATE};0;0;0;__NAME__${fields}`,
+      "^SV",
+    ],
+  };
+}
+
+/** Render a sample serial for a given auto-code config (UI preview). */
+export function previewAutoCodeSerial(
+  opts: AutoCodeSeedOpts,
+  sample: { yearChar?: string; doy?: number; counter?: number } = {},
+): string {
+  const line = (opts.line || "").trim();
+  const unit = (opts.unit || "").trim();
+  const y = (sample.yearChar ?? "A").slice(0, 1).toUpperCase();
+  const d = (sample.doy ?? 132).toString().padStart(3, "0");
+  const c = (sample.counter ?? 1).toString().padStart(6, "0");
+  return `${line}${y}${d}${c}${unit}`;
+}
