@@ -102,6 +102,19 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
     if (open) {
       setSlotA(bindingToSlot(pair.a, "Lid printer (DM 16×16)", A_DEFAULTS));
       setSlotB(bindingToSlot(pair.b, "Side printer (text)", B_DEFAULTS));
+      // Restore prior Auto-Code Mode selection so the operator doesn't have
+      // to re-tick the box (and re-enter line/unit/counter slot) every bind.
+      if (pair.autoCodeMode) {
+        setAutoCodeMode(true);
+        if (pair.autoCodeOpts) {
+          setAutoCodeOpts({
+            line: pair.autoCodeOpts.line,
+            unit: pair.autoCodeOpts.unit,
+            counterSlot: pair.autoCodeOpts.counterSlot,
+            yearMap: pair.autoCodeOpts.yearMap ?? defaultYearMap(6),
+          });
+        }
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
