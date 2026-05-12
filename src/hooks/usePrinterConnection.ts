@@ -2587,6 +2587,15 @@ export function usePrinterConnection() {
     // Generate DataMatrix ECC200 bitmap upload commands
     const { uploadCommands: dmUploadCmds, graphicMap: dmGraphicMap } = await generateDataMatrixCommands(validFields, templateHeight);
 
+    const counterSlotConfigs = new Map<number, { digits: number; leadingZeroes: boolean }>();
+    for (const c of counterConfigs ?? []) {
+      const slot = Math.trunc(c.id);
+      if (slot < 1 || slot > 4) continue;
+      const end = Math.max(0, Math.trunc(c.endCount));
+      const digits = Math.min(9, Math.max(1, String(end).length));
+      counterSlotConfigs.set(slot, { digits, leadingZeroes: !!c.leadingZeroes });
+    }
+
     const buildPositionedFieldSubcommand = (field: typeof validFields[number], index: number) => {
       const fieldHeight = field.type === 'barcode' && field.height 
         ? field.height 
@@ -2596,7 +2605,7 @@ export function usePrinterConnection() {
       return buildFieldSubcommand({
         ...field,
         y: Math.max(0, printerY),
-      }, index + 1, templateHeight, dmGraphicMap);
+      }, index + 1, templateHeight, dmGraphicMap, counterSlotConfigs);
     };
     const fieldSubcommands = validFields.map(buildPositionedFieldSubcommand).join('');
 
