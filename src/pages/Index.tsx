@@ -986,16 +986,18 @@ const Index = () => {
       perMessageSettings,
       includeMessageSettings: hasMessagePrinterSettings,
     });
+    const counterConfigCommands = buildCounterConfigCommandSequence(localDetails);
 
     let restoredByCommandSequence = false;
-    if (messageDependentCommands.length > 0 && connectionState.connectedPrinter) {
+    if ((messageDependentCommands.length > 0 || counterConfigCommands.length > 0) && connectionState.connectedPrinter) {
       const commandSequence: SequencedPrinterCommand[] = [];
 
       // ^NM already leaves the just-saved message selected on the printer,
       // so avoid sending an immediate redundant ^SM on heavy saves.
+      commandSequence.push(...counterConfigCommands);
       commandSequence.push(...messageDependentCommands);
 
-      if (hasAdjustSettings || hasMessagePrinterSettings) {
+      if (hasAdjustSettings || hasMessagePrinterSettings || counterConfigCommands.length > 0) {
         commandSequence.push('^SV');
       }
 
@@ -1088,6 +1090,7 @@ const Index = () => {
   }, [
     buildEffectiveMessageDependentSettings,
     buildMessageDependentCommandSequence,
+    buildCounterConfigCommandSequence,
     editingMessage,
     normalizeMessageForPrinter,
     getMessage,
