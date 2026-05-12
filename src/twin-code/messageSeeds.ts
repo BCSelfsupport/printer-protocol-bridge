@@ -159,7 +159,7 @@ export function buildSeedCommands(seed: MessageSeed, messageName: string): strin
       .replace(/__NAME__/g, safe)
       // Safety net for older cached/generated Auto-Code seeds: Program Year must
       // use ^AP type 8. Hardware rejects ^AP type 9 and then ^SV returns CmdNotRec.
-      .replace(/(\^AP\d+;\d+;\d+;\d+;)9(?=\^|$)/g, '$18'),
+      .replace(/(\^AP\d+;\d+;\d+;\d+;)9(?=\^|$)/g, (_match, prefix) => `${prefix}8`),
   );
 }
 
