@@ -41,6 +41,8 @@ import {
 } from "./twinDispatcher";
 import { profilerBus } from "./profilerBus";
 import { computeHeadroom, cycleBudgetForBpm, DEFAULT_SAFETY_FACTOR } from "./throughputHeadroom";
+import { twinPairStore } from "./twinPairStore";
+import { autoCodeSerial } from "./autoCodeSerial";
 
 const ACTIVE_RUN_KEY = "twincode.activeRun.v1";
 
