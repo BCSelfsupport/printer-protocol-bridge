@@ -2076,11 +2076,24 @@ export function usePrinterConnection() {
         // Fallback: ^AH with type 7 (HH:MM:SS with delimiters)
         return `^AH${fieldNum};${field.x};${field.y};${fontCode};7`;
       }
-      case 'counter':
-        // ^AC n; x; y; s; c where c = hardware counter slot
-        // 0 = print count, 1-4 = custom counters. Respect the field's selected
-        // counter slot so Force Print increments the correct value on-printer.
-        return `^AC${fieldNum};${field.x};${field.y};${fontCode};${Math.min(4, Math.max(0, parseInt(field.autoCodeFieldType?.match(/^counter_(\d+)$/i)?.[1] ?? '0', 10) || 0))}`;
+      case 'counter': {
+        // ^AC n;x;y;f;c[;d;l] — c=hardware counter slot (0=print,1-4=custom),
+        // d=digit count, l=leading-zero flag (1=pad zeros, 0=blanks).
+        // Protocol v2.6 §5.33: digit/leading-zero formatting is baked into the
+        // FIELD itself, NOT a separate counter-slot config command. Without
+        // these the printer falls back to the slot's HMI defaults (typically
+        // 9 digits, no leading zeros) — which is exactly the "max numbers,
+        // no leading zeros" symptom users hit when Advanced settings appear
+        // to do nothing.
+        const slot = Math.min(4, Math.max(0, parseInt(field.autoCodeFieldType?.match(/^counter_(\d+)$/i)?.[1] ?? '0', 10) || 0));
+        const cfg = slot >= 1 ? counterSlotConfigs?.get(slot) : undefined;
+        if (cfg && cfg.digits >= 1) {
+          const d = Math.min(9, Math.max(1, Math.trunc(cfg.digits)));
+          const l = cfg.leadingZeroes ? 1 : 0;
+          return `^AC${fieldNum};${field.x};${field.y};${fontCode};${slot};${d};${l}`;
+        }
+        return `^AC${fieldNum};${field.x};${field.y};${fontCode};${slot}`;
+      }
       case 'barcode': {
         // ^AB syntax varies by barcode type (per v2.0 protocol section 5.27.2.1):
         //   1D (non-Code128): ^AB n;x;y;f;t;m;r;data
