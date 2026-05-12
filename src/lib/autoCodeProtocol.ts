@@ -78,8 +78,9 @@ export function isProgram(codeType: string): boolean {
 /** Strip "program_" prefix to get the base code type for protocol lookup */
 export function baseCodeType(codeType: string): string {
   const base = codeType.replace(/^program_/, '');
+  // Aliases for legacy/short ids → canonical date code keys in DATE_CODE_TO_PROTOCOL
   const programAliases: Record<string, string> = {
-    year: 'y',
+    year: 'y',     // legacy: program_year → 1-digit year (d=8)
     month: 'mm',
     week: 'ww',
     dow: 'dow_num',

@@ -42,13 +42,14 @@ describe("messageSeeds — protocol v2.6 conformance", () => {
     expect(cmds[6]).toBe("^SV");
   });
 
-  it("buildSeedCommands rewrites stale ^AP …;9 → ;8 safety net", () => {
-    const stale = {
+  it("buildSeedCommands passes ^AP type codes through verbatim (spec §5.33.2.7 allows any d/t)", () => {
+    const seed = {
       label: "x",
       description: "x",
-      commandsTemplate: ["^NM 1;0;0;0;__NAME__^AP2;13;0;2;9"],
+      commandsTemplate: ["^NM 1;0;0;0;__NAME__^AP2;13;0;2;9", "^AP3;20;0;2;10"],
     };
-    const out = buildSeedCommands(stale, "AUTO");
-    expect(out[0]).toBe("^NM 1;0;0;0;AUTO^AP2;13;0;2;8");
+    const out = buildSeedCommands(seed, "AUTO");
+    expect(out[0]).toBe("^NM 1;0;0;0;AUTO^AP2;13;0;2;9");
+    expect(out[1]).toBe("^AP3;20;0;2;10");
   });
 });
