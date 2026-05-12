@@ -295,7 +295,7 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
   const TEMPLATE = 1;
 
   // PROTOCOL v2.6 §5.30/§5.31 — multi-field messages MUST use ^NM with the
-  // FIRST field inline, then ^NF per additional field, then ^SV.
+  // FIRST field inline, then ^NF <message>; per additional field, then ^SV.
   // Cramming all 5 fields into a single ^NM ACKs (echoes) but is silently
   // rejected by the firmware; ^SV then returns CmdNotRec (nothing pending).
   // This is the same fix used for the 12-field DOZEN12 message — see
@@ -318,7 +318,7 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
     commandsTemplate: [
       "^DM __NAME__",
       `^NM ${TEMPLATE};0;0;0;__NAME__${firstField}`,
-      ...appendFields.map((f) => `^NF ${f}`),
+      ...appendFields.map((f) => `^NF __NAME__;${f}`),
       "^SV",
     ],
   };
