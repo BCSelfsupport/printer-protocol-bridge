@@ -283,11 +283,11 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
 
   // Protocol v2.6 references:
   //   §5.33.2.1 ^AT — text field
-  //   §5.33.2.7 ^AP — programmable date code (t=8 = "Year 1-digit" via Program Year HMI table → A/B/C…)
-  //   NOTE: ^AP only accepts PROGRAM table codes (5/7/8/23/24/25). Non-program
-  //   codes like t=9 (year 2-digit) are NOT valid for ^AP — the firmware silently
-  //   rejects the entire ^NM, which is the failure that breaks Auto-Code bind
-  //   when the Program Year table isn't populated AND when t≠8 is used here.
+  //   §5.33.2.7 ^AP — programmable date code. Per spec, d= accepts ANY of the
+  //     ^AD/^AH type codes (1–22 / 23–29). We use d=10 (4-digit year YYYY) so
+  //     the printer's HMI Program Year table can map the FULL year (e.g.
+  //     2026 → "A") instead of only the last digit. The substituted character
+  //     is whatever the operator configured on the printer.
   //   §5.33.2.3 ^AD — date code (t=4 = day-of-year DDD / "Julian day")
   //   §5.33.2.x ^AC — counter field (c = hardware slot 1..4)
   //
@@ -316,7 +316,9 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
 
   const firstField = `^AT1;${xLine};0;${FONT};${line}`;
   const appendFields = [
-    `^AP2;${xYear};0;${FONT};8`,
+    // ^AP d=10 → printer looks up the full 4-digit year in its Program Year
+    // HMI table and prints the mapped character (e.g. 2026 → A).
+    `^AP2;${xYear};0;${FONT};10`,
     `^AD3;${xJulian};0;${FONT};4`,
     `^AC4;${xCounter};0;${FONT};${slot};${COUNTER_DIGITS};${COUNTER_LEADING_ZERO}`,
     `^AT5;${xUnit};0;${FONT};${unit}`,

@@ -35,7 +35,7 @@ describe("messageSeeds — protocol v2.6 conformance", () => {
     expect(cmds[1]).not.toMatch(/\^AD/);
     expect(cmds[1]).not.toMatch(/\^AC/);
     // The remaining four fields each get their own ^NF line
-    expect(cmds[2]).toMatch(/^\^NF AUTO;\^AP2;\d+;0;2;8$/);
+    expect(cmds[2]).toMatch(/^\^NF AUTO;\^AP2;\d+;0;2;10$/);
     expect(cmds[3]).toMatch(/^\^NF AUTO;\^AD3;\d+;0;2;4$/);
     expect(cmds[4]).toMatch(/^\^NF AUTO;\^AC4;\d+;0;2;1;6;1$/);
     expect(cmds[5]).toMatch(/^\^NF AUTO;\^AT5;\d+;0;2;U$/);
