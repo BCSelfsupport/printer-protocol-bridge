@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Loader2, CheckCircle2, XCircle, Link2, Unlink, Cpu, Wifi, FileText, Hash, Barcode, Type, Sparkles, Zap } from "lucide-react";
 import { twinPairStore, useTwinPair, type TwinPrinterBinding, type DispatchSubcommand } from "../twinPairStore";
-import { seedForSide, buildAutoCodeSeed, previewAutoCodeSerial, type AutoCodeSeedOpts } from "../messageSeeds";
+import { seedForSide, buildAutoCodeSeed, previewAutoCodeSerial, defaultYearMap, letterForCurrentYear, type AutoCodeSeedOpts } from "../messageSeeds";
 import { seedTwinPairMessages } from "../twinDispatcher";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 import type { Printer } from "@/types/printer";
@@ -87,8 +87,15 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
   // (line + programmable year A-Z + Julian DDD + counter slot + unit). No CSV,
   // no per-bottle host traffic — printers self-generate every serial.
   const [autoCodeMode, setAutoCodeMode] = useState(false);
-  const [autoCodeOpts, setAutoCodeOpts] = useState<AutoCodeSeedOpts>({ line: "27", unit: "U", counterSlot: 1 });
+  const [autoCodeOpts, setAutoCodeOpts] = useState<AutoCodeSeedOpts>({
+    line: "27",
+    unit: "U",
+    counterSlot: 1,
+    yearMap: defaultYearMap(6),
+  });
   const autoCodePreview = previewAutoCodeSerial(autoCodeOpts);
+  const todaysYearLetter = letterForCurrentYear(autoCodeOpts.yearMap);
+  const thisYear = new Date().getFullYear();
 
   // Re-seed when dialog opens, so user always sees current binding
   useEffect(() => {
@@ -269,6 +276,59 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
                   </ToggleGroup>
                 </div>
               </div>
+
+              {/* Programmable Year setup — table that drives ^AP t=8 (1 letter / year).
+                  MUST match the table configured on each printer (Setup → Program
+                  Date Codes → Program Year) or the live serial will use a different
+                  letter than this preview shows. */}
+              <div className="rounded border border-dashed border-border bg-background/40 p-2 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[11px] font-semibold">
+                    Program Year setup <span className="text-muted-foreground font-normal">(year → letter)</span>
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => setAutoCodeOpts({ ...autoCodeOpts, yearMap: defaultYearMap(6) })}
+                    className="text-[10px] text-muted-foreground hover:text-foreground underline"
+                  >
+                    Reset (A = {thisYear})
+                  </button>
+                </div>
+                <div className="grid grid-cols-6 gap-1">
+                  {Object.entries(autoCodeOpts.yearMap ?? {})
+                    .sort(([a], [b]) => Number(a) - Number(b))
+                    .map(([year, letter]) => {
+                      const yNum = Number(year);
+                      const isCurrent = yNum === thisYear;
+                      return (
+                        <div key={year} className="flex flex-col items-center">
+                          <span className={`text-[9px] ${isCurrent ? "text-primary font-semibold" : "text-muted-foreground"}`}>
+                            {year}
+                          </span>
+                          <Input
+                            value={letter}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/[^A-Za-z]/g, "").slice(0, 1).toUpperCase();
+                              setAutoCodeOpts({
+                                ...autoCodeOpts,
+                                yearMap: { ...(autoCodeOpts.yearMap ?? {}), [yNum]: v },
+                              });
+                            }}
+                            className={`h-7 px-1 text-center font-mono text-xs ${isCurrent ? "border-primary" : ""}`}
+                            maxLength={1}
+                          />
+                        </div>
+                      );
+                    })}
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-snug">
+                  This year ({thisYear}) prints as <span className="font-mono font-semibold text-primary">{todaysYearLetter}</span>.
+                  This same table must be configured on BOTH printers via{" "}
+                  <span className="font-medium">Setup → Program Date Codes → Program Year</span>{" "}
+                  so the lid DM and side text resolve identically.
+                </p>
+              </div>
+
               <div className="rounded bg-background/80 p-2 text-center font-mono text-base tracking-wider">
                 <span className="text-[10px] text-muted-foreground mr-2">sample:</span>
                 <span className="text-foreground font-semibold">{autoCodePreview}</span>
