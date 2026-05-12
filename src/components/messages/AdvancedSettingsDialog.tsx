@@ -1,5 +1,5 @@
 import { ArrowLeft, ChevronUp, ChevronDown, RotateCcw, Pencil } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 // Advanced settings following BestCode manual pages 52-55
 export interface AdvancedSettings {
