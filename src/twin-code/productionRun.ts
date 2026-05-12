@@ -425,6 +425,30 @@ class ProductionRunStore {
       const active = this.state.active;
       if (!active) return;
       if (firing) return;
+
+      // Detect mid-run catalog promotions (on-deck queue auto-appended a new
+      // CSV). The fingerprint changes whenever appendSerials() runs; record a
+      // new segment so the audit can show which bottles came from which file.
+      const segs = active.catalogSegments ?? [];
+      const lastSegFp = segs.length > 0 ? segs[segs.length - 1].fingerprint : null;
+      if (cs.fingerprint && cs.fingerprint !== lastSegFp) {
+        const updated: ProductionRunMeta = {
+          ...active,
+          catalogSegments: [
+            ...segs,
+            {
+              fingerprint: cs.fingerprint,
+              catalogTotalAtSwap: cs.total,
+              recordsIdxAtSwap: catalog.getRecords().length,
+              swappedAtMs: Date.now(),
+            },
+          ],
+        };
+        this.state = { ...this.state, active: updated };
+        this.persistActive();
+        this.notify();
+      }
+
       const recordsConsumed = catalog.getRecords().length - active.recordsStartIdx;
 
       // (1) Run-length cap reached?
