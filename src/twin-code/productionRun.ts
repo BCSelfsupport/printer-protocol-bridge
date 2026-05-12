@@ -228,6 +228,14 @@ class ProductionRunStore {
         speedCode: TWIN_DEFAULT_SPEED_CODE,
         speedLabel: TWIN_DEFAULT_SPEED_LABEL,
       } : null,
+      catalogSegments: cs.fingerprint
+        ? [{
+            fingerprint: cs.fingerprint,
+            catalogTotalAtSwap: cs.total,
+            recordsIdxAtSwap: catalog.getRecords().length,
+            swappedAtMs: Date.now(),
+          }]
+        : [],
     };
     this.state = { ...this.state, active: meta };
     // Fresh run = fresh fault history; otherwise prior shift's incidents
