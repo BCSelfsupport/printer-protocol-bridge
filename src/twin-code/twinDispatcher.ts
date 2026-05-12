@@ -766,6 +766,19 @@ export async function seedTwinPairMessages(
     seedA?: MessageSeed;
     /** Optional seed override for side B — replaces the default SIDE seed. */
     seedB?: MessageSeed;
+    /**
+     * Optional hardware-counter configuration to push to BOTH printers via the
+     * named-parameter ^CC form (protocol v2.6 §5.5) plus a ^CN reset to load
+     * the start value into the live counter. Lets the operator re-zero or
+     * re-seed mid-run after rejects without touching either HMI.
+     * See mem://integration/cc-named-parameters.
+     */
+    counterConfig?: {
+      slot: 1 | 2 | 3 | 4;
+      start: number;
+      digits: number;
+      leadingZero: boolean;
+    };
   },
 ): Promise<BoundPairResult> {
   type SeedResult = { ok: boolean; error?: string; seeded?: boolean };
