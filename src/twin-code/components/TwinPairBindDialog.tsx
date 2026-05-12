@@ -220,6 +220,66 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
           </DialogDescription>
         </DialogHeader>
 
+        {/* Auto-Code Mode — no CSV; native on-printer auto-codes */}
+        <div className={`rounded-md border p-3 transition-colors ${autoCodeMode ? "border-primary/60 bg-primary/5" : "border-border bg-muted/20"}`}>
+          <label htmlFor="autocode-toggle" className="flex cursor-pointer items-start gap-3">
+            <Checkbox
+              id="autocode-toggle"
+              checked={autoCodeMode}
+              onCheckedChange={(v) => setAutoCodeMode(v === true)}
+              className="mt-0.5"
+            />
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center gap-1.5 text-sm font-semibold">
+                <Zap className="h-4 w-4 text-primary" />
+                Auto-Code Mode — no CSV, fastest cycle time
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Seeds BOTH printers with an identical 5-field native message:{" "}
+                <span className="font-mono">text + programmable year (A-Z) + Julian DDD + counter + text</span>.
+                Each printer self-generates every serial — no per-bottle host traffic. Counter slot must already
+                be configured (digits, leading zeros, rollover) via the existing Counters dialog.
+              </p>
+            </div>
+          </label>
+
+          {autoCodeMode && (
+            <div className="mt-3 space-y-2 pl-7">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label htmlFor="ac-line" className="text-[11px]">Line number</Label>
+                  <Input id="ac-line" value={autoCodeOpts.line}
+                    onChange={(e) => setAutoCodeOpts({ ...autoCodeOpts, line: e.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 3) })}
+                    className="h-8 font-mono text-xs" placeholder="27" maxLength={3} />
+                </div>
+                <div>
+                  <Label htmlFor="ac-unit" className="text-[11px]">Unit suffix</Label>
+                  <Input id="ac-unit" value={autoCodeOpts.unit}
+                    onChange={(e) => setAutoCodeOpts({ ...autoCodeOpts, unit: e.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 2).toUpperCase() })}
+                    className="h-8 font-mono text-xs uppercase" placeholder="U" maxLength={2} />
+                </div>
+                <div>
+                  <Label className="text-[11px]">Counter slot</Label>
+                  <ToggleGroup type="single" value={String(autoCodeOpts.counterSlot)}
+                    onValueChange={(v) => v && setAutoCodeOpts({ ...autoCodeOpts, counterSlot: Number(v) as 1|2|3|4 })}
+                    className="mt-1 grid grid-cols-4 gap-1">
+                    {[1,2,3,4].map((n) => (
+                      <ToggleGroupItem key={n} value={String(n)} className="h-8 text-xs font-mono data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">{n}</ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </div>
+              </div>
+              <div className="rounded bg-background/80 p-2 text-center font-mono text-base tracking-wider">
+                <span className="text-[10px] text-muted-foreground mr-2">sample:</span>
+                <span className="text-foreground font-semibold">{autoCodePreview}</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground italic">
+                Both printers seeded with the SAME message — Counter slot {autoCodeOpts.counterSlot} ticks natively on each side.
+              </p>
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2" data-tour="bind-ip-fields">
           <div data-tour="bind-message-config">
             <SlotCard
