@@ -330,6 +330,39 @@ const Index = () => {
     return commands;
   }, []);
 
+  const buildCounterConfigCommandSequence = useCallback((details: MessageDetails): SequencedPrinterCommand[] => {
+    const counters = details.advancedSettings?.counters ?? [];
+    if (counters.length === 0) return [];
+
+    const referencedCounterIds = new Set<number>();
+    details.fields.forEach((field) => {
+      const match = field.autoCodeFieldType?.match(/^counter_(\d+)$/i);
+      const slot = match ? Number.parseInt(match[1], 10) : NaN;
+      if (Number.isInteger(slot) && slot >= 1 && slot <= 4) referencedCounterIds.add(slot);
+    });
+
+    return counters
+      .filter((counter) => referencedCounterIds.has(counter.id))
+      .filter((counter) => {
+        const defaultEnd = 999999999;
+        return counter.startCount !== 0
+          || counter.endCount !== defaultEnd
+          || counter.incrementation !== 1
+          || counter.leadingZeroes;
+      })
+      .map((counter) => {
+        const id = Math.min(4, Math.max(1, Math.trunc(counter.id)));
+        const start = Math.min(999999999, Math.max(0, Math.trunc(counter.startCount)));
+        const end = Math.min(999999999, Math.max(0, Math.trunc(counter.endCount)));
+        const increment = Math.min(20, Math.max(-20, Math.trunc(counter.incrementation)));
+        const leadingZeroes = counter.leadingZeroes ? 1 : 0;
+        return {
+          command: `^CC ${id};${start};${start};${end};${increment};${leadingZeroes}`,
+          delayAfterMs: 700,
+        };
+      });
+  }, []);
+
   const stripPromptMetadata = useCallback((details: MessageDetails): MessageDetails => ({
     ...details,
     fields: details.fields.map(({ promptBeforePrint, promptLabel, promptLength, ...field }) => field),
