@@ -95,9 +95,9 @@ export function ConveyorPanel() {
   useEffect(() => {
     if (!liveMode) return;
     conveyorSim.setLiveDispatcher((serial) =>
-      twinDispatcher.dispatch(serial, { forceTrigger: !productionMode })
+      twinDispatcher.dispatch(serial, { forceTrigger: !productionMode, autoCode: !!pair.autoCodeMode })
     );
-  }, [liveMode, productionMode]);
+  }, [liveMode, productionMode, pair.autoCodeMode]);
 
   // ---- LIVE bonded dispatch wiring ----
   const enableLive = async () => {
