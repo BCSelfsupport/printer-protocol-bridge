@@ -183,6 +183,8 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
       messageNameB: b.messageName,
       autoCreateA: a.autoCreate ?? true,
       autoCreateB: b.autoCreate ?? true,
+      seedA: autoCodeMode ? buildAutoCodeSeed(autoCodeOpts) : undefined,
+      seedB: autoCodeMode ? buildAutoCodeSeed(autoCodeOpts) : undefined,
     });
     setSaving(false);
     if (!res.ok) {
