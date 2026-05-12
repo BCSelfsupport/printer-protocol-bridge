@@ -810,6 +810,7 @@ const Index = () => {
       details.templateValue,
       false,
       perMessageSettings,
+      details.advancedSettings?.counters,
     );
 
     if (!rawCommands || rawCommands.length === 0) {
