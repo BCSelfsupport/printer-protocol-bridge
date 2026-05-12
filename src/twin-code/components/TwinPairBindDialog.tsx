@@ -112,6 +112,7 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
             line: pair.autoCodeOpts.line,
             unit: pair.autoCodeOpts.unit,
             counterSlot: pair.autoCodeOpts.counterSlot,
+            counterStart: pair.autoCodeOpts.counterStart ?? 1,
             yearMap: pair.autoCodeOpts.yearMap ?? defaultYearMap(6),
           });
         }
