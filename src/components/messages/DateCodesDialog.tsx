@@ -41,14 +41,18 @@ const DATE_TYPE_OPTIONS: DateTypeOption[] = [
 ];
 
 // Year code options — mapped to v2.6 protocol §5.33.2.3 date type codes
+// Programmable variants emit ^AP §5.33.2.7 with the same d= type code as ^AD,
+// so the printer's HMI Program tables can rewrite the rendered characters.
 const YEAR_CODES = [
   { id: 'yyyy', label: 'Four Digit Year (YYYY)', protocolCode: 10 },
   { id: 'yy', label: 'Two-Digit Year (YY)', protocolCode: 9 },
   { id: 'y', label: 'One-Digit Year (Y)', protocolCode: 8 },
   { id: 'doy', label: 'Day of Year (DDD)', protocolCode: 4 },
   { id: 'julian', label: 'Julian Date (YDDD)', protocolCode: null }, // Composite: 1-digit year + day-of-year
-  { id: 'program_year', label: 'Program Year', protocolCode: 8 },   // Uses ^AP programmable 1-digit year table
-  { id: 'program_doy', label: 'Program Day of Year', protocolCode: 4 }, // Uses ^AP
+  { id: 'program_yyyy', label: 'Program Year (YYYY)', protocolCode: 10 }, // ^AP d=10
+  { id: 'program_yy',   label: 'Program Year (YY)',   protocolCode: 9 },  // ^AP d=9
+  { id: 'program_y',    label: 'Program Year (Y)',    protocolCode: 8 },  // ^AP d=8
+  { id: 'program_doy',  label: 'Program Day of Year', protocolCode: 4 },  // ^AP d=4
 ];
 
 // Month code options
