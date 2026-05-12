@@ -21,6 +21,8 @@
 import { profilerBus } from "./profilerBus";
 import { catalog } from "./catalog";
 import { faultGuard } from "./faultGuard";
+import { twinPairStore } from "./twinPairStore";
+import { autoCodeSerial } from "./autoCodeSerial";
 
 /**
  * Pluggable per-bottle dispatcher. When set (e.g. via `setLiveDispatcher`),
