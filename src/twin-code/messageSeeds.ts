@@ -266,13 +266,19 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts): MessageSeed {
   const FONT = 2;
   const TEMPLATE = 1;
 
-  const fields = [
-    `^AT1;${xLine};0;${FONT};${line}`,
+  // PROTOCOL v2.6 §5.30/§5.31 — multi-field messages MUST use ^NM with the
+  // FIRST field inline, then ^NF per additional field, then ^SV.
+  // Cramming all 5 fields into a single ^NM ACKs (echoes) but is silently
+  // rejected by the firmware; ^SV then returns CmdNotRec (nothing pending).
+  // This is the same fix used for the 12-field DOZEN12 message — see
+  // mem://features/message-persistence/nm-nf-field-append-flow.
+  const firstField = `^AT1;${xLine};0;${FONT};${line}`;
+  const appendFields = [
     `^AP2;${xYear};0;${FONT};8`,
     `^AD3;${xJulian};0;${FONT};4`,
     `^AC4;${xCounter};0;${FONT};${slot}`,
     `^AT5;${xUnit};0;${FONT};${unit}`,
-  ].join("");
+  ];
 
   const sample = `${line}A132${"1".padStart(6, "0")}${unit}`;
   return {
@@ -283,7 +289,8 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts): MessageSeed {
       `No CSV, no per-bottle host traffic — printers self-generate every serial.`,
     commandsTemplate: [
       "^DM __NAME__",
-      `^NM ${TEMPLATE};0;0;0;__NAME__${fields}`,
+      `^NM ${TEMPLATE};0;0;0;__NAME__${firstField}`,
+      ...appendFields.map((f) => `^NF ${f}`),
       "^SV",
     ],
   };
