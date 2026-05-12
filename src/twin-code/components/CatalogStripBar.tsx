@@ -634,6 +634,8 @@ export function CatalogStripBar() {
       <CsvColumnPickerDialog
         open={pickerOpen}
         rawText={csvText}
+        target={csvTarget}
+        filename={csvFilename}
         onCancel={() => {
           setPickerOpen(false);
           setCsvText(null);
