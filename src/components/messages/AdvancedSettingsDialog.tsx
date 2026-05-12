@@ -1,5 +1,5 @@
 import { ArrowLeft, ChevronUp, ChevronDown, RotateCcw, Pencil } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 // Advanced settings following BestCode manual pages 52-55
 export interface AdvancedSettings {
@@ -174,6 +175,11 @@ interface AdvancedSettingsDialogProps {
   onOpenChange: (open: boolean) => void;
   settings: AdvancedSettings;
   onUpdate: (settings: Partial<AdvancedSettings>) => void;
+  /**
+   * Optional. When provided, counter changes are pushed to the printer live
+   * via ^CC named-parameter form (protocol v2.6 §5.5). Debounced per param.
+   */
+  onSendCommand?: (command: string) => Promise<{ success?: boolean; response?: string; error?: string } | unknown>;
 }
 
 export function AdvancedSettingsDialog({
@@ -181,17 +187,80 @@ export function AdvancedSettingsDialog({
   onOpenChange,
   settings,
   onUpdate,
+  onSendCommand,
 }: AdvancedSettingsDialogProps) {
   const [activeTab, setActiveTab] = useState('general');
   const [selectedCounter, setSelectedCounter] = useState(1);
 
   const currentCounter = settings.counters.find(c => c.id === selectedCounter) || settings.counters[0];
 
+  // Debounce per-param ^CC pushes so spinner clicks don't flood the socket.
+  // Key = "<slot>:<paramLetter>" so each row debounces independently.
+  const pushTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const pushCounterParam = useCallback(
+    (slot: number, paramLetter: 'I' | 'S' | 'E' | 'L' | 'R' | 'T', value: number) => {
+      if (!onSendCommand) return;
+      const key = `${slot}:${paramLetter}`;
+      const existing = pushTimers.current.get(key);
+      if (existing) clearTimeout(existing);
+      const timer = setTimeout(async () => {
+        const cmd = `^CC ${slot};${paramLetter}${value}`;
+        try {
+          const result = (await onSendCommand(cmd)) as { success?: boolean; response?: string; error?: string };
+          const resp = String(result?.response ?? '').toLowerCase();
+          const ok = result?.success !== false && !resp.includes('inv') && !resp.includes('cmdformat') && !resp.includes('cmdnotrec');
+          if (!ok) {
+            toast.error(`Counter ${slot} update rejected`, {
+              description: result?.response || result?.error || 'Printer rejected the change',
+            });
+          }
+        } catch (err) {
+          toast.error(`Counter ${slot} update failed`, {
+            description: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }, 400);
+      pushTimers.current.set(key, timer);
+    },
+    [onSendCommand],
+  );
+
+  // Cancel pending pushes on unmount
+  useEffect(() => {
+    return () => {
+      pushTimers.current.forEach((t) => clearTimeout(t));
+      pushTimers.current.clear();
+    };
+  }, []);
+
   const updateCounter = (updates: Partial<typeof currentCounter>) => {
     const newCounters = settings.counters.map(c =>
       c.id === selectedCounter ? { ...c, ...updates } : c
     );
     onUpdate({ counters: newCounters });
+
+    // Live-push each changed param to the printer using the named-parameter
+    // ^CC form. Mapping: protocol v2.6 §5.5 — C;V;S;L;T;I;E;R
+    if (typeof updates.incrementation === 'number') {
+      pushCounterParam(selectedCounter, 'I', updates.incrementation);
+    }
+    if (typeof updates.startCount === 'number') {
+      pushCounterParam(selectedCounter, 'S', updates.startCount);
+    }
+    if (typeof updates.endCount === 'number') {
+      pushCounterParam(selectedCounter, 'E', updates.endCount);
+    }
+    if (typeof updates.leadingZeroes === 'boolean') {
+      pushCounterParam(selectedCounter, 'L', updates.leadingZeroes ? 1 : 0);
+    }
+    if (typeof updates.repeat === 'number') {
+      pushCounterParam(selectedCounter, 'R', updates.repeat);
+    }
+    if (updates.countTrigger !== undefined) {
+      pushCounterParam(selectedCounter, 'T', updates.countTrigger === 'Photocell' ? 1 : 0);
+    }
+    // counterResets: no protocol command — HMI-local only, applied on save.
   };
 
   return (
