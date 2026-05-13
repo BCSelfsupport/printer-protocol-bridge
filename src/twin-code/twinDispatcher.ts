@@ -158,15 +158,21 @@ class PrinterSession {
   } = {}): Promise<{ ok: boolean; error?: string; seeded?: boolean }> {
     this.isEmulated = this.detectEmulated();
     const { messageName, seed, preSelectCommands, skipOneToOne } = opts;
+    const trace = (step: string, extra?: Record<string, unknown>) => {
+      console.info(`[TwinBind:${this.label}] ${step}`, { printerId: this.printerId, ...extra });
+    };
+    trace('enter:start', { messageName, hasSeed: !!seed, skipOneToOne, emulated: this.isEmulated });
 
     const runPreSelect = async () => {
       if (!preSelectCommands || preSelectCommands.length === 0) return;
+      trace('preSelect:start', { count: preSelectCommands.length });
       for (const cmd of preSelectCommands) {
         await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 3000 }).catch(() => {});
       }
       // Persist to non-volatile so the values survive ^SM activation.
       await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 3000 }).catch(() => {});
       await new Promise(res => setTimeout(res, 150));
+      trace('preSelect:done');
     };
 
     // ---- Emulator path: synthesize R/T/C entirely in-process ----
@@ -174,6 +180,7 @@ class PrinterSession {
       // Seed-on-bind is also honored on the emulator so the dev path mirrors prod.
       let seeded = false;
       if (seed && messageName) {
+        trace('emulator:ensureMessage');
         const r = await this.ensureMessage(messageName, seed);
         if (!r.ok) {
           return { ok: false, error: r.error };
@@ -182,6 +189,7 @@ class PrinterSession {
       }
       await runPreSelect();
       if (messageName) {
+        trace('emulator:^SM');
         const sm = await printerTransport.sendCommand(this.printerId, `^SM ${messageName}`, { maxWaitMs: 2000 });
         if (!sm?.success) {
           return { ok: false, error: `${this.label}: ^SM failed (emulator)` };
@@ -191,6 +199,7 @@ class PrinterSession {
       // Per v2.6 §6.1, ^MB is the 1:1 entry command; ^CM p1 is Auto-Print, not 1:1.
       // Auto-Code mode skips ^MB — the printer self-prints from the hardware photocell.
       if (!skipOneToOne) {
+        trace('emulator:^MB');
         const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 2000 });
         if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
           return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed (emulator)` };
@@ -198,21 +207,25 @@ class PrinterSession {
       }
       this.active = true;
       this.skipOneToOne = !!skipOneToOne;
+      trace('emulator:active');
       return { ok: true, seeded };
     }
 
     if (!window.electronAPI?.oneToOne) {
       // Renderer fallback (no Electron, no emulator) — pretend we entered so demos still work.
       this.active = true;
+      trace('renderer-fallback:active');
       return { ok: true };
     }
 
     if (this.printer) {
+      trace('connect:start');
       const ready = await printerTransport.connect(this.printer);
       if (!ready?.success) {
         await this.cleanup();
         return { ok: false, error: `${this.label}: connect failed${ready?.error ? ` — ${ready.error}` : ''}` };
       }
+      trace('connect:ok');
     }
 
     // Subscribe to ACK stream FIRST so the printer's ^MB response framing is captured.
@@ -231,49 +244,45 @@ class PrinterSession {
       if (payload.kind === 'ack' && payload.char) this.handleAck(payload.char);
     });
 
+    trace('attach:start');
     const attached = await window.electronAPI.oneToOne.attach(this.printerId);
     if (!attached?.success) {
       await this.cleanup();
       return { ok: false, error: `${this.label}: 1-1 attach failed — no active socket` };
     }
+    trace('attach:ok');
 
     // Seed-on-bind: if the operator opted in (passed `seed`) and the named
     // message isn't on the printer yet, lay it down before ^SM so the
     // dispatcher's ^MD^BD/^MD^TD path always has a correct field to write to.
     let seeded = false;
     if (seed && messageName) {
+      trace('ensureMessage:start');
       const r = await this.ensureMessage(messageName, seed);
       if (!r.ok) {
         await this.exit();
         return { ok: false, error: r.error };
       }
       seeded = !!r.seeded;
-      // After ^NM+^SV the firmware needs a beat to commit before ^SM will
-      // resolve the new name. Without this, ^SM races the commit and the
-      // printer stays on whatever message was previously active.
+      trace('ensureMessage:done', { seeded });
       if (seeded) await new Promise(res => setTimeout(res, 600));
     }
 
-    // Push counter + print params BEFORE ^SM-select so the very first print
-    // after activation uses the intended config (no stale-counter ghost cycle).
     await runPreSelect();
 
     if (messageName) {
       const target = messageName.trim().toUpperCase();
+      trace('^SM:start', { target });
       const sm = await printerTransport.sendCommand(this.printerId, `^SM ${target}`, { maxWaitMs: 4000 });
       if (!sm?.success) {
         await this.exit();
         return { ok: false, error: `${this.label}: ^SM failed` };
       }
-      // Verify the selection actually took. ^SU is the authoritative status
-      // source for the current message; ^MS is only a secondary hint because
-      // some firmware revs report 1-1 state there without a message name.
-      // If the firmware silently kept the previous selection (common right
-      // after a fresh ^NM+^SV) we re-issue ^SM once before giving up.
       await new Promise(res => setTimeout(res, 300));
+      trace('^SM:verify');
       const verified = await this.verifyActiveMessage(target);
       if (!verified.ok) {
-        // One retry — sometimes ^SM lands but status races it on busy firmware.
+        trace('^SM:verify-retry', { active: verified.active });
         await new Promise(res => setTimeout(res, 400));
         await printerTransport.sendCommand(this.printerId, `^SM ${target}`, { maxWaitMs: 4000 });
         await new Promise(res => setTimeout(res, 300));
@@ -283,24 +292,29 @@ class PrinterSession {
           return { ok: false, error: `${this.label}: ^SM ${target} did not stick (active="${second.active || '?'}")` };
         }
       }
+      trace('^SM:ok');
     }
 
     if (!skipOneToOne) {
+      trace('^MB:start');
       const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 4000 });
       if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
         await this.cleanup();
         return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed` };
       }
 
+      trace('^MB:confirm');
       const mode = await this.confirmOneToOneMode();
       if (!mode.ok) {
         await this.cleanup();
         return { ok: false, error: mode.error };
       }
+      trace('^MB:ok');
     }
 
     this.active = true;
     this.skipOneToOne = !!skipOneToOne;
+    trace('enter:done', { seeded });
     return { ok: true, seeded };
   }
 
