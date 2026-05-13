@@ -548,12 +548,38 @@ class PrinterSession {
     )];
   }
 
+  /** Stable fingerprint of the seed's commandsTemplate (captures line/unit/slot/etc). */
+  private seedContentFingerprint(seed: MessageSeed, messageName: string): string {
+    const cmds = buildSeedCommands(seed, messageName.trim().toUpperCase());
+    // Skip ^DM (delete) — pure data commands only
+    const data = cmds.filter(c => !c.startsWith('^DM')).join('|');
+    let h = 0;
+    for (let i = 0; i < data.length; i++) {
+      h = ((h << 5) - h + data.charCodeAt(i)) | 0;
+    }
+    return h.toString(36);
+  }
+
+  private fingerprintKey(messageName: string): string {
+    return `twincode-seed-fp:${this.printerId}:${messageName.trim().toUpperCase()}`;
+  }
+
+  private getStoredFingerprint(messageName: string): string | null {
+    try { return localStorage.getItem(this.fingerprintKey(messageName)); } catch { return null; }
+  }
+
+  private setStoredFingerprint(messageName: string, fp: string): void {
+    try { localStorage.setItem(this.fingerprintKey(messageName), fp); } catch {}
+  }
+
   private async ensureMessage(
     messageName: string,
     seed: MessageSeed,
   ): Promise<{ ok: boolean; error?: string; seeded?: boolean }> {
     const target = messageName.trim().toUpperCase();
     if (!target) return { ok: false, error: `${this.label}: empty message name` };
+
+    const expectedFp = this.seedContentFingerprint(seed, target);
 
     // ^LM check — works on both Electron and emulator paths since the regular
     // transport handles routing. If ^LM fails outright, surface the error
@@ -572,15 +598,25 @@ class PrinterSession {
     const expectedSig = this.seedSignature(seed);
 
     if (exists) {
-      // Compare on-printer field topology against the seed. If they don't
-      // match (e.g. the printer still has an old single-field LID but we now
-      // want the 5-field auto-code), delete + recreate so both printers run
-      // exactly the message the bind dialog asked for.
+      // Content fingerprint check: detect operator-changed line/prefix/counter
+      // even when topology (field count + kinds) is identical to the previous
+      // seed. Without this, rebinding with a new line number silently keeps
+      // the old message.
+      const storedFp = this.getStoredFingerprint(target);
+      const fpMatches = storedFp !== null && storedFp === expectedFp;
+
+      // Topology check (catches old seeds installed before fingerprinting).
       const actualSig = await this.printerSignature(target);
-      if (!this.signatureMismatch(expectedSig, actualSig)) {
+      const sigOk = !this.signatureMismatch(expectedSig, actualSig);
+
+      if (fpMatches && sigOk) {
         return { ok: true, seeded: false };
       }
-      console.info('[TwinSeed] content mismatch — refreshing', { target, expected: expectedSig, actual: actualSig });
+      console.info('[TwinSeed] refresh required', {
+        target,
+        reason: !fpMatches ? 'content-fingerprint-changed' : 'topology-mismatch',
+        expectedFp, storedFp, expected: expectedSig, actual: actualSig,
+      });
     }
 
     // Missing OR mismatched → seed (the seed's first ^DM handles overwrite).
@@ -613,7 +649,8 @@ class PrinterSession {
       };
     }
 
-    console.info('[TwinSeed] seeded & verified', { target, responses });
+    this.setStoredFingerprint(target, expectedFp);
+    console.info('[TwinSeed] seeded & verified', { target, fp: expectedFp, responses });
     return { ok: true, seeded: true };
   }
 
