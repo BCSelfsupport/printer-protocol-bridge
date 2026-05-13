@@ -1186,6 +1186,22 @@ class TwinDispatcher {
   getPhotocellMirrorState(): PhotocellMirrorState { return this.mirrorState; }
 
   /**
+   * Soft-stop printing on both bound printers without cycling the jet.
+   * Sends `n 0` (HV deflection off) to A and B so further photocell trips
+   * are ignored. Used by the production-run target-count auto-stop so the
+   * physical line halts at exactly N printed codes.
+   */
+  async inhibitPrinting(): Promise<void> {
+    const targets: number[] = [];
+    if (this.a) targets.push(this.a.printerId);
+    if (this.b) targets.push(this.b.printerId);
+    await Promise.all(targets.map(id =>
+      printerTransport.sendCommand(id, 'n 0', { maxWaitMs: 2000 }).catch(() => {})
+    ));
+    this.stopPhotocellMirror();
+  }
+
+  /**
    * Begin mirroring the printer's hardware photocell trips into the catalog
    * ledger. Polls printer A's ^CN every 400ms. On each delta, dispenses N
    * serials (autoCodeSerial.next() in Auto-Code Mode, catalog.dispense()

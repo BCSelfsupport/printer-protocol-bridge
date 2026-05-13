@@ -90,6 +90,11 @@ export function ProductionRunBar() {
       // Auto Print Go pacing forever, which is what produced the "BOTTLE #640"
       // runaway after a 50-bottle lot. Halt the photocell first, then export.
       conveyorSim.stop();
+      // Native photocell mode (Production / Auto-Code) prints on every
+      // hardware beam break — the ledger stop alone won't halt the line.
+      // Send `n 0` (HV deflection off) to both bound printers so further
+      // photocell trips are ignored at exactly the target count.
+      twinDispatcher.inhibitPrinting().catch(() => {});
       downloadRunCSV(exp);
       downloadRunJSON(exp);
       downloadEnvelopeReport(exp);
@@ -98,7 +103,7 @@ export function ProductionRunBar() {
         : "catalog exhausted";
       toast({
         title: `Lot ${exp.meta.lotNumber} complete — ${reason}`,
-        description: `${exp.summary.printed.toLocaleString()} printed · ${exp.summary.missed.toLocaleString()} missed · yield ${exp.summary.yieldPct.toFixed(2)}%. CSV + signed JSON + Envelope report downloaded.`,
+        description: `${exp.summary.printed.toLocaleString()} printed · ${exp.summary.missed.toLocaleString()} missed · yield ${exp.summary.yieldPct.toFixed(2)}%. Printer HV disabled — re-enable Start Print to resume.`,
       });
       // Celebrate cleanly via sonner — operators get a glanceable success
       // banner separate from the heavier download notice above.
