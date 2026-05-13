@@ -598,15 +598,25 @@ class PrinterSession {
     const expectedSig = this.seedSignature(seed);
 
     if (exists) {
-      // Compare on-printer field topology against the seed. If they don't
-      // match (e.g. the printer still has an old single-field LID but we now
-      // want the 5-field auto-code), delete + recreate so both printers run
-      // exactly the message the bind dialog asked for.
+      // Content fingerprint check: detect operator-changed line/prefix/counter
+      // even when topology (field count + kinds) is identical to the previous
+      // seed. Without this, rebinding with a new line number silently keeps
+      // the old message.
+      const storedFp = this.getStoredFingerprint(target);
+      const fpMatches = storedFp !== null && storedFp === expectedFp;
+
+      // Topology check (catches old seeds installed before fingerprinting).
       const actualSig = await this.printerSignature(target);
-      if (!this.signatureMismatch(expectedSig, actualSig)) {
+      const sigOk = !this.signatureMismatch(expectedSig, actualSig);
+
+      if (fpMatches && sigOk) {
         return { ok: true, seeded: false };
       }
-      console.info('[TwinSeed] content mismatch — refreshing', { target, expected: expectedSig, actual: actualSig });
+      console.info('[TwinSeed] refresh required', {
+        target,
+        reason: !fpMatches ? 'content-fingerprint-changed' : 'topology-mismatch',
+        expectedFp, storedFp, expected: expectedSig, actual: actualSig,
+      });
     }
 
     // Missing OR mismatched → seed (the seed's first ^DM handles overwrite).
