@@ -27,7 +27,7 @@ import { printerTransport } from '@/lib/printerTransport';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import type { Printer } from '@/types/printer';
 import type { TwinPairState } from '@/twin-code/twinPairStore';
-import { buildSeedCommands, seedForSide, type MessageSeed } from '@/twin-code/messageSeeds';
+import { buildAutoCodeSeed, buildSeedCommands, seedForSide, type MessageSeed } from '@/twin-code/messageSeeds';
 
 /**
  * Twin Code default print parameters pushed to both printers on bind/seed.
@@ -1016,9 +1016,11 @@ class TwinDispatcher {
     // opted in via `autoCreateA` / `autoCreateB`.
     const msgA = opts.messageNameA ?? pair.a.messageName ?? opts.messageName;
     const msgB = opts.messageNameB ?? pair.b.messageName ?? opts.messageName;
+    const autoCodeSeedA = pair.autoCodeMode && pair.autoCodeOpts ? buildAutoCodeSeed(pair.autoCodeOpts, 'A') : seedForSide('A');
+    const autoCodeSeedB = pair.autoCodeMode && pair.autoCodeOpts ? buildAutoCodeSeed(pair.autoCodeOpts, 'B') : seedForSide('B');
     const [resA, resB] = await Promise.all([
-      this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? seedForSide('A') : undefined }),
-      this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? seedForSide('B') : undefined }),
+      this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? autoCodeSeedA : undefined }),
+      this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? autoCodeSeedB : undefined }),
     ]);
 
     if (!resA.ok || !resB.ok) {
