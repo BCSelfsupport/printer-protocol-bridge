@@ -649,7 +649,8 @@ class PrinterSession {
       };
     }
 
-    console.info('[TwinSeed] seeded & verified', { target, responses });
+    this.setStoredFingerprint(target, expectedFp);
+    console.info('[TwinSeed] seeded & verified', { target, fp: expectedFp, responses });
     return { ok: true, seeded: true };
   }
 
