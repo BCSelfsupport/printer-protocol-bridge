@@ -112,6 +112,7 @@ class PrinterSession {
   private unsub: (() => void) | null = null;
   private active = false;
   private isEmulated = false;
+  private skipOneToOne = false;
 
   constructor(
     public printerId: number,
@@ -145,9 +146,18 @@ class PrinterSession {
      * stale counter values before our follow-up commands catch up.
      */
     preSelectCommands?: string[];
+    /**
+     * If true, do NOT enter 1:1 mode (^MB). In Auto-Code mode the printer
+     * self-prints on every hardware photocell trip using its internal
+     * counter (^AC). Entering ^MB would lock the printer waiting for ^MD
+     * frames from the host, ignore photocell trips, and grey out Edit/New
+     * on the HMI. We just want ^SM-select + counter setup; the photocell
+     * mirror handles ledger updates.
+     */
+    skipOneToOne?: boolean;
   } = {}): Promise<{ ok: boolean; error?: string; seeded?: boolean }> {
     this.isEmulated = this.detectEmulated();
-    const { messageName, seed, preSelectCommands } = opts;
+    const { messageName, seed, preSelectCommands, skipOneToOne } = opts;
 
     const runPreSelect = async () => {
       if (!preSelectCommands || preSelectCommands.length === 0) return;
@@ -179,11 +189,15 @@ class PrinterSession {
       }
       // Drive ^MB through the regular transport so emulator state stays consistent.
       // Per v2.6 §6.1, ^MB is the 1:1 entry command; ^CM p1 is Auto-Print, not 1:1.
-      const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 2000 });
-      if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
-        return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed (emulator)` };
+      // Auto-Code mode skips ^MB — the printer self-prints from the hardware photocell.
+      if (!skipOneToOne) {
+        const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 2000 });
+        if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
+          return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed (emulator)` };
+        }
       }
       this.active = true;
+      this.skipOneToOne = !!skipOneToOne;
       return { ok: true, seeded };
     }
 
@@ -271,19 +285,22 @@ class PrinterSession {
       }
     }
 
-    const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 4000 });
-    if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
-      await this.cleanup();
-      return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed` };
-    }
+    if (!skipOneToOne) {
+      const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 4000 });
+      if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
+        await this.cleanup();
+        return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed` };
+      }
 
-    const mode = await this.confirmOneToOneMode();
-    if (!mode.ok) {
-      await this.cleanup();
-      return { ok: false, error: mode.error };
+      const mode = await this.confirmOneToOneMode();
+      if (!mode.ok) {
+        await this.cleanup();
+        return { ok: false, error: mode.error };
+      }
     }
 
     this.active = true;
+    this.skipOneToOne = !!skipOneToOne;
     return { ok: true, seeded };
   }
 
@@ -777,13 +794,19 @@ class PrinterSession {
   async exit(): Promise<void> {
     this.active = false;
     this.abortInFlight('detached');
+    const sentMb = !this.skipOneToOne;
 
     if (this.isEmulated) {
-      try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }); } catch (_) { /* best effort */ }
+      if (sentMb) {
+        try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }); } catch (_) { /* best effort */ }
+      }
     } else if (window.electronAPI?.oneToOne) {
-      try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 4000 }); } catch (_) { /* best effort */ }
+      if (sentMb) {
+        try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 4000 }); } catch (_) { /* best effort */ }
+      }
       try { await window.electronAPI.oneToOne.detach(this.printerId); } catch (_) { /* best effort */ }
     }
+    this.skipOneToOne = false;
     await this.cleanup();
   }
 
@@ -1235,9 +1258,10 @@ class TwinDispatcher {
       ];
     }
 
+    const skipOneToOne = !!opts.autoCodeMode;
     const [resA, resB] = await Promise.all([
-      this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? autoCodeSeedA : undefined, preSelectCommands: preSelect }),
-      this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? autoCodeSeedB : undefined, preSelectCommands: preSelect }),
+      this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? autoCodeSeedA : undefined, preSelectCommands: preSelect, skipOneToOne }),
+      this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? autoCodeSeedB : undefined, preSelectCommands: preSelect, skipOneToOne }),
     ]);
 
     if (!resA.ok || !resB.ok) {
