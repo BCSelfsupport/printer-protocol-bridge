@@ -1075,14 +1075,15 @@ export async function seedTwinPairMessages(
       // the message is still inactive guarantees the very first print uses the
       // intended counter start/digits/leading-zero config.
       // ^DA = print delay, ^PW = print width, ^CM s = speed. Defaults baseline
-      // for minimum cycle time; operator can tune up via Adjust if needed.
+      // for minimum cycle time; keep print mode Normal (p0) so the hardware
+      // photocell/Print-Go input remains the trigger source during Live.
       // ^CC named-parameter form per protocol v2.6 §5.5
       // (mem://integration/cc-named-parameters). Positional form silently
       // swaps L and E — always use I/S/E/L/T explicitly.
       for (const pid of [printerA.id, printerB.id]) {
         await printerTransport.sendCommand(pid, `^DA ${TWIN_DEFAULT_DELAY}`, { maxWaitMs: 3000 }).catch(() => {});
         await printerTransport.sendCommand(pid, `^PW ${TWIN_DEFAULT_WIDTH}`, { maxWaitMs: 3000 }).catch(() => {});
-        await printerTransport.sendCommand(pid, `^CM s${TWIN_DEFAULT_SPEED_CODE}`, { maxWaitMs: 3000 }).catch(() => {});
+        await printerTransport.sendCommand(pid, `^CM s${TWIN_DEFAULT_SPEED_CODE};o0;p0`, { maxWaitMs: 3000 }).catch(() => {});
 
         if (opts.counterConfig) {
           const { slot, start, digits, leadingZero } = opts.counterConfig;
