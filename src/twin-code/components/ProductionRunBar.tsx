@@ -53,6 +53,7 @@ export function ProductionRunBar() {
   const summary = useLiveRunSummary();
   const cat = useCatalog();
   const pair = useTwinPair();
+  const [productionMode] = useProductionMode();
   const [startOpen, setStartOpen] = useState(false);
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
@@ -66,6 +67,19 @@ export function ProductionRunBar() {
     return () => clearInterval(t);
   }, [run.active]);
   void elapsedTick;
+
+  // Hardware photocell mirror — when in Production mode, the printer's real
+  // photocell drives every print. We poll ^CN to mirror those trips into the
+  // catalog ledger so "Printed" increments live without any host-side ^PT.
+  useEffect(() => {
+    if (!run.active) return;
+    if (!productionMode) return;
+    if (!twinDispatcher.isBound()) return;
+    twinDispatcher.startPhotocellMirror({ autoCode: !!pair.autoCodeMode });
+    return () => {
+      twinDispatcher.stopPhotocellMirror();
+    };
+  }, [run.active, productionMode, pair.autoCodeMode]);
 
   // Auto-stop when the catalog is exhausted OR the run-length cap is hit:
   // download the signed export + envelope report and surface a toast so the
