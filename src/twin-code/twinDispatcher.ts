@@ -1333,6 +1333,16 @@ class TwinDispatcher {
         `^CC ${slot};T0`,
         `^CN ${slot};${start}`,
       ];
+      // Reset host-side serial mirror so LID ^MD^BD frames stay in lock-step
+      // with the printer's freshly-reset counter on each rebind. Without this
+      // the host counter keeps climbing across rebinds even though the printer
+      // counter was just reset to counterStart.
+      try {
+        autoCodeSerialMirror.reset(Math.max(0, start - 1));
+        console.info('[TwinBind] host autocode counter reset', { start });
+      } catch (e) {
+        console.warn('[TwinBind] host autocode counter reset failed', e);
+      }
     }
 
     const skipOneToOne = !!opts.autoCodeMode;
