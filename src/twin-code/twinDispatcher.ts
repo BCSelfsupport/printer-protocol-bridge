@@ -984,7 +984,139 @@ class TwinDispatcher {
   private wasPollingPaused = false;
   private opts: TwinDispatcherOptions = {};
 
+  // ---- Hardware photocell mirror (Production mode) ----
+  // In Production mode the printer's real photocell triggers each strike on
+  // its own — the host plays no role in timing. We poll ^CN periodically to
+  // detect when the printer's print counter advances; each new print is
+  // mirrored into the catalog ledger + profilerBus so the production-run
+  // banner shows live "Printed" counts even though the host never issued ^PT.
+  private mirrorTimer: number | null = null;
+  private mirrorBaseline: number | null = null;
+  private mirrorLast: number | null = null;
+  private mirrorAutoCode = false;
+  private mirrorListeners = new Set<(state: PhotocellMirrorState) => void>();
+  private mirrorState: PhotocellMirrorState = { active: false, count: 0, lastTickAt: 0, bpm: 0 };
+  private mirrorRecentTicks: number[] = [];
+  private mirrorVirtualBottleId = 1_000_000; // virtual ids so they don't clash with sim bottles
+
   isBound() { return !!(this.a && this.b); }
+
+  /** Subscribe to photocell-mirror state updates. */
+  subscribePhotocellMirror(fn: (state: PhotocellMirrorState) => void): () => void {
+    this.mirrorListeners.add(fn);
+    fn(this.mirrorState);
+    return () => { this.mirrorListeners.delete(fn); };
+  }
+
+  getPhotocellMirrorState(): PhotocellMirrorState { return this.mirrorState; }
+
+  /**
+   * Begin mirroring the printer's hardware photocell trips into the catalog
+   * ledger. Polls printer A's ^CN every 400ms. On each delta, dispenses N
+   * serials (autoCodeSerial.next() in Auto-Code Mode, catalog.dispense()
+   * otherwise) and records them as printed. Idempotent — calling twice is a
+   * no-op. Stops automatically when the dispatcher is unbound.
+   */
+  startPhotocellMirror(opts?: { autoCode?: boolean }) {
+    if (!this.a) return;
+    if (this.mirrorTimer !== null) return;
+    this.mirrorAutoCode = !!opts?.autoCode;
+    this.mirrorBaseline = null;
+    this.mirrorLast = null;
+    this.mirrorRecentTicks = [];
+    this.mirrorState = { active: true, count: 0, lastTickAt: 0, bpm: 0 };
+    this.notifyMirror();
+
+    const tick = async () => {
+      if (!this.a) { this.stopPhotocellMirror(); return; }
+      try {
+        const r = await printerTransport.sendCommand(this.a.printerId, '^CN', { maxWaitMs: 1500, idleAfterDataMs: 200 });
+        if (r?.success) {
+          const n = parsePrintCount(r.response || '');
+          if (n != null) {
+            if (this.mirrorBaseline == null) {
+              this.mirrorBaseline = n;
+              this.mirrorLast = n;
+            } else if (this.mirrorLast != null && n > this.mirrorLast) {
+              const delta = n - this.mirrorLast;
+              this.mirrorLast = n;
+              for (let i = 0; i < delta; i++) {
+                this.recordMirroredPrint();
+              }
+            } else if (this.mirrorLast != null && n < this.mirrorLast) {
+              // Counter was reset on the printer (re-zeroed) — re-baseline.
+              this.mirrorBaseline = n;
+              this.mirrorLast = n;
+            }
+          }
+        }
+      } catch { /* ignore poll errors */ }
+    };
+    // Fire one immediately to grab a baseline, then repeat.
+    void tick();
+    this.mirrorTimer = window.setInterval(tick, 400);
+  }
+
+  stopPhotocellMirror() {
+    if (this.mirrorTimer !== null) {
+      window.clearInterval(this.mirrorTimer);
+      this.mirrorTimer = null;
+    }
+    this.mirrorBaseline = null;
+    this.mirrorLast = null;
+    this.mirrorRecentTicks = [];
+    this.mirrorState = { active: false, count: 0, lastTickAt: 0, bpm: 0 };
+    this.notifyMirror();
+  }
+
+  private recordMirroredPrint() {
+    let serial: string | null = null;
+    if (this.mirrorAutoCode) {
+      const r = autoCodeSerialMirror.next();
+      serial = r ? r.serial : null;
+    } else {
+      serial = catalogModule.dispense();
+    }
+    const bottleId = this.mirrorVirtualBottleId++;
+    const now = performance.now();
+    if (serial) {
+      try {
+        catalogModule.recordPrinted(serial, bottleId);
+      } catch { /* dup guard — convert to miss */
+        catalogModule.recordMissed(bottleId);
+      }
+    } else {
+      catalogModule.recordMissed(bottleId);
+    }
+    profilerBusModule.push({
+      serial,
+      outcome: serial ? 'printed' : 'missed',
+      t0: now, t1: now, t2a: now, t2b: now, t3a: now, t3b: now, t4: now,
+      ingressMs: 0, dispatchMs: 0, wireAMs: 0, wireBMs: 0, skewMs: 0, cycleMs: 0,
+    });
+
+    // BPM = sliding 10-tick window
+    this.mirrorRecentTicks.push(now);
+    if (this.mirrorRecentTicks.length > 10) this.mirrorRecentTicks.shift();
+    let bpm = 0;
+    if (this.mirrorRecentTicks.length >= 2) {
+      const span = (this.mirrorRecentTicks[this.mirrorRecentTicks.length - 1] - this.mirrorRecentTicks[0]) / 1000;
+      if (span > 0) bpm = ((this.mirrorRecentTicks.length - 1) / span) * 60;
+    }
+    this.mirrorState = {
+      active: true,
+      count: this.mirrorState.count + 1,
+      lastTickAt: Date.now(),
+      bpm,
+    };
+    this.notifyMirror();
+  }
+
+  private notifyMirror() {
+    const s = this.mirrorState;
+    this.mirrorListeners.forEach(l => l(s));
+  }
+
 
   /**
    * Returns the per-side ^MD subcommand kinds for the currently bound pair, so
