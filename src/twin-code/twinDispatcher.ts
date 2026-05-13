@@ -899,38 +899,25 @@ export async function seedTwinPairMessages(
       ]);
       if (!resA.ok || !resB.ok) return { ok: false, error: resA.error || resB.error || 'Message auto-create failed' };
 
-      // After seeding (or even when the message already existed), explicitly
-      // ^SM-select the bound LID/SIDE messages so the printers come out of the
-      // bind flow already pointing at the right message. Otherwise the operator
-      // has to manually select them on the HMI before the first run, or LIVE
-      // mode silently dispatches against whatever message the keypad last picked.
-      // Give freshly-seeded ^NM/^SV a beat to commit before ^SM resolves the name.
+      // Give freshly-seeded ^NM/^SV a beat to commit before any follow-on cmds.
       if (resA.seeded || resB.seeded) await new Promise(res => setTimeout(res, 600));
-      const selA = await printerTransport.sendCommand(printerA.id, `^SM ${nameA.trim().toUpperCase()}`, { maxWaitMs: 4000 });
-      const selB = await printerTransport.sendCommand(printerB.id, `^SM ${nameB.trim().toUpperCase()}`, { maxWaitMs: 4000 });
-      if (!selA?.success || !selB?.success) {
-        return {
-          ok: false,
-          error: `Message ^SM-select failed${!selA?.success ? ` on A (${nameA})` : ''}${!selB?.success ? ` on B (${nameB})` : ''}`,
-        };
-      }
 
-      // Push Twin Code default print parameters so the printer's stored values
-      // match what the TwinCode UI assumes. Without this, an HMI-set delay of
-      // 2300 silently bloats cycle time even though the dispatcher thinks
-      // delay is 100. ^DA = print delay, ^PW = print width, ^CM s = speed.
-      // Defaults: Delay 100, Width 1, Speed Ultra Fast (3) — minimum cycle
-      // time baseline; operator can tune up via Adjust if print quality needs it.
+      // CRITICAL ORDER: push print params + counter config BEFORE ^SM-select.
+      // If we ^SM-select first, the printer activates the message with stale
+      // counter values (e.g. last operator setting) and prints one or more bad
+      // codes before the ^CC/^CN we send catches up. Pre-loading these while
+      // the message is still inactive guarantees the very first print uses the
+      // intended counter start/digits/leading-zero config.
+      // ^DA = print delay, ^PW = print width, ^CM s = speed. Defaults baseline
+      // for minimum cycle time; operator can tune up via Adjust if needed.
+      // ^CC named-parameter form per protocol v2.6 §5.5
+      // (mem://integration/cc-named-parameters). Positional form silently
+      // swaps L and E — always use I/S/E/L/T explicitly.
       for (const pid of [printerA.id, printerB.id]) {
         await printerTransport.sendCommand(pid, `^DA ${TWIN_DEFAULT_DELAY}`, { maxWaitMs: 3000 }).catch(() => {});
         await printerTransport.sendCommand(pid, `^PW ${TWIN_DEFAULT_WIDTH}`, { maxWaitMs: 3000 }).catch(() => {});
         await printerTransport.sendCommand(pid, `^CM s${TWIN_DEFAULT_SPEED_CODE}`, { maxWaitMs: 3000 }).catch(() => {});
 
-        // Hardware counter config — named-parameter ^CC form per protocol v2.6
-        // §5.5 (mem://integration/cc-named-parameters). The positional form
-        // silently swaps L and E, so we use I/S/E/L/T explicitly. ^CN <slot>;<v>
-        // sets the live counter so the next print starts AT `start` (handles
-        // re-coding after rejects without touching the HMI).
         if (opts.counterConfig) {
           const { slot, start, digits, leadingZero } = opts.counterConfig;
           const end = Math.max(start, Math.pow(10, Math.max(1, digits)) - 1);
@@ -946,6 +933,17 @@ export async function seedTwinPairMessages(
         await new Promise(res => setTimeout(res, 200));
         await printerTransport.sendCommand(pid, '^SV', { maxWaitMs: 3000 }).catch(() => {});
         await new Promise(res => setTimeout(res, 150));
+      }
+
+      // Now ^SM-select the bound LID/SIDE messages — counters and print
+      // parameters are already loaded so the first cycle prints the right code.
+      const selA = await printerTransport.sendCommand(printerA.id, `^SM ${nameA.trim().toUpperCase()}`, { maxWaitMs: 4000 });
+      const selB = await printerTransport.sendCommand(printerB.id, `^SM ${nameB.trim().toUpperCase()}`, { maxWaitMs: 4000 });
+      if (!selA?.success || !selB?.success) {
+        return {
+          ok: false,
+          error: `Message ^SM-select failed${!selA?.success ? ` on A (${nameA})` : ''}${!selB?.success ? ` on B (${nameB})` : ''}`,
+        };
       }
 
       return { ok: true, aId: printerA.id, bId: printerB.id, seededA: !!resA.seeded, seededB: !!resB.seeded };
