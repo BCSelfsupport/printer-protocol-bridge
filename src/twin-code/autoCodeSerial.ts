@@ -73,6 +73,8 @@ class AutoCodeSerialMirror {
     if (!pair.autoCodeMode || !pair.autoCodeOpts) return null;
 
     const { line, unit, yearMap } = pair.autoCodeOpts;
+    const normalizedLine = line.toUpperCase();
+    const normalizedUnit = unit.toUpperCase();
     this.counter += 1;
     this.persist();
 
@@ -80,7 +82,7 @@ class AutoCodeSerialMirror {
     const doy = dayOfYear(new Date());
     const ddd = String(doy).padStart(3, "0");
     const cnt = String(this.counter).padStart(6, "0");
-    const serial = `${line}${yearLetter}${ddd}${cnt}${unit}`;
+    const serial = `${normalizedLine}${yearLetter}${ddd}${cnt}${normalizedUnit}`;
     return { serial, counter: this.counter };
   }
 }

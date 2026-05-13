@@ -243,6 +243,8 @@ export function letterForCurrentYear(map?: Record<number, string>): string {
 export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B"): MessageSeed {
   const line = (opts.line || "").trim();
   const unit = (opts.unit || "").trim();
+  const normalizedLine = line.toUpperCase();
+  const normalizedUnit = unit.toUpperCase();
   const slot = Math.min(4, Math.max(1, opts.counterSlot)) | 0;
 
   // ---------------------------------------------------------------------
@@ -255,12 +257,12 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
   // The placeholder data here is overwritten on the first print.
   // ---------------------------------------------------------------------
   if (side === "A") {
-    const sample = `${line}A132${"1".padStart(6, "0")}${unit}`;
+    const sample = `${normalizedLine}A132${"1".padStart(6, "0")}${normalizedUnit}`;
     return {
       label: `Auto-code LID · DM 16×16 (${sample})`,
       description:
         `Single ECC200 DataMatrix 16×16 barcode field encoding the same 13-char serial ` +
-        `the SIDE printer auto-generates (line "${line}" + year + DDD + counter + "${unit}"). ` +
+        `the SIDE printer auto-generates (line "${normalizedLine}" + year + DDD + counter + "${normalizedUnit}"). ` +
         `Dispatcher overwrites the encoded data per print via ^MD^BD1.`,
       commandsTemplate: [
         "^DM __NAME__",
@@ -276,7 +278,7 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
   // Standard 7-high font: 5 dots wide + 1 dot gap = 6 dots per character.
   const W = 6;
   const xLine    = 0;
-  const xYear    = xLine    + line.length * W + 1;
+  const xYear    = xLine    + normalizedLine.length * W + 1;
   const xJulian  = xYear    + 1 * W + 1;
   const xCounter = xJulian  + 3 * W + 1;
   const xUnit    = xCounter + 6 * W + 1;
@@ -314,22 +316,22 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
   const COUNTER_DIGITS = 6;
   const COUNTER_LEADING_ZERO = 1;
 
-  const firstField = `^AT1;${xLine};0;${FONT};${line}`;
+  const firstField = `^AT1;${xLine};0;${FONT};${normalizedLine}`;
   const appendFields = [
     // ^AP d=10 → printer looks up the full 4-digit year in its Program Year
     // HMI table and prints the mapped character (e.g. 2026 → A).
     `^AP2;${xYear};0;${FONT};10`,
     `^AD3;${xJulian};0;${FONT};4`,
     `^AC4;${xCounter};0;${FONT};${slot};${COUNTER_DIGITS};${COUNTER_LEADING_ZERO}`,
-    `^AT5;${xUnit};0;${FONT};${unit}`,
+    `^AT5;${xUnit};0;${FONT};${normalizedUnit}`,
   ];
 
-  const sample = `${line}A132${"1".padStart(6, "0")}${unit}`;
+  const sample = `${normalizedLine}A132${"1".padStart(6, "0")}${normalizedUnit}`;
   return {
     label: `Auto-code · ${sample}`,
     description:
-      `5-field native auto-coded message — text "${line}" + programmable year (A-Z) + ` +
-      `Julian DDD + counter slot ${slot} (6-digit) + text "${unit}". Sample: ${sample}. ` +
+      `5-field native auto-coded message — text "${normalizedLine}" + programmable year (A-Z) + ` +
+      `Julian DDD + counter slot ${slot} (6-digit) + text "${normalizedUnit}". Sample: ${sample}. ` +
       `No CSV, no per-bottle host traffic — printers self-generate every serial.`,
     commandsTemplate: [
       "^DM __NAME__",
@@ -345,8 +347,8 @@ export function previewAutoCodeSerial(
   opts: AutoCodeSeedOpts,
   sample: { yearChar?: string; doy?: number; counter?: number } = {},
 ): string {
-  const line = (opts.line || "").trim();
-  const unit = (opts.unit || "").trim();
+  const line = (opts.line || "").trim().toUpperCase();
+  const unit = (opts.unit || "").trim().toUpperCase();
   const y = (sample.yearChar ?? letterForCurrentYear(opts.yearMap)).slice(0, 1).toUpperCase();
   const d = (sample.doy ?? 132).toString().padStart(3, "0");
   const c = (sample.counter ?? 1).toString().padStart(6, "0");

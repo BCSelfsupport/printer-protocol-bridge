@@ -383,11 +383,31 @@ class PrinterSession {
     target: string,
     seed: MessageSeed,
   ): Promise<{ ok: boolean; error?: string; responses: string[] }> {
+    const parked = await this.parkAwayFromTarget(target);
+    if (!parked.ok) {
+      return {
+        ok: false,
+        error: `${this.label}: could not deselect "${target}" before re-seed${parked.error ? ` — ${parked.error}` : ''}`,
+        responses: parked.responses,
+      };
+    }
+
     const cmds = buildSeedCommands(seed, target);
-    const responses: string[] = [];
+    const responses: string[] = [...parked.responses];
     for (const cmd of cmds) {
       const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000 });
       responses.push(`${cmd.slice(0, 30)} → ${r?.success ? 'ACK' : 'NAK'}${r?.response ? ` "${r.response.trim().slice(0, 80)}"` : ''}`);
+      if (!r?.success && cmd.startsWith('^DM')) {
+        const failure = `${r?.response || ''} ${r?.error || ''}`;
+        const harmlessMissing = /MsgNotFnd|Message not found|not found/i.test(failure);
+        if (!harmlessMissing) {
+          return {
+            ok: false,
+            error: `${this.label}: delete before seed failed for "${target}"${failure.trim() ? `: ${failure.trim()}` : ''}`,
+            responses,
+          };
+        }
+      }
       if (!r?.success && !cmd.startsWith('^DM')) {
         return {
           ok: false,
@@ -395,9 +415,56 @@ class PrinterSession {
           responses,
         };
       }
-      await new Promise(res => setTimeout(res, 300));
+      await new Promise(res => setTimeout(res, cmd.startsWith('^DM') ? 500 : 300));
     }
     return { ok: true, responses };
+  }
+
+  /**
+   * Before a seed refresh we must get OFF the target message. BestCode rejects
+   * ^DM against the active message; if we ignore that and then send ^NM/^NF,
+   * firmware can merge new fields into the old message, which physically prints
+   * the new auto-code fields on top of the old 13-character text field.
+   */
+  private async parkAwayFromTarget(target: string): Promise<{ ok: boolean; error?: string; responses: string[] }> {
+    const responses: string[] = [];
+    const targetName = target.trim().toUpperCase();
+    const parkName = 'TWINPARK';
+
+    const lm = await printerTransport.sendCommand(this.printerId, '^LM', { maxWaitMs: 4000 });
+    const names = this.parseMessageNames(lm?.response || '');
+    const existingPark = ['BESTCODE', 'QUANTUM', parkName, ...names].find((name) => name !== targetName && names.includes(name));
+    let selectedPark = existingPark;
+
+    if (!selectedPark && targetName !== parkName) {
+      const nm = await printerTransport.sendCommand(this.printerId, `^NM 1;0;0;0;${parkName}^AT1;0;0;2;P`, { maxWaitMs: 4000 });
+      responses.push(`^NM ${parkName} → ${nm?.success ? 'ACK' : 'NAK'}${nm?.response ? ` "${nm.response.trim().slice(0, 80)}"` : ''}`);
+      if (!nm?.success) return { ok: false, error: `parking message create failed`, responses };
+      await new Promise(res => setTimeout(res, 300));
+      const sv = await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 4000 });
+      responses.push(`^SV park → ${sv?.success ? 'ACK' : 'NAK'}${sv?.response ? ` "${sv.response.trim().slice(0, 80)}"` : ''}`);
+      if (!sv?.success) return { ok: false, error: `parking message save failed`, responses };
+      await new Promise(res => setTimeout(res, 500));
+      selectedPark = parkName;
+    }
+
+    if (!selectedPark) return { ok: true, responses };
+    const sm = await printerTransport.sendCommand(this.printerId, `^SM ${selectedPark}`, { maxWaitMs: 4000 });
+    responses.push(`^SM ${selectedPark} → ${sm?.success ? 'ACK' : 'NAK'}${sm?.response ? ` "${sm.response.trim().slice(0, 80)}"` : ''}`);
+    if (!sm?.success) return { ok: false, error: `parking select failed`, responses };
+    await new Promise(res => setTimeout(res, 400));
+    return { ok: true, responses };
+  }
+
+  private parseMessageNames(raw: string): string[] {
+    const stop = new Set(['COMMAND', 'SUCCESSFUL', 'MESSAGE', 'MESSAGES', 'LIST', 'CREATED', 'SELECTED', 'OK']);
+    return [...new Set(
+      raw
+        .toUpperCase()
+        .split(/[\s,;:\r\n]+/)
+        .map((part) => part.replace(/[^A-Z0-9_-]/g, ''))
+        .filter((part) => part.length > 0 && part.length <= 32 && /[A-Z]/.test(part) && !stop.has(part)),
+    )];
   }
 
   private async ensureMessage(
@@ -453,6 +520,15 @@ class PrinterSession {
       return {
         ok: false,
         error: `${this.label}: "${target}" not in ^LM after seed. Wire trace: ${responses.join(' | ')}. ^LM after: "${verifyList.trim().slice(0, 120)}"`,
+      };
+    }
+
+    const seededSig = await this.printerSignature(target);
+    if (this.signatureMismatch(expectedSig, seededSig)) {
+      console.warn('[TwinSeed] post-seed signature mismatch', { target, expected: expectedSig, actual: seededSig, responses });
+      return {
+        ok: false,
+        error: `${this.label}: "${target}" still has the wrong field layout after re-seed. Wire trace: ${responses.join(' | ')}`,
       };
     }
 
