@@ -1381,22 +1381,28 @@ class TwinDispatcher {
       const slot = opts.autoCodeOpts.counterSlot;
       const start = Math.max(0, opts.autoCodeOpts.counterStart ?? 0);
       const end = 999999;
+      // BestCode `^CC slot;V` sets the *current* count; the printer then
+      // increment-then-prints on each photocell trip, so the FIRST physical
+      // print = V + 1. To make the first print equal `start`, seed the
+      // current value to `start - 1` (clamped to 0). Earlier we wrote
+      // `start` here, which is why production runs of 10 came back as
+      // serials 2..11 instead of 1..10.
+      const currentSeed = Math.max(0, start - 1);
       preSelect = [
         `^CC ${slot};I1`,
         `^CC ${slot};S${start}`,
         `^CC ${slot};E${end}`,
         `^CC ${slot};L1`,
         `^CC ${slot};T0`,
-        `^CC ${slot};${start}`,
+        `^CC ${slot};${currentSeed}`,
       ];
-      postSelect = [`^CC ${slot};${start}`];
-      // Reset host-side serial mirror so LID ^MD^BD frames stay in lock-step
-      // with the printer's freshly-reset counter on each rebind. Without this
-      // the host counter keeps climbing across rebinds even though the printer
-      // counter was just reset to counterStart.
+      postSelect = [`^CC ${slot};${currentSeed}`];
+      // Reset host-side serial mirror to the same pre-increment seed so the
+      // LID ^MD^BD frame and the SIDE's auto-printed counter both produce
+      // the same serial on the very first photocell trip after rebind.
       try {
-        autoCodeSerialMirror.reset(Math.max(0, start - 1));
-        console.info('[TwinBind] host autocode counter reset', { start });
+        autoCodeSerialMirror.reset(currentSeed);
+        console.info('[TwinBind] host autocode counter reset', { start, currentSeed });
       } catch (e) {
         console.warn('[TwinBind] host autocode counter reset failed', e);
       }
