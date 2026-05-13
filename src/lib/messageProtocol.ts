@@ -233,6 +233,10 @@ const ELEMENT_TYPE_MAP: Record<number, MessageField['type']> = {
   7: 'text',       // Block element
 };
 
+const PROTOCOL_TIME_TO_FORMAT: Record<number, string> = {
+  23: 'HH', 24: 'MM', 25: 'SS', 26: 'HHMM', 27: 'HHMMSS', 28: 'HH:MM', 29: 'HH:MM:SS',
+};
+
 /** Barcode subtype → encoding key (for ^AB type parameter) */
 const BARCODE_SUBTYPE_TO_ENCODING: Record<number, string> = {
   0: 'i25', 1: 'upca', 2: 'upce', 3: 'ean13', 4: 'ean8',
@@ -580,6 +584,34 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
 
   console.log('[parseLfResponse] parsed fields:', fields.length, fields);
   return fields;
+}
+
+function autoCodeMetaFromProtocol(pf: ParsedField): Pick<MessageField, 'autoCodeFieldType' | 'autoCodeFormat'> {
+  const command = pf.protocolCommand;
+  const code = pf.protocolTypeCode;
+
+  if (command === 'AC') {
+    const slot = pf.counterSlot && pf.counterSlot >= 1 && pf.counterSlot <= 4 ? pf.counterSlot : 1;
+    return { autoCodeFieldType: `counter_${slot}` };
+  }
+
+  if (command === 'AH' && code !== undefined) {
+    return { autoCodeFieldType: 'time', autoCodeFormat: PROTOCOL_TIME_TO_FORMAT[code] ?? undefined };
+  }
+
+  if ((command === 'AD' || command === 'AP' || command === 'AE') && code !== undefined) {
+    const prefix = command === 'AE' ? 'date_expiry' : 'date_normal';
+    const individualTypes: Record<number, string> = {
+      1: 'dow_num', 2: 'dow_alpha', 3: 'dom', 4: 'doy', 5: 'ww', 6: 'mm', 7: 'alpha_month', 8: 'y', 9: 'yy', 10: 'yyyy',
+    };
+    if (individualTypes[code]) {
+      const codeType = command === 'AP' ? `program_${individualTypes[code]}` : individualTypes[code];
+      return { autoCodeFieldType: `${prefix}_${codeType}` };
+    }
+    return { autoCodeFieldType: prefix, autoCodeFormat: PROTOCOL_DATE_TO_FORMAT[code] };
+  }
+
+  return {};
 }
 
 // ── Message builder ──────────────────────────────────────────────────────────
