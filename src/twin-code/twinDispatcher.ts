@@ -175,6 +175,26 @@ class PrinterSession {
       trace('preSelect:done');
     };
 
+    const armNativePhotocellMode = async (): Promise<{ ok: boolean; error?: string }> => {
+      if (!skipOneToOne) return { ok: true };
+      trace('native-photocell:arm:start');
+      const commands = [
+        `^DA ${TWIN_DEFAULT_DELAY}`,
+        `^PW ${TWIN_DEFAULT_WIDTH}`,
+        `^CM s${TWIN_DEFAULT_SPEED_CODE};o0;p1`,
+        '^SV',
+      ];
+      for (const cmd of commands) {
+        const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000 });
+        if (!r?.success) {
+          return { ok: false, error: `${this.label}: native photocell arm failed on ${cmd}` };
+        }
+        await new Promise(res => setTimeout(res, 150));
+      }
+      trace('native-photocell:arm:done');
+      return { ok: true };
+    };
+
     // ---- Emulator path: synthesize R/T/C entirely in-process ----
     if (this.isEmulated) {
       // Seed-on-bind is also honored on the emulator so the dev path mirrors prod.
@@ -293,6 +313,12 @@ class PrinterSession {
         }
       }
       trace('^SM:ok');
+    }
+
+    const nativeArmed = await armNativePhotocellMode();
+    if (!nativeArmed.ok) {
+      await this.cleanup();
+      return { ok: false, error: nativeArmed.error };
     }
 
     if (!skipOneToOne) {
