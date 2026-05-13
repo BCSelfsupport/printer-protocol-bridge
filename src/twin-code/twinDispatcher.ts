@@ -794,13 +794,19 @@ class PrinterSession {
   async exit(): Promise<void> {
     this.active = false;
     this.abortInFlight('detached');
+    const sentMb = !this.skipOneToOne;
 
     if (this.isEmulated) {
-      try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }); } catch (_) { /* best effort */ }
+      if (sentMb) {
+        try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 2000 }); } catch (_) { /* best effort */ }
+      }
     } else if (window.electronAPI?.oneToOne) {
-      try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 4000 }); } catch (_) { /* best effort */ }
+      if (sentMb) {
+        try { await printerTransport.sendCommand(this.printerId, '^ME', { maxWaitMs: 4000 }); } catch (_) { /* best effort */ }
+      }
       try { await window.electronAPI.oneToOne.detach(this.printerId); } catch (_) { /* best effort */ }
     }
+    this.skipOneToOne = false;
     await this.cleanup();
   }
 
