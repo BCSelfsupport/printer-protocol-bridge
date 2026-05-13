@@ -151,7 +151,18 @@ export function CatalogStripBar() {
       return;
     }
     setLiveBusy(true);
-    const res = await twinDispatcher.bind(pair, printers);
+    const res = await twinDispatcher.bind(pair, printers, {
+      messageNameA: pair.a?.messageName,
+      messageNameB: pair.b?.messageName,
+      fieldA: pair.a?.fieldIndex,
+      fieldB: pair.b?.fieldIndex,
+      subcommandA: pair.a?.subcommand,
+      subcommandB: pair.b?.subcommand,
+      autoCreateA: pair.a?.autoCreate ?? true,
+      autoCreateB: pair.b?.autoCreate ?? true,
+      autoCodeMode,
+      autoCodeOpts: pair.autoCodeOpts,
+    });
     setLiveBusy(false);
     if (!res.ok) {
       toast({
@@ -161,13 +172,11 @@ export function CatalogStripBar() {
       });
       return;
     }
-    // In production the real photocell drives prints. When the conveyor sim
-    // is firing (Auto Print Go on the production banner, or any synthetic
-    // bottle generator), there is no real beam-break — the firmware would
-    // sit waiting forever — so we MUST pass forceTrigger: true so the bonded
-    // dispatcher injects a software trigger like Pre-flight does.
+    // AUTO-code production must stay in native photocell mode (no ^MB/1:1),
+    // otherwise the printer HMI disables Edit/New and the physical Print Go is
+    // ignored. Catalog/CSV test mode still injects ^PT for synthetic bottles.
     conveyorSim.setLiveDispatcher((serial) =>
-      twinDispatcher.dispatch(serial, { forceTrigger: true }),
+      twinDispatcher.dispatch(serial, { forceTrigger: !productionMode, autoCode: autoCodeMode }),
     );
     setLiveMode(true);
     toast({
