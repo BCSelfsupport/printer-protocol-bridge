@@ -188,11 +188,15 @@ class PrinterSession {
       }
       // Drive ^MB through the regular transport so emulator state stays consistent.
       // Per v2.6 §6.1, ^MB is the 1:1 entry command; ^CM p1 is Auto-Print, not 1:1.
-      const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 2000 });
-      if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
-        return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed (emulator)` };
+      // Auto-Code mode skips ^MB — the printer self-prints from the hardware photocell.
+      if (!skipOneToOne) {
+        const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 2000 });
+        if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
+          return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed (emulator)` };
+        }
       }
       this.active = true;
+      this.skipOneToOne = !!skipOneToOne;
       return { ok: true, seeded };
     }
 
