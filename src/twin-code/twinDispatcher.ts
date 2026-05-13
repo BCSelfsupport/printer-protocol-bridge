@@ -97,9 +97,27 @@ class PrinterSession {
   async enter(opts: {
     messageName?: string;
     seed?: MessageSeed;
+    /**
+     * Commands to execute AFTER seed-commit but BEFORE ^SM-select.
+     * Use for counter (^CC/^CN) and print parameters (^DA/^PW/^CM) so the
+     * very first print after activation uses the intended config — without
+     * this, ^SM races and the printer fires one or more bad codes with
+     * stale counter values before our follow-up commands catch up.
+     */
+    preSelectCommands?: string[];
   } = {}): Promise<{ ok: boolean; error?: string; seeded?: boolean }> {
     this.isEmulated = this.detectEmulated();
-    const { messageName, seed } = opts;
+    const { messageName, seed, preSelectCommands } = opts;
+
+    const runPreSelect = async () => {
+      if (!preSelectCommands || preSelectCommands.length === 0) return;
+      for (const cmd of preSelectCommands) {
+        await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 3000 }).catch(() => {});
+      }
+      // Persist to non-volatile so the values survive ^SM activation.
+      await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 3000 }).catch(() => {});
+      await new Promise(res => setTimeout(res, 150));
+    };
 
     // ---- Emulator path: synthesize R/T/C entirely in-process ----
     if (this.isEmulated) {
@@ -112,6 +130,7 @@ class PrinterSession {
         }
         seeded = !!r.seeded;
       }
+      await runPreSelect();
       if (messageName) {
         const sm = await printerTransport.sendCommand(this.printerId, `^SM ${messageName}`, { maxWaitMs: 2000 });
         if (!sm?.success) {
