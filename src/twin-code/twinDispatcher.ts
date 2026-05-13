@@ -145,9 +145,18 @@ class PrinterSession {
      * stale counter values before our follow-up commands catch up.
      */
     preSelectCommands?: string[];
+    /**
+     * If true, do NOT enter 1:1 mode (^MB). In Auto-Code mode the printer
+     * self-prints on every hardware photocell trip using its internal
+     * counter (^AC). Entering ^MB would lock the printer waiting for ^MD
+     * frames from the host, ignore photocell trips, and grey out Edit/New
+     * on the HMI. We just want ^SM-select + counter setup; the photocell
+     * mirror handles ledger updates.
+     */
+    skipOneToOne?: boolean;
   } = {}): Promise<{ ok: boolean; error?: string; seeded?: boolean }> {
     this.isEmulated = this.detectEmulated();
-    const { messageName, seed, preSelectCommands } = opts;
+    const { messageName, seed, preSelectCommands, skipOneToOne } = opts;
 
     const runPreSelect = async () => {
       if (!preSelectCommands || preSelectCommands.length === 0) return;
