@@ -158,7 +158,7 @@ export function ProductionRunBar() {
             </div>
           </div>
 
-          <ConveyorAutoControls consumed={consumed} elapsedSec={summary.elapsedSec} />
+          <ConveyorAutoControls consumed={consumed} elapsedSec={summary.elapsedSec} productionMode={productionMode} />
 
           <div className="ml-auto flex flex-wrap items-center gap-5">
             <BigStat label="Printed" value={summary.printed.toLocaleString()} tone="ok" />
