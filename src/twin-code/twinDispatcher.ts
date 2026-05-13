@@ -1296,10 +1296,13 @@ class TwinDispatcher {
     }
 
     const skipOneToOne = !!opts.autoCodeMode;
+    console.info('[TwinBind] entering both sides', { aId, bId, msgA, msgB, autoCode: !!opts.autoCodeMode, skipOneToOne });
+    const tEnter = performance.now();
     const [resA, resB] = await Promise.all([
       this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? autoCodeSeedA : undefined, preSelectCommands: preSelect, skipOneToOne }),
       this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? autoCodeSeedB : undefined, preSelectCommands: preSelect, skipOneToOne }),
     ]);
+    console.info('[TwinBind] both sides entered', { elapsedMs: Math.round(performance.now() - tEnter), resA, resB });
 
     if (!resA.ok || !resB.ok) {
       // Clean up whichever entered.
@@ -1319,10 +1322,13 @@ class TwinDispatcher {
       const subB = opts.subcommandB ?? 'TD';
       const kindA: 'text' | 'barcode' = subA === 'BD' ? 'barcode' : 'text';
       const kindB: 'text' | 'barcode' = opts.autoCodeMode ? 'text' : (subB === 'BD' ? 'barcode' : 'text');
+      console.info('[TwinBind] field-index check', { fieldA, fieldB: opts.autoCodeMode ? 5 : fieldB, kindA, kindB });
+      const tField = performance.now();
       const [vA, vB] = await Promise.all([
         this.a.verifyFieldIndex(fieldA, kindA),
         this.b.verifyFieldIndex(opts.autoCodeMode ? 5 : fieldB, kindB),
       ]);
+      console.info('[TwinBind] field-index check done', { elapsedMs: Math.round(performance.now() - tField), vA, vB });
       if (!vA.ok || !vB.ok) {
         await Promise.all([this.a.exit(), this.b.exit()]);
         this.a = null; this.b = null;
@@ -1331,6 +1337,7 @@ class TwinDispatcher {
       }
     }
 
+    console.info('[TwinBind] bind complete');
     return { ok: true, aId, bId, seededA: !!resA.seeded, seededB: !!resB.seeded };
   }
 
