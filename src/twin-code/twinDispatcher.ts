@@ -397,6 +397,17 @@ class PrinterSession {
     for (const cmd of cmds) {
       const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000 });
       responses.push(`${cmd.slice(0, 30)} → ${r?.success ? 'ACK' : 'NAK'}${r?.response ? ` "${r.response.trim().slice(0, 80)}"` : ''}`);
+      if (!r?.success && cmd.startsWith('^DM')) {
+        const failure = `${r?.response || ''} ${r?.error || ''}`;
+        const harmlessMissing = /MsgNotFnd|Message not found|not found/i.test(failure);
+        if (!harmlessMissing) {
+          return {
+            ok: false,
+            error: `${this.label}: delete before seed failed for "${target}"${failure.trim() ? `: ${failure.trim()}` : ''}`,
+            responses,
+          };
+        }
+      }
       if (!r?.success && !cmd.startsWith('^DM')) {
         return {
           ok: false,
@@ -509,6 +520,15 @@ class PrinterSession {
       return {
         ok: false,
         error: `${this.label}: "${target}" not in ^LM after seed. Wire trace: ${responses.join(' | ')}. ^LM after: "${verifyList.trim().slice(0, 120)}"`,
+      };
+    }
+
+    const seededSig = await this.printerSignature(target);
+    if (this.signatureMismatch(expectedSig, seededSig)) {
+      console.warn('[TwinSeed] post-seed signature mismatch', { target, expected: expectedSig, actual: seededSig, responses });
+      return {
+        ok: false,
+        error: `${this.label}: "${target}" still has the wrong field layout after re-seed. Wire trace: ${responses.join(' | ')}`,
       };
     }
 
