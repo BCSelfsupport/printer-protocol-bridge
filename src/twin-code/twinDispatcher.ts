@@ -1090,12 +1090,10 @@ export async function seedTwinPairMessages(
       // Give freshly-seeded ^NM/^SV a beat to commit before any follow-on cmds.
       if (resA.seeded || resB.seeded) await new Promise(res => setTimeout(res, 600));
 
-      // CRITICAL ORDER: push print params + counter config BEFORE ^SM-select.
-      // If we ^SM-select first, the printer activates the message with stale
-      // counter values (e.g. last operator setting) and prints one or more bad
-      // codes before the ^CC/^CN we send catches up. Pre-loading these while
-      // the message is still inactive guarantees the very first print uses the
-      // intended counter start/digits/leading-zero config.
+      // Print params are safe before ^SM-select, but counter *current value*
+      // must be pushed again after ^SM. BestCode can re-initialize the active
+      // message's displayed/live counter during ^SM, which made rebinding show
+      // the old count even though the line/prefix fields updated correctly.
       // ^DA = print delay, ^PW = print width, ^CM s = speed. Defaults baseline
       // for minimum cycle time; keep print mode Normal (p0) so the hardware
       // photocell/Print-Go input remains the trigger source during Live.
@@ -1115,13 +1113,13 @@ export async function seedTwinPairMessages(
           await printerTransport.sendCommand(pid, `^CC ${slot};E${end}`, { maxWaitMs: 3000 }).catch(() => {});
           await printerTransport.sendCommand(pid, `^CC ${slot};L${leadingZero ? 1 : 0}`, { maxWaitMs: 3000 }).catch(() => {});
           await printerTransport.sendCommand(pid, `^CC ${slot};T0`, { maxWaitMs: 3000 }).catch(() => {});
-          await printerTransport.sendCommand(pid, `^CN ${slot};${start}`, { maxWaitMs: 3000 }).catch(() => {});
-          await new Promise(res => setTimeout(res, 150));
+          await printerTransport.sendCommand(pid, `^CC ${slot};${start}`, { maxWaitMs: 3000 }).catch(() => {});
+          await new Promise(res => setTimeout(res, 300));
         }
 
-        await new Promise(res => setTimeout(res, 200));
+        await new Promise(res => setTimeout(res, 300));
         await printerTransport.sendCommand(pid, '^SV', { maxWaitMs: 3000 }).catch(() => {});
-        await new Promise(res => setTimeout(res, 150));
+        await new Promise(res => setTimeout(res, 300));
       }
 
       // Now ^SM-select the bound LID/SIDE messages — counters and print
@@ -1133,6 +1131,17 @@ export async function seedTwinPairMessages(
           ok: false,
           error: `Message ^SM-select failed${!selA?.success ? ` on A (${nameA})` : ''}${!selB?.success ? ` on B (${nameB})` : ''}`,
         };
+      }
+
+      if (opts.counterConfig) {
+        const { slot, start } = opts.counterConfig;
+        for (const pid of [printerA.id, printerB.id]) {
+          await new Promise(res => setTimeout(res, 300));
+          const r = await printerTransport.sendCommand(pid, `^CC ${slot};${start}`, { maxWaitMs: 3000 }).catch(() => null);
+          console.info('[TwinSeed] post-select counter reset', { printerId: pid, slot, start, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+          await new Promise(res => setTimeout(res, 300));
+          await printerTransport.sendCommand(pid, '^SV', { maxWaitMs: 3000 }).catch(() => {});
+        }
       }
 
       return { ok: true, aId: printerA.id, bId: printerB.id, seededA: !!resA.seeded, seededB: !!resB.seeded };
