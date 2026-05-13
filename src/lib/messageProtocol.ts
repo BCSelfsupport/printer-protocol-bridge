@@ -451,6 +451,7 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
       let fontCode = 5; // Default 16-high
       let hexFieldType: number | undefined;
       let barcodeEncoding: string | undefined;
+      let fieldTypeFromHex: MessageField['type'] | undefined;
 
       if (tHexMatch) {
         const hexVal = parseFieldTypeHex(tHexMatch[1]);
@@ -458,11 +459,14 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
         if (lookup) {
           hexFieldType = hexVal;
           barcodeEncoding = lookup.barcodeEncoding;
+          fieldTypeFromHex = lookup.type;
           console.log(`[parseLfResponse] T:${tHexMatch[1]} (0x${hexVal.toString(16)}) → ${lookup.type}${barcodeEncoding ? ` [${barcodeEncoding}]` : ''}`);
         } else {
           console.log(`[parseLfResponse] T:${tHexMatch[1]} (0x${hexVal.toString(16)}) → unknown hex type, defaulting to text`);
         }
       }
+
+      const protocolMeta = inferProtocolMetaFromFieldLine(trimmed, fieldTypeFromHex);
 
       // Font code: derive from H: (actual dot height) which is always reliable
       const parsedH = hMatch ? parseInt(hMatch[1], 10) : 0;
@@ -496,6 +500,7 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
         elementData: '',
         hexFieldType,
         barcodeEncoding,
+        ...protocolMeta,
       };
       continue;
     }
@@ -507,7 +512,14 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
       const etMatch = trimmed.match(/\bT\s*:\s*(\d+)/i);
       const edMatch = trimmed.match(/\bD\s*:\s*(.+)/i);
       if (etMatch) {
-        currentField.elementType = parseInt(etMatch[1], 10);
+        const elementType = parseInt(etMatch[1], 10);
+        currentField.elementType = elementType;
+        if (!currentField.protocolCommand) {
+          if (elementType === 2) currentField.protocolCommand = 'AH';
+          else if (elementType === 3) currentField.protocolCommand = 'AD';
+          else if (elementType === 4) currentField.protocolCommand = 'AP';
+          else if (elementType === 5) currentField.protocolCommand = 'AC';
+        }
       }
       if (edMatch) currentField.elementData = edMatch[1].trim();
       continue;
@@ -542,6 +554,7 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
         if (derived !== undefined) fontCode = derived;
       }
 
+      const flatProtocolMeta = inferProtocolMetaFromFieldLine(trimmed, undefined);
       currentField = {
         fieldNum,
         fontCode,
@@ -554,6 +567,7 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
         rotation: rMatch ? parseInt(rMatch[1], 10) : 0,
         elementType: tMatch ? parseInt(tMatch[1], 10) : 0,
         elementData: dMatch ? dMatch[1].trim() : '',
+        ...flatProtocolMeta,
       };
       continue;
     }
