@@ -200,6 +200,10 @@ class PrinterSession {
       if (seeded) await new Promise(res => setTimeout(res, 600));
     }
 
+    // Push counter + print params BEFORE ^SM-select so the very first print
+    // after activation uses the intended config (no stale-counter ghost cycle).
+    await runPreSelect();
+
     if (messageName) {
       const target = messageName.trim().toUpperCase();
       const sm = await printerTransport.sendCommand(this.printerId, `^SM ${target}`, { maxWaitMs: 4000 });
