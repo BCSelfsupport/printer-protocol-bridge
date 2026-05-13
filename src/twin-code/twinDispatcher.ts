@@ -1003,8 +1003,15 @@ class TwinDispatcher {
     let aReady = false;
     let bReady = autoCode; // No ^MD on B in autoCode — treat B as ready immediately.
     let forceSent = false;
+    // CRITICAL: in Auto-Code mode the SIDE printer self-prints natively from
+    // the shared hardware photocell (no ^MD needed). If we ALSO inject ^PT
+    // via forcePrintGo, the printer fires twice per bottle and we get the
+    // characteristic ghost/overlay print where one serial sits on top of
+    // the next. Suppress all host-side Print Go in autoCode — the photocell
+    // is the single source of truth for bottle timing.
+    const allowForce = !!opts?.forceTrigger && !autoCode;
     const fireWhenReady = () => {
-      if (!opts?.forceTrigger || forceSent || !aReady || !bReady) return;
+      if (!allowForce || forceSent || !aReady || !bReady) return;
       forceSent = true;
       a.forcePrintGo();
       b.forcePrintGo();
@@ -1021,8 +1028,8 @@ class TwinDispatcher {
     // Pre-flight / bench path: no product crosses the photocell, so send the
     // same Print Go (^PT) signal the operator would otherwise press manually.
     // If an R ACK is missed, a later fallback raw ^PT still gives the firmware
-    // a chance to advance T→C before C-timeout.
-    if (opts?.forceTrigger) {
+    // a chance to advance T→C before C-timeout. Skipped in autoCode (see above).
+    if (allowForce) {
       setTimeout(() => {
         if (forceSent) return;
         forceSent = true;
