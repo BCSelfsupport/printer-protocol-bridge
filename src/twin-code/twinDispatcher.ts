@@ -112,6 +112,7 @@ class PrinterSession {
   private unsub: (() => void) | null = null;
   private active = false;
   private isEmulated = false;
+  private skipOneToOne = false;
 
   constructor(
     public printerId: number,
