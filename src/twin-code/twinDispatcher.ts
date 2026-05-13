@@ -548,12 +548,38 @@ class PrinterSession {
     )];
   }
 
+  /** Stable fingerprint of the seed's commandsTemplate (captures line/unit/slot/etc). */
+  private seedContentFingerprint(seed: MessageSeed, messageName: string): string {
+    const cmds = buildSeedCommands(seed, messageName.trim().toUpperCase());
+    // Skip ^DM (delete) — pure data commands only
+    const data = cmds.filter(c => !c.startsWith('^DM')).join('|');
+    let h = 0;
+    for (let i = 0; i < data.length; i++) {
+      h = ((h << 5) - h + data.charCodeAt(i)) | 0;
+    }
+    return h.toString(36);
+  }
+
+  private fingerprintKey(messageName: string): string {
+    return `twincode-seed-fp:${this.printerId}:${messageName.trim().toUpperCase()}`;
+  }
+
+  private getStoredFingerprint(messageName: string): string | null {
+    try { return localStorage.getItem(this.fingerprintKey(messageName)); } catch { return null; }
+  }
+
+  private setStoredFingerprint(messageName: string, fp: string): void {
+    try { localStorage.setItem(this.fingerprintKey(messageName), fp); } catch {}
+  }
+
   private async ensureMessage(
     messageName: string,
     seed: MessageSeed,
   ): Promise<{ ok: boolean; error?: string; seeded?: boolean }> {
     const target = messageName.trim().toUpperCase();
     if (!target) return { ok: false, error: `${this.label}: empty message name` };
+
+    const expectedFp = this.seedContentFingerprint(seed, target);
 
     // ^LM check — works on both Electron and emulator paths since the regular
     // transport handles routing. If ^LM fails outright, surface the error
