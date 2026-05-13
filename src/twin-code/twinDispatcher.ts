@@ -147,6 +147,12 @@ class PrinterSession {
      */
     preSelectCommands?: string[];
     /**
+     * Commands to execute AFTER ^SM-select. Counter current values are most
+     * reliable here because save/select can re-initialize the active message's
+     * displayed counter from its stored start value.
+     */
+    postSelectCommands?: string[];
+    /**
      * If true, do NOT enter 1:1 mode (^MB). In Auto-Code mode the printer
      * self-prints on every hardware photocell trip using its internal
      * counter (^AC). Entering ^MB would lock the printer waiting for ^MD
@@ -157,7 +163,7 @@ class PrinterSession {
     skipOneToOne?: boolean;
   } = {}): Promise<{ ok: boolean; error?: string; seeded?: boolean }> {
     this.isEmulated = this.detectEmulated();
-    const { messageName, seed, preSelectCommands, skipOneToOne } = opts;
+    const { messageName, seed, preSelectCommands, postSelectCommands, skipOneToOne } = opts;
     const trace = (step: string, extra?: Record<string, unknown>) => {
       console.info(`[TwinBind:${this.label}] ${step}`, { printerId: this.printerId, ...extra });
     };
@@ -168,11 +174,25 @@ class PrinterSession {
       trace('preSelect:start', { count: preSelectCommands.length });
       for (const cmd of preSelectCommands) {
         await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 3000 }).catch(() => {});
+        await new Promise(res => setTimeout(res, 300));
       }
       // Persist to non-volatile so the values survive ^SM activation.
       await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 3000 }).catch(() => {});
-      await new Promise(res => setTimeout(res, 150));
+      await new Promise(res => setTimeout(res, 300));
       trace('preSelect:done');
+    };
+
+    const runPostSelect = async () => {
+      if (!postSelectCommands || postSelectCommands.length === 0) return;
+      trace('postSelect:start', { count: postSelectCommands.length });
+      for (const cmd of postSelectCommands) {
+        const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 3000 }).catch(() => null);
+        console.info(`[TwinBind:${this.label}] postSelect:cmd`, { printerId: this.printerId, cmd, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+        await new Promise(res => setTimeout(res, 300));
+      }
+      await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 3000 }).catch(() => {});
+      await new Promise(res => setTimeout(res, 300));
+      trace('postSelect:done');
     };
 
     const armNativePhotocellMode = async (): Promise<{ ok: boolean; error?: string }> => {
@@ -317,6 +337,8 @@ class PrinterSession {
       }
       trace('^SM:ok');
     }
+
+    await runPostSelect();
 
     const nativeArmed = await armNativePhotocellMode();
     if (!nativeArmed.ok) {
