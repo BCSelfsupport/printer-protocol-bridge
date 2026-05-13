@@ -108,13 +108,22 @@ export function OperatorHUD() {
   }, [cat.missCount, alarmEnabled]);
 
   // Derive last printed serial from the live conveyor (most recent printed bottle).
+  // Fallback: when running off the hardware photocell mirror (Production +
+  // Auto-Code), there are no sim bottles — pull the most recent printed serial
+  // straight from profilerBus instead.
   const lastPrinted = useMemo(() => {
     for (let i = conv.bottles.length - 1; i >= 0; i--) {
       const b = conv.bottles[i];
       if (b.state === "printed" && b.serial) return b;
     }
+    for (let i = samples.length - 1; i >= 0; i--) {
+      const s = samples[i];
+      if (s.outcome === "printed" && s.serial) {
+        return { id: s.index, serial: s.serial } as { id: number; serial: string };
+      }
+    }
     return null;
-  }, [conv.bottles]);
+  }, [conv.bottles, samples]);
 
   // Derive currently-printing bottle
   const printing = useMemo(
