@@ -178,6 +178,12 @@ export function CatalogStripBar() {
     conveyorSim.setLiveDispatcher((serial) =>
       twinDispatcher.dispatch(serial, { forceTrigger: !productionMode, autoCode: autoCodeMode }),
     );
+    // Native photocell modes (Production / Auto-Code) print without any
+    // host-side ^PT — start the ^CN mirror so each hardware strike feeds the
+    // ledger + profilerBus, which drives the HUD's "Last printed" readout.
+    if (productionMode || autoCodeMode) {
+      twinDispatcher.startPhotocellMirror({ autoCode: autoCodeMode });
+    }
     setLiveMode(true);
     toast({
       title: "LIVE bonded mode active",
