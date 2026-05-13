@@ -40,17 +40,20 @@ import { useProductionRun, useLiveRunSummary } from "../useProductionRun";
 import { productionRun, downloadRunCSV, downloadRunJSON, type ProductionRunExport } from "../productionRun";
 import { useCatalog } from "../useCatalog";
 import { useTwinPair } from "../twinPairStore";
-import { twinDispatcher } from "../twinDispatcher";
+import { twinDispatcher, type PhotocellMirrorState } from "../twinDispatcher";
+import { useProductionMode } from "../printGoMode";
 import { StartRunDialog } from "./StartRunDialog";
 import { PreflightDialog } from "./PreflightDialog";
 import { toast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
+import { Radio } from "lucide-react";
 
 export function ProductionRunBar() {
   const run = useProductionRun();
   const summary = useLiveRunSummary();
   const cat = useCatalog();
   const pair = useTwinPair();
+  const [productionMode] = useProductionMode();
   const [startOpen, setStartOpen] = useState(false);
   const [preflightOpen, setPreflightOpen] = useState(false);
   const [confirmStop, setConfirmStop] = useState(false);
@@ -64,6 +67,19 @@ export function ProductionRunBar() {
     return () => clearInterval(t);
   }, [run.active]);
   void elapsedTick;
+
+  // Hardware photocell mirror — when in Production mode, the printer's real
+  // photocell drives every print. We poll ^CN to mirror those trips into the
+  // catalog ledger so "Printed" increments live without any host-side ^PT.
+  useEffect(() => {
+    if (!run.active) return;
+    if (!productionMode) return;
+    if (!twinDispatcher.isBound()) return;
+    twinDispatcher.startPhotocellMirror({ autoCode: !!pair.autoCodeMode });
+    return () => {
+      twinDispatcher.stopPhotocellMirror();
+    };
+  }, [run.active, productionMode, pair.autoCodeMode]);
 
   // Auto-stop when the catalog is exhausted OR the run-length cap is hit:
   // download the signed export + envelope report and surface a toast so the
@@ -142,7 +158,7 @@ export function ProductionRunBar() {
             </div>
           </div>
 
-          <ConveyorAutoControls consumed={consumed} elapsedSec={summary.elapsedSec} />
+          <ConveyorAutoControls consumed={consumed} elapsedSec={summary.elapsedSec} productionMode={productionMode} />
 
           <div className="ml-auto flex flex-wrap items-center gap-5">
             <BigStat label="Printed" value={summary.printed.toLocaleString()} tone="ok" />
@@ -379,9 +395,10 @@ function formatElapsed(sec: number): string {
  * This row puts a one-click Start/Stop + a manual Fire 1 right next to the
  * lot number so it's impossible to miss.
  */
-function ConveyorAutoControls({ consumed, elapsedSec }: { consumed: number; elapsedSec: number }) {
+function ConveyorAutoControls({ consumed, elapsedSec, productionMode }: { consumed: number; elapsedSec: number; productionMode: boolean }) {
   const conv = useConveyor();
   const [running, setRunning] = useState(() => conveyorSim.isRunning());
+  const [mirror, setMirror] = useState<PhotocellMirrorState>(() => twinDispatcher.getPhotocellMirrorState());
   useEffect(() => {
     const id = window.setInterval(() => {
       const r = conveyorSim.isRunning();
@@ -389,7 +406,40 @@ function ConveyorAutoControls({ consumed, elapsedSec }: { consumed: number; elap
     }, 300);
     return () => window.clearInterval(id);
   }, []);
+  useEffect(() => twinDispatcher.subscribePhotocellMirror(setMirror), []);
 
+  // ---- PRODUCTION mode: real photocell wired to the printer drives prints. ----
+  // The host has nothing to fire — we just listen on ^CN. Show a clear "live"
+  // banner so the operator knows we're waiting for hardware, not stalled.
+  if (productionMode) {
+    const sinceTickSec = mirror.lastTickAt ? (Date.now() - mirror.lastTickAt) / 1000 : Infinity;
+    const live = mirror.active && sinceTickSec < 5;
+    return (
+      <div className="flex items-center gap-2">
+        <div
+          className={`flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-wider ${
+            live
+              ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+              : 'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+          }`}
+          title="Production mode — the printer's hardware photocell triggers each print. Counts mirror live from ^CN polling."
+        >
+          <span className="relative flex h-2 w-2">
+            <span className={`absolute inline-flex h-full w-full rounded-full ${live ? 'bg-emerald-500 animate-ping opacity-75' : 'bg-amber-500'}`} />
+            <span className={`relative inline-flex h-2 w-2 rounded-full ${live ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+          </span>
+          <Radio className="h-3.5 w-3.5" />
+          {live
+            ? <>Live photocell · <span className="tabular-nums">{Math.round(mirror.bpm)}</span> bpm</>
+            : (mirror.count === 0
+                ? 'Awaiting first photocell trip…'
+                : 'Photocell idle')}
+        </div>
+      </div>
+    );
+  }
+
+  // ---- AUTO (TEST) mode: software paces synthetic bottles into the dispatcher. ----
   // Soft warning when run has been active for >5s but nothing has been
   // dispatched yet — almost always means the conveyor sim isn't running.
   const stalled = !running && consumed === 0 && elapsedSec >= 5;
