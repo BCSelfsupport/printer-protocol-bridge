@@ -6,6 +6,7 @@
  */
 
 import type { MessageField, MessageDetails } from '@/components/screens/EditMessageScreen';
+import { PROTOCOL_DATE_TO_FORMAT } from '@/lib/autoCodeProtocol';
 
 const ALPHA_MONTH_VALUES = new Set([
   'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
@@ -232,6 +233,10 @@ const ELEMENT_TYPE_MAP: Record<number, MessageField['type']> = {
   7: 'text',       // Block element
 };
 
+const PROTOCOL_TIME_TO_FORMAT: Record<number, string> = {
+  23: 'HH', 24: 'MM', 25: 'SS', 26: 'HHMM', 27: 'HHMMSS', 28: 'HH:MM', 29: 'HH:MM:SS',
+};
+
 /** Barcode subtype → encoding key (for ^AB type parameter) */
 const BARCODE_SUBTYPE_TO_ENCODING: Record<number, string> = {
   0: 'i25', 1: 'upca', 2: 'upce', 3: 'ean13', 4: 'ean8',
@@ -257,6 +262,50 @@ interface ParsedField {
   hexFieldType?: number;
   /** Barcode encoding string derived from hex field type */
   barcodeEncoding?: string;
+  /** Native protocol subcommand when it can be recovered from ^LF detail text. */
+  protocolCommand?: 'AT' | 'AD' | 'AH' | 'AP' | 'AE' | 'AC' | 'AB' | 'AL';
+  /** Native date/time/counter subtype from the field payload, when present. */
+  protocolTypeCode?: number;
+  /** Native counter slot from ^AC, when present. */
+  counterSlot?: number;
+}
+
+function inferProtocolMetaFromFieldLine(line: string, fieldType: MessageField['type'] | undefined): Pick<ParsedField, 'protocolCommand' | 'protocolTypeCode' | 'counterSlot'> {
+  const cmdMatch = line.match(/\^(AT|AD|AH|AP|AE|AC|AB|AL)\d+\s*;([^\r\n]*)/i);
+  if (cmdMatch) {
+    const protocolCommand = cmdMatch[1].toUpperCase() as ParsedField['protocolCommand'];
+    const parts = cmdMatch[2].split(';').map(part => part.trim());
+    if (protocolCommand === 'AD' || protocolCommand === 'AH' || protocolCommand === 'AP' || protocolCommand === 'AE') {
+      return { protocolCommand, protocolTypeCode: Number.parseInt(parts[3] ?? '', 10) };
+    }
+    if (protocolCommand === 'AC') {
+      return { protocolCommand, counterSlot: Number.parseInt(parts[3] ?? '', 10), protocolTypeCode: Number.parseInt(parts[4] ?? '', 10) };
+    }
+    return { protocolCommand };
+  }
+
+  const labelMatch = line.match(/\b(?:CMD|COMMAND|SUBCOMMAND|TYPE|KIND)\s*[:=]\s*(AT|AD|AH|AP|AE|AC|AB|AL)\b/i)
+    || line.match(/\b(Text|Date|Time|Program(?:mable)?|Counter|Barcode|Graphic|Logo)\b/i);
+  const label = labelMatch?.[1]?.toLowerCase();
+  let protocolCommand: ParsedField['protocolCommand'] | undefined;
+  if (label) {
+    if (label === 'text') protocolCommand = 'AT';
+    else if (label === 'date') protocolCommand = 'AD';
+    else if (label === 'time') protocolCommand = 'AH';
+    else if (label.startsWith('program')) protocolCommand = 'AP';
+    else if (label === 'counter') protocolCommand = 'AC';
+    else if (label === 'barcode') protocolCommand = 'AB';
+    else if (label === 'graphic' || label === 'logo') protocolCommand = 'AL';
+    else protocolCommand = label.toUpperCase() as ParsedField['protocolCommand'];
+  }
+
+  const codeMatch = line.match(/\b(?:D|TYPECODE|CODE|FMT|FORMAT)\s*[:=]\s*(\d+)\b/i);
+  const slotMatch = line.match(/\b(?:C|COUNTER|SLOT)\s*[:=]\s*([1-4])\b/i);
+  return {
+    protocolCommand: protocolCommand ?? (fieldType === 'counter' ? 'AC' : undefined),
+    protocolTypeCode: codeMatch ? Number.parseInt(codeMatch[1], 10) : undefined,
+    counterSlot: slotMatch ? Number.parseInt(slotMatch[1], 10) : undefined,
+  };
 }
 
 // ── ^GM parser ───────────────────────────────────────────────────────────────
@@ -406,6 +455,7 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
       let fontCode = 5; // Default 16-high
       let hexFieldType: number | undefined;
       let barcodeEncoding: string | undefined;
+      let fieldTypeFromHex: MessageField['type'] | undefined;
 
       if (tHexMatch) {
         const hexVal = parseFieldTypeHex(tHexMatch[1]);
@@ -413,11 +463,14 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
         if (lookup) {
           hexFieldType = hexVal;
           barcodeEncoding = lookup.barcodeEncoding;
+          fieldTypeFromHex = lookup.type;
           console.log(`[parseLfResponse] T:${tHexMatch[1]} (0x${hexVal.toString(16)}) → ${lookup.type}${barcodeEncoding ? ` [${barcodeEncoding}]` : ''}`);
         } else {
           console.log(`[parseLfResponse] T:${tHexMatch[1]} (0x${hexVal.toString(16)}) → unknown hex type, defaulting to text`);
         }
       }
+
+      const protocolMeta = inferProtocolMetaFromFieldLine(trimmed, fieldTypeFromHex);
 
       // Font code: derive from H: (actual dot height) which is always reliable
       const parsedH = hMatch ? parseInt(hMatch[1], 10) : 0;
@@ -451,6 +504,7 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
         elementData: '',
         hexFieldType,
         barcodeEncoding,
+        ...protocolMeta,
       };
       continue;
     }
@@ -462,7 +516,14 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
       const etMatch = trimmed.match(/\bT\s*:\s*(\d+)/i);
       const edMatch = trimmed.match(/\bD\s*:\s*(.+)/i);
       if (etMatch) {
-        currentField.elementType = parseInt(etMatch[1], 10);
+        const elementType = parseInt(etMatch[1], 10);
+        currentField.elementType = elementType;
+        if (!currentField.protocolCommand) {
+          if (elementType === 2) currentField.protocolCommand = 'AH';
+          else if (elementType === 3) currentField.protocolCommand = 'AD';
+          else if (elementType === 4) currentField.protocolCommand = 'AP';
+          else if (elementType === 5) currentField.protocolCommand = 'AC';
+        }
       }
       if (edMatch) currentField.elementData = edMatch[1].trim();
       continue;
@@ -497,6 +558,7 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
         if (derived !== undefined) fontCode = derived;
       }
 
+      const flatProtocolMeta = inferProtocolMetaFromFieldLine(trimmed, undefined);
       currentField = {
         fieldNum,
         fontCode,
@@ -509,6 +571,7 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
         rotation: rMatch ? parseInt(rMatch[1], 10) : 0,
         elementType: tMatch ? parseInt(tMatch[1], 10) : 0,
         elementData: dMatch ? dMatch[1].trim() : '',
+        ...flatProtocolMeta,
       };
       continue;
     }
@@ -521,6 +584,34 @@ export function parseLfResponse(response: string, messageName: string): ParsedFi
 
   console.log('[parseLfResponse] parsed fields:', fields.length, fields);
   return fields;
+}
+
+function autoCodeMetaFromProtocol(pf: ParsedField): Pick<MessageField, 'autoCodeFieldType' | 'autoCodeFormat'> {
+  const command = pf.protocolCommand;
+  const code = pf.protocolTypeCode;
+
+  if (command === 'AC') {
+    const slot = pf.counterSlot && pf.counterSlot >= 1 && pf.counterSlot <= 4 ? pf.counterSlot : 1;
+    return { autoCodeFieldType: `counter_${slot}` };
+  }
+
+  if (command === 'AH' && code !== undefined) {
+    return { autoCodeFieldType: 'time', autoCodeFormat: PROTOCOL_TIME_TO_FORMAT[code] ?? undefined };
+  }
+
+  if ((command === 'AD' || command === 'AP' || command === 'AE') && code !== undefined) {
+    const prefix = command === 'AE' ? 'date_expiry' : 'date_normal';
+    const individualTypes: Record<number, string> = {
+      1: 'dow_num', 2: 'dow_alpha', 3: 'dom', 4: 'doy', 5: 'ww', 6: 'mm', 7: 'alpha_month', 8: 'y', 9: 'yy', 10: 'yyyy',
+    };
+    if (individualTypes[code]) {
+      const codeType = command === 'AP' ? `program_${individualTypes[code]}` : individualTypes[code];
+      return { autoCodeFieldType: `${prefix}_${codeType}` };
+    }
+    return { autoCodeFieldType: prefix, autoCodeFormat: PROTOCOL_DATE_TO_FORMAT[code] };
+  }
+
+  return {};
 }
 
 // ── Message builder ──────────────────────────────────────────────────────────
@@ -548,24 +639,40 @@ export function buildMessageDetails(
     let fieldType: MessageField['type'];
     let barcodeEncoding: string | undefined;
 
-    if (pf.hexFieldType !== undefined) {
-      const lookup = HEX_FIELD_TYPE_MAP[pf.hexFieldType];
-      if (lookup) {
-        fieldType = lookup.type;
-        barcodeEncoding = lookup.barcodeEncoding;
+    if (pf.protocolCommand === 'AD' || pf.protocolCommand === 'AE' || pf.protocolCommand === 'AP') {
+      fieldType = 'date';
+    } else if (pf.protocolCommand === 'AH') {
+      fieldType = 'time';
+    } else if (pf.protocolCommand === 'AC') {
+      fieldType = 'counter';
+    } else if (pf.protocolCommand === 'AB') {
+      fieldType = 'barcode';
+      barcodeEncoding = pf.barcodeEncoding;
+    } else if (pf.protocolCommand === 'AT') {
+      fieldType = 'text';
+    } else if (pf.protocolCommand === 'AL') {
+      fieldType = 'logo';
+    } else {
+
+      if (pf.hexFieldType !== undefined) {
+        const lookup = HEX_FIELD_TYPE_MAP[pf.hexFieldType];
+        if (lookup) {
+          fieldType = lookup.type;
+          barcodeEncoding = lookup.barcodeEncoding;
+        } else {
+          fieldType = ELEMENT_TYPE_MAP[pf.elementType] ?? 'text';
+        }
+      } else if (pf.barcodeEncoding) {
+        fieldType = 'barcode';
+        barcodeEncoding = pf.barcodeEncoding;
       } else {
         fieldType = ELEMENT_TYPE_MAP[pf.elementType] ?? 'text';
       }
-    } else if (pf.barcodeEncoding) {
-      fieldType = 'barcode';
-      barcodeEncoding = pf.barcodeEncoding;
-    } else {
-      fieldType = ELEMENT_TYPE_MAP[pf.elementType] ?? 'text';
     }
 
-    // For non-barcode hex field types, refine using element type
-    // e.g. T:4000 (text) + Element T:2 (time) → type should be 'time'
-    if (fieldType === 'text' && pf.elementType > 0) {
+    // For non-barcode hex field types, refine using element type when no native
+    // subcommand is present. Native ^AP/^AD/^AC wins over generic Element labels.
+    if (!pf.protocolCommand && fieldType === 'text' && pf.elementType > 0) {
       const elementDerived = ELEMENT_TYPE_MAP[pf.elementType];
       if (elementDerived) {
         fieldType = elementDerived;
@@ -587,6 +694,7 @@ export function buildMessageDetails(
       console.log(`[buildMessageDetails] barcode field ${idx + 1}: encoding=${barcodeEncoding}, data="${fieldData}"`);
     }
 
+    const protocolAutoCodeMeta = autoCodeMetaFromProtocol(pf);
     const inferredAutoCodeMeta = inferFetchedAutoCodeMeta(fieldType, fieldData);
 
     return {
@@ -601,8 +709,8 @@ export function buildMessageDetails(
       bold: pf.bold,
       gap: pf.gap,
       rotation: pf.rotation === 0 ? 'Normal' as const : 'Normal' as const,
-      autoCodeFieldType: inferredAutoCodeMeta.autoCodeFieldType,
-      autoCodeFormat: inferredAutoCodeMeta.autoCodeFormat,
+      autoCodeFieldType: protocolAutoCodeMeta.autoCodeFieldType ?? inferredAutoCodeMeta.autoCodeFieldType,
+      autoCodeFormat: protocolAutoCodeMeta.autoCodeFormat ?? inferredAutoCodeMeta.autoCodeFormat,
       autoNumerals: 0,
     };
   });
