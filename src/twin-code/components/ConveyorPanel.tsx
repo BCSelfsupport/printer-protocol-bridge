@@ -120,6 +120,8 @@ export function ConveyorPanel() {
       // Per-side flag on the binding (default true for v3+ entries).
       autoCreateA: pair.a?.autoCreate ?? true,
       autoCreateB: pair.b?.autoCreate ?? true,
+      autoCodeMode: !!pair.autoCodeMode,
+      autoCodeOpts: pair.autoCodeOpts,
     });
     setLiveBusy(false);
     if (!res.ok) {
