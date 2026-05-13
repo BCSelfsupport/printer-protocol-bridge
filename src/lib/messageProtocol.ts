@@ -639,24 +639,40 @@ export function buildMessageDetails(
     let fieldType: MessageField['type'];
     let barcodeEncoding: string | undefined;
 
-    if (pf.hexFieldType !== undefined) {
-      const lookup = HEX_FIELD_TYPE_MAP[pf.hexFieldType];
-      if (lookup) {
-        fieldType = lookup.type;
-        barcodeEncoding = lookup.barcodeEncoding;
+    if (pf.protocolCommand === 'AD' || pf.protocolCommand === 'AE' || pf.protocolCommand === 'AP') {
+      fieldType = 'date';
+    } else if (pf.protocolCommand === 'AH') {
+      fieldType = 'time';
+    } else if (pf.protocolCommand === 'AC') {
+      fieldType = 'counter';
+    } else if (pf.protocolCommand === 'AB') {
+      fieldType = 'barcode';
+      barcodeEncoding = pf.barcodeEncoding;
+    } else if (pf.protocolCommand === 'AT') {
+      fieldType = 'text';
+    } else if (pf.protocolCommand === 'AL') {
+      fieldType = 'logo';
+    } else {
+
+      if (pf.hexFieldType !== undefined) {
+        const lookup = HEX_FIELD_TYPE_MAP[pf.hexFieldType];
+        if (lookup) {
+          fieldType = lookup.type;
+          barcodeEncoding = lookup.barcodeEncoding;
+        } else {
+          fieldType = ELEMENT_TYPE_MAP[pf.elementType] ?? 'text';
+        }
+      } else if (pf.barcodeEncoding) {
+        fieldType = 'barcode';
+        barcodeEncoding = pf.barcodeEncoding;
       } else {
         fieldType = ELEMENT_TYPE_MAP[pf.elementType] ?? 'text';
       }
-    } else if (pf.barcodeEncoding) {
-      fieldType = 'barcode';
-      barcodeEncoding = pf.barcodeEncoding;
-    } else {
-      fieldType = ELEMENT_TYPE_MAP[pf.elementType] ?? 'text';
     }
 
-    // For non-barcode hex field types, refine using element type
-    // e.g. T:4000 (text) + Element T:2 (time) → type should be 'time'
-    if (fieldType === 'text' && pf.elementType > 0) {
+    // For non-barcode hex field types, refine using element type when no native
+    // subcommand is present. Native ^AP/^AD/^AC wins over generic Element labels.
+    if (!pf.protocolCommand && fieldType === 'text' && pf.elementType > 0) {
       const elementDerived = ELEMENT_TYPE_MAP[pf.elementType];
       if (elementDerived) {
         fieldType = elementDerived;
@@ -678,6 +694,7 @@ export function buildMessageDetails(
       console.log(`[buildMessageDetails] barcode field ${idx + 1}: encoding=${barcodeEncoding}, data="${fieldData}"`);
     }
 
+    const protocolAutoCodeMeta = autoCodeMetaFromProtocol(pf);
     const inferredAutoCodeMeta = inferFetchedAutoCodeMeta(fieldType, fieldData);
 
     return {
@@ -692,8 +709,8 @@ export function buildMessageDetails(
       bold: pf.bold,
       gap: pf.gap,
       rotation: pf.rotation === 0 ? 'Normal' as const : 'Normal' as const,
-      autoCodeFieldType: inferredAutoCodeMeta.autoCodeFieldType,
-      autoCodeFormat: inferredAutoCodeMeta.autoCodeFormat,
+      autoCodeFieldType: protocolAutoCodeMeta.autoCodeFieldType ?? inferredAutoCodeMeta.autoCodeFieldType,
+      autoCodeFormat: protocolAutoCodeMeta.autoCodeFormat ?? inferredAutoCodeMeta.autoCodeFormat,
       autoNumerals: 0,
     };
   });
