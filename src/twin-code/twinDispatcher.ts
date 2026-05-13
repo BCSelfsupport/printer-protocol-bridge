@@ -181,7 +181,10 @@ class PrinterSession {
       const commands = [
         `^DA ${TWIN_DEFAULT_DELAY}`,
         `^PW ${TWIN_DEFAULT_WIDTH}`,
-        `^CM s${TWIN_DEFAULT_SPEED_CODE};o0;p1`,
+        // Keep the selected message in Normal print mode. Auto-Code live mode
+        // must NOT switch to ^MB or ^CM p1 because either path can make the
+        // printer wait on host-controlled flow and ignore the hardware Print Go.
+        `^CM s${TWIN_DEFAULT_SPEED_CODE};o0;p0`,
         '^SV',
       ];
       for (const cmd of commands) {
