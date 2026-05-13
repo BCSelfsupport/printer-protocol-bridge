@@ -1501,6 +1501,7 @@ class TwinDispatcher {
   }
 
   async unbind(): Promise<void> {
+    this.stopPhotocellMirror();
     const a = this.a; const b = this.b;
     this.a = null; this.b = null;
     if (a || b) {
