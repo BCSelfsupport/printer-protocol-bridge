@@ -97,9 +97,27 @@ class PrinterSession {
   async enter(opts: {
     messageName?: string;
     seed?: MessageSeed;
+    /**
+     * Commands to execute AFTER seed-commit but BEFORE ^SM-select.
+     * Use for counter (^CC/^CN) and print parameters (^DA/^PW/^CM) so the
+     * very first print after activation uses the intended config — without
+     * this, ^SM races and the printer fires one or more bad codes with
+     * stale counter values before our follow-up commands catch up.
+     */
+    preSelectCommands?: string[];
   } = {}): Promise<{ ok: boolean; error?: string; seeded?: boolean }> {
     this.isEmulated = this.detectEmulated();
-    const { messageName, seed } = opts;
+    const { messageName, seed, preSelectCommands } = opts;
+
+    const runPreSelect = async () => {
+      if (!preSelectCommands || preSelectCommands.length === 0) return;
+      for (const cmd of preSelectCommands) {
+        await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 3000 }).catch(() => {});
+      }
+      // Persist to non-volatile so the values survive ^SM activation.
+      await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 3000 }).catch(() => {});
+      await new Promise(res => setTimeout(res, 150));
+    };
 
     // ---- Emulator path: synthesize R/T/C entirely in-process ----
     if (this.isEmulated) {
@@ -112,6 +130,7 @@ class PrinterSession {
         }
         seeded = !!r.seeded;
       }
+      await runPreSelect();
       if (messageName) {
         const sm = await printerTransport.sendCommand(this.printerId, `^SM ${messageName}`, { maxWaitMs: 2000 });
         if (!sm?.success) {
@@ -180,6 +199,10 @@ class PrinterSession {
       // printer stays on whatever message was previously active.
       if (seeded) await new Promise(res => setTimeout(res, 600));
     }
+
+    // Push counter + print params BEFORE ^SM-select so the very first print
+    // after activation uses the intended config (no stale-counter ghost cycle).
+    await runPreSelect();
 
     if (messageName) {
       const target = messageName.trim().toUpperCase();
@@ -1020,9 +1043,29 @@ class TwinDispatcher {
     const msgB = opts.messageNameB ?? pair.b.messageName ?? opts.messageName;
     const autoCodeSeedA = opts.autoCodeMode && opts.autoCodeOpts ? buildAutoCodeSeed(opts.autoCodeOpts, 'A') : seedForSide('A');
     const autoCodeSeedB = opts.autoCodeMode && opts.autoCodeOpts ? buildAutoCodeSeed(opts.autoCodeOpts, 'B') : seedForSide('B');
+
+    // Pre-select commands: counter slot + start (Auto-Code Mode) so the
+    // first ^SM-activated print uses the right serial. Without this, the
+    // printer activates with its previous (stale) counter and prints one
+    // or more ghost cycles before the ^CC/^CN we'd otherwise send catches up.
+    let preSelect: string[] | undefined;
+    if (opts.autoCodeMode && opts.autoCodeOpts) {
+      const slot = opts.autoCodeOpts.counterSlot;
+      const start = Math.max(0, opts.autoCodeOpts.counterStart ?? 0);
+      const end = 999999;
+      preSelect = [
+        `^CC ${slot};I1`,
+        `^CC ${slot};S${start}`,
+        `^CC ${slot};E${end}`,
+        `^CC ${slot};L1`,
+        `^CC ${slot};T0`,
+        `^CN ${slot};${start}`,
+      ];
+    }
+
     const [resA, resB] = await Promise.all([
-      this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? autoCodeSeedA : undefined }),
-      this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? autoCodeSeedB : undefined }),
+      this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? autoCodeSeedA : undefined, preSelectCommands: preSelect }),
+      this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? autoCodeSeedB : undefined, preSelectCommands: preSelect }),
     ]);
 
     if (!resA.ok || !resB.ok) {
