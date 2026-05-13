@@ -325,6 +325,8 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
   ];
 
   const sample = `${line}A132${"1".padStart(6, "0")}${unit}`;
+  const normalizedLine = line.toUpperCase();
+  const normalizedUnit = unit.toUpperCase();
   return {
     label: `Auto-code · ${sample}`,
     description:
