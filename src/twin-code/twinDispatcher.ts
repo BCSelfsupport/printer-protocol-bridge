@@ -838,6 +838,9 @@ export interface TwinDispatcherOptions {
    */
   autoCreateA?: boolean;
   autoCreateB?: boolean;
+  /** Auto-Code Mode seed/config supplied by the saved twin-pair binding. */
+  autoCodeMode?: boolean;
+  autoCodeOpts?: TwinPairState['autoCodeOpts'];
 }
 
 export async function seedTwinPairMessages(
@@ -1016,8 +1019,8 @@ class TwinDispatcher {
     // opted in via `autoCreateA` / `autoCreateB`.
     const msgA = opts.messageNameA ?? pair.a.messageName ?? opts.messageName;
     const msgB = opts.messageNameB ?? pair.b.messageName ?? opts.messageName;
-    const autoCodeSeedA = pair.autoCodeMode && pair.autoCodeOpts ? buildAutoCodeSeed(pair.autoCodeOpts, 'A') : seedForSide('A');
-    const autoCodeSeedB = pair.autoCodeMode && pair.autoCodeOpts ? buildAutoCodeSeed(pair.autoCodeOpts, 'B') : seedForSide('B');
+    const autoCodeSeedA = opts.autoCodeMode && opts.autoCodeOpts ? buildAutoCodeSeed(opts.autoCodeOpts, 'A') : seedForSide('A');
+    const autoCodeSeedB = opts.autoCodeMode && opts.autoCodeOpts ? buildAutoCodeSeed(opts.autoCodeOpts, 'B') : seedForSide('B');
     const [resA, resB] = await Promise.all([
       this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? autoCodeSeedA : undefined }),
       this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? autoCodeSeedB : undefined }),
