@@ -40,11 +40,13 @@ import { useProductionRun, useLiveRunSummary } from "../useProductionRun";
 import { productionRun, downloadRunCSV, downloadRunJSON, type ProductionRunExport } from "../productionRun";
 import { useCatalog } from "../useCatalog";
 import { useTwinPair } from "../twinPairStore";
-import { twinDispatcher } from "../twinDispatcher";
+import { twinDispatcher, type PhotocellMirrorState } from "../twinDispatcher";
+import { useProductionMode } from "../printGoMode";
 import { StartRunDialog } from "./StartRunDialog";
 import { PreflightDialog } from "./PreflightDialog";
 import { toast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
+import { Radio } from "lucide-react";
 
 export function ProductionRunBar() {
   const run = useProductionRun();
