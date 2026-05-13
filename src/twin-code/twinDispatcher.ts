@@ -1356,6 +1356,7 @@ class TwinDispatcher {
     // printer activates with its previous (stale) counter and prints one
     // or more ghost cycles before the ^CC/^CN we'd otherwise send catches up.
     let preSelect: string[] | undefined;
+    let postSelect: string[] | undefined;
     if (opts.autoCodeMode && opts.autoCodeOpts) {
       const slot = opts.autoCodeOpts.counterSlot;
       const start = Math.max(0, opts.autoCodeOpts.counterStart ?? 0);
@@ -1366,8 +1367,9 @@ class TwinDispatcher {
         `^CC ${slot};E${end}`,
         `^CC ${slot};L1`,
         `^CC ${slot};T0`,
-        `^CN ${slot};${start}`,
+        `^CC ${slot};${start}`,
       ];
+      postSelect = [`^CC ${slot};${start}`];
       // Reset host-side serial mirror so LID ^MD^BD frames stay in lock-step
       // with the printer's freshly-reset counter on each rebind. Without this
       // the host counter keeps climbing across rebinds even though the printer
@@ -1384,8 +1386,8 @@ class TwinDispatcher {
     console.info('[TwinBind] entering both sides', { aId, bId, msgA, msgB, autoCode: !!opts.autoCodeMode, skipOneToOne });
     const tEnter = performance.now();
     const [resA, resB] = await Promise.all([
-      this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? autoCodeSeedA : undefined, preSelectCommands: preSelect, skipOneToOne }),
-      this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? autoCodeSeedB : undefined, preSelectCommands: preSelect, skipOneToOne }),
+      this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? autoCodeSeedA : undefined, preSelectCommands: preSelect, postSelectCommands: postSelect, skipOneToOne }),
+      this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? autoCodeSeedB : undefined, preSelectCommands: preSelect, postSelectCommands: postSelect, skipOneToOne }),
     ]);
     console.info('[TwinBind] both sides entered', { elapsedMs: Math.round(performance.now() - tEnter), resA, resB });
 
