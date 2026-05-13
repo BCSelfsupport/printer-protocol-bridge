@@ -1043,10 +1043,10 @@ class TwinDispatcher {
       const subA = opts.subcommandA ?? 'BD';
       const subB = opts.subcommandB ?? 'TD';
       const kindA: 'text' | 'barcode' = subA === 'BD' ? 'barcode' : 'text';
-      const kindB: 'text' | 'barcode' = subB === 'BD' ? 'barcode' : 'text';
+      const kindB: 'text' | 'barcode' = opts.autoCodeMode ? 'text' : (subB === 'BD' ? 'barcode' : 'text');
       const [vA, vB] = await Promise.all([
         this.a.verifyFieldIndex(fieldA, kindA),
-        this.b.verifyFieldIndex(fieldB, kindB),
+        this.b.verifyFieldIndex(opts.autoCodeMode ? 5 : fieldB, kindB),
       ]);
       if (!vA.ok || !vB.ok) {
         await Promise.all([this.a.exit(), this.b.exit()]);
