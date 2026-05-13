@@ -395,9 +395,10 @@ function formatElapsed(sec: number): string {
  * This row puts a one-click Start/Stop + a manual Fire 1 right next to the
  * lot number so it's impossible to miss.
  */
-function ConveyorAutoControls({ consumed, elapsedSec }: { consumed: number; elapsedSec: number }) {
+function ConveyorAutoControls({ consumed, elapsedSec, productionMode }: { consumed: number; elapsedSec: number; productionMode: boolean }) {
   const conv = useConveyor();
   const [running, setRunning] = useState(() => conveyorSim.isRunning());
+  const [mirror, setMirror] = useState<PhotocellMirrorState>(() => twinDispatcher.getPhotocellMirrorState());
   useEffect(() => {
     const id = window.setInterval(() => {
       const r = conveyorSim.isRunning();
@@ -405,7 +406,40 @@ function ConveyorAutoControls({ consumed, elapsedSec }: { consumed: number; elap
     }, 300);
     return () => window.clearInterval(id);
   }, []);
+  useEffect(() => twinDispatcher.subscribePhotocellMirror(setMirror), []);
 
+  // ---- PRODUCTION mode: real photocell wired to the printer drives prints. ----
+  // The host has nothing to fire — we just listen on ^CN. Show a clear "live"
+  // banner so the operator knows we're waiting for hardware, not stalled.
+  if (productionMode) {
+    const sinceTickSec = mirror.lastTickAt ? (Date.now() - mirror.lastTickAt) / 1000 : Infinity;
+    const live = mirror.active && sinceTickSec < 5;
+    return (
+      <div className="flex items-center gap-2">
+        <div
+          className={`flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-wider ${
+            live
+              ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+              : 'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+          }`}
+          title="Production mode — the printer's hardware photocell triggers each print. Counts mirror live from ^CN polling."
+        >
+          <span className="relative flex h-2 w-2">
+            <span className={`absolute inline-flex h-full w-full rounded-full ${live ? 'bg-emerald-500 animate-ping opacity-75' : 'bg-amber-500'}`} />
+            <span className={`relative inline-flex h-2 w-2 rounded-full ${live ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+          </span>
+          <Radio className="h-3.5 w-3.5" />
+          {live
+            ? <>Live photocell · <span className="tabular-nums">{Math.round(mirror.bpm)}</span> bpm</>
+            : (mirror.count === 0
+                ? 'Awaiting first photocell trip…'
+                : 'Photocell idle')}
+        </div>
+      </div>
+    );
+  }
+
+  // ---- AUTO (TEST) mode: software paces synthetic bottles into the dispatcher. ----
   // Soft warning when run has been active for >5s but nothing has been
   // dispatched yet — almost always means the conveyor sim isn't running.
   const stalled = !running && consumed === 0 && elapsedSec >= 5;
