@@ -369,6 +369,7 @@ class PrinterSession {
     expected: { count: number; kinds: string[] },
     actual: { count: number; kinds: string[] } | null,
   ): boolean {
+    if (this.isEmulated) return false; // emulator ^LF is intentionally simplified
     if (!actual) return false; // can't tell — don't clobber
     if (actual.count !== expected.count) return true;
     if (actual.kinds.length === expected.kinds.length && actual.kinds.length > 0) {
