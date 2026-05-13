@@ -28,6 +28,46 @@ import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import type { Printer } from '@/types/printer';
 import type { TwinPairState } from '@/twin-code/twinPairStore';
 import { buildAutoCodeSeed, buildSeedCommands, seedForSide, type MessageSeed } from '@/twin-code/messageSeeds';
+import { catalog as catalogModule } from '@/twin-code/catalog';
+import { profilerBus as profilerBusModule } from '@/twin-code/profilerBus';
+import { autoCodeSerial as autoCodeSerialMirror } from '@/twin-code/autoCodeSerial';
+
+/**
+ * Live state of the hardware photocell mirror. `count` is total prints
+ * observed since startPhotocellMirror() was called. `bpm` is a sliding
+ * 10-tick rolling rate so the operator can confirm the line is live.
+ */
+export interface PhotocellMirrorState {
+  active: boolean;
+  count: number;
+  lastTickAt: number;
+  bpm: number;
+}
+
+/**
+ * Tolerant parser for `^CN` responses across firmware revs (PC[..], PrC[..],
+ * "Print Count: N", "Product: N Print: N" or plain CSV "p,r,c1,c2..."). Pulls
+ * out the PRINT count (positions[1]) which is the photocell-incremented
+ * counter on every BestCode firmware variant we've seen.
+ */
+function parsePrintCount(raw: string): number | null {
+  const cleaned = raw
+    .split(/[\r\n]+/)
+    .map(l => l.trim())
+    .filter(l => l && !/^\^CN$/i.test(l) && !/^success$/i.test(l) && l !== '>')
+    .join('\n');
+  if (!cleaned) return null;
+  const m1 = cleaned.match(/PrC\[(\d+)\]/);
+  if (m1) return parseInt(m1[1], 10);
+  const m2 = cleaned.match(/Print\s*Count\s*[:=]\s*(\d+)/i);
+  if (m2) return parseInt(m2[1], 10);
+  const m3 = cleaned.match(/\bPrint\s*[:=]\s*(\d+)/i);
+  if (m3) return parseInt(m3[1], 10);
+  // CSV fallback: positions[1] is print count.
+  const parts = cleaned.split(/[,;]/).map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+  if (parts.length >= 2) return parts[1];
+  return null;
+}
 
 /**
  * Twin Code default print parameters pushed to both printers on bind/seed.
