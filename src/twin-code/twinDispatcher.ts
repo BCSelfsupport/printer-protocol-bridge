@@ -1195,9 +1195,13 @@ class TwinDispatcher {
     const targets: number[] = [];
     if (this.a) targets.push(this.a.printerId);
     if (this.b) targets.push(this.b.printerId);
-    await Promise.all(targets.map(id =>
-      printerTransport.sendCommand(id, 'n 0', { maxWaitMs: 2000 }).catch(() => {})
-    ));
+    // Use ^PR 0 (HV deflection off) — the documented v2.6 command for soft-stop.
+    // The previous `n 0` form was rejected as CmdFormat, so the line never halted.
+    // Send to both A and B sequentially so we can log per-printer outcomes.
+    for (const id of targets) {
+      const r = await printerTransport.sendCommand(id, '^PR 0', { maxWaitMs: 3000 }).catch(() => null);
+      console.info('[TwinDispatcher] inhibitPrinting:^PR 0', { printerId: id, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+    }
     this.stopPhotocellMirror();
   }
 
