@@ -147,6 +147,12 @@ class PrinterSession {
      */
     preSelectCommands?: string[];
     /**
+     * Commands to execute AFTER ^SM-select. Counter current values are most
+     * reliable here because save/select can re-initialize the active message's
+     * displayed counter from its stored start value.
+     */
+    postSelectCommands?: string[];
+    /**
      * If true, do NOT enter 1:1 mode (^MB). In Auto-Code mode the printer
      * self-prints on every hardware photocell trip using its internal
      * counter (^AC). Entering ^MB would lock the printer waiting for ^MD
@@ -157,7 +163,7 @@ class PrinterSession {
     skipOneToOne?: boolean;
   } = {}): Promise<{ ok: boolean; error?: string; seeded?: boolean }> {
     this.isEmulated = this.detectEmulated();
-    const { messageName, seed, preSelectCommands, skipOneToOne } = opts;
+    const { messageName, seed, preSelectCommands, postSelectCommands, skipOneToOne } = opts;
     const trace = (step: string, extra?: Record<string, unknown>) => {
       console.info(`[TwinBind:${this.label}] ${step}`, { printerId: this.printerId, ...extra });
     };
@@ -168,11 +174,25 @@ class PrinterSession {
       trace('preSelect:start', { count: preSelectCommands.length });
       for (const cmd of preSelectCommands) {
         await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 3000 }).catch(() => {});
+        await new Promise(res => setTimeout(res, 300));
       }
       // Persist to non-volatile so the values survive ^SM activation.
       await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 3000 }).catch(() => {});
-      await new Promise(res => setTimeout(res, 150));
+      await new Promise(res => setTimeout(res, 300));
       trace('preSelect:done');
+    };
+
+    const runPostSelect = async () => {
+      if (!postSelectCommands || postSelectCommands.length === 0) return;
+      trace('postSelect:start', { count: postSelectCommands.length });
+      for (const cmd of postSelectCommands) {
+        const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 3000 }).catch(() => null);
+        console.info(`[TwinBind:${this.label}] postSelect:cmd`, { printerId: this.printerId, cmd, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+        await new Promise(res => setTimeout(res, 300));
+      }
+      await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 3000 }).catch(() => {});
+      await new Promise(res => setTimeout(res, 300));
+      trace('postSelect:done');
     };
 
     const armNativePhotocellMode = async (): Promise<{ ok: boolean; error?: string }> => {
@@ -317,6 +337,8 @@ class PrinterSession {
       }
       trace('^SM:ok');
     }
+
+    await runPostSelect();
 
     const nativeArmed = await armNativePhotocellMode();
     if (!nativeArmed.ok) {
@@ -1068,12 +1090,10 @@ export async function seedTwinPairMessages(
       // Give freshly-seeded ^NM/^SV a beat to commit before any follow-on cmds.
       if (resA.seeded || resB.seeded) await new Promise(res => setTimeout(res, 600));
 
-      // CRITICAL ORDER: push print params + counter config BEFORE ^SM-select.
-      // If we ^SM-select first, the printer activates the message with stale
-      // counter values (e.g. last operator setting) and prints one or more bad
-      // codes before the ^CC/^CN we send catches up. Pre-loading these while
-      // the message is still inactive guarantees the very first print uses the
-      // intended counter start/digits/leading-zero config.
+      // Print params are safe before ^SM-select, but counter *current value*
+      // must be pushed again after ^SM. BestCode can re-initialize the active
+      // message's displayed/live counter during ^SM, which made rebinding show
+      // the old count even though the line/prefix fields updated correctly.
       // ^DA = print delay, ^PW = print width, ^CM s = speed. Defaults baseline
       // for minimum cycle time; keep print mode Normal (p0) so the hardware
       // photocell/Print-Go input remains the trigger source during Live.
@@ -1093,13 +1113,13 @@ export async function seedTwinPairMessages(
           await printerTransport.sendCommand(pid, `^CC ${slot};E${end}`, { maxWaitMs: 3000 }).catch(() => {});
           await printerTransport.sendCommand(pid, `^CC ${slot};L${leadingZero ? 1 : 0}`, { maxWaitMs: 3000 }).catch(() => {});
           await printerTransport.sendCommand(pid, `^CC ${slot};T0`, { maxWaitMs: 3000 }).catch(() => {});
-          await printerTransport.sendCommand(pid, `^CN ${slot};${start}`, { maxWaitMs: 3000 }).catch(() => {});
-          await new Promise(res => setTimeout(res, 150));
+          await printerTransport.sendCommand(pid, `^CC ${slot};${start}`, { maxWaitMs: 3000 }).catch(() => {});
+          await new Promise(res => setTimeout(res, 300));
         }
 
-        await new Promise(res => setTimeout(res, 200));
+        await new Promise(res => setTimeout(res, 300));
         await printerTransport.sendCommand(pid, '^SV', { maxWaitMs: 3000 }).catch(() => {});
-        await new Promise(res => setTimeout(res, 150));
+        await new Promise(res => setTimeout(res, 300));
       }
 
       // Now ^SM-select the bound LID/SIDE messages — counters and print
@@ -1111,6 +1131,17 @@ export async function seedTwinPairMessages(
           ok: false,
           error: `Message ^SM-select failed${!selA?.success ? ` on A (${nameA})` : ''}${!selB?.success ? ` on B (${nameB})` : ''}`,
         };
+      }
+
+      if (opts.counterConfig) {
+        const { slot, start } = opts.counterConfig;
+        for (const pid of [printerA.id, printerB.id]) {
+          await new Promise(res => setTimeout(res, 300));
+          const r = await printerTransport.sendCommand(pid, `^CC ${slot};${start}`, { maxWaitMs: 3000 }).catch(() => null);
+          console.info('[TwinSeed] post-select counter reset', { printerId: pid, slot, start, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+          await new Promise(res => setTimeout(res, 300));
+          await printerTransport.sendCommand(pid, '^SV', { maxWaitMs: 3000 }).catch(() => {});
+        }
       }
 
       return { ok: true, aId: printerA.id, bId: printerB.id, seededA: !!resA.seeded, seededB: !!resB.seeded };
@@ -1325,6 +1356,7 @@ class TwinDispatcher {
     // printer activates with its previous (stale) counter and prints one
     // or more ghost cycles before the ^CC/^CN we'd otherwise send catches up.
     let preSelect: string[] | undefined;
+    let postSelect: string[] | undefined;
     if (opts.autoCodeMode && opts.autoCodeOpts) {
       const slot = opts.autoCodeOpts.counterSlot;
       const start = Math.max(0, opts.autoCodeOpts.counterStart ?? 0);
@@ -1335,8 +1367,9 @@ class TwinDispatcher {
         `^CC ${slot};E${end}`,
         `^CC ${slot};L1`,
         `^CC ${slot};T0`,
-        `^CN ${slot};${start}`,
+        `^CC ${slot};${start}`,
       ];
+      postSelect = [`^CC ${slot};${start}`];
       // Reset host-side serial mirror so LID ^MD^BD frames stay in lock-step
       // with the printer's freshly-reset counter on each rebind. Without this
       // the host counter keeps climbing across rebinds even though the printer
@@ -1353,8 +1386,8 @@ class TwinDispatcher {
     console.info('[TwinBind] entering both sides', { aId, bId, msgA, msgB, autoCode: !!opts.autoCodeMode, skipOneToOne });
     const tEnter = performance.now();
     const [resA, resB] = await Promise.all([
-      this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? autoCodeSeedA : undefined, preSelectCommands: preSelect, skipOneToOne }),
-      this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? autoCodeSeedB : undefined, preSelectCommands: preSelect, skipOneToOne }),
+      this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? autoCodeSeedA : undefined, preSelectCommands: preSelect, postSelectCommands: postSelect, skipOneToOne }),
+      this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? autoCodeSeedB : undefined, preSelectCommands: preSelect, postSelectCommands: postSelect, skipOneToOne }),
     ]);
     console.info('[TwinBind] both sides entered', { elapsedMs: Math.round(performance.now() - tEnter), resA, resB });
 
