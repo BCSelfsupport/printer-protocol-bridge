@@ -284,19 +284,22 @@ class PrinterSession {
       }
     }
 
-    const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 4000 });
-    if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
-      await this.cleanup();
-      return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed` };
-    }
+    if (!skipOneToOne) {
+      const mb = await printerTransport.sendCommand(this.printerId, '^MB', { maxWaitMs: 4000 });
+      if (!mb?.success || /JNR|jet not running/i.test(mb.response || '')) {
+        await this.cleanup();
+        return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed` };
+      }
 
-    const mode = await this.confirmOneToOneMode();
-    if (!mode.ok) {
-      await this.cleanup();
-      return { ok: false, error: mode.error };
+      const mode = await this.confirmOneToOneMode();
+      if (!mode.ok) {
+        await this.cleanup();
+        return { ok: false, error: mode.error };
+      }
     }
 
     this.active = true;
+    this.skipOneToOne = !!skipOneToOne;
     return { ok: true, seeded };
   }
 
