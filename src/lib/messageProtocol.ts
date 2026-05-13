@@ -6,6 +6,7 @@
  */
 
 import type { MessageField, MessageDetails } from '@/components/screens/EditMessageScreen';
+import { PROTOCOL_DATE_TO_FORMAT } from '@/lib/autoCodeProtocol';
 
 const ALPHA_MONTH_VALUES = new Set([
   'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
@@ -257,6 +258,50 @@ interface ParsedField {
   hexFieldType?: number;
   /** Barcode encoding string derived from hex field type */
   barcodeEncoding?: string;
+  /** Native protocol subcommand when it can be recovered from ^LF detail text. */
+  protocolCommand?: 'AT' | 'AD' | 'AH' | 'AP' | 'AE' | 'AC' | 'AB' | 'AL';
+  /** Native date/time/counter subtype from the field payload, when present. */
+  protocolTypeCode?: number;
+  /** Native counter slot from ^AC, when present. */
+  counterSlot?: number;
+}
+
+function inferProtocolMetaFromFieldLine(line: string, fieldType: MessageField['type'] | undefined): Pick<ParsedField, 'protocolCommand' | 'protocolTypeCode' | 'counterSlot'> {
+  const cmdMatch = line.match(/\^(AT|AD|AH|AP|AE|AC|AB|AL)\d+\s*;([^\r\n]*)/i);
+  if (cmdMatch) {
+    const protocolCommand = cmdMatch[1].toUpperCase() as ParsedField['protocolCommand'];
+    const parts = cmdMatch[2].split(';').map(part => part.trim());
+    if (protocolCommand === 'AD' || protocolCommand === 'AH' || protocolCommand === 'AP' || protocolCommand === 'AE') {
+      return { protocolCommand, protocolTypeCode: Number.parseInt(parts[3] ?? '', 10) };
+    }
+    if (protocolCommand === 'AC') {
+      return { protocolCommand, counterSlot: Number.parseInt(parts[4] ?? '', 10), protocolTypeCode: Number.parseInt(parts[5] ?? '', 10) };
+    }
+    return { protocolCommand };
+  }
+
+  const labelMatch = line.match(/\b(?:CMD|COMMAND|SUBCOMMAND|TYPE|KIND)\s*[:=]\s*(AT|AD|AH|AP|AE|AC|AB|AL)\b/i)
+    || line.match(/\b(Text|Date|Time|Program(?:mable)?|Counter|Barcode|Graphic|Logo)\b/i);
+  const label = labelMatch?.[1]?.toLowerCase();
+  let protocolCommand: ParsedField['protocolCommand'] | undefined;
+  if (label) {
+    if (label === 'text') protocolCommand = 'AT';
+    else if (label === 'date') protocolCommand = 'AD';
+    else if (label === 'time') protocolCommand = 'AH';
+    else if (label.startsWith('program')) protocolCommand = 'AP';
+    else if (label === 'counter') protocolCommand = 'AC';
+    else if (label === 'barcode') protocolCommand = 'AB';
+    else if (label === 'graphic' || label === 'logo') protocolCommand = 'AL';
+    else protocolCommand = label.toUpperCase() as ParsedField['protocolCommand'];
+  }
+
+  const codeMatch = line.match(/\b(?:D|TYPECODE|CODE|FMT|FORMAT)\s*[:=]\s*(\d+)\b/i);
+  const slotMatch = line.match(/\b(?:C|COUNTER|SLOT)\s*[:=]\s*([1-4])\b/i);
+  return {
+    protocolCommand: protocolCommand ?? (fieldType === 'counter' ? 'AC' : undefined),
+    protocolTypeCode: codeMatch ? Number.parseInt(codeMatch[1], 10) : undefined,
+    counterSlot: slotMatch ? Number.parseInt(slotMatch[1], 10) : undefined,
+  };
 }
 
 // ── ^GM parser ───────────────────────────────────────────────────────────────
