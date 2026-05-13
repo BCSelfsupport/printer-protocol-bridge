@@ -27,7 +27,7 @@ import { printerTransport } from '@/lib/printerTransport';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import type { Printer } from '@/types/printer';
 import type { TwinPairState } from '@/twin-code/twinPairStore';
-import { buildSeedCommands, seedForSide, type MessageSeed } from '@/twin-code/messageSeeds';
+import { buildAutoCodeSeed, buildSeedCommands, seedForSide, type MessageSeed } from '@/twin-code/messageSeeds';
 
 /**
  * Twin Code default print parameters pushed to both printers on bind/seed.
@@ -369,6 +369,7 @@ class PrinterSession {
     expected: { count: number; kinds: string[] },
     actual: { count: number; kinds: string[] } | null,
   ): boolean {
+    if (this.isEmulated) return false; // emulator ^LF is intentionally simplified
     if (!actual) return false; // can't tell — don't clobber
     if (actual.count !== expected.count) return true;
     if (actual.kinds.length === expected.kinds.length && actual.kinds.length > 0) {
@@ -838,6 +839,9 @@ export interface TwinDispatcherOptions {
    */
   autoCreateA?: boolean;
   autoCreateB?: boolean;
+  /** Auto-Code Mode seed/config supplied by the saved twin-pair binding. */
+  autoCodeMode?: boolean;
+  autoCodeOpts?: TwinPairState['autoCodeOpts'];
 }
 
 export async function seedTwinPairMessages(
@@ -1016,9 +1020,11 @@ class TwinDispatcher {
     // opted in via `autoCreateA` / `autoCreateB`.
     const msgA = opts.messageNameA ?? pair.a.messageName ?? opts.messageName;
     const msgB = opts.messageNameB ?? pair.b.messageName ?? opts.messageName;
+    const autoCodeSeedA = opts.autoCodeMode && opts.autoCodeOpts ? buildAutoCodeSeed(opts.autoCodeOpts, 'A') : seedForSide('A');
+    const autoCodeSeedB = opts.autoCodeMode && opts.autoCodeOpts ? buildAutoCodeSeed(opts.autoCodeOpts, 'B') : seedForSide('B');
     const [resA, resB] = await Promise.all([
-      this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? seedForSide('A') : undefined }),
-      this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? seedForSide('B') : undefined }),
+      this.a.enter({ messageName: msgA, seed: opts.autoCreateA ? autoCodeSeedA : undefined }),
+      this.b.enter({ messageName: msgB, seed: opts.autoCreateB ? autoCodeSeedB : undefined }),
     ]);
 
     if (!resA.ok || !resB.ok) {
@@ -1038,10 +1044,10 @@ class TwinDispatcher {
       const subA = opts.subcommandA ?? 'BD';
       const subB = opts.subcommandB ?? 'TD';
       const kindA: 'text' | 'barcode' = subA === 'BD' ? 'barcode' : 'text';
-      const kindB: 'text' | 'barcode' = subB === 'BD' ? 'barcode' : 'text';
+      const kindB: 'text' | 'barcode' = opts.autoCodeMode ? 'text' : (subB === 'BD' ? 'barcode' : 'text');
       const [vA, vB] = await Promise.all([
         this.a.verifyFieldIndex(fieldA, kindA),
-        this.b.verifyFieldIndex(fieldB, kindB),
+        this.b.verifyFieldIndex(opts.autoCodeMode ? 5 : fieldB, kindB),
       ]);
       if (!vA.ok || !vB.ok) {
         await Promise.all([this.a.exit(), this.b.exit()]);
