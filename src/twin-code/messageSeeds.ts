@@ -278,7 +278,7 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
   // Standard 7-high font: 5 dots wide + 1 dot gap = 6 dots per character.
   const W = 6;
   const xLine    = 0;
-  const xYear    = xLine    + line.length * W + 1;
+  const xYear    = xLine    + normalizedLine.length * W + 1;
   const xJulian  = xYear    + 1 * W + 1;
   const xCounter = xJulian  + 3 * W + 1;
   const xUnit    = xCounter + 6 * W + 1;
@@ -347,8 +347,8 @@ export function previewAutoCodeSerial(
   opts: AutoCodeSeedOpts,
   sample: { yearChar?: string; doy?: number; counter?: number } = {},
 ): string {
-  const line = (opts.line || "").trim();
-  const unit = (opts.unit || "").trim();
+  const line = (opts.line || "").trim().toUpperCase();
+  const unit = (opts.unit || "").trim().toUpperCase();
   const y = (sample.yearChar ?? letterForCurrentYear(opts.yearMap)).slice(0, 1).toUpperCase();
   const d = (sample.doy ?? 132).toString().padStart(3, "0");
   const c = (sample.counter ?? 1).toString().padStart(6, "0");
