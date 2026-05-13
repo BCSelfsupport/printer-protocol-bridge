@@ -279,7 +279,7 @@ function inferProtocolMetaFromFieldLine(line: string, fieldType: MessageField['t
       return { protocolCommand, protocolTypeCode: Number.parseInt(parts[3] ?? '', 10) };
     }
     if (protocolCommand === 'AC') {
-      return { protocolCommand, counterSlot: Number.parseInt(parts[4] ?? '', 10), protocolTypeCode: Number.parseInt(parts[5] ?? '', 10) };
+      return { protocolCommand, counterSlot: Number.parseInt(parts[3] ?? '', 10), protocolTypeCode: Number.parseInt(parts[4] ?? '', 10) };
     }
     return { protocolCommand };
   }
