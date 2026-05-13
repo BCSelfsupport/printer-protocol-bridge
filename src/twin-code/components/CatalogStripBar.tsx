@@ -194,6 +194,7 @@ export function CatalogStripBar() {
   const disableLive = async () => {
     setLiveBusy(true);
     conveyorSim.setLiveDispatcher(null);
+    twinDispatcher.stopPhotocellMirror();
     await twinDispatcher.unbind();
     setLiveBusy(false);
     setLiveMode(false);
