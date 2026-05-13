@@ -100,16 +100,28 @@ export function ConveyorPanel() {
   }, [liveMode, productionMode, pair.autoCodeMode]);
 
   // ---- LIVE bonded dispatch wiring ----
+  // Hard ceiling on bind() duration. Without this, any single sub-step that
+  // hangs (^MB confirm, ^SM verify retry, ^LF field check, etc.) leaves the
+  // Live switch stuck on "Going live…" until the operator navigates away
+  // (which unmounts ConveyorPanel and forces unbind via the cleanup effect).
+  // 25s is well past any normal bind (~3-6s in practice) but short enough
+  // that the operator gets actionable feedback instead of an infinite spinner.
+  const LIVE_BIND_TIMEOUT_MS = 25_000;
+
   const enableLive = async () => {
     if (!pairBound) {
       toast({ title: 'Bind a twin pair first', variant: 'destructive' });
       return;
     }
     setLiveBusy(true);
+    console.info('[LiveToggle] enableLive: starting bind', {
+      a: pair.a?.ip, b: pair.b?.ip, autoCode: !!pair.autoCodeMode,
+    });
+    const t0 = performance.now();
     // Pull per-side dispatch config from the store (set in TwinPairBindDialog).
     // Falls back to dispatcher defaults (field 2, A=BD, B=TD, current message)
     // for legacy bindings that pre-date the config UI.
-    const res = await twinDispatcher.bind(pair, printers, {
+    const bindPromise = twinDispatcher.bind(pair, printers, {
       messageNameA: pair.a?.messageName,
       messageNameB: pair.b?.messageName,
       fieldA: pair.a?.fieldIndex,
@@ -123,11 +135,27 @@ export function ConveyorPanel() {
       autoCodeMode: !!pair.autoCodeMode,
       autoCodeOpts: pair.autoCodeOpts,
     });
+    const timeoutPromise = new Promise<{ ok: false; error: string; timedOut: true }>((resolve) =>
+      setTimeout(
+        () => resolve({ ok: false, error: `Bind timed out after ${(LIVE_BIND_TIMEOUT_MS / 1000).toFixed(0)}s — see console for the last step reached`, timedOut: true }),
+        LIVE_BIND_TIMEOUT_MS,
+      ),
+    );
+    const res = await Promise.race([bindPromise, timeoutPromise]);
+    const elapsed = Math.round(performance.now() - t0);
     setLiveBusy(false);
     if (!res.ok) {
+      console.warn('[LiveToggle] bind failed', { elapsedMs: elapsed, error: res.error, timedOut: 'timedOut' in res });
+      // On timeout the dispatcher state is unknown — force-unbind so a retry
+      // starts from a clean slate (matches what navigating to message preview
+      // used to do incidentally via the unmount effect).
+      if ('timedOut' in res) {
+        try { await twinDispatcher.unbind(); } catch (_) { /* best effort */ }
+      }
       toast({ title: 'Could not enter LIVE mode', description: res.error, variant: 'destructive' });
       return;
     }
+    console.info('[LiveToggle] bind ok', { elapsedMs: elapsed, seededA: res.seededA, seededB: res.seededB });
     conveyorSim.setLiveDispatcher((serial) => twinDispatcher.dispatch(serial, { forceTrigger: !productionMode, autoCode: !!pair.autoCodeMode }));
     setLiveMode(true);
     const seedNote = res.seededA || res.seededB
