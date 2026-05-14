@@ -250,11 +250,14 @@ class ProductionRunStore {
     // The "Resume from bottle #N" banner reads the conveyor's bottle id, so
     // resetting here keeps the operator-facing number aligned with this lot.
     conveyorSim.resetBottleCounter();
-    // Auto-Code Mode: align the host counter mirror with the printer's freshly-
-    // seeded counter slot start so the LID DataMatrix encodes the same serial
-    // the SIDE prints natively for bottle #1.
-    if (twinPairStore.getState().autoCodeMode) {
-      autoCodeSerial.reset();
+    // Auto-Code Mode: the printer increments the counter before printing, so
+    // the host mirror must be reset to the same pre-increment seed used at bind
+    // (`start - 1`). Resetting to `start` made the HUD/LID mirror show 000002
+    // while the SIDE physically printed 000001 on the first photocell trip.
+    const pair = twinPairStore.getState();
+    if (pair.autoCodeMode) {
+      const start = Math.max(0, Math.floor(pair.autoCodeOpts?.counterStart ?? 1));
+      autoCodeSerial.reset(Math.max(0, start - 1));
     }
     // Install the pre-dispatch gate so the conveyor stops issuing serials the
     // INSTANT the target is reached — keeps A and B printer counters in
