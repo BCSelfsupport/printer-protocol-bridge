@@ -1320,6 +1320,22 @@ class TwinDispatcher {
 
   getPhotocellMirrorState(): PhotocellMirrorState { return this.mirrorState; }
 
+  private async resolveNextAutoCodeCounterFromSide(printerId: number, slot: 1 | 2 | 3 | 4, fallbackNext: number): Promise<number> {
+    const cn = await printerTransport.sendCommand(printerId, '^CN', { maxWaitMs: 2000, idleAfterDataMs: 300 }).catch(() => null);
+    const current = cn?.success ? parseCounterSnapshot(cn.response || '').custom[slot - 1] : null;
+    return current != null && current >= 0 ? current + 1 : fallbackNext;
+  }
+
+  private async preloadAutoCodeLid(nextCounter: number, reason: string): Promise<void> {
+    if (!this.a || !this.opts.autoCodeMode || !this.opts.autoCodeOpts) return;
+    const serial = autoCodeSerialMirror.serialFor(nextCounter);
+    if (!serial) return;
+    const field = this.opts.fieldA ?? 1;
+    const sub = this.opts.subcommandA ?? 'BD';
+    const r = await printerTransport.sendCommand(this.a.printerId, `^MD^${sub}${field};${serial}`, { maxWaitMs: 3000, idleAfterDataMs: 300 }).catch(() => null);
+    console.info('[TwinDispatcher] autocode lid preload', { reason, nextCounter, serial, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+  }
+
   /**
    * Soft-stop printing on both bound printers without cycling the jet.
    * Sends `n 0` (HV deflection off) to A and B so further photocell trips
