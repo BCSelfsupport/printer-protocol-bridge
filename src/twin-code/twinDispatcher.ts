@@ -1691,13 +1691,13 @@ class TwinDispatcher {
       const slot = opts.autoCodeOpts.counterSlot;
       const start = Math.max(0, opts.autoCodeOpts.counterStart ?? 0);
       const end = 999999;
-      // BestCode `^CC slot;V` sets the *current* count; the printer then
-      // increment-then-prints on each photocell trip, so the FIRST physical
-      // print = V + 1. To make the first print equal `start`, seed the
-      // current value to `start - 1` (clamped to 0). Earlier we wrote
-      // `start` here, which is why production runs of 10 came back as
-      // serials 2..11 instead of 1..10.
-      const currentSeed = Math.max(0, start - 1);
+      // BestCode `^CC slot;V` loads V as the value the printer will PRINT
+      // on the next photocell trip (then increments after print). Earlier we
+      // seeded `start - 1` assuming increment-then-print, but operators saw
+      // SIDE physically print one BELOW what the host/HUD/LID showed
+      // (e.g. SIDE=000008 while HUD/LID=000009). Seed `start` directly so
+      // the first physical print equals `start` and the LID/HUD agree.
+      const currentSeed = start;
       // Zero the printer's HMI Print Count (id 0) and Product Count (id 6).
       // Repeated in BOTH preSelect AND postSelect because some firmware
       // revisions restore message-saved counter values on ^SM activation —
