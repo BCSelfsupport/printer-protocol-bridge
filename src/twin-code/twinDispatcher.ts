@@ -78,6 +78,29 @@ function parsePrintCount(raw: string): number | null {
   return parseCounterCounts(raw).print;
 }
 
+function isPrinterCommandAccepted(result: { success?: boolean; response?: string; error?: string } | null | undefined): boolean {
+  if (!result?.success) return false;
+  const text = `${result.response || ''}\n${result.error || ''}`;
+  return !/(^|[\r\n])\s*\?\s*\d*|\b(CmdFormat|Invalid|InvYesNo|OutOfRange|MsgNotFnd|FileNotFound|not\s+found|failed)\b/i.test(text);
+}
+
+const HMI_COUNTER_ZERO_COMMANDS = [
+  // Compact value form is what the existing Counters screen uses successfully.
+  '^CC 0;0',
+  '^CC 6;0',
+  // Named current-value form is accepted by newer v2.6 firmware.
+  '^CC 0;V0',
+  '^CC 6;V0',
+  // Full named form makes the value reset unambiguous on firmwares that require
+  // V plus configuration context before the HMI service counter is refreshed.
+  '^CC 0;V0;S0;L0;T0;I1;E999999999;R0',
+  '^CC 6;V0;S0;L0;T0;I1;E999999999;R0',
+  // Some protocol builds document counter edits through ^CN n;value. If a unit
+  // only supports query-only ^CN this will NAK harmlessly; we log acceptance.
+  '^CN 0;0',
+  '^CN 6;0',
+] as const;
+
 /**
  * Twin Code default print parameters pushed to both printers on bind/seed.
  * Exposed so the production-run audit can record the *exact* values that
@@ -205,14 +228,16 @@ class PrinterSession {
     };
 
     const forceZeroHmiRunCounters = async () => {
-      // Use named current-value form first (`V0`) and compact legacy form as a
-      // fallback. Some firmware accepts both but only applies one reliably to
-      // the HMI service counters after ^SM activates the production message.
+      // Try every counter-reset spelling known to this app/protocol. The
+      // compact ^CC C;V form is proven by the manual Counters screen, but some
+      // v2.6 builds prefer named V0, and older notes mention ^CN n;value.
       trace('hmi-counter-zero:start');
-      const commands = ['^CC 0;V0', '^CC 0;0', '^CC 6;V0', '^CC 6;0'];
-      for (const cmd of commands) {
+      const accepted: string[] = [];
+      for (const cmd of HMI_COUNTER_ZERO_COMMANDS) {
         const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000, idleAfterDataMs: 700 }).catch(() => null);
-        console.info(`[TwinBind:${this.label}] hmi-counter-zero:cmd`, { printerId: this.printerId, cmd, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+        const ok = isPrinterCommandAccepted(r);
+        if (ok) accepted.push(cmd);
+        console.info(`[TwinBind:${this.label}] hmi-counter-zero:cmd`, { printerId: this.printerId, cmd, ok, response: r?.response?.trim?.()?.slice(0, 120) });
         await new Promise(res => setTimeout(res, 350));
       }
       await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 4000, idleAfterDataMs: 700 }).catch(() => {});
@@ -220,7 +245,7 @@ class PrinterSession {
 
       const cn = await printerTransport.sendCommand(this.printerId, '^CN', { maxWaitMs: 4000, idleAfterDataMs: 800 }).catch(() => null);
       const counts = parseCounterCounts(cn?.response || '');
-      trace('hmi-counter-zero:verify', { ok: !!cn?.success, product: counts.product, print: counts.print });
+      trace('hmi-counter-zero:verify', { ok: !!cn?.success, accepted, product: counts.product, print: counts.print });
       if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
         console.warn(`[TwinBind:${this.label}] HMI counters still non-zero after bind reset`, { printerId: this.printerId, response: cn.response, counts });
       }
@@ -255,11 +280,24 @@ class PrinterSession {
     // cosmetic — the real ^SM target later in enter() always overrides it.
     const showLoadingOnHmi = async (minVisibleMs = 0) => {
       try {
-        const ensure = await this.ensureMessage(LOADING_MESSAGE_NAME, LOADING_SEED);
-        if (!ensure.ok) { trace('loading-hmi:ensure-failed', { error: ensure.error }); return; }
-        const sm = await printerTransport.sendCommand(this.printerId, `^SM ${LOADING_MESSAGE_NAME}`, { maxWaitMs: 4000, idleAfterDataMs: 700 });
-        trace('loading-hmi:shown', { ok: !!sm?.success, response: sm?.response?.trim?.()?.slice(0, 120) });
-        if (sm?.success && minVisibleMs > 0) await new Promise(res => setTimeout(res, minVisibleMs));
+        const target = LOADING_MESSAGE_NAME.trim().toUpperCase();
+        // Directly write/select LOADING without `parkAwayFromTarget()`: parking
+        // can visibly select BESTCODE first, which is exactly what we are trying
+        // to avoid during the operator-facing bind switch.
+        const cmds = buildSeedCommands(LOADING_SEED, target);
+        for (const cmd of cmds) {
+          const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000, idleAfterDataMs: 800 }).catch(() => null);
+          if (!isPrinterCommandAccepted(r) && !cmd.startsWith('^DM')) {
+            trace('loading-hmi:ensure-failed', { cmd, response: r?.response?.trim?.()?.slice(0, 120), error: r?.error });
+            return;
+          }
+          await new Promise(res => setTimeout(res, cmd.startsWith('^DM') ? 200 : 350));
+        }
+        const sm = await printerTransport.sendCommand(this.printerId, `^SM ${target}`, { maxWaitMs: 4000, idleAfterDataMs: 1000 });
+        await new Promise(res => setTimeout(res, 300));
+        const verified = isPrinterCommandAccepted(sm) ? await this.verifyActiveMessage(target) : { ok: false, active: '' };
+        trace('loading-hmi:shown', { ok: isPrinterCommandAccepted(sm), active: verified.active, response: sm?.response?.trim?.()?.slice(0, 120) });
+        if (isPrinterCommandAccepted(sm) && minVisibleMs > 0) await new Promise(res => setTimeout(res, minVisibleMs));
       } catch (e) {
         trace('loading-hmi:error', { error: String(e) });
       }
@@ -1513,7 +1551,7 @@ class TwinDispatcher {
       // (which is exactly what the operator reported: only the lid Print
       // Count cleared, Product Count and the SIDE printer counters all
       // came back to their pre-bind values once ^SM fired).
-      const counterZero = [`^CC 0;V0`, `^CC 0;0`, `^CC 6;V0`, `^CC 6;0`];
+      const counterZero = [...HMI_COUNTER_ZERO_COMMANDS];
       preSelect = [
         ...counterZero,
         `^CC ${slot};I1`,
