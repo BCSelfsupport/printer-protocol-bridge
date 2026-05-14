@@ -1005,19 +1005,31 @@ export function usePrinterConnection() {
   useEffect(() => {
     const handler = (ev: Event) => {
       const detail = (ev as CustomEvent<{ printerIds: number[]; hvOn: boolean }>).detail;
-      const connectedId = connectedPrinterIdRef.current;
-      if (connectedId == null || !detail?.printerIds?.includes(connectedId)) return;
+      if (!detail?.printerIds?.length) return;
       const hvOn = !!detail.hvOn;
-      console.info('[usePrinterConnection] twincode:hv-state for connected printer', { connectedId, hvOn });
-      setConnectionState(prev => ({
-        ...prev,
-        status: prev.status ? { ...prev.status, isRunning: hvOn, jetRunning: hvOn ? prev.status.jetRunning : false } : prev.status,
-      }));
-      updatePrinterStatus(connectedId, {
-        isAvailable: true,
-        status: hvOn ? 'ready' : 'not_ready',
-        hasActiveErrors: false,
+      const connectedId = connectedPrinterIdRef.current;
+      console.info('[usePrinterConnection] twincode:hv-state', { ids: detail.printerIds, hvOn, connectedId });
+
+      // Update the printer storage row for EVERY printer in the bonded pair so
+      // both A and B cards on the Codesync dashboard reflect the actual HV
+      // state, not just whichever printer happens to be the "connected" one.
+      detail.printerIds.forEach(id => {
+        updatePrinterStatus(id, {
+          isAvailable: true,
+          status: hvOn ? 'ready' : 'not_ready',
+          hasActiveErrors: false,
+        });
       });
+
+      // If one of the bonded printers is also the currently-connected printer,
+      // mirror the change into the local connectionState so its detail panel
+      // (jet/HV indicators) updates immediately without waiting for polling.
+      if (connectedId != null && detail.printerIds.includes(connectedId)) {
+        setConnectionState(prev => ({
+          ...prev,
+          status: prev.status ? { ...prev.status, isRunning: hvOn, jetRunning: hvOn ? prev.status.jetRunning : false } : prev.status,
+        }));
+      }
     };
     window.addEventListener('twincode:hv-state', handler as EventListener);
     return () => window.removeEventListener('twincode:hv-state', handler as EventListener);
