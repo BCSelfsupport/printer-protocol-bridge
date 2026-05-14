@@ -253,36 +253,7 @@ class PrinterSession {
       trace('postSelect:done');
     };
 
-    const forceZeroHmiRunCounters = async (phase = 'final') => {
-      // Keep this as the LAST bind action and do NOT follow it with ^SV/^SM/^CM.
-      // The dashboard reset path does not save; on hardware, later save/select
-      // operations can reload the message-saved counter snapshot and make the
-      // HMI appear to reset, then jump back to the old Product/Print counts.
-      const sweep = async () => {
-        for (const cmd of HMI_RUN_COUNTER_ZERO_COMMANDS) {
-          const r = await printerTransport.sendCommand(this.printerId, cmd).catch(() => null);
-          console.info(`[TwinBind:${this.label}] hmi-counter-zero:cmd`, { printerId: this.printerId, phase, cmd, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
-          await new Promise(res => setTimeout(res, 150));
-        }
-      };
-      trace('hmi-counter-zero:start', { phase });
-      await sweep();
-      await new Promise(res => setTimeout(res, 700));
-
-      let cn = await printerTransport.sendCommand(this.printerId, '^CN').catch(() => null);
-      let counts = parseCounterCounts(cn?.response || '');
-      if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
-        trace('hmi-counter-zero:retry', { phase, product: counts.product, print: counts.print });
-        await sweep();
-        await new Promise(res => setTimeout(res, 700));
-        cn = await printerTransport.sendCommand(this.printerId, '^CN').catch(() => null);
-        counts = parseCounterCounts(cn?.response || '');
-      }
-      trace('hmi-counter-zero:verify', { phase, ok: !!cn?.success, product: counts.product, print: counts.print });
-      if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
-        console.warn(`[TwinBind:${this.label}] HMI counters still non-zero after bind reset`, { printerId: this.printerId, phase, response: cn.response, counts });
-      }
-    };
+    const forceZeroHmiRunCounters = (phase = 'final') => forceZeroHmiRunCountersForPrinter(this.printerId, this.label, phase);
 
     const armNativePhotocellMode = async (): Promise<{ ok: boolean; error?: string }> => {
       if (!skipOneToOne) return { ok: true };
