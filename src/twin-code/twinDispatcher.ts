@@ -84,11 +84,9 @@ function isPrinterCommandAccepted(result: { success?: boolean; response?: string
   return !/(^|[\r\n])\s*\?\s*\d*|\b(CmdFormat|Invalid|InvYesNo|OutOfRange|MsgNotFnd|FileNotFound|not\s+found|failed)\b/i.test(text);
 }
 
-// Mirror the dashboard Reset button (resetCounter in usePrinterConnection):
-// it sends a single bare `^CC <id>;0` per counter, sequentially, and that is
-// the spelling the HMI actually honours on both 2D-lid and side printers.
-// Counter IDs: 0 = Print, 1-4 = Custom, 6 = Product.
-const HMI_COUNTER_ZERO_COMMANDS = [
+// Mirror the dashboard Reset button spelling (resetCounter in usePrinterConnection):
+// bare `^CC <id>;0`, sequentially. Counter IDs: 0 = Print, 1-4 = Custom, 6 = Product.
+const ALL_COUNTER_ZERO_COMMANDS = [
   '^CC 0;0',
   '^CC 1;0',
   '^CC 2;0',
@@ -96,6 +94,38 @@ const HMI_COUNTER_ZERO_COMMANDS = [
   '^CC 4;0',
   '^CC 6;0',
 ] as const;
+
+const HMI_RUN_COUNTER_ZERO_COMMANDS = ['^CC 0;0', '^CC 6;0'] as const;
+
+async function forceZeroHmiRunCountersForPrinter(printerId: number, label: 'A' | 'B', phase = 'final') {
+  const trace = (step: string, extra?: Record<string, unknown>) => {
+    console.info(`[TwinBind:${label}] ${step}`, { printerId, ...extra });
+  };
+  const sweep = async () => {
+    for (const cmd of HMI_RUN_COUNTER_ZERO_COMMANDS) {
+      const r = await printerTransport.sendCommand(printerId, cmd).catch(() => null);
+      console.info(`[TwinBind:${label}] hmi-counter-zero:cmd`, { printerId, phase, cmd, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+      await new Promise(res => setTimeout(res, 150));
+    }
+  };
+  trace('hmi-counter-zero:start', { phase });
+  await sweep();
+  await new Promise(res => setTimeout(res, 700));
+
+  let cn = await printerTransport.sendCommand(printerId, '^CN').catch(() => null);
+  let counts = parseCounterCounts(cn?.response || '');
+  if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
+    trace('hmi-counter-zero:retry', { phase, product: counts.product, print: counts.print });
+    await sweep();
+    await new Promise(res => setTimeout(res, 700));
+    cn = await printerTransport.sendCommand(printerId, '^CN').catch(() => null);
+    counts = parseCounterCounts(cn?.response || '');
+  }
+  trace('hmi-counter-zero:verify', { phase, ok: !!cn?.success, product: counts.product, print: counts.print });
+  if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
+    console.warn(`[TwinBind:${label}] HMI counters still non-zero after bind reset`, { printerId, phase, response: cn.response, counts });
+  }
+}
 
 /**
  * Twin Code default print parameters pushed to both printers on bind/seed.
@@ -223,30 +253,7 @@ class PrinterSession {
       trace('postSelect:done');
     };
 
-    const forceZeroHmiRunCounters = async () => {
-      // Use the EXACT spelling/cadence the dashboard Reset button uses
-      // (resetCounter in usePrinterConnection). That call is verified to clear
-      // the HMI Product/Print counters on both the 2D-lid and the side
-      // printer; the bind path was previously over-specifying timeouts and
-      // mixing in V0/^CN variants which firmware would NAK and abort the
-      // sweep mid-stream.
-      trace('hmi-counter-zero:start');
-      for (const cmd of HMI_COUNTER_ZERO_COMMANDS) {
-        const r = await printerTransport.sendCommand(this.printerId, cmd).catch(() => null);
-        console.info(`[TwinBind:${this.label}] hmi-counter-zero:cmd`, { printerId: this.printerId, cmd, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
-        await new Promise(res => setTimeout(res, 150));
-      }
-      // Persist so the zeroed values survive any subsequent ^SM activation.
-      await printerTransport.sendCommand(this.printerId, '^SV').catch(() => {});
-      await new Promise(res => setTimeout(res, 300));
-
-      const cn = await printerTransport.sendCommand(this.printerId, '^CN').catch(() => null);
-      const counts = parseCounterCounts(cn?.response || '');
-      trace('hmi-counter-zero:verify', { ok: !!cn?.success, product: counts.product, print: counts.print });
-      if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
-        console.warn(`[TwinBind:${this.label}] HMI counters still non-zero after bind reset`, { printerId: this.printerId, response: cn.response, counts });
-      }
-    };
+    const forceZeroHmiRunCounters = (phase = 'final') => forceZeroHmiRunCountersForPrinter(this.printerId, this.label, phase);
 
     const armNativePhotocellMode = async (): Promise<{ ok: boolean; error?: string }> => {
       if (!skipOneToOne) return { ok: true };
@@ -278,17 +285,21 @@ class PrinterSession {
     const showLoadingOnHmi = async (minVisibleMs = 0) => {
       try {
         const target = LOADING_MESSAGE_NAME.trim().toUpperCase();
-        // Directly write/select LOADING without `parkAwayFromTarget()`: parking
-        // can visibly select BESTCODE first, which is exactly what we are trying
-        // to avoid during the operator-facing bind switch.
-        const cmds = buildSeedCommands(LOADING_SEED, target);
-        for (const cmd of cmds) {
-          const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000, idleAfterDataMs: 800 }).catch(() => null);
-          if (!isPrinterCommandAccepted(r) && !cmd.startsWith('^DM')) {
-            trace('loading-hmi:ensure-failed', { cmd, response: r?.response?.trim?.()?.slice(0, 120), error: r?.error });
-            return;
+        // Fast path: if LOADING already exists, only select it. Recreating it
+        // every bind can fail when LOADING is already active, and older parking
+        // logic visibly selected BESTCODE first.
+        const lm = await printerTransport.sendCommand(this.printerId, '^LM', { maxWaitMs: 4000 }).catch(() => null);
+        const exists = lm?.success && this.parseMessageNames(lm.response || '').includes(target);
+        if (!exists) {
+          const cmds = buildSeedCommands(LOADING_SEED, target);
+          for (const cmd of cmds) {
+            const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000, idleAfterDataMs: 800 }).catch(() => null);
+            if (!isPrinterCommandAccepted(r) && !cmd.startsWith('^DM')) {
+              trace('loading-hmi:ensure-failed', { cmd, response: r?.response?.trim?.()?.slice(0, 120), error: r?.error });
+              return;
+            }
+            await new Promise(res => setTimeout(res, cmd.startsWith('^DM') ? 200 : 350));
           }
-          await new Promise(res => setTimeout(res, cmd.startsWith('^DM') ? 200 : 350));
         }
         const sm = await printerTransport.sendCommand(this.printerId, `^SM ${target}`, { maxWaitMs: 4000, idleAfterDataMs: 1000 });
         await new Promise(res => setTimeout(res, 300));
@@ -327,7 +338,6 @@ class PrinterSession {
         }
       }
       await runPostSelect();
-      await forceZeroHmiRunCounters();
       // Drive ^MB through the regular transport so emulator state stays consistent.
       // Per v2.6 §6.1, ^MB is the 1:1 entry command; ^CM p1 is Auto-Print, not 1:1.
       // Auto-Code mode skips ^MB — the printer self-prints from the hardware photocell.
@@ -338,6 +348,7 @@ class PrinterSession {
           return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed (emulator)` };
         }
       }
+      await forceZeroHmiRunCounters('final');
       this.active = true;
       this.skipOneToOne = !!skipOneToOne;
       trace('emulator:active');
@@ -438,7 +449,6 @@ class PrinterSession {
     }
 
     await runPostSelect();
-    await forceZeroHmiRunCounters();
 
     const nativeArmed = await armNativePhotocellMode();
     if (!nativeArmed.ok) {
@@ -462,6 +472,8 @@ class PrinterSession {
       }
       trace('^MB:ok');
     }
+
+    await forceZeroHmiRunCounters('final');
 
     this.active = true;
     this.skipOneToOne = !!skipOneToOne;
@@ -675,11 +687,12 @@ class PrinterSession {
   private async parkAwayFromTarget(target: string): Promise<{ ok: boolean; error?: string; responses: string[] }> {
     const responses: string[] = [];
     const targetName = target.trim().toUpperCase();
+    const loadingName = LOADING_MESSAGE_NAME.trim().toUpperCase();
     const parkName = 'TWINPARK';
 
     const lm = await printerTransport.sendCommand(this.printerId, '^LM', { maxWaitMs: 4000 });
     const names = this.parseMessageNames(lm?.response || '');
-    const existingPark = ['BESTCODE', 'QUANTUM', parkName, ...names].find((name) => name !== targetName && names.includes(name));
+    const existingPark = [loadingName, parkName, ...names, 'QUANTUM', 'BESTCODE'].find((name) => name !== targetName && names.includes(name));
     let selectedPark = existingPark;
 
     if (!selectedPark && targetName !== parkName) {
@@ -1548,7 +1561,7 @@ class TwinDispatcher {
       // (which is exactly what the operator reported: only the lid Print
       // Count cleared, Product Count and the SIDE printer counters all
       // came back to their pre-bind values once ^SM fired).
-      const counterZero = [...HMI_COUNTER_ZERO_COMMANDS];
+      const counterZero = [...ALL_COUNTER_ZERO_COMMANDS];
       preSelect = [
         ...counterZero,
         `^CC ${slot};I1`,
@@ -1604,6 +1617,14 @@ class TwinDispatcher {
         return { ok: false, error: vA.error || vB.error || 'Field-index check failed' };
       }
     }
+
+    // Absolute last step after field checks: ^LF/^MS/^CM/^SM can refresh the HMI
+    // from message state, so re-zero Product/Print once no later bind command can
+    // reload the old values.
+    await Promise.all([
+      forceZeroHmiRunCountersForPrinter(aId, 'A', 'post-field-check'),
+      forceZeroHmiRunCountersForPrinter(bId, 'B', 'post-field-check'),
+    ]);
 
     console.info('[TwinBind] bind complete');
     return { ok: true, aId, bId, seededA: !!resA.seeded, seededB: !!resB.seeded };

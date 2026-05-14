@@ -1,6 +1,6 @@
 ---
 name: Twin Code — zero hardware counters on bind
-description: Bind pre/post/final zeros HMI Print Count and Product Count on both A and B using compact, named, full named, and ^CN fallback forms, then verifies.
+description: Bind zeros HMI Print Count and Product Count on both A and B using dashboard-style ^CC commands as the final bind action, then verifies.
 type: feature
 ---
 
@@ -15,20 +15,16 @@ number and the audit CSV `bottleIndex`.
 
 # How
 
-`twinDispatcher.bind()` sends counter-zero commands to BOTH A and B before and
-after ^SM-activating the production message, then performs a final forced reset
-and verifies with ^CN. It must try all accepted forms because firmware variants
-apply different spellings to HMI service counters:
+`twinDispatcher.bind()` sends dashboard-style counter-zero commands to BOTH A and
+B before and after ^SM-activating the production message, then performs a final
+forced Product/Print reset after all message select / print-mode commands and
+verifies with ^CN. The final reset must be the last bind action; do not follow it
+with ^SV, ^SM, or ^CM because those can reload the message-saved HMI counter
+snapshot and make counts jump back from 0.
 
 ```
 ^CC 0;0    # compact legacy form used by the manual Counters screen
 ^CC 6;0
-^CC 0;V0   # named current-value form
-^CC 6;V0
-^CC 0;V0;S0;L0;T0;I1;E999999999;R0  # full named fallback
-^CC 6;V0;S0;L0;T0;I1;E999999999;R0
-^CN 0;0    # harmless fallback if firmware supports ^CN n;value writes
-^CN 6;0
 ^CC <slot>;I1 ... S<start> ... E999999 ... L1 ... T0 ... <start-1>
 ^CN        # verify Product Count and Print Count are zero
 ```
