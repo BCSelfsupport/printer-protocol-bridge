@@ -682,11 +682,12 @@ class PrinterSession {
   private async parkAwayFromTarget(target: string): Promise<{ ok: boolean; error?: string; responses: string[] }> {
     const responses: string[] = [];
     const targetName = target.trim().toUpperCase();
+    const loadingName = LOADING_MESSAGE_NAME.trim().toUpperCase();
     const parkName = 'TWINPARK';
 
     const lm = await printerTransport.sendCommand(this.printerId, '^LM', { maxWaitMs: 4000 });
     const names = this.parseMessageNames(lm?.response || '');
-    const existingPark = ['BESTCODE', 'QUANTUM', parkName, ...names].find((name) => name !== targetName && names.includes(name));
+    const existingPark = [loadingName, parkName, ...names, 'QUANTUM', 'BESTCODE'].find((name) => name !== targetName && names.includes(name));
     let selectedPark = existingPark;
 
     if (!selectedPark && targetName !== parkName) {
