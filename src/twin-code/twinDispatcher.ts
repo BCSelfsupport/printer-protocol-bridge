@@ -142,6 +142,8 @@ async function forceZeroHmiRunCountersForPrinter(printerId: number, label: 'A' |
   };
   trace('hmi-counter-zero:start', { phase });
   await sweep();
+  const save = await printerTransport.sendCommand(printerId, '^SV', { maxWaitMs: 3000 }).catch(() => null);
+  console.info(`[TwinBind:${label}] hmi-counter-zero:save`, { printerId, phase, ok: !!save?.success, response: save?.response?.trim?.()?.slice(0, 120) });
   await new Promise(res => setTimeout(res, 700));
 
   let cn = await printerTransport.sendCommand(printerId, '^CN').catch(() => null);
@@ -149,6 +151,8 @@ async function forceZeroHmiRunCountersForPrinter(printerId: number, label: 'A' |
   if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
     trace('hmi-counter-zero:retry', { phase, product: counts.product, print: counts.print });
     await sweep();
+    const retrySave = await printerTransport.sendCommand(printerId, '^SV', { maxWaitMs: 3000 }).catch(() => null);
+    console.info(`[TwinBind:${label}] hmi-counter-zero:retry-save`, { printerId, phase, ok: !!retrySave?.success, response: retrySave?.response?.trim?.()?.slice(0, 120) });
     await new Promise(res => setTimeout(res, 700));
     cn = await printerTransport.sendCommand(printerId, '^CN').catch(() => null);
     counts = parseCounterCounts(cn?.response || '');
