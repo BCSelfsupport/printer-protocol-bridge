@@ -8,6 +8,7 @@ import { parseGmResponse, parseLfResponse, buildMessageDetails } from '@/lib/mes
 import type { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { getProtocolFieldInfo } from '@/lib/autoCodeProtocol';
 import { generateDataMatrixCommands, isDataMatrixField, extractDataMatrixData, generateDataMatrixBitmap } from '@/lib/dataMatrixGenerator';
+import { twinDispatcher } from '@/twin-code/twinDispatcher';
 import { parsePumpHours, parsePowerHours } from '@/lib/filterTracker';
 import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
 import { useSerializedPolling, PollingCommand } from '@/hooks/useSerializedPolling';
@@ -2820,6 +2821,16 @@ export function usePrinterConnection() {
         if (!result?.success) {
           console.error('[resetCounter] ^CC command failed:', result?.error);
           return false;
+        }
+
+        // Twin-Code: if this printer is the SIDE (B) of a bound auto-code
+        // pair and the counter slot matches autoCodeOpts.counterSlot, mirror
+        // the new value to the LID immediately so the lid's 2D barcode
+        // tracks the SIDE 1:1 (no host re-computation drift).
+        try {
+          await twinDispatcher.notifySideCounterChanged(printer.id, counterId, value);
+        } catch (e) {
+          console.warn('[resetCounter] twin mirror failed (non-fatal):', e);
         }
         
         // Query counters via ^CN after a delay to reflect new values

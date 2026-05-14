@@ -1337,6 +1337,34 @@ class TwinDispatcher {
   }
 
   /**
+   * External hook: operator changed the SIDE printer's counter (via the
+   * printer-preview Counters card / "load 000003" / Reset All). The LID
+   * carries a host-pushed DataMatrix that must mirror the SIDE 1:1, so we
+   * re-align the host serial mirror and immediately push the matching next
+   * serial to the LID via ^MD^BD. No-op if not bound, not in Auto-Code mode,
+   * the printer isn't the SIDE (B), or the slot doesn't match autoCodeOpts.
+   *
+   * `currentValue` is the value just written by ^CC slot;V — i.e. the
+   * "previous" count. Per BestCode firmware (increment-then-print), the
+   * NEXT printed serial uses counter = currentValue + 1.
+   */
+  async notifySideCounterChanged(printerId: number, slot: number, currentValue: number): Promise<void> {
+    if (!this.a || !this.b) return;
+    if (!this.opts.autoCodeMode || !this.opts.autoCodeOpts) return;
+    if (printerId !== this.b.printerId) return;
+    if (slot !== this.opts.autoCodeOpts.counterSlot) return;
+    const next = Math.max(1, Math.floor(currentValue) + 1);
+    autoCodeSerialMirror.resetForNext(next);
+    // Re-baseline the photocell mirror so the next ^CN delta isn't
+    // mis-interpreted as a backwards jump (which would re-fire mirror-rezero).
+    if (this.mirrorTimer !== null) {
+      this.mirrorBaseline = currentValue;
+      this.mirrorLast = currentValue;
+    }
+    await this.preloadAutoCodeLid(next, `side-counter-change(slot=${slot},value=${currentValue})`);
+  }
+
+  /**
    * Soft-stop printing on both bound printers without cycling the jet.
    * Sends `n 0` (HV deflection off) to A and B so further photocell trips
    * are ignored. Used by the production-run target-count auto-stop so the
