@@ -1465,6 +1465,11 @@ class TwinDispatcher {
       const r = await printerTransport.sendCommand(id, '^PR 1', { maxWaitMs: 3000 }).catch(() => null);
       console.info('[TwinDispatcher] resumePrinting:^PR 1', { printerId: id, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
     }
+    try {
+      window.dispatchEvent(new CustomEvent('twincode:hv-state', {
+        detail: { printerIds: targets, hvOn: true },
+      }));
+    } catch { /* non-browser */ }
   }
 
   /**
