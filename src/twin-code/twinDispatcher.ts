@@ -1443,15 +1443,8 @@ class TwinDispatcher {
         `^CC ${slot};${currentSeed}`,
       ];
       postSelect = [`^CC ${slot};${currentSeed}`];
-      // Reset host-side serial mirror to the same pre-increment seed so the
-      // LID ^MD^BD frame and the SIDE's auto-printed counter both produce
-      // the same serial on the very first photocell trip after rebind.
-      try {
-        autoCodeSerialMirror.reset(currentSeed);
-        console.info('[TwinBind] host autocode counter reset', { start, currentSeed });
-      } catch (e) {
-        console.warn('[TwinBind] host autocode counter reset failed', e);
-      }
+      // (Host-side mirror was already reset eagerly at the top of bind() so
+      // the HUD updates instantly; no duplicate reset needed here.)
     }
 
     const skipOneToOne = !!opts.autoCodeMode;
