@@ -8,6 +8,7 @@ import { parseGmResponse, parseLfResponse, buildMessageDetails } from '@/lib/mes
 import type { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { getProtocolFieldInfo } from '@/lib/autoCodeProtocol';
 import { generateDataMatrixCommands, isDataMatrixField, extractDataMatrixData, generateDataMatrixBitmap } from '@/lib/dataMatrixGenerator';
+import { twinDispatcher } from '@/twin-code/twinDispatcher';
 import { parsePumpHours, parsePowerHours } from '@/lib/filterTracker';
 import { useServiceStatusPolling } from '@/hooks/useServiceStatusPolling';
 import { useSerializedPolling, PollingCommand } from '@/hooks/useSerializedPolling';
