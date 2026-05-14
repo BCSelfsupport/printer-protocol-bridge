@@ -13,7 +13,7 @@
  * Drift is detected separately via the existing ^CN poll on the SIDE.
  */
 
-import { twinPairStore } from "./twinPairStore";
+import { twinPairStore, type TwinPairState } from "./twinPairStore";
 import { letterForCurrentYear } from "./messageSeeds";
 
 const STORAGE_KEY = "twin-code-autocode-counter";
@@ -56,6 +56,18 @@ class AutoCodeSerialMirror {
     this.persist();
   }
 
+  /** Reset the mirror so the next generated serial uses this exact counter. */
+  resetForNext(nextCounter: number) {
+    this.reset(Math.max(0, (nextCounter | 0) - 1));
+  }
+
+  /** Build a serial for a specific counter value without advancing state. */
+  serialFor(counter: number): string | null {
+    const opts = twinPairStore.getState().autoCodeOpts;
+    if (!opts) return null;
+    return buildAutoCodeSerialForCounter(opts, Math.max(0, counter | 0));
+  }
+
   /** Current value WITHOUT advancing — useful for UI peek. */
   peek(): number {
     this.hydrate();
@@ -91,6 +103,19 @@ function dayOfYear(d: Date): number {
   const start = new Date(d.getFullYear(), 0, 0);
   const diff = d.getTime() - start.getTime();
   return Math.floor(diff / 86_400_000);
+}
+
+export function buildAutoCodeSerialForCounter(
+  opts: NonNullable<TwinPairState['autoCodeOpts']>,
+  counter: number,
+  date = new Date(),
+): string {
+  const line = opts.line.toUpperCase();
+  const unit = opts.unit.toUpperCase();
+  const yearLetter = letterForCurrentYear(opts.yearMap);
+  const ddd = String(dayOfYear(date)).padStart(3, "0");
+  const cnt = String(Math.max(0, counter | 0)).padStart(6, "0");
+  return `${line}${yearLetter}${ddd}${cnt}${unit}`;
 }
 
 export const autoCodeSerial = new AutoCodeSerialMirror();
