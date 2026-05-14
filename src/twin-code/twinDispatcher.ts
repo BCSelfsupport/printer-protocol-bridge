@@ -50,23 +50,32 @@ export interface PhotocellMirrorState {
  * out the PRINT count (positions[1]) which is the photocell-incremented
  * counter on every BestCode firmware variant we've seen.
  */
-function parsePrintCount(raw: string): number | null {
+function parseCounterCounts(raw: string): { product: number | null; print: number | null } {
   const cleaned = raw
     .split(/[\r\n]+/)
     .map(l => l.trim())
     .filter(l => l && !/^\^CN$/i.test(l) && !/^success$/i.test(l) && l !== '>')
     .join('\n');
-  if (!cleaned) return null;
-  const m1 = cleaned.match(/PrC\[(\d+)\]/);
-  if (m1) return parseInt(m1[1], 10);
-  const m2 = cleaned.match(/Print\s*Count\s*[:=]\s*(\d+)/i);
-  if (m2) return parseInt(m2[1], 10);
-  const m3 = cleaned.match(/\bPrint\s*[:=]\s*(\d+)/i);
-  if (m3) return parseInt(m3[1], 10);
-  // CSV fallback: positions[1] is print count.
+  if (!cleaned) return { product: null, print: null };
+  const productVerbose = cleaned.match(/Product\s*Count\s*[:=]\s*(\d+)/i) || cleaned.match(/\bProduct\s*[:=]\s*(\d+)/i);
+  const printVerbose = cleaned.match(/Print\s*Count\s*[:=]\s*(\d+)/i) || cleaned.match(/\bPrint\s*[:=]\s*(\d+)/i);
+  if (productVerbose || printVerbose) {
+    return {
+      product: productVerbose ? parseInt(productVerbose[1], 10) : null,
+      print: printVerbose ? parseInt(printVerbose[1], 10) : null,
+    };
+  }
+  const pc = cleaned.match(/PC\[(\d+)\]/i);
+  const prc = cleaned.match(/PrC\[(\d+)\]/i);
+  if (pc || prc) return { product: pc ? parseInt(pc[1], 10) : null, print: prc ? parseInt(prc[1], 10) : null };
+  // CSV fallback: positions[0]=product, positions[1]=print.
   const parts = cleaned.split(/[,;]/).map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
-  if (parts.length >= 2) return parts[1];
-  return null;
+  if (parts.length >= 2) return { product: parts[0], print: parts[1] };
+  return { product: null, print: null };
+}
+
+function parsePrintCount(raw: string): number | null {
+  return parseCounterCounts(raw).print;
 }
 
 /**
