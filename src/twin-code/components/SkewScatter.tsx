@@ -15,6 +15,7 @@ export function SkewScatter({ samples, count = 500 }: Props) {
     }));
   }, [samples, count]);
 
+  const hasData = useMemo(() => data.some((d) => d.a > 0 || d.b > 0), [data]);
   const max = useMemo(
     () => Math.max(1, ...data.flatMap((d) => [d.a, d.b])),
     [data],
