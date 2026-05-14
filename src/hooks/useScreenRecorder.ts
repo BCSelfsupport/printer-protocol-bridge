@@ -30,7 +30,11 @@ async function getElectronStream(): Promise<MediaStream> {
       mandatory: {
         chromeMediaSource: 'desktop',
         chromeMediaSourceId: sourceId,
-        maxFrameRate: 15,
+        maxFrameRate: 30,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        minWidth: 1280,
+        minHeight: 720,
       },
     },
   });
@@ -72,7 +76,11 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
         screenStream = await getElectronStream();
       } else if (navigator.mediaDevices?.getDisplayMedia) {
         screenStream = await navigator.mediaDevices.getDisplayMedia({
-          video: { frameRate: 15 },
+          video: {
+            frameRate: { ideal: 30 },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
           audio: false,
         });
       } else {
@@ -103,6 +111,7 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
 
       const recorder = new MediaRecorder(combinedStream, {
         mimeType: 'video/webm;codecs=vp9',
+        videoBitsPerSecond: 8_000_000, // 8 Mbps for crisp text
       });
 
       recorder.ondataavailable = (e) => {
