@@ -2822,6 +2822,16 @@ export function usePrinterConnection() {
           console.error('[resetCounter] ^CC command failed:', result?.error);
           return false;
         }
+
+        // Twin-Code: if this printer is the SIDE (B) of a bound auto-code
+        // pair and the counter slot matches autoCodeOpts.counterSlot, mirror
+        // the new value to the LID immediately so the lid's 2D barcode
+        // tracks the SIDE 1:1 (no host re-computation drift).
+        try {
+          await twinDispatcher.notifySideCounterChanged(printer.id, counterId, value);
+        } catch (e) {
+          console.warn('[resetCounter] twin mirror failed (non-fatal):', e);
+        }
         
         // Query counters via ^CN after a delay to reflect new values
         setTimeout(async () => {
