@@ -312,6 +312,10 @@ class PrinterSession {
     }
     trace('attach:ok');
 
+    // Show "LOADING" on the HMI as soon as we have a socket — gives the
+    // operator immediate visual feedback while seeding/^CC/^SM-target run.
+    await showLoadingOnHmi();
+
     // Seed-on-bind: if the operator opted in (passed `seed`) and the named
     // message isn't on the printer yet, lay it down before ^SM so the
     // dispatcher's ^MD^BD/^MD^TD path always has a correct field to write to.
