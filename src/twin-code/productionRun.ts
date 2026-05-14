@@ -265,6 +265,13 @@ class ProductionRunStore {
     // being torn down). When targetCount is null/0, no gate is installed and
     // the run runs until the catalog itself is exhausted.
     this.installDispatchGate(meta);
+    // Re-enable HV deflection on both bound printers in case the previous
+    // run ended with `inhibitPrinting()` (^PR 0). Without this, the operator
+    // would Start a new lot and see zero photocell prints because the prior
+    // run's soft-stop is still in effect.
+    if (input.liveAtStart) {
+      twinDispatcher.resumePrinting().catch(() => { /* best-effort */ });
+    }
     this.persistActive();
     this.notify();
     // Watch the catalog so the run auto-finalizes on the last bottle.
