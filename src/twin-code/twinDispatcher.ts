@@ -74,6 +74,28 @@ function parseCounterCounts(raw: string): { product: number | null; print: numbe
   return { product: null, print: null };
 }
 
+function parseCounterSnapshot(raw: string): { product: number | null; print: number | null; custom: Array<number | null> } {
+  const base = parseCounterCounts(raw);
+  const custom: Array<number | null> = [null, null, null, null];
+  for (let i = 1; i <= 4; i++) {
+    const verbose = raw.match(new RegExp(`Counter\\s*${i}\\s*[:=]\\s*(\\d+)`, 'i'));
+    const compact = raw.match(new RegExp(`\\bC${i}\\s*\\[\\s*(\\d+)\\s*\\]`, 'i'))
+      || raw.match(new RegExp(`\\bCustom${i}\\s*:?\\s*(\\d+)`, 'i'));
+    const match = verbose || compact;
+    if (match) custom[i - 1] = parseInt(match[1], 10);
+  }
+  const cleaned = raw
+    .split(/[\r\n]+/)
+    .map(l => l.trim())
+    .filter(l => l && !/^\^CN$/i.test(l) && !/^success$/i.test(l) && l !== '>')
+    .join('\n');
+  if (custom.every(v => v == null)) {
+    const parts = cleaned.split(/[,;]/).map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+    if (parts.length >= 6) for (let i = 0; i < 4; i++) custom[i] = parts[i + 2];
+  }
+  return { ...base, custom };
+}
+
 function parsePrintCount(raw: string): number | null {
   return parseCounterCounts(raw).print;
 }
@@ -1297,6 +1319,22 @@ class TwinDispatcher {
   }
 
   getPhotocellMirrorState(): PhotocellMirrorState { return this.mirrorState; }
+
+  private async resolveNextAutoCodeCounterFromSide(printerId: number, slot: 1 | 2 | 3 | 4, fallbackNext: number): Promise<number> {
+    const cn = await printerTransport.sendCommand(printerId, '^CN', { maxWaitMs: 2000, idleAfterDataMs: 300 }).catch(() => null);
+    const current = cn?.success ? parseCounterSnapshot(cn.response || '').custom[slot - 1] : null;
+    return current != null && current >= 0 ? current + 1 : fallbackNext;
+  }
+
+  private async preloadAutoCodeLid(nextCounter: number, reason: string): Promise<void> {
+    if (!this.a || !this.opts.autoCodeMode || !this.opts.autoCodeOpts) return;
+    const serial = autoCodeSerialMirror.serialFor(nextCounter);
+    if (!serial) return;
+    const field = this.opts.fieldA ?? 1;
+    const sub = this.opts.subcommandA ?? 'BD';
+    const r = await printerTransport.sendCommand(this.a.printerId, `^MD^${sub}${field};${serial}`, { maxWaitMs: 3000, idleAfterDataMs: 300 }).catch(() => null);
+    console.info('[TwinDispatcher] autocode lid preload', { reason, nextCounter, serial, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+  }
 
   /**
    * Soft-stop printing on both bound printers without cycling the jet.
