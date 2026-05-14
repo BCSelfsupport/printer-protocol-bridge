@@ -1391,7 +1391,9 @@ class TwinDispatcher {
     if (this.opts.autoCodeMode && this.opts.autoCodeOpts && this.b) {
       const slot = this.opts.autoCodeOpts.counterSlot;
       const start = Math.max(1, Math.floor(this.opts.autoCodeOpts.counterStart ?? 1));
-      const seed = Math.max(0, start - 1);
+      // `^CC slot;V` loads V as the next-to-print value (no pre-increment),
+      // so seeding `start` directly makes the first print equal `start`.
+      const seed = start;
       const end = 999999;
       for (const t of targets) {
         for (const cmd of [`^CC ${slot};I1`, `^CC ${slot};S${start}`, `^CC ${slot};E${end}`, `^CC ${slot};L1`, `^CC ${slot};T0`, `^CC ${slot};${seed}`]) {
