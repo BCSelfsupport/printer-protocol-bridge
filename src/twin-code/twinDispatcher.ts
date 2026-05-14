@@ -1402,26 +1402,58 @@ class TwinDispatcher {
     this.mirrorState = { active: true, count: 0, lastTickAt: 0, bpm: 0 };
     this.notifyMirror();
 
+    // In Auto-Code mode the SIDE printer (B) holds the authoritative custom
+    // counter — that's the value baked into both the printed text and the
+    // serial we mirror to the LID barcode. Polling A's print count drifts
+    // because the LID barcode field is static-data only and can't advance
+    // until we ^MD it. Poll B's ^CN custom slot instead.
+    const slot = this.mirrorAutoCode ? this.opts.autoCodeOpts?.counterSlot ?? null : null;
+    const pollPrinterId = this.mirrorAutoCode && this.b ? this.b.printerId : this.a.printerId;
+    const readCount = (raw: string): number | null => {
+      if (slot != null) {
+        const snap = parseCounterSnapshot(raw);
+        return snap.custom[slot - 1] ?? null;
+      }
+      return parsePrintCount(raw);
+    };
+
     const tick = async () => {
       if (!this.a) { this.stopPhotocellMirror(); return; }
       try {
-        const r = await printerTransport.sendCommand(this.a.printerId, '^CN', { maxWaitMs: 1500, idleAfterDataMs: 200 });
+        const r = await printerTransport.sendCommand(pollPrinterId, '^CN', { maxWaitMs: 1500, idleAfterDataMs: 200 });
         if (r?.success) {
-          const n = parsePrintCount(r.response || '');
+          const n = readCount(r.response || '');
           if (n != null) {
             if (this.mirrorBaseline == null) {
               this.mirrorBaseline = n;
               this.mirrorLast = n;
+              // First read: align the LID barcode with what the SIDE will
+              // print on the very next photocell trip.
+              if (this.mirrorAutoCode) {
+                autoCodeSerialMirror.resetForNext(n + 1);
+                void this.preloadAutoCodeLid(n + 1, 'mirror-baseline');
+              }
             } else if (this.mirrorLast != null && n > this.mirrorLast) {
               const delta = n - this.mirrorLast;
               this.mirrorLast = n;
               for (let i = 0; i < delta; i++) {
                 this.recordMirroredPrint();
               }
+              // After accounting for the prints that just happened, push the
+              // matching serial for the NEXT photocell trip to the LID so the
+              // 2D barcode tracks the SIDE counter in lock-step.
+              if (this.mirrorAutoCode) {
+                autoCodeSerialMirror.resetForNext(n + 1);
+                void this.preloadAutoCodeLid(n + 1, 'mirror-advance');
+              }
             } else if (this.mirrorLast != null && n < this.mirrorLast) {
               // Counter was reset on the printer (re-zeroed) — re-baseline.
               this.mirrorBaseline = n;
               this.mirrorLast = n;
+              if (this.mirrorAutoCode) {
+                autoCodeSerialMirror.resetForNext(n + 1);
+                void this.preloadAutoCodeLid(n + 1, 'mirror-rezero');
+              }
             }
           }
         }
