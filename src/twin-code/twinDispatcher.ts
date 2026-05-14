@@ -1496,19 +1496,22 @@ class TwinDispatcher {
             if (this.mirrorBaseline == null) {
               this.mirrorBaseline = n;
               this.mirrorLast = n;
-              // First read: align the LID barcode with what the SIDE will
-              // print on the very next photocell trip.
+              // First read: ^CN on SIDE reports the value the printer will
+              // PRINT on the next photocell trip (post-^CC load semantics).
+              // Preload the LID with that same value so the 2D barcode
+              // matches the SIDE's first physical print 1:1.
               if (this.mirrorAutoCode) {
-                autoCodeSerialMirror.resetForNext(n + 1);
-                void this.preloadAutoCodeLid(n + 1, 'mirror-baseline');
+                autoCodeSerialMirror.resetForNext(n);
+                void this.preloadAutoCodeLid(n, 'mirror-baseline');
               }
             } else if (this.mirrorLast != null && n > this.mirrorLast) {
               const delta = n - this.mirrorLast;
-              const firstPrintedCounter = this.mirrorLast + 1;
+              // Under the post-^CC-load model, ^CN reads the NEXT-to-print
+              // value. Between polls the SIDE printed `mirrorLast .. n-1`
+              // and now sits ready to print `n`.
+              const firstPrintedCounter = this.mirrorLast;
               this.mirrorLast = n;
               if (this.mirrorAutoCode) {
-                // Re-align host mirror so each next() returns the serial
-                // matching the SIDE's actual printed counter (firstPrintedCounter..n).
                 autoCodeSerialMirror.resetForNext(firstPrintedCounter);
               }
               for (let i = 0; i < delta; i++) {
@@ -1517,16 +1520,16 @@ class TwinDispatcher {
               // Push the matching serial for the NEXT photocell trip to the
               // LID so the 2D barcode tracks the SIDE counter in lock-step.
               if (this.mirrorAutoCode) {
-                autoCodeSerialMirror.resetForNext(n + 1);
-                void this.preloadAutoCodeLid(n + 1, 'mirror-advance');
+                autoCodeSerialMirror.resetForNext(n);
+                void this.preloadAutoCodeLid(n, 'mirror-advance');
               }
             } else if (this.mirrorLast != null && n < this.mirrorLast) {
               // Counter was reset on the printer (re-zeroed) — re-baseline.
               this.mirrorBaseline = n;
               this.mirrorLast = n;
               if (this.mirrorAutoCode) {
-                autoCodeSerialMirror.resetForNext(n + 1);
-                void this.preloadAutoCodeLid(n + 1, 'mirror-rezero');
+                autoCodeSerialMirror.resetForNext(n);
+                void this.preloadAutoCodeLid(n, 'mirror-rezero');
               }
             }
           }
