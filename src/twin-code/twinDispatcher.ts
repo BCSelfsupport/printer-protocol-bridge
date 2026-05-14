@@ -336,6 +336,11 @@ class PrinterSession {
       if (seeded) await new Promise(res => setTimeout(res, 600));
     }
 
+    // Re-assert LOADING after seeding (^DM/^NM auto-activates the new
+    // message on most firmware) so the HMI actually shows LOADING during
+    // the ^CC counter-zero sweep, not the previous production message.
+    await showLoadingOnHmi();
+
     await runPreSelect();
 
     if (messageName) {
