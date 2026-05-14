@@ -1434,7 +1434,6 @@ class TwinDispatcher {
                 void this.preloadAutoCodeLid(n + 1, 'mirror-baseline');
               }
             } else if (this.mirrorLast != null && n > this.mirrorLast) {
-            } else if (this.mirrorLast != null && n > this.mirrorLast) {
               const delta = n - this.mirrorLast;
               const firstPrintedCounter = this.mirrorLast + 1;
               this.mirrorLast = n;
