@@ -279,7 +279,10 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
   // The placeholder data here is overwritten on the first print.
   // ---------------------------------------------------------------------
   if (side === "A") {
-    const sample = `${normalizedLine}A132${"1".padStart(6, "0")}${normalizedUnit}`;
+    const sample = previewAutoCodeSerial(opts, {
+      doy: dayOfYear(new Date()),
+      counter: Math.max(0, Math.floor(opts.counterStart ?? 1)),
+    });
     return {
       label: `Auto-code LID · DM 16×16 (${sample})`,
       description:
@@ -358,7 +361,10 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
     `^AT5;${xUnit};0;${FONT};${normalizedUnit}`,
   ];
 
-  const sample = `${normalizedLine}A132${"1".padStart(6, "0")}${normalizedUnit}`;
+  const sample = previewAutoCodeSerial(opts, {
+    doy: dayOfYear(new Date()),
+    counter: Math.max(0, Math.floor(opts.counterStart ?? 1)),
+  });
   return {
     label: `Auto-code · ${sample}`,
     description:
@@ -372,6 +378,11 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
       "^SV",
     ],
   };
+}
+
+function dayOfYear(d: Date): number {
+  const start = new Date(d.getFullYear(), 0, 0);
+  return Math.floor((d.getTime() - start.getTime()) / 86_400_000);
 }
 
 /** Render a sample serial for a given auto-code config (UI preview). */
