@@ -10,11 +10,16 @@ interface Props {
 export function RollingCycleChart({ samples, count = 1000 }: Props) {
   const data = useMemo(() => {
     const recent = samples.slice(-count);
-    return recent.map((s) => ({
-      index: s.index,
-      cycleMs: s.cycleMs,
-      missed: s.outcome === "missed",
-    }));
+    // Bottle #1 has no prior tick so its cycleMs is 0 — drop it so the chart
+    // doesn't mislead with a phantom 0 ms cycle, and show 1-based bottle
+    // numbers (operators count "bottle 1..N", not "0..N-1").
+    return recent
+      .filter((s) => s.cycleMs > 0)
+      .map((s) => ({
+        index: s.index + 1,
+        cycleMs: s.cycleMs,
+        missed: s.outcome === "missed",
+      }));
   }, [samples, count]);
 
   const misses = useMemo(() => data.filter((d) => d.missed), [data]);
