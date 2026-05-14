@@ -1367,7 +1367,7 @@ class TwinDispatcher {
     if (!this.opts.autoCodeMode || !this.opts.autoCodeOpts) return;
     if (printerId !== this.b.printerId) return;
     if (slot !== this.opts.autoCodeOpts.counterSlot) return;
-    const next = Math.max(1, Math.floor(currentValue) + 1);
+    const next = Math.max(1, Math.floor(currentValue));
     autoCodeSerialMirror.resetForNext(next);
     // Re-baseline the photocell mirror so the next ^CN delta isn't
     // mis-interpreted as a backwards jump (which would re-fire mirror-rezero).
@@ -1376,6 +1376,33 @@ class TwinDispatcher {
       this.mirrorLast = currentValue;
     }
     await this.preloadAutoCodeLid(next, `side-counter-change(slot=${slot},value=${currentValue})`);
+  }
+
+  async resetProductionRunCounters(reason = 'production-run-start'): Promise<void> {
+    const targets: Array<{ id: number; label: 'A' | 'B' }> = [];
+    if (this.a) targets.push({ id: this.a.printerId, label: 'A' });
+    if (this.b) targets.push({ id: this.b.printerId, label: 'B' });
+    if (targets.length === 0) return;
+
+    await Promise.all(targets.map(t => forceZeroHmiRunCountersForPrinter(t.id, t.label, reason)));
+
+    if (this.opts.autoCodeMode && this.opts.autoCodeOpts && this.b) {
+      const slot = this.opts.autoCodeOpts.counterSlot;
+      const start = Math.max(1, Math.floor(this.opts.autoCodeOpts.counterStart ?? 1));
+      const seed = Math.max(0, start - 1);
+      const end = 999999;
+      for (const t of targets) {
+        for (const cmd of [`^CC ${slot};I1`, `^CC ${slot};S${start}`, `^CC ${slot};E${end}`, `^CC ${slot};L1`, `^CC ${slot};T0`, `^CC ${slot};${seed}`]) {
+          await printerTransport.sendCommand(t.id, cmd, { maxWaitMs: 3000 }).catch(() => null);
+          await new Promise(res => setTimeout(res, 150));
+        }
+        await printerTransport.sendCommand(t.id, '^SV', { maxWaitMs: 3000 }).catch(() => null);
+      }
+      autoCodeSerialMirror.resetForNext(start);
+      this.mirrorBaseline = seed;
+      this.mirrorLast = seed;
+      await this.preloadAutoCodeLid(start, reason);
+    }
   }
 
   /**
