@@ -97,6 +97,36 @@ const ALL_COUNTER_ZERO_COMMANDS = [
 
 const HMI_RUN_COUNTER_ZERO_COMMANDS = ['^CC 0;0', '^CC 6;0'] as const;
 
+async function forceZeroHmiRunCountersForPrinter(printerId: number, label: 'A' | 'B', phase = 'final') {
+  const trace = (step: string, extra?: Record<string, unknown>) => {
+    console.info(`[TwinBind:${label}] ${step}`, { printerId, ...extra });
+  };
+  const sweep = async () => {
+    for (const cmd of HMI_RUN_COUNTER_ZERO_COMMANDS) {
+      const r = await printerTransport.sendCommand(printerId, cmd).catch(() => null);
+      console.info(`[TwinBind:${label}] hmi-counter-zero:cmd`, { printerId, phase, cmd, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+      await new Promise(res => setTimeout(res, 150));
+    }
+  };
+  trace('hmi-counter-zero:start', { phase });
+  await sweep();
+  await new Promise(res => setTimeout(res, 700));
+
+  let cn = await printerTransport.sendCommand(printerId, '^CN').catch(() => null);
+  let counts = parseCounterCounts(cn?.response || '');
+  if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
+    trace('hmi-counter-zero:retry', { phase, product: counts.product, print: counts.print });
+    await sweep();
+    await new Promise(res => setTimeout(res, 700));
+    cn = await printerTransport.sendCommand(printerId, '^CN').catch(() => null);
+    counts = parseCounterCounts(cn?.response || '');
+  }
+  trace('hmi-counter-zero:verify', { phase, ok: !!cn?.success, product: counts.product, print: counts.print });
+  if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
+    console.warn(`[TwinBind:${label}] HMI counters still non-zero after bind reset`, { printerId, phase, response: cn.response, counts });
+  }
+}
+
 /**
  * Twin Code default print parameters pushed to both printers on bind/seed.
  * Exposed so the production-run audit can record the *exact* values that
