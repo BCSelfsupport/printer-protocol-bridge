@@ -1614,6 +1614,14 @@ class TwinDispatcher {
       }
     }
 
+    // Absolute last step after field checks: ^LF/^MS/^CM/^SM can refresh the HMI
+    // from message state, so re-zero Product/Print once no later bind command can
+    // reload the old values.
+    await Promise.all([
+      forceZeroHmiRunCountersForPrinter(aId, 'A', 'post-field-check'),
+      forceZeroHmiRunCountersForPrinter(bId, 'B', 'post-field-check'),
+    ]);
+
     console.info('[TwinBind] bind complete');
     return { ok: true, aId, bId, seededA: !!resA.seeded, seededB: !!resB.seeded };
   }
