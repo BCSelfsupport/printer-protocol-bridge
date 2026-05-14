@@ -1191,7 +1191,7 @@ class TwinDispatcher {
    * are ignored. Used by the production-run target-count auto-stop so the
    * physical line halts at exactly N printed codes.
    */
-  async inhibitPrinting(): Promise<void> {
+  async inhibitPrinting(opts?: { correctCounterTo?: number }): Promise<void> {
     const targets: number[] = [];
     if (this.a) targets.push(this.a.printerId);
     if (this.b) targets.push(this.b.printerId);
@@ -1202,7 +1202,36 @@ class TwinDispatcher {
       const r = await printerTransport.sendCommand(id, '^PR 0', { maxWaitMs: 3000 }).catch(() => null);
       console.info('[TwinDispatcher] inhibitPrinting:^PR 0', { printerId: id, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
     }
+    // Correct the printer's HMI counter so it matches the actual printed
+    // count. The printer firmware's `^CC slot;V` is increment-then-print, so
+    // after N prints the internal counter sits at N but the HMI displays the
+    // NEXT serial value (N+1). Operators reading the HMI then see "11" after
+    // a 10-print run. Re-seed `^CC slot;${N - 1}` so the HMI's "next"
+    // matches `N`, which reads as the just-completed print count.
+    if (opts?.correctCounterTo != null && this.opts.autoCodeMode && this.opts.autoCodeOpts) {
+      const slot = this.opts.autoCodeOpts.counterSlot;
+      const seed = Math.max(0, Math.floor(opts.correctCounterTo) - 1);
+      for (const id of targets) {
+        const r = await printerTransport.sendCommand(id, `^CC ${slot};${seed}`, { maxWaitMs: 2000 }).catch(() => null);
+        console.info('[TwinDispatcher] inhibitPrinting:counter-correct', { printerId: id, slot, seed, ok: !!r?.success });
+      }
+    }
     this.stopPhotocellMirror();
+  }
+
+  /**
+   * Re-enable HV deflection on both bound printers. Called at the start of a
+   * new production run so the printer that was halted by `inhibitPrinting()`
+   * at the end of the previous lot resumes responding to photocell trips.
+   */
+  async resumePrinting(): Promise<void> {
+    const targets: number[] = [];
+    if (this.a) targets.push(this.a.printerId);
+    if (this.b) targets.push(this.b.printerId);
+    for (const id of targets) {
+      const r = await printerTransport.sendCommand(id, '^PR 1', { maxWaitMs: 3000 }).catch(() => null);
+      console.info('[TwinDispatcher] resumePrinting:^PR 1', { printerId: id, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+    }
   }
 
   /**
