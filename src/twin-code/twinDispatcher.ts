@@ -74,6 +74,28 @@ function parseCounterCounts(raw: string): { product: number | null; print: numbe
   return { product: null, print: null };
 }
 
+function parseCounterSnapshot(raw: string): { product: number | null; print: number | null; custom: Array<number | null> } {
+  const base = parseCounterCounts(raw);
+  const custom: Array<number | null> = [null, null, null, null];
+  for (let i = 1; i <= 4; i++) {
+    const verbose = raw.match(new RegExp(`Counter\\s*${i}\\s*[:=]\\s*(\\d+)`, 'i'));
+    const compact = raw.match(new RegExp(`\\bC${i}\\s*\\[\\s*(\\d+)\\s*\\]`, 'i'))
+      || raw.match(new RegExp(`\\bCustom${i}\\s*:?\\s*(\\d+)`, 'i'));
+    const match = verbose || compact;
+    if (match) custom[i - 1] = parseInt(match[1], 10);
+  }
+  const cleaned = raw
+    .split(/[\r\n]+/)
+    .map(l => l.trim())
+    .filter(l => l && !/^\^CN$/i.test(l) && !/^success$/i.test(l) && l !== '>')
+    .join('\n');
+  if (custom.every(v => v == null)) {
+    const parts = cleaned.split(/[,;]/).map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+    if (parts.length >= 6) for (let i = 0; i < 4; i++) custom[i] = parts[i + 2];
+  }
+  return { ...base, custom };
+}
+
 function parsePrintCount(raw: string): number | null {
   return parseCounterCounts(raw).print;
 }
