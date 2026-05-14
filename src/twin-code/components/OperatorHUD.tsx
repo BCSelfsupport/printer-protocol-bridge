@@ -111,15 +111,31 @@ export function OperatorHUD() {
   // Fallback: when running off the hardware photocell mirror (Production +
   // Auto-Code), there are no sim bottles — pull the most recent printed serial
   // straight from profilerBus instead.
+  //
+  // SINGLE SOURCE OF TRUTH: when the serial follows the Auto-Code format
+  // `<line><Y><DDD><cnt6><unit>` (13 chars), prefer the counter embedded in
+  // the serial itself for the displayed bottle #. That value is identical to
+  // the printer's hardware ^AC counter (HMI display) and to the audit CSV's
+  // bottleIndex — guaranteeing HUD / Printer A / Printer B / Report all agree.
   const lastPrinted = useMemo(() => {
+    const parseEmbeddedCounter = (serial: string): number | null => {
+      // 13-char Auto-Code shape: 2-char line + 1-char year + 3-digit DDD +
+      // 6-digit counter + 1-char unit. Counter occupies positions 6..11.
+      const m = /^[A-Z0-9]{2}[A-Z]\d{3}(\d{6})[A-Z]$/.exec(serial);
+      return m ? parseInt(m[1], 10) : null;
+    };
     for (let i = conv.bottles.length - 1; i >= 0; i--) {
       const b = conv.bottles[i];
-      if (b.state === "printed" && b.serial) return { id: b.id + 1, serial: b.serial };
+      if (b.state === "printed" && b.serial) {
+        const embedded = parseEmbeddedCounter(b.serial);
+        return { id: embedded ?? b.id + 1, serial: b.serial };
+      }
     }
     for (let i = samples.length - 1; i >= 0; i--) {
       const s = samples[i];
       if (s.outcome === "printed" && s.serial) {
-        return { id: s.index + 1, serial: s.serial };
+        const embedded = parseEmbeddedCounter(s.serial);
+        return { id: embedded ?? s.index + 1, serial: s.serial };
       }
     }
     return null;

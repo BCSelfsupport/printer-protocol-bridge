@@ -1316,13 +1316,20 @@ class TwinDispatcher {
 
   private recordMirroredPrint() {
     let serial: string | null = null;
+    let bottleId: number;
     if (this.mirrorAutoCode) {
       const r = autoCodeSerialMirror.next();
       serial = r ? r.serial : null;
+      // SINGLE SOURCE OF TRUTH for sync: in Auto-Code Mode the printer's
+      // hardware counter (^AC slot N) IS the bottle index — the same value
+      // is baked into the LID DataMatrix, displayed on the SIDE HMI, shown
+      // on the HUD, and exported as `bottleIndex` in the audit CSV. No more
+      // 1,000,000+ virtual ids that disagreed with HMI / serial / HUD.
+      bottleId = r ? r.counter : this.mirrorVirtualBottleId++;
     } else {
       serial = catalogModule.dispense();
+      bottleId = this.mirrorVirtualBottleId++;
     }
-    const bottleId = this.mirrorVirtualBottleId++;
     const now = performance.now();
     if (serial) {
       try {
