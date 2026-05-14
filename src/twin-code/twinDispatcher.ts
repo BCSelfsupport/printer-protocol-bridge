@@ -231,12 +231,13 @@ class PrinterSession {
     // visual feedback during the rest of bind (field check, ^CC, ^SM target,
     // ^MB). Best-effort: any failure is swallowed because this is purely
     // cosmetic — the real ^SM target later in enter() always overrides it.
-    const showLoadingOnHmi = async () => {
+    const showLoadingOnHmi = async (minVisibleMs = 0) => {
       try {
         const ensure = await this.ensureMessage(LOADING_MESSAGE_NAME, LOADING_SEED);
         if (!ensure.ok) { trace('loading-hmi:ensure-failed', { error: ensure.error }); return; }
-        const sm = await printerTransport.sendCommand(this.printerId, `^SM ${LOADING_MESSAGE_NAME}`, { maxWaitMs: 2000 });
-        trace('loading-hmi:shown', { ok: !!sm?.success });
+        const sm = await printerTransport.sendCommand(this.printerId, `^SM ${LOADING_MESSAGE_NAME}`, { maxWaitMs: 4000, idleAfterDataMs: 700 });
+        trace('loading-hmi:shown', { ok: !!sm?.success, response: sm?.response?.trim?.()?.slice(0, 120) });
+        if (sm?.success && minVisibleMs > 0) await new Promise(res => setTimeout(res, minVisibleMs));
       } catch (e) {
         trace('loading-hmi:error', { error: String(e) });
       }
@@ -245,7 +246,7 @@ class PrinterSession {
     // ---- Emulator path: synthesize R/T/C entirely in-process ----
     if (this.isEmulated) {
       // Show LOADING on the emulated HMI first so dev mirrors prod UX.
-      await showLoadingOnHmi();
+      await showLoadingOnHmi(600);
       // Seed-on-bind is also honored on the emulator so the dev path mirrors prod.
       let seeded = false;
       if (seed && messageName) {
@@ -327,7 +328,7 @@ class PrinterSession {
 
     // Show "LOADING" on the HMI as soon as we have a socket — gives the
     // operator immediate visual feedback while seeding/^CC/^SM-target run.
-    await showLoadingOnHmi();
+    await showLoadingOnHmi(600);
 
     // Seed-on-bind: if the operator opted in (passed `seed`) and the named
     // message isn't on the printer yet, lay it down before ^SM so the
