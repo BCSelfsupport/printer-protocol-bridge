@@ -1434,14 +1434,20 @@ class TwinDispatcher {
                 void this.preloadAutoCodeLid(n + 1, 'mirror-baseline');
               }
             } else if (this.mirrorLast != null && n > this.mirrorLast) {
+            } else if (this.mirrorLast != null && n > this.mirrorLast) {
               const delta = n - this.mirrorLast;
+              const firstPrintedCounter = this.mirrorLast + 1;
               this.mirrorLast = n;
+              if (this.mirrorAutoCode) {
+                // Re-align host mirror so each next() returns the serial
+                // matching the SIDE's actual printed counter (firstPrintedCounter..n).
+                autoCodeSerialMirror.resetForNext(firstPrintedCounter);
+              }
               for (let i = 0; i < delta; i++) {
                 this.recordMirroredPrint();
               }
-              // After accounting for the prints that just happened, push the
-              // matching serial for the NEXT photocell trip to the LID so the
-              // 2D barcode tracks the SIDE counter in lock-step.
+              // Push the matching serial for the NEXT photocell trip to the
+              // LID so the 2D barcode tracks the SIDE counter in lock-step.
               if (this.mirrorAutoCode) {
                 autoCodeSerialMirror.resetForNext(n + 1);
                 void this.preloadAutoCodeLid(n + 1, 'mirror-advance');
