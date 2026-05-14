@@ -1,6 +1,6 @@
 ---
 name: Twin Code — zero hardware counters on bind
-description: Bind preSelect zeros HMI Print Count (^CC 0;0) and Product Count (^CC 6;0) on both A and B so the service display matches the HUD and audit CSV from bottle 1.
+description: Bind pre/post/final zeros HMI Print Count and Product Count on both A and B using named V0 plus compact fallback, then verifies with ^CN.
 type: feature
 ---
 
@@ -15,13 +15,17 @@ number and the audit CSV `bottleIndex`.
 
 # How
 
-`twinDispatcher.bind()` preSelect (`src/twin-code/twinDispatcher.ts`) now sends
-to BOTH A and B before ^SM-activating the production message:
+`twinDispatcher.bind()` sends counter-zero commands to BOTH A and B before and
+after ^SM-activating the production message, then performs a final forced reset
+and verifies with ^CN:
 
 ```
-^CC 0;0    # zero HMI Print Count
-^CC 6;0    # zero HMI Product Count
+^CC 0;V0   # zero HMI Print Count using named current-value form
+^CC 0;0    # compact fallback for firmware that expects legacy C;V
+^CC 6;V0   # zero HMI Product Count using named current-value form
+^CC 6;0    # compact fallback
 ^CC <slot>;I1 ... S<start> ... E999999 ... L1 ... T0 ... <start-1>
+^CN        # verify Product Count and Print Count are zero
 ```
 
 Counter ids per BestCode protocol v2.6 ^CC table:

@@ -50,23 +50,32 @@ export interface PhotocellMirrorState {
  * out the PRINT count (positions[1]) which is the photocell-incremented
  * counter on every BestCode firmware variant we've seen.
  */
-function parsePrintCount(raw: string): number | null {
+function parseCounterCounts(raw: string): { product: number | null; print: number | null } {
   const cleaned = raw
     .split(/[\r\n]+/)
     .map(l => l.trim())
     .filter(l => l && !/^\^CN$/i.test(l) && !/^success$/i.test(l) && l !== '>')
     .join('\n');
-  if (!cleaned) return null;
-  const m1 = cleaned.match(/PrC\[(\d+)\]/);
-  if (m1) return parseInt(m1[1], 10);
-  const m2 = cleaned.match(/Print\s*Count\s*[:=]\s*(\d+)/i);
-  if (m2) return parseInt(m2[1], 10);
-  const m3 = cleaned.match(/\bPrint\s*[:=]\s*(\d+)/i);
-  if (m3) return parseInt(m3[1], 10);
-  // CSV fallback: positions[1] is print count.
+  if (!cleaned) return { product: null, print: null };
+  const productVerbose = cleaned.match(/Product\s*Count\s*[:=]\s*(\d+)/i) || cleaned.match(/\bProduct\s*[:=]\s*(\d+)/i);
+  const printVerbose = cleaned.match(/Print\s*Count\s*[:=]\s*(\d+)/i) || cleaned.match(/\bPrint\s*[:=]\s*(\d+)/i);
+  if (productVerbose || printVerbose) {
+    return {
+      product: productVerbose ? parseInt(productVerbose[1], 10) : null,
+      print: printVerbose ? parseInt(printVerbose[1], 10) : null,
+    };
+  }
+  const pc = cleaned.match(/PC\[(\d+)\]/i);
+  const prc = cleaned.match(/PrC\[(\d+)\]/i);
+  if (pc || prc) return { product: pc ? parseInt(pc[1], 10) : null, print: prc ? parseInt(prc[1], 10) : null };
+  // CSV fallback: positions[0]=product, positions[1]=print.
   const parts = cleaned.split(/[,;]/).map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
-  if (parts.length >= 2) return parts[1];
-  return null;
+  if (parts.length >= 2) return { product: parts[0], print: parts[1] };
+  return { product: null, print: null };
+}
+
+function parsePrintCount(raw: string): number | null {
+  return parseCounterCounts(raw).print;
 }
 
 /**
@@ -195,6 +204,28 @@ class PrinterSession {
       trace('postSelect:done');
     };
 
+    const forceZeroHmiRunCounters = async () => {
+      // Use named current-value form first (`V0`) and compact legacy form as a
+      // fallback. Some firmware accepts both but only applies one reliably to
+      // the HMI service counters after ^SM activates the production message.
+      trace('hmi-counter-zero:start');
+      const commands = ['^CC 0;V0', '^CC 0;0', '^CC 6;V0', '^CC 6;0'];
+      for (const cmd of commands) {
+        const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000, idleAfterDataMs: 700 }).catch(() => null);
+        console.info(`[TwinBind:${this.label}] hmi-counter-zero:cmd`, { printerId: this.printerId, cmd, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+        await new Promise(res => setTimeout(res, 350));
+      }
+      await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 4000, idleAfterDataMs: 700 }).catch(() => {});
+      await new Promise(res => setTimeout(res, 700));
+
+      const cn = await printerTransport.sendCommand(this.printerId, '^CN', { maxWaitMs: 4000, idleAfterDataMs: 800 }).catch(() => null);
+      const counts = parseCounterCounts(cn?.response || '');
+      trace('hmi-counter-zero:verify', { ok: !!cn?.success, product: counts.product, print: counts.print });
+      if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
+        console.warn(`[TwinBind:${this.label}] HMI counters still non-zero after bind reset`, { printerId: this.printerId, response: cn.response, counts });
+      }
+    };
+
     const armNativePhotocellMode = async (): Promise<{ ok: boolean; error?: string }> => {
       if (!skipOneToOne) return { ok: true };
       trace('native-photocell:arm:start');
@@ -222,12 +253,13 @@ class PrinterSession {
     // visual feedback during the rest of bind (field check, ^CC, ^SM target,
     // ^MB). Best-effort: any failure is swallowed because this is purely
     // cosmetic — the real ^SM target later in enter() always overrides it.
-    const showLoadingOnHmi = async () => {
+    const showLoadingOnHmi = async (minVisibleMs = 0) => {
       try {
         const ensure = await this.ensureMessage(LOADING_MESSAGE_NAME, LOADING_SEED);
         if (!ensure.ok) { trace('loading-hmi:ensure-failed', { error: ensure.error }); return; }
-        const sm = await printerTransport.sendCommand(this.printerId, `^SM ${LOADING_MESSAGE_NAME}`, { maxWaitMs: 2000 });
-        trace('loading-hmi:shown', { ok: !!sm?.success });
+        const sm = await printerTransport.sendCommand(this.printerId, `^SM ${LOADING_MESSAGE_NAME}`, { maxWaitMs: 4000, idleAfterDataMs: 700 });
+        trace('loading-hmi:shown', { ok: !!sm?.success, response: sm?.response?.trim?.()?.slice(0, 120) });
+        if (sm?.success && minVisibleMs > 0) await new Promise(res => setTimeout(res, minVisibleMs));
       } catch (e) {
         trace('loading-hmi:error', { error: String(e) });
       }
@@ -236,7 +268,7 @@ class PrinterSession {
     // ---- Emulator path: synthesize R/T/C entirely in-process ----
     if (this.isEmulated) {
       // Show LOADING on the emulated HMI first so dev mirrors prod UX.
-      await showLoadingOnHmi();
+      await showLoadingOnHmi(600);
       // Seed-on-bind is also honored on the emulator so the dev path mirrors prod.
       let seeded = false;
       if (seed && messageName) {
@@ -259,6 +291,8 @@ class PrinterSession {
           return { ok: false, error: `${this.label}: ^SM failed (emulator)` };
         }
       }
+      await runPostSelect();
+      await forceZeroHmiRunCounters();
       // Drive ^MB through the regular transport so emulator state stays consistent.
       // Per v2.6 §6.1, ^MB is the 1:1 entry command; ^CM p1 is Auto-Print, not 1:1.
       // Auto-Code mode skips ^MB — the printer self-prints from the hardware photocell.
@@ -318,7 +352,7 @@ class PrinterSession {
 
     // Show "LOADING" on the HMI as soon as we have a socket — gives the
     // operator immediate visual feedback while seeding/^CC/^SM-target run.
-    await showLoadingOnHmi();
+    await showLoadingOnHmi(600);
 
     // Seed-on-bind: if the operator opted in (passed `seed`) and the named
     // message isn't on the printer yet, lay it down before ^SM so the
@@ -369,6 +403,7 @@ class PrinterSession {
     }
 
     await runPostSelect();
+    await forceZeroHmiRunCounters();
 
     const nativeArmed = await armNativePhotocellMode();
     if (!nativeArmed.ok) {
@@ -1478,7 +1513,7 @@ class TwinDispatcher {
       // (which is exactly what the operator reported: only the lid Print
       // Count cleared, Product Count and the SIDE printer counters all
       // came back to their pre-bind values once ^SM fired).
-      const counterZero = [`^CC 0;0`, `^CC 6;0`];
+      const counterZero = [`^CC 0;V0`, `^CC 0;0`, `^CC 6;V0`, `^CC 6;0`];
       preSelect = [
         ...counterZero,
         `^CC ${slot};I1`,
