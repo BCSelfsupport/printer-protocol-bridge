@@ -235,6 +235,8 @@ class PrinterSession {
 
     // ---- Emulator path: synthesize R/T/C entirely in-process ----
     if (this.isEmulated) {
+      // Show LOADING on the emulated HMI first so dev mirrors prod UX.
+      await showLoadingOnHmi();
       // Seed-on-bind is also honored on the emulator so the dev path mirrors prod.
       let seeded = false;
       if (seed && messageName) {
