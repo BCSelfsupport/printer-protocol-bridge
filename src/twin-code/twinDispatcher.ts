@@ -1462,15 +1462,16 @@ class TwinDispatcher {
       // `start` here, which is why production runs of 10 came back as
       // serials 2..11 instead of 1..10.
       const currentSeed = Math.max(0, start - 1);
+      // Zero the printer's HMI Print Count (id 0) and Product Count (id 6).
+      // Repeated in BOTH preSelect AND postSelect because some firmware
+      // revisions restore message-saved counter values on ^SM activation —
+      // resetting only before ^SM leaves the HMI showing the old count
+      // (which is exactly what the operator reported: only the lid Print
+      // Count cleared, Product Count and the SIDE printer counters all
+      // came back to their pre-bind values once ^SM fired).
+      const counterZero = [`^CC 0;0`, `^CC 6;0`];
       preSelect = [
-        // Zero the printer's HMI Print Count (id 0) and Product Count (id 6)
-        // so each fresh bind starts both sides from 0 — keeps the HMI
-        // service display in sync with the host HUD and the audit CSV.
-        // Without this the LID showed e.g. "10 prints" while the SIDE showed
-        // "84" because the lid had been re-seeded mid-test and the side
-        // hadn't.
-        `^CC 0;0`,
-        `^CC 6;0`,
+        ...counterZero,
         `^CC ${slot};I1`,
         `^CC ${slot};S${start}`,
         `^CC ${slot};E${end}`,
@@ -1478,7 +1479,7 @@ class TwinDispatcher {
         `^CC ${slot};T0`,
         `^CC ${slot};${currentSeed}`,
       ];
-      postSelect = [`^CC ${slot};${currentSeed}`];
+      postSelect = [...counterZero, `^CC ${slot};${currentSeed}`];
       // (Host-side mirror was already reset eagerly at the top of bind() so
       // the HUD updates instantly; no duplicate reset needed here.)
     }
