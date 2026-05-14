@@ -1583,11 +1583,22 @@ class TwinDispatcher {
     } else {
       catalogModule.recordMissed(bottleId);
     }
+    // Cycle time = wall-clock interval between consecutive photocell triggers.
+    // We don't have per-stage T1..T3 instrumentation in mirror mode (the
+    // firmware drives the photocell directly), so we collapse all stage
+    // timestamps onto `now` and derive cycleMs from the gap to the previous
+    // tick. This makes the cycle-time histogram + bottleneck callout work
+    // when the operator is hand-triggering the photocell.
+    const prevTick = this.mirrorRecentTicks.length
+      ? this.mirrorRecentTicks[this.mirrorRecentTicks.length - 1]
+      : null;
+    const cycleMs = prevTick != null ? Math.max(0, now - prevTick) : 0;
+    const t0 = prevTick != null ? prevTick : now;
     profilerBusModule.push({
       serial,
       outcome: serial ? 'printed' : 'missed',
-      t0: now, t1: now, t2a: now, t2b: now, t3a: now, t3b: now, t4: now,
-      ingressMs: 0, dispatchMs: 0, wireAMs: 0, wireBMs: 0, skewMs: 0, cycleMs: 0,
+      t0, t1: now, t2a: now, t2b: now, t3a: now, t3b: now, t4: now,
+      ingressMs: cycleMs, dispatchMs: 0, wireAMs: 0, wireBMs: 0, skewMs: 0, cycleMs,
     });
 
     // BPM = sliding 10-tick window
