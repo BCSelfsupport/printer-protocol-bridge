@@ -1402,26 +1402,63 @@ class TwinDispatcher {
     this.mirrorState = { active: true, count: 0, lastTickAt: 0, bpm: 0 };
     this.notifyMirror();
 
+    // In Auto-Code mode the SIDE printer (B) holds the authoritative custom
+    // counter — that's the value baked into both the printed text and the
+    // serial we mirror to the LID barcode. Polling A's print count drifts
+    // because the LID barcode field is static-data only and can't advance
+    // until we ^MD it. Poll B's ^CN custom slot instead.
+    const slot = this.mirrorAutoCode ? this.opts.autoCodeOpts?.counterSlot ?? null : null;
+    const pollPrinterId = this.mirrorAutoCode && this.b ? this.b.printerId : this.a.printerId;
+    const readCount = (raw: string): number | null => {
+      if (slot != null) {
+        const snap = parseCounterSnapshot(raw);
+        return snap.custom[slot - 1] ?? null;
+      }
+      return parsePrintCount(raw);
+    };
+
     const tick = async () => {
       if (!this.a) { this.stopPhotocellMirror(); return; }
       try {
-        const r = await printerTransport.sendCommand(this.a.printerId, '^CN', { maxWaitMs: 1500, idleAfterDataMs: 200 });
+        const r = await printerTransport.sendCommand(pollPrinterId, '^CN', { maxWaitMs: 1500, idleAfterDataMs: 200 });
         if (r?.success) {
-          const n = parsePrintCount(r.response || '');
+          const n = readCount(r.response || '');
           if (n != null) {
             if (this.mirrorBaseline == null) {
               this.mirrorBaseline = n;
               this.mirrorLast = n;
+              // First read: align the LID barcode with what the SIDE will
+              // print on the very next photocell trip.
+              if (this.mirrorAutoCode) {
+                autoCodeSerialMirror.resetForNext(n + 1);
+                void this.preloadAutoCodeLid(n + 1, 'mirror-baseline');
+              }
             } else if (this.mirrorLast != null && n > this.mirrorLast) {
               const delta = n - this.mirrorLast;
+              const firstPrintedCounter = this.mirrorLast + 1;
               this.mirrorLast = n;
+              if (this.mirrorAutoCode) {
+                // Re-align host mirror so each next() returns the serial
+                // matching the SIDE's actual printed counter (firstPrintedCounter..n).
+                autoCodeSerialMirror.resetForNext(firstPrintedCounter);
+              }
               for (let i = 0; i < delta; i++) {
                 this.recordMirroredPrint();
+              }
+              // Push the matching serial for the NEXT photocell trip to the
+              // LID so the 2D barcode tracks the SIDE counter in lock-step.
+              if (this.mirrorAutoCode) {
+                autoCodeSerialMirror.resetForNext(n + 1);
+                void this.preloadAutoCodeLid(n + 1, 'mirror-advance');
               }
             } else if (this.mirrorLast != null && n < this.mirrorLast) {
               // Counter was reset on the printer (re-zeroed) — re-baseline.
               this.mirrorBaseline = n;
               this.mirrorLast = n;
+              if (this.mirrorAutoCode) {
+                autoCodeSerialMirror.resetForNext(n + 1);
+                void this.preloadAutoCodeLid(n + 1, 'mirror-rezero');
+              }
             }
           }
         }
@@ -1663,6 +1700,19 @@ class TwinDispatcher {
       forceZeroHmiRunCountersForPrinter(aId, 'A', 'post-field-check'),
       forceZeroHmiRunCountersForPrinter(bId, 'B', 'post-field-check'),
     ]);
+
+    // Auto-Code: align the LID barcode with the SIDE's first upcoming print
+    // BEFORE the operator starts the line. Without this preload the LID's
+    // 2D field carries whatever serial was last written (often `000001`)
+    // while the SIDE freshly prints `start`, producing the visible mismatch
+    // operators reported (side=000003 / lid=000001).
+    if (opts.autoCodeMode && opts.autoCodeOpts) {
+      const slot = opts.autoCodeOpts.counterSlot;
+      const start = Math.max(1, opts.autoCodeOpts.counterStart ?? 1);
+      const next = await this.resolveNextAutoCodeCounterFromSide(bId, slot, start);
+      autoCodeSerialMirror.resetForNext(next);
+      await this.preloadAutoCodeLid(next, 'bind-initial');
+    }
 
     console.info('[TwinBind] bind complete');
     return { ok: true, aId, bId, seededA: !!resA.seeded, seededB: !!resB.seeded };
