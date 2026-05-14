@@ -84,21 +84,17 @@ function isPrinterCommandAccepted(result: { success?: boolean; response?: string
   return !/(^|[\r\n])\s*\?\s*\d*|\b(CmdFormat|Invalid|InvYesNo|OutOfRange|MsgNotFnd|FileNotFound|not\s+found|failed)\b/i.test(text);
 }
 
+// Mirror the dashboard Reset button (resetCounter in usePrinterConnection):
+// it sends a single bare `^CC <id>;0` per counter, sequentially, and that is
+// the spelling the HMI actually honours on both 2D-lid and side printers.
+// Counter IDs: 0 = Print, 1-4 = Custom, 6 = Product.
 const HMI_COUNTER_ZERO_COMMANDS = [
-  // Compact value form is what the existing Counters screen uses successfully.
   '^CC 0;0',
+  '^CC 1;0',
+  '^CC 2;0',
+  '^CC 3;0',
+  '^CC 4;0',
   '^CC 6;0',
-  // Named current-value form is accepted by newer v2.6 firmware.
-  '^CC 0;V0',
-  '^CC 6;V0',
-  // Full named form makes the value reset unambiguous on firmwares that require
-  // V plus configuration context before the HMI service counter is refreshed.
-  '^CC 0;V0;S0;L0;T0;I1;E999999999;R0',
-  '^CC 6;V0;S0;L0;T0;I1;E999999999;R0',
-  // Some protocol builds document counter edits through ^CN n;value. If a unit
-  // only supports query-only ^CN this will NAK harmlessly; we log acceptance.
-  '^CN 0;0',
-  '^CN 6;0',
 ] as const;
 
 /**
