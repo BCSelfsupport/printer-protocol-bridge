@@ -291,6 +291,8 @@ class PrinterSession {
           return { ok: false, error: `${this.label}: ^SM failed (emulator)` };
         }
       }
+      await runPostSelect();
+      await forceZeroHmiRunCounters();
       // Drive ^MB through the regular transport so emulator state stays consistent.
       // Per v2.6 §6.1, ^MB is the 1:1 entry command; ^CM p1 is Auto-Print, not 1:1.
       // Auto-Code mode skips ^MB — the printer self-prints from the hardware photocell.
@@ -401,6 +403,7 @@ class PrinterSession {
     }
 
     await runPostSelect();
+    await forceZeroHmiRunCounters();
 
     const nativeArmed = await armNativePhotocellMode();
     if (!nativeArmed.ok) {
