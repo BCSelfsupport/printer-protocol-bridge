@@ -27,7 +27,7 @@ import { printerTransport } from '@/lib/printerTransport';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import type { Printer } from '@/types/printer';
 import type { TwinPairState } from '@/twin-code/twinPairStore';
-import { buildAutoCodeSeed, buildSeedCommands, seedForSide, type MessageSeed } from '@/twin-code/messageSeeds';
+import { buildAutoCodeSeed, buildSeedCommands, seedForSide, LOADING_SEED, LOADING_MESSAGE_NAME, type MessageSeed } from '@/twin-code/messageSeeds';
 import { catalog as catalogModule } from '@/twin-code/catalog';
 import { profilerBus as profilerBusModule } from '@/twin-code/profilerBus';
 import { autoCodeSerial as autoCodeSerialMirror } from '@/twin-code/autoCodeSerial';
