@@ -17,6 +17,7 @@ export function StageHeatmap({ samples, stage, label }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const data = useMemo(() => samples.slice(-2000).map((s) => s[stage]), [samples, stage]);
+  const hasData = useMemo(() => data.some((v) => v > 0), [data]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
