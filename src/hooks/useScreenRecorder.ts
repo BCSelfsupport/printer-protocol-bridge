@@ -30,7 +30,11 @@ async function getElectronStream(): Promise<MediaStream> {
       mandatory: {
         chromeMediaSource: 'desktop',
         chromeMediaSourceId: sourceId,
-        maxFrameRate: 15,
+        maxFrameRate: 30,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        minWidth: 1280,
+        minHeight: 720,
       },
     },
   });
