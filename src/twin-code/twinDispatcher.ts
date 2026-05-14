@@ -1554,7 +1554,7 @@ class TwinDispatcher {
       // (which is exactly what the operator reported: only the lid Print
       // Count cleared, Product Count and the SIDE printer counters all
       // came back to their pre-bind values once ^SM fired).
-      const counterZero = [...HMI_COUNTER_ZERO_COMMANDS];
+      const counterZero = [...ALL_COUNTER_ZERO_COMMANDS];
       preSelect = [
         ...counterZero,
         `^CC ${slot};I1`,
