@@ -27,7 +27,7 @@ import { printerTransport } from '@/lib/printerTransport';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import type { Printer } from '@/types/printer';
 import type { TwinPairState } from '@/twin-code/twinPairStore';
-import { buildAutoCodeSeed, buildSeedCommands, seedForSide, type MessageSeed } from '@/twin-code/messageSeeds';
+import { buildAutoCodeSeed, buildSeedCommands, seedForSide, LOADING_SEED, LOADING_MESSAGE_NAME, type MessageSeed } from '@/twin-code/messageSeeds';
 import { catalog as catalogModule } from '@/twin-code/catalog';
 import { profilerBus as profilerBusModule } from '@/twin-code/profilerBus';
 import { autoCodeSerial as autoCodeSerialMirror } from '@/twin-code/autoCodeSerial';
@@ -218,8 +218,25 @@ class PrinterSession {
       return { ok: true };
     };
 
+    // Show "LOADING" on the printer HMI immediately so the operator gets
+    // visual feedback during the rest of bind (field check, ^CC, ^SM target,
+    // ^MB). Best-effort: any failure is swallowed because this is purely
+    // cosmetic — the real ^SM target later in enter() always overrides it.
+    const showLoadingOnHmi = async () => {
+      try {
+        const ensure = await this.ensureMessage(LOADING_MESSAGE_NAME, LOADING_SEED);
+        if (!ensure.ok) { trace('loading-hmi:ensure-failed', { error: ensure.error }); return; }
+        const sm = await printerTransport.sendCommand(this.printerId, `^SM ${LOADING_MESSAGE_NAME}`, { maxWaitMs: 2000 });
+        trace('loading-hmi:shown', { ok: !!sm?.success });
+      } catch (e) {
+        trace('loading-hmi:error', { error: String(e) });
+      }
+    };
+
     // ---- Emulator path: synthesize R/T/C entirely in-process ----
     if (this.isEmulated) {
+      // Show LOADING on the emulated HMI first so dev mirrors prod UX.
+      await showLoadingOnHmi();
       // Seed-on-bind is also honored on the emulator so the dev path mirrors prod.
       let seeded = false;
       if (seed && messageName) {
@@ -294,6 +311,10 @@ class PrinterSession {
       return { ok: false, error: `${this.label}: 1-1 attach failed — no active socket` };
     }
     trace('attach:ok');
+
+    // Show "LOADING" on the HMI as soon as we have a socket — gives the
+    // operator immediate visual feedback while seeding/^CC/^SM-target run.
+    await showLoadingOnHmi();
 
     // Seed-on-bind: if the operator opted in (passed `seed`) and the named
     // message isn't on the printer yet, lay it down before ^SM so the
