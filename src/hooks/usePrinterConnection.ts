@@ -996,6 +996,33 @@ export function usePrinterConnection() {
     connectedPrinterPortRef.current = connectionState.connectedPrinter?.port;
   }, [connectionState.connectedPrinter?.ipAddress, connectionState.connectedPrinter?.port]);
 
+  // Twin-Code bonded sessions pause normal ^SU polling for the entire session,
+  // so when the production-run watcher fires `^PR 0` (HV deflection off) at
+  // end-of-lot, this hook never sees the resulting V300UP:0 and the dashboard
+  // keeps showing "HV On". twinDispatcher dispatches `twincode:hv-state` after
+  // every inhibitPrinting/resumePrinting so we can flip our local status to
+  // match the actual printer without unpausing polling.
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const detail = (ev as CustomEvent<{ printerIds: number[]; hvOn: boolean }>).detail;
+      const connectedId = connectedPrinterIdRef.current;
+      if (connectedId == null || !detail?.printerIds?.includes(connectedId)) return;
+      const hvOn = !!detail.hvOn;
+      console.info('[usePrinterConnection] twincode:hv-state for connected printer', { connectedId, hvOn });
+      setConnectionState(prev => ({
+        ...prev,
+        status: prev.status ? { ...prev.status, isRunning: hvOn, jetRunning: hvOn ? prev.status.jetRunning : false } : prev.status,
+      }));
+      updatePrinterStatus(connectedId, {
+        isAvailable: true,
+        status: hvOn ? 'ready' : 'not_ready',
+        hasActiveErrors: false,
+      });
+    };
+    window.addEventListener('twincode:hv-state', handler as EventListener);
+    return () => window.removeEventListener('twincode:hv-state', handler as EventListener);
+  }, [updatePrinterStatus]);
+
   // Track consecutive polling cycle failures to detect unreachable printers.
   // When a connected printer stops responding (e.g. IP changed, network down),
   // we mark it offline after enough consecutive failed cycles.
