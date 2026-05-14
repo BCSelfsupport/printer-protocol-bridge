@@ -257,7 +257,7 @@ export function TrainingVideosScreen({ onBack, recorderState, recorderActions }:
                 Record Training Video
               </DialogTitle>
             </DialogHeader>
-            <div className="flex-1 min-h-[400px] overflow-hidden">
+            <div className="flex-1 min-h-[400px] overflow-y-auto">
               <TrainingVideoRecorder
                 recorderState={recorderState}
                 recorderActions={recorderActions}
