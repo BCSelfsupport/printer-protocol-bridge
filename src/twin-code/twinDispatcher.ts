@@ -204,6 +204,28 @@ class PrinterSession {
       trace('postSelect:done');
     };
 
+    const forceZeroHmiRunCounters = async () => {
+      // Use named current-value form first (`V0`) and compact legacy form as a
+      // fallback. Some firmware accepts both but only applies one reliably to
+      // the HMI service counters after ^SM activates the production message.
+      trace('hmi-counter-zero:start');
+      const commands = ['^CC 0;V0', '^CC 0;0', '^CC 6;V0', '^CC 6;0'];
+      for (const cmd of commands) {
+        const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000, idleAfterDataMs: 700 }).catch(() => null);
+        console.info(`[TwinBind:${this.label}] hmi-counter-zero:cmd`, { printerId: this.printerId, cmd, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+        await new Promise(res => setTimeout(res, 350));
+      }
+      await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 4000, idleAfterDataMs: 700 }).catch(() => {});
+      await new Promise(res => setTimeout(res, 700));
+
+      const cn = await printerTransport.sendCommand(this.printerId, '^CN', { maxWaitMs: 4000, idleAfterDataMs: 800 }).catch(() => null);
+      const counts = parseCounterCounts(cn?.response || '');
+      trace('hmi-counter-zero:verify', { ok: !!cn?.success, product: counts.product, print: counts.print });
+      if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
+        console.warn(`[TwinBind:${this.label}] HMI counters still non-zero after bind reset`, { printerId: this.printerId, response: cn.response, counts });
+      }
+    };
+
     const armNativePhotocellMode = async (): Promise<{ ok: boolean; error?: string }> => {
       if (!skipOneToOne) return { ok: true };
       trace('native-photocell:arm:start');
