@@ -20,6 +20,7 @@ type Stage = 'check' | 'verify';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+const PREVIEW_DEV_PASSWORD = 'CITEC';
 
 /**
  * Server-verified developer sign-in.
@@ -38,6 +39,11 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
     if (!open) return;
     setError(null);
     setCode('');
+    if (import.meta.env.DEV) {
+      setStage('verify');
+      setBusy(false);
+      return;
+    }
     if (!productKey) {
       setError('No license key activated.');
       return;
@@ -71,6 +77,13 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
     if (!code.trim() || !productKey) return;
     setBusy(true);
     setError(null);
+    if (import.meta.env.DEV && code.trim().toUpperCase() === PREVIEW_DEV_PASSWORD) {
+      setCode('');
+      onSuccess();
+      onOpenChange(false);
+      setBusy(false);
+      return;
+    }
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-dev-access`, {
         method: 'POST',
