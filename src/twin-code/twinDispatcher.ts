@@ -280,11 +280,19 @@ class PrinterSession {
     // cosmetic — the real ^SM target later in enter() always overrides it.
     const showLoadingOnHmi = async (minVisibleMs = 0) => {
       try {
-        const ensure = await this.ensureMessage(LOADING_MESSAGE_NAME, LOADING_SEED);
+        const target = LOADING_MESSAGE_NAME.trim().toUpperCase();
+        // Always rewrite LOADING instead of trusting ^LM. The customer saw the
+        // HMI flip to BESTCODE during bind, which means an old/stale LOADING
+        // entry or a failed select can leave no visible placeholder. A forced
+        // ^DM/^NM/^SV makes the placeholder deterministic before ^SM.
+        const ensure = await this.runSeedCommands(target, LOADING_SEED);
         if (!ensure.ok) { trace('loading-hmi:ensure-failed', { error: ensure.error }); return; }
-        const sm = await printerTransport.sendCommand(this.printerId, `^SM ${LOADING_MESSAGE_NAME}`, { maxWaitMs: 4000, idleAfterDataMs: 700 });
-        trace('loading-hmi:shown', { ok: !!sm?.success, response: sm?.response?.trim?.()?.slice(0, 120) });
-        if (sm?.success && minVisibleMs > 0) await new Promise(res => setTimeout(res, minVisibleMs));
+        await new Promise(res => setTimeout(res, 300));
+        const sm = await printerTransport.sendCommand(this.printerId, `^SM ${target}`, { maxWaitMs: 4000, idleAfterDataMs: 1000 });
+        await new Promise(res => setTimeout(res, 300));
+        const verified = isPrinterCommandAccepted(sm) ? await this.verifyActiveMessage(target) : { ok: false, active: '' };
+        trace('loading-hmi:shown', { ok: isPrinterCommandAccepted(sm), active: verified.active, response: sm?.response?.trim?.()?.slice(0, 120) });
+        if (isPrinterCommandAccepted(sm) && minVisibleMs > 0) await new Promise(res => setTimeout(res, minVisibleMs));
       } catch (e) {
         trace('loading-hmi:error', { error: String(e) });
       }
