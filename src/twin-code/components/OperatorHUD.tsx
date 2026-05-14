@@ -114,12 +114,12 @@ export function OperatorHUD() {
   const lastPrinted = useMemo(() => {
     for (let i = conv.bottles.length - 1; i >= 0; i--) {
       const b = conv.bottles[i];
-      if (b.state === "printed" && b.serial) return b;
+      if (b.state === "printed" && b.serial) return { id: b.id + 1, serial: b.serial };
     }
     for (let i = samples.length - 1; i >= 0; i--) {
       const s = samples[i];
       if (s.outcome === "printed" && s.serial) {
-        return { id: s.index, serial: s.serial } as { id: number; serial: string };
+        return { id: s.index + 1, serial: s.serial };
       }
     }
     return null;
