@@ -1441,6 +1441,15 @@ class TwinDispatcher {
       }
     }
     this.stopPhotocellMirror();
+    // Polling is paused for the entire bonded session, so the dashboard's
+    // status.isRunning never gets a fresh ^SU after we drop HV deflection.
+    // Broadcast an explicit HV-off event so the per-printer connection hook
+    // can flip its local status without waiting for unpaused polling.
+    try {
+      window.dispatchEvent(new CustomEvent('twincode:hv-state', {
+        detail: { printerIds: targets, hvOn: false },
+      }));
+    } catch { /* non-browser */ }
   }
 
   /**
@@ -1456,6 +1465,11 @@ class TwinDispatcher {
       const r = await printerTransport.sendCommand(id, '^PR 1', { maxWaitMs: 3000 }).catch(() => null);
       console.info('[TwinDispatcher] resumePrinting:^PR 1', { printerId: id, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
     }
+    try {
+      window.dispatchEvent(new CustomEvent('twincode:hv-state', {
+        detail: { printerIds: targets, hvOn: true },
+      }));
+    } catch { /* non-browser */ }
   }
 
   /**
