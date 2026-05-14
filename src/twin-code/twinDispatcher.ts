@@ -228,14 +228,16 @@ class PrinterSession {
     };
 
     const forceZeroHmiRunCounters = async () => {
-      // Use named current-value form first (`V0`) and compact legacy form as a
-      // fallback. Some firmware accepts both but only applies one reliably to
-      // the HMI service counters after ^SM activates the production message.
+      // Try every counter-reset spelling known to this app/protocol. The
+      // compact ^CC C;V form is proven by the manual Counters screen, but some
+      // v2.6 builds prefer named V0, and older notes mention ^CN n;value.
       trace('hmi-counter-zero:start');
-      const commands = ['^CC 0;V0', '^CC 0;0', '^CC 6;V0', '^CC 6;0'];
-      for (const cmd of commands) {
+      const accepted: string[] = [];
+      for (const cmd of HMI_COUNTER_ZERO_COMMANDS) {
         const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000, idleAfterDataMs: 700 }).catch(() => null);
-        console.info(`[TwinBind:${this.label}] hmi-counter-zero:cmd`, { printerId: this.printerId, cmd, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+        const ok = isPrinterCommandAccepted(r);
+        if (ok) accepted.push(cmd);
+        console.info(`[TwinBind:${this.label}] hmi-counter-zero:cmd`, { printerId: this.printerId, cmd, ok, response: r?.response?.trim?.()?.slice(0, 120) });
         await new Promise(res => setTimeout(res, 350));
       }
       await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 4000, idleAfterDataMs: 700 }).catch(() => {});
@@ -243,7 +245,7 @@ class PrinterSession {
 
       const cn = await printerTransport.sendCommand(this.printerId, '^CN', { maxWaitMs: 4000, idleAfterDataMs: 800 }).catch(() => null);
       const counts = parseCounterCounts(cn?.response || '');
-      trace('hmi-counter-zero:verify', { ok: !!cn?.success, product: counts.product, print: counts.print });
+      trace('hmi-counter-zero:verify', { ok: !!cn?.success, accepted, product: counts.product, print: counts.print });
       if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
         console.warn(`[TwinBind:${this.label}] HMI counters still non-zero after bind reset`, { printerId: this.printerId, response: cn.response, counts });
       }
