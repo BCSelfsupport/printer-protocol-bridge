@@ -77,7 +77,16 @@ export function StageHeatmap({ samples, stage, label }: Props) {
           time → · y = stage duration · brightness = density
         </span>
       </div>
-      <canvas ref={canvasRef} className="h-32 w-full rounded" />
+      {hasData ? (
+        <canvas ref={canvasRef} className="h-32 w-full rounded" />
+      ) : (
+        <div className="flex h-32 items-center justify-center px-3 text-center">
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            No samples for {label.toLowerCase()} — this stage isn't measured in
+            photocell / Auto-Code mode.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
