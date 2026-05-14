@@ -1463,6 +1463,14 @@ class TwinDispatcher {
       // serials 2..11 instead of 1..10.
       const currentSeed = Math.max(0, start - 1);
       preSelect = [
+        // Zero the printer's HMI Print Count (id 0) and Product Count (id 6)
+        // so each fresh bind starts both sides from 0 — keeps the HMI
+        // service display in sync with the host HUD and the audit CSV.
+        // Without this the LID showed e.g. "10 prints" while the SIDE showed
+        // "84" because the lid had been re-seeded mid-test and the side
+        // hadn't.
+        `^CC 0;0`,
+        `^CC 6;0`,
         `^CC ${slot};I1`,
         `^CC ${slot};S${start}`,
         `^CC ${slot};E${end}`,
