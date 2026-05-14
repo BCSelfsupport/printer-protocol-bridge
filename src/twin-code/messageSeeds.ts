@@ -299,6 +299,13 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
 
   // Standard 7-high font: 5 dots wide + 1 dot gap = 6 dots per character.
   const W = 6;
+  // Resolve the year letter from the operator-configured Program Year map
+  // (defaults to "A" for the current year). We bake this as a STATIC text
+  // character instead of using ^AP d=10, because ^AP relies on the printer's
+  // own Program Year HMI table — if that table isn't pre-configured on each
+  // printer, the field renders blank on the HMI (gap between line# and DDD).
+  // Hardcoding the letter here removes that hidden setup dependency entirely.
+  const yearChar = letterForCurrentYear(opts.yearMap);
   const xLine    = 0;
   const xYear    = xLine    + normalizedLine.length * W + 1;
   const xJulian  = xYear    + 1 * W + 1;
@@ -340,9 +347,12 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
 
   const firstField = `^AT1;${xLine};0;${FONT};${normalizedLine}`;
   const appendFields = [
-    // ^AP d=10 → printer looks up the full 4-digit year in its Program Year
-    // HMI table and prints the mapped character (e.g. 2026 → A).
-    `^AP2;${xYear};0;${FONT};10`,
+    // Year letter is a STATIC text field (e.g. "A" for 2026) baked in from
+    // the host-side year map. Avoids the ^AP/Program-Year HMI-table dependency
+    // that previously left the HMI showing a blank gap where the letter
+    // should be. The host re-seeds the message at bind, so a year rollover
+    // is picked up the next time the operator binds the pair.
+    `^AT2;${xYear};0;${FONT};${yearChar}`,
     `^AD3;${xJulian};0;${FONT};4`,
     `^AC4;${xCounter};0;${FONT};${slot};${COUNTER_DIGITS};${COUNTER_LEADING_ZERO}`,
     `^AT5;${xUnit};0;${FONT};${normalizedUnit}`,
