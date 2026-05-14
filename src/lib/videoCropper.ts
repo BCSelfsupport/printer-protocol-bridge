@@ -111,7 +111,7 @@ export async function cropVideoTop(
     log('using mimeType', mimeType);
 
     const chunks: Blob[] = [];
-    const recorder = new MediaRecorder(combined, { mimeType });
+    const recorder = new MediaRecorder(combined, { mimeType, videoBitsPerSecond: 8_000_000 });
     recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
 
     const stopped = new Promise<Blob>((resolve) => {

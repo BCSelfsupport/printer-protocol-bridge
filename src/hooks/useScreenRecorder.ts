@@ -72,7 +72,11 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
         screenStream = await getElectronStream();
       } else if (navigator.mediaDevices?.getDisplayMedia) {
         screenStream = await navigator.mediaDevices.getDisplayMedia({
-          video: { frameRate: 15 },
+          video: {
+            frameRate: { ideal: 30 },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
           audio: false,
         });
       } else {
@@ -103,6 +107,7 @@ export function useScreenRecorder(onRecordingStart?: () => void) {
 
       const recorder = new MediaRecorder(combinedStream, {
         mimeType: 'video/webm;codecs=vp9',
+        videoBitsPerSecond: 8_000_000, // 8 Mbps for crisp text
       });
 
       recorder.ondataavailable = (e) => {
