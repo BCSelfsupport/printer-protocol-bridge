@@ -1337,7 +1337,9 @@ class TwinDispatcher {
   private async resolveNextAutoCodeCounterFromSide(printerId: number, slot: 1 | 2 | 3 | 4, fallbackNext: number): Promise<number> {
     const cn = await printerTransport.sendCommand(printerId, '^CN', { maxWaitMs: 2000, idleAfterDataMs: 300 }).catch(() => null);
     const current = cn?.success ? parseCounterSnapshot(cn.response || '').custom[slot - 1] : null;
-    return current != null && current >= 0 ? current + 1 : fallbackNext;
+    // ^CN reports the value SIDE will print on the next photocell trip
+    // (post-^CC-load semantics). That IS the value the LID must encode.
+    return current != null && current >= 0 ? current : fallbackNext;
   }
 
   private async preloadAutoCodeLid(nextCounter: number, reason: string): Promise<void> {
@@ -1389,7 +1391,9 @@ class TwinDispatcher {
     if (this.opts.autoCodeMode && this.opts.autoCodeOpts && this.b) {
       const slot = this.opts.autoCodeOpts.counterSlot;
       const start = Math.max(1, Math.floor(this.opts.autoCodeOpts.counterStart ?? 1));
-      const seed = Math.max(0, start - 1);
+      // `^CC slot;V` loads V as the next-to-print value (no pre-increment),
+      // so seeding `start` directly makes the first print equal `start`.
+      const seed = start;
       const end = 999999;
       for (const t of targets) {
         for (const cmd of [`^CC ${slot};I1`, `^CC ${slot};S${start}`, `^CC ${slot};E${end}`, `^CC ${slot};L1`, `^CC ${slot};T0`, `^CC ${slot};${seed}`]) {
@@ -1496,19 +1500,22 @@ class TwinDispatcher {
             if (this.mirrorBaseline == null) {
               this.mirrorBaseline = n;
               this.mirrorLast = n;
-              // First read: align the LID barcode with what the SIDE will
-              // print on the very next photocell trip.
+              // First read: ^CN on SIDE reports the value the printer will
+              // PRINT on the next photocell trip (post-^CC load semantics).
+              // Preload the LID with that same value so the 2D barcode
+              // matches the SIDE's first physical print 1:1.
               if (this.mirrorAutoCode) {
-                autoCodeSerialMirror.resetForNext(n + 1);
-                void this.preloadAutoCodeLid(n + 1, 'mirror-baseline');
+                autoCodeSerialMirror.resetForNext(n);
+                void this.preloadAutoCodeLid(n, 'mirror-baseline');
               }
             } else if (this.mirrorLast != null && n > this.mirrorLast) {
               const delta = n - this.mirrorLast;
-              const firstPrintedCounter = this.mirrorLast + 1;
+              // Under the post-^CC-load model, ^CN reads the NEXT-to-print
+              // value. Between polls the SIDE printed `mirrorLast .. n-1`
+              // and now sits ready to print `n`.
+              const firstPrintedCounter = this.mirrorLast;
               this.mirrorLast = n;
               if (this.mirrorAutoCode) {
-                // Re-align host mirror so each next() returns the serial
-                // matching the SIDE's actual printed counter (firstPrintedCounter..n).
                 autoCodeSerialMirror.resetForNext(firstPrintedCounter);
               }
               for (let i = 0; i < delta; i++) {
@@ -1517,16 +1524,16 @@ class TwinDispatcher {
               // Push the matching serial for the NEXT photocell trip to the
               // LID so the 2D barcode tracks the SIDE counter in lock-step.
               if (this.mirrorAutoCode) {
-                autoCodeSerialMirror.resetForNext(n + 1);
-                void this.preloadAutoCodeLid(n + 1, 'mirror-advance');
+                autoCodeSerialMirror.resetForNext(n);
+                void this.preloadAutoCodeLid(n, 'mirror-advance');
               }
             } else if (this.mirrorLast != null && n < this.mirrorLast) {
               // Counter was reset on the printer (re-zeroed) — re-baseline.
               this.mirrorBaseline = n;
               this.mirrorLast = n;
               if (this.mirrorAutoCode) {
-                autoCodeSerialMirror.resetForNext(n + 1);
-                void this.preloadAutoCodeLid(n + 1, 'mirror-rezero');
+                autoCodeSerialMirror.resetForNext(n);
+                void this.preloadAutoCodeLid(n, 'mirror-rezero');
               }
             }
           }
@@ -1691,13 +1698,13 @@ class TwinDispatcher {
       const slot = opts.autoCodeOpts.counterSlot;
       const start = Math.max(0, opts.autoCodeOpts.counterStart ?? 0);
       const end = 999999;
-      // BestCode `^CC slot;V` sets the *current* count; the printer then
-      // increment-then-prints on each photocell trip, so the FIRST physical
-      // print = V + 1. To make the first print equal `start`, seed the
-      // current value to `start - 1` (clamped to 0). Earlier we wrote
-      // `start` here, which is why production runs of 10 came back as
-      // serials 2..11 instead of 1..10.
-      const currentSeed = Math.max(0, start - 1);
+      // BestCode `^CC slot;V` loads V as the value the printer will PRINT
+      // on the next photocell trip (then increments after print). Earlier we
+      // seeded `start - 1` assuming increment-then-print, but operators saw
+      // SIDE physically print one BELOW what the host/HUD/LID showed
+      // (e.g. SIDE=000008 while HUD/LID=000009). Seed `start` directly so
+      // the first physical print equals `start` and the LID/HUD agree.
+      const currentSeed = start;
       // Zero the printer's HMI Print Count (id 0) and Product Count (id 6).
       // Repeated in BOTH preSelect AND postSelect because some firmware
       // revisions restore message-saved counter values on ^SM activation —
