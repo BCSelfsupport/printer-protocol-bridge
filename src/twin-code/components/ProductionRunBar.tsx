@@ -94,7 +94,7 @@ export function ProductionRunBar() {
       // hardware beam break — the ledger stop alone won't halt the line.
       // Send `n 0` (HV deflection off) to both bound printers so further
       // photocell trips are ignored at exactly the target count.
-      twinDispatcher.inhibitPrinting().catch(() => {});
+      twinDispatcher.inhibitPrinting({ correctCounterTo: exp.summary.printed }).catch(() => {});
       downloadRunCSV(exp);
       downloadRunJSON(exp);
       downloadEnvelopeReport(exp);
