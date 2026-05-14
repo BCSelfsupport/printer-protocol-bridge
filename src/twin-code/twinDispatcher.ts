@@ -1513,7 +1513,7 @@ class TwinDispatcher {
       // (which is exactly what the operator reported: only the lid Print
       // Count cleared, Product Count and the SIDE printer counters all
       // came back to their pre-bind values once ^SM fired).
-      const counterZero = [`^CC 0;0`, `^CC 6;0`];
+      const counterZero = [`^CC 0;V0`, `^CC 0;0`, `^CC 6;V0`, `^CC 6;0`];
       preSelect = [
         ...counterZero,
         `^CC ${slot};I1`,
