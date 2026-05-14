@@ -281,13 +281,18 @@ class PrinterSession {
     const showLoadingOnHmi = async (minVisibleMs = 0) => {
       try {
         const target = LOADING_MESSAGE_NAME.trim().toUpperCase();
-        // Always rewrite LOADING instead of trusting ^LM. The customer saw the
-        // HMI flip to BESTCODE during bind, which means an old/stale LOADING
-        // entry or a failed select can leave no visible placeholder. A forced
-        // ^DM/^NM/^SV makes the placeholder deterministic before ^SM.
-        const ensure = await this.runSeedCommands(target, LOADING_SEED);
-        if (!ensure.ok) { trace('loading-hmi:ensure-failed', { error: ensure.error }); return; }
-        await new Promise(res => setTimeout(res, 300));
+        // Directly write/select LOADING without `parkAwayFromTarget()`: parking
+        // can visibly select BESTCODE first, which is exactly what we are trying
+        // to avoid during the operator-facing bind switch.
+        const cmds = buildSeedCommands(LOADING_SEED, target);
+        for (const cmd of cmds) {
+          const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000, idleAfterDataMs: 800 }).catch(() => null);
+          if (!isPrinterCommandAccepted(r) && !cmd.startsWith('^DM')) {
+            trace('loading-hmi:ensure-failed', { cmd, response: r?.response?.trim?.()?.slice(0, 120), error: r?.error });
+            return;
+          }
+          await new Promise(res => setTimeout(res, cmd.startsWith('^DM') ? 200 : 350));
+        }
         const sm = await printerTransport.sendCommand(this.printerId, `^SM ${target}`, { maxWaitMs: 4000, idleAfterDataMs: 1000 });
         await new Promise(res => setTimeout(res, 300));
         const verified = isPrinterCommandAccepted(sm) ? await this.verifyActiveMessage(target) : { ok: false, active: '' };
