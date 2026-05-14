@@ -1373,6 +1373,23 @@ class TwinDispatcher {
 
     this.opts = opts;
 
+    // Reset the host-side auto-code serial mirror IMMEDIATELY (before polling
+    // pause / setMeta / waitForPollingIdle / parallel ^MB enter). The wire
+    // ^CC commands still ride along in preSelect below, but the HUD/LID
+    // mirror reads from the host counter — doing this synchronously means
+    // the operator sees `000001` the instant they hit Bind instead of after
+    // the 1-3s firmware handshake settles.
+    if (opts.autoCodeMode && opts.autoCodeOpts) {
+      const start = Math.max(0, opts.autoCodeOpts.counterStart ?? 0);
+      const currentSeed = Math.max(0, start - 1);
+      try {
+        autoCodeSerialMirror.reset(currentSeed);
+        console.info('[TwinBind] host autocode counter reset (eager)', { start, currentSeed });
+      } catch (e) {
+        console.warn('[TwinBind] host autocode counter reset failed', e);
+      }
+    }
+
     // Pause polling once for the whole bonded session.
     this.wasPollingPaused = isPollingPaused();
     if (!this.wasPollingPaused) setPollingPaused(true);
@@ -1426,15 +1443,8 @@ class TwinDispatcher {
         `^CC ${slot};${currentSeed}`,
       ];
       postSelect = [`^CC ${slot};${currentSeed}`];
-      // Reset host-side serial mirror to the same pre-increment seed so the
-      // LID ^MD^BD frame and the SIDE's auto-printed counter both produce
-      // the same serial on the very first photocell trip after rebind.
-      try {
-        autoCodeSerialMirror.reset(currentSeed);
-        console.info('[TwinBind] host autocode counter reset', { start, currentSeed });
-      } catch (e) {
-        console.warn('[TwinBind] host autocode counter reset failed', e);
-      }
+      // (Host-side mirror was already reset eagerly at the top of bind() so
+      // the HUD updates instantly; no duplicate reset needed here.)
     }
 
     const skipOneToOne = !!opts.autoCodeMode;
