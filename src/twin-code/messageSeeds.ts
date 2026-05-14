@@ -149,6 +149,28 @@ export const SIDE_SEED: MessageSeed = {
 };
 
 /**
+ * LOADING seed — single text field that says "LOADING" on the HMI while the
+ * dispatcher does the real bind work (field check, ^CC counter setup, ^SM of
+ * the production target). Operator visibility only — never actually prints
+ * because we always ^SM-swap to the real target before ^MB / Print Go.
+ *
+ * Same shape as SIDE_SEED (1×7-dot template, Standard 7-high text) so it
+ * works on both lid and side printers regardless of the production template.
+ */
+export const LOADING_SEED: MessageSeed = {
+  label: "Loading placeholder",
+  description: "Temporary HMI placeholder shown during bind — never prints.",
+  commandsTemplate: [
+    "^DM __NAME__",
+    "^NM 1;0;0;0;__NAME__^AT1;0;0;2;LOADING",
+    "^SV",
+  ],
+};
+
+/** Canonical name used for the bind-time placeholder message. */
+export const LOADING_MESSAGE_NAME = "LOADING";
+
+/**
  * Resolve a seed's template into concrete commands for a given message name.
  * The seed templates use the placeholder `__NAME__` so operator-renamed pairs
  * (e.g. "LID-A1" instead of plain "LID") still get the correct ^DM target.
