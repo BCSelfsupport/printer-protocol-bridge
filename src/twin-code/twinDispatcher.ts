@@ -1337,7 +1337,9 @@ class TwinDispatcher {
   private async resolveNextAutoCodeCounterFromSide(printerId: number, slot: 1 | 2 | 3 | 4, fallbackNext: number): Promise<number> {
     const cn = await printerTransport.sendCommand(printerId, '^CN', { maxWaitMs: 2000, idleAfterDataMs: 300 }).catch(() => null);
     const current = cn?.success ? parseCounterSnapshot(cn.response || '').custom[slot - 1] : null;
-    return current != null && current >= 0 ? current + 1 : fallbackNext;
+    // ^CN reports the value SIDE will print on the next photocell trip
+    // (post-^CC-load semantics). That IS the value the LID must encode.
+    return current != null && current >= 0 ? current : fallbackNext;
   }
 
   private async preloadAutoCodeLid(nextCounter: number, reason: string): Promise<void> {
