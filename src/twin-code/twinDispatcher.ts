@@ -84,11 +84,9 @@ function isPrinterCommandAccepted(result: { success?: boolean; response?: string
   return !/(^|[\r\n])\s*\?\s*\d*|\b(CmdFormat|Invalid|InvYesNo|OutOfRange|MsgNotFnd|FileNotFound|not\s+found|failed)\b/i.test(text);
 }
 
-// Mirror the dashboard Reset button (resetCounter in usePrinterConnection):
-// it sends a single bare `^CC <id>;0` per counter, sequentially, and that is
-// the spelling the HMI actually honours on both 2D-lid and side printers.
-// Counter IDs: 0 = Print, 1-4 = Custom, 6 = Product.
-const HMI_COUNTER_ZERO_COMMANDS = [
+// Mirror the dashboard Reset button spelling (resetCounter in usePrinterConnection):
+// bare `^CC <id>;0`, sequentially. Counter IDs: 0 = Print, 1-4 = Custom, 6 = Product.
+const ALL_COUNTER_ZERO_COMMANDS = [
   '^CC 0;0',
   '^CC 1;0',
   '^CC 2;0',
@@ -96,6 +94,8 @@ const HMI_COUNTER_ZERO_COMMANDS = [
   '^CC 4;0',
   '^CC 6;0',
 ] as const;
+
+const HMI_RUN_COUNTER_ZERO_COMMANDS = ['^CC 0;0', '^CC 6;0'] as const;
 
 /**
  * Twin Code default print parameters pushed to both printers on bind/seed.
@@ -223,28 +223,34 @@ class PrinterSession {
       trace('postSelect:done');
     };
 
-    const forceZeroHmiRunCounters = async () => {
-      // Use the EXACT spelling/cadence the dashboard Reset button uses
-      // (resetCounter in usePrinterConnection). That call is verified to clear
-      // the HMI Product/Print counters on both the 2D-lid and the side
-      // printer; the bind path was previously over-specifying timeouts and
-      // mixing in V0/^CN variants which firmware would NAK and abort the
-      // sweep mid-stream.
-      trace('hmi-counter-zero:start');
-      for (const cmd of HMI_COUNTER_ZERO_COMMANDS) {
-        const r = await printerTransport.sendCommand(this.printerId, cmd).catch(() => null);
-        console.info(`[TwinBind:${this.label}] hmi-counter-zero:cmd`, { printerId: this.printerId, cmd, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
-        await new Promise(res => setTimeout(res, 150));
-      }
-      // Persist so the zeroed values survive any subsequent ^SM activation.
-      await printerTransport.sendCommand(this.printerId, '^SV').catch(() => {});
-      await new Promise(res => setTimeout(res, 300));
+    const forceZeroHmiRunCounters = async (phase = 'final') => {
+      // Keep this as the LAST bind action and do NOT follow it with ^SV/^SM/^CM.
+      // The dashboard reset path does not save; on hardware, later save/select
+      // operations can reload the message-saved counter snapshot and make the
+      // HMI appear to reset, then jump back to the old Product/Print counts.
+      const sweep = async () => {
+        for (const cmd of HMI_RUN_COUNTER_ZERO_COMMANDS) {
+          const r = await printerTransport.sendCommand(this.printerId, cmd).catch(() => null);
+          console.info(`[TwinBind:${this.label}] hmi-counter-zero:cmd`, { printerId: this.printerId, phase, cmd, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
+          await new Promise(res => setTimeout(res, 150));
+        }
+      };
+      trace('hmi-counter-zero:start', { phase });
+      await sweep();
+      await new Promise(res => setTimeout(res, 700));
 
-      const cn = await printerTransport.sendCommand(this.printerId, '^CN').catch(() => null);
-      const counts = parseCounterCounts(cn?.response || '');
-      trace('hmi-counter-zero:verify', { ok: !!cn?.success, product: counts.product, print: counts.print });
+      let cn = await printerTransport.sendCommand(this.printerId, '^CN').catch(() => null);
+      let counts = parseCounterCounts(cn?.response || '');
       if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
-        console.warn(`[TwinBind:${this.label}] HMI counters still non-zero after bind reset`, { printerId: this.printerId, response: cn.response, counts });
+        trace('hmi-counter-zero:retry', { phase, product: counts.product, print: counts.print });
+        await sweep();
+        await new Promise(res => setTimeout(res, 700));
+        cn = await printerTransport.sendCommand(this.printerId, '^CN').catch(() => null);
+        counts = parseCounterCounts(cn?.response || '');
+      }
+      trace('hmi-counter-zero:verify', { phase, ok: !!cn?.success, product: counts.product, print: counts.print });
+      if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
+        console.warn(`[TwinBind:${this.label}] HMI counters still non-zero after bind reset`, { printerId: this.printerId, phase, response: cn.response, counts });
       }
     };
 
