@@ -108,16 +108,26 @@ function isPrinterCommandAccepted(result: { success?: boolean; response?: string
 
 // Mirror the dashboard Reset button spelling (resetCounter in usePrinterConnection):
 // bare `^CC <id>;0`, sequentially. Counter IDs: 0 = Print, 1-4 = Custom, 6 = Product.
+//
+// IMPORTANT: For the HMI run counters (Print=0, Product=6) we ALSO have to
+// zero the *start* value (`S0`) — not just the current value. Without this,
+// the next `^SM` activation reloads the counter to whatever start value was
+// previously persisted into the message (commonly the pre-bind reading like
+// 84), making the counters visibly snap back to old values the moment the
+// real production message becomes active. Setting `S0` then `^SV` permanently
+// pins the message's saved snapshot at 0.
 const ALL_COUNTER_ZERO_COMMANDS = [
+  '^CC 0;S0',
   '^CC 0;0',
   '^CC 1;0',
   '^CC 2;0',
   '^CC 3;0',
   '^CC 4;0',
+  '^CC 6;S0',
   '^CC 6;0',
 ] as const;
 
-const HMI_RUN_COUNTER_ZERO_COMMANDS = ['^CC 0;0', '^CC 6;0'] as const;
+const HMI_RUN_COUNTER_ZERO_COMMANDS = ['^CC 0;S0', '^CC 0;0', '^CC 6;S0', '^CC 6;0'] as const;
 
 async function forceZeroHmiRunCountersForPrinter(printerId: number, label: 'A' | 'B', phase = 'final') {
   const trace = (step: string, extra?: Record<string, unknown>) => {
