@@ -198,7 +198,7 @@ class ProductionRunStore {
   }
 
   /** Begin a new run. Throws if one is already active. */
-  start(input: { lotNumber: string; operator: string; note?: string; liveAtStart: boolean; targetCount?: number | null }): ProductionRunMeta {
+  async start(input: { lotNumber: string; operator: string; note?: string; liveAtStart: boolean; targetCount?: number | null }): Promise<ProductionRunMeta> {
     if (this.state.active) {
       throw new Error("A production run is already active — stop it before starting another.");
     }
@@ -270,7 +270,8 @@ class ProductionRunStore {
     // would Start a new lot and see zero photocell prints because the prior
     // run's soft-stop is still in effect.
     if (input.liveAtStart) {
-      twinDispatcher.resumePrinting().catch(() => { /* best-effort */ });
+      await twinDispatcher.resetProductionRunCounters('production-run-start');
+      await twinDispatcher.resumePrinting();
     }
     this.persistActive();
     this.notify();

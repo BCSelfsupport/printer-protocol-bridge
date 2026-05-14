@@ -103,7 +103,7 @@ export function StartRunDialog({
     try {
       const printed = await cloudLedger.queryPrinted(cat.fingerprint);
       const added = catalog.preSeedPrinted(printed.map((p) => p.serial));
-      productionRun.start({
+      await productionRun.start({
         lotNumber: run.lot_number,
         operator: run.operator,
         note: `[Resumed from ${run.pc_machine_id.slice(0, 8)}] ${run.note ?? ""}`.trim(),
@@ -133,7 +133,7 @@ export function StartRunDialog({
     try {
       const parsedTarget = parseInt(targetCount, 10);
       const target = Number.isFinite(parsedTarget) && parsedTarget > 0 ? parsedTarget : null;
-      productionRun.start({
+      await productionRun.start({
         lotNumber: lot,
         operator,
         note,
