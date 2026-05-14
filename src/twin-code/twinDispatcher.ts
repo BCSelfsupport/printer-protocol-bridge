@@ -247,6 +247,10 @@ class PrinterSession {
         }
         seeded = !!r.seeded;
       }
+      // Re-assert LOADING after seeding (^DM/^NM auto-activates the new
+      // message on most firmware) so the HMI actually shows LOADING during
+      // the ^CC counter-zero sweep, not the previous production message.
+      await showLoadingOnHmi();
       await runPreSelect();
       if (messageName) {
         trace('emulator:^SM');
