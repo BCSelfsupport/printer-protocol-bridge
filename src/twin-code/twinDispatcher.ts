@@ -1696,6 +1696,19 @@ class TwinDispatcher {
       forceZeroHmiRunCountersForPrinter(bId, 'B', 'post-field-check'),
     ]);
 
+    // Auto-Code: align the LID barcode with the SIDE's first upcoming print
+    // BEFORE the operator starts the line. Without this preload the LID's
+    // 2D field carries whatever serial was last written (often `000001`)
+    // while the SIDE freshly prints `start`, producing the visible mismatch
+    // operators reported (side=000003 / lid=000001).
+    if (opts.autoCodeMode && opts.autoCodeOpts) {
+      const slot = opts.autoCodeOpts.counterSlot;
+      const start = Math.max(1, opts.autoCodeOpts.counterStart ?? 1);
+      const next = await this.resolveNextAutoCodeCounterFromSide(bId, slot, start);
+      autoCodeSerialMirror.resetForNext(next);
+      await this.preloadAutoCodeLid(next, 'bind-initial');
+    }
+
     console.info('[TwinBind] bind complete');
     return { ok: true, aId, bId, seededA: !!resA.seeded, seededB: !!resB.seeded };
   }
