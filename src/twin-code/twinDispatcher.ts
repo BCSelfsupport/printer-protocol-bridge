@@ -218,6 +218,21 @@ class PrinterSession {
       return { ok: true };
     };
 
+    // Show "LOADING" on the printer HMI immediately so the operator gets
+    // visual feedback during the rest of bind (field check, ^CC, ^SM target,
+    // ^MB). Best-effort: any failure is swallowed because this is purely
+    // cosmetic — the real ^SM target later in enter() always overrides it.
+    const showLoadingOnHmi = async () => {
+      try {
+        const ensure = await this.ensureMessage(LOADING_MESSAGE_NAME, LOADING_SEED);
+        if (!ensure.ok) { trace('loading-hmi:ensure-failed', { error: ensure.error }); return; }
+        const sm = await printerTransport.sendCommand(this.printerId, `^SM ${LOADING_MESSAGE_NAME}`, { maxWaitMs: 2000 });
+        trace('loading-hmi:shown', { ok: !!sm?.success });
+      } catch (e) {
+        trace('loading-hmi:error', { error: String(e) });
+      }
+    };
+
     // ---- Emulator path: synthesize R/T/C entirely in-process ----
     if (this.isEmulated) {
       // Seed-on-bind is also honored on the emulator so the dev path mirrors prod.
