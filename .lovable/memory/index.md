@@ -114,3 +114,4 @@ Updated: today
 - [^NM Digest Pause](mem://features/message-persistence/nm-digest-pause) — Scale ^NM→^SV delay (300+60ms/field, cap 3s) to fix Dozen12 12-field lockup
 - [Protocol ^NM/^NF Flow](mem://features/message-persistence/nm-nf-field-append-flow) — Use ^NF after field 7; avoid F8 ^NM lockup; deselect slaves before rewrite.
 - [Save Busy Defers Fleet Push](mem://features/message-persistence/save-busy-defers-fleet-push) — Concurrent Fleet HTTP pushes locked up F8/F9 saves; saveBusy flag gates uploaders.
+- [Twin Counter Zero on Bind](mem://features/twin-code-counter-zero-on-bind) — Bind preSelect zeros HMI Print (^CC 0;0) and Product (^CC 6;0) counters on A+B for parity with HUD/CSV.
