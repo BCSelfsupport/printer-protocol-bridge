@@ -15,6 +15,7 @@ export function SkewScatter({ samples, count = 500 }: Props) {
     }));
   }, [samples, count]);
 
+  const hasData = useMemo(() => data.some((d) => d.a > 0 || d.b > 0), [data]);
   const max = useMemo(
     () => Math.max(1, ...data.flatMap((d) => [d.a, d.b])),
     [data],
@@ -28,43 +29,53 @@ export function SkewScatter({ samples, count = 500 }: Props) {
           diagonal = bonded · drift = bottleneck
         </span>
       </div>
-      <div className="h-48">
-        <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart margin={{ top: 4, right: 8, bottom: 16, left: 0 }}>
-            <XAxis
-              type="number"
-              dataKey="a"
-              name="Printer A"
-              domain={[0, max]}
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-              label={{ value: "Printer A (ms)", position: "insideBottom", offset: -4, fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-            />
-            <YAxis
-              type="number"
-              dataKey="b"
-              name="Printer B"
-              domain={[0, max]}
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-              width={36}
-            />
-            <Tooltip
-              contentStyle={{
-                background: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: 6,
-                fontSize: 11,
-              }}
-              formatter={(v: number) => `${v.toFixed(2)} ms`}
-            />
-            <ReferenceLine
-              segment={[{ x: 0, y: 0 }, { x: max, y: max }]}
-              stroke="hsl(var(--muted-foreground))"
-              strokeDasharray="3 3"
-            />
-            <Scatter data={data} fill="hsl(var(--primary))" fillOpacity={0.5} />
-          </ScatterChart>
-        </ResponsiveContainer>
-      </div>
+      {hasData ? (
+        <div className="h-48">
+          <ResponsiveContainer width="100%" height="100%">
+            <ScatterChart margin={{ top: 4, right: 8, bottom: 16, left: 0 }}>
+              <XAxis
+                type="number"
+                dataKey="a"
+                name="Printer A"
+                domain={[0, max]}
+                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                label={{ value: "Printer A (ms)", position: "insideBottom", offset: -4, fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              />
+              <YAxis
+                type="number"
+                dataKey="b"
+                name="Printer B"
+                domain={[0, max]}
+                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                width={36}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "hsl(var(--popover))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: 6,
+                  fontSize: 11,
+                }}
+                formatter={(v: number) => `${v.toFixed(2)} ms`}
+              />
+              <ReferenceLine
+                segment={[{ x: 0, y: 0 }, { x: max, y: max }]}
+                stroke="hsl(var(--muted-foreground))"
+                strokeDasharray="3 3"
+              />
+              <Scatter data={data} fill="hsl(var(--primary))" fillOpacity={0.5} />
+            </ScatterChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <div className="flex h-48 items-center justify-center px-4 text-center">
+          <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
+            Per-printer round-trip is only sampled when CodeSync drives each
+            dispatch (host-driven mode). In Auto-Code / photocell mode the
+            printers fire directly off the beam, so wire timing isn't measured.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

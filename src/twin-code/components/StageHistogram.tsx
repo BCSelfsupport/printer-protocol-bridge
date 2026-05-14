@@ -11,6 +11,7 @@ interface Props {
 
 export function StageHistogram({ samples, stage, label }: Props) {
   const values = useMemo(() => samples.map((s) => s[stage]), [samples, stage]);
+  const hasData = useMemo(() => values.some((v) => v > 0), [values]);
   const stats = useMemo(() => computeStats(values), [values]);
   const bins = useMemo(() => histogram(values, 24), [values]);
 
@@ -22,33 +23,42 @@ export function StageHistogram({ samples, stage, label }: Props) {
           n={stats.count} · p50 {stats.p50.toFixed(1)} · p95 {stats.p95.toFixed(1)} · p99 {stats.p99.toFixed(1)} ms
         </span>
       </div>
-      <div className="h-32">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={bins} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-            <XAxis
-              dataKey="x"
-              tickFormatter={(v) => `${v.toFixed(0)}`}
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis hide />
-            <Tooltip
-              contentStyle={{
-                background: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: 6,
-                fontSize: 11,
-              }}
-              formatter={(v: number) => [v, "count"]}
-              labelFormatter={(v: number) => `${v.toFixed(2)} ms`}
-            />
-            <ReferenceLine x={stats.p50} stroke="hsl(var(--chart-2))" strokeDasharray="2 2" />
-            <ReferenceLine x={stats.p95} stroke="hsl(var(--chart-4))" strokeDasharray="2 2" />
-            <Bar dataKey="count" fill="hsl(var(--primary))" radius={[2, 2, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {!hasData ? (
+        <div className="flex h-32 items-center justify-center px-3 text-center">
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            No samples for {label.toLowerCase()} — this stage isn't measured in
+            photocell / Auto-Code mode.
+          </p>
+        </div>
+      ) : (
+        <div className="h-32">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={bins} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+              <XAxis
+                dataKey="x"
+                tickFormatter={(v) => `${v.toFixed(0)}`}
+                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis hide />
+              <Tooltip
+                contentStyle={{
+                  background: "hsl(var(--popover))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: 6,
+                  fontSize: 11,
+                }}
+                formatter={(v: number) => [v, "count"]}
+                labelFormatter={(v: number) => `${v.toFixed(2)} ms`}
+              />
+              <ReferenceLine x={stats.p50} stroke="hsl(var(--chart-2))" strokeDasharray="2 2" />
+              <ReferenceLine x={stats.p95} stroke="hsl(var(--chart-4))" strokeDasharray="2 2" />
+              <Bar dataKey="count" fill="hsl(var(--primary))" radius={[2, 2, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
