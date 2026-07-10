@@ -36,6 +36,7 @@ import { ThroughputGauge } from "@/twin-code/components/ThroughputGauge";
 import { BottleneckCallout } from "@/twin-code/components/BottleneckCallout";
 import { StageHeatmap } from "@/twin-code/components/StageHeatmap";
 import { ConveyorPanel } from "@/twin-code/components/ConveyorPanel";
+import { TntUplinkPanel } from "@/twin-code/components/TntUplinkPanel";
 import { OperatorHUD } from "@/twin-code/components/OperatorHUD";
 import { ProductionRunBar } from "@/twin-code/components/ProductionRunBar";
 import { CatalogStripBar } from "@/twin-code/components/CatalogStripBar";
