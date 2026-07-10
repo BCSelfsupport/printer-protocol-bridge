@@ -82,7 +82,7 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
   const [debugTab, setDebugTab] = useState<DebugTab>(() => {
     try {
       const v = localStorage.getItem(DEBUG_TAB_KEY) as DebugTab | null;
-      const allowed: DebugTab[] = ["live", "conveyor", "generator", "waterfall", "distributions", "heatmaps"];
+      const allowed: DebugTab[] = ["live", "conveyor", "generator", "waterfall", "distributions", "heatmaps", "tnt"];
       return v && allowed.includes(v) ? v : "live";
     } catch { return "live"; }
   });
