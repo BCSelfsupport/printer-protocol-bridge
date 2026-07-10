@@ -421,6 +421,8 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
                       <StageHeatmap samples={samples} stage="skewMs" label="A↔B skew" />
                     </section>
                   )}
+
+                  {debugTab === "tnt" && <TntUplinkPanel />}
                 </div>
               </div>
 
