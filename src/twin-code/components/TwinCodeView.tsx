@@ -312,6 +312,7 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
                     { id: "waterfall", label: "Waterfall" },
                     { id: "distributions", label: "Distributions" },
                     { id: "heatmaps", label: "Heatmaps" },
+                    { id: "tnt", label: "TnT Uplink" },
                   ] as { id: DebugTab; label: string }[]).map((t) => {
                     const active = debugTab === t.id;
                     return (
