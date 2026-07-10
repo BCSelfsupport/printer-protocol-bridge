@@ -36,6 +36,7 @@ import { ThroughputGauge } from "@/twin-code/components/ThroughputGauge";
 import { BottleneckCallout } from "@/twin-code/components/BottleneckCallout";
 import { StageHeatmap } from "@/twin-code/components/StageHeatmap";
 import { ConveyorPanel } from "@/twin-code/components/ConveyorPanel";
+import { TntUplinkPanel } from "@/twin-code/components/TntUplinkPanel";
 import { OperatorHUD } from "@/twin-code/components/OperatorHUD";
 import { ProductionRunBar } from "@/twin-code/components/ProductionRunBar";
 import { CatalogStripBar } from "@/twin-code/components/CatalogStripBar";
@@ -52,7 +53,7 @@ import {
 
 const VIEW_PREF_KEY = "twincode.view"; // "hud" | "debug"
 const DEBUG_TAB_KEY = "twincode.debugTab"; // see DebugTab below
-type DebugTab = "live" | "conveyor" | "generator" | "waterfall" | "distributions" | "heatmaps";
+type DebugTab = "live" | "conveyor" | "generator" | "waterfall" | "distributions" | "heatmaps" | "tnt";
 
 export interface TwinCodeViewProps {
   /**
@@ -82,7 +83,7 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
   const [debugTab, setDebugTab] = useState<DebugTab>(() => {
     try {
       const v = localStorage.getItem(DEBUG_TAB_KEY) as DebugTab | null;
-      const allowed: DebugTab[] = ["live", "conveyor", "generator", "waterfall", "distributions", "heatmaps"];
+      const allowed: DebugTab[] = ["live", "conveyor", "generator", "waterfall", "distributions", "heatmaps", "tnt"];
       return v && allowed.includes(v) ? v : "live";
     } catch { return "live"; }
   });
@@ -151,7 +152,7 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
   // While-away recap toast on tab refocus
   useWhileAwayRecap();
   // Keyboard shortcuts + help overlay (?, Space, H, D, 1-6)
-  const debugTabIds: DebugTab[] = ["live", "conveyor", "generator", "waterfall", "distributions", "heatmaps"];
+  const debugTabIds: DebugTab[] = ["live", "conveyor", "generator", "waterfall", "distributions", "heatmaps", "tnt"];
   const { helpOpen, setHelpOpen } = useTwinCodeShortcuts({
     toggleGenerator: () => (running ? handleStop() : handleStart()),
     showHud: () => setView("hud"),
@@ -312,6 +313,7 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
                     { id: "waterfall", label: "Waterfall" },
                     { id: "distributions", label: "Distributions" },
                     { id: "heatmaps", label: "Heatmaps" },
+                    { id: "tnt", label: "TnT Uplink" },
                   ] as { id: DebugTab; label: string }[]).map((t) => {
                     const active = debugTab === t.id;
                     return (
@@ -419,6 +421,8 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
                       <StageHeatmap samples={samples} stage="skewMs" label="A↔B skew" />
                     </section>
                   )}
+
+                  {debugTab === "tnt" && <TntUplinkPanel />}
                 </div>
               </div>
 
