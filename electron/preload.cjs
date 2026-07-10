@@ -36,6 +36,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getInfo: () => ipcRenderer.invoke('relay:get-info'),
   },
 
+  // Track-n-Trace TCP endpoint (Phase 1)
+  tnt: {
+    getState: () => ipcRenderer.invoke('tnt:get-state'),
+    getConfig: () => ipcRenderer.invoke('tnt:get-config'),
+    setConfig: (cfg) => ipcRenderer.invoke('tnt:set-config', cfg),
+    send: (opcode, payload) => ipcRenderer.invoke('tnt:send', { opcode, payload }),
+    onFrame: (callback) => {
+      const handler = (_e, entry) => callback(entry);
+      ipcRenderer.on('tnt:frame', handler);
+      return () => ipcRenderer.removeListener('tnt:frame', handler);
+    },
+    onState: (callback) => {
+      const handler = (_e, state) => callback(state);
+      ipcRenderer.on('tnt:state', handler);
+      return () => ipcRenderer.removeListener('tnt:state', handler);
+    },
+  },
+
   // App operations
   app: {
     getVersion: () => ipcRenderer.invoke('app:get-version'),
