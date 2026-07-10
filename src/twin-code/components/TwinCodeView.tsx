@@ -151,7 +151,7 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
   // While-away recap toast on tab refocus
   useWhileAwayRecap();
   // Keyboard shortcuts + help overlay (?, Space, H, D, 1-6)
-  const debugTabIds: DebugTab[] = ["live", "conveyor", "generator", "waterfall", "distributions", "heatmaps"];
+  const debugTabIds: DebugTab[] = ["live", "conveyor", "generator", "waterfall", "distributions", "heatmaps", "tnt"];
   const { helpOpen, setHelpOpen } = useTwinCodeShortcuts({
     toggleGenerator: () => (running ? handleStop() : handleStart()),
     showHud: () => setView("hud"),
