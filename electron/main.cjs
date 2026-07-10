@@ -1182,9 +1182,47 @@ ipcMain.handle('hotfolder:configure', async (event, config) => {
   return { success: true };
 });
 
+// ── Track-n-Trace TCP endpoint (Phase 1 — see TnT_Protocol_Compatibility_and_SOW §4) ──
+const { TntServer, OPCODES: TNT_OPCODES } = require('./tntServer.cjs');
+let tntServer = null;
+const tntConfigPath = path.join(app.getPath('userData'), 'tnt-config.json');
+function readTntConfig() {
+  try { return JSON.parse(fs.readFileSync(tntConfigPath, 'utf8')); }
+  catch { return { enabled: false, port: 8101 }; }
+}
+function writeTntConfig(cfg) {
+  try { fs.writeFileSync(tntConfigPath, JSON.stringify(cfg, null, 2)); } catch (_) {}
+}
+function startTntServer(cfg) {
+  stopTntServer();
+  tntServer = new TntServer({ port: cfg.port || 8101, logDir: app.getPath('userData') });
+  tntServer.on('frame', (entry) => { mainWindow?.webContents.send('tnt:frame', entry); });
+  tntServer.on('state', (state) => { mainWindow?.webContents.send('tnt:state', state); });
+  tntServer.start();
+  logToFile(`[tnt] server starting on port ${cfg.port || 8101}`);
+}
+function stopTntServer() {
+  if (tntServer) { try { tntServer.stop(); } catch (_) {} tntServer = null; }
+}
+ipcMain.handle('tnt:get-state', () => tntServer ? tntServer.getState() : { listening: false, connected: false, port: 8101, framesIn: 0, framesOut: 0, recent: [] });
+ipcMain.handle('tnt:get-config', () => readTntConfig());
+ipcMain.handle('tnt:set-config', (_e, cfg) => {
+  const next = { enabled: !!cfg.enabled, port: Number(cfg.port) || 8101 };
+  writeTntConfig(next);
+  if (next.enabled) startTntServer(next); else stopTntServer();
+  return { success: true, config: next };
+});
+ipcMain.handle('tnt:send', (_e, { opcode, payload }) => {
+  if (!tntServer) return { success: false, error: 'not_running' };
+  const ok = tntServer.send(opcode, payload);
+  return { success: ok };
+});
+
 app.whenReady().then(() => {
   createWindow();
   startRelayServer();
+  const tntCfg = readTntConfig();
+  if (tntCfg.enabled) startTntServer(tntCfg);
 });
 
 app.on('window-all-closed', () => {
