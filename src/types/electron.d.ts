@@ -92,6 +92,7 @@ interface ElectronAPI {
   printer: PrinterAPI;
   oneToOne: OneToOneAPI;
   relay: RelayAPI;
+  tnt: TntAPI;
   app: AppAPI;
   onUpdateAvailable: (callback: (info: { version: string }) => void) => void;
   onUpdateDownloadProgress: (callback: (progress: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => void;
