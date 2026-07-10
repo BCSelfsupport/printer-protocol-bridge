@@ -22,6 +22,41 @@ interface RelayAPI {
   getInfo: () => Promise<{ port: number; ips: string[] }>;
 }
 
+export interface TntFrameEntry {
+  dir: 'in' | 'out';
+  opcode: number;
+  name: string;
+  at: string;
+  size: number;
+  json: unknown;
+}
+
+export interface TntState {
+  listening: boolean;
+  port: number;
+  connected: boolean;
+  peer: string | null;
+  framesIn: number;
+  framesOut: number;
+  lastFrameAt: string | null;
+  lastError: string | null;
+  recent: TntFrameEntry[];
+}
+
+export interface TntConfig {
+  enabled: boolean;
+  port: number;
+}
+
+interface TntAPI {
+  getState: () => Promise<TntState>;
+  getConfig: () => Promise<TntConfig>;
+  setConfig: (cfg: TntConfig) => Promise<{ success: boolean; config: TntConfig }>;
+  send: (opcode: number, payload: unknown) => Promise<{ success: boolean; error?: string }>;
+  onFrame: (cb: (entry: TntFrameEntry) => void) => () => void;
+  onState: (cb: (state: TntState) => void) => () => void;
+}
+
 interface AppAPI {
   getVersion: () => Promise<string>;
   checkForUpdates: () => void;
