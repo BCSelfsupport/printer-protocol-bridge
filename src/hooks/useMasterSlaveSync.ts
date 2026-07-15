@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { Printer } from '@/types/printer';
+import { Printer, PrintSettings } from '@/types/printer';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerEmulator } from '@/lib/printerEmulator';
 import type { MessageDetails } from '@/components/screens/EditMessageScreen';
@@ -14,8 +14,34 @@ interface UseMasterSlaveSyncOptions {
   currentMessage?: string | null;
   messages?: { id: number; name: string }[];
   getMessageContent?: (messageName: string) => MessageDetails | null;
-  buildMessageCommands?: (messageName: string, fields: MessageDetails['fields'], templateValue?: string, isNew?: boolean) => Promise<string[] | null> | string[] | null;
+  buildMessageCommands?: (
+    messageName: string,
+    fields: MessageDetails['fields'],
+    templateValue?: string,
+    isNew?: boolean,
+    messageSettings?: {
+      speed?: PrintSettings['speed'];
+      rotation?: PrintSettings['rotation'];
+      printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
+    },
+    counterConfigs?: NonNullable<MessageDetails['advancedSettings']>['counters'],
+  ) => Promise<string[] | null> | string[] | null;
+  currentSettings?: PrintSettings;
 }
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const getSyncCommandDelay = (command: string, fieldCount: number) => {
+  const trimmed = command.trim().toUpperCase();
+  if (trimmed.startsWith('^NM ')) {
+    if (fieldCount >= 10) return 12000;
+    if (fieldCount >= 8) return 9000;
+    if (fieldCount >= 6) return 7000;
+    return Math.min(4000, 1000 + fieldCount * 250);
+  }
+  if (trimmed === '^SV') return 1500;
+  return 300;
+};
 
 /**
  * Hook that automatically synchronizes messages and message selection
@@ -30,6 +56,9 @@ export function useMasterSlaveSync({
   connectedPrinterId,
   currentMessage,
   messages = [],
+  getMessageContent,
+  buildMessageCommands,
+  currentSettings,
 }: UseMasterSlaveSyncOptions) {
   const prevMessageRef = useRef<string | null>(null);
   const prevMessageListRef = useRef<string[]>([]);
@@ -122,14 +151,43 @@ export function useMasterSlaveSync({
     console.log(`[MasterSlaveSync] Syncing message selection "${currentMessage}" to ${slaves.length} slave(s)`);
 
     (async () => {
+      const details = getMessageContent?.(currentMessage) ?? null;
       for (const slave of slaves) {
-        const ok = await sendCommandToPrinter(slave, `^SM ${currentMessage}`);
-        console.log(`[MasterSlaveSync] ^SM ${currentMessage} → ${slave.name}: ${ok ? 'OK' : 'FAIL'}`);
+        let ok = true;
+
+        if (details && details.fields.length > 0 && buildMessageCommands) {
+          const rotation = slave.rotation ?? 'Normal';
+          const rawCommands = await buildMessageCommands(
+            currentMessage,
+            details.fields,
+            details.templateValue,
+            false,
+            {
+              speed: details.adjustSettings?.speed ?? details.settings?.speed ?? currentSettings?.speed ?? 'Fastest',
+              rotation,
+              printMode: details.settings?.printMode ?? 'Normal',
+            },
+            details.advancedSettings?.counters,
+          );
+
+          const commands = (rawCommands ?? []).filter((cmd) => !cmd.trim().toUpperCase().startsWith('^DM '));
+          for (const cmd of commands) {
+            ok = await sendCommandToPrinter(slave, cmd);
+            console.log(`[MasterSlaveSync] ${cmd.startsWith('^NM ') ? `^NM ${currentMessage}` : cmd} → ${slave.name}: ${ok ? 'OK' : 'FAIL'}`);
+            if (!ok) break;
+            await delay(getSyncCommandDelay(cmd, details.fields.length));
+          }
+        }
+
+        if (ok) {
+          ok = await sendCommandToPrinter(slave, `^SM ${currentMessage}`);
+        }
+        console.log(`[MasterSlaveSync] ^SM ${currentMessage} → ${slave.name} (${slave.rotation ?? 'Normal'}): ${ok ? 'OK' : 'FAIL'}`);
       }
     })().finally(() => {
       syncingRef.current = false;
     });
-  }, [isMaster, currentMessage, getSlaves, sendCommandToPrinter]);
+  }, [isMaster, currentMessage, getSlaves, sendCommandToPrinter, getMessageContent, buildMessageCommands, currentSettings]);
 
   // Message content is pushed by Index.syncMessageToSlaves after save using the
   // full ^DM → ^NM → ^SV sequence. Do not also send a bare ^NM here: that can
