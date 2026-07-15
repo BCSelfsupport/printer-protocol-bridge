@@ -75,6 +75,8 @@ interface MessagesScreenProps {
       rotation?: string;
       printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
     },
+    counterConfigs?: Array<{ id: number; startCount: number; endCount: number; leadingZeroes: boolean }>,
+    selectAfterSave?: boolean,
   ) => Promise<boolean>;
   /** Save updated message details to local storage */
   onSaveStoredMessage?: (details: MessageDetails) => void;
