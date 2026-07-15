@@ -491,9 +491,10 @@ export function PrintersScreen({
     setEditDialogOpen(true);
   };
 
-  const handleSaveEdit = (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: import('@/types/printer').PrinterRole; masterId?: number }) => {
+  const handleSaveEdit = (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: import('@/types/printer').PrinterRole; masterId?: number; serialNumber?: string; lineId?: string; rotation?: import('@/types/printer').Printer['rotation'] }) => {
     onUpdatePrinter?.(printerId, updates);
   };
+
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
