@@ -54,7 +54,7 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
     if (!open) return;
     setError(null);
     setCode('');
-    if (import.meta.env.DEV) {
+    if (isPreviewEnv()) {
       setStage('verify');
       setBusy(false);
       return;
