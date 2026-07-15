@@ -22,6 +22,21 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 const PREVIEW_DEV_PASSWORD = 'CITEC';
 
+// Treat local dev AND Lovable preview/sandbox hosts as "preview" so the
+// CITEC shortcut works without a real developer-enrolled license.
+const isPreviewEnv = () => {
+  if (import.meta.env.DEV) return true;
+  if (typeof window === 'undefined') return false;
+  const h = window.location.hostname;
+  return (
+    h === 'localhost' ||
+    h === '127.0.0.1' ||
+    h.endsWith('.lovable.app') ||
+    h.endsWith('.lovableproject.com') ||
+    h.endsWith('.lovable.dev')
+  );
+};
+
 /**
  * Server-verified developer sign-in.
  */
