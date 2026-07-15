@@ -2350,7 +2350,50 @@ const Index = () => {
         onControlUnmount={() => setControlScreenOpen(false)}
         onNavigate={handleNavigate}
         onTurnOff={handleTurnOff}
-        onSyncMaster={syncMaster}
+        onSyncMaster={async (masterId) => {
+          // If the master is the currently connected printer, push full message
+          // content (^DM → ^NM → ^SV via replaceMessageWithoutDelete) for every
+          // message. Bare `^NM <name>` won't populate fields on the slave.
+          const isConnectedMaster =
+            connectionState.connectedPrinter?.id === masterId && isMaster;
+          if (!isConnectedMaster) {
+            // Fallback: at least push message names (best-effort for masters we
+            // aren't currently connected to — full content isn't cached).
+            await syncMaster(masterId);
+            toast.info('Slave sync: only message names pushed (master not connected)');
+            return;
+          }
+
+          const slaves = getSlavesForMaster(masterId).filter(s => s.isAvailable);
+          if (slaves.length === 0) {
+            toast.warning('No online slaves for this master');
+            return;
+          }
+          const messagesToPush = connectionState.messages ?? [];
+          if (messagesToPush.length === 0) {
+            toast.warning('No messages to sync');
+            return;
+          }
+
+          setPollingPaused(true);
+          const t = toast.loading(`Syncing ${messagesToPush.length} message(s) to ${slaves.length} slave(s)…`);
+          try {
+            await waitForPollingIdle(3000);
+            let okCount = 0;
+            for (const m of messagesToPush) {
+              const details = getMessage(m.name);
+              if (!details || details.fields.length === 0) continue;
+              await syncMessageToSlaves(m.name, details, false);
+              okCount += 1;
+            }
+            toast.success(`Synced ${okCount} message(s) to ${slaves.length} slave(s)`, { id: t });
+          } catch (err: any) {
+            console.error('[SyncSlaves] Failed:', err);
+            toast.error(`Slave sync failed: ${err?.message ?? 'unknown error'}`, { id: t });
+          } finally {
+            setTimeout(() => setPollingPaused(false), 1000);
+          }
+        }}
         onBroadcastMessage={async (masterId, messageName, slaveValues) => {
           // Compute the absolute field number for the prompted field
           const stored = getMessage(messageName);
