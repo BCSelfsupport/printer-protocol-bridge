@@ -65,6 +65,26 @@ const defaultSettings: PrintSettings = {
   repeatAmount: 0,
 };
 
+// BestCode HMI rotation order for message/printer orientation.
+// Keep this aligned anywhere we send ^NM or ^CM orientation values.
+const ROTATION_TO_PROTOCOL_CODE: Record<string, number> = {
+  'Normal': 0,
+  'Flip': 1,
+  'Mirror Flip': 2,
+  'Mirror': 3,
+  'Tower': 4,
+  'Tower Flip': 5,
+  'Tower Mirror Flip': 6,
+  'Tower Mirror': 7,
+};
+
+const PROTOCOL_CODE_TO_ROTATION: Record<number, PrintSettings['rotation']> = {
+  0: 'Normal',
+  1: 'Flip',
+  2: 'Mirror Flip',
+  3: 'Mirror',
+};
+
 const mockMessages: PrintMessage[] = [];
 
 const mockStatus: PrinterStatus = {
@@ -2382,16 +2402,6 @@ export function usePrinterConnection() {
       y: field.y,
     })));
 
-    const orientationMap: Record<string, number> = {
-      'Normal': 0,
-      'Flip': 1,
-      'Mirror': 2,
-      'Mirror Flip': 3,
-      'Tower': 4,
-      'Tower Flip': 5,
-      'Tower Mirror': 6,
-      'Tower Mirror Flip': 7,
-    };
     const speedMap: Record<PrintSettings['speed'], number> = {
       'Fast': 0,
       'Faster': 1,
@@ -2408,7 +2418,7 @@ export function usePrinterConnection() {
     };
 
     const nmSpeed = speedMap[messageSettings?.speed ?? 'Fast'] ?? 0;
-    const nmOrientation = orientationMap[messageSettings?.rotation ?? 'Normal'] ?? 0;
+    const nmOrientation = ROTATION_TO_PROTOCOL_CODE[messageSettings?.rotation ?? 'Normal'] ?? 0;
     const nmPrintMode = printModeMap[messageSettings?.printMode ?? 'Normal'] ?? 0;
 
     const nmHeaderCommand = `^NM ${templateCode};${nmSpeed};${nmOrientation};${nmPrintMode};${messageName}`;
@@ -2649,16 +2659,6 @@ export function usePrinterConnection() {
     };
     const fieldSubcommands = validFields.map(buildPositionedFieldSubcommand).join('');
 
-    const orientationMap: Record<string, number> = {
-      'Normal': 0,
-      'Flip': 1,
-      'Mirror': 2,
-      'Mirror Flip': 3,
-      'Tower': 4,
-      'Tower Flip': 5,
-      'Tower Mirror': 6,
-      'Tower Mirror Flip': 7,
-    };
     const speedMap: Record<PrintSettings['speed'], number> = {
       'Fast': 0,
       'Faster': 1,
@@ -2675,7 +2675,7 @@ export function usePrinterConnection() {
     };
 
     const nmSpeed = speedMap[messageSettings?.speed ?? 'Fast'] ?? 0;
-    const nmOrientation = orientationMap[messageSettings?.rotation ?? 'Normal'] ?? 0;
+    const nmOrientation = ROTATION_TO_PROTOCOL_CODE[messageSettings?.rotation ?? 'Normal'] ?? 0;
     const nmPrintMode = printModeMap[messageSettings?.printMode ?? 'Normal'] ?? 0;
 
     const nmHeaderCommand = `^NM ${templateCode};${nmSpeed};${nmOrientation};${nmPrintMode};${messageName}`;
@@ -3153,17 +3153,6 @@ export function usePrinterConnection() {
     const printer = connectionState.connectedPrinter;
 
     // Map rotation and speed to numeric values per protocol
-    // Extended orientation map to include tower modes (0-7)
-    const orientationMap: Record<string, number> = {
-      'Normal': 0,
-      'Flip': 1,
-      'Mirror': 2,
-      'Mirror Flip': 3,
-      'Tower': 4,
-      'Tower Flip': 5,
-      'Tower Mirror': 6,
-      'Tower Mirror Flip': 7,
-    };
     const speedMap: Record<PrintSettings['speed'], number> = {
       'Fast': 0,
       'Faster': 1,
@@ -3180,7 +3169,7 @@ export function usePrinterConnection() {
     };
 
     // ^CM with named parameters: s=speed, o=orientation, p=printMode
-    const orientationValue = orientationMap[settings.rotation] ?? 0;
+    const orientationValue = ROTATION_TO_PROTOCOL_CODE[settings.rotation] ?? 0;
     const printModeValue = printModeMap[settings.printMode ?? 'Normal'];
     const command = `^CM s${speedMap[settings.speed]};o${orientationValue};p${printModeValue}`;
 
@@ -3238,12 +3227,6 @@ export function usePrinterConnection() {
             return match ? parseInt(match[1], 10) : null;
           };
 
-          const rotationReverseMap: Record<number, PrintSettings['rotation']> = {
-            0: 'Normal',
-            1: 'Mirror',
-            2: 'Flip',
-            3: 'Mirror Flip',
-          };
           const speedReverseMap: Record<number, PrintSettings['speed']> = {
             0: 'Fast',
             1: 'Faster',
@@ -3280,7 +3263,7 @@ export function usePrinterConnection() {
               ...(width !== null && { width }),
               ...(height !== null && { height }),
               ...(delay !== null && { delay }),
-              ...(rotationNum !== null && { rotation: rotationReverseMap[rotationNum] ?? 'Normal' }),
+              ...(rotationNum !== null && { rotation: PROTOCOL_CODE_TO_ROTATION[rotationNum] ?? 'Normal' }),
               ...(bold !== null && { bold }),
               ...(speedNum !== null && { speed: speedReverseMap[speedNum] ?? 'Fast' }),
               ...(gap !== null && { gap }),

@@ -692,6 +692,7 @@ const Index = () => {
     messages: connectionState.messages,
     getMessageContent: (messageName) => getMessage(messageName),
     buildMessageCommands,
+    currentSettings: connectionState.settings,
   });
 
   const sendVerifiedCommandSequence = useCallback(async (
@@ -882,12 +883,10 @@ const Index = () => {
     for (const slave of availableSlaves) {
       const slaveCurrent = slave.currentMessage?.trim().toUpperCase();
       let ok = false;
-      // Per-printer rotation override: if the slave has a configured
-      // rotation (set in Edit Printer), force it into the message header so
-      // lines running in the opposite direction of travel print correctly.
-      const slaveAdjust = slave.rotation
-        ? { ...(details.adjustSettings ?? {}), rotation: slave.rotation }
-        : details.adjustSettings;
+      // Per-printer rotation override: always force the printer card setting
+      // into the message header so message-stored rotation is ignored.
+      const slaveRotation = slave.rotation ?? 'Normal';
+      const slaveAdjust = { ...(details.adjustSettings ?? {}), rotation: slaveRotation };
       const result = await replaceMessageWithoutDelete(slave, messageName, {
         fields: details.fields,
         templateValue: details.templateValue,
@@ -901,7 +900,7 @@ const Index = () => {
       }
 
       if (ok) {
-        const slaveDetails = normalizeMessageForPrinter({ ...details, name: messageName });
+        const slaveDetails = normalizeMessageForPrinter({ ...details, name: messageName, adjustSettings: slaveAdjust });
         saveMessage(slaveDetails, slave.id);
         recentlySavedRef.current.set(`${slave.id}:${messageName}`, Date.now());
         if (slaveCurrent === targetUpper) {

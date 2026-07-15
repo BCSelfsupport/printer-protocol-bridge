@@ -151,7 +151,7 @@ interface MessageSettingsDialogProps {
 }
 
 const rotationValues: MessageSettings['rotation'][] = [
-  'Normal', 'Flip', 'Mirror', 'Mirror Flip'
+  'Normal', 'Flip', 'Mirror Flip', 'Mirror'
 ];
 const speedValues: MessageSettings['speed'][] = ['Fast', 'Faster', 'Fastest', 'Ultra Fast'];
 const printModeValues: MessageSettings['printMode'][] = ['Normal', 'Auto', 'Repeat', 'Reverse', 'Auto Encoder', 'Auto Encoder Reverse'];
