@@ -186,3 +186,21 @@ export function getHardcodedMessage(name: string): MessageDetails | null {
 export function isHardcodedMessage(name: string): boolean {
   return HARDCODED_NAMES.includes(name.toLowerCase());
 }
+
+/**
+ * Factory/demo/preset messages that exist on every printer out of the box.
+ * Master→slave sync should skip these so it doesn't waste time pushing
+ * messages that are already present (and often read-only) on the slaves.
+ */
+const PRESET_MESSAGE_NAMES = new Set([
+  'bestcode',
+  'bestcode auto',
+  'quantum',
+  'quantum auto',
+  'moba',
+]);
+
+export function isPresetMessage(name: string): boolean {
+  return PRESET_MESSAGE_NAMES.has(name.trim().toLowerCase());
+}
+
