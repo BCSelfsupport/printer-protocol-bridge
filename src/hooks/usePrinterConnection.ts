@@ -2463,6 +2463,15 @@ export function usePrinterConnection() {
       }
       // Ensure message is in local state
       addMessage(messageName);
+      if (selectAfterSave) {
+        smSelectGraceUntilRef.current = Date.now() + 15000;
+        smExpectedMessageRef.current = messageName.toUpperCase();
+        setConnectionState(prev => ({
+          ...prev,
+          status: prev.status ? { ...prev.status, currentMessage: messageName } : null,
+        }));
+        updatePrinter(printer.id, { currentMessage: messageName });
+      }
       return true;
     } else if (isElectron || isRelayMode()) {
       // Pause status polling to prevent ^SU commands from interleaving
