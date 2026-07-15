@@ -525,15 +525,25 @@ export function PrintersScreen({
         {/* Header */}
         <div className="p-3 border-b border-slate-800 bg-slate-900/80">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
                 <PrinterIcon className="w-4 h-4 text-primary" />
               </div>
-              <div>
-                <h2 className="font-bold text-white text-sm">Network Printers</h2>
+              <div className="min-w-0">
+                <h2 className="font-bold text-white text-sm truncate">Network Printers</h2>
                 <p className="text-[10px] text-slate-400">{visiblePrinters.length} device{visiblePrinters.length !== 1 ? 's' : ''} • drag to reorder</p>
               </div>
             </div>
+            <Button
+              onClick={() => setExpandedGridOpen(true)}
+              size="sm"
+              variant="outline"
+              className="h-8 px-2 border-slate-500 text-white bg-slate-700/50 hover:bg-slate-600 hover:text-white flex-shrink-0"
+              title="Expand printers to full-screen grid"
+              aria-label="Expand printers to full-screen grid"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </Button>
           </div>
           
           {/* Consumables & Reports navigation */}
