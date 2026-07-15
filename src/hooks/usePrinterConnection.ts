@@ -2611,7 +2611,7 @@ export function usePrinterConnection() {
       console.log('[saveMessageContent] Web preview mock - commands:', commands);
       return true;
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter, connectionState.status?.currentMessage, addMessage]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter, connectionState.status?.currentMessage, addMessage, updatePrinter]);
 
   // Build the raw protocol commands for a message (without sending).
   // Used by master/slave sync to send messages to non-connected printers.
