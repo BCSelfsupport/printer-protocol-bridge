@@ -266,26 +266,30 @@ export function useMasterSlaveSync({
         masterCurrentMsg = currentMessage ?? null;
       }
 
-      if (masterMessages.length === 0 && !masterCurrentMsg) {
+      const syncMessages = masterMessages.filter(name => !isPresetMessage(name));
+      const syncCurrentMsg = masterCurrentMsg && !isPresetMessage(masterCurrentMsg) ? masterCurrentMsg : null;
+
+      if (syncMessages.length === 0 && !syncCurrentMsg) {
         console.log(`[MasterSlaveSync] No messages to sync from master ${master.name}`);
         return;
       }
 
-      console.log(`[MasterSlaveSync] Syncing master "${master.name}" (${masterMessages.length} msgs) → ${slaves.length} slave(s)`);
+      console.log(`[MasterSlaveSync] Syncing master "${master.name}" (${syncMessages.length}/${masterMessages.length} msgs) → ${slaves.length} slave(s)`);
       syncingRef.current = true;
 
       for (const slave of slaves) {
-        for (const msgName of masterMessages) {
+        for (const msgName of syncMessages) {
           await sendCommandToPrinter(slave, `^NM ${msgName}`);
         }
-        if (masterCurrentMsg) {
-          await sendCommandToPrinter(slave, `^SM ${masterCurrentMsg}`);
+        if (syncCurrentMsg) {
+          await sendCommandToPrinter(slave, `^SM ${syncCurrentMsg}`);
         }
       }
 
       syncingRef.current = false;
       console.log(`[MasterSlaveSync] Master "${master.name}" sync complete`);
     }, [printers, connectedPrinterId, messages, currentMessage, sendCommandToPrinter]),
+
 
     // Broadcast a specific message to all slaves with optional per-printer User Define values
     // userDefineFieldNum: the 1-indexed absolute field number (from ^NM ordering) for the prompted field
