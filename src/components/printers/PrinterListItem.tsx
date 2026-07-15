@@ -91,10 +91,31 @@ export function PrinterListItem({
   isUpdatingExpiry = false,
   messageExpiryDays,
   twinPairRole,
+  onRotationChange,
 }: PrinterListItemProps) {
   const [editingExpiry, setEditingExpiry] = useState(false);
   const [expiryInput, setExpiryInput] = useState('');
   const expiryInputRef = useRef<HTMLInputElement>(null);
+  // Per-printer rotation cycle: Normal → Mirror → Flip → Mirror Flip → Normal.
+  // Baked into every message pushed from Master → this printer on sync so lines
+  // running in the opposite direction of travel print correctly regardless of
+  // the source message's stored orientation.
+  const ROTATION_CYCLE = ['Normal', 'Mirror', 'Flip', 'Mirror Flip'] as const;
+  const ROTATION_LABELS: Record<typeof ROTATION_CYCLE[number], string> = {
+    'Normal': 'L→R',
+    'Mirror': 'MIR',
+    'Flip': 'FLIP',
+    'Mirror Flip': 'R→L',
+  };
+  const currentRotation = (printer.rotation ?? 'Normal') as typeof ROTATION_CYCLE[number];
+  const handleRotationCycle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onRotationChange) return;
+    const idx = ROTATION_CYCLE.indexOf(currentRotation);
+    const next = ROTATION_CYCLE[(idx + 1) % ROTATION_CYCLE.length];
+    onRotationChange(printer.id, next);
+  };
+
   // Slaves should mirror the master's active message in the card UI even if
   // their local emulator state still has an older message name.
   const displayMessage = printer.role === 'slave'
