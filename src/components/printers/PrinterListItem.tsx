@@ -412,7 +412,20 @@ export function PrinterListItem({
                 Sync Slaves
               </Button>
             )}
-            {/* Service button */}
+            {/* Rotation cycle (overrides message rotation on Master sync) */}
+            {onRotationChange && (
+              <Button
+                onClick={handleRotationCycle}
+                size="sm"
+                variant="ghost"
+                className={`h-6 text-[10px] px-2 ${currentRotation === 'Normal' ? 'text-slate-400 hover:text-white hover:bg-slate-600' : 'text-cyan-300 hover:text-white hover:bg-cyan-500/20 border border-cyan-400/40'}`}
+                title={`Rotation: ${currentRotation}. Click to cycle (Normal → Mirror → Flip → Mirror Flip). Applied to every message on sync.`}
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                {ROTATION_LABELS[currentRotation]}
+              </Button>
+            )}
+
             {printer.isAvailable && onService && (
               <Button
                 onClick={(e) => {
