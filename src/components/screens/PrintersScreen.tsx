@@ -130,6 +130,8 @@ function SortablePrinterItem({
   messageExpiryDays,
   twinPairRole,
   hideDragHandle,
+  onRotationChange,
+
 }: {
   printer: Printer;
   isSelected: boolean;
@@ -154,7 +156,9 @@ function SortablePrinterItem({
   messageExpiryDays?: number;
   twinPairRole?: 'A' | 'B' | null;
   hideDragHandle?: boolean;
+  onRotationChange?: (printerId: number, rotation: NonNullable<Printer['rotation']>) => void;
 }) {
+
   const {
     attributes,
     listeners,
@@ -209,10 +213,12 @@ function SortablePrinterItem({
         isUpdatingExpiry={isUpdatingExpiry}
         messageExpiryDays={messageExpiryDays}
         twinPairRole={twinPairRole}
+        onRotationChange={onRotationChange}
       />
     </div>
   );
 }
+
 
 export function PrintersScreen({
   printers,
@@ -684,7 +690,9 @@ export function PrintersScreen({
                       : pairPrinters && pairPrinters.b.id === printer.id ? 'B'
                       : null
                     }
+                    onRotationChange={onUpdatePrinter ? (id, rot) => onUpdatePrinter(id, { rotation: rot }) : undefined}
                   />
+
                 );
               };
 
@@ -1065,6 +1073,8 @@ export function PrintersScreen({
                       : pairPrinters && pairPrinters.b.id === printer.id ? 'B'
                       : null
                     }
+                    onRotationChange={onUpdatePrinter ? (id, rot) => onUpdatePrinter(id, { rotation: rot }) : undefined}
+
                   />
                 );
               })}

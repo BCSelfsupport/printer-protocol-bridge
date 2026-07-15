@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, Calendar, Check, X, Link2, Send } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, Calendar, Check, X, Link2, Send, RotateCcw } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
@@ -49,7 +49,10 @@ interface PrinterListItemProps {
   messageExpiryDays?: number;
   /** TwinCode pair role badge — 'A' (lid) or 'B' (side). Shown when this printer is part of a bound pair. */
   twinPairRole?: 'A' | 'B' | null;
+  /** Callback when the per-printer rotation cycle button is clicked */
+  onRotationChange?: (printerId: number, rotation: NonNullable<Printer['rotation']>) => void;
 }
+
 
 // Helper to get color for fluid levels
 function getFluidColor(level?: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN'): string {
@@ -88,10 +91,31 @@ export function PrinterListItem({
   isUpdatingExpiry = false,
   messageExpiryDays,
   twinPairRole,
+  onRotationChange,
 }: PrinterListItemProps) {
   const [editingExpiry, setEditingExpiry] = useState(false);
   const [expiryInput, setExpiryInput] = useState('');
   const expiryInputRef = useRef<HTMLInputElement>(null);
+  // Per-printer rotation cycle: Normal → Mirror → Flip → Mirror Flip → Normal.
+  // Baked into every message pushed from Master → this printer on sync so lines
+  // running in the opposite direction of travel print correctly regardless of
+  // the source message's stored orientation.
+  const ROTATION_CYCLE = ['Normal', 'Mirror', 'Flip', 'Mirror Flip'] as const;
+  const ROTATION_LABELS: Record<typeof ROTATION_CYCLE[number], string> = {
+    'Normal': 'L→R',
+    'Mirror': 'MIR',
+    'Flip': 'FLIP',
+    'Mirror Flip': 'R→L',
+  };
+  const currentRotation = (printer.rotation ?? 'Normal') as typeof ROTATION_CYCLE[number];
+  const handleRotationCycle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onRotationChange) return;
+    const idx = ROTATION_CYCLE.indexOf(currentRotation);
+    const next = ROTATION_CYCLE[(idx + 1) % ROTATION_CYCLE.length];
+    onRotationChange(printer.id, next);
+  };
+
   // Slaves should mirror the master's active message in the card UI even if
   // their local emulator state still has an older message name.
   const displayMessage = printer.role === 'slave'
@@ -388,7 +412,20 @@ export function PrinterListItem({
                 Sync Slaves
               </Button>
             )}
-            {/* Service button */}
+            {/* Rotation cycle (overrides message rotation on Master sync) */}
+            {onRotationChange && (
+              <Button
+                onClick={handleRotationCycle}
+                size="sm"
+                variant="ghost"
+                className={`h-6 text-[10px] px-2 ${currentRotation === 'Normal' ? 'text-slate-400 hover:text-white hover:bg-slate-600' : 'text-cyan-300 hover:text-white hover:bg-cyan-500/20 border border-cyan-400/40'}`}
+                title={`Rotation: ${currentRotation}. Click to cycle (Normal → Mirror → Flip → Mirror Flip). Applied to every message on sync.`}
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                {ROTATION_LABELS[currentRotation]}
+              </Button>
+            )}
+
             {printer.isAvailable && onService && (
               <Button
                 onClick={(e) => {
@@ -487,6 +524,17 @@ export function PrinterListItem({
               WARNING
             </span>
           )}
+          {onRotationChange && (
+            <button
+              onClick={handleRotationCycle}
+              className={`text-[10px] px-1.5 py-0.5 rounded font-semibold whitespace-nowrap inline-flex items-center gap-1 transition-all ${currentRotation === 'Normal' ? 'bg-slate-700/60 text-slate-300 hover:bg-slate-600' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 hover:bg-cyan-500/30'}`}
+              title={`Rotation: ${currentRotation}. Click to cycle.`}
+            >
+              <RotateCcw className="w-2.5 h-2.5" />
+              {ROTATION_LABELS[currentRotation]}
+            </button>
+          )}
+
         </div>
       </div>
 
