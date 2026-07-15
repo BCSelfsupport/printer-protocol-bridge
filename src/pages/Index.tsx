@@ -2375,18 +2375,31 @@ const Index = () => {
             return;
           }
 
+          // Skip messages that already exist on every slave from the factory
+          // (hardcoded demos: bestcode, bestcode auto, quantum, quantum auto)
+          // and 'moba' which ships pre-installed on slaves. Pushing these just
+          // slows the sync and risks lockups.
+          const SKIP_PRELOADED = new Set(['bestcode', 'bestcode auto', 'quantum', 'quantum auto', 'moba']);
+          const filtered = messagesToPush.filter(m => !SKIP_PRELOADED.has(m.name.toLowerCase()));
+          const skipped = messagesToPush.length - filtered.length;
+
+          if (filtered.length === 0) {
+            toast.info(`Nothing to sync — all ${messagesToPush.length} message(s) are pre-installed on slaves`);
+            return;
+          }
+
           setPollingPaused(true);
-          const t = toast.loading(`Syncing ${messagesToPush.length} message(s) to ${slaves.length} slave(s)…`);
+          const t = toast.loading(`Syncing ${filtered.length} message(s) to ${slaves.length} slave(s)${skipped ? ` (skipping ${skipped} pre-installed)` : ''}…`);
           try {
             await waitForPollingIdle(3000);
             let okCount = 0;
-            for (const m of messagesToPush) {
+            for (const m of filtered) {
               const details = getMessage(m.name);
               if (!details || details.fields.length === 0) continue;
               await syncMessageToSlaves(m.name, details, false);
               okCount += 1;
             }
-            toast.success(`Synced ${okCount} message(s) to ${slaves.length} slave(s)`, { id: t });
+            toast.success(`Synced ${okCount} message(s) to ${slaves.length} slave(s)${skipped ? ` — skipped ${skipped} pre-installed` : ''}`, { id: t });
           } catch (err: any) {
             console.error('[SyncSlaves] Failed:', err);
             toast.error(`Slave sync failed: ${err?.message ?? 'unknown error'}`, { id: t });
