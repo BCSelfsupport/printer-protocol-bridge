@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
-import { setPollingPaused, isPollingPaused } from '@/lib/pollingPause';
+import { setPollingPaused } from '@/lib/pollingPause';
 import { beginSaveBusy } from '@/lib/saveBusy';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
 
@@ -417,106 +417,12 @@ export function usePrinterConnection() {
   const setServiceScreenOpen = (_: boolean) => {};
   const setControlScreenOpen = (_: boolean) => {};
 
-  // Quick-status polling: ephemeral TCP connect → ^SU → disconnect for reachable,
-  // non-connected printers. Runs every 15s to populate ink/makeup/message/count
-  // on the printer cards without requiring a full connection.
-  const quickStatusInProgressRef = useRef(false);
-  const quickStatusPoll = useCallback(async () => {
-    if (quickStatusInProgressRef.current) return;
-    if (shouldUseEmulator()) return;
-    if (isPollingPaused()) return;
-
-    const connectedId = connectedPrinterIdRef.current;
-    const targets = printersRef.current.filter(
-      (p) => p.isAvailable && p.id !== connectedId
-    );
-    if (targets.length === 0) return;
-
-    quickStatusInProgressRef.current = true;
-    try {
-      const results = await printerTransport.quickStatus(
-        targets.map((p) => ({ id: p.id, ipAddress: p.ipAddress, port: p.port }))
-      );
-      if (!results) return;
-
-      results.forEach((r: any) => {
-        if (!r.ok) return;
-
-        // Parse ^SU response
-        const suRaw = r.suRaw || r.raw || '';
-        const parsed = parseStatusResponse(suRaw);
-        if (!parsed) return;
-
-        const hvOn = parsed.printStatus === 'Ready';
-
-        // Parse ^LE response for authoritative EMPTY detection
-        const leRaw = r.leRaw || '';
-        const leResult = parseErrorListResponse(leRaw);
-        const inkEmpty = leResult?.inkEmpty ?? false;
-        const makeupEmpty = leResult?.makeupEmpty ?? false;
-
-        const inkLevel = (inkEmpty ? 'EMPTY' : (parsed.inkLevel?.toUpperCase() ?? 'UNKNOWN')) as Printer['inkLevel'];
-        const makeupLevel = (makeupEmpty ? 'EMPTY' : (parsed.makeupLevel?.toUpperCase() ?? 'UNKNOWN')) as Printer['makeupLevel'];
-
-        // DIAGNOSTIC: log raw fluid lines so we can see what the printer
-        // actually reports vs. what we display on the card. Cheap (1 line per
-        // printer per poll) and only fires when an SU response was received.
-        const inkLine = (suRaw.match(/[^\r\n]*\bINK[^\r\n]*/i) || [''])[0].trim();
-        const makeupLine = (suRaw.match(/[^\r\n]*\bMAKEUP[^\r\n]*/i) || [''])[0].trim();
-        console.log(
-          `[quick-status] printer ${r.id} fluids → ink="${inkLine}" → ${inkLevel} | makeup="${makeupLine}" → ${makeupLevel}${makeupEmpty ? ' (LE override: EMPTY)' : ''}`
-        );
-
-
-        // Parse ^SM response for current message name
-        // ^SM response format: "^SM\r\nMESSAGE_NAME\r\nSuccess\r\n>"
-        const smRaw = r.smRaw || '';
-        let currentMessage: string | undefined;
-        const smLines = smRaw.split(/\r?\n/).map((l: string) => l.trim()).filter((l: string) => l && l !== '^SM' && !/^success$/i.test(l) && l !== '>');
-        if (smLines.length > 0) {
-          let msgName = smLines[0].replace(/[^\x20-\x7E]/g, '').trim();
-          // Strip echo-on prefix: "Selected Message: NAME" or "Message: NAME"
-          msgName = msgName.replace(/^(Selected\s+)?Message\s*:\s*/i, '').trim();
-          if (msgName && msgName !== 'NONE') {
-            currentMessage = msgName.toUpperCase();
-          }
-        }
-
-        // Detect active errors from ^LE
-        const hasErrors = (leResult?.errors?.length ?? 0) > 0;
-
-        // Parse print count from ^SU PRINT: field
-        const printCountMatch = suRaw.match(/PRINT\s*:\s*(\d+)/i);
-        const printCount = printCountMatch ? parseInt(printCountMatch[1], 10) : undefined;
-
-        updatePrinterStatus(r.id, {
-          isAvailable: true,
-          status: hvOn ? 'ready' : 'not_ready',
-          hasActiveErrors: hasErrors,
-          inkLevel,
-          makeupLevel,
-          ...(currentMessage !== undefined ? { currentMessage } : {}),
-          ...(printCount !== undefined ? { printCount } : {}),
-        });
-      });
-    } catch (err) {
-      console.error('[quick-status] Poll failed:', err);
-    } finally {
-      quickStatusInProgressRef.current = false;
-    }
-  }, [updatePrinterStatus]);
-
-  useEffect(() => {
-    if (!availabilityPollingEnabled) return;
-    if (shouldUseEmulator()) return;
-
-    const initialTimer = setTimeout(quickStatusPoll, 5000);
-    const interval = setInterval(quickStatusPoll, 15000);
-    return () => {
-      clearTimeout(initialTimer);
-      clearInterval(interval);
-    };
-  }, [availabilityPollingEnabled, quickStatusPoll]);
+  // IMPORTANT: Do not run any "quick status" background Telnet probe for idle
+  // printers. BestCode hardware has a single fragile port-23 session slot; even
+  // connect → ^SU → disconnect against a printer that is merely sitting on the
+  // network can steal/wedge that slot. Unconnected cards only get ICMP reachability
+  // plus last-known stored values. Live ^SU/^LE/^SM/^LM polling starts only after
+  // the operator explicitly connects/selects that printer.
 
 
   // Stable callback for service polling – avoids effect churn

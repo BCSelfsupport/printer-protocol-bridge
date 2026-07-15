@@ -7,6 +7,7 @@ Updated: today
 - BestCode Printer management (Electron app + PWA).
 - Protocol v2.6 authoritative. Save requires `^SV` after `^NM`.
 - 1 persistent TCP socket (port 23) per printer. Only one telnet session allowed by hardware.
+- Never background-probe port 23 on idle printers; use ICMP only until explicit connect.
 - Admin password: `TEXAS`. Emulator: `CITEC`. Dev panel: gated by license-key + TOTP 2FA (no shared password).
 - Owner developer key: `53F2G-K94HE-VK8DB-8RB4U`. Only owner can issue developer invites.
 - Hardware vertical limits: Model 82=25-dot, 86=19-dot, 88=32-dot.
@@ -33,7 +34,7 @@ Updated: today
 - [Master/Slave](mem://features/master-slave-system) — Sync messages and selection commands to slaves
 - [Fonts](mem://features/font-rendering-specs) — 9 printer fonts, Standard7High plain zero
 - [Dashboard Layout](mem://style/dashboard-layout-specs) — Bottom alignment for 16-dot/25-dot messages
-- [Client Concurrency](mem://architecture/multi-client-concurrency) — Firmware natively handles port 23 concurrency
+- [Port 23 Concurrency](mem://constraints/port-23-single-session) — No background/ephemeral Telnet; explicit persistent connection only
 - [Jet/HV Control](mem://features/jet-hv-control) — 66s startup, 134s shutdown, ^PR 1/0
 - [Polling Strategy](mem://architecture/status-polling-strategy) — Gated polling, excludes connected printer from pings
 - [Dev Access](mem://auth/dev-access-flow) — DEPRECATED — superseded by developer-access-system
