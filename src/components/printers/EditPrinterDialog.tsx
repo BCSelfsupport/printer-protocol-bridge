@@ -17,16 +17,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Printer as PrinterIcon, Save, Trash2, Crown, Link, Hash, Tag } from 'lucide-react';
+import { Printer as PrinterIcon, Save, Trash2, Crown, Link, Hash, Tag, RotateCcw } from 'lucide-react';
+
+type PrinterRotation = NonNullable<Printer['rotation']>;
 
 interface EditPrinterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   printer: Printer | null;
-  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string; lineId?: string }) => void;
+  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string; lineId?: string; rotation?: PrinterRotation }) => void;
   onDelete?: (printerId: number) => void;
   allPrinters?: Printer[];
 }
+
 
 export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelete, allPrinters = [] }: EditPrinterDialogProps) {
   const pair = useTwinPair();
@@ -38,6 +41,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
   const [serialNumber, setSerialNumber] = useState('');
   
   const [lineId, setLineId] = useState('');
+  const [rotation, setRotation] = useState<PrinterRotation>('Normal');
   const [ipError, setIpError] = useState('');
   // Sync form when printer changes
   useEffect(() => {
@@ -50,8 +54,10 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       setSerialNumber(printer.serialNumber ?? '');
       
       setLineId(printer.lineId ?? '');
+      setRotation(printer.rotation ?? 'Normal');
     }
   }, [printer]);
+
 
   const existingIps = allPrinters.filter(p => p.id !== printer?.id).map(p => p.ipAddress);
 
@@ -93,7 +99,9 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       serialNumber: serialNumber.trim() || undefined,
       
       lineId: lineId.trim() || undefined,
+      rotation,
     });
+
     onOpenChange(false);
   };
 
@@ -196,6 +204,34 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
               Optional. Used as the value for Line ID fields in messages.
             </p>
           </div>
+
+          {/* Print Rotation (per printer, applied on Master sync) */}
+          <div className="space-y-2">
+            <Label className="text-slate-300 flex items-center gap-1.5">
+              <RotateCcw className="w-3.5 h-3.5" />
+              Print Rotation (Direction of Travel)
+            </Label>
+            <Select value={rotation} onValueChange={(v) => setRotation(v as PrinterRotation)}>
+              <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Normal">Normal — Left → Right</SelectItem>
+                <SelectItem value="Mirror Flip">Inverted 180° — Right → Left</SelectItem>
+                <SelectItem value="Mirror">Mirror (horizontal flip)</SelectItem>
+                <SelectItem value="Flip">Flip (vertical flip)</SelectItem>
+                <SelectItem value="Tower">Tower</SelectItem>
+                <SelectItem value="Tower Flip">Tower Flip</SelectItem>
+                <SelectItem value="Tower Mirror">Tower Mirror</SelectItem>
+                <SelectItem value="Tower Mirror Flip">Tower Mirror Flip</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-slate-500">
+              Baked into every message pushed from Master → this printer. Set to "Inverted 180°" for lines that run right-to-left.
+            </p>
+          </div>
+
+
 
 
           {(() => {
