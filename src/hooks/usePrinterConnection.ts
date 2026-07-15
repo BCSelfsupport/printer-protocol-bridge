@@ -2446,6 +2446,13 @@ export function usePrinterConnection() {
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
     commands.push(FLUSH_COMMAND);
+    // When selectAfterSave is set, chain ^SM inside the same polling-pause
+    // window so no ^SU / ^LM can interleave between ^SV and ^SM. This is the
+    // hot path for messages with prompted (User Define) fields — running ^SM
+    // concurrently with a post-^SV poll was locking the firmware.
+    if (selectAfterSave) {
+      commands.push(`^SM ${messageName}`);
+    }
 
     if (shouldUseEmulator()) {
       const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
