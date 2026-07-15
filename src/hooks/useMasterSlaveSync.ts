@@ -140,10 +140,16 @@ export function useMasterSlaveSync({
     return false;
   }, [connectedPrinterId]);
 
-  // Sync message selection: when master's currentMessage changes, push full content to slaves first, then ^SM
+  // Sync message selection: when master's currentMessage changes, push full content to slaves first, then ^SM.
+  // Skip factory/preset messages (BestCode, Moba, etc.) — they already exist on slaves.
   useEffect(() => {
     if (!isMaster || !currentMessage || syncingRef.current) return;
     if (currentMessage === prevMessageRef.current) return;
+    if (isPresetMessage(currentMessage)) {
+      console.log(`[MasterSlaveSync] Skipping preset message selection "${currentMessage}"`);
+      prevMessageRef.current = currentMessage;
+      return;
+    }
 
     prevMessageRef.current = currentMessage;
     const slaves = getSlaves();
@@ -151,6 +157,7 @@ export function useMasterSlaveSync({
 
     syncingRef.current = true;
     console.log(`[MasterSlaveSync] Syncing message selection "${currentMessage}" to ${slaves.length} slave(s)`);
+
 
     (async () => {
       const details = getMessageContent?.(currentMessage) ?? null;
