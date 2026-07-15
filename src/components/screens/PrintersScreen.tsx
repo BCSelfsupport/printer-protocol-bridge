@@ -130,6 +130,8 @@ function SortablePrinterItem({
   messageExpiryDays,
   twinPairRole,
   hideDragHandle,
+  onRotationChange,
+
 }: {
   printer: Printer;
   isSelected: boolean;
