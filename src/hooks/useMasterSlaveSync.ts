@@ -166,9 +166,19 @@ export function useMasterSlaveSync({
 
         if (details && details.fields.length > 0 && buildMessageCommands) {
           const rotation = slave.rotation ?? 'Normal';
+          // Per-printer expiry offset override — apply slave.expiryOffsetDays to
+          // any expiry date field so each line gets its own offset on the HMI.
+          const slaveOffset = slave.expiryOffsetDays;
+          const slaveFields = slaveOffset === undefined
+            ? details.fields
+            : details.fields.map((f) => {
+                const isExpiry = f.autoCodeFieldType?.startsWith('date_expiry')
+                  || (f.autoCodeExpiryDays ?? 0) > 0;
+                return isExpiry ? { ...f, autoCodeExpiryDays: slaveOffset } : f;
+              });
           const rawCommands = await buildMessageCommands(
             currentMessage,
-            details.fields,
+            slaveFields,
             details.templateValue,
             false,
             {

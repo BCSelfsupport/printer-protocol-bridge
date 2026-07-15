@@ -894,8 +894,18 @@ const Index = () => {
       // into the message header so message-stored rotation is ignored.
       const slaveRotation = slave.rotation ?? 'Normal';
       const slaveAdjust = { ...(details.adjustSettings ?? {}), rotation: slaveRotation };
+      // Per-printer expiry offset override: apply slave.expiryOffsetDays to
+      // any expiry date field so each line uses its own offset.
+      const slaveOffset = slave.expiryOffsetDays;
+      const slaveFields = slaveOffset === undefined
+        ? details.fields
+        : details.fields.map((f) => {
+            const isExpiry = f.autoCodeFieldType?.startsWith('date_expiry')
+              || (f.autoCodeExpiryDays ?? 0) > 0;
+            return isExpiry ? { ...f, autoCodeExpiryDays: slaveOffset } : f;
+          });
       const result = await replaceMessageWithoutDelete(slave, messageName, {
-        fields: details.fields,
+        fields: slaveFields,
         templateValue: details.templateValue,
         settings: details.settings,
         adjustSettings: slaveAdjust,
@@ -907,7 +917,7 @@ const Index = () => {
       }
 
       if (ok) {
-        const slaveDetails = normalizeMessageForPrinter({ ...details, name: messageName, adjustSettings: slaveAdjust });
+        const slaveDetails = normalizeMessageForPrinter({ ...details, name: messageName, fields: slaveFields, adjustSettings: slaveAdjust });
         saveMessage(slaveDetails, slave.id);
         recentlySavedRef.current.set(`${slave.id}:${messageName}`, Date.now());
         if (slaveCurrent === targetUpper) {
