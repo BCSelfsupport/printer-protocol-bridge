@@ -58,6 +58,8 @@ import { useFleetTelemetryPush } from '@/hooks/useFleetTelemetryPush';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { isRelayMode, printerTransport } from '@/lib/printerTransport';
 import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
+import { isPresetMessage } from '@/lib/hardcodedMessages';
+
 
 
 // Dev panel can be shown in dev mode OR when signed in with CITEC password
@@ -872,6 +874,10 @@ const Index = () => {
     isNew?: boolean,
   ) => {
     if (!isMaster || !connectionState.connectedPrinter) return;
+    if (isPresetMessage(messageName)) {
+      console.log(`[MasterSlaveSync] Skipping preset message "${messageName}" — already exists on slaves`);
+      return;
+    }
     const slaves = getSlavesForMaster(connectionState.connectedPrinter.id);
     const availableSlaves = slaves.filter(s => s.isAvailable);
     if (availableSlaves.length === 0) return;
@@ -879,6 +885,7 @@ const Index = () => {
     if (details.fields.length === 0) return;
 
     console.log(`[MasterSlaveSync] Pushing "${messageName}" to ${availableSlaves.length} slave(s) (template=${details.templateValue ?? '32'})`);
+
     const targetUpper = messageName.trim().toUpperCase();
     for (const slave of availableSlaves) {
       const slaveCurrent = slave.currentMessage?.trim().toUpperCase();
@@ -2381,13 +2388,11 @@ const Index = () => {
             return;
           }
 
-          // Skip messages that already exist on every slave from the factory
-          // (hardcoded demos: bestcode, bestcode auto, quantum, quantum auto)
-          // and 'moba' which ships pre-installed on slaves. Pushing these just
-          // slows the sync and risks lockups.
-          const SKIP_PRELOADED = new Set(['bestcode', 'bestcode auto', 'quantum', 'quantum auto', 'moba']);
-          const filtered = messagesToPush.filter(m => !SKIP_PRELOADED.has(m.name.toLowerCase()));
+          // Skip factory/preset messages that already exist on every slave
+          // (BestCode, BestCode Auto, Quantum, Quantum Auto, Moba).
+          const filtered = messagesToPush.filter(m => !isPresetMessage(m.name));
           const skipped = messagesToPush.length - filtered.length;
+
 
           if (filtered.length === 0) {
             toast.info(`Nothing to sync — all ${messagesToPush.length} message(s) are pre-installed on slaves`);
