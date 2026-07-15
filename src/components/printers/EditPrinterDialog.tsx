@@ -41,6 +41,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
   const [serialNumber, setSerialNumber] = useState('');
   
   const [lineId, setLineId] = useState('');
+  const [rotation, setRotation] = useState<PrinterRotation>('Normal');
   const [ipError, setIpError] = useState('');
   // Sync form when printer changes
   useEffect(() => {
@@ -53,8 +54,10 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       setSerialNumber(printer.serialNumber ?? '');
       
       setLineId(printer.lineId ?? '');
+      setRotation(printer.rotation ?? 'Normal');
     }
   }, [printer]);
+
 
   const existingIps = allPrinters.filter(p => p.id !== printer?.id).map(p => p.ipAddress);
 
