@@ -1073,6 +1073,8 @@ export function PrintersScreen({
                       : pairPrinters && pairPrinters.b.id === printer.id ? 'B'
                       : null
                     }
+                    onRotationChange={onUpdatePrinter ? (id, rot) => onUpdatePrinter(id, { rotation: rot }) : undefined}
+
                   />
                 );
               })}
