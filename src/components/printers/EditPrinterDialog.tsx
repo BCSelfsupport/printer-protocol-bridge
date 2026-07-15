@@ -99,7 +99,9 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       serialNumber: serialNumber.trim() || undefined,
       
       lineId: lineId.trim() || undefined,
+      rotation,
     });
+
     onOpenChange(false);
   };
 
