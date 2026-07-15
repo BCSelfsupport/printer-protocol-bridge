@@ -89,14 +89,19 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim() || !productKey) return;
+    if (!code.trim()) return;
     setBusy(true);
     setError(null);
-    if (import.meta.env.DEV && code.trim().toUpperCase() === PREVIEW_DEV_PASSWORD) {
+    if (isPreviewEnv() && code.trim().toUpperCase() === PREVIEW_DEV_PASSWORD) {
       setCode('');
       onSuccess();
       onOpenChange(false);
       setBusy(false);
+      return;
+    }
+    if (!productKey) {
+      setBusy(false);
+      setError('No license key activated.');
       return;
     }
     try {
