@@ -140,7 +140,7 @@ function SettingCard({
   );
 }
 
-const rotationValues: FieldSettings['rotation'][] = ['Normal', 'Mirror', 'Flip', 'Mirror Flip'];
+const rotationValues: FieldSettings['rotation'][] = ['Normal', 'Flip', 'Mirror Flip', 'Mirror'];
 const autoNumeralValues = [0, 1, 2, 3, 4];
 
 interface FieldSettingsPanelProps {

@@ -106,8 +106,8 @@ export function WireCableScreen({
   // Flip-flop: alternate orientation on each print
   // This would be triggered by the app watching print count changes
   const ORIENTATION_MAP: Record<string, number> = {
-    'Normal': 0, 'Flip': 1, 'Mirror': 2, 'Mirror Flip': 3,
-    'Tower': 4, 'Tower Flip': 5, 'Tower Mirror': 6, 'Tower Mirror Flip': 7,
+    'Normal': 0, 'Flip': 1, 'Mirror Flip': 2, 'Mirror': 3,
+    'Tower': 4, 'Tower Flip': 5, 'Tower Mirror Flip': 6, 'Tower Mirror': 7,
   };
 
   // Watch print count for flip-flop

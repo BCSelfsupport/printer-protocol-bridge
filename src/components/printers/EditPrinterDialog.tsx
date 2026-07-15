@@ -218,8 +218,8 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
               <SelectContent>
                 <SelectItem value="Normal">Normal</SelectItem>
                 <SelectItem value="Flip">Flip</SelectItem>
-                <SelectItem value="Mirror">Mirror</SelectItem>
                 <SelectItem value="Mirror Flip">Mirror Flip</SelectItem>
+                <SelectItem value="Mirror">Mirror</SelectItem>
               </SelectContent>
             </Select>
           </div>

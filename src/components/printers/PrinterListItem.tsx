@@ -96,11 +96,11 @@ export function PrinterListItem({
   const [editingExpiry, setEditingExpiry] = useState(false);
   const [expiryInput, setExpiryInput] = useState('');
   const expiryInputRef = useRef<HTMLInputElement>(null);
-  // Per-printer rotation cycle: Normal → Mirror → Flip → Mirror Flip → Normal.
+  // Per-printer rotation cycle matches the printer HMI order.
   // Baked into every message pushed from Master → this printer on sync so lines
   // running in the opposite direction of travel print correctly regardless of
   // the source message's stored orientation.
-  const ROTATION_CYCLE = ['Normal', 'Mirror', 'Flip', 'Mirror Flip'] as const;
+  const ROTATION_CYCLE = ['Normal', 'Flip', 'Mirror Flip', 'Mirror'] as const;
   const ROTATION_LABELS: Record<typeof ROTATION_CYCLE[number], string> = {
     'Normal': 'Normal',
     'Mirror': 'Mirror',
@@ -419,7 +419,7 @@ export function PrinterListItem({
                 size="sm"
                 variant="ghost"
                 className={`h-6 text-[10px] px-2 ${currentRotation === 'Normal' ? 'text-slate-400 hover:text-white hover:bg-slate-600' : 'text-cyan-300 hover:text-white hover:bg-cyan-500/20 border border-cyan-400/40'}`}
-                title={`Rotation: ${currentRotation}. Click to cycle (Normal → Mirror → Flip → Mirror Flip). Applied to every message on sync.`}
+                title={`Rotation: ${currentRotation}. Click to cycle.`}
               >
                 <RotateCcw className="w-3 h-3 mr-1" />
                 {ROTATION_LABELS[currentRotation]}
