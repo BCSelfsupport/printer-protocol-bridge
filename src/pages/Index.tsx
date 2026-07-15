@@ -874,6 +874,10 @@ const Index = () => {
     isNew?: boolean,
   ) => {
     if (!isMaster || !connectionState.connectedPrinter) return;
+    if (isPresetMessage(messageName)) {
+      console.log(`[MasterSlaveSync] Skipping preset message "${messageName}" — already exists on slaves`);
+      return;
+    }
     const slaves = getSlavesForMaster(connectionState.connectedPrinter.id);
     const availableSlaves = slaves.filter(s => s.isAvailable);
     if (availableSlaves.length === 0) return;
@@ -881,6 +885,7 @@ const Index = () => {
     if (details.fields.length === 0) return;
 
     console.log(`[MasterSlaveSync] Pushing "${messageName}" to ${availableSlaves.length} slave(s) (template=${details.templateValue ?? '32'})`);
+
     const targetUpper = messageName.trim().toUpperCase();
     for (const slave of availableSlaves) {
       const slaveCurrent = slave.currentMessage?.trim().toUpperCase();
