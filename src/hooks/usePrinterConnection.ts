@@ -2567,6 +2567,19 @@ export function usePrinterConnection() {
         setPollingPaused(false);
         releaseSaveBusy();
 
+        // Apply selection state after the guarded ^SM completes so polling
+        // sees the new currentMessage immediately and the grace window covers
+        // the firmware settle period.
+        if (selectAfterSave) {
+          smSelectGraceUntilRef.current = Date.now() + 15000;
+          smExpectedMessageRef.current = messageName.toUpperCase();
+          setConnectionState(prev => ({
+            ...prev,
+            status: prev.status ? { ...prev.status, currentMessage: messageName } : null,
+          }));
+          updatePrinter(printer.id, { currentMessage: messageName });
+        }
+
         // Post-save verification: wait for firmware to flush, then check ^LM.
         if (isNew) {
           await new Promise(resolve => setTimeout(resolve, 500));
