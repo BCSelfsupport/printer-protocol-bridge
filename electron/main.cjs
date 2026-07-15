@@ -276,74 +276,12 @@ ipcMain.handle('printer:check-status', async (event, printers) => {
   return results;
 });
 
-// Quick status: ephemeral TCP connect → ^SU + ^LE + ^SM → disconnect.
-// Returns ink/makeup levels (with EMPTY override from ^LE), current message name (^SM),
-// and print count without a persistent connection.
-// IMPORTANT: Only call this for printers that are NOT currently connected via the main socket.
+// Quick status is intentionally disabled.
+// BestCode printers can lock up from background ephemeral Telnet sessions even
+// while merely sitting on the network. Idle/unconnected printers must only be
+// checked with ICMP reachability; protocol reads begin after explicit connect.
 ipcMain.handle('printer:quick-status', async (event, printers) => {
-  const TIMEOUT = 8000;
-
-  // Send a command on a socket and collect the response until '>' prompt
-  const sendAndCollect = (socket, command) => new Promise((resolve) => {
-    let buf = '';
-    const onData = (data) => {
-      handleTelnetNegotiation(socket, data);
-      const stripped = stripTelnetBytes(data);
-      if (stripped && stripped.length > 0) {
-        buf += stripped.toString();
-        if (buf.includes('>')) {
-          socket.off('data', onData);
-          resolve(buf);
-        }
-      }
-    };
-    socket.on('data', onData);
-    try { socket.write(command + '\r\n'); } catch (_) { resolve(''); }
-    // Safety timeout per command
-    setTimeout(() => { socket.off('data', onData); resolve(buf); }, 3000);
-  });
-
-  const queryOne = (printer) => new Promise((resolve) => {
-    const socket = new net.Socket();
-    socket.setTimeout(TIMEOUT);
-    let resolved = false;
-
-    const finish = (result) => {
-      if (resolved) return;
-      resolved = true;
-      try { socket.destroy(); } catch (_) {}
-      resolve(result);
-    };
-
-    socket.on('connect', () => {
-      // Wait for Telnet negotiation before sending commands
-      setTimeout(async () => {
-        if (resolved) return;
-        try {
-          // Drain any welcome banner
-          const suRaw = await sendAndCollect(socket, '^SU');
-          const leRaw = await sendAndCollect(socket, '^LE');
-          const smRaw = await sendAndCollect(socket, '^SM');
-          finish({ id: printer.id, ok: true, suRaw, leRaw, smRaw });
-        } catch (_) {
-          finish({ id: printer.id, ok: false });
-        }
-      }, 600);
-    });
-
-    // Consume Telnet negotiation during handshake phase
-    socket.on('data', (data) => { handleTelnetNegotiation(socket, data); });
-    socket.on('error', () => finish({ id: printer.id, ok: false }));
-    socket.on('timeout', () => finish({ id: printer.id, ok: false }));
-    socket.on('close', () => finish({ id: printer.id, ok: false }));
-
-    socket.connect(printer.port, printer.ipAddress);
-    setTimeout(() => finish({ id: printer.id, ok: false }), TIMEOUT);
-  });
-
-  // Run queries in parallel — firmware supports multiple concurrent Telnet sessions.
-  const results = await Promise.all(printers.map(queryOne));
-  return results;
+  return (printers || []).map((printer) => ({ id: printer.id, ok: false, disabled: true }));
 });
 
 ipcMain.handle('printer:connect', async (event, printer) => {
@@ -818,52 +756,9 @@ function startRelayServer() {
         sendJson(200, { printers: results });
 
       } else if (url === '/relay/quick-status') {
-        // Ephemeral TCP connect → ^SU → disconnect for each printer
+        // Disabled: never open background ephemeral Telnet sessions to idle printers.
         const printers = payload.printers || [];
-        const TIMEOUT = 5000;
-        const queryOne = (printer) => new Promise((resolve) => {
-          const socket = new net.Socket();
-          socket.setTimeout(TIMEOUT);
-          let resolved = false;
-          let dataBuffer = '';
-          let commandSent = false;
-
-          const finish = (result) => {
-            if (resolved) return;
-            resolved = true;
-            try { socket.destroy(); } catch (_) {}
-            resolve(result);
-          };
-
-          socket.on('connect', () => {
-            setTimeout(() => {
-              if (!resolved) {
-                commandSent = true;
-                try { socket.write('^SU\r\n'); } catch (_) { finish({ id: printer.id, ok: false }); }
-              }
-            }, 600);
-          });
-
-          socket.on('data', (data) => {
-            handleTelnetNegotiation(socket, data);
-            const stripped = stripTelnetBytes(data);
-            if (stripped && stripped.length > 0 && commandSent) {
-              dataBuffer += stripped.toString();
-              if (dataBuffer.includes('Success') || dataBuffer.includes('>')) {
-                finish({ id: printer.id, ok: true, raw: dataBuffer });
-              }
-            }
-          });
-
-          socket.on('error', () => finish({ id: printer.id, ok: false }));
-          socket.on('timeout', () => finish({ id: printer.id, ok: false }));
-          socket.on('close', () => finish({ id: printer.id, ok: false }));
-
-          socket.connect(printer.port, printer.ipAddress);
-          setTimeout(() => finish({ id: printer.id, ok: false }), TIMEOUT);
-        });
-
-        const results = await Promise.all(printers.map(queryOne));
+        const results = printers.map((printer) => ({ id: printer.id, ok: false, disabled: true }));
         sendJson(200, { results });
 
       } else if (url === '/relay/connect') {
