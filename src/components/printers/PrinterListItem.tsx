@@ -49,7 +49,10 @@ interface PrinterListItemProps {
   messageExpiryDays?: number;
   /** TwinCode pair role badge — 'A' (lid) or 'B' (side). Shown when this printer is part of a bound pair. */
   twinPairRole?: 'A' | 'B' | null;
+  /** Callback when the per-printer rotation cycle button is clicked */
+  onRotationChange?: (printerId: number, rotation: NonNullable<Printer['rotation']>) => void;
 }
+
 
 // Helper to get color for fluid levels
 function getFluidColor(level?: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN'): string {
