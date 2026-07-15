@@ -48,7 +48,31 @@ jobs:
           if (!(Test-Path "electron\resources")) { New-Item -ItemType Directory -Path "electron\resources" }
           Copy-Item "public\codesync-icon.png" "electron\resources\icon.png" -Force
 
-      - name: Build and publish installer
+      - name: Build installer
+        run: npx electron-builder --config electron/electron-builder.json --win --publish never
+
+      - name: Publish installer to GitHub Release
+        shell: pwsh
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --config electron/electron-builder.json --win --publish always
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = $env:NEW_VERSION
+          if (-not $version) { $version = (node -p "require('./package.json').version") }
+          $tag = "v$version"
+          $target = (git rev-parse HEAD)
+
+          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release edit $tag --repo $env:GITHUB_REPOSITORY --title $version
+          } else {
+            gh release create $tag --repo $env:GITHUB_REPOSITORY --title $version --target $target --latest
+          }
+
+          $assets = Get-ChildItem -Path release -File | Where-Object {
+            $_.Name -like "*.exe" -or $_.Name -like "*.blockmap" -or $_.Name -eq "latest.yml"
+          }
+          if (-not $assets) { throw "No installer assets found in release folder" }
+
+          foreach ($asset in $assets) {
+            gh release upload $tag $asset.FullName --repo $env:GITHUB_REPOSITORY --clobber
+          }
