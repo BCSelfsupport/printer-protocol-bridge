@@ -74,5 +74,5 @@ jobs:
           if (-not $assets) { throw "No installer assets found in release folder" }
 
           foreach ($asset in $assets) {
-            gh release upload $tag $asset.FullName --repo $env:GITHUB_REPOSITORY --clobber
+            gh release upload $tag "$($asset.FullName)" --repo $env:GITHUB_REPOSITORY --clobber
           }
