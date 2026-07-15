@@ -41,15 +41,10 @@ const ROTATION_OPTIONS = [
   { value: 'Flip', label: 'Flip' },
   { value: 'Mirror', label: 'Mirror' },
   { value: 'Mirror Flip', label: 'Mirror Flip' },
-  { value: 'Tower', label: 'Tower' },
-  { value: 'Tower Flip', label: 'Tower Flip' },
-  { value: 'Tower Mirror', label: 'Tower Mirror' },
-  { value: 'Tower Mirror Flip', label: 'Tower Mirror Flip' },
 ] as const;
 
 const ORIENTATION_MAP: Record<string, number> = {
   'Normal': 0, 'Flip': 1, 'Mirror': 2, 'Mirror Flip': 3,
-  'Tower': 4, 'Tower Flip': 5, 'Tower Mirror': 6, 'Tower Mirror Flip': 7,
 };
 
 const SPEED_OPTIONS: { value: PrintSettings['speed']; label: string }[] = [
