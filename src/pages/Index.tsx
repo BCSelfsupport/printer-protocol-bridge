@@ -882,17 +882,24 @@ const Index = () => {
     for (const slave of availableSlaves) {
       const slaveCurrent = slave.currentMessage?.trim().toUpperCase();
       let ok = false;
+      // Per-printer rotation override: if the slave has a configured
+      // rotation (set in Edit Printer), force it into the message header so
+      // lines running in the opposite direction of travel print correctly.
+      const slaveAdjust = slave.rotation
+        ? { ...(details.adjustSettings ?? {}), rotation: slave.rotation }
+        : details.adjustSettings;
       const result = await replaceMessageWithoutDelete(slave, messageName, {
         fields: details.fields,
         templateValue: details.templateValue,
         settings: details.settings,
-        adjustSettings: details.adjustSettings,
+        adjustSettings: slaveAdjust,
         advancedSettings: details.advancedSettings,
       });
       ok = result.success;
       if (!ok) {
         console.warn(`[MasterSlaveSync] Slave rewrite failed on ${slave.name}: ${result.reason}`);
       }
+
       if (ok) {
         const slaveDetails = normalizeMessageForPrinter({ ...details, name: messageName });
         saveMessage(slaveDetails, slave.id);
