@@ -2310,6 +2310,7 @@ export function usePrinterConnection() {
       printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
     },
     counterConfigs?: Array<{ id: number; startCount: number; endCount: number; leadingZeroes: boolean }>,
+    selectAfterSave?: boolean,
   ): Promise<boolean> => {
     console.log('[saveMessageContent] Called with:', messageName, fields, 'template:', templateValue, 'isNew:', isNew);
     (saveMessageContent as any).__lastError = '';
