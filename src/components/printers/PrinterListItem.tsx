@@ -524,6 +524,17 @@ export function PrinterListItem({
               WARNING
             </span>
           )}
+          {onRotationChange && (
+            <button
+              onClick={handleRotationCycle}
+              className={`text-[10px] px-1.5 py-0.5 rounded font-semibold whitespace-nowrap inline-flex items-center gap-1 transition-all ${currentRotation === 'Normal' ? 'bg-slate-700/60 text-slate-300 hover:bg-slate-600' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 hover:bg-cyan-500/30'}`}
+              title={`Rotation: ${currentRotation}. Click to cycle.`}
+            >
+              <RotateCcw className="w-2.5 h-2.5" />
+              {ROTATION_LABELS[currentRotation]}
+            </button>
+          )}
+
         </div>
       </div>
 
