@@ -75,6 +75,8 @@ interface MessagesScreenProps {
       rotation?: string;
       printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
     },
+    counterConfigs?: Array<{ id: number; startCount: number; endCount: number; leadingZeroes: boolean }>,
+    selectAfterSave?: boolean,
   ) => Promise<boolean>;
   /** Save updated message details to local storage */
   onSaveStoredMessage?: (details: MessageDetails) => void;
@@ -918,8 +920,12 @@ export function MessagesScreen({
             try {
               toast.loading('Writing message to printer...', { id: 'prompt-save' });
 
-              // Single atomic write: ^DM + ^NM (with all fields, settings, template) + ^SV
-              // This avoids runtime field mutation that causes firmware lockups.
+              // Single guarded write: ^NM + ^SV + ^SM (chained inside the
+              // polling-pause window). Running ^SM as a separate call after
+              // saveMessageContent races with resumed ^SU polling and locks
+              // the firmware — that's the "printer lockup on prompted message
+              // select" bug. selectAfterSave keeps polling paused across the
+              // whole sequence.
               const saved = await onSaveMessageContent(
                 selectedMessage.name,
                 updatedDetails.fields,
@@ -930,17 +936,12 @@ export function MessagesScreen({
                   rotation: updatedDetails.settings.rotation,
                   printMode: updatedDetails.settings.printMode,
                 } : undefined,
+                updatedDetails.advancedSettings?.counters,
+                true, // selectAfterSave — chain ^SM inside the pause window
               );
 
               if (!saved) {
                 toast.error('Failed to write message to printer', { id: 'prompt-save' });
-                return;
-              }
-
-              // Now select the message cleanly — it's already fully written
-              const selected = await onSelect(selectedMessage);
-              if (!selected) {
-                toast.error('Message saved but failed to select', { id: 'prompt-save' });
                 return;
               }
 

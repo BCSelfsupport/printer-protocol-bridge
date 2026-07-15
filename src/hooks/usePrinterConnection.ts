@@ -2310,6 +2310,7 @@ export function usePrinterConnection() {
       printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
     },
     counterConfigs?: Array<{ id: number; startCount: number; endCount: number; leadingZeroes: boolean }>,
+    selectAfterSave?: boolean,
   ): Promise<boolean> => {
     console.log('[saveMessageContent] Called with:', messageName, fields, 'template:', templateValue, 'isNew:', isNew);
     (saveMessageContent as any).__lastError = '';
@@ -2445,6 +2446,13 @@ export function usePrinterConnection() {
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
     commands.push(FLUSH_COMMAND);
+    // When selectAfterSave is set, chain ^SM inside the same polling-pause
+    // window so no ^SU / ^LM can interleave between ^SV and ^SM. This is the
+    // hot path for messages with prompted (User Define) fields — running ^SM
+    // concurrently with a post-^SV poll was locking the firmware.
+    if (selectAfterSave) {
+      commands.push(`^SM ${messageName}`);
+    }
 
     if (shouldUseEmulator()) {
       const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
@@ -2455,6 +2463,15 @@ export function usePrinterConnection() {
       }
       // Ensure message is in local state
       addMessage(messageName);
+      if (selectAfterSave) {
+        smSelectGraceUntilRef.current = Date.now() + 15000;
+        smExpectedMessageRef.current = messageName.toUpperCase();
+        setConnectionState(prev => ({
+          ...prev,
+          status: prev.status ? { ...prev.status, currentMessage: messageName } : null,
+        }));
+        updatePrinter(printer.id, { currentMessage: messageName });
+      }
       return true;
     } else if (isElectron || isRelayMode()) {
       // Pause status polling to prevent ^SU commands from interleaving
@@ -2550,6 +2567,19 @@ export function usePrinterConnection() {
         setPollingPaused(false);
         releaseSaveBusy();
 
+        // Apply selection state after the guarded ^SM completes so polling
+        // sees the new currentMessage immediately and the grace window covers
+        // the firmware settle period.
+        if (selectAfterSave) {
+          smSelectGraceUntilRef.current = Date.now() + 15000;
+          smExpectedMessageRef.current = messageName.toUpperCase();
+          setConnectionState(prev => ({
+            ...prev,
+            status: prev.status ? { ...prev.status, currentMessage: messageName } : null,
+          }));
+          updatePrinter(printer.id, { currentMessage: messageName });
+        }
+
         // Post-save verification: wait for firmware to flush, then check ^LM.
         if (isNew) {
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -2581,7 +2611,7 @@ export function usePrinterConnection() {
       console.log('[saveMessageContent] Web preview mock - commands:', commands);
       return true;
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter, connectionState.status?.currentMessage, addMessage]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter, connectionState.status?.currentMessage, addMessage, updatePrinter]);
 
   // Build the raw protocol commands for a message (without sending).
   // Used by master/slave sync to send messages to non-connected printers.
