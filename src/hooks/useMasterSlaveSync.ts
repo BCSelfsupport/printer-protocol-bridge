@@ -217,14 +217,15 @@ export function useMasterSlaveSync({
       const slaves = getSlaves();
       if (slaves.length === 0) return;
 
-      console.log(`[MasterSlaveSync] Full sync: ${messages.length} messages to ${slaves.length} slaves`);
+      const syncMessages = messages.filter(m => !isPresetMessage(m.name));
+      console.log(`[MasterSlaveSync] Full sync: ${syncMessages.length}/${messages.length} messages to ${slaves.length} slaves`);
       syncingRef.current = true;
 
       for (const slave of slaves) {
-        for (const msg of messages) {
+        for (const msg of syncMessages) {
           await sendCommandToPrinter(slave, `^NM ${msg.name}`);
         }
-        if (currentMessage) {
+        if (currentMessage && !isPresetMessage(currentMessage)) {
           await sendCommandToPrinter(slave, `^SM ${currentMessage}`);
         }
       }
@@ -232,6 +233,7 @@ export function useMasterSlaveSync({
       syncingRef.current = false;
       console.log('[MasterSlaveSync] Full sync complete');
     }, [isMaster, messages, currentMessage, getSlaves, sendCommandToPrinter]),
+
 
     // Sync a specific master's messages to its slaves (works for any master, not just connected)
     syncMaster: useCallback(async (masterId: number) => {
