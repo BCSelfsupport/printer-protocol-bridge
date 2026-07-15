@@ -1,4 +1,5 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio, Link2, ChevronDown } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio, Link2, ChevronDown, Maximize2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -275,6 +276,7 @@ export function PrintersScreen({
   const [servicePrinter, setServicePrinter] = useState<Printer | null>(null);
   const [broadcastDialogOpen, setBroadcastDialogOpen] = useState(false);
   const [broadcastMaster, setBroadcastMaster] = useState<Printer | null>(null);
+  const [expandedGridOpen, setExpandedGridOpen] = useState(false);
   const [updatingExpiryPrinterId, setUpdatingExpiryPrinterId] = useState<number | null>(null);
   const [devTaps, setDevTaps] = useState<number[]>([]);
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -523,15 +525,25 @@ export function PrintersScreen({
         {/* Header */}
         <div className="p-3 border-b border-slate-800 bg-slate-900/80">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
                 <PrinterIcon className="w-4 h-4 text-primary" />
               </div>
-              <div>
-                <h2 className="font-bold text-white text-sm">Network Printers</h2>
+              <div className="min-w-0">
+                <h2 className="font-bold text-white text-sm truncate">Network Printers</h2>
                 <p className="text-[10px] text-slate-400">{visiblePrinters.length} device{visiblePrinters.length !== 1 ? 's' : ''} • drag to reorder</p>
               </div>
             </div>
+            <Button
+              onClick={() => setExpandedGridOpen(true)}
+              size="sm"
+              variant="outline"
+              className="h-8 px-2 border-slate-500 text-white bg-slate-700/50 hover:bg-slate-600 hover:text-white flex-shrink-0"
+              title="Expand printers to full-screen grid"
+              aria-label="Expand printers to full-screen grid"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </Button>
           </div>
           
           {/* Consumables & Reports navigation */}
@@ -971,6 +983,94 @@ export function PrintersScreen({
           }}
         />
       )}
+
+      {/* Expanded Full-Screen Printer Grid */}
+      <Dialog open={expandedGridOpen} onOpenChange={setExpandedGridOpen}>
+        <DialogContent className="max-w-[98vw] w-[98vw] h-[95vh] max-h-[95vh] p-0 flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 border-slate-800">
+          <DialogHeader className="px-6 pt-5 pb-3 border-b border-slate-800">
+            <DialogTitle className="flex items-center gap-3 text-white">
+              <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center">
+                <PrinterIcon className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <div className="text-lg font-bold">Network Printers</div>
+                <div className="text-xs font-normal text-slate-400">
+                  {visiblePrinters.length} device{visiblePrinters.length !== 1 ? 's' : ''} · full-screen view
+                </div>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1">
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {visiblePrinters.map((printer) => {
+                const msgName = printer.role === 'slave'
+                  ? (masterMessageMap.get(printer.id) || printer.currentMessage)
+                  : (printer.currentMessage || masterMessageMap.get(printer.id));
+                const msgContent = msgName && getMessageContent
+                  ? (getMessageContent(msgName, printer.id)
+                    || (printer.masterId ? getMessageContent(msgName, printer.masterId) : null)
+                    || (connectedPrinter ? getMessageContent(msgName, connectedPrinter.id) : null)
+                    || getMessageContent(msgName))
+                  : null;
+                const expiryField = msgContent?.fields?.find(f => (
+                  f.type === 'date'
+                  && (
+                    f.autoCodeFieldType?.startsWith('date_expiry')
+                    || (f.autoCodeExpiryDays ?? 0) > 0
+                  )
+                ));
+                const msgExpiry = expiryField ? (expiryField.autoCodeExpiryDays ?? 0) : undefined;
+                return (
+                  <PrinterListItem
+                    key={printer.id}
+                    printer={printer}
+                    isSelected={selectedPrinter?.id === printer.id}
+                    onSelect={() => {
+                      handlePrinterClick(printer);
+                      setExpandedGridOpen(false);
+                    }}
+                    onConnect={() => {
+                      onConnect(printer);
+                      setExpandedGridOpen(false);
+                    }}
+                    onEdit={() => handleEditPrinter(printer)}
+                    onService={() => handleOpenService(printer)}
+                    showConnectButton={true}
+                    isConnected={connectedPrinter?.id === printer.id}
+                    compact={false}
+                    countdownType={getCountdown ? getCountdown(printer.id).type : (connectedPrinter?.id === printer.id ? countdownType : null)}
+                    countdownSeconds={getCountdown ? getCountdown(printer.id).seconds : (connectedPrinter?.id === printer.id ? countdownSeconds : null)}
+                    syncGroupIndex={syncGroupMap.get(printer.id)}
+                    slaveCount={printer.role === 'master' ? slaveCountMap.get(printer.id) ?? 0 : undefined}
+                    onSync={printer.role === 'master' && onSyncMaster ? () => onSyncMaster(printer.id) : undefined}
+                    onBroadcast={printer.role === 'master' && onBroadcastMessage ? () => {
+                      setBroadcastMaster(printer);
+                      setBroadcastDialogOpen(true);
+                    } : undefined}
+                    streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
+                    masterMessage={masterMessageMap.get(printer.id)}
+                    onExpiryChange={onSlaveExpiryChange ? async (printerId, days) => {
+                      setUpdatingExpiryPrinterId(printerId);
+                      try {
+                        await onSlaveExpiryChange(printerId, days);
+                      } finally {
+                        setUpdatingExpiryPrinterId(null);
+                      }
+                    } : undefined}
+                    isUpdatingExpiry={updatingExpiryPrinterId === printer.id}
+                    messageExpiryDays={msgExpiry}
+                    twinPairRole={
+                      pairPrinters && pairPrinters.a.id === printer.id ? 'A'
+                      : pairPrinters && pairPrinters.b.id === printer.id ? 'B'
+                      : null
+                    }
+                  />
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
