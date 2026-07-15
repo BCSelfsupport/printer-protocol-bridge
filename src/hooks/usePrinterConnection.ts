@@ -70,19 +70,19 @@ const defaultSettings: PrintSettings = {
 const ROTATION_TO_PROTOCOL_CODE: Record<string, number> = {
   'Normal': 0,
   'Flip': 1,
-  'Mirror Flip': 2,
-  'Mirror': 3,
+  'Mirror': 2,
+  'Mirror Flip': 3,
   'Tower': 4,
   'Tower Flip': 5,
-  'Tower Mirror Flip': 6,
-  'Tower Mirror': 7,
+  'Tower Mirror': 6,
+  'Tower Mirror Flip': 7,
 };
 
 const PROTOCOL_CODE_TO_ROTATION: Record<number, PrintSettings['rotation']> = {
   0: 'Normal',
   1: 'Flip',
-  2: 'Mirror Flip',
-  3: 'Mirror',
+  2: 'Mirror',
+  3: 'Mirror Flip',
 };
 
 const mockMessages: PrintMessage[] = [];

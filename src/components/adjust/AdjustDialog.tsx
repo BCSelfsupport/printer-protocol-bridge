@@ -44,7 +44,7 @@ const ROTATION_OPTIONS = [
 ] as const;
 
 const ORIENTATION_MAP: Record<string, number> = {
-  'Normal': 0, 'Flip': 1, 'Mirror Flip': 2, 'Mirror': 3,
+  'Normal': 0, 'Flip': 1, 'Mirror': 2, 'Mirror Flip': 3,
 };
 
 const SPEED_OPTIONS: { value: PrintSettings['speed']; label: string }[] = [
