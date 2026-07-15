@@ -213,10 +213,12 @@ function SortablePrinterItem({
         isUpdatingExpiry={isUpdatingExpiry}
         messageExpiryDays={messageExpiryDays}
         twinPairRole={twinPairRole}
+        onRotationChange={onRotationChange}
       />
     </div>
   );
 }
+
 
 export function PrintersScreen({
   printers,
