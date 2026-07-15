@@ -80,7 +80,7 @@ export interface MessageAdjustSettings {
   gap?: number;
   pitch?: number;
   speed?: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
-  rotation?: 'Normal' | 'Flip' | 'Mirror' | 'Mirror Flip' | 'Tower' | 'Tower Flip' | 'Tower Mirror' | 'Tower Mirror Flip';
+  rotation?: 'Normal' | 'Flip' | 'Mirror' | 'Mirror Flip';
 }
 
 export interface MessageDetails {
