@@ -201,6 +201,15 @@ const PRESET_MESSAGE_NAMES = new Set([
 ]);
 
 export function isPresetMessage(name: string): boolean {
-  return PRESET_MESSAGE_NAMES.has(name.trim().toLowerCase());
+  // Normalize: strip NULs, trim, lowercase, and collapse whitespace/
+  // underscores/dashes to a single space. Handles HMI variants like
+  // "BESTCODE_AUTO", "BESTCODE  AUTO", "BestCode-Auto", trailing NULs, etc.
+  const normalized = (name ?? '')
+    .replace(/\u0000/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_\-]+/g, ' ');
+  return PRESET_MESSAGE_NAMES.has(normalized);
 }
+
 
