@@ -156,7 +156,9 @@ function SortablePrinterItem({
   messageExpiryDays?: number;
   twinPairRole?: 'A' | 'B' | null;
   hideDragHandle?: boolean;
+  onRotationChange?: (printerId: number, rotation: NonNullable<Printer['rotation']>) => void;
 }) {
+
   const {
     attributes,
     listeners,
