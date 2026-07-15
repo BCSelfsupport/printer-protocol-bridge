@@ -576,6 +576,21 @@ export function PrinterListItem({
 
           {/* Right: action buttons */}
           <div className="flex items-center gap-1 flex-shrink-0">
+            {printer.role === 'master' && onSync && slaveCount > 0 && (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSync();
+                }}
+                size="sm"
+                variant="ghost"
+                className="h-6 text-[10px] px-2 text-amber-300 hover:text-white hover:bg-amber-500/20"
+                title={`Push all messages to ${slaveCount} slave(s)`}
+              >
+                <Send className="w-3 h-3" />
+                <span className="hidden min-[420px]:inline ml-1">Sync</span>
+              </Button>
+            )}
             {printer.isAvailable && onService && (
               <Button
                 onClick={(e) => {
