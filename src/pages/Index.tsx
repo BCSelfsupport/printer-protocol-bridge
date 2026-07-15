@@ -917,7 +917,7 @@ const Index = () => {
       }
 
       if (ok) {
-        const slaveDetails = normalizeMessageForPrinter({ ...details, name: messageName, adjustSettings: slaveAdjust });
+        const slaveDetails = normalizeMessageForPrinter({ ...details, name: messageName, fields: slaveFields, adjustSettings: slaveAdjust });
         saveMessage(slaveDetails, slave.id);
         recentlySavedRef.current.set(`${slave.id}:${messageName}`, Date.now());
         if (slaveCurrent === targetUpper) {
