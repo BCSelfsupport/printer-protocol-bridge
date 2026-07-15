@@ -102,10 +102,10 @@ export function PrinterListItem({
   // the source message's stored orientation.
   const ROTATION_CYCLE = ['Normal', 'Mirror', 'Flip', 'Mirror Flip'] as const;
   const ROTATION_LABELS: Record<typeof ROTATION_CYCLE[number], string> = {
-    'Normal': 'L→R',
-    'Mirror': 'MIR',
-    'Flip': 'FLIP',
-    'Mirror Flip': 'R→L',
+    'Normal': 'Normal',
+    'Mirror': 'Mirror',
+    'Flip': 'Flip',
+    'Mirror Flip': 'Mirror Flip',
   };
   const currentRotation = (printer.rotation ?? 'Normal') as typeof ROTATION_CYCLE[number];
   const handleRotationCycle = (e: React.MouseEvent) => {

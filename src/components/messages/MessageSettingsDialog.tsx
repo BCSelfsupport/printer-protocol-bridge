@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 // p = Print Mode (0=Normal, 1=Auto, 2=Repeat, 3=Reverse, 5=Auto Encoder, 6=Auto Encoder Reverse)
 export interface MessageSettings {
   speed: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
-  rotation: 'Normal' | 'Flip' | 'Mirror' | 'Mirror Flip' | 'Tower' | 'Tower Flip' | 'Tower Mirror' | 'Tower Mirror Flip';
+  rotation: 'Normal' | 'Flip' | 'Mirror' | 'Mirror Flip';
   printMode: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
 }
 
@@ -151,8 +151,7 @@ interface MessageSettingsDialogProps {
 }
 
 const rotationValues: MessageSettings['rotation'][] = [
-  'Normal', 'Flip', 'Mirror', 'Mirror Flip', 
-  'Tower', 'Tower Flip', 'Tower Mirror', 'Tower Mirror Flip'
+  'Normal', 'Flip', 'Mirror', 'Mirror Flip'
 ];
 const speedValues: MessageSettings['speed'][] = ['Fast', 'Faster', 'Fastest', 'Ultra Fast'];
 const printModeValues: MessageSettings['printMode'][] = ['Normal', 'Auto', 'Repeat', 'Reverse', 'Auto Encoder', 'Auto Encoder Reverse'];

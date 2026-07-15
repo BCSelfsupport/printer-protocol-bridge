@@ -209,26 +209,19 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
           <div className="space-y-2">
             <Label className="text-slate-300 flex items-center gap-1.5">
               <RotateCcw className="w-3.5 h-3.5" />
-              Print Rotation (Direction of Travel)
+              Print Rotation
             </Label>
             <Select value={rotation} onValueChange={(v) => setRotation(v as PrinterRotation)}>
               <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Normal">Normal — Left → Right</SelectItem>
-                <SelectItem value="Mirror Flip">Inverted 180° — Right → Left</SelectItem>
-                <SelectItem value="Mirror">Mirror (horizontal flip)</SelectItem>
-                <SelectItem value="Flip">Flip (vertical flip)</SelectItem>
-                <SelectItem value="Tower">Tower</SelectItem>
-                <SelectItem value="Tower Flip">Tower Flip</SelectItem>
-                <SelectItem value="Tower Mirror">Tower Mirror</SelectItem>
-                <SelectItem value="Tower Mirror Flip">Tower Mirror Flip</SelectItem>
+                <SelectItem value="Normal">Normal</SelectItem>
+                <SelectItem value="Flip">Flip</SelectItem>
+                <SelectItem value="Mirror">Mirror</SelectItem>
+                <SelectItem value="Mirror Flip">Mirror Flip</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-[10px] text-slate-500">
-              Baked into every message pushed from Master → this printer. Set to "Inverted 180°" for lines that run right-to-left.
-            </p>
           </div>
 
 
