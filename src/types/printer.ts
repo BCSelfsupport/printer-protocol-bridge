@@ -20,7 +20,14 @@ export interface Printer {
   serialNumber?: string; // User-entered serial number for fleet tracking
   expiryOffsetDays?: number; // Per-printer expiration date offset in days (e.g., +1, +2, +7)
   lineId?: string; // Line ID label used for Line ID field in messages
+  // Per-printer print orientation override. When set, master → slave sync
+  // rewrites every synced message on this printer with this rotation baked
+  // into the ^NM header, so lines running in the opposite direction of
+  // travel (e.g. R→L vs L→R) always print correctly regardless of what the
+  // master message stores.
+  rotation?: 'Normal' | 'Mirror' | 'Flip' | 'Mirror Flip' | 'Tower' | 'Tower Flip' | 'Tower Mirror' | 'Tower Mirror Flip';
 }
+
 
 export interface PrinterStatus {
   printOn: boolean;
