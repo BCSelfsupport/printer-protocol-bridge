@@ -2402,6 +2402,9 @@ const Index = () => {
           // (BestCode, BestCode Auto, Quantum, Quantum Auto, Moba).
           const filtered = messagesToPush.filter(m => !isPresetMessage(m.name));
           const skipped = messagesToPush.length - filtered.length;
+          console.log('[SyncSlaves] master messages:', messagesToPush.map(m => m.name));
+          console.log('[SyncSlaves] skipped as preset:', messagesToPush.filter(m => isPresetMessage(m.name)).map(m => m.name));
+
 
 
           if (filtered.length === 0) {
