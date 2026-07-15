@@ -983,6 +983,94 @@ export function PrintersScreen({
           }}
         />
       )}
+
+      {/* Expanded Full-Screen Printer Grid */}
+      <Dialog open={expandedGridOpen} onOpenChange={setExpandedGridOpen}>
+        <DialogContent className="max-w-[98vw] w-[98vw] h-[95vh] max-h-[95vh] p-0 flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 border-slate-800">
+          <DialogHeader className="px-6 pt-5 pb-3 border-b border-slate-800">
+            <DialogTitle className="flex items-center gap-3 text-white">
+              <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center">
+                <PrinterIcon className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <div className="text-lg font-bold">Network Printers</div>
+                <div className="text-xs font-normal text-slate-400">
+                  {visiblePrinters.length} device{visiblePrinters.length !== 1 ? 's' : ''} · full-screen view
+                </div>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1">
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {visiblePrinters.map((printer) => {
+                const msgName = printer.role === 'slave'
+                  ? (masterMessageMap.get(printer.id) || printer.currentMessage)
+                  : (printer.currentMessage || masterMessageMap.get(printer.id));
+                const msgContent = msgName && getMessageContent
+                  ? (getMessageContent(msgName, printer.id)
+                    || (printer.masterId ? getMessageContent(msgName, printer.masterId) : null)
+                    || (connectedPrinter ? getMessageContent(msgName, connectedPrinter.id) : null)
+                    || getMessageContent(msgName))
+                  : null;
+                const expiryField = msgContent?.fields?.find(f => (
+                  f.type === 'date'
+                  && (
+                    f.autoCodeFieldType?.startsWith('date_expiry')
+                    || (f.autoCodeExpiryDays ?? 0) > 0
+                  )
+                ));
+                const msgExpiry = expiryField ? (expiryField.autoCodeExpiryDays ?? 0) : undefined;
+                return (
+                  <PrinterListItem
+                    key={printer.id}
+                    printer={printer}
+                    isSelected={selectedPrinter?.id === printer.id}
+                    onSelect={() => {
+                      handlePrinterClick(printer);
+                      setExpandedGridOpen(false);
+                    }}
+                    onConnect={() => {
+                      onConnect(printer);
+                      setExpandedGridOpen(false);
+                    }}
+                    onEdit={() => handleEditPrinter(printer)}
+                    onService={() => handleOpenService(printer)}
+                    showConnectButton={true}
+                    isConnected={connectedPrinter?.id === printer.id}
+                    compact={false}
+                    countdownType={getCountdown ? getCountdown(printer.id).type : (connectedPrinter?.id === printer.id ? countdownType : null)}
+                    countdownSeconds={getCountdown ? getCountdown(printer.id).seconds : (connectedPrinter?.id === printer.id ? countdownSeconds : null)}
+                    syncGroupIndex={syncGroupMap.get(printer.id)}
+                    slaveCount={printer.role === 'master' ? slaveCountMap.get(printer.id) ?? 0 : undefined}
+                    onSync={printer.role === 'master' && onSyncMaster ? () => onSyncMaster(printer.id) : undefined}
+                    onBroadcast={printer.role === 'master' && onBroadcastMessage ? () => {
+                      setBroadcastMaster(printer);
+                      setBroadcastDialogOpen(true);
+                    } : undefined}
+                    streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
+                    masterMessage={masterMessageMap.get(printer.id)}
+                    onExpiryChange={onSlaveExpiryChange ? async (printerId, days) => {
+                      setUpdatingExpiryPrinterId(printerId);
+                      try {
+                        await onSlaveExpiryChange(printerId, days);
+                      } finally {
+                        setUpdatingExpiryPrinterId(null);
+                      }
+                    } : undefined}
+                    isUpdatingExpiry={updatingExpiryPrinterId === printer.id}
+                    messageExpiryDays={msgExpiry}
+                    twinPairRole={
+                      pairPrinters && pairPrinters.a.id === printer.id ? 'A'
+                      : pairPrinters && pairPrinters.b.id === printer.id ? 'B'
+                      : null
+                    }
+                  />
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
