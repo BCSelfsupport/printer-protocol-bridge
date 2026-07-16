@@ -1020,15 +1020,62 @@ export function MessagesScreen({
           setUserDefineEntryOpen(open);
           if (!open) {
             setPendingMessageDetails(null);
+            setPendingApplyTargets(null);
             onHome();
           }
         }}
         prompts={userDefinePrompts}
         onConfirm={async (entries) => {
+          // ─── Multi-target apply path ─────────────────────────────────
+          // If pendingApplyTargets is set, the operator picked a fleet of
+          // printers via the ApplyToPrintersDialog. Bake the entered values
+          // once, then push the fully-resolved message to every target using
+          // the parent-supplied per-printer helper (which handles connected
+          // vs non-connected sockets internally).
+          if (pendingApplyTargets && pendingMessageDetails && selectedMessage && onApplyPromptValuesOnPrinter) {
+            const bakedFields = pendingMessageDetails.fields.map(f => {
+              if (f.promptBeforePrint && entries[f.id] !== undefined) {
+                return { ...f, data: entries[f.id].trim() || f.data };
+              }
+              return f;
+            });
+            const tokenMap = buildTokenMap({ ...pendingMessageDetails, fields: bakedFields });
+            const updatedDetails = {
+              ...pendingMessageDetails,
+              fields: resolveAllFields(bakedFields, tokenMap, { preserveCounterTokens: true }),
+            };
+
+            const targets = pendingApplyTargets;
+            toast.loading(`Applying "${selectedMessage.name}" to ${targets.length} printer(s)…`, { id: 'multi-prompt' });
+            try {
+              // Fan out in parallel — each printer has its own socket and
+              // runPrinterWriteExclusive lock, so this is safe.
+              const results = await Promise.all(
+                targets.map(async (p) => ({ p, ok: await onApplyPromptValuesOnPrinter(p, selectedMessage, updatedDetails) }))
+              );
+              const okCount = results.filter(r => r.ok).length;
+              const failCount = results.length - okCount;
+              if (failCount === 0) {
+                toast.success(`Applied to ${okCount} printer(s)`, { id: 'multi-prompt' });
+              } else {
+                toast.error(`Applied to ${okCount}, failed on ${failCount}. Check printer cards.`, { id: 'multi-prompt' });
+              }
+              // Update local cache so the source printer's UI reflects the baked values.
+              onSaveStoredMessage?.(updatedDetails);
+              onPromptSaved?.(updatedDetails);
+            } catch (e) {
+              console.error('[MessagesScreen] Multi-target prompt apply failed:', e);
+              toast.error('Failed to apply message across printers', { id: 'multi-prompt' });
+            }
+            setUserDefineEntryOpen(false);
+            setPendingMessageDetails(null);
+            setPendingApplyTargets(null);
+            onHome();
+            return;
+          }
+
+          // ─── Legacy single-source path (unchanged) ───────────────────
           if (pendingMessageDetails && selectedMessage && onSaveMessageContent) {
-            // Bake prompted values into the prompt fields, then expand any
-            // {TOKEN} placeholders across ALL fields (e.g. a QR field referencing
-            // {WORK_ORDER} or {COUNTER1}). The printer only ever sees resolved data.
             const bakedFields = pendingMessageDetails.fields.map(f => {
               if (f.promptBeforePrint && entries[f.id] !== undefined) {
                 return { ...f, data: entries[f.id].trim() || f.data };
@@ -1043,13 +1090,6 @@ export function MessagesScreen({
 
             try {
               toast.loading('Writing message to printer...', { id: 'prompt-save' });
-
-              // Single guarded write: ^NM + ^SV + ^SM (chained inside the
-              // polling-pause window). Running ^SM as a separate call after
-              // saveMessageContent races with resumed ^SU polling and locks
-              // the firmware — that's the "printer lockup on prompted message
-              // select" bug. selectAfterSave keeps polling paused across the
-              // whole sequence.
               const saved = await onSaveMessageContent(
                 selectedMessage.name,
                 updatedDetails.fields,
@@ -1061,7 +1101,7 @@ export function MessagesScreen({
                   printMode: updatedDetails.settings.printMode,
                 } : undefined,
                 updatedDetails.advancedSettings?.counters,
-                true, // selectAfterSave — chain ^SM inside the pause window
+                true,
               );
 
               if (!saved) {
@@ -1069,7 +1109,6 @@ export function MessagesScreen({
                 return;
               }
 
-              // Persist locally so preview and storage stay in sync
               onSaveStoredMessage?.(updatedDetails);
               onPromptSaved?.(updatedDetails);
               toast.success('Message loaded with entered values', { id: 'prompt-save' });
@@ -1078,7 +1117,6 @@ export function MessagesScreen({
               toast.error('Failed to write message to printer', { id: 'prompt-save' });
             }
           } else if (onSendCommand) {
-            // Legacy: send ^MD^TD for native userdefine fields (per v2.6 §5.28.2)
             const tdEntries = Object.entries(entries).filter(([, value]) => value.trim());
             if (tdEntries.length > 0) {
               const tdSubcommands = tdEntries.map(([, value], idx) => `^TD${idx + 1};${value.trim()}`).join('');
@@ -1094,6 +1132,27 @@ export function MessagesScreen({
           onHome();
         }}
       />
+
+      {/* Apply-to-Printers Dialog — opened when the operator hits Select and
+          sibling printers are available. On confirm, fans the selection out
+          to the chosen targets. */}
+      {sourcePrinter && siblingPrinters && pendingApplyMessage && (
+        <ApplyToPrintersDialog
+          open={applyDialogOpen}
+          onOpenChange={(open) => {
+            setApplyDialogOpen(open);
+            if (!open && !userDefineEntryOpen) {
+              setPendingApplyMessage(null);
+            }
+          }}
+          messageName={pendingApplyMessage.name}
+          sourcePrinter={sourcePrinter}
+          siblingPrinters={siblingPrinters}
+          onConfirm={(targets) => {
+            void runSelectionAcrossTargets(targets);
+          }}
+        />
+      )}
 
       {/* Swap Slot Selection Dialog */}
       <Dialog open={swapSlotDialogOpen} onOpenChange={setSwapSlotDialogOpen}>
