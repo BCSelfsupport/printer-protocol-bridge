@@ -159,6 +159,10 @@ export function MessagesScreen({
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
   const [pendingApplyMessage, setPendingApplyMessage] = useState<PrintMessage | null>(null);
   const [pendingApplyTargets, setPendingApplyTargets] = useState<Printer[] | null>(null);
+  // Copy-to-printers dialog state (mode = 'copy' variant of ApplyToPrintersDialog)
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [pendingCopyMessage, setPendingCopyMessage] = useState<PrintMessage | null>(null);
+  const [isCopying, setIsCopying] = useState(false);
   // Mobile-scan workflow state
   const [scanWaitingOpen, setScanWaitingOpen] = useState(false);
   const [pendingScanRequestId, setPendingScanRequestId] = useState<string | null>(null);
