@@ -3301,6 +3301,76 @@ export function usePrinterConnection() {
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
 
+  // Query print settings from an ARBITRARY printer (connected or not).
+  // Reuses the persistent transport when the target is the currently-connected
+  // printer; otherwise opens a guarded connect → ^QP → disconnect session so
+  // multiple simultaneous fleet queries don't stomp on port 23.
+  const queryPrintSettingsForPrinter = useCallback(async (printer: Printer): Promise<Partial<PrintSettings> | null> => {
+    if (shouldUseEmulator()) return null;
+    if (!isElectron && !isRelayMode()) return null;
+
+    const parseQpResponse = (response: string): Partial<PrintSettings> | null => {
+      const extract = (key: string): number | null => {
+        const m = response.match(new RegExp(`${key}[:\\s]*(\\d+)`, 'i'));
+        return m ? parseInt(m[1], 10) : null;
+      };
+      const speedReverseMap: Record<number, PrintSettings['speed']> = {
+        0: 'Fast', 1: 'Faster', 2: 'Fastest', 3: 'Ultra Fast',
+      };
+      const width = extract('Width');
+      const height = extract('Height');
+      const delay = extract('Delay');
+      const rotationNum = extract('Rotation');
+      const bold = extract('Bold');
+      const speedNum = extract('Speed');
+      const gap = extract('Gap');
+      const pitch = extract('Pitch');
+      const parsed: Partial<PrintSettings> = {
+        ...(width !== null && { width }),
+        ...(height !== null && { height }),
+        ...(delay !== null && { delay }),
+        ...(rotationNum !== null && { rotation: PROTOCOL_CODE_TO_ROTATION[rotationNum] ?? 'Normal' }),
+        ...(bold !== null && { bold }),
+        ...(speedNum !== null && { speed: speedReverseMap[speedNum] ?? 'Fast' }),
+        ...(gap !== null && { gap }),
+        ...(pitch !== null && { pitch }),
+      };
+      return Object.keys(parsed).length ? parsed : null;
+    };
+
+    // Connected printer: reuse persistent transport.
+    if (printer.id === connectionState.connectedPrinter?.id) {
+      try {
+        const result = await printerTransport.sendCommand(printer.id, '^QP');
+        if (!result?.success || !result.response) return null;
+        return parseQpResponse(result.response);
+      } catch (e) {
+        console.error('[queryPrintSettingsForPrinter] connected query failed:', e);
+        return null;
+      }
+    }
+
+    // Non-connected printer: guarded connect/query/disconnect.
+    return runFleetWriteExclusive(() => runPrinterWriteExclusive(printer.id, async () => {
+      try {
+        const connectResult = await printerTransport.connect({ id: printer.id, ipAddress: printer.ipAddress, port: printer.port });
+        if (!connectResult?.success) {
+          console.warn(`[queryPrintSettingsForPrinter] connect failed for ${printer.name}: ${connectResult?.error ?? 'unknown'}`);
+          return null;
+        }
+        const result = await printerTransport.sendCommand(printer.id, '^QP');
+        if (!result?.success || !result.response) return null;
+        return parseQpResponse(result.response);
+      } catch (e) {
+        console.error(`[queryPrintSettingsForPrinter] failed for ${printer.name}:`, e);
+        return null;
+      } finally {
+        try { await printerTransport.disconnect(printer.id); } catch { /* ignore */ }
+      }
+    }));
+  }, [connectionState.connectedPrinter?.id]);
+
+
   // Reorder printers (for drag-and-drop)
   const reorderPrinters = useCallback((newOrder: Printer[]) => {
     setPrinters(newOrder);
