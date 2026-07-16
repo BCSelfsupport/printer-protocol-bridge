@@ -1562,7 +1562,7 @@ const Index = () => {
     if (printerCurrent) {
       for (const k of ['width', 'height', 'delay', 'bold', 'gap', 'pitch'] as (keyof PrintSettings)[]) {
         const pv = printerCurrent[k];
-        const target = (fullAdjustSettings as Record<string, unknown>)[k];
+        const target = (fullAdjustSettings as unknown as Record<string, unknown>)[k];
         if (pv !== undefined && pv === target) {
           delete (adjustToPush as Record<string, unknown>)[k];
         }
