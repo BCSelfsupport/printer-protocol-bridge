@@ -45,7 +45,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { LicenseAssignmentPanel } from '@/components/dev/LicenseAssignmentPanel';
-import { FleetMonitoringPanel } from '@/components/dev/FleetMonitoringPanel';
+
 import { FeedbackPanel } from '@/components/dev/FeedbackPanel';
 import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
 import { ParameterSnapshot } from '@/components/dev/ParameterSnapshot';
@@ -518,10 +518,6 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                 <TabsTrigger value="manual" className="text-xs gap-1 flex-shrink-0"><Send className="w-3.5 h-3.5" />Manual</TabsTrigger>
                 <TabsTrigger value="network" className="text-xs gap-1 flex-shrink-0"><Network className="w-3.5 h-3.5" />Network</TabsTrigger>
                 <TabsTrigger value="sync-test" className="text-xs gap-1 flex-shrink-0"><Radio className="w-3.5 h-3.5" />Sync Test</TabsTrigger>
-                <TabsTrigger value="fleet" className="text-xs gap-1 flex-shrink-0">
-                  <Globe className="w-3.5 h-3.5" />
-                  Fleet
-                </TabsTrigger>
                 <TabsTrigger value="licenses" className="text-xs gap-1 flex-shrink-0">
                   <Shield className="w-3.5 h-3.5" />
                   Licenses
@@ -1069,34 +1065,6 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
               <SlaveSelectionAckTest />
             </TabsContent>
 
-            {/* Fleet Monitoring Tab */}
-            <TabsContent value="fleet" className="flex-1 overflow-hidden m-0">
-              <div className="flex flex-col items-center justify-center h-full gap-5 p-6">
-                <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-500 to-emerald-500" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                  <Signal className="w-8 h-8 text-white relative z-10" />
-                </div>
-                <div className="text-center">
-                  <div className="flex items-start justify-center">
-                    <span className="text-lg font-bold italic text-blue-600">Fleet</span>
-                    <span className="text-lg font-bold italic text-emerald-500">Telemetry</span>
-                    <span className="text-[8px] text-muted-foreground ml-0.5 mt-0.5">™</span>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-1 tracking-wider uppercase">Remote Fleet Monitoring & OTA Updates</p>
-                </div>
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={() => {
-                    window.location.hash = '#/telemetry';
-                  }}
-                >
-                  <Signal className="w-4 h-4 mr-2" />
-                  Open Fleet Telemetry
-                </Button>
-              </div>
-            </TabsContent>
 
             {/* Licenses Tab */}
             <TabsContent value="licenses" className="flex-1 overflow-hidden m-0">
