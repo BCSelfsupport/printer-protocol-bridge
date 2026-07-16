@@ -281,6 +281,13 @@ class PrinterEmulatorInstance {
   private readonly VERSION = 'v01.09.00.14';
   private readonly BUILD_DATE = 'Feb 06 2026 10:30:00';
 
+  // Test hook: when true, every write-side command (^NM, ^SV, ^DM) returns
+  // a simulated failure so we can exercise the Master → Slave sync failure
+  // paths without unplugging a real printer. Toggle via
+  // `multiPrinterEmulator.setSimulateWriteFailure(ip, boolean)` or the
+  // browser console helper `simulateSlaveWriteFailure()`.
+  public simulateWriteFailure: boolean = false;
+
   constructor(config: EmulatedPrinterConfig) {
     this.config = config;
     this.state = createDefaultState(config.initialState);
