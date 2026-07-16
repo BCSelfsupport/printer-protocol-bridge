@@ -405,6 +405,16 @@ export function useMasterSlaveSync({
   // Sync message selection: when master's currentMessage changes, push full content to slaves first, then ^SM.
   // Factory/preset messages already exist on slaves, so only send ^SM for those.
   const runSelectionSync = useCallback((messageName: string) => {
+    // Clear stale pass/fail pips on ALL slaves for this master the moment a
+    // new selection begins — the previous verdict no longer describes reality
+    // once we start pushing a different message. Do this even if a sync is
+    // already in-flight (queued case) so the UI never shows an outdated OK
+    // for the message we're about to switch away from.
+    const allSlavesNow = getAllSlavesForMaster();
+    if (allSlavesNow.length > 0) {
+      startRef.current?.(allSlavesNow.map(s => s.id), messageName);
+    }
+
     if (syncingRef.current) {
       // A sync is already running. Remember the newest requested message so
       // we drain it as soon as the current run finishes. This is the fix for
@@ -414,6 +424,7 @@ export function useMasterSlaveSync({
       console.log(`[MasterSlaveSync] Queued "${messageName}" — sync already in progress`);
       return;
     }
+
 
     const onlineSlaves = getSlaves();
     const allSlaves = getAllSlavesForMaster();
