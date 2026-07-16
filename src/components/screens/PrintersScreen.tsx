@@ -638,12 +638,11 @@ export function PrintersScreen({
         <ScrollArea className="flex-1">
           <div className="p-2 pr-3 space-y-2">
             {(() => {
-              // Render a single printer item — used both inside the bound-pair group
-              // and in the main DnD list, so we don't duplicate the long prop list.
-              const renderPrinterItem = (printer: Printer, opts?: { hideDragHandle?: boolean }) => {
-                const msgName = printer.role === 'slave'
-                  ? (printer.currentMessage || masterMessageMap.get(printer.id))
-                  : (printer.currentMessage || masterMessageMap.get(printer.id));
+              // Compute msgExpiry (days) for a given printer using the same lookup
+              // rules as the list renderer. Returns undefined when the current
+              // message has no expiry field.
+              const getMsgExpiry = (printer: Printer): number | undefined => {
+                const msgName = printer.currentMessage || masterMessageMap.get(printer.id);
                 const msgContent = msgName && getMessageContent
                   ? (getMessageContent(msgName, printer.id)
                     || (printer.masterId ? getMessageContent(msgName, printer.masterId) : null)
@@ -651,13 +650,23 @@ export function PrintersScreen({
                     || getMessageContent(msgName))
                   : null;
                 const expiryField = msgContent?.fields?.find(f => (
-                  f.type === 'date'
-                  && (
+                  f.type === 'date' && (
                     f.autoCodeFieldType?.startsWith('date_expiry')
                     || (f.autoCodeExpiryDays ?? 0) > 0
                   )
                 ));
-                const msgExpiry = expiryField ? (expiryField.autoCodeExpiryDays ?? 0) : undefined;
+                return expiryField ? (expiryField.autoCodeExpiryDays ?? 0) : undefined;
+              };
+
+              const openExpiryDialog = (sourcePrinter: Printer, currentDays: number) => {
+                setExpiryDialogSource(sourcePrinter);
+                setExpiryDialogCurrentDays(currentDays);
+              };
+
+              // Render a single printer item — used both inside the bound-pair group
+              // and in the main DnD list, so we don't duplicate the long prop list.
+              const renderPrinterItem = (printer: Printer, opts?: { hideDragHandle?: boolean }) => {
+                const msgExpiry = getMsgExpiry(printer);
                 return (
                   <SortablePrinterItem
                     key={printer.id}
@@ -693,6 +702,7 @@ export function PrintersScreen({
                     } : undefined}
                     isUpdatingExpiry={updatingExpiryPrinterId === printer.id}
                     messageExpiryDays={msgExpiry}
+                    onOpenExpiryDialog={onSlaveExpiryChange ? openExpiryDialog : undefined}
                     twinPairRole={
                       pairPrinters && pairPrinters.a.id === printer.id ? 'A'
                       : pairPrinters && pairPrinters.b.id === printer.id ? 'B'
@@ -703,6 +713,7 @@ export function PrintersScreen({
 
                 );
               };
+
 
               const pairIds = new Set<number>();
               if (pairPrinters) {
