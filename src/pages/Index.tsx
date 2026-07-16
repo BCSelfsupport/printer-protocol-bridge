@@ -835,6 +835,7 @@ const Index = () => {
     targetPrinter: Printer,
     messageName: string,
     details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings' | 'advancedSettings'>,
+    reselectAfter: boolean = true,
   ) => {
     const { perMessageSettings } = buildEffectiveMessageDependentSettings(details as MessageDetails);
     const rawCommands = await buildMessageCommands(
@@ -871,8 +872,16 @@ const Index = () => {
     // ^CC slot config command needed (and the firmware does not accept one).
     sequence.push(...commands);
     sequence.push('^SV');
-    const reselectCommandIndex = sequence.length;
-    sequence.push(`^SM ${messageName}`);
+    // Only re-select the message if the caller asks for it. In bulk "Sync
+    // Slaves" we push many messages back-to-back; issuing ^SM after each
+    // would make the slave visibly cycle through every message and land on
+    // whichever one was pushed last instead of keeping the master's active
+    // message selected. A ^SM reselect is only needed when the slave already
+    // had this exact message active (so the firmware re-renders the fields).
+    const reselectCommandIndex = reselectAfter ? sequence.length : -1;
+    if (reselectAfter) {
+      sequence.push(`^SM ${messageName}`);
+    }
 
     const sequencedCommands = sequence.map((command) => ({
       command,
@@ -881,7 +890,7 @@ const Index = () => {
 
     const result = await sendVerifiedCommandSequence(targetPrinter, sequencedCommands, 300);
     if (!result.success) {
-      if (result.failedIndex === reselectCommandIndex) {
+      if (reselectAfter && result.failedIndex === reselectCommandIndex) {
         return { success: false as const, reason: 'reselect' as const };
       }
       return { success: false as const, reason: 'command' as const };
@@ -937,7 +946,7 @@ const Index = () => {
         settings: details.settings,
         adjustSettings: slaveAdjust,
         advancedSettings: details.advancedSettings,
-      });
+      }, slaveCurrent === targetUpper);
       ok = result.success;
       if (!ok) {
         console.warn(`[MasterSlaveSync] Slave rewrite failed on ${slave.name}: ${result.reason}`);
