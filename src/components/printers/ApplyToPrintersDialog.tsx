@@ -205,34 +205,56 @@ export function ApplyToPrintersDialog({
           </p>
         </DialogHeader>
 
+        {/* Send to All — prominent top control */}
+        <button
+          type="button"
+          onClick={() => (checked.size === siblingPrinters.length && siblingPrinters.length > 0 ? clearAll() : selectAll())}
+          disabled={siblingPrinters.length === 0}
+          className={cn(
+            'w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all',
+            checked.size === siblingPrinters.length && siblingPrinters.length > 0
+              ? 'bg-primary/20 border-primary'
+              : 'bg-slate-800/60 border-slate-600 hover:border-primary/60 hover:bg-slate-800',
+            siblingPrinters.length === 0 && 'opacity-50 cursor-not-allowed',
+          )}
+        >
+          <div
+            className={cn(
+              'w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0',
+              checked.size === siblingPrinters.length && siblingPrinters.length > 0
+                ? 'bg-primary border-primary'
+                : 'border-slate-400 bg-slate-900',
+            )}
+          >
+            {checked.size === siblingPrinters.length && siblingPrinters.length > 0 && (
+              <Check className="w-4 h-4 text-white" strokeWidth={4} />
+            )}
+          </div>
+          <div className="flex-1 text-left">
+            <div className="text-sm font-bold text-white">Send to All Printers</div>
+            <div className="text-[11px] text-slate-400">
+              Apply this message to every online printer/line in the list
+            </div>
+          </div>
+        </button>
+
         {/* Toolbar */}
         <div className="flex items-center justify-between gap-2 flex-wrap border-y border-slate-700 py-2">
           <div className="text-xs text-slate-300">
             <span className="font-bold text-white">{totalTargets}</span> printer{totalTargets === 1 ? '' : 's'} selected
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              onClick={selectAll}
-              disabled={siblingPrinters.length === 0 || checked.size === siblingPrinters.length}
-              className="h-8 text-xs bg-primary hover:bg-primary/90 font-bold"
-            >
-              <Check className="w-3.5 h-3.5 mr-1" />
-              Select All Printers
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={clearAll}
-              disabled={checked.size === 0}
-              className="h-8 text-xs border-slate-600"
-            >
-              Clear
-            </Button>
-          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={clearAll}
+            disabled={checked.size === 0}
+            className="h-8 text-xs border-slate-600"
+          >
+            Clear
+          </Button>
         </div>
+
 
         {/* Card grid */}
         <ScrollArea className="flex-1 -mx-2 px-2">
