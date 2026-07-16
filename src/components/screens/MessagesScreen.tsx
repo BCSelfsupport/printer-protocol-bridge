@@ -139,6 +139,10 @@ export function MessagesScreen({
   liveCounters,
   isSlave = false,
   onSlaveBlocked,
+  sourcePrinter,
+  siblingPrinters,
+  onSelectOnPrinter,
+  onApplyPromptValuesOnPrinter,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
