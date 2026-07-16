@@ -423,6 +423,9 @@ export function PrinterListItem({
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
             {(() => {
               const badge = getStatusBadge();
+              // Suppress OFFLINE badge — the printer icon color already conveys reachability,
+              // and ICMP ping is often blocked on plant networks (false-offline).
+              if (effectiveStatus === 'offline') return null;
               return (
                 <span className={`text-xs px-2.5 py-1 rounded font-medium ${badge.className}`}>
                   {badge.label}
@@ -561,6 +564,7 @@ export function PrinterListItem({
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           {(() => {
             const badge = getStatusBadge();
+            if (effectiveStatus === 'offline') return null;
             return (
               <span className={cn(
                 "text-[10px] px-2 py-0.5 rounded font-medium whitespace-nowrap",
