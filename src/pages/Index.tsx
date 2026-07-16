@@ -702,15 +702,24 @@ const Index = () => {
     getMessageContent: (messageName) => getMessage(messageName),
     buildMessageCommands,
     currentSettings: connectionState.settings,
-    onSlaveSyncOutcome: (slaveId, ok, reason, messageName) => {
-      updatePrinter(slaveId, {
+    onSlaveSyncOutcome: (slaveId, ok, reason, messageName, verifiedMessage) => {
+      // Only trust the printer's own read-back: currentMessage is set STRICTLY
+      // from `verifiedMessage` (the value the slave reported when queried after
+      // the ^SM write). If we didn't get a valid read-back, we do NOT touch
+      // currentMessage — the old value stays, rendered as stale via the OUT OF
+      // SYNC badge and the FAIL pip. Never claim a slave switched on trust.
+      const patch: Partial<Printer> = {
         lastSelectionResult: {
           messageName,
           success: ok,
           reason: ok ? undefined : reason,
           at: Date.now(),
         },
-      });
+      };
+      if (ok && verifiedMessage) {
+        patch.currentMessage = verifiedMessage;
+      }
+      updatePrinter(slaveId, patch);
     },
   });
 
