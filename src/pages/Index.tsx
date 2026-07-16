@@ -307,7 +307,7 @@ const Index = () => {
         printMode: effectivePrintMode,
       },
     };
-  }, [connectionState.settings]);
+  }, [connectionState.settings, connectionState.connectedPrinter?.rotation]);
 
   const buildMessageDependentCommandSequence = useCallback(({
     adjustSettings,
