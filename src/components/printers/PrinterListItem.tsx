@@ -398,6 +398,16 @@ export function PrinterListItem({
                 WARNING
               </span>
             )}
+            {printer.role === 'slave' && printer.syncOutOfDate && (
+              <span
+                className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-medium"
+                title={printer.syncLastFailure
+                  ? `Last sync failed on "${printer.syncLastFailure.messageName}" (${printer.syncLastFailure.reason})`
+                  : 'Last Master sync did not complete on this slave'}
+              >
+                OUT OF SYNC
+              </span>
+            )}
             {/* Sync Slaves button (masters only) */}
             {printer.role === 'master' && onSync && slaveCount > 0 && (
               <Button

@@ -908,21 +908,22 @@ const Index = () => {
     messageName: string,
     details: MessageDetails,
     isNew?: boolean,
-  ) => {
-    if (!isMaster || !connectionState.connectedPrinter) return;
+  ): Promise<Array<{ slaveId: number; slaveName: string; ok: boolean; reason?: string }>> => {
+    if (!isMaster || !connectionState.connectedPrinter) return [];
     if (isPresetMessage(messageName)) {
       console.log(`[MasterSlaveSync] Skipping preset message "${messageName}" — already exists on slaves`);
-      return;
+      return [];
     }
     const slaves = getSlavesForMaster(connectionState.connectedPrinter.id);
     const availableSlaves = slaves.filter(s => s.isAvailable);
-    if (availableSlaves.length === 0) return;
+    if (availableSlaves.length === 0) return [];
 
-    if (details.fields.length === 0) return;
+    if (details.fields.length === 0) return [];
 
     console.log(`[MasterSlaveSync] Pushing "${messageName}" to ${availableSlaves.length} slave(s) (template=${details.templateValue ?? '32'})`);
 
     const targetUpper = messageName.trim().toUpperCase();
+    const results: Array<{ slaveId: number; slaveName: string; ok: boolean; reason?: string }> = [];
     for (const slave of availableSlaves) {
       const slaveCurrent = slave.currentMessage?.trim().toUpperCase();
       let ok = false;
@@ -948,8 +949,10 @@ const Index = () => {
         advancedSettings: details.advancedSettings,
       }, slaveCurrent === targetUpper);
       ok = result.success;
+      const reason = ok ? undefined : (result.reason ?? 'unknown');
+      results.push({ slaveId: slave.id, slaveName: slave.name, ok, reason });
       if (!ok) {
-        console.warn(`[MasterSlaveSync] Slave rewrite failed on ${slave.name}: ${result.reason}`);
+        console.warn(`[MasterSlaveSync] Slave rewrite failed on ${slave.name}: ${reason}`);
       }
 
       if (ok) {
@@ -962,6 +965,7 @@ const Index = () => {
       }
       console.log(`[MasterSlaveSync] Pushed "${messageName}" → ${slave.name}: ${ok ? 'OK' : 'PARTIAL'}`);
     }
+    return results;
   }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, replaceMessageWithoutDelete, normalizeMessageForPrinter, saveMessage, updatePrinter]);
 
   const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
@@ -2452,14 +2456,53 @@ const Index = () => {
           const t = toast.loading(`Syncing ${filtered.length} message(s) to ${slaves.length} slave(s)${skipped ? ` (skipping ${skipped} pre-installed)` : ''}…`);
           try {
             await waitForPollingIdle(3000);
-            let okCount = 0;
+            // Aggregate outcomes per-slave across every message pushed so we
+            // can report accurate success/failure and flag any slave that
+            // didn't accept the full push as OUT OF SYNC.
+            const slaveOutcomes = new Map<number, { name: string; failures: Array<{ messageName: string; reason: string }> }>();
+            for (const s of slaves) slaveOutcomes.set(s.id, { name: s.name, failures: [] });
+
+            let msgOkCount = 0;
             for (const m of filtered) {
               const details = getMessage(m.name);
               if (!details || details.fields.length === 0) continue;
-              await syncMessageToSlaves(m.name, details, false);
-              okCount += 1;
+              const perSlave = await syncMessageToSlaves(m.name, details, false);
+              const allOk = perSlave.length > 0 && perSlave.every(r => r.ok);
+              if (allOk) msgOkCount += 1;
+              for (const r of perSlave) {
+                if (!r.ok) {
+                  slaveOutcomes.get(r.slaveId)?.failures.push({ messageName: m.name, reason: r.reason ?? 'unknown' });
+                }
+              }
             }
-            toast.success(`Synced ${okCount} message(s) to ${slaves.length} slave(s)${skipped ? ` — skipped ${skipped} pre-installed` : ''}`, { id: t });
+
+            // Flag slaves: any failure → OUT OF SYNC; otherwise clear.
+            const failedSlaves: Array<{ name: string; failures: Array<{ messageName: string; reason: string }> }> = [];
+            for (const [slaveId, outcome] of slaveOutcomes) {
+              if (outcome.failures.length > 0) {
+                failedSlaves.push(outcome);
+                const first = outcome.failures[0];
+                updatePrinter(slaveId, {
+                  syncOutOfDate: true,
+                  syncLastFailure: { messageName: first.messageName, reason: first.reason, at: Date.now() },
+                });
+              } else {
+                updatePrinter(slaveId, { syncOutOfDate: false, syncLastFailure: null });
+              }
+            }
+
+            if (failedSlaves.length === 0) {
+              toast.success(`Synced ${msgOkCount}/${filtered.length} message(s) to ${slaves.length} slave(s)${skipped ? ` — skipped ${skipped} pre-installed` : ''}`, { id: t });
+            } else {
+              const summary = failedSlaves
+                .map(s => `${s.name} (${s.failures.length} msg${s.failures.length === 1 ? '' : 's'}: ${s.failures.slice(0, 2).map(f => `${f.messageName}→${f.reason}`).join(', ')}${s.failures.length > 2 ? '…' : ''})`)
+                .join(' • ');
+              toast.error(`Sync partial: ${failedSlaves.length}/${slaves.length} slave(s) failed — ${summary}`, {
+                id: t,
+                duration: 10000,
+              });
+              console.warn('[SyncSlaves] Per-slave failures:', Array.from(slaveOutcomes.values()));
+            }
           } catch (err: any) {
             console.error('[SyncSlaves] Failed:', err);
             toast.error(`Slave sync failed: ${err?.message ?? 'unknown error'}`, { id: t });

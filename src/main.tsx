@@ -213,6 +213,37 @@ if (import.meta.env.DEV) {
       console.error('[clearSlaves] failed:', e);
     }
   };
+
+  // Dev helper: toggle simulated write-failure on a slave's emulator so we
+  // can test the Master → Slave sync failure path. Usage from the browser
+  // console:
+  //   simulateSlaveWriteFailure()             → list slaves + current state
+  //   simulateSlaveWriteFailure('SlaveA')     → toggle that slave ON/OFF
+  //   simulateSlaveWriteFailure('SlaveA', true|false)  → force a value
+  (window as any).simulateSlaveWriteFailure = async (name?: string, value?: boolean) => {
+    const { multiPrinterEmulator } = await import('./lib/multiPrinterEmulator');
+    const raw = localStorage.getItem('codesync-printers');
+    if (!raw) { console.warn('[simFail] no printers in localStorage'); return; }
+    const printers = JSON.parse(raw) as Array<{ name: string; ipAddress: string; port: number; role?: string }>;
+    const slaves = printers.filter(p => p.role === 'slave');
+    if (!name) {
+      const state = slaves.map(s => {
+        const inst = multiPrinterEmulator.getInstanceByIp(s.ipAddress, s.port);
+        return { name: s.name, ip: s.ipAddress, simulateWriteFailure: !!inst?.simulateWriteFailure };
+      });
+      console.table(state);
+      console.log('Call simulateSlaveWriteFailure("<name>") to toggle a slave.');
+      return state;
+    }
+    const target = slaves.find(s => s.name.toLowerCase() === name.toLowerCase());
+    if (!target) { console.warn(`[simFail] no slave named "${name}"`); return; }
+    const inst = multiPrinterEmulator.getInstanceByIp(target.ipAddress, target.port);
+    if (!inst) { console.warn(`[simFail] no emulator instance for ${target.name}`); return; }
+    const next = typeof value === 'boolean' ? value : !inst.simulateWriteFailure;
+    inst.simulateWriteFailure = next;
+    console.log(`[simFail] ${target.name} simulateWriteFailure = ${next}`);
+    return { name: target.name, simulateWriteFailure: next };
+  };
 }
 
 const bootstrap = async () => {

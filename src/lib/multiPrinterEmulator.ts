@@ -281,6 +281,13 @@ class PrinterEmulatorInstance {
   private readonly VERSION = 'v01.09.00.14';
   private readonly BUILD_DATE = 'Feb 06 2026 10:30:00';
 
+  // Test hook: when true, every write-side command (^NM, ^SV, ^DM) returns
+  // a simulated failure so we can exercise the Master → Slave sync failure
+  // paths without unplugging a real printer. Toggle via
+  // `multiPrinterEmulator.setSimulateWriteFailure(ip, boolean)` or the
+  // browser console helper `simulateSlaveWriteFailure()`.
+  public simulateWriteFailure: boolean = false;
+
   constructor(config: EmulatedPrinterConfig) {
     this.config = config;
     this.state = createDefaultState(config.initialState);
@@ -398,6 +405,23 @@ class PrinterEmulatorInstance {
     let success = true;
 
     try {
+      // Failure-injection hook: simulate a printer that rejects any write
+      // (message create/save/delete). Read/status commands still work so the
+      // sync loop can observe that the slave is reachable but not accepting
+      // the push. This mirrors a real failure mode (busy/locked/faulted
+      // firmware) more closely than a full disconnect would.
+      if (this.simulateWriteFailure) {
+        const isWrite = trimmedCommand.startsWith('^NM')
+          || trimmedCommand === '^SV'
+          || trimmedCommand.startsWith('^DM');
+        if (isWrite) {
+          response = this.formatError(99, 'SimulatedFail', 'Simulated write failure (dev)');
+          success = false;
+          this.addLog(command.trim(), response, 'received');
+          return { success, response };
+        }
+      }
+
       if (trimmedCommand.startsWith('^VV')) {
         response = this.cmdViewVersion();
       } else if (trimmedCommand.startsWith('^EN')) {
@@ -971,6 +995,18 @@ class MultiPrinterEmulatorManager {
    */
   resetAll() {
     this.instances.forEach(instance => instance.reset());
+  }
+
+  /**
+   * Toggle the write-failure simulation on a specific emulator instance.
+   * When true, ^NM/^SV/^DM return a simulated error so we can reproduce
+   * Master → Slave sync failures end-to-end.
+   */
+  setSimulateWriteFailure(ipAddress: string, port: number | undefined, value: boolean): boolean {
+    const instance = this.getInstanceByIp(ipAddress, port);
+    if (!instance) return false;
+    instance.simulateWriteFailure = value;
+    return true;
   }
 
   /**
