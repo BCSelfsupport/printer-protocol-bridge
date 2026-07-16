@@ -1491,16 +1491,86 @@ const Index = () => {
         targetPrinterName: targetPrinter.name,
         messageName,
         storedFound: !!stored,
-        storedAdjustSettings: stored?.adjustSettings ?? null,
-        storedMessageSettings: stored?.settings ?? null,
       });
       return;
     }
 
-    const adj = stored.adjustSettings ?? {};
-    const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(stored, targetPrinter);
+    // Respect operator changes made at the printer HMI: if this printer is
+    // the connected one, query ^QP first and treat any values the printer
+    // reports as authoritative. Update the stored copy so future selects
+    // don't clobber those values, and skip re-pushing keys that already
+    // match — so a technician who tweaked width/speed/delay at the printer
+    // and pressed Save keeps their tweaks after a re-select.
+    let adoptedStored = stored;
+    let printerCurrent: Partial<PrintSettings> | null = null;
+    if (targetPrinter.id === connectionState.connectedPrinter?.id) {
+      try {
+        printerCurrent = await queryPrintSettingsForConnectedPrinter();
+      } catch (e) {
+        console.warn('[AdjustDebug][applyStoredAdjustSettings.queryFailed]', e);
+      }
+      if (printerCurrent) {
+        const storedAdjust = (stored.adjustSettings ?? {}) as Partial<PrintSettings>;
+        const storedMsgSettings = (stored.settings ?? {}) as Partial<PrintSettings>;
+        const mergedAdjust: Partial<PrintSettings> = { ...storedAdjust };
+        const mergedMsgSettings: Partial<PrintSettings> = { ...storedMsgSettings };
+        let changed = false;
+        const adjustKeys: (keyof PrintSettings)[] = ['width', 'height', 'delay', 'bold', 'gap', 'pitch'];
+        for (const k of adjustKeys) {
+          const pv = printerCurrent[k];
+          if (pv !== undefined && pv !== storedAdjust[k]) {
+            (mergedAdjust as Record<string, unknown>)[k] = pv;
+            changed = true;
+          }
+        }
+        // Speed + rotation are part of message settings (baked in ^NM/^CM).
+        // Only adopt if operator explicitly changed them at the printer HMI
+        // (i.e., they differ from stored) — we still push these via ^NM/^CM
+        // during message writes, so adopting keeps our record honest.
+        for (const k of ['speed', 'rotation'] as (keyof PrintSettings)[]) {
+          const pv = printerCurrent[k];
+          if (pv !== undefined && pv !== storedMsgSettings[k]) {
+            (mergedMsgSettings as Record<string, unknown>)[k] = pv;
+            changed = true;
+          }
+        }
+        if (changed) {
+          adoptedStored = { ...stored, adjustSettings: mergedAdjust as MessageDetails['adjustSettings'], settings: mergedMsgSettings as MessageDetails['settings'] };
+          try {
+            saveMessage(adoptedStored, targetPrinter.id);
+            console.log('[AdjustDebug][applyStoredAdjustSettings.adoptedPrinterValues]', {
+              targetPrinterId: targetPrinter.id,
+              messageName,
+              printerCurrent,
+              mergedAdjust,
+              mergedMsgSettings,
+            });
+            toast.info(`Adopted printer-side changes for "${messageName}"`, { duration: 3000 });
+          } catch (e) {
+            console.error('[AdjustDebug][applyStoredAdjustSettings.saveFailed]', e);
+          }
+        }
+      }
+    }
+
+    const adj = adoptedStored.adjustSettings ?? {};
+    const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(adoptedStored, targetPrinter);
+
+    // Build command sequence, but skip any adjust key that already matches
+    // the printer's current value (either just queried or previously known).
+    const adjustToPush: Partial<MessageDetails['adjustSettings']> = { ...(adj as object) };
+    if (printerCurrent) {
+      for (const k of ['width', 'height', 'delay', 'bold', 'gap', 'pitch'] as (keyof PrintSettings)[]) {
+        const pv = printerCurrent[k];
+        const target = (fullAdjustSettings as Record<string, unknown>)[k];
+        if (pv !== undefined && pv === target) {
+          delete (adjustToPush as Record<string, unknown>)[k];
+        }
+      }
+    }
+
     const commands = buildMessageDependentCommandSequence({
-      adjustSettings: adj,
+      adjustSettings: adjustToPush,
       fullAdjustSettings,
       perMessageSettings,
       includeMessageSettings: hasStoredMessageSettings,
@@ -1510,13 +1580,16 @@ const Index = () => {
       targetPrinterId: targetPrinter.id,
       targetPrinterName: targetPrinter.name,
       messageName,
-      currentConnectionSettings: connectionState.settings,
-      storedAdjustSettings: adj,
-      storedMessageSettings: stored.settings ?? null,
-      computedFullSettings: fullAdjustSettings,
-      computedPerMessageSettings: perMessageSettings,
+      printerCurrent,
+      adjustToPush,
       commands,
     });
+
+    if (commands.length === 0) {
+      console.log('[AdjustDebug][applyStoredAdjustSettings.noop]', { targetPrinterId: targetPrinter.id, messageName });
+      updateSettings(fullAdjustSettings);
+      return;
+    }
 
     if (targetPrinter.id === connectionState.connectedPrinter?.id) {
       setPollingPaused(true);
@@ -1525,12 +1598,7 @@ const Index = () => {
         await waitForPollingIdle(3000);
         const result = await sendVerifiedCommandSequence(targetPrinter, commands, 300);
         if (!result.success) {
-          console.error('[AdjustDebug][applyStoredAdjustSettings.failed]', {
-            targetPrinterId: targetPrinter.id,
-            messageName,
-            result,
-          });
-          // Silent failure — Adjust re-apply is best-effort; print itself already succeeded
+          console.error('[AdjustDebug][applyStoredAdjustSettings.failed]', { targetPrinterId: targetPrinter.id, messageName, result });
           return;
         }
       } finally {
@@ -1539,12 +1607,7 @@ const Index = () => {
     } else {
       const result = await sendVerifiedCommandSequence(targetPrinter, commands, 300);
       if (!result.success) {
-        console.error('[AdjustDebug][applyStoredAdjustSettings.failed]', {
-          targetPrinterId: targetPrinter.id,
-          messageName,
-          result,
-        });
-        // Silent failure — Adjust re-apply is best-effort
+        console.error('[AdjustDebug][applyStoredAdjustSettings.failed]', { targetPrinterId: targetPrinter.id, messageName, result });
         return;
       }
     }
@@ -1561,7 +1624,8 @@ const Index = () => {
     buildEffectiveMessageDependentSettings,
     buildMessageDependentCommandSequence,
     getStoredMessageForPrinter,
-    connectionState.settings,
+    queryPrintSettingsForConnectedPrinter,
+    saveMessage,
     connectionState.connectedPrinter?.id,
     sendVerifiedCommandSequence,
     updateSettings,
