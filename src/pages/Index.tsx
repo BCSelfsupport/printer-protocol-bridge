@@ -54,7 +54,7 @@ import { PrintMessage, Printer } from '@/types/printer';
 import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
 import { useProductionStorage } from '@/hooks/useProductionStorage';
 import { logConsumption } from '@/lib/consumptionTracker';
-import { useFleetTelemetryPush } from '@/hooks/useFleetTelemetryPush';
+
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { isRelayMode, printerTransport } from '@/lib/printerTransport';
 import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
@@ -220,13 +220,8 @@ const Index = () => {
     // For real printers we don't have their message list unless connected
     return [];
   }, [connectionState.messages, connectionState.connectedPrinter?.id]);
-  // Push telemetry to Fleet Telemetry cloud when license is active
-  useFleetTelemetryPush({
-    printers,
-    connectedPrinterId,
-    status: connectionState.status,
-    metrics: connectionState.metrics,
-  });
+
+
 
   // Keep message storage scoped to the connected printer
   // Exit edit mode when switching printers so we don't appear to edit
