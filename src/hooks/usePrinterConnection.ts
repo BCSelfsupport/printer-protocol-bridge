@@ -277,6 +277,18 @@ export function usePrinterConnection() {
           const state = instance.getState();
           const sim = instance.getSimulatedPrinter();
 
+          if (instance.simulateOffline) {
+            // Simulated offline: leave currentMessage / levels UNTOUCHED so
+            // any last-known value stays stale (rendered as LAST: in the UI)
+            // rather than mirroring what the still-running emulator thinks.
+            updatePrinterStatus(p.id, {
+              isAvailable: false,
+              status: 'offline',
+              hasActiveErrors: false,
+            });
+            return;
+          }
+
           updatePrinterStatus(p.id, {
             isAvailable: true,
             status: sim.status,
