@@ -915,15 +915,25 @@ const Index = () => {
       return [];
     }
     const slaves = getSlavesForMaster(connectionState.connectedPrinter.id);
-    const availableSlaves = slaves.filter(s => s.isAvailable);
-    if (availableSlaves.length === 0) return [];
+    if (slaves.length === 0) return [];
 
     if (details.fields.length === 0) return [];
 
-    console.log(`[MasterSlaveSync] Pushing "${messageName}" to ${availableSlaves.length} slave(s) (template=${details.templateValue ?? '32'})`);
+    // Offline slaves cannot receive the push — flag them as OUT OF SYNC
+    // (via the returned failure entry) instead of silently skipping.
+    const results: Array<{ slaveId: number; slaveName: string; ok: boolean; reason?: string }> = [];
+    const availableSlaves: typeof slaves = [];
+    for (const s of slaves) {
+      if (!s.isAvailable) {
+        results.push({ slaveId: s.id, slaveName: s.name, ok: false, reason: 'offline' });
+      } else {
+        availableSlaves.push(s);
+      }
+    }
+
+    console.log(`[MasterSlaveSync] Pushing "${messageName}" to ${availableSlaves.length} slave(s) (${results.length} offline flagged, template=${details.templateValue ?? '32'})`);
 
     const targetUpper = messageName.trim().toUpperCase();
-    const results: Array<{ slaveId: number; slaveName: string; ok: boolean; reason?: string }> = [];
     for (const slave of availableSlaves) {
       const slaveCurrent = slave.currentMessage?.trim().toUpperCase();
       let ok = false;
@@ -2427,9 +2437,17 @@ const Index = () => {
             return;
           }
 
-          const slaves = getSlavesForMaster(masterId).filter(s => s.isAvailable);
+          // Include OFFLINE slaves so they get flagged OUT OF SYNC instead
+          // of silently skipped. syncMessageToSlaves records them as failed
+          // with reason 'offline'.
+          const slaves = getSlavesForMaster(masterId);
+          const onlineSlaveCount = slaves.filter(s => s.isAvailable).length;
           if (slaves.length === 0) {
-            toast.warning('No online slaves for this master');
+            toast.warning('No slaves configured for this master');
+            return;
+          }
+          if (onlineSlaveCount === 0) {
+            toast.warning('All slaves are offline — nothing to sync');
             return;
           }
           const messagesToPush = connectionState.messages ?? [];
