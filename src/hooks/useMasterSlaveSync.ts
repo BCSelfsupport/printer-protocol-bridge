@@ -475,11 +475,25 @@ export function useMasterSlaveSync({
         const result = await sendCommandSequenceToPrinter(slave, sequence, `select ${messageName}`);
         if (!result.success) {
           console.warn(`[MasterSlaveSync] Selection sync failed on ${slave.name}: ${summarizeCommand(result.failedCommand ?? '')} ${result.error ?? ''}`);
-          outcomeRef.current?.(slave.id, false, result.error ? String(result.error).slice(0, 40) : 'rejected', messageName);
+          outcomeRef.current?.(slave.id, false, result.error ? String(result.error).slice(0, 40) : 'rejected', messageName, null);
         } else {
-          outcomeRef.current?.(slave.id, true, 'ok', messageName);
+          // Read-back verification — do NOT trust the ^SM write ACK alone. Query
+          // the printer for its currently-selected message and only report success
+          // if the printer's own state matches what we asked for. This is the
+          // hard guarantee: we never claim a slave switched unless the printer
+          // itself confirms it via a fresh read.
+          await delay(400);
+          const verified = await queryCurrentMessage(slave);
+          const expected = messageName.toUpperCase();
+          if (verified && verified === expected) {
+            outcomeRef.current?.(slave.id, true, 'ok', messageName, verified);
+            console.log(`[MasterSlaveSync] ^SM ${messageName} → ${slave.name}: VERIFIED (${verified})`);
+          } else {
+            const reason = verified ? `verify-mismatch:${verified.slice(0, 20)}` : 'no-readback';
+            outcomeRef.current?.(slave.id, false, reason, messageName, null);
+            console.warn(`[MasterSlaveSync] ^SM ${messageName} → ${slave.name}: write ACK OK but read-back returned ${verified ?? 'null'} (expected ${expected}) — reporting FAIL`);
+          }
         }
-        console.log(`[MasterSlaveSync] ^SM ${messageName} → ${slave.name} (${slave.rotation ?? 'Normal'}): ${result.success ? 'OK' : 'FAIL'}`);
       }
     })().finally(() => {
       setTimeout(() => setPollingPaused(false), 1000);
