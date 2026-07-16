@@ -116,10 +116,12 @@ export function PrinterListItem({
     onRotationChange(printer.id, next);
   };
 
-  // Slaves should mirror the master's active message in the card UI even if
-  // their local emulator state still has an older message name.
+  // Slaves show their OWN confirmed active message name. Only fall back to
+  // the master's active message if the slave has never reported one yet —
+  // otherwise a failed sync would still make the slave appear to have loaded
+  // the master's new selection when in fact the old message is still active.
   const displayMessage = printer.role === 'slave'
-    ? (masterMessage ?? printer.currentMessage ?? undefined)
+    ? (printer.currentMessage ?? masterMessage ?? undefined)
     : (printer.currentMessage ?? undefined);
   
   // Filter status for this printer
