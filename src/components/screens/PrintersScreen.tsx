@@ -634,7 +634,7 @@ export function PrintersScreen({
               // and in the main DnD list, so we don't duplicate the long prop list.
               const renderPrinterItem = (printer: Printer, opts?: { hideDragHandle?: boolean }) => {
                 const msgName = printer.role === 'slave'
-                  ? (masterMessageMap.get(printer.id) || printer.currentMessage)
+                  ? (printer.currentMessage || masterMessageMap.get(printer.id))
                   : (printer.currentMessage || masterMessageMap.get(printer.id));
                 const msgContent = msgName && getMessageContent
                   ? (getMessageContent(msgName, printer.id)
