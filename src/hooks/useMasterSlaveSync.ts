@@ -116,6 +116,7 @@ export function useMasterSlaveSync({
   currentSettings,
 }: UseMasterSlaveSyncOptions) {
   const prevMessageRef = useRef<string | null>(null);
+  const primedMessageRef = useRef(false);
   const prevMessageListRef = useRef<string[]>([]);
   const syncingRef = useRef(false);
 
