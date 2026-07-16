@@ -1157,7 +1157,6 @@ export function PrintersScreen({
         const siblings = visiblePrinters.filter(p =>
           p.id !== expiryDialogSource.id
           && p.isAvailable
-          && getMsgExpiry(p) !== undefined
         );
         return (
           <ApplyExpiryToPrintersDialog
