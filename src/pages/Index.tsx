@@ -1676,6 +1676,9 @@ const Index = () => {
     let noStoredCount = 0;
     let unchangedCount = 0;
     let failedCount = 0;
+    const failureDetails: string[] = [];
+    const noStoredDetails: string[] = [];
+    const noMessageDetails: string[] = [];
 
     // Sequential to avoid overwhelming the fleet-write queue and to keep
     // toast/progress deterministic.
@@ -1685,6 +1688,7 @@ const Index = () => {
         if (!queried) {
           console.warn('[SyncAdjustFromPrinters] query failed', { printer: printer.name });
           failedCount++;
+          failureDetails.push(`${printer.name}: query failed (printer did not respond to ^QP)`);
           continue;
         }
         const printerCurrent = queried.settings;
@@ -1692,12 +1696,14 @@ const Index = () => {
         if (!messageName) {
           console.warn('[SyncAdjustFromPrinters] no current message', { printer: printer.name });
           noMessageCount++;
+          noMessageDetails.push(printer.name);
           continue;
         }
         const stored = getStoredMessageForPrinter(messageName, printer);
         if (!stored) {
           console.warn('[SyncAdjustFromPrinters] no stored message', { printer: printer.name, messageName });
           noStoredCount++;
+          noStoredDetails.push(`${printer.name}:${messageName}`);
           continue;
         }
         const storedAdjust = (stored.adjustSettings ?? {}) as Partial<PrintSettings>;
@@ -1743,6 +1749,8 @@ const Index = () => {
       } catch (e) {
         console.error(`[SyncAdjustFromPrinters] failed on ${printer.name}:`, e);
         failedCount++;
+        const msg = e instanceof Error ? e.message : String(e);
+        failureDetails.push(`${printer.name}: ${msg}`);
       }
     }
 
@@ -1753,8 +1761,14 @@ const Index = () => {
     if (noMessageCount) parts.push(`${noMessageCount} no active msg`);
     if (noStoredCount) parts.push(`${noStoredCount} msg not stored`);
     if (failedCount) parts.push(`${failedCount} failed`);
+    const isSingle = online.length === 1;
+    const detailLines: string[] = [];
+    if (failureDetails.length) detailLines.push(...failureDetails);
+    if (noStoredDetails.length) detailLines.push(`Not stored locally: ${noStoredDetails.join(', ')}`);
+    if (noMessageDetails.length) detailLines.push(`No active message: ${noMessageDetails.join(', ')}`);
+    const description = detailLines.length ? detailLines.join(' • ') : undefined;
     if (failedCount > 0 || noStoredCount > 0 || noMessageCount > 0) {
-      toast.warning(`Adjust sync: ${parts.join(', ')}`, { id: toastId, duration: 6000 });
+      toast.warning(`Adjust sync: ${parts.join(', ')}`, { id: toastId, duration: isSingle ? 10000 : 8000, description });
     } else {
       toast.success(`Adjust sync: ${parts.join(', ')}`, { id: toastId });
     }
