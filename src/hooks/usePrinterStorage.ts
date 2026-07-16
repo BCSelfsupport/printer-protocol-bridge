@@ -322,15 +322,28 @@ export function usePrinterStorage() {
   }, []);
 
   const updatePrinter = useCallback((printerId: number, updates: Partial<Printer>) => {
-    setPrinters(prev => prev.map(p => 
-      p.id === printerId ? { ...p, ...updates } : p
-    ));
+    setPrinters(prev => prev.map(p => {
+      if (p.id !== printerId) return p;
+      const safeUpdates = { ...updates };
+      // Never let an offline card's selected message be overwritten by an
+      // optimistic path. A currentMessage change is only trusted when the same
+      // patch explicitly proves the printer is available/live again.
+      if (!p.isAvailable && safeUpdates.currentMessage !== undefined && safeUpdates.isAvailable !== true) {
+        delete safeUpdates.currentMessage;
+      }
+      return { ...p, ...safeUpdates };
+    }));
   }, []);
 
   const updatePrinterStatus = useCallback((printerId: number, status: Pick<Printer, 'isAvailable' | 'status'> & Partial<Pick<Printer, 'hasActiveErrors' | 'inkLevel' | 'makeupLevel' | 'currentMessage' | 'printCount'>>) => {
-    setPrinters(prev => prev.map(p => 
-      p.id === printerId ? { ...p, ...status } : p
-    ));
+    setPrinters(prev => prev.map(p => {
+      if (p.id !== printerId) return p;
+      const safeStatus = { ...status };
+      if (!p.isAvailable && safeStatus.currentMessage !== undefined && safeStatus.isAvailable !== true) {
+        delete safeStatus.currentMessage;
+      }
+      return { ...p, ...safeStatus };
+    }));
   }, []);
 
   return {

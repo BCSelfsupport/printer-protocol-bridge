@@ -553,7 +553,11 @@ export function useMasterSlaveSync({
       return;
     }
 
-    if (currentMessage === prevMessageRef.current && !syncingRef.current) return;
+    // If the master message name has not actually changed, do nothing even
+    // while a sync is in flight. Re-running here was clearing the ACK/FAIL pip
+    // immediately after each slave reported, making the indicator flash and
+    // then disappear.
+    if (currentMessage === prevMessageRef.current) return;
 
     runSelectionSync(currentMessage);
   }, [isMaster, currentMessage, runSelectionSync]);
