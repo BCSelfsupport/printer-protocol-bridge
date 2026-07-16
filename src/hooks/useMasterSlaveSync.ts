@@ -144,34 +144,26 @@ export function useMasterSlaveSync({
       }
     }
 
-    // For non-connected printers, open an ephemeral connection
-    if (isRelayMode()) {
-      try {
-        await printerTransport.connect({ id: printer.id, ipAddress: printer.ipAddress, port: printer.port });
-        const result = await printerTransport.sendCommand(printer.id, command);
-        await printerTransport.disconnect(printer.id);
-        return result?.success ?? false;
-      } catch (e) {
-        console.error(`[MasterSlaveSync] Relay failed "${command}" to ${printer.name}:`, e);
-        return false;
-      }
-    }
-
-    if (isElectron && window.electronAPI) {
-      try {
-        await window.electronAPI.printer.connect({
-          id: printer.id,
-          ipAddress: printer.ipAddress,
-          port: printer.port,
-        });
-        const result = await window.electronAPI.printer.sendCommand(printer.id, command);
-        // Disconnect after sending to avoid keeping sockets open
-        await window.electronAPI.printer.disconnect(printer.id);
-        return result?.success ?? false;
-      } catch (e) {
-        console.error(`[MasterSlaveSync] Failed to send "${command}" to ${printer.name}:`, e);
-        return false;
-      }
+    // For non-connected printers, guard the whole connect → command → disconnect
+    // transaction. Even single-command helpers must not overlap with a larger
+    // sync/write sequence for the same fragile port-23 session.
+    if (isRelayMode() || (isElectron && window.electronAPI)) {
+      return runFleetWriteExclusive(() => runPrinterWriteExclusive(printer.id, async () => {
+        try {
+          const connectResult = await printerTransport.connect({ id: printer.id, ipAddress: printer.ipAddress, port: printer.port });
+          if (!connectResult?.success) {
+            console.warn(`[MasterSlaveSync] Connect failed for ${printer.name}: ${connectResult?.error ?? 'unknown'}`);
+            return false;
+          }
+          const result = await printerTransport.sendCommand(printer.id, command, getCommandOptions(command));
+          return result?.success ?? false;
+        } catch (e) {
+          console.error(`[MasterSlaveSync] Failed to send "${summarizeCommand(command)}" to ${printer.name}:`, e);
+          return false;
+        } finally {
+          try { await printerTransport.disconnect(printer.id); } catch {}
+        }
+      }));
     }
 
     return false;
