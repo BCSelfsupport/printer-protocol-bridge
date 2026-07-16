@@ -2952,7 +2952,8 @@ const Index = () => {
         onLicense={() => setLicenseDialogOpen(true)}
         onRefreshNetwork={checkPrinterStatus}
         isCheckingNetwork={isChecking}
-        onSyncAdjustFromPrinters={syncAdjustSettingsFromAllPrinters}
+        onSyncAdjustFromPrinters={() => syncAdjustSettingsFromPrinters()}
+        onSyncAdjustFromPrinter={(printer) => syncAdjustSettingsFromPrinters([printer])}
         isSyncingAdjustFromPrinters={isSyncingAdjustFromPrinters}
         onSlaveExpiryChange={handleExpiryOffsetChange}
       />
