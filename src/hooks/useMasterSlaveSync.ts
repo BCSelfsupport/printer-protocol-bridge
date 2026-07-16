@@ -509,7 +509,7 @@ export function useMasterSlaveSync({
         pendingMessageRef.current = null;
       }
     });
-  }, [getSlaves, getAllSlavesForMaster, sendCommandSequenceToPrinter, getMessageContent, buildMessageCommands, currentSettings]);
+  }, [getSlaves, getAllSlavesForMaster, sendCommandSequenceToPrinter, queryCurrentMessage, getMessageContent, buildMessageCommands, currentSettings]);
 
   // Keep an imperative handle so the drain step at the end of a run can call
   // the latest version of runSelectionSync without stale closure issues.
