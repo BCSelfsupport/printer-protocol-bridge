@@ -1475,7 +1475,7 @@ const Index = () => {
     }
 
     const adj = stored.adjustSettings ?? {};
-    const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(stored);
+    const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(stored, targetPrinter);
     const commands = buildMessageDependentCommandSequence({
       adjustSettings: adj,
       fullAdjustSettings,
