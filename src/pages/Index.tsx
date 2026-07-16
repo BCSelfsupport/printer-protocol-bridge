@@ -1942,41 +1942,55 @@ const Index = () => {
     const isConnectedMessageTarget = messageTargetPrinter?.id === connectionState.connectedPrinter?.id;
 
     if (currentScreen === 'messages') {
+      // Per-printer ^SM select — used by both the source select and the
+      // multi-target "Apply to Printers" fan-out. Handles the connected vs
+      // background-printer socket paths and records the ACK/FAIL pip.
+      const selectMessageOnAnyPrinter = async (printer: Printer, message: PrintMessage): Promise<boolean> => {
+        if (printer.id === connectionState.connectedPrinter?.id) {
+          const ok = await selectMessage(message);
+          if (ok) {
+            clearAllExpiryOverrides();
+            await applyStoredAdjustSettings(printer, message.name);
+          }
+          return ok;
+        }
+        const ok = await sendCommandToPrinter(printer, `^SM ${message.name}`);
+        if (ok) {
+          updatePrinter(printer.id, {
+            currentMessage: message.name,
+            lastSelectionResult: { messageName: message.name, success: true, at: Date.now() },
+          });
+          clearAllExpiryOverrides();
+          await applyStoredAdjustSettings(printer, message.name);
+        } else {
+          updatePrinter(printer.id, {
+            lastSelectionResult: { messageName: message.name, success: false, reason: 'No ACK from printer', at: Date.now() },
+          });
+        }
+        return ok;
+      };
+
+      // Siblings = every other online printer the operator can pick as an
+      // extra target in the ApplyToPrintersDialog. Exclude the source printer
+      // itself; the dialog always shows it as the locked source.
+      const siblingPrinters = messageTargetPrinter
+        ? printers.filter(p => p.id !== messageTargetPrinter.id && p.isAvailable)
+        : [];
+
       return (
         <MessagesScreen
           messages={getMessagesForPrinter(messageTargetPrinter)}
           currentMessageName={messageTargetPrinter?.currentMessage ?? connectionState.status?.currentMessage ?? null}
           onSelect={async (message) => {
             if (!messageTargetPrinter) return false;
-            // Slaves follow the master's selection — block independent message changes
-            if (messageTargetPrinter.role === 'slave') {
-              setSlaveBlockPrinterName(messageTargetPrinter.name);
-              setSlaveBlockDialogOpen(true);
-              return false;
-            }
-            if (isConnectedMessageTarget) {
-              const ok = await selectMessage(message);
-              if (ok) {
-                clearAllExpiryOverrides();
-                await applyStoredAdjustSettings(messageTargetPrinter, message.name);
-              }
-              return ok;
-            }
-            const ok = await sendCommandToPrinter(messageTargetPrinter, `^SM ${message.name}`);
-            if (ok) {
-              updatePrinter(messageTargetPrinter.id, {
-                currentMessage: message.name,
-                lastSelectionResult: { messageName: message.name, success: true, at: Date.now() },
-              });
-              clearAllExpiryOverrides();
-              await applyStoredAdjustSettings(messageTargetPrinter, message.name);
-            } else {
-              updatePrinter(messageTargetPrinter.id, {
-                lastSelectionResult: { messageName: message.name, success: false, reason: 'No ACK from printer', at: Date.now() },
-              });
-            }
-            return ok;
+            return selectMessageOnAnyPrinter(messageTargetPrinter, message);
           }}
+          sourcePrinter={messageTargetPrinter}
+          siblingPrinters={siblingPrinters}
+          onSelectOnPrinter={selectMessageOnAnyPrinter}
+          onApplyPromptValuesOnPrinter={(printer, message, updatedDetails) =>
+            applyPromptValuesToPrinter(printer, message, updatedDetails)
+          }
           onFetchMessageDetails={isConnectedMessageTarget ? fetchMessageContent : undefined}
           onSendCommand={async (cmd) => {
             if (isConnectedMessageTarget) {
