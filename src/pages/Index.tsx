@@ -1781,7 +1781,7 @@ const Index = () => {
     } else {
       toast.success(`Adjust sync: ${parts.join(', ')}`, { id: toastId });
     }
-  }, [printers, queryPrintSettingsForPrinter, getStoredMessageForPrinter, saveMessage]);
+  }, [printers, queryPrintSettingsForPrinter, getStoredMessageForPrinter, saveMessage, connectionState.connectedPrinter?.id, updateSettings]);
 
 
 
