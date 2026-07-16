@@ -702,6 +702,13 @@ const Index = () => {
     getMessageContent: (messageName) => getMessage(messageName),
     buildMessageCommands,
     currentSettings: connectionState.settings,
+    onSelectionSyncStart: (slaveIds, _messageName) => {
+      // A new selection is starting — wipe every slave's prior pass/fail pip so
+      // the UI shows a clean slate until each printer reports its own ACK.
+      for (const id of slaveIds) {
+        updatePrinter(id, { lastSelectionResult: undefined });
+      }
+    },
     onSlaveSyncOutcome: (slaveId, ok, reason, messageName, verifiedMessage) => {
       // Only trust the printer's own read-back: currentMessage is set STRICTLY
       // from `verifiedMessage` (the value the slave reported when queried after
@@ -721,6 +728,7 @@ const Index = () => {
       }
       updatePrinter(slaveId, patch);
     },
+
   });
 
   const sendVerifiedCommandSequence = useCallback(async (
