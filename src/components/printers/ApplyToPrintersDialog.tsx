@@ -204,12 +204,14 @@ export function ApplyToPrintersDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary">
             <PrinterIcon className="w-5 h-5" />
-            Apply "{messageName}" to which printers?
+            {isCopy
+              ? `Copy "${messageName}" to which printers?`
+              : `Apply "${messageName}" to which printers?`}
           </DialogTitle>
           <p className="text-xs text-slate-400">
-            The source printer is always included. Tick any others you want to
-            apply the same message to. If the message has a user-prompt field,
-            you'll be asked once for the value — it'll be baked into every checked printer.
+            {isCopy
+              ? `Pick the printers you want to copy "${messageName}" to. The full message content (fields, template, settings) will be written to each checked printer.`
+              : `The source printer is always included. Tick any others you want to apply the same message to. If the message has a user-prompt field, you'll be asked once for the value — it'll be baked into every checked printer.`}
           </p>
         </DialogHeader>
 
