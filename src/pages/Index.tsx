@@ -941,7 +941,7 @@ const Index = () => {
       return { success: false as const, reason: 'command' as const };
     }
 
-    return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | null };
+    return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | 'protected' | null };
   }, [buildCounterConfigCommandSequence, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence]);
 
   // After saving a message on the master, duplicate the full content to all
