@@ -300,6 +300,16 @@ export function useMasterSlaveSync({
   // Skip factory/preset messages (BestCode, Moba, etc.) — they already exist on slaves.
   useEffect(() => {
     if (!isMaster || !currentMessage || syncingRef.current) return;
+
+    // Prime on first run for this master session so we do NOT push the
+    // currently-loaded message to slaves on mount/reconnect — only real
+    // user-driven selection changes should trigger a sync.
+    if (!primedMessageRef.current) {
+      primedMessageRef.current = true;
+      prevMessageRef.current = currentMessage;
+      return;
+    }
+
     if (currentMessage === prevMessageRef.current) return;
     if (isPresetMessage(currentMessage)) {
       console.log(`[MasterSlaveSync] Skipping preset message selection "${currentMessage}"`);
