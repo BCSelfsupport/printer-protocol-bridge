@@ -8,6 +8,7 @@ import { AddPrinterDialog } from '@/components/printers/AddPrinterDialog';
 import { EditPrinterDialog } from '@/components/printers/EditPrinterDialog';
 import { PrinterServicePopup } from '@/components/printers/PrinterServicePopup';
 import { BroadcastMessageDialog } from '@/components/printers/BroadcastMessageDialog';
+import { ApplyExpiryToPrintersDialog } from '@/components/printers/ApplyExpiryToPrintersDialog';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dashboard } from '@/components/screens/Dashboard';
@@ -130,6 +131,7 @@ function SortablePrinterItem({
   onExpiryChange,
   isUpdatingExpiry,
   messageExpiryDays,
+  onOpenExpiryDialog,
   twinPairRole,
   hideDragHandle,
   onRotationChange,
@@ -156,6 +158,7 @@ function SortablePrinterItem({
   onExpiryChange?: (printerId: number, days: number) => void;
   isUpdatingExpiry?: boolean;
   messageExpiryDays?: number;
+  onOpenExpiryDialog?: (sourcePrinter: Printer, currentDays: number) => void;
   twinPairRole?: 'A' | 'B' | null;
   hideDragHandle?: boolean;
   onRotationChange?: (printerId: number, rotation: NonNullable<Printer['rotation']>) => void;
@@ -214,6 +217,7 @@ function SortablePrinterItem({
         onExpiryChange={onExpiryChange}
         isUpdatingExpiry={isUpdatingExpiry}
         messageExpiryDays={messageExpiryDays}
+        onOpenExpiryDialog={onOpenExpiryDialog}
         twinPairRole={twinPairRole}
         onRotationChange={onRotationChange}
       />
@@ -286,6 +290,8 @@ export function PrintersScreen({
   const [broadcastMaster, setBroadcastMaster] = useState<Printer | null>(null);
   const [expandedGridOpen, setExpandedGridOpen] = useState(false);
   const [updatingExpiryPrinterId, setUpdatingExpiryPrinterId] = useState<number | null>(null);
+  const [expiryDialogSource, setExpiryDialogSource] = useState<Printer | null>(null);
+  const [expiryDialogCurrentDays, setExpiryDialogCurrentDays] = useState<number>(0);
   const [devTaps, setDevTaps] = useState<number[]>([]);
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
@@ -632,12 +638,11 @@ export function PrintersScreen({
         <ScrollArea className="flex-1">
           <div className="p-2 pr-3 space-y-2">
             {(() => {
-              // Render a single printer item — used both inside the bound-pair group
-              // and in the main DnD list, so we don't duplicate the long prop list.
-              const renderPrinterItem = (printer: Printer, opts?: { hideDragHandle?: boolean }) => {
-                const msgName = printer.role === 'slave'
-                  ? (printer.currentMessage || masterMessageMap.get(printer.id))
-                  : (printer.currentMessage || masterMessageMap.get(printer.id));
+              // Compute msgExpiry (days) for a given printer using the same lookup
+              // rules as the list renderer. Returns undefined when the current
+              // message has no expiry field.
+              const getMsgExpiry = (printer: Printer): number | undefined => {
+                const msgName = printer.currentMessage || masterMessageMap.get(printer.id);
                 const msgContent = msgName && getMessageContent
                   ? (getMessageContent(msgName, printer.id)
                     || (printer.masterId ? getMessageContent(msgName, printer.masterId) : null)
@@ -645,13 +650,23 @@ export function PrintersScreen({
                     || getMessageContent(msgName))
                   : null;
                 const expiryField = msgContent?.fields?.find(f => (
-                  f.type === 'date'
-                  && (
+                  f.type === 'date' && (
                     f.autoCodeFieldType?.startsWith('date_expiry')
                     || (f.autoCodeExpiryDays ?? 0) > 0
                   )
                 ));
-                const msgExpiry = expiryField ? (expiryField.autoCodeExpiryDays ?? 0) : undefined;
+                return expiryField ? (expiryField.autoCodeExpiryDays ?? 0) : undefined;
+              };
+
+              const openExpiryDialog = (sourcePrinter: Printer, currentDays: number) => {
+                setExpiryDialogSource(sourcePrinter);
+                setExpiryDialogCurrentDays(currentDays);
+              };
+
+              // Render a single printer item — used both inside the bound-pair group
+              // and in the main DnD list, so we don't duplicate the long prop list.
+              const renderPrinterItem = (printer: Printer, opts?: { hideDragHandle?: boolean }) => {
+                const msgExpiry = getMsgExpiry(printer);
                 return (
                   <SortablePrinterItem
                     key={printer.id}
@@ -687,6 +702,7 @@ export function PrintersScreen({
                     } : undefined}
                     isUpdatingExpiry={updatingExpiryPrinterId === printer.id}
                     messageExpiryDays={msgExpiry}
+                    onOpenExpiryDialog={onSlaveExpiryChange ? openExpiryDialog : undefined}
                     twinPairRole={
                       pairPrinters && pairPrinters.a.id === printer.id ? 'A'
                       : pairPrinters && pairPrinters.b.id === printer.id ? 'B'
@@ -697,6 +713,7 @@ export function PrintersScreen({
 
                 );
               };
+
 
               const pairIds = new Set<number>();
               if (pairPrinters) {
@@ -1080,6 +1097,10 @@ export function PrintersScreen({
                         } : undefined}
                         isUpdatingExpiry={updatingExpiryPrinterId === printer.id}
                         messageExpiryDays={msgExpiry}
+                        onOpenExpiryDialog={onSlaveExpiryChange ? (src, days) => {
+                          setExpiryDialogSource(src);
+                          setExpiryDialogCurrentDays(days);
+                        } : undefined}
                         twinPairRole={
                           pairPrinters && pairPrinters.a.id === printer.id ? 'A'
                           : pairPrinters && pairPrinters.b.id === printer.id ? 'B'
@@ -1096,6 +1117,53 @@ export function PrintersScreen({
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* Apply expiry offset to multiple printers */}
+      {expiryDialogSource && onSlaveExpiryChange && (() => {
+        const getMsgExpiry = (printer: Printer): number | undefined => {
+          const msgName = printer.currentMessage || masterMessageMap.get(printer.id);
+          const msgContent = msgName && getMessageContent
+            ? (getMessageContent(msgName, printer.id)
+              || (printer.masterId ? getMessageContent(msgName, printer.masterId) : null)
+              || (connectedPrinter ? getMessageContent(msgName, connectedPrinter.id) : null)
+              || getMessageContent(msgName))
+            : null;
+          const expiryField = msgContent?.fields?.find(f => (
+            f.type === 'date' && (
+              f.autoCodeFieldType?.startsWith('date_expiry')
+              || (f.autoCodeExpiryDays ?? 0) > 0
+            )
+          ));
+          return expiryField ? (expiryField.autoCodeExpiryDays ?? 0) : undefined;
+        };
+        const siblings = visiblePrinters.filter(p =>
+          p.id !== expiryDialogSource.id
+          && p.isAvailable
+          && getMsgExpiry(p) !== undefined
+        );
+        return (
+          <ApplyExpiryToPrintersDialog
+            open={!!expiryDialogSource}
+            onOpenChange={(o) => { if (!o) setExpiryDialogSource(null); }}
+            sourcePrinter={expiryDialogSource}
+            siblingPrinters={siblings}
+            currentDays={expiryDialogCurrentDays}
+            onConfirm={async (targets, days) => {
+              // Sequential apply to avoid clobbering shared master/slave messages.
+              for (const t of targets) {
+                setUpdatingExpiryPrinterId(t.id);
+                try {
+                  await onSlaveExpiryChange(t.id, days);
+                } catch (err) {
+                  console.error('[ApplyExpiry] Failed on', t.name, err);
+                } finally {
+                  setUpdatingExpiryPrinterId(null);
+                }
+              }
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }

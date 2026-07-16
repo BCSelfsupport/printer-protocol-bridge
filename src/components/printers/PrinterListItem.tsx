@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, Calendar, Check, X, Link2, Send, RotateCcw } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, Calendar, Check, X, Link2, Send, RotateCcw, Users } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
@@ -47,6 +47,8 @@ interface PrinterListItemProps {
   isUpdatingExpiry?: boolean;
   /** Original expiry days from the message definition (fallback when no per-printer override) */
   messageExpiryDays?: number;
+  /** Open the multi-target expiry dialog for this printer as source. */
+  onOpenExpiryDialog?: (sourcePrinter: Printer, currentDays: number) => void;
   /** TwinCode pair role badge — 'A' (lid) or 'B' (side). Shown when this printer is part of a bound pair. */
   twinPairRole?: 'A' | 'B' | null;
   /** Callback when the per-printer rotation cycle button is clicked */
@@ -90,6 +92,7 @@ export function PrinterListItem({
   onExpiryChange,
   isUpdatingExpiry = false,
   messageExpiryDays,
+  onOpenExpiryDialog,
   twinPairRole,
   onRotationChange,
 }: PrinterListItemProps) {
@@ -370,21 +373,38 @@ export function PrinterListItem({
                         <button type="button" onClick={handleExpiryCancel} className="p-0.5 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
                       </form>
                     ) : (
-                      <button
-                        onClick={handleExpiryBadgeClick}
-                        className={`flex items-center gap-1.5 px-2 py-1 rounded transition-all ${
-                          isUpdatingExpiry
-                            ? 'bg-amber-500/20 text-amber-300 animate-pulse'
-                            : 'bg-slate-900/80 text-amber-300 hover:bg-slate-800 border border-amber-400/30 hover:border-amber-400/60'
-                        }`}
-                        disabled={isUpdatingExpiry}
-                      >
-                        <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                        <span className="text-sm font-bold">{currentOffset}</span>
-                        <span className="text-[11px] text-amber-300/70">day expiry</span>
-                        {isCustomExpiry && <span className="text-[9px] px-1 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold ml-1">CUSTOM</span>}
-                        {isUpdatingExpiry && <span className="ml-1 text-[10px]">...</span>}
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={handleExpiryBadgeClick}
+                          className={`flex items-center gap-1.5 px-2 py-1 rounded transition-all ${
+                            isUpdatingExpiry
+                              ? 'bg-amber-500/20 text-amber-300 animate-pulse'
+                              : 'bg-slate-900/80 text-amber-300 hover:bg-slate-800 border border-amber-400/30 hover:border-amber-400/60'
+                          }`}
+                          disabled={isUpdatingExpiry}
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                          <span className="text-sm font-bold">{currentOffset}</span>
+                          <span className="text-[11px] text-amber-300/70">day expiry</span>
+                          {isCustomExpiry && <span className="text-[9px] px-1 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold ml-1">CUSTOM</span>}
+                          {isUpdatingExpiry && <span className="ml-1 text-[10px]">...</span>}
+                        </button>
+                        {onOpenExpiryDialog && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isUpdatingExpiry) return;
+                              onOpenExpiryDialog(printer, currentOffset);
+                            }}
+                            title="Apply expiry offset to multiple printers"
+                            disabled={isUpdatingExpiry}
+                            className="p-1 rounded border border-amber-400/30 bg-slate-900/80 text-amber-300 hover:bg-slate-800 hover:border-amber-400/60 transition-all disabled:opacity-40"
+                          >
+                            <Users className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
