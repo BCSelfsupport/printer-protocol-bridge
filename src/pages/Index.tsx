@@ -959,6 +959,10 @@ const Index = () => {
       console.log(`[MasterSlaveSync] Skipping preset message "${messageName}" — already exists on slaves`);
       return [];
     }
+    if (isMessageProtected(messageName)) {
+      console.warn(`[MasterSlaveSync] Skipping protected message "${messageName}" — refusing to overwrite slave backup slot`);
+      return [];
+    }
     const slaves = getSlavesForMaster(connectionState.connectedPrinter.id);
     if (slaves.length === 0) return [];
 
