@@ -1013,7 +1013,7 @@ export function PrintersScreen({
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {visiblePrinters.map((printer) => {
                 const msgName = printer.role === 'slave'
-                  ? (masterMessageMap.get(printer.id) || printer.currentMessage)
+                  ? (printer.currentMessage || masterMessageMap.get(printer.id))
                   : (printer.currentMessage || masterMessageMap.get(printer.id));
                 const msgContent = msgName && getMessageContent
                   ? (getMessageContent(msgName, printer.id)
