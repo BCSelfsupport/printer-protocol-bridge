@@ -1,4 +1,5 @@
-import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardDrive, Upload, Download, ChevronDown, ChevronRight, ArrowUpFromLine, List, LayoutGrid, FileText, Copy } from 'lucide-react';
+import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardDrive, Upload, Download, ChevronDown, ChevronRight, ArrowUpFromLine, List, LayoutGrid, FileText, Copy, Lock, Unlock } from 'lucide-react';
+import { useProtectedMessages } from '@/lib/protectedMessages';
 import { PcLibraryEntry } from '@/hooks/useMessageStorage';
 import { Printer, PrintMessage } from '@/types/printer';
 import { ApplyToPrintersDialog } from '@/components/printers/ApplyToPrintersDialog';
@@ -182,6 +183,10 @@ export function MessagesScreen({
     scannedValue: string;
   } | null>(null);
   const { productKey, isCompanion } = useLicense();
+  // Protected-message registry: names in here are treated as safety-net messages
+  // (e.g. offline backup with a firmware User Prompt field) and CodeSync will
+  // refuse to overwrite them anywhere in the fleet.
+  const { isProtected: isMessageProtected, toggle: toggleMessageProtected } = useProtectedMessages();
   const [pcLibraryOpen, setPcLibraryOpen] = useState(false);
   const [selectedLibraryMessage, setSelectedLibraryMessage] = useState<MessageDetails | null>(null);
   const [selectedLibrarySourcePrinterId, setSelectedLibrarySourcePrinterId] = useState<number | undefined>(undefined);
@@ -644,7 +649,12 @@ export function MessagesScreen({
                   ) : null}
                 </div>
                 <span className="w-12 text-primary font-medium">{message.id}</span>
-                <span className="flex-1 text-center text-lg">{message.name}</span>
+                <span className="flex-1 text-center text-lg flex items-center justify-center gap-2">
+                  {message.name}
+                  {isMessageProtected(message.name) && (
+                    <Lock className="w-4 h-4 text-amber-500" aria-label="Protected — cannot be overwritten" />
+                  )}
+                </span>
               </div>
             ))}
           </div>
@@ -694,6 +704,9 @@ export function MessagesScreen({
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs text-primary font-medium shrink-0">#{message.id}</span>
                         <span className="text-sm font-medium truncate" title={message.name}>{message.name}</span>
+                        {isMessageProtected(message.name) && (
+                          <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0 ml-auto" aria-label="Protected — cannot be overwritten" />
+                        )}
                       </div>
                       {fieldCount > 0 && (
                         <div className="text-[10px] text-muted-foreground mt-0.5">{fieldCount} field{fieldCount !== 1 ? 's' : ''}</div>
@@ -821,10 +834,14 @@ export function MessagesScreen({
           <button 
             onClick={() => {
               if (isSlave) { onSlaveBlocked?.(); return; }
+              if (selectedMessage && isMessageProtected(selectedMessage.name)) {
+                toast.error(`"${selectedMessage.name}" is protected — unlock it first to edit.`);
+                return;
+              }
               selectedMessage && onEdit(selectedMessage);
             }}
             disabled={!selectedMessage || isSlave}
-            title={isSlave ? 'Slave printer — edit messages on the master' : undefined}
+            title={isSlave ? 'Slave printer — edit messages on the master' : (selectedMessage && isMessageProtected(selectedMessage.name) ? 'Protected — unlock to edit' : undefined)}
             className="industrial-button-gray text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
           >
             <Pencil className="w-8 h-8 mb-1" />
@@ -848,11 +865,15 @@ export function MessagesScreen({
             <button
               onClick={() => {
                 if (!selectedMessage) return;
+                if (isMessageProtected(selectedMessage.name)) {
+                  toast.error(`"${selectedMessage.name}" is protected — CodeSync will not copy over other printers' slots with this name.`);
+                  return;
+                }
                 setPendingCopyMessage(selectedMessage);
                 setCopyDialogOpen(true);
               }}
               disabled={!selectedMessage || isCopying}
-              title="Copy this message to other printers"
+              title={selectedMessage && isMessageProtected(selectedMessage.name) ? 'Protected message — overwrite refused' : 'Copy this message to other printers'}
               className="industrial-button-gray text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
             >
               <Copy className="w-8 h-8 mb-1" />
@@ -860,10 +881,46 @@ export function MessagesScreen({
             </button>
           )}
 
+          {/* Protect / Unprotect toggle. Guards this message name against being
+              overwritten by copy-to-printers, master→slave sync, prompt writes
+              or adjust-apply on any printer in the fleet. Used to shield
+              messages that rely on printer-native features CodeSync has no
+              protocol coverage for (e.g. User Prompt fields on a manual
+              backup message like 60DAYBACKUPCODE). */}
+          <button
+            onClick={() => {
+              if (!selectedMessage) return;
+              const nowProtected = !isMessageProtected(selectedMessage.name);
+              toggleMessageProtected(selectedMessage.name);
+              if (nowProtected) {
+                toast.success(`"${selectedMessage.name}" locked — CodeSync will not overwrite it.`);
+              } else {
+                toast.message(`"${selectedMessage.name}" unlocked — normal overwrite allowed.`);
+              }
+            }}
+            disabled={!selectedMessage}
+            title={selectedMessage && isMessageProtected(selectedMessage.name)
+              ? 'Unlock this message so it can be overwritten again'
+              : 'Lock this message to prevent CodeSync from overwriting it (protects printer-native User Prompt / backup fields)'}
+            className="industrial-button-gray text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
+          >
+            {selectedMessage && isMessageProtected(selectedMessage.name) ? (
+              <Unlock className="w-8 h-8 mb-1 text-amber-300" />
+            ) : (
+              <Lock className="w-8 h-8 mb-1" />
+            )}
+            <span className="font-medium">
+              {selectedMessage && isMessageProtected(selectedMessage.name) ? 'Unlock' : 'Protect'}
+            </span>
+          </button>
 
           <button 
             onClick={() => {
               if (isSlave) { onSlaveBlocked?.(); return; }
+              if (selectedMessage && isMessageProtected(selectedMessage.name)) {
+                toast.error(`"${selectedMessage.name}" is protected — unlock it first to delete.`);
+                return;
+              }
               if (selectedMessage && selectedMessage.name === currentMessageName) {
                 toast.error("Can't delete this message — it is currently selected for printing on the printer.");
                 return;
@@ -871,7 +928,7 @@ export function MessagesScreen({
               selectedMessage && setDeleteConfirmOpen(true);
             }}
             disabled={!selectedMessage || isSlave}
-            title={isSlave ? 'Slave printer — delete messages on the master' : undefined}
+            title={isSlave ? 'Slave printer — delete messages on the master' : (selectedMessage && isMessageProtected(selectedMessage.name) ? 'Protected — unlock to delete' : undefined)}
             className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
           >
             <Trash2 className="w-8 h-8 mb-1" />

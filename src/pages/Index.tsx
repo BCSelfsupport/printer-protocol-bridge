@@ -61,6 +61,7 @@ import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
 import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
 import { beginSaveBusy, waitForSaveIdle } from '@/lib/saveBusy';
 import { isPresetMessage } from '@/lib/hardcodedMessages';
+import { isMessageProtected } from '@/lib/protectedMessages';
 
 
 
@@ -870,6 +871,17 @@ const Index = () => {
     details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings' | 'advancedSettings'>,
     reselectAfter: boolean = true,
   ) => {
+    // Protected messages are safety-net messages on the printer (e.g. a
+    // "60DAYBACKUPCODE" that uses the printer's native User Prompt firmware
+    // field). CodeSync has no protocol coverage for the User Prompt field
+    // type, so rewriting the slot via ^NM would strip it and permanently
+    // destroy the operator's offline backup. Refuse the overwrite here — this
+    // funnel is used by copy-to-printers, master→slave sync, prompt rewrites
+    // and adjust-settings apply, so guarding once covers every path.
+    if (isMessageProtected(messageName)) {
+      console.warn(`[Protected] Refusing to overwrite "${messageName}" on ${targetPrinter.name} — message is protected`);
+      return { success: false as const, reason: 'protected' as const };
+    }
     const { perMessageSettings } = buildEffectiveMessageDependentSettings(details as MessageDetails, targetPrinter);
     const rawCommands = await buildMessageCommands(
       messageName,
@@ -881,7 +893,7 @@ const Index = () => {
     );
 
     if (!rawCommands || rawCommands.length === 0) {
-      return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | null };
+      return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | 'protected' | null };
     }
 
     // Fast path: ^NM on an existing message updates fields in place without
@@ -929,7 +941,7 @@ const Index = () => {
       return { success: false as const, reason: 'command' as const };
     }
 
-    return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | null };
+    return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | 'protected' | null };
   }, [buildCounterConfigCommandSequence, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence]);
 
   // After saving a message on the master, duplicate the full content to all
@@ -945,6 +957,10 @@ const Index = () => {
     if (!isMaster || !connectionState.connectedPrinter) return [];
     if (isPresetMessage(messageName)) {
       console.log(`[MasterSlaveSync] Skipping preset message "${messageName}" — already exists on slaves`);
+      return [];
+    }
+    if (isMessageProtected(messageName)) {
+      console.warn(`[MasterSlaveSync] Skipping protected message "${messageName}" — refusing to overwrite slave backup slot`);
       return [];
     }
     const slaves = getSlavesForMaster(connectionState.connectedPrinter.id);
@@ -1374,11 +1390,17 @@ const Index = () => {
       return;
     }
 
-    // Skip any target that is offline or is the source itself.
-    const eligible = targets.filter(t => t.id !== source.id && t.isAvailable);
+    // Skip any target that is offline, is the source itself, or has this
+    // message name marked as protected (see src/lib/protectedMessages.ts).
+    const protectedTargets = targets.filter(t => isMessageProtected(message.name) && t.id !== source.id);
+    const eligible = targets.filter(t => t.id !== source.id && t.isAvailable && !isMessageProtected(message.name));
     const skipped = targets.length - eligible.length;
     if (eligible.length === 0) {
-      toast.error('No eligible target printers (offline or source excluded)');
+      if (protectedTargets.length > 0) {
+        toast.error(`"${message.name}" is protected — overwrite refused on all targets`);
+      } else {
+        toast.error('No eligible target printers (offline or source excluded)');
+      }
       return;
     }
 
