@@ -269,10 +269,10 @@ export function ApplyToPrintersDialog({
         {/* Card grid */}
         <ScrollArea className="flex-1 -mx-2 px-2">
           <div className="space-y-4 py-2">
-            {/* Source (always shown, locked-checked) */}
+            {/* Source (locked in select mode; label-only in copy mode) */}
             <div>
               <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1.5">
-                Source printer
+                {isCopy ? 'Source printer (not written)' : 'Source printer'}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {renderCard(sourcePrinter, true)}
