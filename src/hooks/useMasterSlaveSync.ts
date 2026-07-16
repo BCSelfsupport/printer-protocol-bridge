@@ -144,6 +144,7 @@ export function useMasterSlaveSync({
   buildMessageCommands,
   currentSettings,
   onSlaveSyncOutcome,
+  onSelectionSyncStart,
 }: UseMasterSlaveSyncOptions) {
   const prevMessageRef = useRef<string | null>(null);
   const primedMessageRef = useRef(false);
@@ -153,6 +154,9 @@ export function useMasterSlaveSync({
   const runSelectionSyncRef = useRef<((msg: string) => void) | null>(null);
   const outcomeRef = useRef(onSlaveSyncOutcome);
   useEffect(() => { outcomeRef.current = onSlaveSyncOutcome; }, [onSlaveSyncOutcome]);
+  const startRef = useRef(onSelectionSyncStart);
+  useEffect(() => { startRef.current = onSelectionSyncStart; }, [onSelectionSyncStart]);
+
 
   // Find if the connected printer is a master
   const connectedPrinter = printers.find(p => p.id === connectedPrinterId);
