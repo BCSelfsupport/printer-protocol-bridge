@@ -765,16 +765,16 @@ const Index = () => {
       && (window.electronAPI || isRelayMode());
 
     return runFleetWriteExclusive(() => runPrinterWriteExclusive(targetPrinter.id, async () => {
-      const releaseSaveBusy = commandsToRun.some(({ command }) => isSaveSequenceCommand(command))
-        ? beginSaveBusy()
-        : () => {};
+      const hasSaveCommand = commandsToRun.some(({ command }) => isSaveSequenceCommand(command));
+      let releaseSaveBusy = () => {};
     try {
-      if (needsSharedSession) {
+      if (hasSaveCommand) {
         const saveIdle = await waitForSaveIdle(20000);
         if (!saveIdle) {
           console.warn(`[PrinterWrite] Save busy did not clear before writing ${targetPrinter.name}; aborting sequence`);
           return { success: false, failedIndex: 0 };
         }
+        releaseSaveBusy = beginSaveBusy();
       }
 
       if (needsSharedSession) {
