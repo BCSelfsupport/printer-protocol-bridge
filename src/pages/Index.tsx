@@ -871,6 +871,17 @@ const Index = () => {
     details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings' | 'advancedSettings'>,
     reselectAfter: boolean = true,
   ) => {
+    // Protected messages are safety-net messages on the printer (e.g. a
+    // "60DAYBACKUPCODE" that uses the printer's native User Prompt firmware
+    // field). CodeSync has no protocol coverage for the User Prompt field
+    // type, so rewriting the slot via ^NM would strip it and permanently
+    // destroy the operator's offline backup. Refuse the overwrite here — this
+    // funnel is used by copy-to-printers, master→slave sync, prompt rewrites
+    // and adjust-settings apply, so guarding once covers every path.
+    if (isMessageProtected(messageName)) {
+      console.warn(`[Protected] Refusing to overwrite "${messageName}" on ${targetPrinter.name} — message is protected`);
+      return { success: false as const, reason: 'protected' as const };
+    }
     const { perMessageSettings } = buildEffectiveMessageDependentSettings(details as MessageDetails, targetPrinter);
     const rawCommands = await buildMessageCommands(
       messageName,
@@ -882,7 +893,7 @@ const Index = () => {
     );
 
     if (!rawCommands || rawCommands.length === 0) {
-      return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | null };
+      return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | 'protected' | null };
     }
 
     // Fast path: ^NM on an existing message updates fields in place without
