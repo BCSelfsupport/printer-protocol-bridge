@@ -1671,26 +1671,32 @@ const Index = () => {
     toast.loading(`Reading adjust settings from ${online.length} printer(s)…`, { id: toastId });
 
     let updatedCount = 0;
-    let skippedCount = 0;
+    let noMessageCount = 0;
+    let noStoredCount = 0;
+    let unchangedCount = 0;
     let failedCount = 0;
 
     // Sequential to avoid overwhelming the fleet-write queue and to keep
     // toast/progress deterministic.
     for (const printer of online) {
-      const messageName = printer.currentMessage;
-      if (!messageName) {
-        skippedCount++;
-        continue;
-      }
       try {
-        const printerCurrent = await queryPrintSettingsForPrinter(printer);
-        if (!printerCurrent) {
+        const queried = await queryPrintSettingsForPrinter(printer);
+        if (!queried) {
+          console.warn('[SyncAdjustFromPrinters] query failed', { printer: printer.name });
           failedCount++;
+          continue;
+        }
+        const printerCurrent = queried.settings;
+        const messageName = queried.currentMessage ?? printer.currentMessage ?? null;
+        if (!messageName) {
+          console.warn('[SyncAdjustFromPrinters] no current message', { printer: printer.name });
+          noMessageCount++;
           continue;
         }
         const stored = getStoredMessageForPrinter(messageName, printer);
         if (!stored) {
-          skippedCount++;
+          console.warn('[SyncAdjustFromPrinters] no stored message', { printer: printer.name, messageName });
+          noStoredCount++;
           continue;
         }
         const storedAdjust = (stored.adjustSettings ?? {}) as Partial<PrintSettings>;
@@ -1702,6 +1708,7 @@ const Index = () => {
           const pv = printerCurrent[k];
           if (pv !== undefined && pv !== storedAdjust[k]) {
             (mergedAdjust as Record<string, unknown>)[k] = pv;
+            (mergedMsgSettings as Record<string, unknown>)[k] = pv;
             changed = true;
           }
         }
@@ -1709,6 +1716,7 @@ const Index = () => {
           const pv = printerCurrent[k];
           if (pv !== undefined && pv !== storedMsgSettings[k]) {
             (mergedMsgSettings as Record<string, unknown>)[k] = pv;
+            (mergedAdjust as Record<string, unknown>)[k] = pv;
             changed = true;
           }
         }
@@ -1729,7 +1737,7 @@ const Index = () => {
             mergedMsgSettings,
           });
         } else {
-          skippedCount++;
+          unchangedCount++;
         }
       } catch (e) {
         console.error(`[SyncAdjustFromPrinters] failed on ${printer.name}:`, e);
@@ -1740,9 +1748,11 @@ const Index = () => {
     setIsSyncingAdjustFromPrinters(false);
     const parts: string[] = [];
     parts.push(`${updatedCount} updated`);
-    if (skippedCount) parts.push(`${skippedCount} already in sync`);
+    if (unchangedCount) parts.push(`${unchangedCount} already in sync`);
+    if (noMessageCount) parts.push(`${noMessageCount} no active msg`);
+    if (noStoredCount) parts.push(`${noStoredCount} msg not stored`);
     if (failedCount) parts.push(`${failedCount} failed`);
-    if (failedCount > 0) {
+    if (failedCount > 0 || noStoredCount > 0 || noMessageCount > 0) {
       toast.warning(`Adjust sync: ${parts.join(', ')}`, { id: toastId, duration: 6000 });
     } else {
       toast.success(`Adjust sync: ${parts.join(', ')}`, { id: toastId });
