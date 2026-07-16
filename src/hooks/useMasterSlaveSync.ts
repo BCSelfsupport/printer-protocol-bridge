@@ -58,6 +58,9 @@ interface UseMasterSlaveSyncOptions {
    * pips so the UI reflects only the in-flight attempt.
    */
   onSelectionSyncStart?: (slaveIds: number[], messageName: string) => void;
+}
+
+
 
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
