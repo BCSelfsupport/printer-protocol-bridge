@@ -3405,18 +3405,12 @@ export function usePrinterConnection() {
     // Connected printer: reuse persistent transport.
     if (printer.id === connectionState.connectedPrinter?.id) {
       try {
-        const qp = await printerTransport.sendCommand(printer.id, '^QP');
+        const settings = await queryIndividual();
         const sm = await printerTransport.sendCommand(printer.id, '^SM');
         console.log('[queryPrintSettingsForPrinter] connected raw', {
           printer: printer.name,
-          qp: qp?.response,
           sm: sm?.response,
         });
-        let settings = qp?.success && qp.response ? parseQpResponse(qp.response) : null;
-        if (!settings) {
-          console.warn('[queryPrintSettingsForPrinter] ^QP empty, falling back to individual queries', { printer: printer.name });
-          settings = await queryIndividual();
-        }
         const currentMessage = sm?.success && sm.response ? parseSmResponse(sm.response) : null;
         if (!settings) return null;
         return { settings, currentMessage: currentMessage ?? printer.currentMessage ?? null };
@@ -3434,18 +3428,12 @@ export function usePrinterConnection() {
           console.warn(`[queryPrintSettingsForPrinter] connect failed for ${printer.name}: ${connectResult?.error ?? 'unknown'}`);
           return null;
         }
-        const qp = await printerTransport.sendCommand(printer.id, '^QP');
+        const settings = await queryIndividual();
         const sm = await printerTransport.sendCommand(printer.id, '^SM');
         console.log('[queryPrintSettingsForPrinter] fleet raw', {
           printer: printer.name,
-          qp: qp?.response,
           sm: sm?.response,
         });
-        let settings = qp?.success && qp.response ? parseQpResponse(qp.response) : null;
-        if (!settings) {
-          console.warn('[queryPrintSettingsForPrinter] ^QP empty (fleet), falling back to individual queries', { printer: printer.name });
-          settings = await queryIndividual();
-        }
         const currentMessage = sm?.success && sm.response ? parseSmResponse(sm.response) : null;
         if (!settings) return null;
         return { settings, currentMessage: currentMessage ?? printer.currentMessage ?? null };
@@ -3457,6 +3445,7 @@ export function usePrinterConnection() {
       }
     }));
   }, [connectionState.connectedPrinter?.id]);
+
 
 
 
