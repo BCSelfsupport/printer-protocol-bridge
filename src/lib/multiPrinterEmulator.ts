@@ -998,6 +998,18 @@ class MultiPrinterEmulatorManager {
   }
 
   /**
+   * Toggle the write-failure simulation on a specific emulator instance.
+   * When true, ^NM/^SV/^DM return a simulated error so we can reproduce
+   * Master → Slave sync failures end-to-end.
+   */
+  setSimulateWriteFailure(ipAddress: string, port: number | undefined, value: boolean): boolean {
+    const instance = this.getInstanceByIp(ipAddress, port);
+    if (!instance) return false;
+    instance.simulateWriteFailure = value;
+    return true;
+  }
+
+  /**
    * Get the default/first emulated printer instance (for backward compatibility)
    */
   getDefaultInstance(): PrinterEmulatorInstance | null {
