@@ -130,6 +130,7 @@ function SortablePrinterItem({
   onExpiryChange,
   isUpdatingExpiry,
   messageExpiryDays,
+  onOpenExpiryDialog,
   twinPairRole,
   hideDragHandle,
   onRotationChange,
@@ -156,6 +157,7 @@ function SortablePrinterItem({
   onExpiryChange?: (printerId: number, days: number) => void;
   isUpdatingExpiry?: boolean;
   messageExpiryDays?: number;
+  onOpenExpiryDialog?: (sourcePrinter: Printer, currentDays: number) => void;
   twinPairRole?: 'A' | 'B' | null;
   hideDragHandle?: boolean;
   onRotationChange?: (printerId: number, rotation: NonNullable<Printer['rotation']>) => void;
@@ -214,6 +216,7 @@ function SortablePrinterItem({
         onExpiryChange={onExpiryChange}
         isUpdatingExpiry={isUpdatingExpiry}
         messageExpiryDays={messageExpiryDays}
+        onOpenExpiryDialog={onOpenExpiryDialog}
         twinPairRole={twinPairRole}
         onRotationChange={onRotationChange}
       />
