@@ -2471,7 +2471,8 @@ const Index = () => {
           }
 
           setPollingPaused(true);
-          const t = toast.loading(`Syncing ${filtered.length} message(s) to ${slaves.length} slave(s)${skipped ? ` (skipping ${skipped} pre-installed)` : ''}…`);
+          const offlineCount = slaves.length - onlineSlaveCount;
+          const t = toast.loading(`Syncing ${filtered.length} message(s) to ${onlineSlaveCount} online slave(s)${offlineCount ? ` — ${offlineCount} offline will be flagged` : ''}${skipped ? ` (skipping ${skipped} pre-installed)` : ''}…`);
           try {
             await waitForPollingIdle(3000);
             // Aggregate outcomes per-slave across every message pushed so we
