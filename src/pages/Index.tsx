@@ -768,12 +768,15 @@ const Index = () => {
       const hasSaveCommand = commandsToRun.some(({ command }) => isSaveSequenceCommand(command));
       let releaseSaveBusy = () => {};
     try {
-      if (hasSaveCommand) {
+      if (hasSaveCommand && needsSharedSession) {
         const saveIdle = await waitForSaveIdle(20000);
         if (!saveIdle) {
           console.warn(`[PrinterWrite] Save busy did not clear before writing ${targetPrinter.name}; aborting sequence`);
           return { success: false, failedIndex: 0 };
         }
+      }
+
+      if (hasSaveCommand) {
         releaseSaveBusy = beginSaveBusy();
       }
 
