@@ -306,7 +306,7 @@ export function useMasterSlaveSync({
   }, [connectedPrinterId]);
 
   // Sync message selection: when master's currentMessage changes, push full content to slaves first, then ^SM.
-  // Skip factory/preset messages (BestCode, Moba, etc.) — they already exist on slaves.
+  // Factory/preset messages already exist on slaves, so only send ^SM for those.
   const runSelectionSync = useCallback((messageName: string) => {
     if (syncingRef.current) {
       // A sync is already running. Remember the newest requested message so
@@ -344,7 +344,7 @@ export function useMasterSlaveSync({
 
         const sequence: SequencedCommand[] = [];
 
-        if (details && details.fields.length > 0 && buildMessageCommands) {
+        if (!isPresetMessage(messageName) && details && details.fields.length > 0 && buildMessageCommands) {
           const rotation = slave.rotation ?? 'Normal';
           const slaveOffset = slave.expiryOffsetDays;
           const slaveFields = slaveOffset === undefined
@@ -386,7 +386,7 @@ export function useMasterSlaveSync({
 
       // Drain any queued selection that arrived while we were busy.
       const pending = pendingMessageRef.current;
-      if (pending && pending !== prevMessageRef.current && !isPresetMessage(pending)) {
+      if (pending && pending !== prevMessageRef.current) {
         pendingMessageRef.current = null;
         // Defer to a fresh microtask so state settles first.
         setTimeout(() => runSelectionSyncRef.current?.(pending), 0);
@@ -415,11 +415,6 @@ export function useMasterSlaveSync({
     }
 
     if (currentMessage === prevMessageRef.current && !syncingRef.current) return;
-    if (isPresetMessage(currentMessage)) {
-      console.log(`[MasterSlaveSync] Skipping preset message selection "${currentMessage}"`);
-      prevMessageRef.current = currentMessage;
-      return;
-    }
 
     runSelectionSync(currentMessage);
   }, [isMaster, currentMessage, runSelectionSync]);
@@ -453,7 +448,7 @@ export function useMasterSlaveSync({
           for (const msg of syncMessages) {
             sequence.push({ command: `^NM ${msg.name}`, delayAfterMs: getSyncCommandDelay(`^NM ${msg.name}`, 1) });
           }
-          if (currentMessage && !isPresetMessage(currentMessage)) {
+          if (currentMessage) {
             sequence.push({ command: `^SM ${currentMessage}`, delayAfterMs: 800 });
           }
           await sendCommandSequenceToPrinter(slave, sequence, 'full sync');
@@ -498,7 +493,7 @@ export function useMasterSlaveSync({
       }
 
       const syncMessages = masterMessages.filter(name => !isPresetMessage(name));
-      const syncCurrentMsg = masterCurrentMsg && !isPresetMessage(masterCurrentMsg) ? masterCurrentMsg : null;
+      const syncCurrentMsg = masterCurrentMsg || null;
 
       if (syncMessages.length === 0 && !syncCurrentMsg) {
         console.log(`[MasterSlaveSync] No messages to sync from master ${master.name}`);
