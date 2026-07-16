@@ -7,6 +7,7 @@ import { printerTransport, isRelayMode, type TransportCommandOptions } from '@/l
 import { isPresetMessage } from '@/lib/hardcodedMessages';
 import { setPollingPaused } from '@/lib/pollingPause';
 import { waitForSaveIdle } from '@/lib/saveBusy';
+import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
 
 
 const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
