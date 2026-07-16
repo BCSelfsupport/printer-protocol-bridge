@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio, Link2, ChevronDown, Maximize2 } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio, Link2, ChevronDown, Maximize2, DownloadCloud } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -99,6 +99,9 @@ interface PrintersScreenProps {
   onRefreshNetwork?: () => void;
   /** Whether a network check is in progress */
   isCheckingNetwork?: boolean;
+  /** Pull current adjust settings from every online printer back into stored messages */
+  onSyncAdjustFromPrinters?: () => void;
+  isSyncingAdjustFromPrinters?: boolean;
   /** Called when a printer's expiry offset is changed — resends the message with new expiry */
   onSlaveExpiryChange?: (printerId: number, days: number) => Promise<void>;
   onSelectedPrinterChange?: (printer: Printer | null) => void;
@@ -275,6 +278,8 @@ export function PrintersScreen({
   onLicense,
   onRefreshNetwork,
   isCheckingNetwork = false,
+  onSyncAdjustFromPrinters,
+  isSyncingAdjustFromPrinters = false,
   onSlaveExpiryChange,
   onSelectedPrinterChange,
   getMessageContent,
@@ -619,6 +624,19 @@ export function PrintersScreen({
                 title="Refresh network status"
               >
                 <RefreshCw className={`w-3 h-3 ${isCheckingNetwork ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
+            {onSyncAdjustFromPrinters && (
+              <Button
+                onClick={onSyncAdjustFromPrinters}
+                size="sm"
+                variant="outline"
+                className="border-amber-400/50 text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 hover:text-amber-100 h-8"
+                disabled={isSyncingAdjustFromPrinters}
+                title="Pull current Width/Speed/Delay/Bold/Gap/Pitch from every printer into stored messages"
+              >
+                <DownloadCloud className={`w-3 h-3 mr-1 ${isSyncingAdjustFromPrinters ? 'animate-pulse' : ''}`} />
+                <span className="text-xs">{isSyncingAdjustFromPrinters ? 'Syncing…' : 'Sync Adjust'}</span>
               </Button>
             )}
             {selectedPrinter && (
