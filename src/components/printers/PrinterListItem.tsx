@@ -116,12 +116,11 @@ export function PrinterListItem({
     onRotationChange(printer.id, next);
   };
 
-  // Slaves show their OWN confirmed active message name. Only fall back to
-  // the master's active message if the slave has never reported one yet —
-  // otherwise a failed sync would still make the slave appear to have loaded
-  // the master's new selection when in fact the old message is still active.
+  // Slaves show ONLY their own confirmed active message name. Never fall back
+  // to the master's name: that would make an offline or failed slave appear to
+  // have selected a message we never proved with read-back ACK.
   const displayMessage = printer.role === 'slave'
-    ? (printer.currentMessage ?? masterMessage ?? undefined)
+    ? (printer.currentMessage ?? undefined)
     : (printer.currentMessage ?? undefined);
   // When a printer is OFFLINE, its cached currentMessage is a last-known
   // value — we haven't heard from the printer, so we don't actually know
@@ -227,6 +226,26 @@ export function PrinterListItem({
   const subTextColor = isSelected || isConnected ? 'text-primary' : 'text-slate-300';
   const mutedTextColor = isSelected || isConnected ? 'text-primary/70' : 'text-slate-400';
 
+  const selectionOutcomePip = printer.lastSelectionResult ? (
+    printer.lastSelectionResult.success ? (
+      <span
+        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success/20 border border-success/40 text-success text-[9px] font-bold uppercase tracking-wide"
+        title={`Message "${printer.lastSelectionResult.messageName}" acknowledged by printer`}
+      >
+        <Check className="w-2.5 h-2.5" strokeWidth={3} />
+        <span>OK</span>
+      </span>
+    ) : (
+      <span
+        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-destructive/20 border border-destructive/50 text-destructive text-[9px] font-bold uppercase tracking-wide"
+        title={`Failed to select "${printer.lastSelectionResult.messageName}"${printer.lastSelectionResult.reason ? ` — ${printer.lastSelectionResult.reason}` : ''}`}
+      >
+        <X className="w-2.5 h-2.5" strokeWidth={3} />
+        <span>FAIL</span>
+      </span>
+    )
+  ) : null;
+
   // Compact mode for split-view layout
   if (compact) {
     return (
@@ -279,25 +298,7 @@ export function PrinterListItem({
             )}
           </button>
             {/* Message-selection outcome pip */}
-            {printer.lastSelectionResult && (
-              printer.lastSelectionResult.success ? (
-                <span
-                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success/20 border border-success/40 text-success text-[9px] font-bold uppercase tracking-wide"
-                  title={`Message "${printer.lastSelectionResult.messageName}" acknowledged by printer`}
-                >
-                  <Check className="w-2.5 h-2.5" strokeWidth={3} />
-                  <span>OK</span>
-                </span>
-              ) : (
-                <span
-                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-destructive/20 border border-destructive/50 text-destructive text-[9px] font-bold uppercase tracking-wide animate-pulse"
-                  title={`Failed to select "${printer.lastSelectionResult.messageName}"${printer.lastSelectionResult.reason ? ` — ${printer.lastSelectionResult.reason}` : ''}`}
-                >
-                  <X className="w-2.5 h-2.5" strokeWidth={3} />
-                  <span>FAIL</span>
-                </span>
-              )
-            )}
+            {selectionOutcomePip}
           </div>
 
           {/* Printer info */}
@@ -509,29 +510,32 @@ export function PrinterListItem({
       {/* Top row: icon + name/ip + status badge */}
       <div className="flex items-center gap-2">
         {/* Status indicator - clickable for edit */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit?.();
-          }}
-          className={`relative w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:ring-2 hover:ring-primary/50 ${
-            printer.isAvailable ? 'bg-success/20 hover:bg-success/30' : 'bg-muted hover:bg-muted/80'
-          }`}
-          title="Click to edit printer"
-        >
-          <PrinterIcon className={`w-5 h-5 ${
-            printer.isAvailable ? 'text-success' : 'text-muted-foreground'
-          }`} />
-          <div className={`absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card flex items-center justify-center ${
-            printer.isAvailable ? 'bg-success' : 'bg-destructive'
-          }`}>
-            {printer.isAvailable ? (
-              <Wifi className="w-2.5 h-2.5 text-white" />
-            ) : (
-              <WifiOff className="w-2.5 h-2.5 text-white" />
-            )}
-          </div>
-        </button>
+        <div className="flex flex-col items-center gap-1 flex-shrink-0">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit?.();
+            }}
+            className={`relative w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:ring-2 hover:ring-primary/50 ${
+              printer.isAvailable ? 'bg-success/20 hover:bg-success/30' : 'bg-muted hover:bg-muted/80'
+            }`}
+            title="Click to edit printer"
+          >
+            <PrinterIcon className={`w-5 h-5 ${
+              printer.isAvailable ? 'text-success' : 'text-muted-foreground'
+            }`} />
+            <div className={`absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card flex items-center justify-center ${
+              printer.isAvailable ? 'bg-success' : 'bg-destructive'
+            }`}>
+              {printer.isAvailable ? (
+                <Wifi className="w-2.5 h-2.5 text-white" />
+              ) : (
+                <WifiOff className="w-2.5 h-2.5 text-white" />
+              )}
+            </div>
+          </button>
+          {selectionOutcomePip}
+        </div>
 
         {/* Name + IP */}
         <div className="flex-1 min-w-0">
