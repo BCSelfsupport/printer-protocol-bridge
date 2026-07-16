@@ -1660,14 +1660,15 @@ const Index = () => {
   // printer) and then bring those changes back into CodeSync in one click so
   // future re-selects don't clobber their tweaks.
   const [isSyncingAdjustFromPrinters, setIsSyncingAdjustFromPrinters] = useState(false);
-  const syncAdjustSettingsFromAllPrinters = useCallback(async () => {
-    const online = printers.filter(p => p.isAvailable);
+  const syncAdjustSettingsFromPrinters = useCallback(async (targets?: Printer[]) => {
+    const pool = targets ?? printers;
+    const online = pool.filter(p => p.isAvailable);
     if (online.length === 0) {
       toast.info('No online printers to sync');
       return;
     }
     setIsSyncingAdjustFromPrinters(true);
-    const toastId = 'sync-adjust-all';
+    const toastId = targets && targets.length === 1 ? `sync-adjust-${targets[0].id}` : 'sync-adjust-all';
     toast.loading(`Reading adjust settings from ${online.length} printer(s)…`, { id: toastId });
 
     let updatedCount = 0;
