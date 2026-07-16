@@ -1386,11 +1386,17 @@ const Index = () => {
       return;
     }
 
-    // Skip any target that is offline or is the source itself.
-    const eligible = targets.filter(t => t.id !== source.id && t.isAvailable);
+    // Skip any target that is offline, is the source itself, or has this
+    // message name marked as protected (see src/lib/protectedMessages.ts).
+    const protectedTargets = targets.filter(t => isMessageProtected(message.name) && t.id !== source.id);
+    const eligible = targets.filter(t => t.id !== source.id && t.isAvailable && !isMessageProtected(message.name));
     const skipped = targets.length - eligible.length;
     if (eligible.length === 0) {
-      toast.error('No eligible target printers (offline or source excluded)');
+      if (protectedTargets.length > 0) {
+        toast.error(`"${message.name}" is protected — overwrite refused on all targets`);
+      } else {
+        toast.error('No eligible target printers (offline or source excluded)');
+      }
       return;
     }
 
