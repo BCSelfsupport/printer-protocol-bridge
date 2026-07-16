@@ -4,6 +4,7 @@ import { multiPrinterEmulator } from "@/lib/multiPrinterEmulator";
 import { beginPollingActivity, isPollingPaused, onPollingPauseChange } from "@/lib/pollingPause";
 import { isSaveBusy } from "@/lib/saveBusy";
 import { printerTransport, isRelayMode } from "@/lib/printerTransport";
+import { runPrinterWriteExclusive } from "@/lib/printerWriteQueue";
 
 /**
  * Serialized polling hook: sends multiple commands sequentially over a single
@@ -81,74 +82,92 @@ export function useSerializedPolling(options: {
 
     const tick = async () => {
       if (cancelled || inFlightRef.current) return;
-      if (isSaveBusy()) return; // Defer all polling while a save is in flight
+      // Fast-path bail: don't even acquire the lock if a save is in flight.
+      // Prevents polling from queuing behind long save transactions.
+      if (isSaveBusy()) return;
       inFlightRef.current = true;
-      const endPollingActivity = beginPollingActivity();
+
+      const isEmulatorEnabled = multiPrinterEmulator.enabled || printerEmulator.enabled;
+      const hasElectronAPI = !!window.electronAPI;
+      const relayMode = isRelayMode();
+
+      if (!isEmulatorEnabled && !hasElectronAPI && !relayMode) {
+        inFlightRef.current = false;
+        return;
+      }
+
+      // Acquire the per-printer exclusive lock so this whole poll cycle is
+      // mutually exclusive with any save/select transaction on the same
+      // printer. Closes the TOCTOU window that the isSaveBusy() point-check
+      // alone couldn't cover.
+      const runTick = async () => {
+        // Re-check saveBusy after acquiring the lock in case a save queued
+        // ahead of us and released before we ran.
+        if (cancelled || isSaveBusy()) return;
+        const endPollingActivity = beginPollingActivity();
+        try {
+          let successCount = 0;
+
+          for (const cmd of commandsRef.current) {
+            if (cancelled) break;
+            // Abandon the rest of this cycle if a save has started —
+            // save latency matters more than one poll tick.
+            if (isSaveBusy()) break;
+
+            try {
+              let result: { success: boolean; response?: string; error?: string };
+
+              if (isEmulatorEnabled) {
+                let emulator: { processCommand: (cmd: string) => { success: boolean; response: string } };
+                if (multiPrinterEmulator.enabled && printerIp) {
+                  const instance = multiPrinterEmulator.getInstanceByIp(printerIp, printerPort);
+                  emulator = instance || printerEmulator;
+                } else {
+                  emulator = printerEmulator;
+                }
+                const emulatorResult = emulator.processCommand(cmd.command);
+                result = { success: emulatorResult.success, response: emulatorResult.response };
+              } else {
+                result = await withTimeout(
+                  printerTransport.sendCommand(printerId, cmd.command, { caller: 'serializedPolling' }),
+                  8000,
+                  cmd.command,
+                );
+              }
+
+              if (cancelled) break;
+              if (result.success && typeof result.response === "string") {
+                successCount++;
+                cmd.onResponse(result.response);
+              }
+            } catch (e) {
+              console.error('[useSerializedPolling] Error on', cmd.command, ':', e);
+            }
+
+            if (!isEmulatorEnabled && !cancelled) {
+              await new Promise((r) => setTimeout(r, 300));
+            }
+          }
+
+          if (!cancelled) {
+            if (successCount > 0) onCycleSuccessRef.current?.();
+            else onCycleFailureRef.current?.();
+          }
+        } catch (e) {
+          if (!cancelled) onErrorRef.current?.(e);
+        } finally {
+          endPollingActivity();
+        }
+      };
 
       try {
-        const isEmulatorEnabled = multiPrinterEmulator.enabled || printerEmulator.enabled;
-        const hasElectronAPI = !!window.electronAPI;
-        const relayMode = isRelayMode();
-
-        if (!isEmulatorEnabled && !hasElectronAPI && !relayMode) return;
-
-        let successCount = 0;
-
-        // Send each command sequentially to avoid TCP collisions
-        for (const cmd of commandsRef.current) {
-          if (cancelled) break;
-
-          try {
-            let result: { success: boolean; response?: string; error?: string };
-
-            if (isEmulatorEnabled) {
-              let emulator: { processCommand: (cmd: string) => { success: boolean; response: string } };
-              if (multiPrinterEmulator.enabled && printerIp) {
-                const instance = multiPrinterEmulator.getInstanceByIp(printerIp, printerPort);
-                emulator = instance || printerEmulator;
-              } else {
-                emulator = printerEmulator;
-              }
-              const emulatorResult = emulator.processCommand(cmd.command);
-              result = { success: emulatorResult.success, response: emulatorResult.response };
-            } else {
-              // 8-second timeout per command — if TCP hangs, skip this command
-              // and continue with the rest instead of killing all polling forever
-              result = await withTimeout(
-                printerTransport.sendCommand(printerId, cmd.command),
-                8000,
-                cmd.command,
-              );
-            }
-
-            if (cancelled) break;
-            if (result.success && typeof result.response === "string") {
-              successCount++;
-              cmd.onResponse(result.response);
-            }
-          } catch (e) {
-            console.error('[useSerializedPolling] Error on', cmd.command, ':', e);
-            // Continue to next command — don't let one failure kill the loop
-          }
-
-          // Longer gap between commands to let the printer fully process & respond
-          if (!isEmulatorEnabled && !cancelled) {
-            await new Promise(r => setTimeout(r, 300));
-          }
+        // Emulator ticks don't touch a real socket, so skip the lock.
+        if (isEmulatorEnabled) {
+          await runTick();
+        } else {
+          await runPrinterWriteExclusive(printerId, runTick);
         }
-
-        // Notify caller whether this cycle got any data back
-        if (!cancelled) {
-          if (successCount > 0) {
-            onCycleSuccessRef.current?.();
-          } else {
-            onCycleFailureRef.current?.();
-          }
-        }
-      } catch (e) {
-        if (!cancelled) onErrorRef.current?.(e);
       } finally {
-        endPollingActivity();
         inFlightRef.current = false;
       }
     };

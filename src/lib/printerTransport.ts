@@ -1,13 +1,21 @@
 /**
  * Transport abstraction for printer communication.
- * 
+ *
  * Provides a unified API that works across:
  * 1. Electron (direct TCP via IPC)
  * 2. Relay mode (HTTP via PC's relay server on port 8766)
  * 3. Emulator (development mode)
- * 
+ *
+ * Every sendCommand goes through the command-log ring buffer for post-mortem
+ * diagnosis and, in DEV builds, through a tripwire that warns when a write
+ * happens during an active save without holding the exclusive write lock.
+ *
  * The relay config is stored in localStorage so it persists across sessions.
  */
+
+import { recordCommand } from './printerCommandLog';
+import { isSaveBusy } from './saveBusy';
+import { isPrinterWriteExclusiveHeld } from './printerWriteQueue';
 
 const RELAY_STORAGE_KEY = 'relay-config';
 
@@ -19,6 +27,8 @@ export interface RelayConfig {
 export interface TransportCommandOptions {
   maxWaitMs?: number;
   idleAfterDataMs?: number;
+  /** Short caller tag recorded to the command log for post-mortem tracing. */
+  caller?: string;
 }
 
 let relayConfig: RelayConfig | null = null;
@@ -27,7 +37,7 @@ let relayConfig: RelayConfig | null = null;
 try {
   const stored = localStorage.getItem(RELAY_STORAGE_KEY);
   if (stored) relayConfig = JSON.parse(stored);
-} catch {}
+} catch { /* ignore */ }
 
 export function getRelayConfig(): RelayConfig | null {
   return relayConfig;
@@ -51,7 +61,7 @@ function getRelayUrl(): string | null {
   return `http://${relayConfig.pcIp}:${relayConfig.port || 8766}`;
 }
 
-async function relayFetch(endpoint: string, body: any): Promise<any> {
+async function relayFetch(endpoint: string, body: unknown): Promise<{ printers?: unknown[]; success?: boolean; response?: string; error?: string; [k: string]: unknown } | null> {
   const base = getRelayUrl();
   if (!base) throw new Error('Relay not configured');
   const res = await fetch(`${base}/relay/${endpoint}`, {
@@ -73,9 +83,40 @@ export async function testRelayConnection(config?: RelayConfig): Promise<{ ok: b
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
     const data = await res.json();
     return data.relay ? { ok: true, version: data.version } : { ok: false, error: 'Not a relay server' };
-  } catch (err: any) {
-    return { ok: false, error: err.message || 'Cannot reach relay' };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Cannot reach relay';
+    return { ok: false, error: msg };
   }
+}
+
+// --- Tripwire: writes that could collide with an in-flight save ---
+// Commands that MUTATE printer state (save/select/delete). A non-mutating
+// read (^SU, ^VV, ^LM, ^GM, ^LF, ^CN, ^TM, ^TP, ^SD, ^LE, ^S) is far less
+// risky during a save digest — but a mutation from an unguarded path is
+// exactly what has locked printers up historically.
+const MUTATING_RE = /^\^(NM|NF|SV|DM|SM|CC|MD|BD|PR|CM|AP|SJ|ME|MB)/i;
+
+function checkTripwire(printerId: number, command: string, caller?: string): { saveBusy: boolean; lockHeld: boolean } {
+  const saveBusy = isSaveBusy();
+  const lockHeld = isPrinterWriteExclusiveHeld(printerId);
+  const isDev = typeof import.meta !== 'undefined' && (import.meta as { env?: { DEV?: boolean } }).env?.DEV;
+
+  if (isDev) {
+    if (saveBusy && !lockHeld) {
+      // Someone is writing while a save is committing without holding the lock.
+      // This is the class of bug that has locked BestCode printers historically.
+      console.error(
+        `[portGuard] UNSAFE WRITE during saveBusy without exclusive lock — printer=${printerId} cmd="${command}" caller=${caller ?? '?'}`,
+        new Error('stack trace').stack,
+      );
+    } else if (MUTATING_RE.test(command) && !lockHeld) {
+      console.warn(
+        `[portGuard] Mutating command "${command}" on printer=${printerId} outside exclusive lock (caller=${caller ?? '?'}) — collisions possible if a second writer starts mid-transaction`,
+      );
+    }
+  }
+
+  return { saveBusy, lockHeld };
 }
 
 // --- Unified transport methods ---
@@ -85,9 +126,9 @@ export const printerTransport = {
     if (isRelayMode()) {
       try {
         const data = await relayFetch('check-status', { printers });
-        return data.printers || [];
+        return data?.printers || [];
       } catch {
-        return printers.map(p => ({ id: p.id, isAvailable: false, status: 'offline' as const }));
+        return printers.map((p) => ({ id: p.id, isAvailable: false, status: 'offline' as const }));
       }
     }
     // Electron
@@ -118,13 +159,38 @@ export const printerTransport = {
   },
 
   async sendCommand(printerId: number, command: string, options?: TransportCommandOptions) {
-    if (isRelayMode()) {
-      return relayFetch('send-command', { printerId, command, options });
+    const startedAt = Date.now();
+    const { saveBusy, lockHeld } = checkTripwire(printerId, command, options?.caller);
+    let result: { success: boolean; response?: string; error?: string } | null = null;
+    let thrown: unknown = null;
+    try {
+      if (isRelayMode()) {
+        result = await relayFetch('send-command', { printerId, command, options }) as { success: boolean; response?: string; error?: string };
+      } else if (window.electronAPI) {
+        const send = window.electronAPI.printer.sendCommand as (id: number, cmd: string, opts?: TransportCommandOptions) => Promise<{ success: boolean; response?: string; error?: string }>;
+        result = await send(printerId, command, options);
+      } else {
+        result = { success: false, error: 'No transport available' };
+      }
+      return result;
+    } catch (err) {
+      thrown = err;
+      throw err;
+    } finally {
+      const durationMs = Date.now() - startedAt;
+      recordCommand({
+        printerId,
+        command,
+        startedAt,
+        durationMs,
+        ok: !!result?.success && !thrown,
+        response: result?.response,
+        error: thrown ? String((thrown as Error).message ?? thrown) : result?.error,
+        saveBusy,
+        lockHeld,
+        caller: options?.caller,
+      });
     }
-    if (window.electronAPI) {
-      return (window.electronAPI.printer.sendCommand as (printerId: number, command: string, options?: TransportCommandOptions) => Promise<any>)(printerId, command, options);
-    }
-    return { success: false, error: 'No transport available' };
   },
 
   async setMeta(printer: { id: number; ipAddress: string; port: number }) {

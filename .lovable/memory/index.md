@@ -16,6 +16,7 @@ Updated: today
 - Asset files in `public/` must be valid PNGs accessed via absolute paths.
 - Poll `^SU` every cycle; `^LE`, `^CN`, `^TM` authoritative for faults, counts, metrics.
 - Prevent firmware stalls: 300ms delays, `waitForPollingIdle`, pauses during updates.
+- **All port-23 writers MUST use `runPrinterWriteExclusive` + `printerTransport` (never `window.electronAPI.printer.sendCommand` directly). See [Port-23 Lockup Prevention](mem://constraints/port-23-lockup-prevention).**
 - Fleet printer identity data is per-device only; never copy serial/firmware between printer records.
 
 ## Memories

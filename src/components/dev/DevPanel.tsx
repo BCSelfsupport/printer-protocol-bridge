@@ -287,47 +287,66 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
     setEmulatorEnabled(enabled);
   };
 
+  // Manual/dev commands MUST go through the same guards as production writes,
+  // or a shop-floor operator hitting "^SU" mid-save will lock a printer.
+  // See .lovable/memory/features/message-persistence/save-busy-defers-fleet-push.md
+  const SAVE_CLASS_RE = /^\^(NM|NF|SV|DM)/i;
+
+  const dispatchGuardedCommand = async (cmd: string): Promise<string> => {
+    if (emulatorEnabled) {
+      const emulator = getConnectedEmulator();
+      const result = emulator.processCommand(cmd);
+      return result.response;
+    }
+    if (!window.electronAPI || connectedPrinterId == null) {
+      return 'ERROR: No transport';
+    }
+    const { runPrinterWriteExclusive } = await import('@/lib/printerWriteQueue');
+    const { beginSaveBusy, waitForSaveIdle } = await import('@/lib/saveBusy');
+    const { printerTransport } = await import('@/lib/printerTransport');
+
+    // If someone else's save is committing, wait rather than crashing into it.
+    await waitForSaveIdle(15000);
+
+    return runPrinterWriteExclusive(connectedPrinterId, async () => {
+      // If the operator is manually issuing a save-class command, mark the
+      // save-busy flag so other subsystems (fleet telemetry, polling) defer
+      // for the digest window.
+      const isSaveClass = SAVE_CLASS_RE.test(cmd);
+      const releaseBusy = isSaveClass ? beginSaveBusy() : null;
+      try {
+        const result = await printerTransport.sendCommand(connectedPrinterId, cmd, { caller: 'devPanel' });
+        return result.success ? (result.response || '(no response)') : `ERROR: ${result.error || 'Unknown error'}`;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return `ERROR: ${msg}`;
+      } finally {
+        releaseBusy?.();
+      }
+    });
+  };
+
   const handleSendCommand = async () => {
     const cmd = manualCommand.trim();
     if (!cmd || !canSendCommands) return;
     setManualCommand('');
-    
-    if (emulatorEnabled) {
-      const emulator = getConnectedEmulator();
-      const result = emulator.processCommand(cmd);
-      setManualResponse(prev => [{ command: cmd, response: result.response, timestamp: new Date() }, ...prev].slice(0, 50));
-    } else if (window.electronAPI && connectedPrinterId != null) {
-      setManualSending(true);
-      try {
-        const result = await window.electronAPI.printer.sendCommand(connectedPrinterId, cmd);
-        const responseText = result.success ? (result.response || '(no response)') : `ERROR: ${result.error || 'Unknown error'}`;
-        setManualResponse(prev => [{ command: cmd, response: responseText, timestamp: new Date() }, ...prev].slice(0, 50));
-      } catch (err: any) {
-        setManualResponse(prev => [{ command: cmd, response: `ERROR: ${err.message}`, timestamp: new Date() }, ...prev].slice(0, 50));
-      } finally {
-        setManualSending(false);
-      }
+    setManualSending(true);
+    try {
+      const responseText = await dispatchGuardedCommand(cmd);
+      setManualResponse((prev) => [{ command: cmd, response: responseText, timestamp: new Date() }, ...prev].slice(0, 50));
+    } finally {
+      setManualSending(false);
     }
   };
 
   const handleQuickCommand = async (code: string) => {
     if (!canSendCommands) return;
-    
-    if (emulatorEnabled) {
-      const emulator = getConnectedEmulator();
-      const result = emulator.processCommand(code);
-      setManualResponse(prev => [{ command: code, response: result.response, timestamp: new Date() }, ...prev].slice(0, 50));
-    } else if (window.electronAPI && connectedPrinterId != null) {
-      setManualSending(true);
-      try {
-        const result = await window.electronAPI.printer.sendCommand(connectedPrinterId, code);
-        const responseText = result.success ? (result.response || '(no response)') : `ERROR: ${result.error || 'Unknown error'}`;
-        setManualResponse(prev => [{ command: code, response: responseText, timestamp: new Date() }, ...prev].slice(0, 50));
-      } catch (err: any) {
-        setManualResponse(prev => [{ command: code, response: `ERROR: ${err.message}`, timestamp: new Date() }, ...prev].slice(0, 50));
-      } finally {
-        setManualSending(false);
-      }
+    setManualSending(true);
+    try {
+      const responseText = await dispatchGuardedCommand(code);
+      setManualResponse((prev) => [{ command: code, response: responseText, timestamp: new Date() }, ...prev].slice(0, 50));
+    } finally {
+      setManualSending(false);
     }
   };
 

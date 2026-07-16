@@ -53,24 +53,41 @@ interface Props {
 }
 
 // --- Helpers ---
+// All socket operations here go through the same per-printer exclusive lock
+// used by save/select paths. Without this, running the diagnostic suite on a
+// printer with an active main-app session could open a second Telnet socket
+// (forbidden on BestCode hardware — see port-23-single-session memory) or
+// interleave with an in-flight ^NM/^SV digest and lock the printer.
+import { runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
+import { waitForSaveIdle } from '@/lib/saveBusy';
+import { printerTransport } from '@/lib/printerTransport';
+
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
 async function connectPrinter(id: number, ip: string, port: number) {
-  const t0 = performance.now();
-  const result = await window.electronAPI!.printer.connect({ id, ipAddress: ip, port });
-  return { ...result, elapsed: Math.round(performance.now() - t0) };
+  await waitForSaveIdle(15000);
+  return runPrinterWriteExclusive(id, async () => {
+    const t0 = performance.now();
+    const result = await window.electronAPI!.printer.connect({ id, ipAddress: ip, port });
+    return { ...result, elapsed: Math.round(performance.now() - t0) };
+  });
 }
 
 async function disconnectPrinter(id: number) {
-  const t0 = performance.now();
-  await window.electronAPI!.printer.disconnect(id);
-  return { elapsed: Math.round(performance.now() - t0) };
+  return runPrinterWriteExclusive(id, async () => {
+    const t0 = performance.now();
+    await window.electronAPI!.printer.disconnect(id);
+    return { elapsed: Math.round(performance.now() - t0) };
+  });
 }
 
 async function sendCmd(id: number, cmd: string) {
-  const t0 = performance.now();
-  const result = await window.electronAPI!.printer.sendCommand(id, cmd);
-  return { ...result, elapsed: Math.round((performance.now() - t0) * 100) / 100 };
+  await waitForSaveIdle(15000);
+  return runPrinterWriteExclusive(id, async () => {
+    const t0 = performance.now();
+    const result = await printerTransport.sendCommand(id, cmd, { caller: 'diagnostics' });
+    return { ...result, elapsed: Math.round((performance.now() - t0) * 100) / 100 };
+  });
 }
 
 export function DiagnosticTestProcedure({ ip, port, printerId, isElectron }: Props) {
