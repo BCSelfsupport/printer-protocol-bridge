@@ -31,6 +31,11 @@ export interface Printer {
   // successful sync. Used to render an "OUT OF SYNC" badge on the slave card.
   syncOutOfDate?: boolean;
   syncLastFailure?: { messageName: string; reason: string; at: number } | null;
+  // Master only. When true, restore legacy behavior: selecting a message on
+  // the master immediately fans out ^SM to every slave in this master's group.
+  // When false/undefined (default), operator picks targets via the
+  // "Apply to Printers" dialog per selection.
+  autoSyncSelection?: boolean;
   // Last ^SM message selection outcome for this printer. Rendered as a
   // small pass/fail pip under the printer icon so operators can see at a
   // glance whether the printer actually acknowledged the requested message.
