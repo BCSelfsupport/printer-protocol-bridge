@@ -2220,12 +2220,6 @@ const Index = () => {
             onSelect={async (message) => {
               const messageTargetPrinter = selectedPrinter ?? connectionState.connectedPrinter ?? null;
               if (!messageTargetPrinter) return false;
-              // Slaves follow the master's selection — block independent message changes
-              if (messageTargetPrinter.role === 'slave') {
-                setSlaveBlockPrinterName(messageTargetPrinter.name);
-                setSlaveBlockDialogOpen(true);
-                return false;
-              }
               if (messageTargetPrinter.id === connectionState.connectedPrinter?.id) {
                 const ok = await selectMessage(message);
                 if (ok) {
