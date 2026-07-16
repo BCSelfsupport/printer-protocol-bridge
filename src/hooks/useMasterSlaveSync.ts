@@ -119,6 +119,8 @@ export function useMasterSlaveSync({
   const primedMessageRef = useRef(false);
   const prevMessageListRef = useRef<string[]>([]);
   const syncingRef = useRef(false);
+  const pendingMessageRef = useRef<string | null>(null);
+  const runSelectionSyncRef = useRef<((msg: string) => void) | null>(null);
 
   // Find if the connected printer is a master
   const connectedPrinter = printers.find(p => p.id === connectedPrinterId);
@@ -305,48 +307,45 @@ export function useMasterSlaveSync({
 
   // Sync message selection: when master's currentMessage changes, push full content to slaves first, then ^SM.
   // Skip factory/preset messages (BestCode, Moba, etc.) — they already exist on slaves.
-  useEffect(() => {
-    if (!isMaster || !currentMessage || syncingRef.current) return;
-
-    // Prime on first run for this master session so we do NOT push the
-    // currently-loaded message to slaves on mount/reconnect — only real
-    // user-driven selection changes should trigger a sync.
-    if (!primedMessageRef.current) {
-      primedMessageRef.current = true;
-      prevMessageRef.current = currentMessage;
+  const runSelectionSync = useCallback((messageName: string) => {
+    if (syncingRef.current) {
+      // A sync is already running. Remember the newest requested message so
+      // we drain it as soon as the current run finishes. This is the fix for
+      // "some slaves get the old message, some get nothing" when the user
+      // changes selection mid-sync.
+      pendingMessageRef.current = messageName;
+      console.log(`[MasterSlaveSync] Queued "${messageName}" — sync already in progress`);
       return;
     }
 
-    if (currentMessage === prevMessageRef.current) return;
-    if (isPresetMessage(currentMessage)) {
-      console.log(`[MasterSlaveSync] Skipping preset message selection "${currentMessage}"`);
-      prevMessageRef.current = currentMessage;
-      return;
-    }
-
-    prevMessageRef.current = currentMessage;
     const slaves = getSlaves();
     if (slaves.length === 0) return;
 
     syncingRef.current = true;
-    console.log(`[MasterSlaveSync] Syncing message selection "${currentMessage}" to ${slaves.length} slave(s)`);
-
+    prevMessageRef.current = messageName;
+    console.log(`[MasterSlaveSync] Syncing message selection "${messageName}" to ${slaves.length} slave(s)`);
 
     (async () => {
       const idle = await waitForSaveIdle(20000);
       if (!idle) {
-        console.warn(`[MasterSlaveSync] Aborting selection sync for "${currentMessage}" — save busy did not clear`);
+        console.warn(`[MasterSlaveSync] Aborting selection sync for "${messageName}" — save busy did not clear`);
         return;
       }
       setPollingPaused(true);
-      const details = getMessageContent?.(currentMessage) ?? null;
+      const details = getMessageContent?.(messageName) ?? null;
       for (const slave of slaves) {
+        // If the user picked a newer message while we were mid-fleet, abandon
+        // the remaining slaves for the stale target so we can start the new
+        // one immediately — the newer selection is what the operator wants.
+        if (pendingMessageRef.current && pendingMessageRef.current !== messageName) {
+          console.log(`[MasterSlaveSync] Aborting remaining slaves for "${messageName}" — newer selection "${pendingMessageRef.current}" pending`);
+          break;
+        }
+
         const sequence: SequencedCommand[] = [];
 
         if (details && details.fields.length > 0 && buildMessageCommands) {
           const rotation = slave.rotation ?? 'Normal';
-          // Per-printer expiry offset override — apply slave.expiryOffsetDays to
-          // any expiry date field so each line gets its own offset on the HMI.
           const slaveOffset = slave.expiryOffsetDays;
           const slaveFields = slaveOffset === undefined
             ? details.fields
@@ -356,7 +355,7 @@ export function useMasterSlaveSync({
                 return isExpiry ? { ...f, autoCodeExpiryDays: slaveOffset } : f;
               });
           const rawCommands = await buildMessageCommands(
-            currentMessage,
+            messageName,
             slaveFields,
             details.templateValue,
             false,
@@ -374,18 +373,56 @@ export function useMasterSlaveSync({
           }
         }
 
-        sequence.push({ command: `^SM ${currentMessage}`, delayAfterMs: 800 });
-        const result = await sendCommandSequenceToPrinter(slave, sequence, `select ${currentMessage}`);
+        sequence.push({ command: `^SM ${messageName}`, delayAfterMs: 800 });
+        const result = await sendCommandSequenceToPrinter(slave, sequence, `select ${messageName}`);
         if (!result.success) {
           console.warn(`[MasterSlaveSync] Selection sync failed on ${slave.name}: ${summarizeCommand(result.failedCommand ?? '')} ${result.error ?? ''}`);
         }
-        console.log(`[MasterSlaveSync] ^SM ${currentMessage} → ${slave.name} (${slave.rotation ?? 'Normal'}): ${result.success ? 'OK' : 'FAIL'}`);
+        console.log(`[MasterSlaveSync] ^SM ${messageName} → ${slave.name} (${slave.rotation ?? 'Normal'}): ${result.success ? 'OK' : 'FAIL'}`);
       }
     })().finally(() => {
       setTimeout(() => setPollingPaused(false), 1000);
       syncingRef.current = false;
+
+      // Drain any queued selection that arrived while we were busy.
+      const pending = pendingMessageRef.current;
+      if (pending && pending !== prevMessageRef.current && !isPresetMessage(pending)) {
+        pendingMessageRef.current = null;
+        // Defer to a fresh microtask so state settles first.
+        setTimeout(() => runSelectionSyncRef.current?.(pending), 0);
+      } else {
+        pendingMessageRef.current = null;
+      }
     });
-  }, [isMaster, currentMessage, getSlaves, sendCommandSequenceToPrinter, getMessageContent, buildMessageCommands, currentSettings]);
+  }, [getSlaves, sendCommandSequenceToPrinter, getMessageContent, buildMessageCommands, currentSettings]);
+
+  // Keep an imperative handle so the drain step at the end of a run can call
+  // the latest version of runSelectionSync without stale closure issues.
+  useEffect(() => {
+    runSelectionSyncRef.current = runSelectionSync;
+  }, [runSelectionSync]);
+
+  useEffect(() => {
+    if (!isMaster || !currentMessage) return;
+
+    // Prime on first run for this master session so we do NOT push the
+    // currently-loaded message to slaves on mount/reconnect — only real
+    // user-driven selection changes should trigger a sync.
+    if (!primedMessageRef.current) {
+      primedMessageRef.current = true;
+      prevMessageRef.current = currentMessage;
+      return;
+    }
+
+    if (currentMessage === prevMessageRef.current && !syncingRef.current) return;
+    if (isPresetMessage(currentMessage)) {
+      console.log(`[MasterSlaveSync] Skipping preset message selection "${currentMessage}"`);
+      prevMessageRef.current = currentMessage;
+      return;
+    }
+
+    runSelectionSync(currentMessage);
+  }, [isMaster, currentMessage, runSelectionSync]);
 
   // Message content is pushed by Index.syncMessageToSlaves after save using the
   // full ^DM → ^NM → ^SV sequence. Do not also send a bare ^NM here: that can
