@@ -410,7 +410,7 @@ export function useMasterSlaveSync({
     // the selection change, so their last-known-message is now stale.
     for (const s of offlineSlaves) {
       console.warn(`[MasterSlaveSync] Slave ${s.name} is OFFLINE — flagging OUT OF SYNC for "${messageName}"`);
-      outcomeRef.current?.(s.id, false, 'offline', messageName);
+      outcomeRef.current?.(s.id, false, 'offline', messageName, null);
     }
 
     if (onlineSlaves.length === 0) {
