@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Printer, PrinterRole } from '@/types/printer';
 import { useTwinPair } from '@/twin-code/twinPairStore';
+import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import {
   Dialog,
   DialogContent,
