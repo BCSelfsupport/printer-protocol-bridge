@@ -94,8 +94,10 @@ export function ApplyToPrintersDialog({
   sourcePrinter,
   siblingPrinters,
   onConfirm,
+  mode = 'select',
 }: ApplyToPrintersDialogProps) {
   const [checked, setChecked] = useState<Set<number>>(new Set());
+  const isCopy = mode === 'copy';
 
   // Prime from last-selection on open, filtered to still-available siblings.
   useEffect(() => {
@@ -107,7 +109,7 @@ export function ApplyToPrintersDialog({
   }, [open, sourcePrinter.id, siblingPrinters]);
 
   const groups = useMemo(() => groupPrinters(siblingPrinters), [siblingPrinters]);
-  const totalTargets = 1 + checked.size;
+  const totalTargets = isCopy ? checked.size : 1 + checked.size;
 
   const toggle = (id: number) => {
     setChecked(prev => {
@@ -131,7 +133,7 @@ export function ApplyToPrintersDialog({
   const handleConfirm = () => {
     const extras = siblingPrinters.filter(p => checked.has(p.id));
     saveLastSelection(sourcePrinter.id, extras.map(p => p.id));
-    onConfirm([sourcePrinter, ...extras]);
+    onConfirm(isCopy ? extras : [sourcePrinter, ...extras]);
     onOpenChange(false);
   };
 
