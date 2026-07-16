@@ -192,6 +192,7 @@ const Index = () => {
     saveGlobalAdjust,
     saveMessageSettings,
     queryPrintSettings,
+    queryPrintSettingsForConnectedPrinter,
     sendCommand,
     queryPrinterMetrics,
     checkPrinterStatus,
