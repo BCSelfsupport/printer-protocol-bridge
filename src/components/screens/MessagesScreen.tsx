@@ -183,6 +183,10 @@ export function MessagesScreen({
     scannedValue: string;
   } | null>(null);
   const { productKey, isCompanion } = useLicense();
+  // Protected-message registry: names in here are treated as safety-net messages
+  // (e.g. offline backup with a firmware User Prompt field) and CodeSync will
+  // refuse to overwrite them anywhere in the fleet.
+  const { isProtected: isMessageProtected, toggle: toggleMessageProtected } = useProtectedMessages();
   const [pcLibraryOpen, setPcLibraryOpen] = useState(false);
   const [selectedLibraryMessage, setSelectedLibraryMessage] = useState<MessageDetails | null>(null);
   const [selectedLibrarySourcePrinterId, setSelectedLibrarySourcePrinterId] = useState<number | undefined>(undefined);
