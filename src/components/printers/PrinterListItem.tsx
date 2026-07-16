@@ -123,6 +123,11 @@ export function PrinterListItem({
   const displayMessage = printer.role === 'slave'
     ? (printer.currentMessage ?? masterMessage ?? undefined)
     : (printer.currentMessage ?? undefined);
+  // When a printer is OFFLINE, its cached currentMessage is a last-known
+  // value — we haven't heard from the printer, so we don't actually know
+  // what's loaded. Render it as stale so operators don't mistake it for
+  // live status.
+  const isMessageStale = displayMessage != null && !printer.isAvailable;
   
   // Filter status for this printer
   const pumpHours = streamHours ? parseStreamHoursToNumber(streamHours) : null;
@@ -304,10 +309,18 @@ export function PrinterListItem({
             {displayMessage && (
               <div className={`mt-1 text-xs ${subTextColor}`}>
                 <div className="flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="font-medium truncate">{displayMessage}</span>
+                  <FileText className={`w-3.5 h-3.5 flex-shrink-0 ${isMessageStale ? 'opacity-40' : ''}`} />
+                  {isMessageStale && (
+                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70 font-medium">last:</span>
+                  )}
+                  <span
+                    className={`font-medium truncate ${isMessageStale ? 'italic opacity-50 line-through decoration-muted-foreground/40' : ''}`}
+                    title={isMessageStale ? `Printer offline — last known message was "${displayMessage}". Actual state unknown until reconnect.` : undefined}
+                  >
+                    {displayMessage}
+                  </span>
                 </div>
-                {printer.printCount !== undefined && (
+                {printer.printCount !== undefined && !isMessageStale && (
                   <div className="ml-6 mt-0.5">
                     PRINTS: <span className="font-semibold">{printer.printCount.toString().padStart(7, '0')}</span>
                   </div>
@@ -554,10 +567,18 @@ export function PrinterListItem({
       {displayMessage && (
         <div className={`mt-1.5 ml-12 text-xs ${subTextColor}`}>
           <div className="flex items-center gap-1.5">
-            <FileText className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="font-medium truncate">{displayMessage}</span>
+            <FileText className={`w-3.5 h-3.5 flex-shrink-0 ${isMessageStale ? 'opacity-40' : ''}`} />
+            {isMessageStale && (
+              <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70 font-medium">last:</span>
+            )}
+            <span
+              className={`font-medium truncate ${isMessageStale ? 'italic opacity-50 line-through decoration-muted-foreground/40' : ''}`}
+              title={isMessageStale ? `Printer offline — last known message was "${displayMessage}". Actual state unknown until reconnect.` : undefined}
+            >
+              {displayMessage}
+            </span>
           </div>
-          {printer.printCount !== undefined && (
+          {printer.printCount !== undefined && !isMessageStale && (
             <div className="ml-5 mt-0.5">
               PRINTS: <span className="font-semibold">{printer.printCount.toString().padStart(7, '0')}</span>
             </div>
