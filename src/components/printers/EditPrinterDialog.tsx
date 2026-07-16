@@ -26,7 +26,7 @@ interface EditPrinterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   printer: Printer | null;
-  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string; lineId?: string; rotation?: PrinterRotation }) => void;
+  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string; lineId?: string; rotation?: PrinterRotation; autoSyncSelection?: boolean }) => void;
   onDelete?: (printerId: number) => void;
   allPrinters?: Printer[];
 }
@@ -43,6 +43,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
   
   const [lineId, setLineId] = useState('');
   const [rotation, setRotation] = useState<PrinterRotation>('Normal');
+  const [autoSyncSelection, setAutoSyncSelection] = useState(false);
   const [ipError, setIpError] = useState('');
   // Sync form when printer changes
   useEffect(() => {
@@ -56,6 +57,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       
       setLineId(printer.lineId ?? '');
       setRotation(printer.rotation ?? 'Normal');
+      setAutoSyncSelection(printer.autoSyncSelection ?? false);
     }
   }, [printer]);
 
@@ -116,6 +118,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       
       lineId: lineId.trim() || undefined,
       rotation,
+      autoSyncSelection: effectiveRole === 'master' ? autoSyncSelection : undefined,
     });
 
     onOpenChange(false);
