@@ -124,6 +124,13 @@ export function useMasterSlaveSync({
   const connectedPrinter = printers.find(p => p.id === connectedPrinterId);
   const isMaster = connectedPrinter?.role === 'master';
 
+  // Reset the selection-sync primer when master identity changes so the
+  // first message on a fresh master isn't blindly pushed to slaves.
+  useEffect(() => {
+    primedMessageRef.current = false;
+    prevMessageRef.current = null;
+  }, [connectedPrinterId, isMaster]);
+
   // Get slaves for this master
   const getSlaves = useCallback(() => {
     if (!connectedPrinterId) return [];
