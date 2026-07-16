@@ -704,6 +704,9 @@ export function MessagesScreen({
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs text-primary font-medium shrink-0">#{message.id}</span>
                         <span className="text-sm font-medium truncate" title={message.name}>{message.name}</span>
+                        {isMessageProtected(message.name) && (
+                          <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0 ml-auto" aria-label="Protected — cannot be overwritten" />
+                        )}
                       </div>
                       {fieldCount > 0 && (
                         <div className="text-[10px] text-muted-foreground mt-0.5">{fieldCount} field{fieldCount !== 1 ? 's' : ''}</div>
