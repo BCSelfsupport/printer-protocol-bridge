@@ -8,6 +8,7 @@ import { AddPrinterDialog } from '@/components/printers/AddPrinterDialog';
 import { EditPrinterDialog } from '@/components/printers/EditPrinterDialog';
 import { PrinterServicePopup } from '@/components/printers/PrinterServicePopup';
 import { BroadcastMessageDialog } from '@/components/printers/BroadcastMessageDialog';
+import { ApplyExpiryToPrintersDialog } from '@/components/printers/ApplyExpiryToPrintersDialog';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dashboard } from '@/components/screens/Dashboard';
@@ -289,6 +290,8 @@ export function PrintersScreen({
   const [broadcastMaster, setBroadcastMaster] = useState<Printer | null>(null);
   const [expandedGridOpen, setExpandedGridOpen] = useState(false);
   const [updatingExpiryPrinterId, setUpdatingExpiryPrinterId] = useState<number | null>(null);
+  const [expiryDialogSource, setExpiryDialogSource] = useState<Printer | null>(null);
+  const [expiryDialogCurrentDays, setExpiryDialogCurrentDays] = useState<number>(0);
   const [devTaps, setDevTaps] = useState<number[]>([]);
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
