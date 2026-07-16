@@ -69,9 +69,21 @@ const SAVE_ACK_MAX_WAIT_MS = 30000;
 const SAVE_NM_IDLE_AFTER_DATA_MS = 1500;
 const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 5000;
 
+// Prompt-before-print messages force the printer through a longer internal
+// handshake on ^SM (prompt config parse + display). A 15 s HTTP ceiling can
+// cut the ACK on slow slaves and cause phantom FAILs — worse, a printer left
+// mid-transition has historically required a power-cycle. Give ^SM room to
+// breathe when the target message carries any prompt field.
+const SM_PROMPT_ACK_MAX_WAIT_MS = 28000;
+const SM_PROMPT_IDLE_AFTER_DATA_MS = 1500;
+const SM_PROMPT_POST_DELAY_MS = 1500;
+const SM_VERIFY_RETRY_DELAY_MS = 1500;
+
 type SequencedCommand = {
   command: string;
   delayAfterMs?: number;
+  /** Overrides the default per-command transport options (timeout/idle window). */
+  options?: TransportCommandOptions;
 };
 
 const getCommandOptions = (command: string): TransportCommandOptions | undefined => {
@@ -83,6 +95,11 @@ const getCommandOptions = (command: string): TransportCommandOptions | undefined
     return { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS };
   }
   return undefined;
+};
+
+const messageHasPrompt = (details: MessageDetails | null): boolean => {
+  if (!details) return false;
+  return details.fields.some((f) => (f as { promptBeforePrint?: boolean }).promptBeforePrint === true);
 };
 
 const isSaveCommand = (command: string) => {
@@ -259,8 +276,8 @@ export function useMasterSlaveSync({
     const logPrefix = `[MasterSlaveSync][${traceId}] ${traceLabel} → ${printer.name}`;
     console.log(`${logPrefix}: START ${sequence.length} command(s)`);
 
-    const runCommand = async (command: string) => {
-      const options = getCommandOptions(command);
+    const runCommand = async (command: string, overrideOptions?: TransportCommandOptions) => {
+      const options = overrideOptions ?? getCommandOptions(command);
       if (printer.id === connectedPrinterId) {
         return printerTransport.sendCommand(printer.id, command, options);
       }
@@ -318,9 +335,9 @@ export function useMasterSlaveSync({
         }
 
         for (let index = 0; index < sequence.length; index += 1) {
-          const { command, delayAfterMs = 300 } = sequence[index];
+          const { command, delayAfterMs = 300, options: entryOptions } = sequence[index];
           const commandStarted = Date.now();
-          const result = await runCommand(command);
+          const result = await runCommand(command, entryOptions);
           const response = result?.response ?? result?.error ?? '';
           const ok = !!result?.success && !isProtocolFailureResponse(response);
           console.log(`${logPrefix}: #${index + 1}/${sequence.length} ${summarizeCommand(command)} → ${ok ? 'OK' : 'FAIL'} ${Date.now() - commandStarted}ms${response ? ` (${response.replace(/[\r\n]+/g, ' ').slice(0, 160)})` : ''}`);
@@ -455,6 +472,10 @@ export function useMasterSlaveSync({
       }
       setPollingPaused(true);
       const details = getMessageContent?.(messageName) ?? null;
+      const hasPrompt = messageHasPrompt(details);
+      if (hasPrompt) {
+        console.log(`[MasterSlaveSync] "${messageName}" is prompt-before-print — extending ^SM ACK window to ${SM_PROMPT_ACK_MAX_WAIT_MS}ms and read-back retry`);
+      }
       for (const slave of onlineSlaves) {
         // If the user picked a newer message while we were mid-fleet, abandon
         // the remaining slaves for the stale target so we can start the new
@@ -495,7 +516,13 @@ export function useMasterSlaveSync({
           }
         }
 
-        sequence.push({ command: `^SM ${messageName}`, delayAfterMs: 800 });
+        sequence.push({
+          command: `^SM ${messageName}`,
+          delayAfterMs: hasPrompt ? SM_PROMPT_POST_DELAY_MS : 800,
+          options: hasPrompt
+            ? { maxWaitMs: SM_PROMPT_ACK_MAX_WAIT_MS, idleAfterDataMs: SM_PROMPT_IDLE_AFTER_DATA_MS }
+            : undefined,
+        });
         const result = await sendCommandSequenceToPrinter(slave, sequence, `select ${messageName}`);
         if (!result.success) {
           console.warn(`[MasterSlaveSync] Selection sync failed on ${slave.name}: ${summarizeCommand(result.failedCommand ?? '')} ${result.error ?? ''}`);
@@ -503,12 +530,20 @@ export function useMasterSlaveSync({
         } else {
           // Read-back verification — do NOT trust the ^SM write ACK alone. Query
           // the printer for its currently-selected message and only report success
-          // if the printer's own state matches what we asked for. This is the
-          // hard guarantee: we never claim a slave switched unless the printer
-          // itself confirms it via a fresh read.
+          // if the printer's own state matches what we asked for. Prompt messages
+          // in particular can leave the firmware busy for a beat after ACK, so we
+          // give a single retry after a grace period before declaring FAIL. This
+          // matches the firmware-grace pattern used elsewhere and prevents a false
+          // FAIL that could lure the operator into re-issuing selects and wedging
+          // the printer.
           await delay(400);
-          const verified = await queryCurrentMessage(slave);
+          let verified = await queryCurrentMessage(slave);
           const expected = messageName.toUpperCase();
+          if ((!verified || verified !== expected) && hasPrompt) {
+            console.log(`[MasterSlaveSync] ^SM ${messageName} → ${slave.name}: first read-back "${verified ?? 'null'}" — retrying after ${SM_VERIFY_RETRY_DELAY_MS}ms (prompt message)`);
+            await delay(SM_VERIFY_RETRY_DELAY_MS);
+            verified = await queryCurrentMessage(slave);
+          }
           if (verified && verified === expected) {
             outcomeRef.current?.(slave.id, true, 'ok', messageName, verified);
             console.log(`[MasterSlaveSync] ^SM ${messageName} → ${slave.name}: VERIFIED (${verified})`);
