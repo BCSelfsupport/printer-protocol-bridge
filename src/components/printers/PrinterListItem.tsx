@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, Calendar, Check, X, Link2, Send, RotateCcw } from 'lucide-react';
+import { Printer as PrinterIcon, Wifi, WifiOff, Droplets, Palette, FileText, Plug, Settings2, Crown, Link, Filter, Calendar, Check, X, Link2, Send, RotateCcw, Users } from 'lucide-react';
 import { getFilterStatus } from '@/lib/filterTracker';
 import { parseStreamHoursToNumber } from '@/components/consumables/ConsumablePredictions';
 import { Printer } from '@/types/printer';
@@ -47,6 +47,8 @@ interface PrinterListItemProps {
   isUpdatingExpiry?: boolean;
   /** Original expiry days from the message definition (fallback when no per-printer override) */
   messageExpiryDays?: number;
+  /** Open the multi-target expiry dialog for this printer as source. */
+  onOpenExpiryDialog?: (sourcePrinter: Printer, currentDays: number) => void;
   /** TwinCode pair role badge — 'A' (lid) or 'B' (side). Shown when this printer is part of a bound pair. */
   twinPairRole?: 'A' | 'B' | null;
   /** Callback when the per-printer rotation cycle button is clicked */
@@ -90,6 +92,7 @@ export function PrinterListItem({
   onExpiryChange,
   isUpdatingExpiry = false,
   messageExpiryDays,
+  onOpenExpiryDialog,
   twinPairRole,
   onRotationChange,
 }: PrinterListItemProps) {
