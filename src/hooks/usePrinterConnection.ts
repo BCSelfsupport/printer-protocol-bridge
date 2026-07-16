@@ -1805,9 +1805,15 @@ export function usePrinterConnection() {
           status: prev.status ? { ...prev.status, currentMessage: state.currentMessage } : null,
         }));
         // Immediately update the printer card's currentMessage
-        updatePrinter(printer.id, { currentMessage: state.currentMessage });
+        updatePrinter(printer.id, {
+          currentMessage: state.currentMessage,
+          lastSelectionResult: { messageName: message.name, success: true, at: Date.now() },
+        });
         return true;
       }
+      updatePrinter(printer.id, {
+        lastSelectionResult: { messageName: message.name, success: false, reason: 'Emulator rejected ^SM', at: Date.now() },
+      });
       return false;
     } else if (isElectron || isRelayMode()) {
       try {
@@ -1818,6 +1824,14 @@ export function usePrinterConnection() {
         const responseText = result?.response ?? '';
         if (!result?.success || isProtocolCommandFailure(responseText)) {
           console.error('[selectMessage] ^SM rejected by printer:', responseText || result?.error);
+          updatePrinter(printer.id, {
+            lastSelectionResult: {
+              messageName: message.name,
+              success: false,
+              reason: (responseText || result?.error || 'No ACK from printer').toString().slice(0, 120),
+              at: Date.now(),
+            },
+          });
           return false;
         }
 
@@ -1828,10 +1842,21 @@ export function usePrinterConnection() {
           ...prev,
           status: prev.status ? { ...prev.status, currentMessage: message.name } : null,
         }));
-        updatePrinter(printer.id, { currentMessage: message.name });
+        updatePrinter(printer.id, {
+          currentMessage: message.name,
+          lastSelectionResult: { messageName: message.name, success: true, at: Date.now() },
+        });
         return true;
       } catch (e) {
         console.error('[selectMessage] Failed to send ^SM command:', e);
+        updatePrinter(printer.id, {
+          lastSelectionResult: {
+            messageName: message.name,
+            success: false,
+            reason: (e instanceof Error ? e.message : String(e)).slice(0, 120),
+            at: Date.now(),
+          },
+        });
         return false;
       }
     } else {
@@ -1841,7 +1866,10 @@ export function usePrinterConnection() {
         ...prev,
         status: prev.status ? { ...prev.status, currentMessage: message.name } : null,
       }));
-      updatePrinter(printer.id, { currentMessage: message.name });
+      updatePrinter(printer.id, {
+        currentMessage: message.name,
+        lastSelectionResult: { messageName: message.name, success: true, at: Date.now() },
+      });
       return true;
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter, updatePrinter]);

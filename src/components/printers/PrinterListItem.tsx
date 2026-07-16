@@ -244,6 +244,7 @@ export function PrinterListItem({
       >
         <div className="flex items-start gap-2.5">
           {/* Status indicator - clickable for edit */}
+          <div className="flex flex-col items-center gap-1 flex-shrink-0">
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -277,6 +278,27 @@ export function PrinterListItem({
               </div>
             )}
           </button>
+            {/* Message-selection outcome pip */}
+            {printer.lastSelectionResult && (
+              printer.lastSelectionResult.success ? (
+                <span
+                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success/20 border border-success/40 text-success text-[9px] font-bold uppercase tracking-wide"
+                  title={`Message "${printer.lastSelectionResult.messageName}" acknowledged by printer`}
+                >
+                  <Check className="w-2.5 h-2.5" strokeWidth={3} />
+                  <span>OK</span>
+                </span>
+              ) : (
+                <span
+                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-destructive/20 border border-destructive/50 text-destructive text-[9px] font-bold uppercase tracking-wide animate-pulse"
+                  title={`Failed to select "${printer.lastSelectionResult.messageName}"${printer.lastSelectionResult.reason ? ` — ${printer.lastSelectionResult.reason}` : ''}`}
+                >
+                  <X className="w-2.5 h-2.5" strokeWidth={3} />
+                  <span>FAIL</span>
+                </span>
+              )
+            )}
+          </div>
 
           {/* Printer info */}
           <div className="flex-1 min-w-0">
