@@ -3253,6 +3253,54 @@ export function usePrinterConnection() {
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
+  // Query print settings from the connected printer and RETURN the parsed
+  // values without mutating connectionState. Used before re-pushing stored
+  // adjust settings so we can detect operator changes made at the printer HMI
+  // (width/speed/delay/bold/gap/pitch/rotation) and adopt them as the new
+  // baseline instead of overwriting them.
+  const queryPrintSettingsForConnectedPrinter = useCallback(async (): Promise<Partial<PrintSettings> | null> => {
+    if (!connectionState.isConnected || !connectionState.connectedPrinter) return null;
+    const printer = connectionState.connectedPrinter;
+    if (shouldUseEmulator()) return null;
+    if (!isElectron && !isRelayMode()) return null;
+
+    try {
+      const result = await printerTransport.sendCommand(printer.id, '^QP');
+      if (!result?.success || !result.response) return null;
+      const response = result.response;
+      const extract = (key: string): number | null => {
+        const m = response.match(new RegExp(`${key}[:\\s]*(\\d+)`, 'i'));
+        return m ? parseInt(m[1], 10) : null;
+      };
+      const speedReverseMap: Record<number, PrintSettings['speed']> = {
+        0: 'Fast', 1: 'Faster', 2: 'Fastest', 3: 'Ultra Fast',
+      };
+      const width = extract('Width');
+      const height = extract('Height');
+      const delay = extract('Delay');
+      const rotationNum = extract('Rotation');
+      const bold = extract('Bold');
+      const speedNum = extract('Speed');
+      const gap = extract('Gap');
+      const pitch = extract('Pitch');
+      const parsed: Partial<PrintSettings> = {
+        ...(width !== null && { width }),
+        ...(height !== null && { height }),
+        ...(delay !== null && { delay }),
+        ...(rotationNum !== null && { rotation: PROTOCOL_CODE_TO_ROTATION[rotationNum] ?? 'Normal' }),
+        ...(bold !== null && { bold }),
+        ...(speedNum !== null && { speed: speedReverseMap[speedNum] ?? 'Fast' }),
+        ...(gap !== null && { gap }),
+        ...(pitch !== null && { pitch }),
+      };
+      return Object.keys(parsed).length ? parsed : null;
+    } catch (e) {
+      console.error('[queryPrintSettingsForConnectedPrinter] failed:', e);
+      return null;
+    }
+  }, [connectionState.isConnected, connectionState.connectedPrinter]);
+
+
   // Reorder printers (for drag-and-drop)
   const reorderPrinters = useCallback((newOrder: Printer[]) => {
     setPrinters(newOrder);
@@ -3613,6 +3661,7 @@ export function usePrinterConnection() {
     saveGlobalAdjust,
     saveMessageSettings,
     queryPrintSettings,
+    queryPrintSettingsForConnectedPrinter,
     sendCommand,
     queryPrinterMetrics,
     refreshPolling,
