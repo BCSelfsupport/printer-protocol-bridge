@@ -16,12 +16,18 @@ interface ApplyToPrintersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   messageName: string;
-  /** The printer the operator clicked Select from — always included, checked, locked. */
+  /** The printer the operator clicked Select/Copy from. In 'select' mode it's
+   *  included as a locked target. In 'copy' mode it's shown as the source label
+   *  only and never included in the returned target list. */
   sourcePrinter: Printer;
   /** All other online printers eligible as extra targets. */
   siblingPrinters: Printer[];
-  /** Called with the full target list (source + checked siblings). */
+  /** In 'select' mode: full target list (source + checked siblings).
+   *  In 'copy' mode: only the checked siblings. */
   onConfirm: (targets: Printer[]) => void;
+  /** 'select' (default) = apply-message-selection UX.
+   *  'copy' = duplicate this message onto other printers. */
+  mode?: 'select' | 'copy';
 }
 
 const LAST_SELECTION_KEY = 'apply-to-printers:last-selection';
