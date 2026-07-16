@@ -228,50 +228,52 @@ export function useMasterSlaveSync({
     }
 
     const needsSession = printer.id !== connectedPrinterId && (isRelayMode() || isElectron);
-    try {
-      if (needsSession) {
-        const connectStarted = Date.now();
-        const connectResult = await printerTransport.connect({
-          id: printer.id,
-          ipAddress: printer.ipAddress,
-          port: printer.port,
-        });
-        console.log(`${logPrefix}: CONNECT ${connectResult?.success ? 'OK' : 'FAIL'} ${Date.now() - connectStarted}ms${connectResult?.error ? ` (${connectResult.error})` : ''}`);
-        if (!connectResult?.success) {
-          return { success: false, failedIndex: 0, failedCommand: sequence[0]?.command, error: connectResult?.error || 'Connect failed' };
+    return runFleetWriteExclusive(() => runPrinterWriteExclusive(printer.id, async () => {
+      try {
+        if (needsSession) {
+          const connectStarted = Date.now();
+          const connectResult = await printerTransport.connect({
+            id: printer.id,
+            ipAddress: printer.ipAddress,
+            port: printer.port,
+          });
+          console.log(`${logPrefix}: CONNECT ${connectResult?.success ? 'OK' : 'FAIL'} ${Date.now() - connectStarted}ms${connectResult?.error ? ` (${connectResult.error})` : ''}`);
+          if (!connectResult?.success) {
+            return { success: false, failedIndex: 0, failedCommand: sequence[0]?.command, error: connectResult?.error || 'Connect failed' };
+          }
+          await delay(300);
         }
-        await delay(300);
-      }
 
-      for (let index = 0; index < sequence.length; index += 1) {
-        const { command, delayAfterMs = 300 } = sequence[index];
-        const commandStarted = Date.now();
-        const result = await runCommand(command);
-        const response = result?.response ?? result?.error ?? '';
-        const ok = !!result?.success;
-        console.log(`${logPrefix}: #${index + 1}/${sequence.length} ${summarizeCommand(command)} → ${ok ? 'OK' : 'FAIL'} ${Date.now() - commandStarted}ms${response ? ` (${response.replace(/[\r\n]+/g, ' ').slice(0, 160)})` : ''}`);
-        if (!ok) {
-          return { success: false, failedIndex: index, failedCommand: command, error: response || 'Command failed' };
+        for (let index = 0; index < sequence.length; index += 1) {
+          const { command, delayAfterMs = 300 } = sequence[index];
+          const commandStarted = Date.now();
+          const result = await runCommand(command);
+          const response = result?.response ?? result?.error ?? '';
+          const ok = !!result?.success;
+          console.log(`${logPrefix}: #${index + 1}/${sequence.length} ${summarizeCommand(command)} → ${ok ? 'OK' : 'FAIL'} ${Date.now() - commandStarted}ms${response ? ` (${response.replace(/[\r\n]+/g, ' ').slice(0, 160)})` : ''}`);
+          if (!ok) {
+            return { success: false, failedIndex: index, failedCommand: command, error: response || 'Command failed' };
+          }
+          if (delayAfterMs > 0) await delay(delayAfterMs);
         }
-        if (delayAfterMs > 0) await delay(delayAfterMs);
-      }
 
-      console.log(`${logPrefix}: DONE ${Date.now() - startedAt}ms`);
-      return { success: true, failedIndex: null };
-    } catch (error: any) {
-      console.error(`${logPrefix}: ERROR`, error);
-      return { success: false, failedIndex: 0, failedCommand: sequence[0]?.command, error: error?.message || 'Sequence failed' };
-    } finally {
-      if (needsSession) {
-        try {
-          await delay(500);
-          await printerTransport.disconnect(printer.id);
-          console.log(`${logPrefix}: DISCONNECT`);
-        } catch (error) {
-          console.warn(`${logPrefix}: DISCONNECT failed`, error);
+        console.log(`${logPrefix}: DONE ${Date.now() - startedAt}ms`);
+        return { success: true, failedIndex: null };
+      } catch (error: any) {
+        console.error(`${logPrefix}: ERROR`, error);
+        return { success: false, failedIndex: 0, failedCommand: sequence[0]?.command, error: error?.message || 'Sequence failed' };
+      } finally {
+        if (needsSession) {
+          try {
+            await delay(500);
+            await printerTransport.disconnect(printer.id);
+            console.log(`${logPrefix}: DISCONNECT`);
+          } catch (error) {
+            console.warn(`${logPrefix}: DISCONNECT failed`, error);
+          }
         }
       }
-    }
+    }));
   }, [connectedPrinterId]);
 
   // Sync message selection: when master's currentMessage changes, push full content to slaves first, then ^SM.
