@@ -32,8 +32,10 @@ import {
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
+  rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
 
 import { NavItem } from '@/components/layout/BottomNav';
 
@@ -1010,75 +1012,87 @@ export function PrintersScreen({
             </DialogTitle>
           </DialogHeader>
           <ScrollArea className="flex-1">
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {visiblePrinters.map((printer) => {
-                const msgName = printer.role === 'slave'
-                  ? (printer.currentMessage || masterMessageMap.get(printer.id))
-                  : (printer.currentMessage || masterMessageMap.get(printer.id));
-                const msgContent = msgName && getMessageContent
-                  ? (getMessageContent(msgName, printer.id)
-                    || (printer.masterId ? getMessageContent(msgName, printer.masterId) : null)
-                    || (connectedPrinter ? getMessageContent(msgName, connectedPrinter.id) : null)
-                    || getMessageContent(msgName))
-                  : null;
-                const expiryField = msgContent?.fields?.find(f => (
-                  f.type === 'date'
-                  && (
-                    f.autoCodeFieldType?.startsWith('date_expiry')
-                    || (f.autoCodeExpiryDays ?? 0) > 0
-                  )
-                ));
-                const msgExpiry = expiryField ? (expiryField.autoCodeExpiryDays ?? 0) : undefined;
-                return (
-                  <PrinterListItem
-                    key={printer.id}
-                    printer={printer}
-                    isSelected={selectedPrinter?.id === printer.id}
-                    onSelect={() => {
-                      handlePrinterClick(printer);
-                      setExpandedGridOpen(false);
-                    }}
-                    onConnect={() => {
-                      onConnect(printer);
-                      setExpandedGridOpen(false);
-                    }}
-                    onEdit={() => handleEditPrinter(printer)}
-                    onService={() => handleOpenService(printer)}
-                    showConnectButton={true}
-                    isConnected={connectedPrinter?.id === printer.id}
-                    compact={false}
-                    countdownType={getCountdown ? getCountdown(printer.id).type : (connectedPrinter?.id === printer.id ? countdownType : null)}
-                    countdownSeconds={getCountdown ? getCountdown(printer.id).seconds : (connectedPrinter?.id === printer.id ? countdownSeconds : null)}
-                    syncGroupIndex={syncGroupMap.get(printer.id)}
-                    slaveCount={printer.role === 'master' ? slaveCountMap.get(printer.id) ?? 0 : undefined}
-                    onSync={printer.role === 'master' && onSyncMaster ? () => onSyncMaster(printer.id) : undefined}
-                    onBroadcast={printer.role === 'master' && onBroadcastMessage ? () => {
-                      setBroadcastMaster(printer);
-                      setBroadcastDialogOpen(true);
-                    } : undefined}
-                    streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
-                    masterMessage={masterMessageMap.get(printer.id)}
-                    onExpiryChange={onSlaveExpiryChange ? async (printerId, days) => {
-                      setUpdatingExpiryPrinterId(printerId);
-                      try {
-                        await onSlaveExpiryChange(printerId, days);
-                      } finally {
-                        setUpdatingExpiryPrinterId(null);
-                      }
-                    } : undefined}
-                    isUpdatingExpiry={updatingExpiryPrinterId === printer.id}
-                    messageExpiryDays={msgExpiry}
-                    twinPairRole={
-                      pairPrinters && pairPrinters.a.id === printer.id ? 'A'
-                      : pairPrinters && pairPrinters.b.id === printer.id ? 'B'
-                      : null
-                    }
-                    onRotationChange={onUpdatePrinter ? (id, rot) => onUpdatePrinter(id, { rotation: rot }) : undefined}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={visiblePrinters.map((p) => p.id)}
+                strategy={rectSortingStrategy}
+              >
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {visiblePrinters.map((printer) => {
+                    const msgName = printer.role === 'slave'
+                      ? (printer.currentMessage || masterMessageMap.get(printer.id))
+                      : (printer.currentMessage || masterMessageMap.get(printer.id));
+                    const msgContent = msgName && getMessageContent
+                      ? (getMessageContent(msgName, printer.id)
+                        || (printer.masterId ? getMessageContent(msgName, printer.masterId) : null)
+                        || (connectedPrinter ? getMessageContent(msgName, connectedPrinter.id) : null)
+                        || getMessageContent(msgName))
+                      : null;
+                    const expiryField = msgContent?.fields?.find(f => (
+                      f.type === 'date'
+                      && (
+                        f.autoCodeFieldType?.startsWith('date_expiry')
+                        || (f.autoCodeExpiryDays ?? 0) > 0
+                      )
+                    ));
+                    const msgExpiry = expiryField ? (expiryField.autoCodeExpiryDays ?? 0) : undefined;
+                    return (
+                      <SortablePrinterItem
+                        key={printer.id}
+                        printer={printer}
+                        isSelected={selectedPrinter?.id === printer.id}
+                        onSelect={() => {
+                          handlePrinterClick(printer);
+                          setExpandedGridOpen(false);
+                        }}
+                        onConnect={() => {
+                          onConnect(printer);
+                          setExpandedGridOpen(false);
+                        }}
+                        onEdit={() => handleEditPrinter(printer)}
+                        onService={() => handleOpenService(printer)}
+                        showConnectButton={true}
+                        isConnected={connectedPrinter?.id === printer.id}
+                        compact={false}
+                        countdownType={getCountdown ? getCountdown(printer.id).type : (connectedPrinter?.id === printer.id ? countdownType : null)}
+                        countdownSeconds={getCountdown ? getCountdown(printer.id).seconds : (connectedPrinter?.id === printer.id ? countdownSeconds : null)}
+                        isMobile={isMobile}
+                        syncGroupIndex={syncGroupMap.get(printer.id)}
+                        slaveCount={printer.role === 'master' ? slaveCountMap.get(printer.id) ?? 0 : undefined}
+                        onSync={printer.role === 'master' && onSyncMaster ? () => onSyncMaster(printer.id) : undefined}
+                        onBroadcast={printer.role === 'master' && onBroadcastMessage ? () => {
+                          setBroadcastMaster(printer);
+                          setBroadcastDialogOpen(true);
+                        } : undefined}
+                        streamHours={connectedPrinter?.id === printer.id ? connectedMetrics?.streamHours : undefined}
+                        masterMessage={masterMessageMap.get(printer.id)}
+                        onExpiryChange={onSlaveExpiryChange ? async (printerId, days) => {
+                          setUpdatingExpiryPrinterId(printerId);
+                          try {
+                            await onSlaveExpiryChange(printerId, days);
+                          } finally {
+                            setUpdatingExpiryPrinterId(null);
+                          }
+                        } : undefined}
+                        isUpdatingExpiry={updatingExpiryPrinterId === printer.id}
+                        messageExpiryDays={msgExpiry}
+                        twinPairRole={
+                          pairPrinters && pairPrinters.a.id === printer.id ? 'A'
+                          : pairPrinters && pairPrinters.b.id === printer.id ? 'B'
+                          : null
+                        }
+                        onRotationChange={onUpdatePrinter ? (id, rot) => onUpdatePrinter(id, { rotation: rot }) : undefined}
+                      />
+                    );
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
 
-                  />
-                );
-              })}
-            </div>
           </ScrollArea>
         </DialogContent>
       </Dialog>
