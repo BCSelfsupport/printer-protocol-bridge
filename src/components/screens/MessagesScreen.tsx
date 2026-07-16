@@ -1,6 +1,7 @@
 import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardDrive, Upload, Download, ChevronDown, ChevronRight, ArrowUpFromLine, List, LayoutGrid, FileText } from 'lucide-react';
 import { PcLibraryEntry } from '@/hooks/useMessageStorage';
-import { PrintMessage } from '@/types/printer';
+import { Printer, PrintMessage } from '@/types/printer';
+import { ApplyToPrintersDialog } from '@/components/printers/ApplyToPrintersDialog';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
@@ -98,6 +99,15 @@ interface MessagesScreenProps {
   isSlave?: boolean;
   /** Called when a blocked action is attempted on a slave (Index renders the explainer dialog). */
   onSlaveBlocked?: () => void;
+  // ─── Multi-target selection ("Apply to Printers" dialog) ──────────────────
+  /** The printer this Messages screen is currently managing (source of the selection). */
+  sourcePrinter?: Printer | null;
+  /** Other online printers the operator may also apply the message to. */
+  siblingPrinters?: Printer[];
+  /** Plain ^SM select on the given printer. */
+  onSelectOnPrinter?: (printer: Printer, message: PrintMessage) => Promise<boolean>;
+  /** Full baked-fields rewrite + ^SM on the given printer (used for prompted messages). */
+  onApplyPromptValuesOnPrinter?: (printer: Printer, message: PrintMessage, updatedDetails: MessageDetails) => Promise<boolean>;
 }
 
 export function MessagesScreen({ 
@@ -129,6 +139,10 @@ export function MessagesScreen({
   liveCounters,
   isSlave = false,
   onSlaveBlocked,
+  sourcePrinter,
+  siblingPrinters,
+  onSelectOnPrinter,
+  onApplyPromptValuesOnPrinter,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -138,6 +152,10 @@ export function MessagesScreen({
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
   const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
   const [pendingMessageDetails, setPendingMessageDetails] = useState<MessageDetails | null>(null);
+  // Multi-target apply state
+  const [applyDialogOpen, setApplyDialogOpen] = useState(false);
+  const [pendingApplyMessage, setPendingApplyMessage] = useState<PrintMessage | null>(null);
+  const [pendingApplyTargets, setPendingApplyTargets] = useState<Printer[] | null>(null);
   // Mobile-scan workflow state
   const [scanWaitingOpen, setScanWaitingOpen] = useState(false);
   const [pendingScanRequestId, setPendingScanRequestId] = useState<string | null>(null);
@@ -277,9 +295,115 @@ export function MessagesScreen({
     setSelectedMessage(message);
   };
 
+  // Entry point when the operator clicks Select. If the parent supplied
+  // sibling printers + the multi-target callbacks, open the "Apply to
+  // Printers" dialog first so the operator can pick who receives this
+  // message. Otherwise fall through to the legacy single-target path.
   const handleSelectMessage = async () => {
     if (!selectedMessage || isSelecting) return;
-    
+
+    if (
+      sourcePrinter &&
+      siblingPrinters &&
+      siblingPrinters.length > 0 &&
+      onSelectOnPrinter &&
+      onApplyPromptValuesOnPrinter
+    ) {
+      setPendingApplyMessage(selectedMessage);
+      setApplyDialogOpen(true);
+      return;
+    }
+
+    await runSelectionOnSource();
+  };
+
+  // Fan out the current selection to a list of target printers chosen from
+  // the ApplyToPrintersDialog. Handles the prompt case by opening the
+  // UserDefineEntryDialog once and baking the entered value into every target.
+  const runSelectionAcrossTargets = async (targets: Printer[]) => {
+    if (!selectedMessage) return;
+
+    // Single target = source → reuse existing per-source flow (keeps ^SM only
+    // when no prompt, keeps scan-source flow intact, keeps LineID resolution).
+    if (targets.length === 1 && targets[0].id === sourcePrinter?.id) {
+      await runSelectionOnSource();
+      return;
+    }
+
+    if (!onSelectOnPrinter || !onApplyPromptValuesOnPrinter) {
+      await runSelectionOnSource();
+      return;
+    }
+
+    setIsSelecting(true);
+    try {
+      const stored = onGetStoredMessage?.(selectedMessage.name);
+      const resolvedLineId = connectedPrinterLineId?.trim();
+      const resolvedStored = stored
+        ? {
+            ...stored,
+            fields: stored.fields.map((field) =>
+              field.dynamicSource === 'lineId'
+                ? { ...field, data: resolvedLineId || field.data || 'LINE ID' }
+                : field
+            ),
+          }
+        : null;
+
+      const keyboardPrompts = resolvedStored?.fields.filter(
+        f => f.promptBeforePrint && (f.promptSource ?? 'keyboard') === 'keyboard'
+      ) ?? [];
+      const scannerPrompts = resolvedStored?.fields.filter(
+        f => f.promptBeforePrint && f.promptSource === 'scanner'
+      ) ?? [];
+
+      // Scanner-source prompts across a fleet require a different UX (per-printer
+      // scan). For now, warn and only apply to source when that path is needed.
+      if (scannerPrompts.length > 0) {
+        toast.error('Scan-source prompts can only run on the source printer. Uncheck extra targets.');
+        return;
+      }
+
+      // Keyboard-prompt flow: open UserDefineEntryDialog. onConfirm below
+      // (guarded by pendingApplyTargets) will bake fields and fan out.
+      if (keyboardPrompts.length > 0 && resolvedStored) {
+        const prompts: UserDefinePrompt[] = keyboardPrompts.map(f => ({
+          fieldId: f.id,
+          label: f.promptLabel || f.data || 'ENTER VALUE',
+          length: f.promptLength || 20,
+        }));
+        setPendingMessageDetails(resolvedStored);
+        setPendingApplyTargets(targets);
+        setUserDefinePrompts(prompts);
+        setUserDefineEntryOpen(true);
+        return;
+      }
+
+      // No prompt → plain ^SM to every target, in parallel.
+      toast.loading(`Selecting "${selectedMessage.name}" on ${targets.length} printer(s)…`, { id: 'multi-select' });
+      const results = await Promise.all(
+        targets.map(async (p) => ({ p, ok: await onSelectOnPrinter(p, selectedMessage) }))
+      );
+      const okCount = results.filter(r => r.ok).length;
+      const failCount = results.length - okCount;
+      if (failCount === 0) {
+        toast.success(`Selected on ${okCount} printer(s)`, { id: 'multi-select' });
+      } else {
+        toast.error(`Selected on ${okCount}, failed on ${failCount}. Check the printer cards for details.`, { id: 'multi-select' });
+      }
+      onHome();
+    } finally {
+      setIsSelecting(false);
+    }
+  };
+
+  // Legacy single-target selection path (source printer only). Unchanged
+  // behaviour — used when no sibling picker is wired, when the operator
+  // unchecks all extra targets, or when a scan-source prompt forces
+  // source-only.
+  const runSelectionOnSource = async () => {
+    if (!selectedMessage || isSelecting) return;
+
     setIsSelecting(true);
     try {
       // Before selecting, resolve any printer-driven fields from current printer config
@@ -896,15 +1020,62 @@ export function MessagesScreen({
           setUserDefineEntryOpen(open);
           if (!open) {
             setPendingMessageDetails(null);
+            setPendingApplyTargets(null);
             onHome();
           }
         }}
         prompts={userDefinePrompts}
         onConfirm={async (entries) => {
+          // ─── Multi-target apply path ─────────────────────────────────
+          // If pendingApplyTargets is set, the operator picked a fleet of
+          // printers via the ApplyToPrintersDialog. Bake the entered values
+          // once, then push the fully-resolved message to every target using
+          // the parent-supplied per-printer helper (which handles connected
+          // vs non-connected sockets internally).
+          if (pendingApplyTargets && pendingMessageDetails && selectedMessage && onApplyPromptValuesOnPrinter) {
+            const bakedFields = pendingMessageDetails.fields.map(f => {
+              if (f.promptBeforePrint && entries[f.id] !== undefined) {
+                return { ...f, data: entries[f.id].trim() || f.data };
+              }
+              return f;
+            });
+            const tokenMap = buildTokenMap({ ...pendingMessageDetails, fields: bakedFields });
+            const updatedDetails = {
+              ...pendingMessageDetails,
+              fields: resolveAllFields(bakedFields, tokenMap, { preserveCounterTokens: true }),
+            };
+
+            const targets = pendingApplyTargets;
+            toast.loading(`Applying "${selectedMessage.name}" to ${targets.length} printer(s)…`, { id: 'multi-prompt' });
+            try {
+              // Fan out in parallel — each printer has its own socket and
+              // runPrinterWriteExclusive lock, so this is safe.
+              const results = await Promise.all(
+                targets.map(async (p) => ({ p, ok: await onApplyPromptValuesOnPrinter(p, selectedMessage, updatedDetails) }))
+              );
+              const okCount = results.filter(r => r.ok).length;
+              const failCount = results.length - okCount;
+              if (failCount === 0) {
+                toast.success(`Applied to ${okCount} printer(s)`, { id: 'multi-prompt' });
+              } else {
+                toast.error(`Applied to ${okCount}, failed on ${failCount}. Check printer cards.`, { id: 'multi-prompt' });
+              }
+              // Update local cache so the source printer's UI reflects the baked values.
+              onSaveStoredMessage?.(updatedDetails);
+              onPromptSaved?.(updatedDetails);
+            } catch (e) {
+              console.error('[MessagesScreen] Multi-target prompt apply failed:', e);
+              toast.error('Failed to apply message across printers', { id: 'multi-prompt' });
+            }
+            setUserDefineEntryOpen(false);
+            setPendingMessageDetails(null);
+            setPendingApplyTargets(null);
+            onHome();
+            return;
+          }
+
+          // ─── Legacy single-source path (unchanged) ───────────────────
           if (pendingMessageDetails && selectedMessage && onSaveMessageContent) {
-            // Bake prompted values into the prompt fields, then expand any
-            // {TOKEN} placeholders across ALL fields (e.g. a QR field referencing
-            // {WORK_ORDER} or {COUNTER1}). The printer only ever sees resolved data.
             const bakedFields = pendingMessageDetails.fields.map(f => {
               if (f.promptBeforePrint && entries[f.id] !== undefined) {
                 return { ...f, data: entries[f.id].trim() || f.data };
@@ -919,13 +1090,6 @@ export function MessagesScreen({
 
             try {
               toast.loading('Writing message to printer...', { id: 'prompt-save' });
-
-              // Single guarded write: ^NM + ^SV + ^SM (chained inside the
-              // polling-pause window). Running ^SM as a separate call after
-              // saveMessageContent races with resumed ^SU polling and locks
-              // the firmware — that's the "printer lockup on prompted message
-              // select" bug. selectAfterSave keeps polling paused across the
-              // whole sequence.
               const saved = await onSaveMessageContent(
                 selectedMessage.name,
                 updatedDetails.fields,
@@ -937,7 +1101,7 @@ export function MessagesScreen({
                   printMode: updatedDetails.settings.printMode,
                 } : undefined,
                 updatedDetails.advancedSettings?.counters,
-                true, // selectAfterSave — chain ^SM inside the pause window
+                true,
               );
 
               if (!saved) {
@@ -945,7 +1109,6 @@ export function MessagesScreen({
                 return;
               }
 
-              // Persist locally so preview and storage stay in sync
               onSaveStoredMessage?.(updatedDetails);
               onPromptSaved?.(updatedDetails);
               toast.success('Message loaded with entered values', { id: 'prompt-save' });
@@ -954,7 +1117,6 @@ export function MessagesScreen({
               toast.error('Failed to write message to printer', { id: 'prompt-save' });
             }
           } else if (onSendCommand) {
-            // Legacy: send ^MD^TD for native userdefine fields (per v2.6 §5.28.2)
             const tdEntries = Object.entries(entries).filter(([, value]) => value.trim());
             if (tdEntries.length > 0) {
               const tdSubcommands = tdEntries.map(([, value], idx) => `^TD${idx + 1};${value.trim()}`).join('');
@@ -970,6 +1132,27 @@ export function MessagesScreen({
           onHome();
         }}
       />
+
+      {/* Apply-to-Printers Dialog — opened when the operator hits Select and
+          sibling printers are available. On confirm, fans the selection out
+          to the chosen targets. */}
+      {sourcePrinter && siblingPrinters && pendingApplyMessage && (
+        <ApplyToPrintersDialog
+          open={applyDialogOpen}
+          onOpenChange={(open) => {
+            setApplyDialogOpen(open);
+            if (!open && !userDefineEntryOpen) {
+              setPendingApplyMessage(null);
+            }
+          }}
+          messageName={pendingApplyMessage.name}
+          sourcePrinter={sourcePrinter}
+          siblingPrinters={siblingPrinters}
+          onConfirm={(targets) => {
+            void runSelectionAcrossTargets(targets);
+          }}
+        />
+      )}
 
       {/* Swap Slot Selection Dialog */}
       <Dialog open={swapSlotDialogOpen} onOpenChange={setSwapSlotDialogOpen}>

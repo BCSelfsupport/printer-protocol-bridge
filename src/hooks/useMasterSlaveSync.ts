@@ -588,14 +588,18 @@ export function useMasterSlaveSync({
       return;
     }
 
-    // If the master message name has not actually changed, do nothing even
-    // while a sync is in flight. Re-running here was clearing the ACK/FAIL pip
-    // immediately after each slave reported, making the indicator flash and
-    // then disappear.
     if (currentMessage === prevMessageRef.current) return;
 
+    // Legacy behaviour: only auto-fan-out to slaves when the master has
+    // `autoSyncSelection` explicitly enabled. New default is OFF — operators
+    // pick targets per-selection via the ApplyToPrintersDialog instead.
+    if (!connectedPrinter?.autoSyncSelection) {
+      prevMessageRef.current = currentMessage;
+      return;
+    }
+
     runSelectionSync(currentMessage);
-  }, [isMaster, currentMessage, runSelectionSync]);
+  }, [isMaster, currentMessage, runSelectionSync, connectedPrinter?.autoSyncSelection]);
 
   // Message content is pushed by Index.syncMessageToSlaves after save using the
   // full ^DM → ^NM → ^SV sequence. Do not also send a bare ^NM here: that can
