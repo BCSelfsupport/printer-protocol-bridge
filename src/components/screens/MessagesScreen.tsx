@@ -145,6 +145,7 @@ export function MessagesScreen({
   siblingPrinters,
   onSelectOnPrinter,
   onApplyPromptValuesOnPrinter,
+  onCopyMessageToPrinters,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
