@@ -1420,9 +1420,16 @@ const Index = () => {
         { id: 'copy-msg' },
       );
     } else {
+      const failed = results.filter(r => !r.ok);
+      failed.forEach(f => {
+        console.error(`[CopyMessage] FAILED on ${f.target.name} (${f.target.ipAddress ?? f.target.id}) — reason: ${f.reason ?? 'unknown'}`);
+      });
+      const failedList = failed
+        .map(f => `${f.target.name} (${f.reason ?? 'unknown'})`)
+        .join(', ');
       toast.error(
-        `Copied to ${okCount}, failed on ${failCount}. Check the printer cards.`,
-        { id: 'copy-msg' },
+        `Copied to ${okCount}. Failed: ${failedList}`,
+        { id: 'copy-msg', duration: 8000 },
       );
     }
   }, [
