@@ -3354,22 +3354,26 @@ export function usePrinterConnection() {
       return stripped || null;
     };
 
-    // Fallback: some firmwares don't respond to ^QP. Query each parameter
-    // individually via ^PW/^PH/^DA/^SB/^GP/^PA/^SP/^RT (sent with no arg =
-    // read). Returns whatever the printer answers; caller merges with any
-    // ^QP results.
+    // Per BestCode Remote Protocol v2.6 §5.34–5.42 & §5.20 (^GM):
+    //   ^PW / ^PH / ^DA / ^PA — bare command reads current value; reply is
+    //     "PW:15" or "Pad Width = 15" or "PadWidth: 15" (etc.).
+    //   ^GP ? / ^SB ? — read form requires the "?"; bare "^GP" / "^SB" would
+    //     SET the value to 0 (protocol treats missing arg as 0). NEVER read
+    //     these two with a bare command.
+    //   ^GM — Get Message Parameters, returns
+    //     "T:<template> S:<speed> O:<orient> P:<mode>" — canonical source
+    //     for speed & orientation. ^SP / ^RT are not protocol commands.
     const extractNumber = (resp: string, key: string, aliases: string[] = []): number | null => {
       const cleaned = resp.replace(/^success$/gim, '').trim();
-      const withKey = cleaned.match(new RegExp(`\\^?${key}[:\\s]*(-?\\d+)`, 'i'));
+      const withKey = cleaned.match(new RegExp(`\\^?${key}[:\\s=]*(-?\\d+)`, 'i'));
       if (withKey) return parseInt(withKey[1], 10);
       for (const alias of aliases) {
-        const m = cleaned.match(new RegExp(`${alias}[:\\s]*(-?\\d+)`, 'i'));
+        const m = cleaned.match(new RegExp(`${alias}[:\\s=]*(-?\\d+)`, 'i'));
         if (m) return parseInt(m[1], 10);
       }
       const lines = cleaned.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
       for (const line of lines) if (/^-?\d+$/.test(line)) return parseInt(line, 10);
-      const anyNum = cleaned.match(/-?\d+/);
-      return anyNum ? parseInt(anyNum[0], 10) : null;
+      return null;
     };
     const queryIndividual = async (): Promise<Partial<PrintSettings> | null> => {
       const speedReverseMap: Record<number, PrintSettings['speed']> = {
@@ -3386,22 +3390,30 @@ export function usePrinterConnection() {
           return n;
         } catch { return null; }
       };
+      // NOTE: ^GP and ^SB use "?" form — a bare command would zero the value.
       const pairs: [string, string, string[], keyof PrintSettings][] = [
-        ['^PW', 'PW', ['Width', 'Print Width', 'Pad Width'], 'width'],
-        ['^PH', 'PH', ['Height', 'Print Height', 'Pad Height'], 'height'],
-        ['^DA', 'DA', ['Delay'], 'delay'],
-        ['^SB', 'SB', ['Bold'], 'bold'],
-        ['^GP', 'GP', ['Gap'], 'gap'],
-        ['^PA', 'PA', ['Pitch'], 'pitch'],
+        ['^PW',   'PW', ['PadWidth', 'Pad Width', 'Print Width', 'Width'],      'width'],
+        ['^PH',   'PH', ['PadHeight', 'Pad Height', 'Print Height', 'Height'],  'height'],
+        ['^DA',   'DA', ['FwdDelay', 'Fwd Delay', 'Forward Delay', 'Delay'],    'delay'],
+        ['^PA',   'PA', ['Pitch Adjust', 'Pitch'],                              'pitch'],
+        ['^SB ?', 'SB', ['Bold'],                                               'bold'],
+        ['^GP ?', 'GP', ['Gap'],                                                'gap'],
       ];
       for (const [cmd, key, aliases, field] of pairs) {
         const v = await readNum(cmd, key, aliases);
         if (v !== null) (out as Record<string, unknown>)[field] = v;
       }
-      const speedNum = await readNum('^SP', 'SP', ['Speed']);
-      if (speedNum !== null) out.speed = speedReverseMap[speedNum] ?? 'Fast';
-      const rotNum = await readNum('^RT', 'RT', ['Rotation', 'Orient', 'Orientation']);
-      if (rotNum !== null) out.rotation = PROTOCOL_CODE_TO_ROTATION[rotNum] ?? 'Normal';
+      // Speed + orientation via ^GM: "T:<t> S:<s> O:<o> P:<p>"
+      try {
+        const gm = await send('^GM');
+        console.log('[queryPrintSettingsForPrinter.read]', { printer: printer.name, cmd: '^GM', response: gm?.response });
+        if (gm?.success && gm.response) {
+          const s = gm.response.match(/S[:\s=]*(-?\d+)/i);
+          const o = gm.response.match(/O[:\s=]*(-?\d+)/i);
+          if (s) out.speed = speedReverseMap[parseInt(s[1], 10)] ?? 'Fast';
+          if (o) out.rotation = PROTOCOL_CODE_TO_ROTATION[parseInt(o[1], 10)] ?? 'Normal';
+        }
+      } catch { /* ignore */ }
       return Object.keys(out).length ? out : null;
     };
 
