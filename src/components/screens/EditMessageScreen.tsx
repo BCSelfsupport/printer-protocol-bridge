@@ -269,23 +269,35 @@ export function EditMessageScreen({
       onGetMessageDetails(messageName)
         .then((details) => {
           if (details) {
-            setMessage(details);
+            // Refresh any dynamicSource:'lineId' fields with the current
+            // printer setup-card Line ID so the editor always shows the
+            // live value (not whatever was baked in at save time).
+            const liveLineId = connectedPrinterLineId?.trim();
+            const resolvedDetails = liveLineId
+              ? {
+                  ...details,
+                  fields: details.fields.map(f =>
+                    f.dynamicSource === 'lineId' ? { ...f, data: liveLineId } : f
+                  ),
+                }
+              : details;
+            setMessage(resolvedDetails);
             // Restore adjust settings from stored message if available
-            if (details.adjustSettings) {
+            if (resolvedDetails.adjustSettings) {
               setLocalAdjustSettings(prev => ({
                 ...prev,
-                width: details.adjustSettings?.width ?? prev.width,
-                height: details.adjustSettings?.height ?? prev.height,
-                delay: details.adjustSettings?.delay ?? prev.delay,
-                bold: details.adjustSettings?.bold ?? prev.bold,
-                gap: details.adjustSettings?.gap ?? prev.gap,
-                pitch: details.adjustSettings?.pitch ?? prev.pitch,
-                speed: details.adjustSettings?.speed ?? prev.speed,
-                rotation: details.adjustSettings?.rotation ?? prev.rotation,
+                width: resolvedDetails.adjustSettings?.width ?? prev.width,
+                height: resolvedDetails.adjustSettings?.height ?? prev.height,
+                delay: resolvedDetails.adjustSettings?.delay ?? prev.delay,
+                bold: resolvedDetails.adjustSettings?.bold ?? prev.bold,
+                gap: resolvedDetails.adjustSettings?.gap ?? prev.gap,
+                pitch: resolvedDetails.adjustSettings?.pitch ?? prev.pitch,
+                speed: resolvedDetails.adjustSettings?.speed ?? prev.speed,
+                rotation: resolvedDetails.adjustSettings?.rotation ?? prev.rotation,
               }));
             }
-            if (details.fields.length > 0) {
-              setSelectedFieldId(details.fields[0].id);
+            if (resolvedDetails.fields.length > 0) {
+              setSelectedFieldId(resolvedDetails.fields[0].id);
             }
             // Detect user define fields and prompt for entry
             const udFields = details.fields.filter(f => f.type === 'userdefine');
