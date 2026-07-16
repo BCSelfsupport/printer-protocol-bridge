@@ -472,6 +472,10 @@ export function useMasterSlaveSync({
       }
       setPollingPaused(true);
       const details = getMessageContent?.(messageName) ?? null;
+      const hasPrompt = messageHasPrompt(details);
+      if (hasPrompt) {
+        console.log(`[MasterSlaveSync] "${messageName}" is prompt-before-print — extending ^SM ACK window to ${SM_PROMPT_ACK_MAX_WAIT_MS}ms and read-back retry`);
+      }
       for (const slave of onlineSlaves) {
         // If the user picked a newer message while we were mid-fleet, abandon
         // the remaining slaves for the stale target so we can start the new
