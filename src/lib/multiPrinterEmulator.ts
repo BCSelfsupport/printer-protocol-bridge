@@ -405,6 +405,23 @@ class PrinterEmulatorInstance {
     let success = true;
 
     try {
+      // Failure-injection hook: simulate a printer that rejects any write
+      // (message create/save/delete). Read/status commands still work so the
+      // sync loop can observe that the slave is reachable but not accepting
+      // the push. This mirrors a real failure mode (busy/locked/faulted
+      // firmware) more closely than a full disconnect would.
+      if (this.simulateWriteFailure) {
+        const isWrite = trimmedCommand.startsWith('^NM')
+          || trimmedCommand === '^SV'
+          || trimmedCommand.startsWith('^DM');
+        if (isWrite) {
+          response = this.formatError(99, 'SimulatedFail', 'Simulated write failure (dev)');
+          success = false;
+          this.addLog(command.trim(), response, 'received');
+          return { success, response };
+        }
+      }
+
       if (trimmedCommand.startsWith('^VV')) {
         response = this.cmdViewVersion();
       } else if (trimmedCommand.startsWith('^EN')) {
