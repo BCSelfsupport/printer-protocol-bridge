@@ -187,6 +187,32 @@ if (import.meta.env.DEV) {
       console.log('[main.tsx] Emulator auto-enabled via cs_emu=1');
     }
   });
+
+  // Dev helper: wipe emulator message lists on every slave printer back to
+  // just the factory presets (BESTCODE, BESTCODE-AUTO). Run from the browser
+  // console: `clearSlaveEmulatorMessages()` — then reload.
+  (window as any).clearSlaveEmulatorMessages = () => {
+    try {
+      const raw = localStorage.getItem('codesync-printers');
+      if (!raw) { console.warn('[clearSlaves] no printers in localStorage'); return; }
+      const printers = JSON.parse(raw) as Array<{ name: string; ipAddress: string; role?: string }>;
+      const slaves = printers.filter(p => p.role === 'slave');
+      const presets = ['BESTCODE', 'BESTCODE-AUTO'];
+      const cleared: Array<{ name: string; ip: string; before: string[] | null }> = [];
+      for (const s of slaves) {
+        const key = `emulator-messages-${s.ipAddress}`;
+        const before = localStorage.getItem(key);
+        localStorage.setItem(key, JSON.stringify(presets));
+        cleared.push({ name: s.name, ip: s.ipAddress, before: before ? JSON.parse(before) : null });
+      }
+      console.log(`[clearSlaves] Reset ${cleared.length} slave(s) to presets:`, cleared);
+      console.log('[clearSlaves] Reloading to re-hydrate emulator instances…');
+      setTimeout(() => location.reload(), 300);
+      return cleared;
+    } catch (e) {
+      console.error('[clearSlaves] failed:', e);
+    }
+  };
 }
 
 const bootstrap = async () => {
