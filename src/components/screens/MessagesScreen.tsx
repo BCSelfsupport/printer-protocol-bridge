@@ -152,6 +152,10 @@ export function MessagesScreen({
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
   const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
   const [pendingMessageDetails, setPendingMessageDetails] = useState<MessageDetails | null>(null);
+  // Multi-target apply state
+  const [applyDialogOpen, setApplyDialogOpen] = useState(false);
+  const [pendingApplyMessage, setPendingApplyMessage] = useState<PrintMessage | null>(null);
+  const [pendingApplyTargets, setPendingApplyTargets] = useState<Printer[] | null>(null);
   // Mobile-scan workflow state
   const [scanWaitingOpen, setScanWaitingOpen] = useState(false);
   const [pendingScanRequestId, setPendingScanRequestId] = useState<string | null>(null);
