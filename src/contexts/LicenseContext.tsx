@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { toast } from 'sonner';
+import { isDevAccessRuntime } from '@/lib/devAccess';
 
 export type LicenseTier = 'lite' | 'full' | 'database' | 'demo' | 'dev' | 'twincode';
 
@@ -341,8 +342,8 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [isOwnerDeveloper, setIsOwnerDeveloper] = useState(false);
   useEffect(() => {
-    // Local dev (vite) always counts as developer.
-    if (import.meta.env.DEV) {
+    // Local/dev preview and Electron builds can open the CITEC-gated dev portal.
+    if (isDevAccessRuntime()) {
       setIsDeveloper(true);
       setIsOwnerDeveloper(true);
       return;
