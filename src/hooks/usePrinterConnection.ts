@@ -3194,26 +3194,28 @@ export function usePrinterConnection() {
     const speedReverseMap: Record<number, PrintSettings['speed']> = {
       0: 'Fast', 1: 'Faster', 2: 'Fastest', 3: 'Ultra Fast',
     };
-    // Firmware replies to a bare `^PW` (no argument) with a value line that
-    // may take several shapes across models/firmwares:
-    //   "PW 15", "PW:15", "^PW 15"     — 2-letter code form
-    //   "Width: 15", "Print Width: 15" — word form (this is what the emulator
-    //                                     and observed BestCode firmware use)
-    //   "15"                            — bare number
-    // Extractor tries each in order and finally falls back to the first
-    // number found anywhere in the response.
+    // Per BestCode Remote Protocol v2.6:
+    //   ^PW           → "PW:15" / "Pad Width = 15" / "PadWidth: 15"
+    //   ^PH           → "PH:8"  / "Pad Height = 8" / "PadHeight: 8"
+    //   ^DA           → "FwdDelay: 3000"
+    //   ^PA           → "PA:1000" / "Pitch Adjust = 1000"  (read is best-effort; doc
+    //                                                        primarily documents set)
+    //   ^GP ?         → gap (BARE "^GP" is a SET-to-0 — never send it as a read!)
+    //   ^SB ?         → bold (BARE "^SB" would set bold to 0 — same trap)
+    //   ^GM           → "T:<template> S:<speed> O:<orient> P:<mode>" — canonical
+    //                    source for speed and orientation. ^SP / ^RT are NOT
+    //                    protocol commands.
     const extractNumber = (resp: string, key: string, aliases: string[] = []): number | null => {
       const cleaned = resp.replace(/^success$/gim, '').trim();
-      const withKey = cleaned.match(new RegExp(`\\^?${key}[:\\s]*(-?\\d+)`, 'i'));
+      const withKey = cleaned.match(new RegExp(`\\^?${key}[:\\s=]*(-?\\d+)`, 'i'));
       if (withKey) return parseInt(withKey[1], 10);
       for (const alias of aliases) {
-        const m = cleaned.match(new RegExp(`${alias}[:\\s]*(-?\\d+)`, 'i'));
+        const m = cleaned.match(new RegExp(`${alias}[:\\s=]*(-?\\d+)`, 'i'));
         if (m) return parseInt(m[1], 10);
       }
       const lines = cleaned.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
       for (const line of lines) if (/^-?\d+$/.test(line)) return parseInt(line, 10);
-      const anyNum = cleaned.match(/-?\d+/);
-      return anyNum ? parseInt(anyNum[0], 10) : null;
+      return null;
     };
     const readNum = async (cmd: string, key: string, aliases: string[] = []): Promise<number | null> => {
       try {
@@ -3226,14 +3228,27 @@ export function usePrinterConnection() {
     };
 
     try {
-      const width = await readNum('^PW', 'PW', ['Width', 'Print Width', 'Pad Width']);
-      const height = await readNum('^PH', 'PH', ['Height', 'Print Height', 'Pad Height']);
-      const delay = await readNum('^DA', 'DA', ['Delay']);
-      const bold = await readNum('^SB', 'SB', ['Bold']);
-      const gap = await readNum('^GP', 'GP', ['Gap']);
-      const pitch = await readNum('^PA', 'PA', ['Pitch']);
-      const speedNum = await readNum('^SP', 'SP', ['Speed']);
-      const rotNum = await readNum('^RT', 'RT', ['Rotation', 'Orient', 'Orientation']);
+      const width = await readNum('^PW', 'PW', ['PadWidth', 'Pad Width', 'Print Width', 'Width']);
+      const height = await readNum('^PH', 'PH', ['PadHeight', 'Pad Height', 'Print Height', 'Height']);
+      const delay = await readNum('^DA', 'DA', ['FwdDelay', 'Fwd Delay', 'Forward Delay', 'Delay']);
+      const pitch = await readNum('^PA', 'PA', ['Pitch Adjust', 'Pitch']);
+      const bold = await readNum('^SB ?', 'SB', ['Bold']);
+      const gap = await readNum('^GP ?', 'GP', ['Gap']);
+
+      // Speed + orientation come from ^GM (Get Message Parameters).
+      // Output: "T:<template> S:<speed> O:<orient> P:<mode>"
+      let speedNum: number | null = null;
+      let rotNum: number | null = null;
+      try {
+        const gm = await printerTransport.sendCommand(printer.id, '^GM');
+        console.log('[queryPrintSettings.read]', { cmd: '^GM', response: gm?.response });
+        if (gm?.success && gm.response) {
+          const s = gm.response.match(/S[:\s=]*(-?\d+)/i);
+          const o = gm.response.match(/O[:\s=]*(-?\d+)/i);
+          if (s) speedNum = parseInt(s[1], 10);
+          if (o) rotNum = parseInt(o[1], 10);
+        }
+      } catch { /* ignore */ }
 
       const parsed: Partial<PrintSettings> = {
         ...(width !== null && { width }),
