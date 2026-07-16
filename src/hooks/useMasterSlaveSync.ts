@@ -6,7 +6,7 @@ import type { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { printerTransport, isRelayMode, type TransportCommandOptions } from '@/lib/printerTransport';
 import { isPresetMessage } from '@/lib/hardcodedMessages';
 import { setPollingPaused } from '@/lib/pollingPause';
-import { waitForSaveIdle } from '@/lib/saveBusy';
+import { beginSaveBusy, waitForSaveIdle } from '@/lib/saveBusy';
 import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
 
 
@@ -54,6 +54,11 @@ const getCommandOptions = (command: string): TransportCommandOptions | undefined
     return { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS };
   }
   return undefined;
+};
+
+const isSaveCommand = (command: string) => {
+  const trimmed = command.trim().toUpperCase();
+  return trimmed.startsWith('^NM ') || trimmed.startsWith('^NF ') || trimmed === '^SV';
 };
 
 const summarizeCommand = (command: string) => {
@@ -219,6 +224,9 @@ export function useMasterSlaveSync({
 
     const needsSession = printer.id !== connectedPrinterId && (isRelayMode() || isElectron);
     return runFleetWriteExclusive(() => runPrinterWriteExclusive(printer.id, async () => {
+      const releaseSaveBusy = sequence.some(({ command }) => isSaveCommand(command))
+        ? beginSaveBusy()
+        : () => {};
       try {
         if (needsSession) {
           const connectStarted = Date.now();
@@ -253,6 +261,7 @@ export function useMasterSlaveSync({
         console.error(`${logPrefix}: ERROR`, error);
         return { success: false, failedIndex: 0, failedCommand: sequence[0]?.command, error: error?.message || 'Sequence failed' };
       } finally {
+        releaseSaveBusy();
         if (needsSession) {
           try {
             await delay(500);
