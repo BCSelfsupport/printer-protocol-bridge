@@ -51,7 +51,7 @@ const createDefaultState = (overrides?: Partial<EmulatorState>): EmulatorState =
   powerHours: 165.0,
   streamHours: 120.5,
   
-  messages: ['BESTCODE', 'BESTCODE-AUTO', 'TEST', 'SAMPLE', 'BC-GEN2'],
+  messages: ['BC-GEN2', 'BESTCODE', 'BESTCODE-AUTO', 'SAMPLE', 'TEST'].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
   logos: ['ENCODER.BMP', 'highVolt.bmp', 'phaseWave.bmp', 'running_2.bmp', 'USBdrive.bmp'],
   
   errorsOn: false,
@@ -299,6 +299,10 @@ class PrinterEmulatorInstance {
     return `emulator-messages-${this.config.ipAddress}`;
   }
 
+  private sortMessages(msgs: string[]): string[] {
+    return [...msgs].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  }
+
   private loadPersistedMessages() {
     try {
       const saved = localStorage.getItem(this.storageKey);
@@ -317,7 +321,7 @@ class PrinterEmulatorInstance {
               seen.add(def.toUpperCase());
             }
           }
-          this.state.messages = merged;
+          this.state.messages = this.sortMessages(merged);
           // Re-persist so subsequent loads are consistent.
           if (merged.length !== msgs.length) {
             this.persistMessages();
@@ -617,7 +621,7 @@ class PrinterEmulatorInstance {
   }
 
   private cmdListMessages(): string {
-    const msgs = this.state.messages;
+    const msgs = this.sortMessages(this.state.messages);
     if (this.state.echoOn) {
       return `Messages (${msgs.length}):\r\n${msgs.map((m, i) => `${i + 1}. ${m}${m === this.state.currentMessage ? ' (current)' : ''}`).join('\r\n')}`;
     }
@@ -800,6 +804,7 @@ class PrinterEmulatorInstance {
 
     if (!this.state.messages.includes(msgName)) {
       this.state.messages.push(msgName);
+      this.state.messages = this.sortMessages(this.state.messages);
     }
     this.persistMessages();
     return this.state.echoOn ? `Command Successful!\r\nMessage created: ${msgName}` : 'OK';
