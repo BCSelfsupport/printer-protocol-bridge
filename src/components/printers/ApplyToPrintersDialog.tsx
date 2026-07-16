@@ -214,12 +214,12 @@ export function ApplyToPrintersDialog({
             <Button
               type="button"
               size="sm"
-              variant="outline"
               onClick={selectAll}
-              disabled={siblingPrinters.length === 0}
-              className="h-7 text-xs border-slate-600"
+              disabled={siblingPrinters.length === 0 || checked.size === siblingPrinters.length}
+              className="h-8 text-xs bg-primary hover:bg-primary/90 font-bold"
             >
-              Select all
+              <Check className="w-3.5 h-3.5 mr-1" />
+              Select All Printers
             </Button>
             <Button
               type="button"
@@ -227,7 +227,7 @@ export function ApplyToPrintersDialog({
               variant="outline"
               onClick={clearAll}
               disabled={checked.size === 0}
-              className="h-7 text-xs border-slate-600"
+              className="h-8 text-xs border-slate-600"
             >
               Clear
             </Button>
