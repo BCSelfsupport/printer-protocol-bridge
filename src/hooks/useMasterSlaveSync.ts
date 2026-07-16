@@ -61,6 +61,17 @@ const isSaveCommand = (command: string) => {
   return trimmed.startsWith('^NM ') || trimmed.startsWith('^NF ') || trimmed === '^SV';
 };
 
+const isProtocolFailureResponse = (rawResponse?: string) => {
+  if (!rawResponse) return false;
+  const upper = rawResponse.toUpperCase();
+  return /\?\s*\d+\s*:/.test(upper)
+    || /COMMAND\s+FAILED/.test(upper)
+    || /\bERROR\b/.test(upper)
+    || /\bERR\s*\[\s*[1-9]\d*\s*\]/.test(upper)
+    || /\bFAILED\b/.test(upper)
+    || /\bCANNOT\b/.test(upper);
+};
+
 const summarizeCommand = (command: string) => {
   const trimmed = command.trim();
   const upper = trimmed.toUpperCase();
@@ -212,8 +223,9 @@ export function useMasterSlaveSync({
       for (let index = 0; index < sequence.length; index += 1) {
         const { command, delayAfterMs = 300 } = sequence[index];
         const result = instance.processCommand(command);
-        console.log(`${logPrefix}: #${index + 1}/${sequence.length} ${summarizeCommand(command)} → ${result.success ? 'OK' : 'FAIL'}`);
-        if (!result.success) {
+        const ok = result.success && !isProtocolFailureResponse(result.response);
+        console.log(`${logPrefix}: #${index + 1}/${sequence.length} ${summarizeCommand(command)} → ${ok ? 'OK' : 'FAIL'}${result.response ? ` (${result.response.replace(/[\r\n]+/g, ' ').slice(0, 160)})` : ''}`);
+        if (!ok) {
           return { success: false, failedIndex: index, failedCommand: command, error: result.response };
         }
         if (delayAfterMs > 0) await delay(delayAfterMs);
@@ -255,7 +267,7 @@ export function useMasterSlaveSync({
           const commandStarted = Date.now();
           const result = await runCommand(command);
           const response = result?.response ?? result?.error ?? '';
-          const ok = !!result?.success;
+          const ok = !!result?.success && !isProtocolFailureResponse(response);
           console.log(`${logPrefix}: #${index + 1}/${sequence.length} ${summarizeCommand(command)} → ${ok ? 'OK' : 'FAIL'} ${Date.now() - commandStarted}ms${response ? ` (${response.replace(/[\r\n]+/g, ' ').slice(0, 160)})` : ''}`);
           if (!ok) {
             return { success: false, failedIndex: index, failedCommand: command, error: response || 'Command failed' };

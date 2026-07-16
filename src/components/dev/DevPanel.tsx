@@ -50,6 +50,7 @@ import { FeedbackPanel } from '@/components/dev/FeedbackPanel';
 import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
 import { ParameterSnapshot } from '@/components/dev/ParameterSnapshot';
 import { DevInvitePanel } from '@/components/dev/DevInvitePanel';
+import { SlaveSelectionAckTest } from '@/components/dev/SlaveSelectionAckTest';
 import { TwinPairBindDialog } from '@/twin-code/components/TwinPairBindDialog';
 import { useTwinPair } from '@/twin-code/twinPairStore';
 import { useLicense, type LicenseTier } from '@/contexts/LicenseContext';
@@ -497,6 +498,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                 <TabsTrigger value="commands" className="text-xs gap-1 flex-shrink-0"><Terminal className="w-3.5 h-3.5" />Log</TabsTrigger>
                 <TabsTrigger value="manual" className="text-xs gap-1 flex-shrink-0"><Send className="w-3.5 h-3.5" />Manual</TabsTrigger>
                 <TabsTrigger value="network" className="text-xs gap-1 flex-shrink-0"><Network className="w-3.5 h-3.5" />Network</TabsTrigger>
+                <TabsTrigger value="sync-test" className="text-xs gap-1 flex-shrink-0"><Radio className="w-3.5 h-3.5" />Sync Test</TabsTrigger>
                 <TabsTrigger value="fleet" className="text-xs gap-1 flex-shrink-0">
                   <Globe className="w-3.5 h-3.5" />
                   Fleet
@@ -1041,6 +1043,11 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   />
                 </div>
               </ScrollArea>
+            </TabsContent>
+
+            {/* Master/slave ACK Test Tab */}
+            <TabsContent value="sync-test" className="flex-1 overflow-hidden m-0">
+              <SlaveSelectionAckTest />
             </TabsContent>
 
             {/* Fleet Monitoring Tab */}
