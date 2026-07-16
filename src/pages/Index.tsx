@@ -994,14 +994,24 @@ const Index = () => {
       const slaveAdjust = { ...(details.adjustSettings ?? {}), rotation: slaveRotation };
       // Per-printer expiry offset override: apply slave.expiryOffsetDays to
       // any expiry date field so each line uses its own offset.
+      // Per-slave Line ID substitution: dynamicSource === 'lineId' fields must
+      // be rewritten with each slave's configured lineId so the printer HMI
+      // shows the correct line number instead of the master's.
       const slaveOffset = slave.expiryOffsetDays;
-      const slaveFields = slaveOffset === undefined
-        ? details.fields
-        : details.fields.map((f) => {
-            const isExpiry = f.autoCodeFieldType?.startsWith('date_expiry')
-              || (f.autoCodeExpiryDays ?? 0) > 0;
-            return isExpiry ? { ...f, autoCodeExpiryDays: slaveOffset } : f;
-          });
+      const slaveLineId = slave.lineId?.trim();
+      const slaveFields = details.fields.map((f) => {
+        let next = f;
+        if (slaveOffset !== undefined) {
+          const isExpiry = f.autoCodeFieldType?.startsWith('date_expiry')
+            || (f.autoCodeExpiryDays ?? 0) > 0;
+          if (isExpiry) next = { ...next, autoCodeExpiryDays: slaveOffset };
+        }
+        if ((f as any).dynamicSource === 'lineId' && slaveLineId) {
+          next = { ...next, data: slaveLineId };
+        }
+        return next;
+      });
+
       const result = await replaceMessageWithoutDelete(slave, messageName, {
         fields: slaveFields,
         templateValue: details.templateValue,
