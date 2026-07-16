@@ -765,6 +765,9 @@ const Index = () => {
       && (window.electronAPI || isRelayMode());
 
     return runFleetWriteExclusive(() => runPrinterWriteExclusive(targetPrinter.id, async () => {
+      const releaseSaveBusy = commandsToRun.some(({ command }) => isSaveSequenceCommand(command))
+        ? beginSaveBusy()
+        : () => {};
     try {
       if (needsSharedSession) {
         const saveIdle = await waitForSaveIdle(20000);
@@ -810,6 +813,7 @@ const Index = () => {
       console.error('[PrinterWrite] Sequence failed:', error);
       return { success: false, failedIndex: 0 };
     } finally {
+      releaseSaveBusy();
       if (needsSharedSession) {
         try {
           await printerTransport.disconnect(targetPrinter.id);
