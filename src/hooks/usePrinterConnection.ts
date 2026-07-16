@@ -3306,7 +3306,14 @@ export function usePrinterConnection() {
   // Reuses the persistent transport when the target is the currently-connected
   // printer; otherwise opens a guarded connect → ^QP → disconnect session so
   // multiple simultaneous fleet queries don't stomp on port 23.
-  const queryPrintSettingsForPrinter = useCallback(async (printer: Printer): Promise<Partial<PrintSettings> | null> => {
+  //
+  // Also returns the printer's currently selected message name (from ^SM) so
+  // callers can look up the stored copy even when `printer.currentMessage`
+  // isn't populated on the Printer record yet (common for printers that were
+  // fleet-pushed but never explicitly connected/polled).
+  const queryPrintSettingsForPrinter = useCallback(async (
+    printer: Printer,
+  ): Promise<{ settings: Partial<PrintSettings>; currentMessage: string | null } | null> => {
     if (shouldUseEmulator()) return null;
     if (!isElectron && !isRelayMode()) return null;
 
@@ -3339,12 +3346,30 @@ export function usePrinterConnection() {
       return Object.keys(parsed).length ? parsed : null;
     };
 
+    const parseSmResponse = (response: string): string | null => {
+      const cleaned = response
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(l => l && l !== '^SM' && !/^success$/i.test(l) && l !== '>');
+      const first = cleaned[0] ?? '';
+      const stripped = first.replace(/^\^SM\s*/i, '').trim();
+      return stripped || null;
+    };
+
     // Connected printer: reuse persistent transport.
     if (printer.id === connectionState.connectedPrinter?.id) {
       try {
-        const result = await printerTransport.sendCommand(printer.id, '^QP');
-        if (!result?.success || !result.response) return null;
-        return parseQpResponse(result.response);
+        const qp = await printerTransport.sendCommand(printer.id, '^QP');
+        const sm = await printerTransport.sendCommand(printer.id, '^SM');
+        console.log('[queryPrintSettingsForPrinter] connected raw', {
+          printer: printer.name,
+          qp: qp?.response,
+          sm: sm?.response,
+        });
+        const settings = qp?.success && qp.response ? parseQpResponse(qp.response) : null;
+        const currentMessage = sm?.success && sm.response ? parseSmResponse(sm.response) : null;
+        if (!settings) return null;
+        return { settings, currentMessage: currentMessage ?? printer.currentMessage ?? null };
       } catch (e) {
         console.error('[queryPrintSettingsForPrinter] connected query failed:', e);
         return null;
@@ -3359,9 +3384,17 @@ export function usePrinterConnection() {
           console.warn(`[queryPrintSettingsForPrinter] connect failed for ${printer.name}: ${connectResult?.error ?? 'unknown'}`);
           return null;
         }
-        const result = await printerTransport.sendCommand(printer.id, '^QP');
-        if (!result?.success || !result.response) return null;
-        return parseQpResponse(result.response);
+        const qp = await printerTransport.sendCommand(printer.id, '^QP');
+        const sm = await printerTransport.sendCommand(printer.id, '^SM');
+        console.log('[queryPrintSettingsForPrinter] fleet raw', {
+          printer: printer.name,
+          qp: qp?.response,
+          sm: sm?.response,
+        });
+        const settings = qp?.success && qp.response ? parseQpResponse(qp.response) : null;
+        const currentMessage = sm?.success && sm.response ? parseSmResponse(sm.response) : null;
+        if (!settings) return null;
+        return { settings, currentMessage: currentMessage ?? printer.currentMessage ?? null };
       } catch (e) {
         console.error(`[queryPrintSettingsForPrinter] failed for ${printer.name}:`, e);
         return null;
