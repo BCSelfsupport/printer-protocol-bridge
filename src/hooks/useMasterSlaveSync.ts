@@ -52,7 +52,13 @@ interface UseMasterSlaveSyncOptions {
     messageName: string,
     verifiedMessage?: string | null,
   ) => void;
-}
+  /**
+   * Called at the very start of a selection sync (before any per-slave outcome)
+   * with the list of slave IDs about to be synced. Used to clear stale pass/fail
+   * pips so the UI reflects only the in-flight attempt.
+   */
+  onSelectionSyncStart?: (slaveIds: number[], messageName: string) => void;
+
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
