@@ -160,6 +160,111 @@ const EMULATED_PRINTERS: EmulatedPrinterConfig[] = [
       jetRunning: false,
     },
   },
+  {
+    id: 7,
+    name: 'Printer 7',
+    ipAddress: '192.168.1.59',
+    port: 23,
+    initialState: {
+      currentMessage: 'BESTCODE',
+      printCount: 441,
+      productCount: 6720,
+      inkLevel: 'FULL',
+      makeupLevel: 'FULL',
+      hvOn: false,
+      jetRunning: false,
+    },
+  },
+  {
+    id: 8,
+    name: 'Printer 8',
+    ipAddress: '192.168.1.60',
+    port: 23,
+    initialState: {
+      currentMessage: 'TEST',
+      printCount: 1268,
+      productCount: 14320,
+      inkLevel: 'GOOD' as const,
+      makeupLevel: 'FULL',
+      hvOn: false,
+      jetRunning: false,
+    },
+  },
+  {
+    id: 9,
+    name: 'Printer 9',
+    ipAddress: '192.168.1.61',
+    port: 23,
+    initialState: {
+      currentMessage: 'SAMPLE',
+      printCount: 2340,
+      productCount: 20331,
+      inkLevel: 'FULL',
+      makeupLevel: 'GOOD' as const,
+      hvOn: false,
+      jetRunning: false,
+    },
+  },
+  {
+    id: 10,
+    name: 'Printer 10',
+    ipAddress: '192.168.1.62',
+    port: 23,
+    initialState: {
+      currentMessage: 'BC-GEN2',
+      printCount: 3705,
+      productCount: 38911,
+      inkLevel: 'FULL',
+      makeupLevel: 'FULL',
+      hvOn: false,
+      jetRunning: false,
+    },
+  },
+  {
+    id: 11,
+    name: 'Printer 11',
+    ipAddress: '192.168.1.63',
+    port: 23,
+    initialState: {
+      currentMessage: 'BESTCODE',
+      printCount: 813,
+      productCount: 9427,
+      inkLevel: 'GOOD' as const,
+      makeupLevel: 'GOOD' as const,
+      hvOn: false,
+      jetRunning: false,
+    },
+  },
+  {
+    id: 12,
+    name: 'Printer 12',
+    ipAddress: '192.168.1.64',
+    port: 23,
+    initialState: {
+      currentMessage: 'TEST',
+      printCount: 1789,
+      productCount: 21744,
+      inkLevel: 'FULL',
+      makeupLevel: 'FULL',
+      hvOn: false,
+      jetRunning: false,
+    },
+  },
+  {
+    id: 13,
+    name: 'Printer 13',
+    ipAddress: '192.168.1.65',
+    port: 23,
+    initialState: {
+      currentMessage: 'SAMPLE',
+      printCount: 992,
+      productCount: 12084,
+      inkLevel: 'FULL',
+      makeupLevel: 'GOOD' as const,
+      hvOn: false,
+      jetRunning: false,
+    },
+  },
 ];
 
 /**
@@ -279,6 +384,8 @@ class PrinterEmulatorInstance {
         response = this.cmdEchoOn();
       } else if (trimmedCommand.startsWith('^EF')) {
         response = this.cmdEchoOff();
+      } else if (trimmedCommand === '^SV') {
+        response = this.cmdSave();
       } else if (trimmedCommand.startsWith('^SU')) {
         response = this.cmdStatusUpdate();
       } else if (trimmedCommand.startsWith('^SJ')) {
@@ -334,6 +441,10 @@ class PrinterEmulatorInstance {
       success = false;
     }
 
+    if (/\bERR\s*\[\s*[1-9]\d*\s*\]/i.test(response) || /\bERROR\b|\bFAILED\b|\bCANNOT\b/i.test(response)) {
+      success = false;
+    }
+
     this.addLog(command.trim(), response, 'received');
     this.notifyListeners();
 
@@ -379,6 +490,11 @@ class PrinterEmulatorInstance {
   private cmdEchoOff(): string {
     this.state.echoOn = false;
     return '>';
+  }
+
+  private cmdSave(): string {
+    this.persistMessages();
+    return this.state.echoOn ? 'Command Successful!' : 'OK';
   }
 
   private cmdStatusUpdate(): string {
