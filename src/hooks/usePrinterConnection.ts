@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
+import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
 import { setPollingPaused } from '@/lib/pollingPause';
 import { beginSaveBusy } from '@/lib/saveBusy';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
@@ -3732,6 +3733,7 @@ export function usePrinterConnection() {
     saveMessageSettings,
     queryPrintSettings,
     queryPrintSettingsForConnectedPrinter,
+    queryPrintSettingsForPrinter,
     sendCommand,
     queryPrinterMetrics,
     refreshPolling,
