@@ -99,14 +99,23 @@ export function ApplyToPrintersDialog({
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const isCopy = mode === 'copy';
 
+  // Stable key from sibling IDs so this effect doesn't re-run every render
+  // (parent passes a fresh array reference on each render → would wipe checks).
+  const siblingIdsKey = useMemo(
+    () => siblingPrinters.map(p => p.id).sort((a, b) => a - b).join(','),
+    [siblingPrinters],
+  );
+
   // Prime from last-selection on open, filtered to still-available siblings.
   useEffect(() => {
     if (!open) return;
     const last = loadLastSelection(sourcePrinter.id);
-    const eligible = new Set(siblingPrinters.map(p => p.id));
+    const eligibleIds = siblingIdsKey ? siblingIdsKey.split(',').map(Number) : [];
+    const eligible = new Set(eligibleIds);
     const filtered = new Set([...last].filter(id => eligible.has(id)));
     setChecked(filtered);
-  }, [open, sourcePrinter.id, siblingPrinters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, sourcePrinter.id, siblingIdsKey]);
 
   const groups = useMemo(() => groupPrinters(siblingPrinters), [siblingPrinters]);
   const totalTargets = isCopy ? checked.size : 1 + checked.size;
