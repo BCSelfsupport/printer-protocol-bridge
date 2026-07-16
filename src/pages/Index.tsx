@@ -59,7 +59,7 @@ import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/U
 import { isRelayMode, printerTransport } from '@/lib/printerTransport';
 import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
 import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
-import { waitForSaveIdle } from '@/lib/saveBusy';
+import { beginSaveBusy, waitForSaveIdle } from '@/lib/saveBusy';
 import { isPresetMessage } from '@/lib/hardcodedMessages';
 
 
@@ -101,6 +101,11 @@ const hasCompleteSaveAck = (rawResponse?: string): boolean => {
     .trim();
   const upper = cleaned.toUpperCase();
   return upper.includes('COMMAND SUCCESSFUL') || upper === 'OK' || upper === 'SUCCESS';
+};
+
+const isSaveSequenceCommand = (command: string) => {
+  const trimmed = command.trim().toUpperCase();
+  return trimmed.startsWith('^NM ') || trimmed.startsWith('^NF ') || trimmed === '^SV';
 };
 
 const getSaveCommandDelay = (command: string, fieldCount: number) => {
