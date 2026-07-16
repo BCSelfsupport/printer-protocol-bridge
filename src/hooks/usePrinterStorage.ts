@@ -155,6 +155,18 @@ export function usePrinterStorage() {
         const updatedPrinters = prev.map(p => {
           const instance = multiPrinterEmulator.getInstanceByIp(p.ipAddress, p.port);
           if (instance) {
+            // Simulated offline: leave last-known fields UNTOUCHED so the
+            // slave keeps its previously-acknowledged message (rendered as
+            // LAST: in the UI) instead of mirroring the still-running
+            // emulator's internal state.
+            if (instance.simulateOffline) {
+              return {
+                ...p,
+                isAvailable: false,
+                status: 'offline' as const,
+                hasActiveErrors: false,
+              };
+            }
             const state = instance.getState();
             const simPrinter = instance.getSimulatedPrinter();
             return {
