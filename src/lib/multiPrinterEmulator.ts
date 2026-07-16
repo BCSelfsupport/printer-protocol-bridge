@@ -288,6 +288,13 @@ class PrinterEmulatorInstance {
   // browser console helper `simulateSlaveWriteFailure()`.
   public simulateWriteFailure: boolean = false;
 
+  // Test hook: when true, this printer is treated as fully offline —
+  // availability poll marks it unavailable, and every command returns a
+  // transport error (no state changes). Mirrors a real network drop /
+  // powered-off printer so master → slave sync must show FAIL and the
+  // slave's currentMessage must NOT be overwritten from emulator state.
+  public simulateOffline: boolean = false;
+
   constructor(config: EmulatedPrinterConfig) {
     this.config = config;
     this.state = createDefaultState(config.initialState);
