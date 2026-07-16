@@ -179,7 +179,28 @@ export function AdjustDialog({
   onSendCommand,
   isConnected,
   title = 'Adjust Settings',
+  onRefreshFromPrinter,
 }: AdjustDialogProps) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (!onRefreshFromPrinter || !isConnected) return;
+    setIsRefreshing(true);
+    try {
+      await onRefreshFromPrinter();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Auto-refresh from printer when the dialog opens so the user always sees
+  // the live values (not stale cached state).
+  useEffect(() => {
+    if (open && isConnected && onRefreshFromPrinter) {
+      void handleRefresh();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Debounced ^SV — every Adjust change writes to the live setting (^PW etc.),
   // but committing to non-volatile storage on every nudge would burn flash.
@@ -230,8 +251,23 @@ export function AdjustDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <div className="flex items-center justify-between gap-3">
+            <DialogTitle>{title}</DialogTitle>
+            {onRefreshFromPrinter && (
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={!isConnected || isRefreshing}
+                className="industrial-button text-white px-3 py-1.5 rounded text-xs flex items-center gap-1.5 disabled:opacity-50"
+                title="Read current settings from the printer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Reading…' : 'Refresh from printer'}
+              </button>
+            )}
+          </div>
         </DialogHeader>
+
 
         <div className="space-y-4">
           {/* Settings grid - single column on mobile, 2 columns on tablet+ */}
