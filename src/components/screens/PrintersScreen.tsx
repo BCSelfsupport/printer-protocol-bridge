@@ -280,6 +280,7 @@ export function PrintersScreen({
   onRefreshNetwork,
   isCheckingNetwork = false,
   onSyncAdjustFromPrinters,
+  onSyncAdjustFromPrinter,
   isSyncingAdjustFromPrinters = false,
   onSlaveExpiryChange,
   onSelectedPrinterChange,
