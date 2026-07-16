@@ -1334,6 +1334,108 @@ const Index = () => {
     toast.success(`"${message.name}" saved to PC Library`);
   }, [connectionState.connectedPrinter, connectionState.isConnected, getStoredMessageForPrinter, saveToPcLibrary, fetchMessageContent]);
 
+  /** Copy a message (full content, template, settings) from a source printer to one or more targets.
+   *  Uses replaceMessageWithoutDelete per target so an existing slot is overwritten in place
+   *  and a new slot is created via ^NM. Per-target rotation and expiry overrides are respected. */
+  const copyMessageToPrinters = useCallback(async (
+    sourceCandidate: Printer | null | undefined,
+    message: PrintMessage,
+    targets: Printer[],
+  ): Promise<void> => {
+    const source = sourceCandidate ?? connectionState.connectedPrinter ?? null;
+    if (!source) {
+      toast.error('No source printer — connect first');
+      return;
+    }
+    if (targets.length === 0) return;
+
+    // Resolve source details: try cache first, then fetch from source if it's the connected printer.
+    let details = getStoredMessageForPrinter(message.name, source);
+    if ((!details || details.fields.length === 0)
+        && source.id === connectionState.connectedPrinter?.id
+        && connectionState.isConnected) {
+      try {
+        details = await fetchMessageContent(message.name);
+      } catch {}
+    }
+    if (!details || details.fields.length === 0) {
+      toast.error(`Could not read "${message.name}" from source printer`);
+      return;
+    }
+
+    // Skip any target that is offline or is the source itself.
+    const eligible = targets.filter(t => t.id !== source.id && t.isAvailable);
+    const skipped = targets.length - eligible.length;
+    if (eligible.length === 0) {
+      toast.error('No eligible target printers (offline or source excluded)');
+      return;
+    }
+
+    toast.loading(`Copying "${message.name}" to ${eligible.length} printer(s)…`, { id: 'copy-msg' });
+
+    const results = await Promise.all(eligible.map(async (target) => {
+      // Apply per-target rotation + expiry overrides the same way syncMessageToSlaves does.
+      const targetRotation = target.rotation ?? details!.adjustSettings?.rotation ?? 'Normal';
+      const targetAdjust = { ...(details!.adjustSettings ?? {}), rotation: targetRotation };
+      const targetOffset = target.expiryOffsetDays;
+      const targetFields = targetOffset === undefined
+        ? details!.fields
+        : details!.fields.map((f) => {
+            const isExpiry = f.autoCodeFieldType?.startsWith('date_expiry')
+              || (f.autoCodeExpiryDays ?? 0) > 0;
+            return isExpiry ? { ...f, autoCodeExpiryDays: targetOffset } : f;
+          });
+
+      try {
+        const result = await replaceMessageWithoutDelete(target, message.name, {
+          fields: targetFields,
+          templateValue: details!.templateValue,
+          settings: details!.settings,
+          adjustSettings: targetAdjust,
+          advancedSettings: details!.advancedSettings,
+        }, false);
+        if (result.success) {
+          const targetDetails = normalizeMessageForPrinter({
+            ...details!,
+            name: message.name,
+            fields: targetFields,
+            adjustSettings: targetAdjust,
+          });
+          saveMessage(targetDetails, target.id);
+        }
+        return { target, ok: result.success, reason: result.success ? undefined : result.reason };
+      } catch (e) {
+        console.error(`[CopyMessage] Failed on ${target.name}:`, e);
+        return { target, ok: false, reason: 'exception' };
+      }
+    }));
+
+    const okCount = results.filter(r => r.ok).length;
+    const failCount = results.length - okCount;
+    if (failCount === 0) {
+      toast.success(
+        skipped > 0
+          ? `Copied to ${okCount} printer(s) (${skipped} skipped: offline/source)`
+          : `Copied to ${okCount} printer(s)`,
+        { id: 'copy-msg' },
+      );
+    } else {
+      toast.error(
+        `Copied to ${okCount}, failed on ${failCount}. Check the printer cards.`,
+        { id: 'copy-msg' },
+      );
+    }
+  }, [
+    connectionState.connectedPrinter,
+    connectionState.isConnected,
+    getStoredMessageForPrinter,
+    fetchMessageContent,
+    replaceMessageWithoutDelete,
+    normalizeMessageForPrinter,
+    saveMessage,
+  ]);
+
+
   const applyStoredAdjustSettings = useCallback(async (
     targetPrinter: Printer,
     messageName: string,
