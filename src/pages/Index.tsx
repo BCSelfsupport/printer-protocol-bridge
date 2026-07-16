@@ -2093,6 +2093,7 @@ const Index = () => {
           onApplyPromptValuesOnPrinter={(printer, message, updatedDetails) =>
             applyPromptValuesToPrinter(printer, message, updatedDetails)
           }
+          onCopyMessageToPrinters={(message, targets) => copyMessageToPrinters(messageTargetPrinter, message, targets)}
           onFetchMessageDetails={isConnectedMessageTarget ? fetchMessageContent : undefined}
           onSendCommand={async (cmd) => {
             if (isConnectedMessageTarget) {
