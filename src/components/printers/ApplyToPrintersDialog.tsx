@@ -16,12 +16,18 @@ interface ApplyToPrintersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   messageName: string;
-  /** The printer the operator clicked Select from — always included, checked, locked. */
+  /** The printer the operator clicked Select/Copy from. In 'select' mode it's
+   *  included as a locked target. In 'copy' mode it's shown as the source label
+   *  only and never included in the returned target list. */
   sourcePrinter: Printer;
   /** All other online printers eligible as extra targets. */
   siblingPrinters: Printer[];
-  /** Called with the full target list (source + checked siblings). */
+  /** In 'select' mode: full target list (source + checked siblings).
+   *  In 'copy' mode: only the checked siblings. */
   onConfirm: (targets: Printer[]) => void;
+  /** 'select' (default) = apply-message-selection UX.
+   *  'copy' = duplicate this message onto other printers. */
+  mode?: 'select' | 'copy';
 }
 
 const LAST_SELECTION_KEY = 'apply-to-printers:last-selection';
@@ -88,8 +94,10 @@ export function ApplyToPrintersDialog({
   sourcePrinter,
   siblingPrinters,
   onConfirm,
+  mode = 'select',
 }: ApplyToPrintersDialogProps) {
   const [checked, setChecked] = useState<Set<number>>(new Set());
+  const isCopy = mode === 'copy';
 
   // Prime from last-selection on open, filtered to still-available siblings.
   useEffect(() => {
@@ -101,7 +109,7 @@ export function ApplyToPrintersDialog({
   }, [open, sourcePrinter.id, siblingPrinters]);
 
   const groups = useMemo(() => groupPrinters(siblingPrinters), [siblingPrinters]);
-  const totalTargets = 1 + checked.size;
+  const totalTargets = isCopy ? checked.size : 1 + checked.size;
 
   const toggle = (id: number) => {
     setChecked(prev => {
@@ -125,7 +133,7 @@ export function ApplyToPrintersDialog({
   const handleConfirm = () => {
     const extras = siblingPrinters.filter(p => checked.has(p.id));
     saveLastSelection(sourcePrinter.id, extras.map(p => p.id));
-    onConfirm([sourcePrinter, ...extras]);
+    onConfirm(isCopy ? extras : [sourcePrinter, ...extras]);
     onOpenChange(false);
   };
 
@@ -196,12 +204,14 @@ export function ApplyToPrintersDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary">
             <PrinterIcon className="w-5 h-5" />
-            Apply "{messageName}" to which printers?
+            {isCopy
+              ? `Copy "${messageName}" to which printers?`
+              : `Apply "${messageName}" to which printers?`}
           </DialogTitle>
           <p className="text-xs text-slate-400">
-            The source printer is always included. Tick any others you want to
-            apply the same message to. If the message has a user-prompt field,
-            you'll be asked once for the value — it'll be baked into every checked printer.
+            {isCopy
+              ? `Pick the printers you want to copy "${messageName}" to. The full message content (fields, template, settings) will be written to each checked printer.`
+              : `The source printer is always included. Tick any others you want to apply the same message to. If the message has a user-prompt field, you'll be asked once for the value — it'll be baked into every checked printer.`}
           </p>
         </DialogHeader>
 
@@ -259,10 +269,10 @@ export function ApplyToPrintersDialog({
         {/* Card grid */}
         <ScrollArea className="flex-1 -mx-2 px-2">
           <div className="space-y-4 py-2">
-            {/* Source (always shown, locked-checked) */}
+            {/* Source (locked in select mode; label-only in copy mode) */}
             <div>
               <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1.5">
-                Source printer
+                {isCopy ? 'Source printer (not written)' : 'Source printer'}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {renderCard(sourcePrinter, true)}
@@ -310,10 +320,13 @@ export function ApplyToPrintersDialog({
           <Button
             type="button"
             onClick={handleConfirm}
+            disabled={isCopy && checked.size === 0}
             className="bg-primary hover:bg-primary/90"
           >
             <Check className="w-4 h-4 mr-1" />
-            Select on {totalTargets} printer{totalTargets === 1 ? '' : 's'}
+            {isCopy
+              ? `Copy to ${totalTargets} printer${totalTargets === 1 ? '' : 's'}`
+              : `Select on ${totalTargets} printer${totalTargets === 1 ? '' : 's'}`}
           </Button>
         </DialogFooter>
       </DialogContent>

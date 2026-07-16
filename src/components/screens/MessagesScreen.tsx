@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardDrive, Upload, Download, ChevronDown, ChevronRight, ArrowUpFromLine, List, LayoutGrid, FileText } from 'lucide-react';
+import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardDrive, Upload, Download, ChevronDown, ChevronRight, ArrowUpFromLine, List, LayoutGrid, FileText, Copy } from 'lucide-react';
 import { PcLibraryEntry } from '@/hooks/useMessageStorage';
 import { Printer, PrintMessage } from '@/types/printer';
 import { ApplyToPrintersDialog } from '@/components/printers/ApplyToPrintersDialog';
@@ -108,6 +108,8 @@ interface MessagesScreenProps {
   onSelectOnPrinter?: (printer: Printer, message: PrintMessage) => Promise<boolean>;
   /** Full baked-fields rewrite + ^SM on the given printer (used for prompted messages). */
   onApplyPromptValuesOnPrinter?: (printer: Printer, message: PrintMessage, updatedDetails: MessageDetails) => Promise<boolean>;
+  /** Copy a message (full content + settings) from the source printer to the given targets. */
+  onCopyMessageToPrinters?: (message: PrintMessage, targets: Printer[]) => Promise<void>;
 }
 
 export function MessagesScreen({ 
@@ -143,6 +145,7 @@ export function MessagesScreen({
   siblingPrinters,
   onSelectOnPrinter,
   onApplyPromptValuesOnPrinter,
+  onCopyMessageToPrinters,
 }: MessagesScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -156,6 +159,10 @@ export function MessagesScreen({
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
   const [pendingApplyMessage, setPendingApplyMessage] = useState<PrintMessage | null>(null);
   const [pendingApplyTargets, setPendingApplyTargets] = useState<Printer[] | null>(null);
+  // Copy-to-printers dialog state (mode = 'copy' variant of ApplyToPrintersDialog)
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [pendingCopyMessage, setPendingCopyMessage] = useState<PrintMessage | null>(null);
+  const [isCopying, setIsCopying] = useState(false);
   // Mobile-scan workflow state
   const [scanWaitingOpen, setScanWaitingOpen] = useState(false);
   const [pendingScanRequestId, setPendingScanRequestId] = useState<string | null>(null);
@@ -836,6 +843,24 @@ export function MessagesScreen({
             </button>
           )}
 
+          {/* Copy to other printers button — opens ApplyToPrintersDialog in copy mode */}
+          {onCopyMessageToPrinters && sourcePrinter && siblingPrinters && siblingPrinters.length > 0 && (
+            <button
+              onClick={() => {
+                if (!selectedMessage) return;
+                setPendingCopyMessage(selectedMessage);
+                setCopyDialogOpen(true);
+              }}
+              disabled={!selectedMessage || isCopying}
+              title="Copy this message to other printers"
+              className="industrial-button-gray text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
+            >
+              <Copy className="w-8 h-8 mb-1" />
+              <span className="font-medium">{isCopying ? 'Copying...' : 'Copy to...'}</span>
+            </button>
+          )}
+
+
           <button 
             onClick={() => {
               if (isSlave) { onSlaveBlocked?.(); return; }
@@ -1150,6 +1175,31 @@ export function MessagesScreen({
           siblingPrinters={siblingPrinters}
           onConfirm={(targets) => {
             void runSelectionAcrossTargets(targets);
+          }}
+        />
+      )}
+
+      {/* Copy-to-Printers Dialog — duplicates the selected message onto other printers. */}
+      {sourcePrinter && siblingPrinters && pendingCopyMessage && onCopyMessageToPrinters && (
+        <ApplyToPrintersDialog
+          open={copyDialogOpen}
+          onOpenChange={(open) => {
+            setCopyDialogOpen(open);
+            if (!open) setPendingCopyMessage(null);
+          }}
+          mode="copy"
+          messageName={pendingCopyMessage.name}
+          sourcePrinter={sourcePrinter}
+          siblingPrinters={siblingPrinters}
+          onConfirm={async (targets) => {
+            if (targets.length === 0) return;
+            const msg = pendingCopyMessage;
+            setIsCopying(true);
+            try {
+              await onCopyMessageToPrinters(msg, targets);
+            } finally {
+              setIsCopying(false);
+            }
           }}
         />
       )}
