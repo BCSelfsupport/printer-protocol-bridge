@@ -564,6 +564,7 @@ export function PrinterListItem({
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           {(() => {
             const badge = getStatusBadge();
+            if (effectiveStatus === 'offline') return null;
             return (
               <span className={cn(
                 "text-[10px] px-2 py-0.5 rounded font-medium whitespace-nowrap",
