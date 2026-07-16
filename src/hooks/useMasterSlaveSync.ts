@@ -116,12 +116,20 @@ export function useMasterSlaveSync({
   currentSettings,
 }: UseMasterSlaveSyncOptions) {
   const prevMessageRef = useRef<string | null>(null);
+  const primedMessageRef = useRef(false);
   const prevMessageListRef = useRef<string[]>([]);
   const syncingRef = useRef(false);
 
   // Find if the connected printer is a master
   const connectedPrinter = printers.find(p => p.id === connectedPrinterId);
   const isMaster = connectedPrinter?.role === 'master';
+
+  // Reset the selection-sync primer when master identity changes so the
+  // first message on a fresh master isn't blindly pushed to slaves.
+  useEffect(() => {
+    primedMessageRef.current = false;
+    prevMessageRef.current = null;
+  }, [connectedPrinterId, isMaster]);
 
   // Get slaves for this master
   const getSlaves = useCallback(() => {
@@ -299,6 +307,16 @@ export function useMasterSlaveSync({
   // Skip factory/preset messages (BestCode, Moba, etc.) — they already exist on slaves.
   useEffect(() => {
     if (!isMaster || !currentMessage || syncingRef.current) return;
+
+    // Prime on first run for this master session so we do NOT push the
+    // currently-loaded message to slaves on mount/reconnect — only real
+    // user-driven selection changes should trigger a sync.
+    if (!primedMessageRef.current) {
+      primedMessageRef.current = true;
+      prevMessageRef.current = currentMessage;
+      return;
+    }
+
     if (currentMessage === prevMessageRef.current) return;
     if (isPresetMessage(currentMessage)) {
       console.log(`[MasterSlaveSync] Skipping preset message selection "${currentMessage}"`);
