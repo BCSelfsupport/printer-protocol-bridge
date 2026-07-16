@@ -3317,34 +3317,12 @@ export function usePrinterConnection() {
     if (shouldUseEmulator()) return null;
     if (!isElectron && !isRelayMode()) return null;
 
-    const parseQpResponse = (response: string): Partial<PrintSettings> | null => {
-      const extract = (key: string): number | null => {
-        const m = response.match(new RegExp(`${key}[:\\s]*(\\d+)`, 'i'));
-        return m ? parseInt(m[1], 10) : null;
-      };
-      const speedReverseMap: Record<number, PrintSettings['speed']> = {
-        0: 'Fast', 1: 'Faster', 2: 'Fastest', 3: 'Ultra Fast',
-      };
-      const width = extract('Width');
-      const height = extract('Height');
-      const delay = extract('Delay');
-      const rotationNum = extract('Rotation');
-      const bold = extract('Bold');
-      const speedNum = extract('Speed');
-      const gap = extract('Gap');
-      const pitch = extract('Pitch');
-      const parsed: Partial<PrintSettings> = {
-        ...(width !== null && { width }),
-        ...(height !== null && { height }),
-        ...(delay !== null && { delay }),
-        ...(rotationNum !== null && { rotation: PROTOCOL_CODE_TO_ROTATION[rotationNum] ?? 'Normal' }),
-        ...(bold !== null && { bold }),
-        ...(speedNum !== null && { speed: speedReverseMap[speedNum] ?? 'Fast' }),
-        ...(gap !== null && { gap }),
-        ...(pitch !== null && { pitch }),
-      };
-      return Object.keys(parsed).length ? parsed : null;
-    };
+    // Note: `^QP` is not part of the documented protocol; some firmwares
+    // silently ignore it. We query each parameter individually below via
+    // `queryIndividual()` using the documented `^PW`/`^PH`/`^DA`/... read
+    // commands.
+
+
 
     const parseSmResponse = (response: string): string | null => {
       const cleaned = response
