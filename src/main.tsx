@@ -244,6 +244,34 @@ if (import.meta.env.DEV) {
     console.log(`[simFail] ${target.name} simulateWriteFailure = ${next}`);
     return { name: target.name, simulateWriteFailure: next };
   };
+
+  // Dev helper: fully simulate a slave being offline (network drop / powered off).
+  //   simulateSlaveOffline()                     → list slaves + current state
+  //   simulateSlaveOffline('Printer 11')         → toggle offline ON/OFF
+  //   simulateSlaveOffline('Printer 11', true)   → force offline
+  (window as any).simulateSlaveOffline = async (name?: string, value?: boolean) => {
+    const { multiPrinterEmulator } = await import('./lib/multiPrinterEmulator');
+    const raw = localStorage.getItem('codesync-printers');
+    if (!raw) { console.warn('[simOffline] no printers in localStorage'); return; }
+    const printers = JSON.parse(raw) as Array<{ name: string; ipAddress: string; port: number; role?: string }>;
+    if (!name) {
+      const state = printers.map(p => {
+        const inst = multiPrinterEmulator.getInstanceByIp(p.ipAddress, p.port);
+        return { name: p.name, ip: p.ipAddress, role: p.role, simulateOffline: !!inst?.simulateOffline };
+      });
+      console.table(state);
+      console.log('Call simulateSlaveOffline("<name>") to toggle a printer offline.');
+      return state;
+    }
+    const target = printers.find(p => p.name.toLowerCase() === name.toLowerCase());
+    if (!target) { console.warn(`[simOffline] no printer named "${name}"`); return; }
+    const inst = multiPrinterEmulator.getInstanceByIp(target.ipAddress, target.port);
+    if (!inst) { console.warn(`[simOffline] no emulator instance for ${target.name}`); return; }
+    const next = typeof value === 'boolean' ? value : !inst.simulateOffline;
+    inst.simulateOffline = next;
+    console.log(`[simOffline] ${target.name} simulateOffline = ${next}`);
+    return { name: target.name, simulateOffline: next };
+  };
 }
 
 const bootstrap = async () => {

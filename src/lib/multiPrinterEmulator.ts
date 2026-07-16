@@ -288,6 +288,13 @@ class PrinterEmulatorInstance {
   // browser console helper `simulateSlaveWriteFailure()`.
   public simulateWriteFailure: boolean = false;
 
+  // Test hook: when true, this printer is treated as fully offline —
+  // availability poll marks it unavailable, and every command returns a
+  // transport error (no state changes). Mirrors a real network drop /
+  // powered-off printer so master → slave sync must show FAIL and the
+  // slave's currentMessage must NOT be overwritten from emulator state.
+  public simulateOffline: boolean = false;
+
   constructor(config: EmulatedPrinterConfig) {
     this.config = config;
     this.state = createDefaultState(config.initialState);
@@ -354,8 +361,10 @@ class PrinterEmulatorInstance {
       name: this.config.name,
       ipAddress: this.config.ipAddress,
       port: this.config.port,
-      isAvailable: true,
-      status: this.state.hvOn && this.state.jetRunning ? 'ready' : 'not_ready',
+      isAvailable: !this.simulateOffline,
+      status: this.simulateOffline
+        ? 'offline'
+        : (this.state.hvOn && this.state.jetRunning ? 'ready' : 'not_ready'),
     };
   }
 
@@ -405,6 +414,16 @@ class PrinterEmulatorInstance {
     let success = true;
 
     try {
+      // Offline simulation: printer is unreachable. Every command fails as a
+      // transport error and nothing in state changes. This is what the master
+      // → slave sync sees when a real slave loses network or is powered off.
+      if (this.simulateOffline) {
+        response = this.formatError(1, 'Offline', 'Printer is offline (simulated)');
+        success = false;
+        this.addLog(command.trim(), response, 'received');
+        return { success, response };
+      }
+
       // Failure-injection hook: simulate a printer that rejects any write
       // (message create/save/delete). Read/status commands still work so the
       // sync loop can observe that the slave is reachable but not accepting

@@ -702,6 +702,16 @@ const Index = () => {
     getMessageContent: (messageName) => getMessage(messageName),
     buildMessageCommands,
     currentSettings: connectionState.settings,
+    onSlaveSyncOutcome: (slaveId, ok, reason, messageName) => {
+      updatePrinter(slaveId, {
+        lastSelectionResult: {
+          messageName,
+          success: ok,
+          reason: ok ? undefined : reason,
+          at: Date.now(),
+        },
+      });
+    },
   });
 
   const sendVerifiedCommandSequence = useCallback(async (
