@@ -101,6 +101,7 @@ interface PrintersScreenProps {
   isCheckingNetwork?: boolean;
   /** Pull current adjust settings from every online printer back into stored messages */
   onSyncAdjustFromPrinters?: () => void;
+  onSyncAdjustFromPrinter?: (printer: Printer) => void;
   isSyncingAdjustFromPrinters?: boolean;
   /** Called when a printer's expiry offset is changed — resends the message with new expiry */
   onSlaveExpiryChange?: (printerId: number, days: number) => Promise<void>;
