@@ -365,18 +365,21 @@ export function useMasterSlaveSync({
       console.log(`[MasterSlaveSync] Full sync: ${syncMessages.length}/${messages.length} messages to ${slaves.length} slaves`);
       syncingRef.current = true;
 
-      for (const slave of slaves) {
-        const sequence: SequencedCommand[] = [];
-        for (const msg of syncMessages) {
-          sequence.push({ command: `^NM ${msg.name}`, delayAfterMs: getSyncCommandDelay(`^NM ${msg.name}`, 1) });
+      try {
+        for (const slave of slaves) {
+          const sequence: SequencedCommand[] = [];
+          for (const msg of syncMessages) {
+            sequence.push({ command: `^NM ${msg.name}`, delayAfterMs: getSyncCommandDelay(`^NM ${msg.name}`, 1) });
+          }
+          if (currentMessage && !isPresetMessage(currentMessage)) {
+            sequence.push({ command: `^SM ${currentMessage}`, delayAfterMs: 800 });
+          }
+          await sendCommandSequenceToPrinter(slave, sequence, 'full sync');
         }
-        if (currentMessage && !isPresetMessage(currentMessage)) {
-          sequence.push({ command: `^SM ${currentMessage}`, delayAfterMs: 800 });
-        }
-        await sendCommandSequenceToPrinter(slave, sequence, 'full sync');
+      } finally {
+        syncingRef.current = false;
       }
 
-      syncingRef.current = false;
       console.log('[MasterSlaveSync] Full sync complete');
     }, [isMaster, messages, currentMessage, getSlaves, sendCommandSequenceToPrinter]),
 
@@ -423,18 +426,21 @@ export function useMasterSlaveSync({
       console.log(`[MasterSlaveSync] Syncing master "${master.name}" (${syncMessages.length}/${masterMessages.length} msgs) → ${slaves.length} slave(s)`);
       syncingRef.current = true;
 
-      for (const slave of slaves) {
-        const sequence: SequencedCommand[] = [];
-        for (const msgName of syncMessages) {
-          sequence.push({ command: `^NM ${msgName}`, delayAfterMs: getSyncCommandDelay(`^NM ${msgName}`, 1) });
+      try {
+        for (const slave of slaves) {
+          const sequence: SequencedCommand[] = [];
+          for (const msgName of syncMessages) {
+            sequence.push({ command: `^NM ${msgName}`, delayAfterMs: getSyncCommandDelay(`^NM ${msgName}`, 1) });
+          }
+          if (syncCurrentMsg) {
+            sequence.push({ command: `^SM ${syncCurrentMsg}`, delayAfterMs: 800 });
+          }
+          await sendCommandSequenceToPrinter(slave, sequence, `master ${master.name} sync`);
         }
-        if (syncCurrentMsg) {
-          sequence.push({ command: `^SM ${syncCurrentMsg}`, delayAfterMs: 800 });
-        }
-        await sendCommandSequenceToPrinter(slave, sequence, `master ${master.name} sync`);
+      } finally {
+        syncingRef.current = false;
       }
 
-      syncingRef.current = false;
       console.log(`[MasterSlaveSync] Master "${master.name}" sync complete`);
     }, [printers, connectedPrinterId, messages, currentMessage, sendCommandSequenceToPrinter]),
 
@@ -458,22 +464,25 @@ export function useMasterSlaveSync({
       console.log(`[MasterSlaveSync] Broadcasting "${messageName}" to ${slaves.length} slave(s)`);
       syncingRef.current = true;
 
-      for (const slave of slaves) {
-        const sequence: SequencedCommand[] = [{ command: `^SM ${messageName}`, delayAfterMs: 800 }];
+      try {
+        for (const slave of slaves) {
+          const sequence: SequencedCommand[] = [{ command: `^SM ${messageName}`, delayAfterMs: 800 }];
 
-        // Send User Define value if provided
-        // Per v2.6 §5.28.2, ^TD is a subcommand of ^MD (Message Data).
-        // Format: ^MD^TDn;text where n = absolute field number in ^NM.
-        const slaveVal = slaveValues.find(v => v.printerId === slave.id);
-        if (slaveVal && slaveVal.userDefineValue.trim()) {
-          const tdNum = userDefineFieldNum ?? 1;
-          sequence.push({ command: `^MD^TD${tdNum};${slaveVal.userDefineValue.trim()}`, delayAfterMs: 500 });
+          // Send User Define value if provided
+          // Per v2.6 §5.28.2, ^TD is a subcommand of ^MD (Message Data).
+          // Format: ^MD^TDn;text where n = absolute field number in ^NM.
+          const slaveVal = slaveValues.find(v => v.printerId === slave.id);
+          if (slaveVal && slaveVal.userDefineValue.trim()) {
+            const tdNum = userDefineFieldNum ?? 1;
+            sequence.push({ command: `^MD^TD${tdNum};${slaveVal.userDefineValue.trim()}`, delayAfterMs: 500 });
+          }
+          const result = await sendCommandSequenceToPrinter(slave, sequence, `broadcast ${messageName}`);
+          console.log(`[Broadcast] ${messageName} → ${slave.name}: ${result.success ? 'OK' : 'FAIL'}${result.error ? ` (${result.error})` : ''}`);
         }
-        const result = await sendCommandSequenceToPrinter(slave, sequence, `broadcast ${messageName}`);
-        console.log(`[Broadcast] ${messageName} → ${slave.name}: ${result.success ? 'OK' : 'FAIL'}${result.error ? ` (${result.error})` : ''}`);
+      } finally {
+        syncingRef.current = false;
       }
 
-      syncingRef.current = false;
       console.log(`[MasterSlaveSync] Broadcast complete`);
     }, [printers, sendCommandSequenceToPrinter]),
 
