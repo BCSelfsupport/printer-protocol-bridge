@@ -304,6 +304,35 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
             </div>
           )}
 
+          {/* Auto-sync toggle — Master only. Legacy behaviour where selecting a
+              message on the master immediately fans out to every slave. Default
+              OFF; operators now pick targets per-selection via the "Apply to
+              Printers" dialog. */}
+          {role === 'master' && (
+            <div className="space-y-2 rounded-md border border-slate-700 bg-slate-800/50 p-3">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoSyncSelection}
+                  onChange={(e) => setAutoSyncSelection(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 accent-primary"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-slate-200">
+                    Auto-sync message selection from Master
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    When ON, selecting a message on this Master immediately applies
+                    it to every Slave in this group (legacy behaviour). When OFF
+                    (default), use the "Apply to Printers" dialog to pick targets
+                    each time.
+                  </p>
+                </div>
+              </label>
+            </div>
+          )}
+
+
           <div className="flex justify-between pt-2">
             {onDelete && (
               <Button
