@@ -649,7 +649,12 @@ export function MessagesScreen({
                   ) : null}
                 </div>
                 <span className="w-12 text-primary font-medium">{message.id}</span>
-                <span className="flex-1 text-center text-lg">{message.name}</span>
+                <span className="flex-1 text-center text-lg flex items-center justify-center gap-2">
+                  {message.name}
+                  {isMessageProtected(message.name) && (
+                    <Lock className="w-4 h-4 text-amber-500" aria-label="Protected — cannot be overwritten" />
+                  )}
+                </span>
               </div>
             ))}
           </div>
