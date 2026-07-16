@@ -276,7 +276,13 @@ const Index = () => {
     const effectiveSpeed = details.adjustSettings?.speed
       ?? details.settings?.speed
       ?? connectionState.settings.speed;
-    const effectiveRotation = details.adjustSettings?.rotation
+    // Per-printer rotation override (from the printer setup card) always wins
+    // over any rotation stored in the message. This mirrors what
+    // copyMessageToPrinters / syncMessageToSlaves already do for target
+    // printers, and ensures the connected/source printer honors its own
+    // setup-card rotation instead of whatever the message header carries.
+    const effectiveRotation = connectionState.connectedPrinter?.rotation
+      ?? details.adjustSettings?.rotation
       ?? details.settings?.rotation
       ?? connectionState.settings.rotation;
     const effectivePrintMode = details.settings?.printMode ?? 'Normal';
