@@ -18,14 +18,15 @@ export async function runPrinterWriteExclusive<T>(printerId: number, fn: () => P
   const current = new Promise<void>((resolve) => {
     release = resolve;
   });
-  printerChains.set(printerId, previous.then(() => current, () => current));
+  const queued = previous.then(() => current, () => current);
+  printerChains.set(printerId, queued);
 
   await previous.catch(() => undefined);
   try {
     return await fn();
   } finally {
     release();
-    if (printerChains.get(printerId) === current) {
+    if (printerChains.get(printerId) === queued) {
       printerChains.delete(printerId);
     }
   }
@@ -38,14 +39,15 @@ export async function runFleetWriteExclusive<T>(fn: () => Promise<T>): Promise<T
   const current = new Promise<void>((resolve) => {
     release = resolve;
   });
-  fleetChain = previous.then(() => current, () => current);
+  const queued = previous.then(() => current, () => current);
+  fleetChain = queued;
 
   await previous.catch(() => undefined);
   try {
     return await fn();
   } finally {
     release();
-    if (fleetChain === current) {
+    if (fleetChain === queued) {
       fleetChain = Promise.resolve();
     }
   }
