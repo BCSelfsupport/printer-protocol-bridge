@@ -224,10 +224,18 @@ export function useMasterSlaveSync({
 
     const needsSession = printer.id !== connectedPrinterId && (isRelayMode() || isElectron);
     return runFleetWriteExclusive(() => runPrinterWriteExclusive(printer.id, async () => {
-      const releaseSaveBusy = sequence.some(({ command }) => isSaveCommand(command))
-        ? beginSaveBusy()
-        : () => {};
+      const hasSaveCommand = sequence.some(({ command }) => isSaveCommand(command));
+      let releaseSaveBusy = () => {};
       try {
+        if (hasSaveCommand) {
+          const idle = await waitForSaveIdle(20000);
+          if (!idle) {
+            console.warn(`${logPrefix}: ABORT save busy did not clear`);
+            return { success: false, failedIndex: 0, failedCommand: sequence[0]?.command, error: 'Save busy did not clear' };
+          }
+          releaseSaveBusy = beginSaveBusy();
+        }
+
         if (needsSession) {
           const connectStarted = Date.now();
           const connectResult = await printerTransport.connect({
