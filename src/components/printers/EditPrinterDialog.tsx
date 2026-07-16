@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Printer, PrinterRole } from '@/types/printer';
 import { useTwinPair } from '@/twin-code/twinPairStore';
+import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import {
   Dialog,
   DialogContent,
@@ -96,7 +97,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
     }
     
     const ip = ipAddress.trim();
-    const inTwinPair = !!(
+    const inTwinPair = !multiPrinterEmulator.isEmulatedIp(ip, portNum) && !!(
       (pair.a && pair.a.ip === ip && pair.a.port === portNum) ||
       (pair.b && pair.b.ip === ip && pair.b.port === portNum)
     );
@@ -240,7 +241,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
           {(() => {
             const ip = ipAddress.trim();
             const portNum = parseInt(port, 10);
-            const inTwinPair = !!(
+            const inTwinPair = !multiPrinterEmulator.isEmulatedIp(ip, portNum) && !!(
               (pair.a && pair.a.ip === ip && pair.a.port === portNum) ||
               (pair.b && pair.b.ip === ip && pair.b.port === portNum)
             );
