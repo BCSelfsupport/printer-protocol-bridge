@@ -1179,6 +1179,31 @@ export function MessagesScreen({
         />
       )}
 
+      {/* Copy-to-Printers Dialog — duplicates the selected message onto other printers. */}
+      {sourcePrinter && siblingPrinters && pendingCopyMessage && onCopyMessageToPrinters && (
+        <ApplyToPrintersDialog
+          open={copyDialogOpen}
+          onOpenChange={(open) => {
+            setCopyDialogOpen(open);
+            if (!open) setPendingCopyMessage(null);
+          }}
+          mode="copy"
+          messageName={pendingCopyMessage.name}
+          sourcePrinter={sourcePrinter}
+          siblingPrinters={siblingPrinters}
+          onConfirm={async (targets) => {
+            if (targets.length === 0) return;
+            const msg = pendingCopyMessage;
+            setIsCopying(true);
+            try {
+              await onCopyMessageToPrinters(msg, targets);
+            } finally {
+              setIsCopying(false);
+            }
+          }}
+        />
+      )}
+
       {/* Swap Slot Selection Dialog */}
       <Dialog open={swapSlotDialogOpen} onOpenChange={setSwapSlotDialogOpen}>
         <DialogContent className="sm:max-w-md">
