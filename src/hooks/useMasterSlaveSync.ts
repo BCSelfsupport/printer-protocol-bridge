@@ -38,7 +38,20 @@ interface UseMasterSlaveSyncOptions {
    * slaves. Reason is 'ok' on success, otherwise a short failure tag
    * ('offline', 'timeout', 'rejected', etc.).
    */
-  onSlaveSyncOutcome?: (slaveId: number, ok: boolean, reason: string, messageName: string) => void;
+  /**
+   * Called after every slave sync attempt (including offline/skipped) so the
+   * app can flip the OUT OF SYNC badge and update currentMessage. `verifiedMessage`
+   * is the message name the printer confirmed via `^SM` read-back — non-null ONLY
+   * when the printer actually acknowledged the switch. Never set currentMessage
+   * from the requested value; always use verifiedMessage.
+   */
+  onSlaveSyncOutcome?: (
+    slaveId: number,
+    ok: boolean,
+    reason: string,
+    messageName: string,
+    verifiedMessage?: string | null,
+  ) => void;
 }
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
