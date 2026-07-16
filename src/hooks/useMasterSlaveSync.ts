@@ -516,7 +516,13 @@ export function useMasterSlaveSync({
           }
         }
 
-        sequence.push({ command: `^SM ${messageName}`, delayAfterMs: 800 });
+        sequence.push({
+          command: `^SM ${messageName}`,
+          delayAfterMs: hasPrompt ? SM_PROMPT_POST_DELAY_MS : 800,
+          options: hasPrompt
+            ? { maxWaitMs: SM_PROMPT_ACK_MAX_WAIT_MS, idleAfterDataMs: SM_PROMPT_IDLE_AFTER_DATA_MS }
+            : undefined,
+        });
         const result = await sendCommandSequenceToPrinter(slave, sequence, `select ${messageName}`);
         if (!result.success) {
           console.warn(`[MasterSlaveSync] Selection sync failed on ${slave.name}: ${summarizeCommand(result.failedCommand ?? '')} ${result.error ?? ''}`);
@@ -524,12 +530,20 @@ export function useMasterSlaveSync({
         } else {
           // Read-back verification — do NOT trust the ^SM write ACK alone. Query
           // the printer for its currently-selected message and only report success
-          // if the printer's own state matches what we asked for. This is the
-          // hard guarantee: we never claim a slave switched unless the printer
-          // itself confirms it via a fresh read.
+          // if the printer's own state matches what we asked for. Prompt messages
+          // in particular can leave the firmware busy for a beat after ACK, so we
+          // give a single retry after a grace period before declaring FAIL. This
+          // matches the firmware-grace pattern used elsewhere and prevents a false
+          // FAIL that could lure the operator into re-issuing selects and wedging
+          // the printer.
           await delay(400);
-          const verified = await queryCurrentMessage(slave);
+          let verified = await queryCurrentMessage(slave);
           const expected = messageName.toUpperCase();
+          if ((!verified || verified !== expected) && hasPrompt) {
+            console.log(`[MasterSlaveSync] ^SM ${messageName} → ${slave.name}: first read-back "${verified ?? 'null'}" — retrying after ${SM_VERIFY_RETRY_DELAY_MS}ms (prompt message)`);
+            await delay(SM_VERIFY_RETRY_DELAY_MS);
+            verified = await queryCurrentMessage(slave);
+          }
           if (verified && verified === expected) {
             outcomeRef.current?.(slave.id, true, 'ok', messageName, verified);
             console.log(`[MasterSlaveSync] ^SM ${messageName} → ${slave.name}: VERIFIED (${verified})`);
