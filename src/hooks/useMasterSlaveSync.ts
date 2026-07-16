@@ -38,7 +38,20 @@ interface UseMasterSlaveSyncOptions {
    * slaves. Reason is 'ok' on success, otherwise a short failure tag
    * ('offline', 'timeout', 'rejected', etc.).
    */
-  onSlaveSyncOutcome?: (slaveId: number, ok: boolean, reason: string, messageName: string) => void;
+  /**
+   * Called after every slave sync attempt (including offline/skipped) so the
+   * app can flip the OUT OF SYNC badge and update currentMessage. `verifiedMessage`
+   * is the message name the printer confirmed via `^SM` read-back — non-null ONLY
+   * when the printer actually acknowledged the switch. Never set currentMessage
+   * from the requested value; always use verifiedMessage.
+   */
+  onSlaveSyncOutcome?: (
+    slaveId: number,
+    ok: boolean,
+    reason: string,
+    messageName: string,
+    verifiedMessage?: string | null,
+  ) => void;
 }
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -324,6 +337,58 @@ export function useMasterSlaveSync({
     }));
   }, [connectedPrinterId]);
 
+  // Query a printer's currently-selected message via bare `^SM` and return the
+  // parsed message name (uppercase). Runs through the same guarded session so
+  // it never races with an in-flight write. Returns null if the query fails
+  // or the response can't be parsed — caller must treat that as "not verified".
+  const parseSmResponse = (raw: string): string | null => {
+    if (!raw) return null;
+    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(
+      l => l && l !== '^SM' && !/^success$/i.test(l) && !/^command\s+successful/i.test(l) && l !== '>'
+    );
+    if (lines.length === 0) return null;
+    let name = lines[0].replace(/[^\x20-\x7E]/g, '').trim();
+    name = name.replace(/^(Selected\s+)?Message\s*:\s*/i, '').replace(/^MSG\s*:\s*/i, '').trim();
+    if (!name || /^NONE$/i.test(name)) return null;
+    return name.toUpperCase();
+  };
+
+  const queryCurrentMessage = useCallback(async (printer: Printer): Promise<string | null> => {
+    if (shouldUseEmulator()) {
+      const instance = multiPrinterEmulator.enabled
+        ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
+        : printerEmulator;
+      if (!instance) return null;
+      const r = instance.processCommand('^SM');
+      if (!r.success || isProtocolFailureResponse(r.response)) return null;
+      return parseSmResponse(r.response);
+    }
+    if (isRelayMode() || (isElectron && window.electronAPI)) {
+      return runFleetWriteExclusive(() => runPrinterWriteExclusive(printer.id, async () => {
+        const needsSession = printer.id !== connectedPrinterId;
+        try {
+          if (needsSession) {
+            const c = await printerTransport.connect({ id: printer.id, ipAddress: printer.ipAddress, port: printer.port });
+            if (!c?.success) return null;
+            await delay(200);
+          }
+          const r = await printerTransport.sendCommand(printer.id, '^SM');
+          const resp = r?.response ?? '';
+          if (!r?.success || isProtocolFailureResponse(resp)) return null;
+          return parseSmResponse(resp);
+        } catch (e) {
+          console.warn(`[MasterSlaveSync] queryCurrentMessage failed on ${printer.name}:`, e);
+          return null;
+        } finally {
+          if (needsSession) {
+            try { await delay(300); await printerTransport.disconnect(printer.id); } catch {}
+          }
+        }
+      }));
+    }
+    return null;
+  }, [connectedPrinterId]);
+
   // Sync message selection: when master's currentMessage changes, push full content to slaves first, then ^SM.
   // Factory/preset messages already exist on slaves, so only send ^SM for those.
   const runSelectionSync = useCallback((messageName: string) => {
@@ -345,7 +410,7 @@ export function useMasterSlaveSync({
     // the selection change, so their last-known-message is now stale.
     for (const s of offlineSlaves) {
       console.warn(`[MasterSlaveSync] Slave ${s.name} is OFFLINE — flagging OUT OF SYNC for "${messageName}"`);
-      outcomeRef.current?.(s.id, false, 'offline', messageName);
+      outcomeRef.current?.(s.id, false, 'offline', messageName, null);
     }
 
     if (onlineSlaves.length === 0) {
@@ -410,11 +475,25 @@ export function useMasterSlaveSync({
         const result = await sendCommandSequenceToPrinter(slave, sequence, `select ${messageName}`);
         if (!result.success) {
           console.warn(`[MasterSlaveSync] Selection sync failed on ${slave.name}: ${summarizeCommand(result.failedCommand ?? '')} ${result.error ?? ''}`);
-          outcomeRef.current?.(slave.id, false, result.error ? String(result.error).slice(0, 40) : 'rejected', messageName);
+          outcomeRef.current?.(slave.id, false, result.error ? String(result.error).slice(0, 40) : 'rejected', messageName, null);
         } else {
-          outcomeRef.current?.(slave.id, true, 'ok', messageName);
+          // Read-back verification — do NOT trust the ^SM write ACK alone. Query
+          // the printer for its currently-selected message and only report success
+          // if the printer's own state matches what we asked for. This is the
+          // hard guarantee: we never claim a slave switched unless the printer
+          // itself confirms it via a fresh read.
+          await delay(400);
+          const verified = await queryCurrentMessage(slave);
+          const expected = messageName.toUpperCase();
+          if (verified && verified === expected) {
+            outcomeRef.current?.(slave.id, true, 'ok', messageName, verified);
+            console.log(`[MasterSlaveSync] ^SM ${messageName} → ${slave.name}: VERIFIED (${verified})`);
+          } else {
+            const reason = verified ? `verify-mismatch:${verified.slice(0, 20)}` : 'no-readback';
+            outcomeRef.current?.(slave.id, false, reason, messageName, null);
+            console.warn(`[MasterSlaveSync] ^SM ${messageName} → ${slave.name}: write ACK OK but read-back returned ${verified ?? 'null'} (expected ${expected}) — reporting FAIL`);
+          }
         }
-        console.log(`[MasterSlaveSync] ^SM ${messageName} → ${slave.name} (${slave.rotation ?? 'Normal'}): ${result.success ? 'OK' : 'FAIL'}`);
       }
     })().finally(() => {
       setTimeout(() => setPollingPaused(false), 1000);
@@ -430,7 +509,7 @@ export function useMasterSlaveSync({
         pendingMessageRef.current = null;
       }
     });
-  }, [getSlaves, getAllSlavesForMaster, sendCommandSequenceToPrinter, getMessageContent, buildMessageCommands, currentSettings]);
+  }, [getSlaves, getAllSlavesForMaster, sendCommandSequenceToPrinter, queryCurrentMessage, getMessageContent, buildMessageCommands, currentSettings]);
 
   // Keep an imperative handle so the drain step at the end of a run can call
   // the latest version of runSelectionSync without stale closure issues.

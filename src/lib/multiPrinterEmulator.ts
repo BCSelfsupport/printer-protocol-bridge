@@ -654,7 +654,11 @@ class PrinterEmulatorInstance {
       }
       return this.formatError(14, 'FileNotFound', `Message '${msgName}' not found`);
     }
-    return this.formatError(2, 'CmdFormat', 'Usage: ^SM messagename');
+    // Bare `^SM` = query currently-selected message (used for post-select read-back verification).
+    const current = this.state.currentMessage || 'NONE';
+    return this.state.echoOn
+      ? `Command Successful!\r\nSelected Message: ${current}`
+      : `MSG: ${current}`;
   }
 
   private cmdShowDate(): string {
