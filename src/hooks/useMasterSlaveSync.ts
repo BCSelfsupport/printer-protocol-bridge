@@ -276,8 +276,8 @@ export function useMasterSlaveSync({
     const logPrefix = `[MasterSlaveSync][${traceId}] ${traceLabel} → ${printer.name}`;
     console.log(`${logPrefix}: START ${sequence.length} command(s)`);
 
-    const runCommand = async (command: string) => {
-      const options = getCommandOptions(command);
+    const runCommand = async (command: string, overrideOptions?: TransportCommandOptions) => {
+      const options = overrideOptions ?? getCommandOptions(command);
       if (printer.id === connectedPrinterId) {
         return printerTransport.sendCommand(printer.id, command, options);
       }
