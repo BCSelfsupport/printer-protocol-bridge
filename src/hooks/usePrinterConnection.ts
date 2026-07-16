@@ -3343,15 +3343,18 @@ export function usePrinterConnection() {
     // individually via ^PW/^PH/^DA/^SB/^GP/^PA/^SP/^RT (sent with no arg =
     // read). Returns whatever the printer answers; caller merges with any
     // ^QP results.
-    const extractNumber = (resp: string, key: string): number | null => {
-      // Accept "PW 15", "PW:15", "^PW 15", or a lone "15" line.
-      const withKey = resp.match(new RegExp(`\\^?${key}[:\\s]*(-?\\d+)`, 'i'));
+    const extractNumber = (resp: string, key: string, aliases: string[] = []): number | null => {
+      const cleaned = resp.replace(/^success$/gim, '').trim();
+      const withKey = cleaned.match(new RegExp(`\\^?${key}[:\\s]*(-?\\d+)`, 'i'));
       if (withKey) return parseInt(withKey[1], 10);
-      const lines = resp.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-      for (const line of lines) {
-        if (/^-?\d+$/.test(line)) return parseInt(line, 10);
+      for (const alias of aliases) {
+        const m = cleaned.match(new RegExp(`${alias}[:\\s]*(-?\\d+)`, 'i'));
+        if (m) return parseInt(m[1], 10);
       }
-      return null;
+      const lines = cleaned.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      for (const line of lines) if (/^-?\d+$/.test(line)) return parseInt(line, 10);
+      const anyNum = cleaned.match(/-?\d+/);
+      return anyNum ? parseInt(anyNum[0], 10) : null;
     };
     const queryIndividual = async (): Promise<Partial<PrintSettings> | null> => {
       const speedReverseMap: Record<number, PrintSettings['speed']> = {
@@ -3359,28 +3362,30 @@ export function usePrinterConnection() {
       };
       const send = (cmd: string) => printerTransport.sendCommand(printer.id, cmd);
       const out: Partial<PrintSettings> = {};
-      const readNum = async (cmd: string, key: string): Promise<number | null> => {
+      const readNum = async (cmd: string, key: string, aliases: string[] = []): Promise<number | null> => {
         try {
           const r = await send(cmd);
           if (!r?.success || !r.response) return null;
-          return extractNumber(r.response, key);
+          const n = extractNumber(r.response, key, aliases);
+          console.log('[queryPrintSettingsForPrinter.read]', { printer: printer.name, cmd, response: r.response, parsed: n });
+          return n;
         } catch { return null; }
       };
-      const pairs: [string, string, keyof PrintSettings][] = [
-        ['^PW', 'PW', 'width'],
-        ['^PH', 'PH', 'height'],
-        ['^DA', 'DA', 'delay'],
-        ['^SB', 'SB', 'bold'],
-        ['^GP', 'GP', 'gap'],
-        ['^PA', 'PA', 'pitch'],
+      const pairs: [string, string, string[], keyof PrintSettings][] = [
+        ['^PW', 'PW', ['Width', 'Print Width', 'Pad Width'], 'width'],
+        ['^PH', 'PH', ['Height', 'Print Height', 'Pad Height'], 'height'],
+        ['^DA', 'DA', ['Delay'], 'delay'],
+        ['^SB', 'SB', ['Bold'], 'bold'],
+        ['^GP', 'GP', ['Gap'], 'gap'],
+        ['^PA', 'PA', ['Pitch'], 'pitch'],
       ];
-      for (const [cmd, key, field] of pairs) {
-        const v = await readNum(cmd, key);
+      for (const [cmd, key, aliases, field] of pairs) {
+        const v = await readNum(cmd, key, aliases);
         if (v !== null) (out as Record<string, unknown>)[field] = v;
       }
-      const speedNum = await readNum('^SP', 'SP');
+      const speedNum = await readNum('^SP', 'SP', ['Speed']);
       if (speedNum !== null) out.speed = speedReverseMap[speedNum] ?? 'Fast';
-      const rotNum = await readNum('^RT', 'RT');
+      const rotNum = await readNum('^RT', 'RT', ['Rotation', 'Orient', 'Orientation']);
       if (rotNum !== null) out.rotation = PROTOCOL_CODE_TO_ROTATION[rotNum] ?? 'Normal';
       return Object.keys(out).length ? out : null;
     };
