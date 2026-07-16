@@ -414,6 +414,16 @@ class PrinterEmulatorInstance {
     let success = true;
 
     try {
+      // Offline simulation: printer is unreachable. Every command fails as a
+      // transport error and nothing in state changes. This is what the master
+      // → slave sync sees when a real slave loses network or is powered off.
+      if (this.simulateOffline) {
+        response = this.formatError(1, 'Offline', 'Printer is offline (simulated)');
+        success = false;
+        this.addLog(command.trim(), response, 'received');
+        return { success, response };
+      }
+
       // Failure-injection hook: simulate a printer that rejects any write
       // (message create/save/delete). Read/status commands still work so the
       // sync loop can observe that the slave is reachable but not accepting
