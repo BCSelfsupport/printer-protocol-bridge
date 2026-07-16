@@ -646,12 +646,12 @@ export function PrintersScreen({
                 onClick={() => onSyncAdjustFromPrinter(selectedPrinter)}
                 size="sm"
                 variant="outline"
-                className="border-emerald-400/50 text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 hover:text-emerald-100 h-8"
+                className="border-emerald-400/50 text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 hover:text-emerald-100 h-8 px-2"
                 disabled={isSyncingAdjustFromPrinters}
-                title={`Pull current Width/Speed/Delay/Bold/Gap/Pitch from ${selectedPrinter.name} into its stored message`}
+                title={`Sync Adjust from ${selectedPrinter.name} — pull current Width/Speed/Delay/Bold/Gap/Pitch into its stored message`}
+                aria-label={`Sync Adjust from ${selectedPrinter.name}`}
               >
-                <DownloadCloud className={`w-3 h-3 mr-1 ${isSyncingAdjustFromPrinters ? 'animate-pulse' : ''}`} />
-                <span className="text-xs">Sync {selectedPrinter.name}</span>
+                <DownloadCloud className={`w-3.5 h-3.5 ${isSyncingAdjustFromPrinters ? 'animate-pulse' : ''}`} />
               </Button>
             )}
             {selectedPrinter && (
