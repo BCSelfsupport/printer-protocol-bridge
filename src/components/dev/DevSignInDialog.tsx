@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Shield, Loader2 } from 'lucide-react';
 import { useLicense } from '@/contexts/LicenseContext';
+import { isDevAccessRuntime, isPreviewDevPassword } from '@/lib/devAccess';
 
 interface DevSignInDialogProps {
   open: boolean;
@@ -20,22 +21,6 @@ type Stage = 'check' | 'verify';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-const PREVIEW_DEV_PASSWORD = 'CITEC';
-
-// Treat local dev AND Lovable preview/sandbox hosts as "preview" so the
-// CITEC shortcut works without a real developer-enrolled license.
-const isPreviewEnv = () => {
-  if (import.meta.env.DEV) return true;
-  if (typeof window === 'undefined') return false;
-  const h = window.location.hostname;
-  return (
-    h === 'localhost' ||
-    h === '127.0.0.1' ||
-    h.endsWith('.lovable.app') ||
-    h.endsWith('.lovableproject.com') ||
-    h.endsWith('.lovable.dev')
-  );
-};
 
 /**
  * Server-verified developer sign-in.
@@ -54,7 +39,7 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
     if (!open) return;
     setError(null);
     setCode('');
-    if (isPreviewEnv()) {
+    if (isDevAccessRuntime()) {
       setStage('verify');
       setBusy(false);
       return;
@@ -92,7 +77,7 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
     if (!code.trim()) return;
     setBusy(true);
     setError(null);
-    if (isPreviewEnv() && code.trim().toUpperCase() === PREVIEW_DEV_PASSWORD) {
+    if (isDevAccessRuntime() && isPreviewDevPassword(code)) {
       setCode('');
       onSuccess();
       onOpenChange(false);
