@@ -241,7 +241,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
           {(() => {
             const ip = ipAddress.trim();
             const portNum = parseInt(port, 10);
-            const inTwinPair = !!(
+            const inTwinPair = !multiPrinterEmulator.isEmulatedIp(ip, portNum) && !!(
               (pair.a && pair.a.ip === ip && pair.a.port === portNum) ||
               (pair.b && pair.b.ip === ip && pair.b.port === portNum)
             );
