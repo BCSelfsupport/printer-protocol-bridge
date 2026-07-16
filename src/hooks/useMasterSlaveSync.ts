@@ -32,6 +32,13 @@ interface UseMasterSlaveSyncOptions {
     counterConfigs?: NonNullable<MessageDetails['advancedSettings']>['counters'],
   ) => Promise<string[] | null> | string[] | null;
   currentSettings?: PrintSettings;
+  /**
+   * Called after every slave sync attempt (including offline/skipped) so the
+   * app can flip the OUT OF SYNC badge without silently dropping unreachable
+   * slaves. Reason is 'ok' on success, otherwise a short failure tag
+   * ('offline', 'timeout', 'rejected', etc.).
+   */
+  onSlaveSyncOutcome?: (slaveId: number, ok: boolean, reason: string, messageName: string) => void;
 }
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -114,6 +121,7 @@ export function useMasterSlaveSync({
   getMessageContent,
   buildMessageCommands,
   currentSettings,
+  onSlaveSyncOutcome,
 }: UseMasterSlaveSyncOptions) {
   const prevMessageRef = useRef<string | null>(null);
   const primedMessageRef = useRef(false);
@@ -121,6 +129,8 @@ export function useMasterSlaveSync({
   const syncingRef = useRef(false);
   const pendingMessageRef = useRef<string | null>(null);
   const runSelectionSyncRef = useRef<((msg: string) => void) | null>(null);
+  const outcomeRef = useRef(onSlaveSyncOutcome);
+  useEffect(() => { outcomeRef.current = onSlaveSyncOutcome; }, [onSlaveSyncOutcome]);
 
   // Find if the connected printer is a master
   const connectedPrinter = printers.find(p => p.id === connectedPrinterId);
@@ -133,11 +143,20 @@ export function useMasterSlaveSync({
     prevMessageRef.current = null;
   }, [connectedPrinterId, isMaster]);
 
-  // Get slaves for this master
+  // Get ONLINE slaves for this master — used for actual write attempts.
   const getSlaves = useCallback(() => {
     if (!connectedPrinterId) return [];
     return printers.filter(
       p => p.role === 'slave' && p.masterId === connectedPrinterId && p.isAvailable
+    );
+  }, [printers, connectedPrinterId]);
+
+  // Get ALL slaves for this master — including offline. Used to flag
+  // unreachable slaves as OUT OF SYNC instead of silently skipping them.
+  const getAllSlavesForMaster = useCallback(() => {
+    if (!connectedPrinterId) return [];
+    return printers.filter(
+      p => p.role === 'slave' && p.masterId === connectedPrinterId
     );
   }, [printers, connectedPrinterId]);
 
@@ -318,12 +337,26 @@ export function useMasterSlaveSync({
       return;
     }
 
-    const slaves = getSlaves();
-    if (slaves.length === 0) return;
+    const onlineSlaves = getSlaves();
+    const allSlaves = getAllSlavesForMaster();
+    const offlineSlaves = allSlaves.filter(s => !s.isAvailable);
+
+    // Immediately flag offline slaves as OUT OF SYNC — they cannot receive
+    // the selection change, so their last-known-message is now stale.
+    for (const s of offlineSlaves) {
+      console.warn(`[MasterSlaveSync] Slave ${s.name} is OFFLINE — flagging OUT OF SYNC for "${messageName}"`);
+      outcomeRef.current?.(s.id, false, 'offline', messageName);
+    }
+
+    if (onlineSlaves.length === 0) {
+      if (offlineSlaves.length === 0) return;
+      // Nothing to actually push, but we did flag offline slaves above.
+      return;
+    }
 
     syncingRef.current = true;
     prevMessageRef.current = messageName;
-    console.log(`[MasterSlaveSync] Syncing message selection "${messageName}" to ${slaves.length} slave(s)`);
+    console.log(`[MasterSlaveSync] Syncing message selection "${messageName}" to ${onlineSlaves.length} slave(s) (${offlineSlaves.length} offline flagged)`);
 
     (async () => {
       const idle = await waitForSaveIdle(20000);
@@ -333,7 +366,7 @@ export function useMasterSlaveSync({
       }
       setPollingPaused(true);
       const details = getMessageContent?.(messageName) ?? null;
-      for (const slave of slaves) {
+      for (const slave of onlineSlaves) {
         // If the user picked a newer message while we were mid-fleet, abandon
         // the remaining slaves for the stale target so we can start the new
         // one immediately — the newer selection is what the operator wants.
@@ -377,6 +410,9 @@ export function useMasterSlaveSync({
         const result = await sendCommandSequenceToPrinter(slave, sequence, `select ${messageName}`);
         if (!result.success) {
           console.warn(`[MasterSlaveSync] Selection sync failed on ${slave.name}: ${summarizeCommand(result.failedCommand ?? '')} ${result.error ?? ''}`);
+          outcomeRef.current?.(slave.id, false, result.error ? String(result.error).slice(0, 40) : 'rejected', messageName);
+        } else {
+          outcomeRef.current?.(slave.id, true, 'ok', messageName);
         }
         console.log(`[MasterSlaveSync] ^SM ${messageName} → ${slave.name} (${slave.rotation ?? 'Normal'}): ${result.success ? 'OK' : 'FAIL'}`);
       }
@@ -394,7 +430,7 @@ export function useMasterSlaveSync({
         pendingMessageRef.current = null;
       }
     });
-  }, [getSlaves, sendCommandSequenceToPrinter, getMessageContent, buildMessageCommands, currentSettings]);
+  }, [getSlaves, getAllSlavesForMaster, sendCommandSequenceToPrinter, getMessageContent, buildMessageCommands, currentSettings]);
 
   // Keep an imperative handle so the drain step at the end of a run can call
   // the latest version of runSelectionSync without stale closure issues.
