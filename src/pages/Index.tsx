@@ -2200,9 +2200,16 @@ const Index = () => {
               }
               const ok = await sendCommandToPrinter(messageTargetPrinter, `^SM ${message.name}`);
               if (ok) {
-                updatePrinter(messageTargetPrinter.id, { currentMessage: message.name });
+                updatePrinter(messageTargetPrinter.id, {
+                  currentMessage: message.name,
+                  lastSelectionResult: { messageName: message.name, success: true, at: Date.now() },
+                });
                 clearAllExpiryOverrides();
                 await applyStoredAdjustSettings(messageTargetPrinter, message.name);
+              } else {
+                updatePrinter(messageTargetPrinter.id, {
+                  lastSelectionResult: { messageName: message.name, success: false, reason: 'No ACK from printer', at: Date.now() },
+                });
               }
               return ok;
             }}
