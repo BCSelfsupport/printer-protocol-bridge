@@ -61,6 +61,7 @@ import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
 import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
 import { beginSaveBusy, waitForSaveIdle } from '@/lib/saveBusy';
 import { isPresetMessage } from '@/lib/hardcodedMessages';
+import { isMessageProtected } from '@/lib/protectedMessages';
 
 
 
