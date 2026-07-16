@@ -3356,6 +3356,52 @@ export function usePrinterConnection() {
       return stripped || null;
     };
 
+    // Fallback: some firmwares don't respond to ^QP. Query each parameter
+    // individually via ^PW/^PH/^DA/^SB/^GP/^PA/^SP/^RT (sent with no arg =
+    // read). Returns whatever the printer answers; caller merges with any
+    // ^QP results.
+    const extractNumber = (resp: string, key: string): number | null => {
+      // Accept "PW 15", "PW:15", "^PW 15", or a lone "15" line.
+      const withKey = resp.match(new RegExp(`\\^?${key}[:\\s]*(-?\\d+)`, 'i'));
+      if (withKey) return parseInt(withKey[1], 10);
+      const lines = resp.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        if (/^-?\d+$/.test(line)) return parseInt(line, 10);
+      }
+      return null;
+    };
+    const queryIndividual = async (): Promise<Partial<PrintSettings> | null> => {
+      const speedReverseMap: Record<number, PrintSettings['speed']> = {
+        0: 'Fast', 1: 'Faster', 2: 'Fastest', 3: 'Ultra Fast',
+      };
+      const send = (cmd: string) => printerTransport.sendCommand(printer.id, cmd);
+      const out: Partial<PrintSettings> = {};
+      const readNum = async (cmd: string, key: string): Promise<number | null> => {
+        try {
+          const r = await send(cmd);
+          if (!r?.success || !r.response) return null;
+          return extractNumber(r.response, key);
+        } catch { return null; }
+      };
+      const pairs: [string, string, keyof PrintSettings][] = [
+        ['^PW', 'PW', 'width'],
+        ['^PH', 'PH', 'height'],
+        ['^DA', 'DA', 'delay'],
+        ['^SB', 'SB', 'bold'],
+        ['^GP', 'GP', 'gap'],
+        ['^PA', 'PA', 'pitch'],
+      ];
+      for (const [cmd, key, field] of pairs) {
+        const v = await readNum(cmd, key);
+        if (v !== null) (out as Record<string, unknown>)[field] = v;
+      }
+      const speedNum = await readNum('^SP', 'SP');
+      if (speedNum !== null) out.speed = speedReverseMap[speedNum] ?? 'Fast';
+      const rotNum = await readNum('^RT', 'RT');
+      if (rotNum !== null) out.rotation = PROTOCOL_CODE_TO_ROTATION[rotNum] ?? 'Normal';
+      return Object.keys(out).length ? out : null;
+    };
+
     // Connected printer: reuse persistent transport.
     if (printer.id === connectionState.connectedPrinter?.id) {
       try {
@@ -3366,7 +3412,11 @@ export function usePrinterConnection() {
           qp: qp?.response,
           sm: sm?.response,
         });
-        const settings = qp?.success && qp.response ? parseQpResponse(qp.response) : null;
+        let settings = qp?.success && qp.response ? parseQpResponse(qp.response) : null;
+        if (!settings) {
+          console.warn('[queryPrintSettingsForPrinter] ^QP empty, falling back to individual queries', { printer: printer.name });
+          settings = await queryIndividual();
+        }
         const currentMessage = sm?.success && sm.response ? parseSmResponse(sm.response) : null;
         if (!settings) return null;
         return { settings, currentMessage: currentMessage ?? printer.currentMessage ?? null };
@@ -3391,7 +3441,11 @@ export function usePrinterConnection() {
           qp: qp?.response,
           sm: sm?.response,
         });
-        const settings = qp?.success && qp.response ? parseQpResponse(qp.response) : null;
+        let settings = qp?.success && qp.response ? parseQpResponse(qp.response) : null;
+        if (!settings) {
+          console.warn('[queryPrintSettingsForPrinter] ^QP empty (fleet), falling back to individual queries', { printer: printer.name });
+          settings = await queryIndividual();
+        }
         const currentMessage = sm?.success && sm.response ? parseSmResponse(sm.response) : null;
         if (!settings) return null;
         return { settings, currentMessage: currentMessage ?? printer.currentMessage ?? null };
@@ -3403,6 +3457,7 @@ export function usePrinterConnection() {
       }
     }));
   }, [connectionState.connectedPrinter?.id]);
+
 
 
   // Reorder printers (for drag-and-drop)
