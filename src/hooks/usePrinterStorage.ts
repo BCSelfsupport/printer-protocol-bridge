@@ -45,9 +45,18 @@ const saveRemovedEmulatedKeys = (set: Set<string>) => {
 const applyDefaultEmulatorRoles = (printers: Printer[]): Printer[] => {
   const master = printers.find((printer) => printer.ipAddress === EMULATED_MASTER_IP && printer.port === 23);
   if (!master) return printers;
+  const hasAnyEmulatorSyncRole = printers.some((printer) =>
+    EMULATED_PRINTER_IPS.includes(printer.ipAddress)
+    && printer.port === 23
+    && (printer.role === 'master' || printer.role === 'slave')
+  );
 
   return printers.map((printer) => {
-    if (!EMULATED_PRINTER_IPS.includes(printer.ipAddress) || printer.port !== 23 || printer.role !== undefined) {
+    if (!EMULATED_PRINTER_IPS.includes(printer.ipAddress) || printer.port !== 23) {
+      return printer;
+    }
+
+    if (hasAnyEmulatorSyncRole && printer.role !== undefined) {
       return printer;
     }
 
