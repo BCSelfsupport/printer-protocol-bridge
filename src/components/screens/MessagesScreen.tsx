@@ -843,6 +843,24 @@ export function MessagesScreen({
             </button>
           )}
 
+          {/* Copy to other printers button — opens ApplyToPrintersDialog in copy mode */}
+          {onCopyMessageToPrinters && sourcePrinter && siblingPrinters && siblingPrinters.length > 0 && (
+            <button
+              onClick={() => {
+                if (!selectedMessage) return;
+                setPendingCopyMessage(selectedMessage);
+                setCopyDialogOpen(true);
+              }}
+              disabled={!selectedMessage || isCopying}
+              title="Copy this message to other printers"
+              className="industrial-button-gray text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
+            >
+              <Copy className="w-8 h-8 mb-1" />
+              <span className="font-medium">{isCopying ? 'Copying...' : 'Copy to...'}</span>
+            </button>
+          )}
+
+
           <button 
             onClick={() => {
               if (isSlave) { onSlaveBlocked?.(); return; }
