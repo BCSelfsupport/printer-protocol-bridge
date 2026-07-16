@@ -3462,16 +3462,20 @@ export function usePrinterConnection() {
 
     if (shouldUseEmulator()) {
       const emulator = getEmulatorForPrinter(printer.ipAddress, printer.port);
-      
-      // Select message first so ^GM and ^LF operate on it
-      emulator.processCommand(`^SM ${messageName}`);
-      
-      const gmResult = emulator.processCommand('^GM');
+
+      // NOTE: Do NOT send `^SM ${messageName}` here. This function is called
+      // in a loop by the post-connect content-sync effect (Index.tsx), and
+      // ^SM is the one command that mutates the emulator's live
+      // `currentMessage`. Sending it per message would visibly cycle the
+      // master card through every message name and land on the last one.
+      // ^GM and ^LF both accept an explicit <name>, so selection isn't
+      // required to read a specific message's content.
+      const gmResult = emulator.processCommand(`^GM ${messageName}`);
       const lfResult = emulator.processCommand(`^LF ${messageName}`);
-      
+
       const gmParsed = gmResult.success && gmResult.response ? parseGmResponse(gmResult.response) : null;
       const lfParsed = lfResult.success && lfResult.response ? parseLfResponse(lfResult.response, messageName) : [];
-      
+
       if (lfParsed.length === 0) {
         console.log('[fetchMessageContent] No fields parsed for', messageName);
         return null;
