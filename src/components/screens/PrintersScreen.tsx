@@ -1117,6 +1117,53 @@ export function PrintersScreen({
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* Apply expiry offset to multiple printers */}
+      {expiryDialogSource && onSlaveExpiryChange && (() => {
+        const getMsgExpiry = (printer: Printer): number | undefined => {
+          const msgName = printer.currentMessage || masterMessageMap.get(printer.id);
+          const msgContent = msgName && getMessageContent
+            ? (getMessageContent(msgName, printer.id)
+              || (printer.masterId ? getMessageContent(msgName, printer.masterId) : null)
+              || (connectedPrinter ? getMessageContent(msgName, connectedPrinter.id) : null)
+              || getMessageContent(msgName))
+            : null;
+          const expiryField = msgContent?.fields?.find(f => (
+            f.type === 'date' && (
+              f.autoCodeFieldType?.startsWith('date_expiry')
+              || (f.autoCodeExpiryDays ?? 0) > 0
+            )
+          ));
+          return expiryField ? (expiryField.autoCodeExpiryDays ?? 0) : undefined;
+        };
+        const siblings = visiblePrinters.filter(p =>
+          p.id !== expiryDialogSource.id
+          && p.isAvailable
+          && getMsgExpiry(p) !== undefined
+        );
+        return (
+          <ApplyExpiryToPrintersDialog
+            open={!!expiryDialogSource}
+            onOpenChange={(o) => { if (!o) setExpiryDialogSource(null); }}
+            sourcePrinter={expiryDialogSource}
+            siblingPrinters={siblings}
+            currentDays={expiryDialogCurrentDays}
+            onConfirm={async (targets, days) => {
+              // Sequential apply to avoid clobbering shared master/slave messages.
+              for (const t of targets) {
+                setUpdatingExpiryPrinterId(t.id);
+                try {
+                  await onSlaveExpiryChange(t.id, days);
+                } catch (err) {
+                  console.error('[ApplyExpiry] Failed on', t.name, err);
+                } finally {
+                  setUpdatingExpiryPrinterId(null);
+                }
+              }
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }
