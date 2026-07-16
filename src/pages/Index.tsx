@@ -946,7 +946,7 @@ const Index = () => {
         settings: details.settings,
         adjustSettings: slaveAdjust,
         advancedSettings: details.advancedSettings,
-      });
+      }, slaveCurrent === targetUpper);
       ok = result.success;
       if (!ok) {
         console.warn(`[MasterSlaveSync] Slave rewrite failed on ${slave.name}: ${result.reason}`);
