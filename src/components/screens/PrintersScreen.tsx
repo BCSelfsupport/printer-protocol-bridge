@@ -1097,6 +1097,10 @@ export function PrintersScreen({
                         } : undefined}
                         isUpdatingExpiry={updatingExpiryPrinterId === printer.id}
                         messageExpiryDays={msgExpiry}
+                        onOpenExpiryDialog={onSlaveExpiryChange ? (src, days) => {
+                          setExpiryDialogSource(src);
+                          setExpiryDialogCurrentDays(days);
+                        } : undefined}
                         twinPairRole={
                           pairPrinters && pairPrinters.a.id === printer.id ? 'A'
                           : pairPrinters && pairPrinters.b.id === printer.id ? 'B'
