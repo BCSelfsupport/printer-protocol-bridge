@@ -101,6 +101,7 @@ interface PrintersScreenProps {
   isCheckingNetwork?: boolean;
   /** Pull current adjust settings from every online printer back into stored messages */
   onSyncAdjustFromPrinters?: () => void;
+  onSyncAdjustFromPrinter?: (printer: Printer) => void;
   isSyncingAdjustFromPrinters?: boolean;
   /** Called when a printer's expiry offset is changed — resends the message with new expiry */
   onSlaveExpiryChange?: (printerId: number, days: number) => Promise<void>;
@@ -279,6 +280,7 @@ export function PrintersScreen({
   onRefreshNetwork,
   isCheckingNetwork = false,
   onSyncAdjustFromPrinters,
+  onSyncAdjustFromPrinter,
   isSyncingAdjustFromPrinters = false,
   onSlaveExpiryChange,
   onSelectedPrinterChange,
@@ -637,6 +639,19 @@ export function PrintersScreen({
               >
                 <DownloadCloud className={`w-3 h-3 mr-1 ${isSyncingAdjustFromPrinters ? 'animate-pulse' : ''}`} />
                 <span className="text-xs">{isSyncingAdjustFromPrinters ? 'Syncing…' : 'Sync Adjust'}</span>
+              </Button>
+            )}
+            {onSyncAdjustFromPrinter && selectedPrinter && selectedPrinter.isAvailable && (
+              <Button
+                onClick={() => onSyncAdjustFromPrinter(selectedPrinter)}
+                size="sm"
+                variant="outline"
+                className="border-emerald-400/50 text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 hover:text-emerald-100 h-8"
+                disabled={isSyncingAdjustFromPrinters}
+                title={`Pull current Width/Speed/Delay/Bold/Gap/Pitch from ${selectedPrinter.name} into its stored message`}
+              >
+                <DownloadCloud className={`w-3 h-3 mr-1 ${isSyncingAdjustFromPrinters ? 'animate-pulse' : ''}`} />
+                <span className="text-xs">Sync {selectedPrinter.name}</span>
               </Button>
             )}
             {selectedPrinter && (
