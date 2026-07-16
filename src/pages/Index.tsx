@@ -1688,10 +1688,18 @@ const Index = () => {
         if (!queried) {
           console.warn('[SyncAdjustFromPrinters] query failed', { printer: printer.name });
           failedCount++;
-          failureDetails.push(`${printer.name}: query failed (printer did not respond to ^QP)`);
+          failureDetails.push(`${printer.name}: no response to settings query (^PW/^PH/^DA/^SB/^GP/^PA/^SP/^RT)`);
           continue;
         }
         const printerCurrent = queried.settings;
+
+        // If this is the currently-connected printer, mirror the freshly-read
+        // values into the live Global Adjust state so the Adjust dialog shows
+        // exactly what the printer just reported.
+        if (printer.id === connectionState.connectedPrinter?.id) {
+          updateSettings(printerCurrent);
+        }
+
         const messageName = queried.currentMessage ?? printer.currentMessage ?? null;
         if (!messageName) {
           console.warn('[SyncAdjustFromPrinters] no current message', { printer: printer.name });
@@ -1713,7 +1721,7 @@ const Index = () => {
         let changed = false;
         for (const k of ['width', 'height', 'delay', 'bold', 'gap', 'pitch'] as (keyof PrintSettings)[]) {
           const pv = printerCurrent[k];
-          if (pv !== undefined && pv !== storedAdjust[k]) {
+          if (pv !== undefined && (pv !== storedAdjust[k] || pv !== storedMsgSettings[k])) {
             (mergedAdjust as Record<string, unknown>)[k] = pv;
             (mergedMsgSettings as Record<string, unknown>)[k] = pv;
             changed = true;
@@ -1721,7 +1729,7 @@ const Index = () => {
         }
         for (const k of ['speed', 'rotation'] as (keyof PrintSettings)[]) {
           const pv = printerCurrent[k];
-          if (pv !== undefined && pv !== storedMsgSettings[k]) {
+          if (pv !== undefined && (pv !== storedMsgSettings[k] || pv !== storedAdjust[k])) {
             (mergedMsgSettings as Record<string, unknown>)[k] = pv;
             (mergedAdjust as Record<string, unknown>)[k] = pv;
             changed = true;
@@ -1754,6 +1762,7 @@ const Index = () => {
       }
     }
 
+
     setIsSyncingAdjustFromPrinters(false);
     const parts: string[] = [];
     parts.push(`${updatedCount} updated`);
@@ -1772,7 +1781,7 @@ const Index = () => {
     } else {
       toast.success(`Adjust sync: ${parts.join(', ')}`, { id: toastId });
     }
-  }, [printers, queryPrintSettingsForPrinter, getStoredMessageForPrinter, saveMessage]);
+  }, [printers, queryPrintSettingsForPrinter, getStoredMessageForPrinter, saveMessage, connectionState.connectedPrinter?.id, updateSettings]);
 
 
 
@@ -3082,7 +3091,9 @@ const Index = () => {
         onSendCommand={sendCommand}
         isConnected={connectionState.isConnected}
         title="Adjust Settings (Global)"
+        onRefreshFromPrinter={queryPrintSettings}
       />
+
 
       {/* Help Dialog */}
       <HelpDialog

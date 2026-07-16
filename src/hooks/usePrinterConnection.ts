@@ -3173,8 +3173,9 @@ export function usePrinterConnection() {
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
 
-  // Query print settings from the printer
-  // Uses ^QP command to get current print settings
+  // Query print settings from the printer.
+  // Uses documented per-parameter reads (^PW/^PH/^DA/^SB/^GP/^PA/^SP/^RT) —
+  // ^QP is not part of the protocol and many firmwares silently ignore it.
   const queryPrintSettings = useCallback(async (): Promise<void> => {
     console.log('[queryPrintSettings] Called');
     if (!connectionState.isConnected || !connectionState.connectedPrinter) {
@@ -3186,73 +3187,61 @@ export function usePrinterConnection() {
 
     if (shouldUseEmulator()) {
       console.log('[queryPrintSettings] Using emulator - using current settings');
-      // Emulator doesn't have stored settings, use current state
       return;
-    } else if (isElectron || isRelayMode()) {
+    }
+    if (!isElectron && !isRelayMode()) return;
+
+    const speedReverseMap: Record<number, PrintSettings['speed']> = {
+      0: 'Fast', 1: 'Faster', 2: 'Fastest', 3: 'Ultra Fast',
+    };
+    const extractNumber = (resp: string, key: string): number | null => {
+      const withKey = resp.match(new RegExp(`\\^?${key}[:\\s]*(-?\\d+)`, 'i'));
+      if (withKey) return parseInt(withKey[1], 10);
+      const lines = resp.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      for (const line of lines) if (/^-?\d+$/.test(line)) return parseInt(line, 10);
+      return null;
+    };
+    const readNum = async (cmd: string, key: string): Promise<number | null> => {
       try {
-        console.log('[queryPrintSettings] Querying settings from printer');
-        const result = await printerTransport.sendCommand(printer.id, '^QP');
-        console.log('[queryPrintSettings] Result:', JSON.stringify(result));
+        const r = await printerTransport.sendCommand(printer.id, cmd);
+        if (!r?.success || !r.response) return null;
+        return extractNumber(r.response, key);
+      } catch { return null; }
+    };
 
-        if (result?.success && result.response) {
-          // Parse response - format varies by firmware
-          // Expected format: "Width:15,Height:8,Delay:100,Rotation:0,Bold:0,Speed:2,Gap:0,Pitch:0"
-          const response = result.response;
-          
-          const extract = (key: string): number | null => {
-            const match = response.match(new RegExp(`${key}[:\\s]*(\\d+)`, 'i'));
-            return match ? parseInt(match[1], 10) : null;
-          };
+    try {
+      const width = await readNum('^PW', 'PW');
+      const height = await readNum('^PH', 'PH');
+      const delay = await readNum('^DA', 'DA');
+      const bold = await readNum('^SB', 'SB');
+      const gap = await readNum('^GP', 'GP');
+      const pitch = await readNum('^PA', 'PA');
+      const speedNum = await readNum('^SP', 'SP');
+      const rotNum = await readNum('^RT', 'RT');
 
-          const speedReverseMap: Record<number, PrintSettings['speed']> = {
-            0: 'Fast',
-            1: 'Faster',
-            2: 'Fastest',
-            3: 'Ultra Fast',
-          };
+      const parsed: Partial<PrintSettings> = {
+        ...(width !== null && { width }),
+        ...(height !== null && { height }),
+        ...(delay !== null && { delay }),
+        ...(bold !== null && { bold }),
+        ...(gap !== null && { gap }),
+        ...(pitch !== null && { pitch }),
+        ...(speedNum !== null && { speed: speedReverseMap[speedNum] ?? 'Fast' }),
+        ...(rotNum !== null && { rotation: PROTOCOL_CODE_TO_ROTATION[rotNum] ?? 'Normal' }),
+      };
+      console.log('[queryPrintSettings.parsed]', { printerId: printer.id, parsed });
 
-          const width = extract('Width');
-          const height = extract('Height');
-          const delay = extract('Delay');
-          const rotationNum = extract('Rotation');
-          const bold = extract('Bold');
-          const speedNum = extract('Speed');
-          const gap = extract('Gap');
-          const pitch = extract('Pitch');
-
-          console.log('[AdjustDebug][queryPrintSettings.parsed]', {
-            printerId: printer.id,
-            width,
-            height,
-            delay,
-            rotationNum,
-            bold,
-            speedNum,
-            gap,
-            pitch,
-            rawResponse: response,
-          });
-
-          setConnectionState(prev => ({
-            ...prev,
-            settings: {
-              ...prev.settings,
-              ...(width !== null && { width }),
-              ...(height !== null && { height }),
-              ...(delay !== null && { delay }),
-              ...(rotationNum !== null && { rotation: PROTOCOL_CODE_TO_ROTATION[rotationNum] ?? 'Normal' }),
-              ...(bold !== null && { bold }),
-              ...(speedNum !== null && { speed: speedReverseMap[speedNum] ?? 'Fast' }),
-              ...(gap !== null && { gap }),
-              ...(pitch !== null && { pitch }),
-            },
-          }));
-        }
-      } catch (e) {
-        console.error('[queryPrintSettings] Failed to query settings:', e);
+      if (Object.keys(parsed).length) {
+        setConnectionState(prev => ({
+          ...prev,
+          settings: { ...prev.settings, ...parsed },
+        }));
       }
+    } catch (e) {
+      console.error('[queryPrintSettings] Failed:', e);
     }
   }, [connectionState.isConnected, connectionState.connectedPrinter]);
+
 
   // Query print settings from the connected printer and RETURN the parsed
   // values without mutating connectionState. Used before re-pushing stored
