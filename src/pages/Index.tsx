@@ -1631,6 +1631,104 @@ const Index = () => {
     updateSettings,
   ]);
 
+  // Global "Sync Adjust from Printers" — iterate every online printer, query
+  // its current PW/PH/DA/SB/GP/PA + speed/rotation via ^QP, and write those
+  // values back into the printer's stored copy of its current message. This
+  // lets operators tweak settings on the printer HMI (press Save at the
+  // printer) and then bring those changes back into CodeSync in one click so
+  // future re-selects don't clobber their tweaks.
+  const [isSyncingAdjustFromPrinters, setIsSyncingAdjustFromPrinters] = useState(false);
+  const syncAdjustSettingsFromAllPrinters = useCallback(async () => {
+    const online = printers.filter(p => p.isAvailable);
+    if (online.length === 0) {
+      toast.info('No online printers to sync');
+      return;
+    }
+    setIsSyncingAdjustFromPrinters(true);
+    const toastId = 'sync-adjust-all';
+    toast.loading(`Reading adjust settings from ${online.length} printer(s)…`, { id: toastId });
+
+    let updatedCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+
+    // Sequential to avoid overwhelming the fleet-write queue and to keep
+    // toast/progress deterministic.
+    for (const printer of online) {
+      const messageName = printer.currentMessage;
+      if (!messageName) {
+        skippedCount++;
+        continue;
+      }
+      try {
+        const printerCurrent = await queryPrintSettingsForPrinter(printer);
+        if (!printerCurrent) {
+          failedCount++;
+          continue;
+        }
+        const stored = getStoredMessageForPrinter(messageName, printer);
+        if (!stored) {
+          skippedCount++;
+          continue;
+        }
+        const storedAdjust = (stored.adjustSettings ?? {}) as Partial<PrintSettings>;
+        const storedMsgSettings = (stored.settings ?? {}) as Partial<PrintSettings>;
+        const mergedAdjust: Partial<PrintSettings> = { ...storedAdjust };
+        const mergedMsgSettings: Partial<PrintSettings> = { ...storedMsgSettings };
+        let changed = false;
+        for (const k of ['width', 'height', 'delay', 'bold', 'gap', 'pitch'] as (keyof PrintSettings)[]) {
+          const pv = printerCurrent[k];
+          if (pv !== undefined && pv !== storedAdjust[k]) {
+            (mergedAdjust as Record<string, unknown>)[k] = pv;
+            changed = true;
+          }
+        }
+        for (const k of ['speed', 'rotation'] as (keyof PrintSettings)[]) {
+          const pv = printerCurrent[k];
+          if (pv !== undefined && pv !== storedMsgSettings[k]) {
+            (mergedMsgSettings as Record<string, unknown>)[k] = pv;
+            changed = true;
+          }
+        }
+        if (changed) {
+          const updated: MessageDetails = {
+            ...stored,
+            adjustSettings: mergedAdjust as MessageDetails['adjustSettings'],
+            settings: mergedMsgSettings as MessageDetails['settings'],
+          };
+          saveMessage(updated, printer.id);
+          updatedCount++;
+          console.log('[SyncAdjustFromPrinters] updated', {
+            printerId: printer.id,
+            printerName: printer.name,
+            messageName,
+            printerCurrent,
+            mergedAdjust,
+            mergedMsgSettings,
+          });
+        } else {
+          skippedCount++;
+        }
+      } catch (e) {
+        console.error(`[SyncAdjustFromPrinters] failed on ${printer.name}:`, e);
+        failedCount++;
+      }
+    }
+
+    setIsSyncingAdjustFromPrinters(false);
+    const parts: string[] = [];
+    parts.push(`${updatedCount} updated`);
+    if (skippedCount) parts.push(`${skippedCount} already in sync`);
+    if (failedCount) parts.push(`${failedCount} failed`);
+    if (failedCount > 0) {
+      toast.warning(`Adjust sync: ${parts.join(', ')}`, { id: toastId, duration: 6000 });
+    } else {
+      toast.success(`Adjust sync: ${parts.join(', ')}`, { id: toastId });
+    }
+  }, [printers, queryPrintSettingsForPrinter, getStoredMessageForPrinter, saveMessage]);
+
+
+
   const applyPromptValuesToPrinter = useCallback(async (
     targetPrinter: Printer | null,
     message: PrintMessage,
