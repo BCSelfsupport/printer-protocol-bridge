@@ -870,7 +870,7 @@ const Index = () => {
     details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings' | 'advancedSettings'>,
     reselectAfter: boolean = true,
   ) => {
-    const { perMessageSettings } = buildEffectiveMessageDependentSettings(details as MessageDetails);
+    const { perMessageSettings } = buildEffectiveMessageDependentSettings(details as MessageDetails, targetPrinter);
     const rawCommands = await buildMessageCommands(
       messageName,
       details.fields,
