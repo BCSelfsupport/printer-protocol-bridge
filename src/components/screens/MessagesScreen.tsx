@@ -295,9 +295,115 @@ export function MessagesScreen({
     setSelectedMessage(message);
   };
 
+  // Entry point when the operator clicks Select. If the parent supplied
+  // sibling printers + the multi-target callbacks, open the "Apply to
+  // Printers" dialog first so the operator can pick who receives this
+  // message. Otherwise fall through to the legacy single-target path.
   const handleSelectMessage = async () => {
     if (!selectedMessage || isSelecting) return;
-    
+
+    if (
+      sourcePrinter &&
+      siblingPrinters &&
+      siblingPrinters.length > 0 &&
+      onSelectOnPrinter &&
+      onApplyPromptValuesOnPrinter
+    ) {
+      setPendingApplyMessage(selectedMessage);
+      setApplyDialogOpen(true);
+      return;
+    }
+
+    await runSelectionOnSource();
+  };
+
+  // Fan out the current selection to a list of target printers chosen from
+  // the ApplyToPrintersDialog. Handles the prompt case by opening the
+  // UserDefineEntryDialog once and baking the entered value into every target.
+  const runSelectionAcrossTargets = async (targets: Printer[]) => {
+    if (!selectedMessage) return;
+
+    // Single target = source → reuse existing per-source flow (keeps ^SM only
+    // when no prompt, keeps scan-source flow intact, keeps LineID resolution).
+    if (targets.length === 1 && targets[0].id === sourcePrinter?.id) {
+      await runSelectionOnSource();
+      return;
+    }
+
+    if (!onSelectOnPrinter || !onApplyPromptValuesOnPrinter) {
+      await runSelectionOnSource();
+      return;
+    }
+
+    setIsSelecting(true);
+    try {
+      const stored = onGetStoredMessage?.(selectedMessage.name);
+      const resolvedLineId = connectedPrinterLineId?.trim();
+      const resolvedStored = stored
+        ? {
+            ...stored,
+            fields: stored.fields.map((field) =>
+              field.dynamicSource === 'lineId'
+                ? { ...field, data: resolvedLineId || field.data || 'LINE ID' }
+                : field
+            ),
+          }
+        : null;
+
+      const keyboardPrompts = resolvedStored?.fields.filter(
+        f => f.promptBeforePrint && (f.promptSource ?? 'keyboard') === 'keyboard'
+      ) ?? [];
+      const scannerPrompts = resolvedStored?.fields.filter(
+        f => f.promptBeforePrint && f.promptSource === 'scanner'
+      ) ?? [];
+
+      // Scanner-source prompts across a fleet require a different UX (per-printer
+      // scan). For now, warn and only apply to source when that path is needed.
+      if (scannerPrompts.length > 0) {
+        toast.error('Scan-source prompts can only run on the source printer. Uncheck extra targets.');
+        return;
+      }
+
+      // Keyboard-prompt flow: open UserDefineEntryDialog. onConfirm below
+      // (guarded by pendingApplyTargets) will bake fields and fan out.
+      if (keyboardPrompts.length > 0 && resolvedStored) {
+        const prompts: UserDefinePrompt[] = keyboardPrompts.map(f => ({
+          fieldId: f.id,
+          label: f.promptLabel || f.data || 'ENTER VALUE',
+          length: f.promptLength || 20,
+        }));
+        setPendingMessageDetails(resolvedStored);
+        setPendingApplyTargets(targets);
+        setUserDefinePrompts(prompts);
+        setUserDefineEntryOpen(true);
+        return;
+      }
+
+      // No prompt → plain ^SM to every target, in parallel.
+      toast.loading(`Selecting "${selectedMessage.name}" on ${targets.length} printer(s)…`, { id: 'multi-select' });
+      const results = await Promise.all(
+        targets.map(async (p) => ({ p, ok: await onSelectOnPrinter(p, selectedMessage) }))
+      );
+      const okCount = results.filter(r => r.ok).length;
+      const failCount = results.length - okCount;
+      if (failCount === 0) {
+        toast.success(`Selected on ${okCount} printer(s)`, { id: 'multi-select' });
+      } else {
+        toast.error(`Selected on ${okCount}, failed on ${failCount}. Check the printer cards for details.`, { id: 'multi-select' });
+      }
+      onHome();
+    } finally {
+      setIsSelecting(false);
+    }
+  };
+
+  // Legacy single-target selection path (source printer only). Unchanged
+  // behaviour — used when no sibling picker is wired, when the operator
+  // unchecks all extra targets, or when a scan-source prompt forces
+  // source-only.
+  const runSelectionOnSource = async () => {
+    if (!selectedMessage || isSelecting) return;
+
     setIsSelecting(true);
     try {
       // Before selecting, resolve any printer-driven fields from current printer config
