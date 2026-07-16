@@ -99,6 +99,15 @@ interface MessagesScreenProps {
   isSlave?: boolean;
   /** Called when a blocked action is attempted on a slave (Index renders the explainer dialog). */
   onSlaveBlocked?: () => void;
+  // ─── Multi-target selection ("Apply to Printers" dialog) ──────────────────
+  /** The printer this Messages screen is currently managing (source of the selection). */
+  sourcePrinter?: Printer | null;
+  /** Other online printers the operator may also apply the message to. */
+  siblingPrinters?: Printer[];
+  /** Plain ^SM select on the given printer. */
+  onSelectOnPrinter?: (printer: Printer, message: PrintMessage) => Promise<boolean>;
+  /** Full baked-fields rewrite + ^SM on the given printer (used for prompted messages). */
+  onApplyPromptValuesOnPrinter?: (printer: Printer, message: PrintMessage, updatedDetails: MessageDetails) => Promise<boolean>;
 }
 
 export function MessagesScreen({ 
