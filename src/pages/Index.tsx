@@ -58,6 +58,8 @@ import { useFleetTelemetryPush } from '@/hooks/useFleetTelemetryPush';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { isRelayMode, printerTransport } from '@/lib/printerTransport';
 import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
+import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
+import { beginSaveBusy, waitForSaveIdle } from '@/lib/saveBusy';
 import { isPresetMessage } from '@/lib/hardcodedMessages';
 
 
@@ -99,6 +101,11 @@ const hasCompleteSaveAck = (rawResponse?: string): boolean => {
     .trim();
   const upper = cleaned.toUpperCase();
   return upper.includes('COMMAND SUCCESSFUL') || upper === 'OK' || upper === 'SUCCESS';
+};
+
+const isSaveSequenceCommand = (command: string) => {
+  const trimmed = command.trim().toUpperCase();
+  return trimmed.startsWith('^NM ') || trimmed.startsWith('^NF ') || trimmed === '^SV';
 };
 
 const getSaveCommandDelay = (command: string, fieldCount: number) => {
@@ -757,8 +764,24 @@ const Index = () => {
       && targetPrinter.id !== connectionState.connectedPrinter?.id
       && (window.electronAPI || isRelayMode());
 
+    return runFleetWriteExclusive(() => runPrinterWriteExclusive(targetPrinter.id, async () => {
+      const hasSaveCommand = commandsToRun.some(({ command }) => isSaveSequenceCommand(command));
+      let releaseSaveBusy = () => {};
     try {
+      if (hasSaveCommand && needsSharedSession) {
+        const saveIdle = await waitForSaveIdle(20000);
+        if (!saveIdle) {
+          console.warn(`[PrinterWrite] Save busy did not clear before writing ${targetPrinter.name}; aborting sequence`);
+          return { success: false, failedIndex: 0 };
+        }
+      }
+
+      if (hasSaveCommand) {
+        releaseSaveBusy = beginSaveBusy();
+      }
+
       if (needsSharedSession) {
+        console.log(`[PrinterWrite] ${targetPrinter.name}: opening guarded session for ${commandsToRun.length} command(s)`);
         const connectResult = await printerTransport.connect({
           id: targetPrinter.id,
           ipAddress: targetPrinter.ipAddress,
@@ -773,11 +796,13 @@ const Index = () => {
 
       for (let index = 0; index < commandsToRun.length; index += 1) {
         const { command, delayAfterMs } = commandsToRun[index];
+        const startedAt = Date.now();
         const result = await runCommand(command);
         if (!result.success) {
-          console.error(`[PrinterWrite] Command failed on ${targetPrinter.name}: ${command}`);
+          console.error(`[PrinterWrite] Command failed on ${targetPrinter.name} at #${index + 1}/${commandsToRun.length}: ${command}`);
           return { success: false, failedIndex: index };
         }
+        console.log(`[PrinterWrite] ${targetPrinter.name} #${index + 1}/${commandsToRun.length} OK in ${Date.now() - startedAt}ms: ${command.trim().slice(0, 96)}`);
 
         const pendingAckDelay = 'partialPendingSave' in result && result.partialPendingSave ? SAVE_PENDING_ACK_EXTRA_SETTLE_MS : 0;
         const isFinalFlush = index === commandsToRun.length - 1 && command.trim().toUpperCase() === '^SV';
@@ -791,6 +816,7 @@ const Index = () => {
       console.error('[PrinterWrite] Sequence failed:', error);
       return { success: false, failedIndex: 0 };
     } finally {
+      releaseSaveBusy();
       if (needsSharedSession) {
         try {
           await printerTransport.disconnect(targetPrinter.id);
@@ -799,6 +825,7 @@ const Index = () => {
         }
       }
     }
+    }));
   }, [connectionState.connectedPrinter?.id, sendCommand, sendCommandToPrinter]);
 
   // syncMessageToSlaves is declared after replaceMessageWithoutDelete (below)

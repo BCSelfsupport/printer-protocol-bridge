@@ -124,6 +124,7 @@ function createWindow() {
 
 // TCP connection management
 const connections = new Map();
+const connectPromises = new Map();
 // Store last-known connection details so we can reconnect on demand.
 const printerMeta = new Map();
 
@@ -284,25 +285,31 @@ ipcMain.handle('printer:quick-status', async (event, printers) => {
   return (printers || []).map((printer) => ({ id: printer.id, ok: false, disabled: true }));
 });
 
-ipcMain.handle('printer:connect', async (event, printer) => {
+function connectPrinterSocket(printer, source = 'printer:connect') {
   // Persist metadata for on-demand reconnects
   printerMeta.set(printer.id, { ipAddress: printer.ipAddress, port: printer.port });
 
   // Reuse a healthy existing socket immediately (idempotent connect)
   const existing = connections.get(printer.id);
   if (existing && !existing.destroyed && existing.writable) {
-    console.log(`[printer:connect] Reusing existing socket for ${printer.ipAddress}:${printer.port}`);
-    return { success: true, reused: true };
+    console.log(`[${source}] Reusing existing socket for ${printer.ipAddress}:${printer.port}`);
+    return Promise.resolve({ success: true, reused: true });
+  }
+
+  const pending = connectPromises.get(printer.id);
+  if (pending) {
+    console.log(`[${source}] Awaiting in-flight connect for printer ${printer.id}`);
+    return pending;
   }
 
   // Dead socket: clean it up before opening a new one
   if (existing) {
-    console.log(`[printer:connect] Destroying dead socket for printer ${printer.id}`);
+    console.log(`[${source}] Destroying dead socket for printer ${printer.id}`);
     try { existing.destroy(); } catch (_) {}
     connections.delete(printer.id);
   }
 
-  return new Promise((resolve) => {
+  const promise = new Promise((resolve) => {
     const socket = new net.Socket();
     socket.setTimeout(12000);
     socket.setKeepAlive(true, 5000);
@@ -317,7 +324,7 @@ ipcMain.handle('printer:connect', async (event, printer) => {
       const hadTelnet = handleTelnetNegotiation(socket, data);
       if (hadTelnet) {
         telnetHandshakeComplete = true;
-        console.log(`[printer:connect] Telnet negotiation handled for ${printer.id}`);
+        console.log(`[${source}] Telnet negotiation handled for ${printer.id}`);
       }
       const stripped = stripTelnetBytes(data);
       if (stripped && stripped.length > 0) {
@@ -332,28 +339,28 @@ ipcMain.handle('printer:connect', async (event, printer) => {
       clearTimeout(handshakeTimer);
       socket.off('data', onConnectData);
       connections.set(printer.id, socket);
-      console.log(`[printer:connect] Connection ready for ${printer.ipAddress}:${printer.port}`);
+      console.log(`[${source}] Connection ready for ${printer.ipAddress}:${printer.port}`);
       resolve({ success: true });
     };
 
     socket.on('connect', () => {
-      console.log(`[printer:connect] TCP connected to ${printer.ipAddress}:${printer.port}`);
+      console.log(`[${source}] TCP connected to ${printer.ipAddress}:${printer.port}`);
       // Wait for Telnet handshake — Model 88 firmware (v01.09) is slow to negotiate
       handshakeTimer = setTimeout(() => {
         if (!telnetHandshakeComplete) {
-          console.log(`[printer:connect] No Telnet negotiation after 1200ms, proceeding anyway`);
+          console.log(`[${source}] No Telnet negotiation after 1200ms, proceeding anyway`);
         }
         finishConnect();
       }, 1200);
     });
 
     socket.on('timeout', () => {
-      console.log(`[printer:connect] Socket timeout for ${printer.id} — letting it linger`);
+      console.log(`[${source}] Socket timeout for ${printer.id} — letting it linger`);
       // Don't destroy on idle timeout — the socket may still be usable
     });
 
     socket.on('error', (err) => {
-      console.error(`[printer:connect] Socket error for ${printer.id}:`, err.message);
+      console.error(`[${source}] Socket error for ${printer.id}:`, err.message);
       clearTimeout(handshakeTimer);
       connections.delete(printer.id);
       if (!resolved) {
@@ -368,7 +375,7 @@ ipcMain.handle('printer:connect', async (event, printer) => {
     });
 
     socket.on('close', (hadError) => {
-      console.log(`[printer:connect] Socket closed for ${printer.id}, hadError: ${hadError}`);
+      console.log(`[${source}] Socket closed for ${printer.id}, hadError: ${hadError}`);
       clearTimeout(handshakeTimer);
       connections.delete(printer.id);
 
@@ -382,9 +389,20 @@ ipcMain.handle('printer:connect', async (event, printer) => {
       }
     });
 
-    console.log(`[printer:connect] Connecting to ${printer.ipAddress}:${printer.port}`);
+    console.log(`[${source}] Connecting to ${printer.ipAddress}:${printer.port}`);
     socket.connect(printer.port, printer.ipAddress);
   });
+  connectPromises.set(printer.id, promise);
+  promise.finally(() => {
+    if (connectPromises.get(printer.id) === promise) {
+      connectPromises.delete(printer.id);
+    }
+  }).catch(() => {});
+  return promise;
+}
+
+ipcMain.handle('printer:connect', async (event, printer) => {
+  return connectPrinterSocket(printer, 'printer:connect');
 });
 
 // Allow the renderer to register printer connection metadata without opening a TCP socket.
@@ -764,32 +782,7 @@ function startRelayServer() {
       } else if (url === '/relay/connect') {
         // Store meta + connect socket
         const printer = payload.printer;
-        printerMeta.set(printer.id, { ipAddress: printer.ipAddress, port: printer.port });
-        // Attempt TCP connect
-        const result = await new Promise((resolve) => {
-          const existing = connections.get(printer.id);
-          if (existing && !existing.destroyed && existing.writable) {
-            return resolve({ success: true, reused: true });
-          }
-          if (existing) { try { existing.destroy(); } catch(_) {} connections.delete(printer.id); }
-
-          const socket = new net.Socket();
-          socket.setTimeout(10000);
-          socket.setKeepAlive(true, 5000);
-          let resolved = false;
-
-          socket.on('connect', () => {
-            if (!resolved) { resolved = true; connections.set(printer.id, socket); resolve({ success: true }); }
-          });
-          socket.on('error', (err) => {
-            if (!resolved) { resolved = true; resolve({ success: false, error: err.message }); }
-          });
-          socket.on('close', () => { connections.delete(printer.id); });
-          socket.on('data', (data) => { handleTelnetNegotiation(socket, data); });
-          socket.connect(printer.port, printer.ipAddress);
-
-          setTimeout(() => { if (!resolved) { resolved = true; socket.destroy(); resolve({ success: false, error: 'Timeout' }); } }, 10000);
-        });
+        const result = await connectPrinterSocket(printer, 'relay/connect');
         sendJson(200, result);
 
       } else if (url === '/relay/disconnect') {
