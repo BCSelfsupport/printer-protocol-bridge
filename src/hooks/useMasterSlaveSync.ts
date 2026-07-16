@@ -335,9 +335,9 @@ export function useMasterSlaveSync({
         }
 
         for (let index = 0; index < sequence.length; index += 1) {
-          const { command, delayAfterMs = 300 } = sequence[index];
+          const { command, delayAfterMs = 300, options: entryOptions } = sequence[index];
           const commandStarted = Date.now();
-          const result = await runCommand(command);
+          const result = await runCommand(command, entryOptions);
           const response = result?.response ?? result?.error ?? '';
           const ok = !!result?.success && !isProtocolFailureResponse(response);
           console.log(`${logPrefix}: #${index + 1}/${sequence.length} ${summarizeCommand(command)} → ${ok ? 'OK' : 'FAIL'} ${Date.now() - commandStarted}ms${response ? ` (${response.replace(/[\r\n]+/g, ' ').slice(0, 160)})` : ''}`);
