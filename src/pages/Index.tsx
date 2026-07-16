@@ -908,21 +908,22 @@ const Index = () => {
     messageName: string,
     details: MessageDetails,
     isNew?: boolean,
-  ) => {
-    if (!isMaster || !connectionState.connectedPrinter) return;
+  ): Promise<Array<{ slaveId: number; slaveName: string; ok: boolean; reason?: string }>> => {
+    if (!isMaster || !connectionState.connectedPrinter) return [];
     if (isPresetMessage(messageName)) {
       console.log(`[MasterSlaveSync] Skipping preset message "${messageName}" — already exists on slaves`);
-      return;
+      return [];
     }
     const slaves = getSlavesForMaster(connectionState.connectedPrinter.id);
     const availableSlaves = slaves.filter(s => s.isAvailable);
-    if (availableSlaves.length === 0) return;
+    if (availableSlaves.length === 0) return [];
 
-    if (details.fields.length === 0) return;
+    if (details.fields.length === 0) return [];
 
     console.log(`[MasterSlaveSync] Pushing "${messageName}" to ${availableSlaves.length} slave(s) (template=${details.templateValue ?? '32'})`);
 
     const targetUpper = messageName.trim().toUpperCase();
+    const results: Array<{ slaveId: number; slaveName: string; ok: boolean; reason?: string }> = [];
     for (const slave of availableSlaves) {
       const slaveCurrent = slave.currentMessage?.trim().toUpperCase();
       let ok = false;
@@ -948,8 +949,10 @@ const Index = () => {
         advancedSettings: details.advancedSettings,
       }, slaveCurrent === targetUpper);
       ok = result.success;
+      const reason = ok ? undefined : (result.reason ?? 'unknown');
+      results.push({ slaveId: slave.id, slaveName: slave.name, ok, reason });
       if (!ok) {
-        console.warn(`[MasterSlaveSync] Slave rewrite failed on ${slave.name}: ${result.reason}`);
+        console.warn(`[MasterSlaveSync] Slave rewrite failed on ${slave.name}: ${reason}`);
       }
 
       if (ok) {
@@ -962,6 +965,7 @@ const Index = () => {
       }
       console.log(`[MasterSlaveSync] Pushed "${messageName}" → ${slave.name}: ${ok ? 'OK' : 'PARTIAL'}`);
     }
+    return results;
   }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, replaceMessageWithoutDelete, normalizeMessageForPrinter, saveMessage, updatePrinter]);
 
   const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
