@@ -69,9 +69,21 @@ const SAVE_ACK_MAX_WAIT_MS = 30000;
 const SAVE_NM_IDLE_AFTER_DATA_MS = 1500;
 const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 5000;
 
+// Prompt-before-print messages force the printer through a longer internal
+// handshake on ^SM (prompt config parse + display). A 15 s HTTP ceiling can
+// cut the ACK on slow slaves and cause phantom FAILs — worse, a printer left
+// mid-transition has historically required a power-cycle. Give ^SM room to
+// breathe when the target message carries any prompt field.
+const SM_PROMPT_ACK_MAX_WAIT_MS = 28000;
+const SM_PROMPT_IDLE_AFTER_DATA_MS = 1500;
+const SM_PROMPT_POST_DELAY_MS = 1500;
+const SM_VERIFY_RETRY_DELAY_MS = 1500;
+
 type SequencedCommand = {
   command: string;
   delayAfterMs?: number;
+  /** Overrides the default per-command transport options (timeout/idle window). */
+  options?: TransportCommandOptions;
 };
 
 const getCommandOptions = (command: string): TransportCommandOptions | undefined => {
@@ -83,6 +95,11 @@ const getCommandOptions = (command: string): TransportCommandOptions | undefined
     return { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS };
   }
   return undefined;
+};
+
+const messageHasPrompt = (details: MessageDetails | null): boolean => {
+  if (!details) return false;
+  return details.fields.some((f) => (f as { promptBeforePrint?: boolean }).promptBeforePrint === true);
 };
 
 const isSaveCommand = (command: string) => {
