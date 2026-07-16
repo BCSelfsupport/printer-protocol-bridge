@@ -129,6 +129,11 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
         {stage === 'verify' && (
           <form onSubmit={handleVerify} className="space-y-4">
             <p className="text-sm">Use the developer password to open the panel.</p>
+            {isDevAccessRuntime() && (
+              <p className="text-xs text-muted-foreground">
+                Preview / Electron build — password: <code className="font-mono bg-muted px-1 py-0.5 rounded">CITEC</code>
+              </p>
+            )}
             <Input
               value={code}
               onChange={(e) => setCode(e.target.value)}
