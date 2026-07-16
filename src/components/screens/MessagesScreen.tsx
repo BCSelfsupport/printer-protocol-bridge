@@ -1,4 +1,5 @@
-import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardDrive, Upload, Download, ChevronDown, ChevronRight, ArrowUpFromLine, List, LayoutGrid, FileText, Copy } from 'lucide-react';
+import { Printer as PrinterIcon, Check, Plus, Pencil, Trash2, Globe, Leaf, HardDrive, Upload, Download, ChevronDown, ChevronRight, ArrowUpFromLine, List, LayoutGrid, FileText, Copy, Lock, Unlock } from 'lucide-react';
+import { useProtectedMessages } from '@/lib/protectedMessages';
 import { PcLibraryEntry } from '@/hooks/useMessageStorage';
 import { Printer, PrintMessage } from '@/types/printer';
 import { ApplyToPrintersDialog } from '@/components/printers/ApplyToPrintersDialog';
