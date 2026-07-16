@@ -272,16 +272,20 @@ const Index = () => {
       }),
   }), []);
 
-  const buildEffectiveMessageDependentSettings = useCallback((details: MessageDetails) => {
+  const buildEffectiveMessageDependentSettings = useCallback((
+    details: MessageDetails,
+    targetPrinter?: Printer | null,
+  ) => {
     const effectiveSpeed = details.adjustSettings?.speed
       ?? details.settings?.speed
       ?? connectionState.settings.speed;
     // Per-printer rotation override (from the printer setup card) always wins
-    // over any rotation stored in the message. This mirrors what
-    // copyMessageToPrinters / syncMessageToSlaves already do for target
-    // printers, and ensures the connected/source printer honors its own
-    // setup-card rotation instead of whatever the message header carries.
-    const effectiveRotation = connectionState.connectedPrinter?.rotation
+    // over any rotation stored in the message. When a target printer is
+    // supplied (slave sync, copy-to-printers, apply-adjust to a non-connected
+    // printer), use THAT printer's rotation — not the currently connected
+    // one — so each printer honors its own setup-card setting.
+    const rotationPrinter = targetPrinter ?? connectionState.connectedPrinter;
+    const effectiveRotation = rotationPrinter?.rotation
       ?? details.adjustSettings?.rotation
       ?? details.settings?.rotation
       ?? connectionState.settings.rotation;
@@ -308,6 +312,7 @@ const Index = () => {
       },
     };
   }, [connectionState.settings, connectionState.connectedPrinter?.rotation]);
+
 
   const buildMessageDependentCommandSequence = useCallback(({
     adjustSettings,
@@ -865,7 +870,7 @@ const Index = () => {
     details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings' | 'advancedSettings'>,
     reselectAfter: boolean = true,
   ) => {
-    const { perMessageSettings } = buildEffectiveMessageDependentSettings(details as MessageDetails);
+    const { perMessageSettings } = buildEffectiveMessageDependentSettings(details as MessageDetails, targetPrinter);
     const rawCommands = await buildMessageCommands(
       messageName,
       details.fields,
@@ -1470,7 +1475,7 @@ const Index = () => {
     }
 
     const adj = stored.adjustSettings ?? {};
-    const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(stored);
+    const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(stored, targetPrinter);
     const commands = buildMessageDependentCommandSequence({
       adjustSettings: adj,
       fullAdjustSettings,
