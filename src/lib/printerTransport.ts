@@ -61,6 +61,25 @@ function getRelayUrl(): string | null {
   return `http://${relayConfig.pcIp}:${relayConfig.port || 8766}`;
 }
 
+// Default HTTP abort ceiling for a single relay call. Individual commands can
+// extend this via options.maxWaitMs (e.g. ^SM on a prompt-before-print message
+// or ^NM/^SV saves) — we add a small buffer so the printer's own ACK window
+// always expires before the HTTP layer gives up. Clamped to prevent runaway
+// waits on truly wedged printers (that scenario should surface as FAIL, not
+// hang the fleet loop).
+const DEFAULT_RELAY_TIMEOUT_MS = 15000;
+const MAX_RELAY_TIMEOUT_MS = 60000;
+const RELAY_TIMEOUT_BUFFER_MS = 5000;
+
+function resolveRelayTimeoutMs(body: unknown): number {
+  const opts = (body as { options?: TransportCommandOptions } | null)?.options;
+  const maxWait = opts?.maxWaitMs;
+  if (typeof maxWait === 'number' && maxWait > 0) {
+    return Math.min(MAX_RELAY_TIMEOUT_MS, Math.max(DEFAULT_RELAY_TIMEOUT_MS, maxWait + RELAY_TIMEOUT_BUFFER_MS));
+  }
+  return DEFAULT_RELAY_TIMEOUT_MS;
+}
+
 async function relayFetch(endpoint: string, body: unknown): Promise<{ printers?: unknown[]; success?: boolean; response?: string; error?: string; [k: string]: unknown } | null> {
   const base = getRelayUrl();
   if (!base) throw new Error('Relay not configured');
@@ -68,7 +87,7 @@ async function relayFetch(endpoint: string, body: unknown): Promise<{ printers?:
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(resolveRelayTimeoutMs(body)),
   });
   return res.json();
 }
