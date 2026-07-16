@@ -4,6 +4,23 @@ import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 
 const STORAGE_KEY = 'codesync-printers';
 const REMOVED_EMULATED_KEY = 'codesync-printers-removed-emulated';
+const EMULATED_MASTER_IP = '192.168.1.55';
+const EMULATED_PRINTER_IPS = [
+  '192.168.1.55',
+  '192.168.1.56',
+  '192.168.1.57',
+  '192.168.1.58',
+  '192.168.1.59',
+  '192.168.1.60',
+  '192.168.1.61',
+  '192.168.1.62',
+  '192.168.1.63',
+  '192.168.1.64',
+  '192.168.1.65',
+  '192.168.1.100',
+  '192.168.1.101',
+];
+const EMULATED_PRINTER_CONFIGS = EMULATED_PRINTER_IPS.map((ipAddress) => ({ ipAddress, port: 23 }));
 
 // Track emulated printer IP:port pairs the user has explicitly removed,
 // so they don't get re-added by the auto-sync loop.
@@ -23,6 +40,23 @@ const saveRemovedEmulatedKeys = (set: Set<string>) => {
   } catch (e) {
     console.error('Failed to save removed emulated printers:', e);
   }
+};
+
+const applyDefaultEmulatorRoles = (printers: Printer[]): Printer[] => {
+  const master = printers.find((printer) => printer.ipAddress === EMULATED_MASTER_IP && printer.port === 23);
+  if (!master) return printers;
+
+  return printers.map((printer) => {
+    if (!EMULATED_PRINTER_IPS.includes(printer.ipAddress) || printer.port !== 23 || printer.role !== undefined) {
+      return printer;
+    }
+
+    if (printer.id === master.id) {
+      return { ...printer, role: 'master' as const, masterId: undefined };
+    }
+
+    return { ...printer, role: 'slave' as const, masterId: master.id };
+  });
 };
 
 // Get default printers from emulator when enabled, or single default when disabled
@@ -102,21 +136,7 @@ export function usePrinterStorage() {
       if (!multiPrinterEmulator.enabled) return;
       
       // Get all emulated printer configs
-        const emulatedConfigs = [
-        { ipAddress: '192.168.1.55', port: 23 },
-        { ipAddress: '192.168.1.56', port: 23 },
-        { ipAddress: '192.168.1.57', port: 23 },
-        { ipAddress: '192.168.1.58', port: 23 },
-        { ipAddress: '192.168.1.59', port: 23 },
-        { ipAddress: '192.168.1.60', port: 23 },
-        { ipAddress: '192.168.1.61', port: 23 },
-        { ipAddress: '192.168.1.62', port: 23 },
-        { ipAddress: '192.168.1.63', port: 23 },
-        { ipAddress: '192.168.1.64', port: 23 },
-        { ipAddress: '192.168.1.65', port: 23 },
-        { ipAddress: '192.168.1.100', port: 23 },
-        { ipAddress: '192.168.1.101', port: 23 },
-      ];
+        const emulatedConfigs = EMULATED_PRINTER_CONFIGS;
       
       setPrinters(prev => {
         // Create a map of existing printers by IP:port for quick lookup
@@ -172,7 +192,7 @@ export function usePrinterStorage() {
           }
         });
         
-        return updatedPrinters;
+        return applyDefaultEmulatorRoles(updatedPrinters);
       });
     };
 
@@ -185,8 +205,7 @@ export function usePrinterStorage() {
         // Mark all emulated printers as offline
         setPrinters(prev => prev.map(p => {
         // Check against known emulated IPs
-        const knownEmulatedIps = ['192.168.1.55', '192.168.1.56', '192.168.1.57', '192.168.1.58', '192.168.1.59', '192.168.1.60', '192.168.1.61', '192.168.1.62', '192.168.1.63', '192.168.1.64', '192.168.1.65', '192.168.1.100', '192.168.1.101'];
-          const isEmulated = knownEmulatedIps.includes(p.ipAddress);
+          const isEmulated = EMULATED_PRINTER_IPS.includes(p.ipAddress);
           if (isEmulated && !p.isConnected) {
             return {
               ...p,
@@ -207,21 +226,7 @@ export function usePrinterStorage() {
     // Subscribe to state changes from all potential emulated printers
     // We subscribe even before enabled - the callbacks will check enabled state
     const unsubscribers: (() => void)[] = [];
-    const knownEmulatedIps = [
-      { ipAddress: '192.168.1.55', port: 23 },
-      { ipAddress: '192.168.1.56', port: 23 },
-      { ipAddress: '192.168.1.57', port: 23 },
-      { ipAddress: '192.168.1.58', port: 23 },
-      { ipAddress: '192.168.1.59', port: 23 },
-      { ipAddress: '192.168.1.60', port: 23 },
-      { ipAddress: '192.168.1.61', port: 23 },
-      { ipAddress: '192.168.1.62', port: 23 },
-      { ipAddress: '192.168.1.63', port: 23 },
-      { ipAddress: '192.168.1.64', port: 23 },
-      { ipAddress: '192.168.1.65', port: 23 },
-      { ipAddress: '192.168.1.100', port: 23 },
-      { ipAddress: '192.168.1.101', port: 23 },
-    ];
+    const knownEmulatedIps = EMULATED_PRINTER_CONFIGS;
     
     knownEmulatedIps.forEach(ep => {
       // Subscribe directly to the instance (instances exist even when disabled)

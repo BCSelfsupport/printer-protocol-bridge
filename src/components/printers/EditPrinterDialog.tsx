@@ -61,6 +61,17 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
 
   const existingIps = allPrinters.filter(p => p.id !== printer?.id).map(p => p.ipAddress);
 
+  // Available masters: other printers that are set as master (or could be)
+  const availableMasters = allPrinters.filter(
+    p => p.id !== printer?.id && p.role === 'master'
+  );
+
+  useEffect(() => {
+    if (role === 'slave' && !masterId && availableMasters.length > 0) {
+      setMasterId(availableMasters[0].id.toString());
+    }
+  }, [role, masterId, availableMasters]);
+
   const handleIpChange = (value: string) => {
     setIpAddress(value);
     if (existingIps.includes(value.trim())) {
@@ -90,6 +101,10 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       (pair.b && pair.b.ip === ip && pair.b.port === portNum)
     );
     const effectiveRole: PrinterRole = inTwinPair ? 'none' : role;
+    if (effectiveRole === 'slave' && !masterId) {
+      return;
+    }
+
     onSave(printer.id, {
       name: name.trim(),
       ipAddress: ip,
@@ -110,11 +125,6 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
     onDelete(printer.id);
     onOpenChange(false);
   };
-
-  // Available masters: other printers that are set as master (or could be)
-  const availableMasters = allPrinters.filter(
-    p => p.id !== printer?.id && p.role === 'master'
-  );
 
   if (!printer) return null;
 
@@ -314,6 +324,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
               <Button
                 type="submit"
                 className="bg-primary hover:bg-primary/90"
+                disabled={role === 'slave' && availableMasters.length === 0}
               >
                 <Save className="w-4 h-4 mr-1" />
                 Save Changes
