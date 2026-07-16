@@ -1413,13 +1413,24 @@ const Index = () => {
       const targetRotation = target.rotation ?? details!.adjustSettings?.rotation ?? 'Normal';
       const targetAdjust = { ...(details!.adjustSettings ?? {}), rotation: targetRotation };
       const targetOffset = target.expiryOffsetDays;
-      const targetFields = targetOffset === undefined
-        ? details!.fields
-        : details!.fields.map((f) => {
-            const isExpiry = f.autoCodeFieldType?.startsWith('date_expiry')
-              || (f.autoCodeExpiryDays ?? 0) > 0;
-            return isExpiry ? { ...f, autoCodeExpiryDays: targetOffset } : f;
-          });
+      // Per-target Line ID substitution: any field flagged as a printer-driven
+      // Line ID (dynamicSource === 'lineId') must be rewritten with THIS
+      // printer's configured lineId before we save to the target. Otherwise
+      // every copied printer keeps the source printer's Line ID on the HMI.
+      const targetLineId = target.lineId?.trim();
+      const targetFields = details!.fields.map((f) => {
+        let next = f;
+        if (targetOffset !== undefined) {
+          const isExpiry = f.autoCodeFieldType?.startsWith('date_expiry')
+            || (f.autoCodeExpiryDays ?? 0) > 0;
+          if (isExpiry) next = { ...next, autoCodeExpiryDays: targetOffset };
+        }
+        if ((f as any).dynamicSource === 'lineId' && targetLineId) {
+          next = { ...next, data: targetLineId };
+        }
+        return next;
+      });
+
 
       try {
         const result = await replaceMessageWithoutDelete(target, message.name, {
