@@ -177,9 +177,7 @@ export function useMasterSlaveSync({
     commands: SequencedCommand[],
     traceLabel: string,
   ): Promise<{ success: boolean; failedIndex: number | null; failedCommand?: string; error?: string }> => {
-    const sequence = commands
-      .map((entry) => typeof entry === 'string' ? { command: entry } : entry)
-      .filter((entry) => entry.command.trim().length > 0);
+    const sequence = commands.filter((entry) => entry.command.trim().length > 0);
 
     if (sequence.length === 0) {
       return { success: true, failedIndex: null };
