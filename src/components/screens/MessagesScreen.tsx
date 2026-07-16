@@ -108,6 +108,8 @@ interface MessagesScreenProps {
   onSelectOnPrinter?: (printer: Printer, message: PrintMessage) => Promise<boolean>;
   /** Full baked-fields rewrite + ^SM on the given printer (used for prompted messages). */
   onApplyPromptValuesOnPrinter?: (printer: Printer, message: PrintMessage, updatedDetails: MessageDetails) => Promise<boolean>;
+  /** Copy a message (full content + settings) from the source printer to the given targets. */
+  onCopyMessageToPrinters?: (message: PrintMessage, targets: Printer[]) => Promise<void>;
 }
 
 export function MessagesScreen({ 
