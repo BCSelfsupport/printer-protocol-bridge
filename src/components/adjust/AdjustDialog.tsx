@@ -1,4 +1,4 @@
-import { ChevronUp, ChevronDown, Pencil } from 'lucide-react';
+import { ChevronUp, ChevronDown, Pencil, RefreshCw } from 'lucide-react';
 import { PrintSettings } from '@/types/printer';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
@@ -24,7 +24,11 @@ interface AdjustDialogProps {
   onSendCommand: (command: string) => Promise<any>;
   isConnected: boolean;
   title?: string;
+  /** Optional: query current settings from the printer. When provided,
+   *  the dialog auto-refreshes on open and shows a manual refresh button. */
+  onRefreshFromPrinter?: () => Promise<void> | void;
 }
+
 
 // Validation constraints from BestCode v2.0 protocol documentation
 const CONSTRAINTS = {
