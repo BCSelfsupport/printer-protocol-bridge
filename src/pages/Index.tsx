@@ -2346,6 +2346,14 @@ const Index = () => {
               }
               return ok;
             }}
+            sourcePrinter={selectedPrinter ?? connectionState.connectedPrinter ?? null}
+            siblingPrinters={(() => {
+              const tp = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+              return tp ? printers.filter(p => p.id !== tp.id && p.isAvailable) : [];
+            })()}
+            onCopyMessageToPrinters={(message, targets) =>
+              copyMessageToPrinters(selectedPrinter ?? connectionState.connectedPrinter ?? null, message, targets)
+            }
             onFetchMessageDetails={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id === connectionState.connectedPrinter?.id ? fetchMessageContent : undefined}
             onSendCommand={async (cmd) => {
               const target = selectedPrinter ?? connectionState.connectedPrinter ?? null;
