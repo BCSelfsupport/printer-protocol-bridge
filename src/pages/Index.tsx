@@ -3091,7 +3091,9 @@ const Index = () => {
         onSendCommand={sendCommand}
         isConnected={connectionState.isConnected}
         title="Adjust Settings (Global)"
+        onRefreshFromPrinter={queryPrintSettings}
       />
+
 
       {/* Help Dialog */}
       <HelpDialog
