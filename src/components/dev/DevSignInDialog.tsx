@@ -34,40 +34,26 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
   const [showRedeem, setShowRedeem] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
 
-  // On open, probe status (only meaningful for prod — local dev should never see this dialog)
+  // Always land on the verify form so CITEC/TEXAS is reachable no matter what
+  // domain / cache / license state the app is in. The server probe is best-effort
+  // only — its result never blocks the password prompt.
   useEffect(() => {
     if (!open) return;
     setError(null);
     setCode('');
-    if (isDevAccessRuntime()) {
-      setStage('verify');
-      setBusy(false);
-      return;
-    }
-    if (!productKey) {
-      setError('No license key activated.');
-      return;
-    }
-    setStage('check');
-    setBusy(true);
+    setStage('verify');
+    setBusy(false);
+    if (!productKey) return;
+    // Fire and forget: we don't gate the UI on this
     (async () => {
       try {
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-dev-access`, {
+        await fetch(`${SUPABASE_URL}/functions/v1/verify-dev-access`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: ANON_KEY },
           body: JSON.stringify({ product_key: productKey }),
         });
-        const data = await res.json();
-        if (!data.is_developer) {
-          setError('This license is not authorised for developer access.');
-          setStage('check');
-          return;
-        }
-        setStage('verify');
       } catch {
-        setError('Could not reach the server.');
-      } finally {
-        setBusy(false);
+        /* ignored — CITEC/TEXAS override always works */
       }
     })();
   }, [open, productKey]);
@@ -78,7 +64,9 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
     setBusy(true);
     setError(null);
     const normalizedCode = normalizeDevPassword(code);
-    if (isDevAccessRuntime() && isPreviewDevPassword(normalizedCode)) {
+    // Unconditional client-side override — CITEC/TEXAS always open the dev panel,
+    // regardless of runtime, license state, or edge function availability.
+    if (isPreviewDevPassword(normalizedCode)) {
       setCode('');
       onSuccess();
       onOpenChange(false);
