@@ -1850,7 +1850,7 @@ export function usePrinterConnection() {
         });
       }
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus, updatePrinterStatus]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus, updatePrinterStatus, armStopJetGrace]);
 
   // Jet Start - send ^SJ 1 command to start the ink jet
   const jetStart = useCallback(async () => {
