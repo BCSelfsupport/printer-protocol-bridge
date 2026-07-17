@@ -660,20 +660,37 @@ export function PrintersScreen({
                 <DownloadCloud className={`w-3.5 h-3.5 ${isSyncingAdjustFromPrinters ? 'animate-pulse' : ''}`} />
               </Button>
             )}
-            {onStopAllJets && (() => {
-              const onlineCount = printers.filter(p => p.isAvailable).length;
-              return (
+            {selectedPrinter && (
+              <Button
+                onClick={handleRemoveSelected}
+                size="sm"
+                variant="outline"
+                className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300 h-8"
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+
+          {/* End-of-shift: Stop All Jets — its own full-width row so it's
+              always visible and never clipped by the toolbar overflow. */}
+          {onStopAllJets && (() => {
+            const onlineCount = printers.filter(p => p.isAvailable).length;
+            return (
+              <div className="mt-2">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-red-500/50 text-red-300 bg-red-500/10 hover:bg-red-500/20 hover:text-red-200 h-8"
+                      className="w-full border-red-500/50 text-red-300 bg-red-500/10 hover:bg-red-500/20 hover:text-red-200 h-8"
                       disabled={isStoppingAllJets || onlineCount === 0}
                       title="End-of-shift: send Stop Jet to every online printer, one at a time (serialized to protect port 23)"
                     >
                       <PowerOff className={`w-3 h-3 mr-1 ${isStoppingAllJets ? 'animate-pulse' : ''}`} />
-                      <span className="text-xs">{isStoppingAllJets ? 'Stopping…' : 'Stop All Jets'}</span>
+                      <span className="text-xs">
+                        {isStoppingAllJets ? 'Stopping…' : `Stop All Jets${onlineCount > 0 ? ` (${onlineCount})` : ''}`}
+                      </span>
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
@@ -691,20 +708,11 @@ export function PrintersScreen({
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-              );
-            })()}
-            {selectedPrinter && (
-              <Button
-                onClick={handleRemoveSelected}
-                size="sm"
-                variant="outline"
-                className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300 h-8"
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            )}
-          </div>
+              </div>
+            );
+          })()}
         </div>
+
 
         {/* Printer List with ScrollArea */}
         <ScrollArea className="flex-1">
