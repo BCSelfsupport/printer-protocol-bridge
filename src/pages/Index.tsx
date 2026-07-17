@@ -870,7 +870,7 @@ const Index = () => {
         }
       }
     }
-    }));
+    });
   }, [connectionState.connectedPrinter?.id, sendCommand, sendCommandToPrinter]);
 
   // syncMessageToSlaves is declared after replaceMessageWithoutDelete (below)
