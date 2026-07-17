@@ -87,6 +87,7 @@ export function Dashboard({
   isSlave = false,
 }: DashboardProps) {
   const [countersDialogOpen, setCountersDialogOpen] = useState(false);
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const { canDatabase } = useLicense();
 
   // Filter status for the gauge
