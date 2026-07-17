@@ -339,12 +339,21 @@ const Index = () => {
     // ^NM header. Do not send a follow-up ^CM after ^NM/^SV: firmware v01.09
     // rejects it with "Save Message failed" and can wedge prompt/autocode saves.
 
-    if (adjustSettings?.width !== undefined) commands.push({ command: `^PW ${fullAdjustSettings.width}`, delayAfterMs: 1200 });
-    if (adjustSettings?.height !== undefined) commands.push({ command: `^PH ${fullAdjustSettings.height}`, delayAfterMs: 900 });
-    if (adjustSettings?.delay !== undefined) commands.push({ command: `^DA ${fullAdjustSettings.delay}`, delayAfterMs: 700 });
-    if (adjustSettings?.bold !== undefined) commands.push({ command: `^SB ${fullAdjustSettings.bold}`, delayAfterMs: 700 });
-    if (adjustSettings?.gap !== undefined) commands.push({ command: `^GP ${fullAdjustSettings.gap}`, delayAfterMs: 700 });
-    if (adjustSettings?.pitch !== undefined) commands.push({ command: `^PA ${fullAdjustSettings.pitch}`, delayAfterMs: 700 });
+    // If the message carries ANY stored adjustSettings, treat the full set as
+    // authoritative and push every key from fullAdjustSettings (which already
+    // merged stored values with fleet defaults). This guarantees Width=2 /
+    // Delay=500 / etc. actually reach the printer instead of leaving stale
+    // HMI values (e.g. width=15) in place.
+    const hasAnyStoredAdjust = !!adjustSettings && Object.keys(adjustSettings).length > 0;
+    const pushKey = (key: keyof MessageDetails['adjustSettings'] & keyof PrintSettings) =>
+      hasAnyStoredAdjust || adjustSettings?.[key] !== undefined;
+
+    if (pushKey('width')) commands.push({ command: `^PW ${fullAdjustSettings.width}`, delayAfterMs: 1200 });
+    if (pushKey('height')) commands.push({ command: `^PH ${fullAdjustSettings.height}`, delayAfterMs: 900 });
+    if (pushKey('delay')) commands.push({ command: `^DA ${fullAdjustSettings.delay}`, delayAfterMs: 700 });
+    if (pushKey('bold')) commands.push({ command: `^SB ${fullAdjustSettings.bold}`, delayAfterMs: 700 });
+    if (pushKey('gap')) commands.push({ command: `^GP ${fullAdjustSettings.gap}`, delayAfterMs: 700 });
+    if (pushKey('pitch')) commands.push({ command: `^PA ${fullAdjustSettings.pitch}`, delayAfterMs: 700 });
 
     return commands;
   }, []);
