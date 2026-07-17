@@ -671,7 +671,48 @@ export function PrintersScreen({
               </Button>
             )}
           </div>
+
+          {/* End-of-shift: Stop All Jets — its own full-width row so it's
+              always visible and never clipped by the toolbar overflow. */}
+          {onStopAllJets && (() => {
+            const onlineCount = printers.filter(p => p.isAvailable).length;
+            return (
+              <div className="mt-2">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full border-red-500/50 text-red-300 bg-red-500/10 hover:bg-red-500/20 hover:text-red-200 h-8"
+                      disabled={isStoppingAllJets || onlineCount === 0}
+                      title="End-of-shift: send Stop Jet to every online printer, one at a time (serialized to protect port 23)"
+                    >
+                      <PowerOff className={`w-3 h-3 mr-1 ${isStoppingAllJets ? 'animate-pulse' : ''}`} />
+                      <span className="text-xs">
+                        {isStoppingAllJets ? 'Stopping…' : `Stop All Jets${onlineCount > 0 ? ` (${onlineCount})` : ''}`}
+                      </span>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Stop all jets?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will send Stop Jet (^SJ 0) to all {onlineCount} online printer{onlineCount === 1 ? '' : 's'}, one at a time, with a safe delay between each. Each printer will begin its ~2:14 shutdown cycle. Use this for end-of-shift cycle-down.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => { void onStopAllJets(); }}>
+                        Stop All Jets
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            );
+          })()}
         </div>
+
 
         {/* Printer List with ScrollArea */}
         <ScrollArea className="flex-1">
