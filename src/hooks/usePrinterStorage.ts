@@ -335,7 +335,7 @@ export function usePrinterStorage() {
     }));
   }, []);
 
-  const updatePrinterStatus = useCallback((printerId: number, status: Pick<Printer, 'isAvailable' | 'status'> & Partial<Pick<Printer, 'hasActiveErrors' | 'inkLevel' | 'makeupLevel' | 'currentMessage' | 'printCount'>>) => {
+  const updatePrinterStatus = useCallback((printerId: number, status: Pick<Printer, 'isAvailable' | 'status'> & Partial<Pick<Printer, 'hasActiveErrors' | 'inkLevel' | 'makeupLevel' | 'currentMessage' | 'printCount' | 'jetRunning'>>) => {
     setPrinters(prev => prev.map(p => {
       if (p.id !== printerId) return p;
       const safeStatus = { ...status };
