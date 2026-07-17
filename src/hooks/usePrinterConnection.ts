@@ -299,7 +299,7 @@ export function usePrinterConnection() {
             currentMessage: state?.currentMessage,
             printCount: state?.printCount,
             jetRunning: state?.jetRunning,
-          } as any);
+          });
         });
 
         return;
