@@ -1813,6 +1813,7 @@ export function usePrinterConnection() {
           isAvailable: true,
           status: state.hvOn ? 'ready' : 'not_ready',
           hasActiveErrors: false,
+          jetRunning: state.jetRunning,
         });
       }
     } else if (isElectron || isRelayMode()) {
