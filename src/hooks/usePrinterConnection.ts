@@ -1599,7 +1599,21 @@ export function usePrinterConnection() {
 
     // Initial values now come from serialized polling as soon as socketReady is true.
     // This avoids opening a second connection during connect, which can delay status sync.
+
+    // Auto-reconnect success handling: if this connect matches a pending
+    // reconnect entry, clear it and let the operator know.
+    const pending = pendingReconnectRef.current;
+    if (pending && pending.printer.id === printer.id) {
+      console.log('[auto-reconnect] Reconnected to', printer.name, 'after', pending.attempts, 'attempt(s)');
+      toast.success(`Reconnected to ${printer.name}`);
+      pendingReconnectRef.current = null;
+    }
   }, [updatePrinter, queryPrinterStatus, queryMessageList]);
+
+  // Keep ref in sync so the ping loop can trigger auto-reconnect without a
+  // circular dep on `connect`.
+  connectRef.current = connect;
+
 
   const disconnect = useCallback(async () => {
     const printerToClose = connectionState.connectedPrinter;
