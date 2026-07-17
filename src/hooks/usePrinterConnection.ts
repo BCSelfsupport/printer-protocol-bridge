@@ -372,6 +372,50 @@ export function usePrinterConnection() {
               makeupLevel: existingPrinter?.makeupLevel,
               currentMessage: existingPrinter?.currentMessage,
             });
+
+            // Auto-reconnect: if this printer was recently auto-disconnected
+            // by the polling loop and is now pinging healthy again, try to
+            // re-open the persistent socket. Bounded to protect a sick printer.
+            const pending = pendingReconnectRef.current;
+            if (
+              pending &&
+              pending.printer.id === status.id &&
+              !pending.inFlight &&
+              connectedPrinterIdRef.current == null &&
+              Date.now() - pending.lastAt >= AUTO_RECONNECT_MIN_GAP_MS
+            ) {
+              const elapsed = Date.now() - pending.firstAt;
+              if (elapsed > AUTO_RECONNECT_WINDOW_MS || pending.attempts >= AUTO_RECONNECT_MAX_ATTEMPTS) {
+                console.warn('[auto-reconnect] Giving up', {
+                  id: status.id,
+                  attempts: pending.attempts,
+                  elapsedMs: elapsed,
+                });
+                pendingReconnectRef.current = null;
+              } else {
+                pending.attempts += 1;
+                pending.lastAt = Date.now();
+                pending.inFlight = true;
+                console.log('[auto-reconnect] Attempting', {
+                  id: status.id,
+                  name: pending.printer.name,
+                  attempt: pending.attempts,
+                });
+                const fn = connectRef.current;
+                if (fn) {
+                  fn(pending.printer)
+                    .catch((err) => console.warn('[auto-reconnect] Attempt failed:', err))
+                    .finally(() => {
+                      if (pendingReconnectRef.current) {
+                        pendingReconnectRef.current.inFlight = false;
+                      }
+                    });
+                } else {
+                  pending.inFlight = false;
+                }
+              }
+            }
+
           } else {
             const count = (offlineCountsRef.current[status.id] || 0) + 1;
             offlineCountsRef.current[status.id] = count;
