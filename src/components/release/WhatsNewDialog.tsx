@@ -155,8 +155,8 @@ export function WhatsNewButton({
         'relative inline-flex items-center justify-center rounded-full transition-colors',
         className
       )}
-      title="What&apos;s New"
-      aria-label="What&apos;s New"
+      title="What's New"
+      aria-label="What's New"
     >
       <Sparkles className="w-4 h-4 md:w-5 md:h-5" />
       {hasUnread && (
