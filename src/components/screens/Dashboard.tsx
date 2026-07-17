@@ -170,6 +170,7 @@ export function Dashboard({
 
             <WhatsNewButton
               onClick={() => setWhatsNewOpen(true)}
+              label="New"
               className="industrial-button text-white w-auto h-auto px-3 md:px-3 py-2 md:py-2 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[80px] flex-shrink-0"
             />
 
