@@ -1816,6 +1816,10 @@ export function usePrinterConnection() {
       }
     } else if (isElectron || isRelayMode()) {
       try {
+        // Arm the polling-auto-disconnect grace window BEFORE the command goes
+        // out. If ^SU polling stalls during the ~2:14 shutdown, we must not
+        // tear the socket down mid-shutdown (locks firmware).
+        armStopJetGrace(150);
         await waitForSaveIdle(5000).catch(() => undefined);
         await runPrinterWriteExclusive(printer.id, async () => {
           console.log('[jetStop] Sending ^SJ 0');
