@@ -1693,15 +1693,15 @@ export function usePrinterConnection() {
       }
     } else if (isElectron || isRelayMode()) {
       try {
-        console.log('[jetStop] Sending ^SJ 0');
-        const result = await printerTransport.sendCommand(printer.id, '^SJ 0');
-        console.log('[jetStop] Result:', JSON.stringify(result));
-
-        if (!result?.success) {
-          console.error('[jetStop] ^SJ 0 command failed:', result?.error);
-        }
-
-        // Query status after a delay to reflect new state
+        await waitForSaveIdle(5000).catch(() => undefined);
+        await runPrinterWriteExclusive(printer.id, async () => {
+          console.log('[jetStop] Sending ^SJ 0');
+          const result = await printerTransport.sendCommand(printer.id, '^SJ 0', { caller: 'jetStop' });
+          console.log('[jetStop] Result:', JSON.stringify(result));
+          if (!result?.success) {
+            console.error('[jetStop] ^SJ 0 command failed:', result?.error);
+          }
+        });
         setTimeout(() => queryPrinterStatus(printer), 1500);
       } catch (e) {
         console.error('[jetStop] Failed to send ^SJ 0:', e);
