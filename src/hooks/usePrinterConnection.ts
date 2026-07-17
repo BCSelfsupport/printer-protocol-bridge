@@ -1493,22 +1493,34 @@ export function usePrinterConnection() {
   }, [updatePrinter, queryPrinterStatus, queryMessageList]);
 
   const disconnect = useCallback(async () => {
-    if ((isElectron || isRelayMode()) && connectionState.connectedPrinter) {
+    const printerToClose = connectionState.connectedPrinter;
+    if ((isElectron || isRelayMode()) && printerToClose) {
       try {
-        await printerTransport.disconnect(connectionState.connectedPrinter.id);
+        // Serialize the socket close behind any in-flight write on this printer.
+        // Tearing down the TCP session while ^SJ/^PR/^NM is still on the wire
+        // has been observed to lock BestCode firmware (requires power-cycle).
+        // Also wait briefly for save-idle so an in-flight ^NM/^SV digest can
+        // complete before we drop the socket.
+        await waitForSaveIdle(5000).catch(() => undefined);
+        await runPrinterWriteExclusive(printerToClose.id, async () => {
+          try {
+            await printerTransport.disconnect(printerToClose.id);
+          } catch (e) {
+            console.error('Failed to disconnect printer:', e);
+          }
+        });
       } catch (e) {
-        console.error('Failed to disconnect printer:', e);
+        console.error('Disconnect guard failed:', e);
       }
     }
 
-    if (connectionState.connectedPrinter) {
-      updatePrinter(connectionState.connectedPrinter.id, {
+    if (printerToClose) {
+      updatePrinter(printerToClose.id, {
         isConnected: false,
       });
     }
 
     setSocketReady(false);
-    // Reset ^LE empty overrides so stale EMPTY state doesn't carry over to next connection
     leEmptyOverridesRef.current = { inkEmpty: false, makeupEmpty: false };
     setActiveFaults([]);
     setConnectionState({
