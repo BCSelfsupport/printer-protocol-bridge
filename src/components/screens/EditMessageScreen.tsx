@@ -233,10 +233,16 @@ export function EditMessageScreen({
   const [linkedFieldDialogOpen, setLinkedFieldDialogOpen] = useState(false);
   const [dataLinkDialogOpen, setDataLinkDialogOpen] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
-  // Local adjust settings state for the dialog — initialized from message or current printer settings
+  // Local adjust settings state for the dialog.
+  // NEW messages (startEmpty) always start with the fleet's preferred defaults:
+  //   Width=2, Delay=500, Speed=Ultra Fast, Bold=0, Gap=0, Pitch=0.
+  // Rotation is NOT set here — it's driven by the printer setup card at select
+  // time (see buildEffectiveMessageDependentSettings). Existing messages load
+  // their stored adjustSettings in the useEffect below.
   const [localAdjustSettings, setLocalAdjustSettings] = useState<PrintSettings>(() => {
-    const adj = currentAdjustSettings ?? { width: 15, height: 8, delay: 100, bold: 0, gap: 0, pitch: 0, repeatAmount: 0, rotation: 'Normal' as const, speed: 'Ultra Fast' as const };
-    return adj;
+    const FLEET_DEFAULTS: PrintSettings = { width: 2, height: 8, delay: 500, bold: 0, gap: 0, pitch: 0, repeatAmount: 0, rotation: 'Normal', speed: 'Ultra Fast' };
+    if (startEmpty) return FLEET_DEFAULTS;
+    return currentAdjustSettings ?? FLEET_DEFAULTS;
   });
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
