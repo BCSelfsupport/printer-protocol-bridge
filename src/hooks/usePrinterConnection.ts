@@ -381,7 +381,7 @@ export function usePrinterConnection() {
                 consecutiveFailures: count,
                 threshold: OFFLINE_THRESHOLD,
                 wasConnected: isConnectedPrinter,
-                hint: 'Run window.exportPrinterLog(' + status.id + ') NOW for post-mortem',
+                
               });
               updatePrinterStatus(status.id, {
                 isAvailable: false,
