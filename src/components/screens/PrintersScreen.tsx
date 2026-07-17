@@ -10,6 +10,7 @@ import { PrinterServicePopup } from '@/components/printers/PrinterServicePopup';
 import { BroadcastMessageDialog } from '@/components/printers/BroadcastMessageDialog';
 import { ApplyExpiryToPrintersDialog } from '@/components/printers/ApplyExpiryToPrintersDialog';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dashboard } from '@/components/screens/Dashboard';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
