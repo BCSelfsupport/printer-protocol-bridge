@@ -135,9 +135,11 @@ export function WhatsNewDialog({ open, onOpenChange }: WhatsNewDialogProps) {
 export function WhatsNewButton({
   className,
   onClick,
+  label,
 }: {
   className?: string;
   onClick?: () => void;
+  label?: string;
 }) {
   const [hasUnread, setHasUnread] = useState(hasUnreadNote);
 
@@ -159,6 +161,7 @@ export function WhatsNewButton({
       aria-label="What's New"
     >
       <Sparkles className="w-4 h-4 md:w-5 md:h-5" />
+      {label && <span className="text-[10px] md:text-xs">{label}</span>}
       {hasUnread && (
         <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
