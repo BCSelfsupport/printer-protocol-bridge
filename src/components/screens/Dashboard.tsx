@@ -153,14 +153,6 @@ export function Dashboard({
           )}
         </div>
 
-        <WhatsNewButton
-          onClick={() => setWhatsNewOpen(true)}
-          className={`w-8 h-8 md:w-10 md:h-10 flex-shrink-0 ${
-            showCountdown || showReady
-              ? 'bg-white/20 text-white hover:bg-white/30'
-              : 'bg-muted-foreground/30 text-foreground hover:bg-muted-foreground/50'
-          }`}
-        />
       </div>
       
       <div className="flex-1 p-2 md:p-2 flex flex-col gap-2 md:gap-2 overflow-hidden">
@@ -175,6 +167,11 @@ export function Dashboard({
               <Key className="w-7 h-7 md:w-7 md:h-7 mb-0.5" />
               <span className="text-[10px] md:text-xs">{isSignedIn ? 'Sign Out' : 'Sign In'}</span>
             </button>
+
+            <WhatsNewButton
+              onClick={() => setWhatsNewOpen(true)}
+              className="industrial-button text-white w-auto h-auto px-3 md:px-3 py-2 md:py-2 rounded-lg flex flex-col items-center justify-center min-w-[70px] md:min-w-[80px] flex-shrink-0"
+            />
 
             <button 
               onClick={onHelp}
