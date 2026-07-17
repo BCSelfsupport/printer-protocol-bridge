@@ -1829,6 +1829,16 @@ export function usePrinterConnection() {
           console.log('[jetStop] Result:', JSON.stringify(result));
           if (!result?.success) {
             console.error('[jetStop] ^SJ 0 command failed:', result?.error);
+          } else {
+            // Optimistically reflect stopped state on the printer record so a
+            // fast switch to another printer (before the next ^SU) doesn't
+            // leave Stop-All-Jets thinking this jet is still running.
+            updatePrinterStatus(printer.id, {
+              isAvailable: true,
+              status: 'not_ready',
+              hasActiveErrors: false,
+              jetRunning: false,
+            });
           }
         });
         setTimeout(() => queryPrinterStatus(printer), 1500);
