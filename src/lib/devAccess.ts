@@ -1,5 +1,8 @@
 export const PREVIEW_DEV_PASSWORD = 'CITEC';
 
+export const normalizeDevPassword = (password: string) =>
+  (password ?? '').normalize('NFKC').replace(/[\u200B-\u200D\uFEFF]/g, '').trim().toUpperCase();
+
 export const isDevAccessRuntime = () => {
   if (import.meta.env.DEV) return true;
   if (typeof window === 'undefined') return false;
@@ -16,7 +19,7 @@ export const isDevAccessRuntime = () => {
 };
 
 export const isPreviewDevPassword = (password: string) => {
-  const p = (password ?? '').trim().toUpperCase();
+  const p = normalizeDevPassword(password);
   // Accept CITEC (dev/emulator) and TEXAS (admin) in preview/Electron so the
   // dev portal opens whether the user recalls the dev or the admin password.
   return p === PREVIEW_DEV_PASSWORD || p === 'TEXAS';

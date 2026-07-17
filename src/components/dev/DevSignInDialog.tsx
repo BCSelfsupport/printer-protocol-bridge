@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Shield, Loader2 } from 'lucide-react';
 import { useLicense } from '@/contexts/LicenseContext';
-import { isDevAccessRuntime, isPreviewDevPassword } from '@/lib/devAccess';
+import { isDevAccessRuntime, isPreviewDevPassword, normalizeDevPassword } from '@/lib/devAccess';
 
 interface DevSignInDialogProps {
   open: boolean;
@@ -77,7 +77,8 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
     if (!code.trim()) return;
     setBusy(true);
     setError(null);
-    if (isDevAccessRuntime() && isPreviewDevPassword(code)) {
+    const normalizedCode = normalizeDevPassword(code);
+    if (isDevAccessRuntime() && isPreviewDevPassword(normalizedCode)) {
       setCode('');
       onSuccess();
       onOpenChange(false);
@@ -93,7 +94,7 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
       const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-dev-access`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: ANON_KEY },
-        body: JSON.stringify({ product_key: productKey, dev_password: code.trim() }),
+        body: JSON.stringify({ product_key: productKey, dev_password: normalizedCode }),
       });
       const data = await res.json();
       if (data.valid) {
