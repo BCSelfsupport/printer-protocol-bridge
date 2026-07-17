@@ -372,6 +372,50 @@ export function usePrinterConnection() {
               makeupLevel: existingPrinter?.makeupLevel,
               currentMessage: existingPrinter?.currentMessage,
             });
+
+            // Auto-reconnect: if this printer was recently auto-disconnected
+            // by the polling loop and is now pinging healthy again, try to
+            // re-open the persistent socket. Bounded to protect a sick printer.
+            const pending = pendingReconnectRef.current;
+            if (
+              pending &&
+              pending.printer.id === status.id &&
+              !pending.inFlight &&
+              connectedPrinterIdRef.current == null &&
+              Date.now() - pending.lastAt >= AUTO_RECONNECT_MIN_GAP_MS
+            ) {
+              const elapsed = Date.now() - pending.firstAt;
+              if (elapsed > AUTO_RECONNECT_WINDOW_MS || pending.attempts >= AUTO_RECONNECT_MAX_ATTEMPTS) {
+                console.warn('[auto-reconnect] Giving up', {
+                  id: status.id,
+                  attempts: pending.attempts,
+                  elapsedMs: elapsed,
+                });
+                pendingReconnectRef.current = null;
+              } else {
+                pending.attempts += 1;
+                pending.lastAt = Date.now();
+                pending.inFlight = true;
+                console.log('[auto-reconnect] Attempting', {
+                  id: status.id,
+                  name: pending.printer.name,
+                  attempt: pending.attempts,
+                });
+                const fn = connectRef.current;
+                if (fn) {
+                  fn(pending.printer)
+                    .catch((err) => console.warn('[auto-reconnect] Attempt failed:', err))
+                    .finally(() => {
+                      if (pendingReconnectRef.current) {
+                        pendingReconnectRef.current.inFlight = false;
+                      }
+                    });
+                } else {
+                  pending.inFlight = false;
+                }
+              }
+            }
+
           } else {
             const count = (offlineCountsRef.current[status.id] || 0) + 1;
             offlineCountsRef.current[status.id] = count;
@@ -989,6 +1033,32 @@ export function usePrinterConnection() {
   const pollingFailCountRef = useRef(0);
   const POLLING_OFFLINE_THRESHOLD = 5; // 5 failed cycles × 3s = ~15s before offline
 
+  // Stop-jet shutdown grace window. During the ~2:14 clean-shutdown cycle the
+  // printer may go slow/quiet on ^SU; auto-disconnecting mid-shutdown has
+  // been observed to lock BestCode firmware (same class as Issue 2). Arm this
+  // whenever ^SJ 0 goes out to the connected printer; handlePollingCycleFailure
+  // refuses to disconnect while the grace is active.
+  const stopJetGraceUntilRef = useRef<number>(0);
+  const armStopJetGrace = useCallback((seconds: number = 150) => {
+    stopJetGraceUntilRef.current = Date.now() + seconds * 1000;
+    console.log('[stopJetGrace] armed for', seconds, 's');
+  }, []);
+
+  // Auto-reconnect after unexpected polling-triggered offline. Remember the
+  // printer so the ping loop can re-open the session the moment it responds
+  // again. Bounded so a genuinely sick printer doesn't get hammered.
+  const pendingReconnectRef = useRef<{
+    printer: Printer;
+    attempts: number;
+    firstAt: number;
+    lastAt: number;
+    inFlight: boolean;
+  } | null>(null);
+  const AUTO_RECONNECT_MAX_ATTEMPTS = 3;
+  const AUTO_RECONNECT_WINDOW_MS = 60_000;
+  const AUTO_RECONNECT_MIN_GAP_MS = 4_000;
+  const connectRef = useRef<((printer: Printer) => Promise<void>) | null>(null);
+
   const handlePollingCycleFailure = useCallback(() => {
     pollingFailCountRef.current++;
     const printerId = connectedPrinterIdRef.current;
@@ -998,11 +1068,31 @@ export function usePrinterConnection() {
       threshold: POLLING_OFFLINE_THRESHOLD,
     });
     if (pollingFailCountRef.current >= POLLING_OFFLINE_THRESHOLD && printerId != null) {
+      // Refuse to auto-disconnect while a stop-jet shutdown is in progress.
+      if (Date.now() < stopJetGraceUntilRef.current) {
+        const remaining = Math.ceil((stopJetGraceUntilRef.current - Date.now()) / 1000);
+        console.warn('[polling] Suppressing auto-disconnect during stop-jet grace', {
+          printerId, remainingSeconds: remaining,
+        });
+        return;
+      }
       console.error('[polling] Connected printer unreachable — marking OFFLINE', {
         printerId,
         consecutiveFailures: pollingFailCountRef.current,
-        
       });
+      // Arm auto-reconnect for this printer so the ping loop re-opens it as
+      // soon as it responds again.
+      const printerObj = printersRef.current.find(p => p.id === printerId);
+      if (printerObj) {
+        pendingReconnectRef.current = {
+          printer: printerObj,
+          attempts: 0,
+          firstAt: Date.now(),
+          lastAt: 0,
+          inFlight: false,
+        };
+        console.log('[auto-reconnect] Armed for printer', printerId, printerObj.name);
+      }
       updatePrinterStatus(printerId, {
         isAvailable: false,
         status: 'offline',
@@ -1011,6 +1101,7 @@ export function usePrinterConnection() {
       disconnectRef.current();
     }
   }, [updatePrinterStatus]);
+
 
   const handlePollingCycleSuccess = useCallback(() => {
     pollingFailCountRef.current = 0;
@@ -1508,7 +1599,21 @@ export function usePrinterConnection() {
 
     // Initial values now come from serialized polling as soon as socketReady is true.
     // This avoids opening a second connection during connect, which can delay status sync.
+
+    // Auto-reconnect success handling: if this connect matches a pending
+    // reconnect entry, clear it and let the operator know.
+    const pending = pendingReconnectRef.current;
+    if (pending && pending.printer.id === printer.id) {
+      console.log('[auto-reconnect] Reconnected to', printer.name, 'after', pending.attempts, 'attempt(s)');
+      toast.success(`Reconnected to ${printer.name}`);
+      pendingReconnectRef.current = null;
+    }
   }, [updatePrinter, queryPrinterStatus, queryMessageList]);
+
+  // Keep ref in sync so the ping loop can trigger auto-reconnect without a
+  // circular dep on `connect`.
+  connectRef.current = connect;
+
 
   const disconnect = useCallback(async () => {
     const printerToClose = connectionState.connectedPrinter;
@@ -1711,6 +1816,10 @@ export function usePrinterConnection() {
       }
     } else if (isElectron || isRelayMode()) {
       try {
+        // Arm the polling-auto-disconnect grace window BEFORE the command goes
+        // out. If ^SU polling stalls during the ~2:14 shutdown, we must not
+        // tear the socket down mid-shutdown (locks firmware).
+        armStopJetGrace(150);
         await waitForSaveIdle(5000).catch(() => undefined);
         await runPrinterWriteExclusive(printer.id, async () => {
           console.log('[jetStop] Sending ^SJ 0');
@@ -1741,7 +1850,7 @@ export function usePrinterConnection() {
         });
       }
     }
-  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus, updatePrinterStatus]);
+  }, [connectionState.isConnected, connectionState.connectedPrinter, queryPrinterStatus, updatePrinterStatus, armStopJetGrace]);
 
   // Jet Start - send ^SJ 1 command to start the ink jet
   const jetStart = useCallback(async () => {
@@ -3827,6 +3936,7 @@ export function usePrinterConnection() {
     startPrint,
     stopPrint,
     jetStop,
+    armStopJetGrace,
     jetStart,
     updateSettings,
     selectMessage,
