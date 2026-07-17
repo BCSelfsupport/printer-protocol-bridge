@@ -1570,25 +1570,21 @@ export function usePrinterConnection() {
       }
     } else if (isElectron || isRelayMode()) {
       try {
-        const tryCommands = ['^PR 1', '^PR1'] as const;
-        let lastResult: any = null;
-
-        for (const cmd of tryCommands) {
-          console.log('[startPrint] Sending', cmd);
-          const result = await printerTransport.sendCommand(printer.id, cmd);
-          lastResult = result;
-          console.log('[startPrint] Result for', cmd, ':', JSON.stringify(result));
-
-          // If the device reports success, stop trying formats.
-          if (result?.success) break;
-        }
-
-        if (!lastResult?.success) {
-          console.error('[startPrint] ^PR command failed:', lastResult?.error);
-        }
-
-        // Always query actual status after a brief delay to confirm.
-        // This drives the HMI state (green/red) from real V300UP.
+        await waitForSaveIdle(5000).catch(() => undefined);
+        await runPrinterWriteExclusive(printer.id, async () => {
+          const tryCommands = ['^PR 1', '^PR1'] as const;
+          let lastResult: any = null;
+          for (const cmd of tryCommands) {
+            console.log('[startPrint] Sending', cmd);
+            const result = await printerTransport.sendCommand(printer.id, cmd, { caller: 'startPrint' });
+            lastResult = result;
+            console.log('[startPrint] Result for', cmd, ':', JSON.stringify(result));
+            if (result?.success) break;
+          }
+          if (!lastResult?.success) {
+            console.error('[startPrint] ^PR command failed:', lastResult?.error);
+          }
+        });
         setTimeout(() => queryPrinterStatus(printer), 800);
       } catch (e) {
         console.error('[startPrint] Failed to send ^PR 1:', e);
