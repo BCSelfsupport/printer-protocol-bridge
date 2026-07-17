@@ -104,6 +104,9 @@ interface PrintersScreenProps {
   onSyncAdjustFromPrinters?: () => void;
   onSyncAdjustFromPrinter?: (printer: Printer) => void;
   isSyncingAdjustFromPrinters?: boolean;
+  /** Send ^SJ 0 to every online printer serially (end-of-shift shutdown) */
+  onStopAllJets?: () => Promise<void> | void;
+  isStoppingAllJets?: boolean;
   /** Called when a printer's expiry offset is changed — resends the message with new expiry */
   onSlaveExpiryChange?: (printerId: number, days: number) => Promise<void>;
   onSelectedPrinterChange?: (printer: Printer | null) => void;
