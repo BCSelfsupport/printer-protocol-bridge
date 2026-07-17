@@ -2224,13 +2224,16 @@ const Index = () => {
     //   - must be reachable (isAvailable)
     //   - skip printers already in a 'stopping' countdown (avoid duplicate ^SJ 0
     //     which can re-lock a printer mid-shutdown)
-    //   - skip the currently-connected printer if we already know jet is off
-    //   - offline printers are excluded by isAvailable check
+    //   - skip any printer whose last-known jetRunning === false (emulator poll
+    //     or connected-printer ^SU). Only skip when we KNOW it's off; undefined
+    //     means we've never observed the state and we still send.
     const targets = printers.filter(p => {
       if (!p.isAvailable) return false;
       const cd = getCountdown(p.id);
       if (cd.type === 'stopping') return false;
-      // Best-effort: if this is the connected printer and we know jetRunning=false, skip it
+      if (p.jetRunning === false) return false;
+      // Belt-and-braces for the connected printer: if live status says jet is
+      // off (fresher than the persisted flag), skip it too.
       if (
         connectionState.connectedPrinter?.id === p.id &&
         connectionState.status &&

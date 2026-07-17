@@ -14,6 +14,11 @@ export interface Printer {
   makeupLevel?: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' | 'UNKNOWN';
   currentMessage?: string | null;
   printCount?: number;
+  // Last-known jet-running state for this printer. Populated by the emulator
+  // per-printer status poll and by the connected printer's ^SU parse. Undefined
+  // when we've never seen a state (e.g. real hardware peer where we only ping).
+  // Used by "Stop All Jets" to skip printers already stopped.
+  jetRunning?: boolean;
   // Master/Slave configuration
   role?: PrinterRole;
   masterId?: number; // ID of the master printer (when role === 'slave')

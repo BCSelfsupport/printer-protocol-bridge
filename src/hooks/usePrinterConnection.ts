@@ -298,6 +298,7 @@ export function usePrinterConnection() {
             makeupLevel: state?.makeupLevel as Printer['makeupLevel'],
             currentMessage: state?.currentMessage,
             printCount: state?.printCount,
+            jetRunning: state?.jetRunning,
           });
         });
 
@@ -524,13 +525,10 @@ export function usePrinterConnection() {
       updatePrinterStatus(connectedPrinterId, {
         isAvailable: true,
         status: hvOn ? 'ready' : 'not_ready',
-        // DO NOT set hasActiveErrors from ^SU errorActive here — ^LE is the sole
-        // authoritative source for hasActiveErrors. Some firmware (e.g. Quantum X)
-        // returns Err[1] in ^SU even after faults are cleared, causing false WARNING
-        // badges. The errorActive flag is still stored in metrics for display purposes.
         ...(inkLevelCard ? { inkLevel: inkLevelCard } : {}),
         ...(makeupLevelCard ? { makeupLevel: makeupLevelCard } : {}),
-        // Do NOT set printCount from ^SU — ^CN is the authoritative source to avoid flipping
+        // Persist jetRunning so Stop-All-Jets can skip printers already stopped.
+        jetRunning: jetActive,
       });
     }
 
