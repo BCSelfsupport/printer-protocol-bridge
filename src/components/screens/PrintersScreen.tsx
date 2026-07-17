@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio, Link2, ChevronDown, Maximize2, DownloadCloud } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio, Link2, ChevronDown, Maximize2, DownloadCloud, PowerOff } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -10,6 +10,7 @@ import { PrinterServicePopup } from '@/components/printers/PrinterServicePopup';
 import { BroadcastMessageDialog } from '@/components/printers/BroadcastMessageDialog';
 import { ApplyExpiryToPrintersDialog } from '@/components/printers/ApplyExpiryToPrintersDialog';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dashboard } from '@/components/screens/Dashboard';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
@@ -103,6 +104,9 @@ interface PrintersScreenProps {
   onSyncAdjustFromPrinters?: () => void;
   onSyncAdjustFromPrinter?: (printer: Printer) => void;
   isSyncingAdjustFromPrinters?: boolean;
+  /** Send ^SJ 0 to every online printer serially (end-of-shift shutdown) */
+  onStopAllJets?: () => Promise<void> | void;
+  isStoppingAllJets?: boolean;
   /** Called when a printer's expiry offset is changed — resends the message with new expiry */
   onSlaveExpiryChange?: (printerId: number, days: number) => Promise<void>;
   onSelectedPrinterChange?: (printer: Printer | null) => void;
@@ -282,6 +286,8 @@ export function PrintersScreen({
   onSyncAdjustFromPrinters,
   onSyncAdjustFromPrinter,
   isSyncingAdjustFromPrinters = false,
+  onStopAllJets,
+  isStoppingAllJets = false,
   onSlaveExpiryChange,
   onSelectedPrinterChange,
   getMessageContent,
@@ -654,6 +660,39 @@ export function PrintersScreen({
                 <DownloadCloud className={`w-3.5 h-3.5 ${isSyncingAdjustFromPrinters ? 'animate-pulse' : ''}`} />
               </Button>
             )}
+            {onStopAllJets && (() => {
+              const onlineCount = printers.filter(p => p.isAvailable).length;
+              return (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-red-500/50 text-red-300 bg-red-500/10 hover:bg-red-500/20 hover:text-red-200 h-8"
+                      disabled={isStoppingAllJets || onlineCount === 0}
+                      title="End-of-shift: send Stop Jet to every online printer, one at a time (serialized to protect port 23)"
+                    >
+                      <PowerOff className={`w-3 h-3 mr-1 ${isStoppingAllJets ? 'animate-pulse' : ''}`} />
+                      <span className="text-xs">{isStoppingAllJets ? 'Stopping…' : 'Stop All Jets'}</span>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Stop all jets?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will send Stop Jet (^SJ 0) to all {onlineCount} online printer{onlineCount === 1 ? '' : 's'}, one at a time, with a safe delay between each. Each printer will begin its ~2:14 shutdown cycle. Use this for end-of-shift cycle-down.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => { void onStopAllJets(); }}>
+                        Stop All Jets
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              );
+            })()}
             {selectedPrinter && (
               <Button
                 onClick={handleRemoveSelected}

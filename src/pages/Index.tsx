@@ -2214,6 +2214,46 @@ const Index = () => {
     if (connectedPrinterId) startCountdown(connectedPrinterId, 'stopping');
   }, [jetStop, startCountdown, connectedPrinterId]);
 
+  // End-of-shift: send ^SJ 0 to every online printer, serialized so no two
+  // stop-jet commands share the port-23 window (which was locking printers up
+  // when clicked fast one after another).
+  const [isStoppingAllJets, setIsStoppingAllJets] = useState(false);
+  const handleStopAllJets = useCallback(async () => {
+    const targets = printers.filter(p => p.isAvailable);
+    if (targets.length === 0) {
+      toast.info('No online printers to stop.');
+      return;
+    }
+    setIsStoppingAllJets(true);
+    console.log('[StopAllJets] starting', { count: targets.length, ids: targets.map(p => p.id) });
+    let ok = 0;
+    let fail = 0;
+    try {
+      for (const printer of targets) {
+        try {
+          const success = await sendCommandToPrinter(printer, '^SJ 0');
+          if (success) {
+            ok += 1;
+            startCountdown(printer.id, 'stopping');
+            console.log('[StopAllJets] stopped', { id: printer.id, name: printer.name });
+          } else {
+            fail += 1;
+            console.warn('[StopAllJets] failed', { id: printer.id, name: printer.name });
+          }
+        } catch (e) {
+          fail += 1;
+          console.error('[StopAllJets] error', { id: printer.id, name: printer.name, error: e });
+        }
+        // Safety gap between printers so a laggy ACK never overlaps the next open
+        await new Promise(r => setTimeout(r, 400));
+      }
+      if (fail === 0) toast.success(`Stop Jet sent to ${ok} printer${ok === 1 ? '' : 's'}.`);
+      else toast.warning(`Stop Jet: ${ok} succeeded, ${fail} failed. Check log.`);
+    } finally {
+      setIsStoppingAllJets(false);
+    }
+  }, [printers, sendCommandToPrinter, startCountdown]);
+
   // Force Print handler: sends ^PT then advances the data source row for VDP messages
   const handleForcePrint = useCallback(async () => {
     try {
@@ -3015,6 +3055,8 @@ const Index = () => {
         onSyncAdjustFromPrinters={() => syncAdjustSettingsFromPrinters()}
         onSyncAdjustFromPrinter={(printer) => syncAdjustSettingsFromPrinters([printer])}
         isSyncingAdjustFromPrinters={isSyncingAdjustFromPrinters}
+        onStopAllJets={handleStopAllJets}
+        isStoppingAllJets={isStoppingAllJets}
         onSlaveExpiryChange={handleExpiryOffsetChange}
       />
     );

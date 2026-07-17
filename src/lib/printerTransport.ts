@@ -113,6 +113,9 @@ export async function testRelayConnection(config?: RelayConfig): Promise<{ ok: b
 // read (^SU, ^VV, ^LM, ^GM, ^LF, ^CN, ^TM, ^TP, ^SD, ^LE, ^S) is far less
 // risky during a save digest — but a mutation from an unguarded path is
 // exactly what has locked printers up historically.
+// ^SJ (jet start/stop) and ^PR (HV on/off) added — a torn-down socket while
+// these are in flight has been observed to lock BestCode firmware requiring
+// a power-cycle. Any caller MUST hold runPrinterWriteExclusive.
 const MUTATING_RE = /^\^(NM|NF|SV|DM|SM|CC|MD|BD|PR|CM|AP|SJ|ME|MB)/i;
 
 function checkTripwire(printerId: number, command: string, caller?: string): { saveBusy: boolean; lockHeld: boolean } {

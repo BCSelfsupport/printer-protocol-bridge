@@ -18,7 +18,7 @@ import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
 import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
 import { setPollingPaused } from '@/lib/pollingPause';
-import { beginSaveBusy } from '@/lib/saveBusy';
+import { beginSaveBusy, waitForSaveIdle } from '@/lib/saveBusy';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
 
 /**
@@ -376,6 +376,13 @@ export function usePrinterConnection() {
             const count = (offlineCountsRef.current[status.id] || 0) + 1;
             offlineCountsRef.current[status.id] = count;
             if (count >= OFFLINE_THRESHOLD) {
+              console.warn('[availability] Marking printer OFFLINE (ping)', {
+                printerId: status.id,
+                consecutiveFailures: count,
+                threshold: OFFLINE_THRESHOLD,
+                wasConnected: isConnectedPrinter,
+                hint: 'Run window.exportPrinterLog(' + status.id + ') NOW for post-mortem',
+              });
               updatePrinterStatus(status.id, {
                 isAvailable: false,
                 status: 'offline',
@@ -385,6 +392,8 @@ export function usePrinterConnection() {
                 console.log('[availability] Connected printer went offline, auto-disconnecting');
                 disconnectRef.current();
               }
+            } else {
+              console.debug('[availability] Ping miss', { printerId: status.id, count, threshold: OFFLINE_THRESHOLD });
             }
           }
         });
@@ -982,10 +991,19 @@ export function usePrinterConnection() {
 
   const handlePollingCycleFailure = useCallback(() => {
     pollingFailCountRef.current++;
-    console.warn('[usePrinterConnection] Polling cycle failed, count:', pollingFailCountRef.current);
-    if (pollingFailCountRef.current >= POLLING_OFFLINE_THRESHOLD && connectedPrinterIdRef.current != null) {
-      console.error('[usePrinterConnection] Connected printer unreachable after', POLLING_OFFLINE_THRESHOLD, 'cycles — marking offline');
-      updatePrinterStatus(connectedPrinterIdRef.current, {
+    const printerId = connectedPrinterIdRef.current;
+    console.warn('[polling] Polling cycle failed', {
+      printerId,
+      consecutiveFailures: pollingFailCountRef.current,
+      threshold: POLLING_OFFLINE_THRESHOLD,
+    });
+    if (pollingFailCountRef.current >= POLLING_OFFLINE_THRESHOLD && printerId != null) {
+      console.error('[polling] Connected printer unreachable — marking OFFLINE', {
+        printerId,
+        consecutiveFailures: pollingFailCountRef.current,
+        hint: 'Run window.exportPrinterLog(' + printerId + ') NOW for post-mortem — this is Issue 1 evidence',
+      });
+      updatePrinterStatus(printerId, {
         isAvailable: false,
         status: 'offline',
         hasActiveErrors: false,
@@ -1493,22 +1511,34 @@ export function usePrinterConnection() {
   }, [updatePrinter, queryPrinterStatus, queryMessageList]);
 
   const disconnect = useCallback(async () => {
-    if ((isElectron || isRelayMode()) && connectionState.connectedPrinter) {
+    const printerToClose = connectionState.connectedPrinter;
+    if ((isElectron || isRelayMode()) && printerToClose) {
       try {
-        await printerTransport.disconnect(connectionState.connectedPrinter.id);
+        // Serialize the socket close behind any in-flight write on this printer.
+        // Tearing down the TCP session while ^SJ/^PR/^NM is still on the wire
+        // has been observed to lock BestCode firmware (requires power-cycle).
+        // Also wait briefly for save-idle so an in-flight ^NM/^SV digest can
+        // complete before we drop the socket.
+        await waitForSaveIdle(5000).catch(() => undefined);
+        await runPrinterWriteExclusive(printerToClose.id, async () => {
+          try {
+            await printerTransport.disconnect(printerToClose.id);
+          } catch (e) {
+            console.error('Failed to disconnect printer:', e);
+          }
+        });
       } catch (e) {
-        console.error('Failed to disconnect printer:', e);
+        console.error('Disconnect guard failed:', e);
       }
     }
 
-    if (connectionState.connectedPrinter) {
-      updatePrinter(connectionState.connectedPrinter.id, {
+    if (printerToClose) {
+      updatePrinter(printerToClose.id, {
         isConnected: false,
       });
     }
 
     setSocketReady(false);
-    // Reset ^LE empty overrides so stale EMPTY state doesn't carry over to next connection
     leEmptyOverridesRef.current = { inkEmpty: false, makeupEmpty: false };
     setActiveFaults([]);
     setConnectionState({
@@ -1558,25 +1588,21 @@ export function usePrinterConnection() {
       }
     } else if (isElectron || isRelayMode()) {
       try {
-        const tryCommands = ['^PR 1', '^PR1'] as const;
-        let lastResult: any = null;
-
-        for (const cmd of tryCommands) {
-          console.log('[startPrint] Sending', cmd);
-          const result = await printerTransport.sendCommand(printer.id, cmd);
-          lastResult = result;
-          console.log('[startPrint] Result for', cmd, ':', JSON.stringify(result));
-
-          // If the device reports success, stop trying formats.
-          if (result?.success) break;
-        }
-
-        if (!lastResult?.success) {
-          console.error('[startPrint] ^PR command failed:', lastResult?.error);
-        }
-
-        // Always query actual status after a brief delay to confirm.
-        // This drives the HMI state (green/red) from real V300UP.
+        await waitForSaveIdle(5000).catch(() => undefined);
+        await runPrinterWriteExclusive(printer.id, async () => {
+          const tryCommands = ['^PR 1', '^PR1'] as const;
+          let lastResult: any = null;
+          for (const cmd of tryCommands) {
+            console.log('[startPrint] Sending', cmd);
+            const result = await printerTransport.sendCommand(printer.id, cmd, { caller: 'startPrint' });
+            lastResult = result;
+            console.log('[startPrint] Result for', cmd, ':', JSON.stringify(result));
+            if (result?.success) break;
+          }
+          if (!lastResult?.success) {
+            console.error('[startPrint] ^PR command failed:', lastResult?.error);
+          }
+        });
         setTimeout(() => queryPrinterStatus(printer), 800);
       } catch (e) {
         console.error('[startPrint] Failed to send ^PR 1:', e);
@@ -1625,22 +1651,21 @@ export function usePrinterConnection() {
       }
     } else if (isElectron || isRelayMode()) {
       try {
-        const tryCommands = ['^PR 0', '^PR0'] as const;
-        let lastResult: any = null;
-
-        for (const cmd of tryCommands) {
-          console.log('[stopPrint] Sending', cmd);
-          const result = await printerTransport.sendCommand(printer.id, cmd);
-          lastResult = result;
-          console.log('[stopPrint] Result for', cmd, ':', JSON.stringify(result));
-          if (result?.success) break;
-        }
-
-        if (!lastResult?.success) {
-          console.error('[stopPrint] ^PR command failed:', lastResult?.error);
-        }
-
-        // Always query actual status after a brief delay to confirm.
+        await waitForSaveIdle(5000).catch(() => undefined);
+        await runPrinterWriteExclusive(printer.id, async () => {
+          const tryCommands = ['^PR 0', '^PR0'] as const;
+          let lastResult: any = null;
+          for (const cmd of tryCommands) {
+            console.log('[stopPrint] Sending', cmd);
+            const result = await printerTransport.sendCommand(printer.id, cmd, { caller: 'stopPrint' });
+            lastResult = result;
+            console.log('[stopPrint] Result for', cmd, ':', JSON.stringify(result));
+            if (result?.success) break;
+          }
+          if (!lastResult?.success) {
+            console.error('[stopPrint] ^PR command failed:', lastResult?.error);
+          }
+        });
         setTimeout(() => queryPrinterStatus(printer), 800);
       } catch (e) {
         console.error('[stopPrint] Failed to send ^PR 0:', e);
@@ -1686,15 +1711,15 @@ export function usePrinterConnection() {
       }
     } else if (isElectron || isRelayMode()) {
       try {
-        console.log('[jetStop] Sending ^SJ 0');
-        const result = await printerTransport.sendCommand(printer.id, '^SJ 0');
-        console.log('[jetStop] Result:', JSON.stringify(result));
-
-        if (!result?.success) {
-          console.error('[jetStop] ^SJ 0 command failed:', result?.error);
-        }
-
-        // Query status after a delay to reflect new state
+        await waitForSaveIdle(5000).catch(() => undefined);
+        await runPrinterWriteExclusive(printer.id, async () => {
+          console.log('[jetStop] Sending ^SJ 0');
+          const result = await printerTransport.sendCommand(printer.id, '^SJ 0', { caller: 'jetStop' });
+          console.log('[jetStop] Result:', JSON.stringify(result));
+          if (!result?.success) {
+            console.error('[jetStop] ^SJ 0 command failed:', result?.error);
+          }
+        });
         setTimeout(() => queryPrinterStatus(printer), 1500);
       } catch (e) {
         console.error('[jetStop] Failed to send ^SJ 0:', e);
@@ -1749,12 +1774,15 @@ export function usePrinterConnection() {
       }
     } else if (isElectron || isRelayMode()) {
       try {
-        console.log('[jetStart] Sending ^SJ 1');
-        const result = await printerTransport.sendCommand(printer.id, '^SJ 1');
-        console.log('[jetStart] Result:', JSON.stringify(result));
-        if (!result?.success) {
-          console.error('[jetStart] ^SJ 1 command failed:', result?.error);
-        }
+        await waitForSaveIdle(5000).catch(() => undefined);
+        await runPrinterWriteExclusive(printer.id, async () => {
+          console.log('[jetStart] Sending ^SJ 1');
+          const result = await printerTransport.sendCommand(printer.id, '^SJ 1', { caller: 'jetStart' });
+          console.log('[jetStart] Result:', JSON.stringify(result));
+          if (!result?.success) {
+            console.error('[jetStart] ^SJ 1 command failed:', result?.error);
+          }
+        });
       } catch (e) {
         console.error('[jetStart] Failed to send ^SJ 1:', e);
       }
