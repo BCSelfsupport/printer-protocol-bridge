@@ -376,6 +376,13 @@ export function usePrinterConnection() {
             const count = (offlineCountsRef.current[status.id] || 0) + 1;
             offlineCountsRef.current[status.id] = count;
             if (count >= OFFLINE_THRESHOLD) {
+              console.warn('[availability] Marking printer OFFLINE (ping)', {
+                printerId: status.id,
+                consecutiveFailures: count,
+                threshold: OFFLINE_THRESHOLD,
+                wasConnected: isConnectedPrinter,
+                hint: 'Run window.exportPrinterLog(' + status.id + ') NOW for post-mortem',
+              });
               updatePrinterStatus(status.id, {
                 isAvailable: false,
                 status: 'offline',
@@ -385,6 +392,8 @@ export function usePrinterConnection() {
                 console.log('[availability] Connected printer went offline, auto-disconnecting');
                 disconnectRef.current();
               }
+            } else {
+              console.debug('[availability] Ping miss', { printerId: status.id, count, threshold: OFFLINE_THRESHOLD });
             }
           }
         });
