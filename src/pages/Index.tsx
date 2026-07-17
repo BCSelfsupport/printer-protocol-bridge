@@ -2215,23 +2215,57 @@ const Index = () => {
     if (connectedPrinterId) startCountdown(connectedPrinterId, 'stopping');
   }, [jetStop, startCountdown, connectedPrinterId]);
 
-  // End-of-shift: send ^SJ 0 to every online printer, serialized so no two
-  // stop-jet commands share the port-23 window (which was locking printers up
-  // when clicked fast one after another).
+  // End-of-shift: send ^SJ 0 to every online printer that still has its jet
+  // running, serialized so no two stop-jet commands share the port-23 window
+  // (which was locking printers up when clicked fast one after another).
   const [isStoppingAllJets, setIsStoppingAllJets] = useState(false);
   const handleStopAllJets = useCallback(async () => {
-    const targets = printers.filter(p => p.isAvailable);
+    // Filter targets:
+    //   - must be reachable (isAvailable)
+    //   - skip printers already in a 'stopping' countdown (avoid duplicate ^SJ 0
+    //     which can re-lock a printer mid-shutdown)
+    //   - skip the currently-connected printer if we already know jet is off
+    //   - offline printers are excluded by isAvailable check
+    const targets = printers.filter(p => {
+      if (!p.isAvailable) return false;
+      const cd = getCountdown(p.id);
+      if (cd.type === 'stopping') return false;
+      // Best-effort: if this is the connected printer and we know jetRunning=false, skip it
+      if (
+        connectionState.connectedPrinter?.id === p.id &&
+        connectionState.status &&
+        connectionState.status.jetRunning === false
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    const skipped = printers.filter(p => p.isAvailable).length - targets.length;
+
     if (targets.length === 0) {
-      toast.info('No online printers to stop.');
+      toast.info(skipped > 0
+        ? `All ${skipped} online printer${skipped === 1 ? '' : 's'} already stopped or stopping.`
+        : 'No online printers to stop.');
       return;
     }
     setIsStoppingAllJets(true);
-    console.log('[StopAllJets] starting', { count: targets.length, ids: targets.map(p => p.id) });
+    console.log('[StopAllJets] starting', {
+      count: targets.length,
+      skipped,
+      ids: targets.map(p => p.id),
+    });
     let ok = 0;
     let fail = 0;
     try {
       for (const printer of targets) {
         try {
+          // If this iteration targets the currently-connected printer, arm the
+          // polling auto-disconnect grace window so we don't tear the socket
+          // down mid-shutdown (Issue 2 recurrence).
+          if (connectionState.connectedPrinter?.id === printer.id) {
+            armStopJetGrace?.(150);
+          }
           const success = await sendCommandToPrinter(printer, '^SJ 0');
           if (success) {
             ok += 1;
@@ -2248,12 +2282,14 @@ const Index = () => {
         // Safety gap between printers so a laggy ACK never overlaps the next open
         await new Promise(r => setTimeout(r, 400));
       }
-      if (fail === 0) toast.success(`Stop Jet sent to ${ok} printer${ok === 1 ? '' : 's'}.`);
-      else toast.warning(`Stop Jet: ${ok} succeeded, ${fail} failed. Check log.`);
+      const skipMsg = skipped > 0 ? ` (${skipped} already stopped)` : '';
+      if (fail === 0) toast.success(`Stop Jet sent to ${ok} printer${ok === 1 ? '' : 's'}.${skipMsg}`);
+      else toast.warning(`Stop Jet: ${ok} succeeded, ${fail} failed.${skipMsg} Check log.`);
     } finally {
       setIsStoppingAllJets(false);
     }
-  }, [printers, sendCommandToPrinter, startCountdown]);
+  }, [printers, sendCommandToPrinter, startCountdown, getCountdown, connectionState.connectedPrinter, connectionState.status, armStopJetGrace]);
+
 
   // Force Print handler: sends ^PT then advances the data source row for VDP messages
   const handleForcePrint = useCallback(async () => {
