@@ -3936,6 +3936,7 @@ export function usePrinterConnection() {
     startPrint,
     stopPrint,
     jetStop,
+    armStopJetGrace,
     jetStart,
     updateSettings,
     selectMessage,
