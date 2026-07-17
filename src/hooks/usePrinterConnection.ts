@@ -381,7 +381,7 @@ export function usePrinterConnection() {
                 consecutiveFailures: count,
                 threshold: OFFLINE_THRESHOLD,
                 wasConnected: isConnectedPrinter,
-                hint: 'Run window.exportPrinterLog(' + status.id + ') NOW for post-mortem',
+                
               });
               updatePrinterStatus(status.id, {
                 isAvailable: false,
@@ -1001,7 +1001,7 @@ export function usePrinterConnection() {
       console.error('[polling] Connected printer unreachable — marking OFFLINE', {
         printerId,
         consecutiveFailures: pollingFailCountRef.current,
-        hint: 'Run window.exportPrinterLog(' + printerId + ') NOW for post-mortem — this is Issue 1 evidence',
+        
       });
       updatePrinterStatus(printerId, {
         isAvailable: false,
