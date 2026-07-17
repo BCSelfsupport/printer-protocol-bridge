@@ -400,6 +400,8 @@ export function Dashboard({
       onResetAll={onResetAllCounters}
       onMount={onQueryCounters}
     />
+
+    <WhatsNewDialog open={whatsNewOpen} onOpenChange={setWhatsNewOpen} />
     
     {/* Combined Bottom Nav with version info - all on one line */}
     {onNavigate && (
