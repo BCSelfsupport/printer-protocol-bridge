@@ -1525,19 +1525,27 @@ const Index = () => {
     targetPrinter: Printer,
     messageName: string,
   ): Promise<void> => {
-    const stored = getStoredMessageForPrinter(messageName, targetPrinter);
-    const hasStoredAdjustSettings = !!stored?.adjustSettings;
-    const hasStoredMessageSettings = !!stored?.settings;
-
-    if (!hasStoredAdjustSettings && !hasStoredMessageSettings) {
-      console.warn('[AdjustDebug][applyStoredAdjustSettings.skip]', {
+    const storedRaw = getStoredMessageForPrinter(messageName, targetPrinter);
+    // Legacy messages (created before we persisted per-message adjust settings)
+    // used to be skipped here, which left the HMI's live values (often W15/D200)
+    // untouched after a select. Instead, synthesize a stored record backed by
+    // the fleet defaults so every select pushes W2/D500/Ultra Fast unless the
+    // message explicitly overrides them.
+    const stored: MessageDetails = storedRaw ?? {
+      name: messageName,
+      fields: [],
+      templateValue: undefined,
+      settings: { speed: FLEET_DEFAULT_ADJUST_SETTINGS.speed, rotation: FLEET_DEFAULT_ADJUST_SETTINGS.rotation } as MessageDetails['settings'],
+      adjustSettings: { ...FLEET_DEFAULT_ADJUST_SETTINGS } as MessageDetails['adjustSettings'],
+    } as MessageDetails;
+    if (!storedRaw) {
+      console.warn('[AdjustDebug][applyStoredAdjustSettings.usingFleetDefaults]', {
         targetPrinterId: targetPrinter.id,
         targetPrinterName: targetPrinter.name,
         messageName,
-        storedFound: !!stored,
       });
-      return;
     }
+    const hasStoredMessageSettings = true;
 
     // Respect operator changes made at the printer HMI: if this printer is
     // the connected one, query ^QP first and treat any values the printer
