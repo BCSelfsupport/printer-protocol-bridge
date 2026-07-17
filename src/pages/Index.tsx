@@ -802,7 +802,14 @@ const Index = () => {
       && targetPrinter.id !== connectionState.connectedPrinter?.id
       && (window.electronAPI || isRelayMode());
 
-    return runFleetWriteExclusive(() => runPrinterWriteExclusive(targetPrinter.id, async () => {
+    // Per-printer lock only. The fleet-wide lock previously wrapped this call
+    // was serializing writes across ALL printers — turning a parallel 13-printer
+    // message select into a 4.5-minute sequential run. Each printer already has
+    // its own exclusive lock (protecting its single port-23 session), and TCP
+    // sessions to different printers are fully independent hardware, so
+    // concurrent per-printer transactions cannot cause single-printer lockups.
+    // The fleet lock is still retained for jet-cycle mass operations elsewhere.
+    return runPrinterWriteExclusive(targetPrinter.id, async () => {
       const hasSaveCommand = commandsToRun.some(({ command }) => isSaveSequenceCommand(command));
       let releaseSaveBusy = () => {};
     try {
@@ -863,7 +870,7 @@ const Index = () => {
         }
       }
     }
-    }));
+    });
   }, [connectionState.connectedPrinter?.id, sendCommand, sendCommandToPrinter]);
 
   // syncMessageToSlaves is declared after replaceMessageWithoutDelete (below)
