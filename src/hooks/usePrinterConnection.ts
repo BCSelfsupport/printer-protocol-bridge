@@ -1233,6 +1233,9 @@ export function usePrinterConnection() {
             hasActiveErrors: parsed.errorActive,
             inkLevel: inkLevelQ,
             makeupLevel: makeupLevelQ,
+            // Persist jetRunning so Stop-All-Jets can skip already-stopped printers
+            // even if the operator switches away before the main polling loop refreshes.
+            jetRunning: !!(parsed.subsystems?.vltOn || hvOn),
           });
           
           // Map parsed levels to status-compatible types
