@@ -298,7 +298,8 @@ export function usePrinterConnection() {
             makeupLevel: state?.makeupLevel as Printer['makeupLevel'],
             currentMessage: state?.currentMessage,
             printCount: state?.printCount,
-          });
+            jetRunning: state?.jetRunning,
+          } as any);
         });
 
         return;
