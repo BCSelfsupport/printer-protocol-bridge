@@ -1903,6 +1903,16 @@ export function usePrinterConnection() {
           console.log('[jetStart] Result:', JSON.stringify(result));
           if (!result?.success) {
             console.error('[jetStart] ^SJ 1 command failed:', result?.error);
+          } else {
+            // Optimistically mark this printer as running so a fast switch to
+            // another printer (before the next ^SU parses VLT_ON) doesn't
+            // leave Stop-All-Jets thinking this jet is stopped and skip it.
+            updatePrinterStatus(printer.id, {
+              isAvailable: true,
+              status: 'not_ready',
+              hasActiveErrors: false,
+              jetRunning: true,
+            });
           }
         });
       } catch (e) {
