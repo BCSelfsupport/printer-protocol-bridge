@@ -119,6 +119,23 @@ export interface PrintSettings {
   repeatAmount: number;
 }
 
+// Fleet-wide preferred defaults for message adjust settings.
+// Used both when creating a new message in the editor AND as the fallback when
+// selecting a legacy message that has no stored adjustSettings — so we never
+// inherit whatever the HMI happens to be showing (e.g. W15/D200 leftovers).
+// Rotation is intentionally omitted; it's driven by the per-printer setup card.
+export const FLEET_DEFAULT_ADJUST_SETTINGS: PrintSettings = {
+  width: 2,
+  height: 8,
+  delay: 500,
+  bold: 0,
+  gap: 0,
+  pitch: 0,
+  repeatAmount: 0,
+  rotation: 'Normal',
+  speed: 'Ultra Fast',
+};
+
 export interface ConnectionState {
   isConnected: boolean;
   connectedPrinter: Printer | null;
