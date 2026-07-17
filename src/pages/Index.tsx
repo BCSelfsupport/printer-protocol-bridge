@@ -13,7 +13,7 @@ import { Dashboard } from '@/components/screens/Dashboard';
 import { PrintersScreen } from '@/components/screens/PrintersScreen';
 import { MessagesScreen } from '@/components/screens/MessagesScreen';
 import { EditMessageScreen, MessageDetails } from '@/components/screens/EditMessageScreen';
-import { PrintSettings } from '@/types/printer';
+import { PrintSettings, FLEET_DEFAULT_ADJUST_SETTINGS } from '@/types/printer';
 import { AdjustDialog } from '@/components/adjust/AdjustDialog';
 import { SetupScreen } from '@/components/screens/SetupScreen';
 import { ServiceScreen } from '@/components/screens/ServiceScreen';
@@ -280,9 +280,13 @@ const Index = () => {
     details: MessageDetails,
     targetPrinter?: Printer | null,
   ) => {
+    // Fall back to the fleet-wide defaults (W2, D500, Ultra Fast) instead of
+    // whatever the HMI is currently showing. Legacy messages that never had
+    // adjustSettings persisted would otherwise inherit stale HMI values like
+    // W15/D200 on every select.
     const effectiveSpeed = details.adjustSettings?.speed
       ?? details.settings?.speed
-      ?? connectionState.settings.speed;
+      ?? FLEET_DEFAULT_ADJUST_SETTINGS.speed;
     // Per-printer rotation override (from the printer setup card) always wins
     // over any rotation stored in the message. When a target printer is
     // supplied (slave sync, copy-to-printers, apply-adjust to a non-connected
@@ -292,17 +296,17 @@ const Index = () => {
     const effectiveRotation = rotationPrinter?.rotation
       ?? details.adjustSettings?.rotation
       ?? details.settings?.rotation
-      ?? connectionState.settings.rotation;
+      ?? FLEET_DEFAULT_ADJUST_SETTINGS.rotation;
     const effectivePrintMode = details.settings?.printMode ?? 'Normal';
 
     const fullAdjustSettings: PrintSettings = {
       ...connectionState.settings,
-      width: details.adjustSettings?.width ?? connectionState.settings.width,
-      height: details.adjustSettings?.height ?? connectionState.settings.height,
-      delay: details.adjustSettings?.delay ?? connectionState.settings.delay,
-      bold: details.adjustSettings?.bold ?? connectionState.settings.bold,
-      gap: details.adjustSettings?.gap ?? connectionState.settings.gap,
-      pitch: details.adjustSettings?.pitch ?? connectionState.settings.pitch,
+      width: details.adjustSettings?.width ?? FLEET_DEFAULT_ADJUST_SETTINGS.width,
+      height: details.adjustSettings?.height ?? FLEET_DEFAULT_ADJUST_SETTINGS.height,
+      delay: details.adjustSettings?.delay ?? FLEET_DEFAULT_ADJUST_SETTINGS.delay,
+      bold: details.adjustSettings?.bold ?? FLEET_DEFAULT_ADJUST_SETTINGS.bold,
+      gap: details.adjustSettings?.gap ?? FLEET_DEFAULT_ADJUST_SETTINGS.gap,
+      pitch: details.adjustSettings?.pitch ?? FLEET_DEFAULT_ADJUST_SETTINGS.pitch,
       speed: effectiveSpeed,
       rotation: effectiveRotation,
     };
@@ -1521,19 +1525,27 @@ const Index = () => {
     targetPrinter: Printer,
     messageName: string,
   ): Promise<void> => {
-    const stored = getStoredMessageForPrinter(messageName, targetPrinter);
-    const hasStoredAdjustSettings = !!stored?.adjustSettings;
-    const hasStoredMessageSettings = !!stored?.settings;
-
-    if (!hasStoredAdjustSettings && !hasStoredMessageSettings) {
-      console.warn('[AdjustDebug][applyStoredAdjustSettings.skip]', {
+    const storedRaw = getStoredMessageForPrinter(messageName, targetPrinter);
+    // Legacy messages (created before we persisted per-message adjust settings)
+    // used to be skipped here, which left the HMI's live values (often W15/D200)
+    // untouched after a select. Instead, synthesize a stored record backed by
+    // the fleet defaults so every select pushes W2/D500/Ultra Fast unless the
+    // message explicitly overrides them.
+    const stored: MessageDetails = storedRaw ?? {
+      name: messageName,
+      fields: [],
+      templateValue: undefined,
+      settings: { speed: FLEET_DEFAULT_ADJUST_SETTINGS.speed, rotation: FLEET_DEFAULT_ADJUST_SETTINGS.rotation } as MessageDetails['settings'],
+      adjustSettings: { ...FLEET_DEFAULT_ADJUST_SETTINGS } as MessageDetails['adjustSettings'],
+    } as MessageDetails;
+    if (!storedRaw) {
+      console.warn('[AdjustDebug][applyStoredAdjustSettings.usingFleetDefaults]', {
         targetPrinterId: targetPrinter.id,
         targetPrinterName: targetPrinter.name,
         messageName,
-        storedFound: !!stored,
       });
-      return;
     }
+    const hasStoredMessageSettings = true;
 
     // Respect operator changes made at the printer HMI: if this printer is
     // the connected one, query ^QP first and treat any values the printer
