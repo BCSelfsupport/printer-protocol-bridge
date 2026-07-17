@@ -1633,22 +1633,21 @@ export function usePrinterConnection() {
       }
     } else if (isElectron || isRelayMode()) {
       try {
-        const tryCommands = ['^PR 0', '^PR0'] as const;
-        let lastResult: any = null;
-
-        for (const cmd of tryCommands) {
-          console.log('[stopPrint] Sending', cmd);
-          const result = await printerTransport.sendCommand(printer.id, cmd);
-          lastResult = result;
-          console.log('[stopPrint] Result for', cmd, ':', JSON.stringify(result));
-          if (result?.success) break;
-        }
-
-        if (!lastResult?.success) {
-          console.error('[stopPrint] ^PR command failed:', lastResult?.error);
-        }
-
-        // Always query actual status after a brief delay to confirm.
+        await waitForSaveIdle(5000).catch(() => undefined);
+        await runPrinterWriteExclusive(printer.id, async () => {
+          const tryCommands = ['^PR 0', '^PR0'] as const;
+          let lastResult: any = null;
+          for (const cmd of tryCommands) {
+            console.log('[stopPrint] Sending', cmd);
+            const result = await printerTransport.sendCommand(printer.id, cmd, { caller: 'stopPrint' });
+            lastResult = result;
+            console.log('[stopPrint] Result for', cmd, ':', JSON.stringify(result));
+            if (result?.success) break;
+          }
+          if (!lastResult?.success) {
+            console.error('[stopPrint] ^PR command failed:', lastResult?.error);
+          }
+        });
         setTimeout(() => queryPrinterStatus(printer), 800);
       } catch (e) {
         console.error('[stopPrint] Failed to send ^PR 0:', e);
