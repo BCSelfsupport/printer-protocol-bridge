@@ -991,10 +991,19 @@ export function usePrinterConnection() {
 
   const handlePollingCycleFailure = useCallback(() => {
     pollingFailCountRef.current++;
-    console.warn('[usePrinterConnection] Polling cycle failed, count:', pollingFailCountRef.current);
-    if (pollingFailCountRef.current >= POLLING_OFFLINE_THRESHOLD && connectedPrinterIdRef.current != null) {
-      console.error('[usePrinterConnection] Connected printer unreachable after', POLLING_OFFLINE_THRESHOLD, 'cycles — marking offline');
-      updatePrinterStatus(connectedPrinterIdRef.current, {
+    const printerId = connectedPrinterIdRef.current;
+    console.warn('[polling] Polling cycle failed', {
+      printerId,
+      consecutiveFailures: pollingFailCountRef.current,
+      threshold: POLLING_OFFLINE_THRESHOLD,
+    });
+    if (pollingFailCountRef.current >= POLLING_OFFLINE_THRESHOLD && printerId != null) {
+      console.error('[polling] Connected printer unreachable — marking OFFLINE', {
+        printerId,
+        consecutiveFailures: pollingFailCountRef.current,
+        hint: 'Run window.exportPrinterLog(' + printerId + ') NOW for post-mortem — this is Issue 1 evidence',
+      });
+      updatePrinterStatus(printerId, {
         isAvailable: false,
         status: 'offline',
         hasActiveErrors: false,
