@@ -1756,12 +1756,15 @@ export function usePrinterConnection() {
       }
     } else if (isElectron || isRelayMode()) {
       try {
-        console.log('[jetStart] Sending ^SJ 1');
-        const result = await printerTransport.sendCommand(printer.id, '^SJ 1');
-        console.log('[jetStart] Result:', JSON.stringify(result));
-        if (!result?.success) {
-          console.error('[jetStart] ^SJ 1 command failed:', result?.error);
-        }
+        await waitForSaveIdle(5000).catch(() => undefined);
+        await runPrinterWriteExclusive(printer.id, async () => {
+          console.log('[jetStart] Sending ^SJ 1');
+          const result = await printerTransport.sendCommand(printer.id, '^SJ 1', { caller: 'jetStart' });
+          console.log('[jetStart] Result:', JSON.stringify(result));
+          if (!result?.success) {
+            console.error('[jetStart] ^SJ 1 command failed:', result?.error);
+          }
+        });
       } catch (e) {
         console.error('[jetStart] Failed to send ^SJ 1:', e);
       }
