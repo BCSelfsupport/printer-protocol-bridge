@@ -171,6 +171,7 @@ const Index = () => {
     stopPrint,
     jetStop,
     jetStart,
+    armStopJetGrace,
     updateSettings,
     selectMessage,
     signIn,
