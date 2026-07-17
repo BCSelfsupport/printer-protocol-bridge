@@ -989,6 +989,32 @@ export function usePrinterConnection() {
   const pollingFailCountRef = useRef(0);
   const POLLING_OFFLINE_THRESHOLD = 5; // 5 failed cycles × 3s = ~15s before offline
 
+  // Stop-jet shutdown grace window. During the ~2:14 clean-shutdown cycle the
+  // printer may go slow/quiet on ^SU; auto-disconnecting mid-shutdown has
+  // been observed to lock BestCode firmware (same class as Issue 2). Arm this
+  // whenever ^SJ 0 goes out to the connected printer; handlePollingCycleFailure
+  // refuses to disconnect while the grace is active.
+  const stopJetGraceUntilRef = useRef<number>(0);
+  const armStopJetGrace = useCallback((seconds: number = 150) => {
+    stopJetGraceUntilRef.current = Date.now() + seconds * 1000;
+    console.log('[stopJetGrace] armed for', seconds, 's');
+  }, []);
+
+  // Auto-reconnect after unexpected polling-triggered offline. Remember the
+  // printer so the ping loop can re-open the session the moment it responds
+  // again. Bounded so a genuinely sick printer doesn't get hammered.
+  const pendingReconnectRef = useRef<{
+    printer: Printer;
+    attempts: number;
+    firstAt: number;
+    lastAt: number;
+    inFlight: boolean;
+  } | null>(null);
+  const AUTO_RECONNECT_MAX_ATTEMPTS = 3;
+  const AUTO_RECONNECT_WINDOW_MS = 60_000;
+  const AUTO_RECONNECT_MIN_GAP_MS = 4_000;
+  const connectRef = useRef<((printer: Printer) => Promise<void>) | null>(null);
+
   const handlePollingCycleFailure = useCallback(() => {
     pollingFailCountRef.current++;
     const printerId = connectedPrinterIdRef.current;
@@ -998,11 +1024,31 @@ export function usePrinterConnection() {
       threshold: POLLING_OFFLINE_THRESHOLD,
     });
     if (pollingFailCountRef.current >= POLLING_OFFLINE_THRESHOLD && printerId != null) {
+      // Refuse to auto-disconnect while a stop-jet shutdown is in progress.
+      if (Date.now() < stopJetGraceUntilRef.current) {
+        const remaining = Math.ceil((stopJetGraceUntilRef.current - Date.now()) / 1000);
+        console.warn('[polling] Suppressing auto-disconnect during stop-jet grace', {
+          printerId, remainingSeconds: remaining,
+        });
+        return;
+      }
       console.error('[polling] Connected printer unreachable — marking OFFLINE', {
         printerId,
         consecutiveFailures: pollingFailCountRef.current,
-        
       });
+      // Arm auto-reconnect for this printer so the ping loop re-opens it as
+      // soon as it responds again.
+      const printerObj = printersRef.current.find(p => p.id === printerId);
+      if (printerObj) {
+        pendingReconnectRef.current = {
+          printer: printerObj,
+          attempts: 0,
+          firstAt: Date.now(),
+          lastAt: 0,
+          inFlight: false,
+        };
+        console.log('[auto-reconnect] Armed for printer', printerId, printerObj.name);
+      }
       updatePrinterStatus(printerId, {
         isAvailable: false,
         status: 'offline',
@@ -1011,6 +1057,7 @@ export function usePrinterConnection() {
       disconnectRef.current();
     }
   }, [updatePrinterStatus]);
+
 
   const handlePollingCycleSuccess = useCallback(() => {
     pollingFailCountRef.current = 0;
