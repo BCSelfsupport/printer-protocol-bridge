@@ -1233,6 +1233,9 @@ export function usePrinterConnection() {
             hasActiveErrors: parsed.errorActive,
             inkLevel: inkLevelQ,
             makeupLevel: makeupLevelQ,
+            // Persist jetRunning so Stop-All-Jets can skip already-stopped printers
+            // even if the operator switches away before the main polling loop refreshes.
+            jetRunning: !!(parsed.subsystems?.vltOn || hvOn),
           });
           
           // Map parsed levels to status-compatible types
@@ -1810,6 +1813,7 @@ export function usePrinterConnection() {
           isAvailable: true,
           status: state.hvOn ? 'ready' : 'not_ready',
           hasActiveErrors: false,
+          jetRunning: state.jetRunning,
         });
       }
     } else if (isElectron || isRelayMode()) {
@@ -1825,6 +1829,16 @@ export function usePrinterConnection() {
           console.log('[jetStop] Result:', JSON.stringify(result));
           if (!result?.success) {
             console.error('[jetStop] ^SJ 0 command failed:', result?.error);
+          } else {
+            // Optimistically reflect stopped state on the printer record so a
+            // fast switch to another printer (before the next ^SU) doesn't
+            // leave Stop-All-Jets thinking this jet is still running.
+            updatePrinterStatus(printer.id, {
+              isAvailable: true,
+              status: 'not_ready',
+              hasActiveErrors: false,
+              jetRunning: false,
+            });
           }
         });
         setTimeout(() => queryPrinterStatus(printer), 1500);
@@ -1875,8 +1889,9 @@ export function usePrinterConnection() {
       if (connectionState.connectedPrinter) {
         updatePrinterStatus(connectionState.connectedPrinter.id, {
           isAvailable: true,
-          status: 'not_ready',
+          status: state.hvOn && state.jetRunning ? 'ready' : 'not_ready',
           hasActiveErrors: false,
+          jetRunning: state.jetRunning,
         });
       }
     } else if (isElectron || isRelayMode()) {
@@ -1888,6 +1903,16 @@ export function usePrinterConnection() {
           console.log('[jetStart] Result:', JSON.stringify(result));
           if (!result?.success) {
             console.error('[jetStart] ^SJ 1 command failed:', result?.error);
+          } else {
+            // Optimistically mark this printer as running so a fast switch to
+            // another printer (before the next ^SU parses VLT_ON) doesn't
+            // leave Stop-All-Jets thinking this jet is stopped and skip it.
+            updatePrinterStatus(printer.id, {
+              isAvailable: true,
+              status: 'not_ready',
+              hasActiveErrors: false,
+              jetRunning: true,
+            });
           }
         });
       } catch (e) {

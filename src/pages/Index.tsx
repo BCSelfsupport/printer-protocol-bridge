@@ -690,6 +690,7 @@ const Index = () => {
       updatePrinter(printerId, {
         status: 'not_ready',
         hasActiveErrors: false,
+        jetRunning: false,
       });
       
       // Fire a manual ^SU to log what the printer actually reports post-shutdown
