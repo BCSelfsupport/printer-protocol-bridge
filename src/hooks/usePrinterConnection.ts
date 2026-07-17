@@ -531,8 +531,10 @@ export function usePrinterConnection() {
         // badges. The errorActive flag is still stored in metrics for display purposes.
         ...(inkLevelCard ? { inkLevel: inkLevelCard } : {}),
         ...(makeupLevelCard ? { makeupLevel: makeupLevelCard } : {}),
+        // Persist jetRunning so Stop-All-Jets knows the true state for this printer.
+        jetRunning: jetActive,
         // Do NOT set printCount from ^SU — ^CN is the authoritative source to avoid flipping
-      });
+      } as any);
     }
 
     setConnectionState((prev) => {
