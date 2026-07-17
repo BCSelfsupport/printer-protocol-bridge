@@ -18,7 +18,7 @@ import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
 import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
 import { setPollingPaused } from '@/lib/pollingPause';
-import { beginSaveBusy } from '@/lib/saveBusy';
+import { beginSaveBusy, waitForSaveIdle } from '@/lib/saveBusy';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
 
 /**
