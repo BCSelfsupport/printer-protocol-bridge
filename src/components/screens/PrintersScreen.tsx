@@ -564,16 +564,22 @@ export function PrintersScreen({
                 <p className="text-[10px] text-slate-400">{visiblePrinters.length} device{visiblePrinters.length !== 1 ? 's' : ''} • drag to reorder</p>
               </div>
             </div>
-            <Button
-              onClick={() => setExpandedGridOpen(true)}
-              size="sm"
-              variant="outline"
-              className="h-8 px-2 border-slate-500 text-white bg-slate-700/50 hover:bg-slate-600 hover:text-white flex-shrink-0"
-              title="Expand printers to full-screen grid"
-              aria-label="Expand printers to full-screen grid"
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
-            </Button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <WhatsNewButton
+                onClick={() => setWhatsNewOpen(true)}
+                className="w-8 h-8 rounded-lg border border-slate-500 text-white bg-slate-700/50 hover:bg-slate-600 hover:text-white flex items-center justify-center"
+              />
+              <Button
+                onClick={() => setExpandedGridOpen(true)}
+                size="sm"
+                variant="outline"
+                className="h-8 px-2 border-slate-500 text-white bg-slate-700/50 hover:bg-slate-600 hover:text-white flex-shrink-0"
+                title="Expand printers to full-screen grid"
+                aria-label="Expand printers to full-screen grid"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+              </Button>
+            </div>
           </div>
           
           {/* Consumables & Reports navigation */}
