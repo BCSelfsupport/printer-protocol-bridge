@@ -3055,6 +3055,8 @@ const Index = () => {
         onSyncAdjustFromPrinters={() => syncAdjustSettingsFromPrinters()}
         onSyncAdjustFromPrinter={(printer) => syncAdjustSettingsFromPrinters([printer])}
         isSyncingAdjustFromPrinters={isSyncingAdjustFromPrinters}
+        onStopAllJets={handleStopAllJets}
+        isStoppingAllJets={isStoppingAllJets}
         onSlaveExpiryChange={handleExpiryOffsetChange}
       />
     );
