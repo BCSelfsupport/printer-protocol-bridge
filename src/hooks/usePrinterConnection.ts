@@ -1879,8 +1879,9 @@ export function usePrinterConnection() {
       if (connectionState.connectedPrinter) {
         updatePrinterStatus(connectionState.connectedPrinter.id, {
           isAvailable: true,
-          status: 'not_ready',
+          status: state.hvOn && state.jetRunning ? 'ready' : 'not_ready',
           hasActiveErrors: false,
+          jetRunning: state.jetRunning,
         });
       }
     } else if (isElectron || isRelayMode()) {
