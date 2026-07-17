@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Sparkles, Wrench, Zap, X } from 'lucide-react';
+import { Sparkles, Wrench, Zap } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
