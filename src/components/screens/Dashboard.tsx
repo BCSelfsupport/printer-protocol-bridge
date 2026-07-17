@@ -13,6 +13,7 @@ import { buildTokenMap, resolveFieldData } from '@/lib/tokenResolver';
 import { CountersDialog } from '@/components/counters/CountersDialog';
 import { NavItem } from '@/components/layout/BottomNav';
 import { ModelBadge } from '@/components/branding/ModelBadge';
+import { WhatsNewButton, WhatsNewDialog } from '@/components/release/WhatsNewDialog';
 
 interface DashboardProps {
   status: PrinterStatus | null;
@@ -86,6 +87,7 @@ export function Dashboard({
   isSlave = false,
 }: DashboardProps) {
   const [countersDialogOpen, setCountersDialogOpen] = useState(false);
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const { canDatabase } = useLicense();
 
   // Filter status for the gauge
@@ -150,6 +152,15 @@ export function Dashboard({
             </span>
           )}
         </div>
+
+        <WhatsNewButton
+          onClick={() => setWhatsNewOpen(true)}
+          className={`w-8 h-8 md:w-10 md:h-10 flex-shrink-0 ${
+            showCountdown || showReady
+              ? 'bg-white/20 text-white hover:bg-white/30'
+              : 'bg-muted-foreground/30 text-foreground hover:bg-muted-foreground/50'
+          }`}
+        />
       </div>
       
       <div className="flex-1 p-2 md:p-2 flex flex-col gap-2 md:gap-2 overflow-hidden">
@@ -389,6 +400,8 @@ export function Dashboard({
       onResetAll={onResetAllCounters}
       onMount={onQueryCounters}
     />
+
+    <WhatsNewDialog open={whatsNewOpen} onOpenChange={setWhatsNewOpen} />
     
     {/* Combined Bottom Nav with version info - all on one line */}
     {onNavigate && (
