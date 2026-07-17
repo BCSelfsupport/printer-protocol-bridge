@@ -13,6 +13,7 @@ import { buildTokenMap, resolveFieldData } from '@/lib/tokenResolver';
 import { CountersDialog } from '@/components/counters/CountersDialog';
 import { NavItem } from '@/components/layout/BottomNav';
 import { ModelBadge } from '@/components/branding/ModelBadge';
+import { WhatsNewButton, WhatsNewDialog } from '@/components/release/WhatsNewDialog';
 
 interface DashboardProps {
   status: PrinterStatus | null;
