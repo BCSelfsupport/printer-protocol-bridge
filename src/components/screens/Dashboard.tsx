@@ -152,6 +152,15 @@ export function Dashboard({
             </span>
           )}
         </div>
+
+        <WhatsNewButton
+          onClick={() => setWhatsNewOpen(true)}
+          className={`w-8 h-8 md:w-10 md:h-10 flex-shrink-0 ${
+            showCountdown || showReady
+              ? 'bg-white/20 text-white hover:bg-white/30'
+              : 'bg-muted-foreground/30 text-foreground hover:bg-muted-foreground/50'
+          }`}
+        />
       </div>
       
       <div className="flex-1 p-2 md:p-2 flex flex-col gap-2 md:gap-2 overflow-hidden">
