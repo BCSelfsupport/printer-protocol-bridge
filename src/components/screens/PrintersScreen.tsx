@@ -1251,6 +1251,8 @@ export function PrintersScreen({
           />
         );
       })()}
+
+      <WhatsNewDialog open={whatsNewOpen} onOpenChange={setWhatsNewOpen} />
     </div>
   );
 }
