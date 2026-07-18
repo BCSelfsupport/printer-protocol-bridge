@@ -96,6 +96,29 @@ const SAVE_NM_IDLE_AFTER_DATA_MS = 1500;
 const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 5000;
 const SAVE_PENDING_ACK_EXTRA_SETTLE_MS = 3000;
 
+const SPEED_TO_PROTOCOL_CODE: Record<PrintSettings['speed'], number> = {
+  Fast: 0,
+  Faster: 1,
+  Fastest: 2,
+  'Ultra Fast': 3,
+};
+
+const ROTATION_TO_PROTOCOL_CODE: Record<PrintSettings['rotation'], number> = {
+  Normal: 0,
+  Flip: 1,
+  Mirror: 2,
+  'Mirror Flip': 3,
+};
+
+const PRINT_MODE_TO_PROTOCOL_CODE: Record<string, number> = {
+  Normal: 0,
+  Auto: 1,
+  Repeat: 2,
+  Reverse: 3,
+  'Auto Encoder': 5,
+  'Auto Encoder Reverse': 6,
+};
+
 const hasCompleteSaveAck = (rawResponse?: string): boolean => {
   const cleaned = Array.from(rawResponse ?? '')
     .filter((char) => {
@@ -205,7 +228,6 @@ const Index = () => {
     saveGlobalAdjust,
     saveMessageSettings,
     queryPrintSettings,
-    queryPrintSettingsForConnectedPrinter,
     queryPrintSettingsForPrinter,
     sendCommand,
     queryPrinterMetrics,
@@ -357,6 +379,7 @@ const Index = () => {
     fullAdjustSettings,
     perMessageSettings,
     includeMessageSettings,
+    includeMessageSettingsCommand = false,
   }: {
     adjustSettings?: MessageDetails['adjustSettings'] | null;
     fullAdjustSettings: PrintSettings;
@@ -366,12 +389,20 @@ const Index = () => {
       printMode: string;
     };
     includeMessageSettings: boolean;
+    includeMessageSettingsCommand?: boolean;
   }): SequencedPrinterCommand[] => {
     const commands: SequencedPrinterCommand[] = [];
 
-    // Speed, orientation, and print mode are already embedded atomically in the
-    // ^NM header. Do not send a follow-up ^CM after ^NM/^SV: firmware v01.09
-    // rejects it with "Save Message failed" and can wedge prompt/autocode saves.
+    // During a message save, speed/orientation/print-mode are embedded in ^NM
+    // and we must not send an immediate follow-up ^CM. During a plain ^SM
+    // selection, however, ^CM is required so the selected stored message adopts
+    // its saved per-printer speed/rotation before ^SV persists it.
+    if (includeMessageSettings && includeMessageSettingsCommand) {
+      const speedCode = SPEED_TO_PROTOCOL_CODE[perMessageSettings.speed] ?? 0;
+      const rotationCode = ROTATION_TO_PROTOCOL_CODE[perMessageSettings.rotation] ?? 0;
+      const printModeCode = PRINT_MODE_TO_PROTOCOL_CODE[perMessageSettings.printMode] ?? 0;
+      commands.push({ command: `^CM s${speedCode};o${rotationCode};p${printModeCode}`, delayAfterMs: 900 });
+    }
 
     // If the message carries ANY stored adjustSettings, treat the full set as
     // authoritative and push every key from fullAdjustSettings (which already
@@ -1648,92 +1679,31 @@ const Index = () => {
     }
     const hasStoredMessageSettings = true;
 
-    // Respect operator changes made at the printer HMI: if this printer is
-    // the connected one, query ^QP first and treat any values the printer
-    // reports as authoritative. Update the stored copy so future selects
-    // don't clobber those values, and skip re-pushing keys that already
-    // match — so a technician who tweaked width/speed/delay at the printer
-    // and pressed Save keeps their tweaks after a re-select.
-    let adoptedStored = stored;
-    let printerCurrent: Partial<PrintSettings> | null = null;
-    if (targetPrinter.id === connectionState.connectedPrinter?.id) {
-      try {
-        printerCurrent = await queryPrintSettingsForConnectedPrinter();
-      } catch (e) {
-        console.warn('[AdjustDebug][applyStoredAdjustSettings.queryFailed]', e);
-      }
-      if (printerCurrent) {
-        const storedAdjust = (stored.adjustSettings ?? {}) as Partial<PrintSettings>;
-        const storedMsgSettings = (stored.settings ?? {}) as Partial<PrintSettings>;
-        const mergedAdjust: Partial<PrintSettings> = { ...storedAdjust };
-        const mergedMsgSettings: Partial<PrintSettings> = { ...storedMsgSettings };
-        let changed = false;
-        const adjustKeys: (keyof PrintSettings)[] = ['width', 'height', 'delay', 'bold', 'gap', 'pitch'];
-        for (const k of adjustKeys) {
-          const pv = printerCurrent[k];
-          if (pv !== undefined && pv !== storedAdjust[k]) {
-            (mergedAdjust as Record<string, unknown>)[k] = pv;
-            changed = true;
-          }
-        }
-        // Speed + rotation are part of message settings (baked in ^NM/^CM).
-        // Only adopt if operator explicitly changed them at the printer HMI
-        // (i.e., they differ from stored) — we still push these via ^NM/^CM
-        // during message writes, so adopting keeps our record honest.
-        for (const k of ['speed', 'rotation'] as (keyof PrintSettings)[]) {
-          const pv = printerCurrent[k];
-          if (pv !== undefined && pv !== storedMsgSettings[k]) {
-            (mergedMsgSettings as Record<string, unknown>)[k] = pv;
-            changed = true;
-          }
-        }
-        if (changed) {
-          adoptedStored = { ...stored, adjustSettings: mergedAdjust as MessageDetails['adjustSettings'], settings: mergedMsgSettings as MessageDetails['settings'] };
-          try {
-            saveMessage(adoptedStored, targetPrinter.id);
-            console.log('[AdjustDebug][applyStoredAdjustSettings.adoptedPrinterValues]', {
-              targetPrinterId: targetPrinter.id,
-              messageName,
-              printerCurrent,
-              mergedAdjust,
-              mergedMsgSettings,
-            });
-            toast.info(`Adopted printer-side changes for "${messageName}"`, { duration: 3000 });
-          } catch (e) {
-            console.error('[AdjustDebug][applyStoredAdjustSettings.saveFailed]', e);
-          }
-        }
-      }
-    }
-
-    const adj = adoptedStored.adjustSettings ?? {};
-    const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(adoptedStored, targetPrinter);
-
-    // Build command sequence, but skip any adjust key that already matches
-    // the printer's current value (either just queried or previously known).
+    // Important: do NOT adopt the printer's live values here. At this point we
+    // have already switched to the target message, so the live HMI values may
+    // be the stale defaults that caused the customer issue. HMI edits are
+    // captured before switching away by captureHmiAdjustSilently(); selection
+    // must push the stored per-printer values back down and persist them.
+    const adj = stored.adjustSettings ?? {};
+    const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(stored, targetPrinter);
     const adjustToPush: Partial<MessageDetails['adjustSettings']> = { ...(adj as object) };
-    if (printerCurrent) {
-      for (const k of ['width', 'height', 'delay', 'bold', 'gap', 'pitch'] as (keyof PrintSettings)[]) {
-        const pv = printerCurrent[k];
-        const target = (fullAdjustSettings as unknown as Record<string, unknown>)[k];
-        if (pv !== undefined && pv === target) {
-          delete (adjustToPush as Record<string, unknown>)[k];
-        }
-      }
-    }
 
     const commands = buildMessageDependentCommandSequence({
       adjustSettings: adjustToPush,
       fullAdjustSettings,
       perMessageSettings,
       includeMessageSettings: hasStoredMessageSettings,
+      includeMessageSettingsCommand: true,
     });
+
+    if (commands.length > 0) {
+      commands.push({ command: '^SV', delayAfterMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS });
+    }
 
     console.log('[AdjustDebug][applyStoredAdjustSettings.start]', {
       targetPrinterId: targetPrinter.id,
       targetPrinterName: targetPrinter.name,
       messageName,
-      printerCurrent,
       adjustToPush,
       commands,
     });
@@ -1777,15 +1747,13 @@ const Index = () => {
     buildEffectiveMessageDependentSettings,
     buildMessageDependentCommandSequence,
     getStoredMessageForPrinter,
-    queryPrintSettingsForConnectedPrinter,
-    saveMessage,
     connectionState.connectedPrinter?.id,
     sendVerifiedCommandSequence,
     updateSettings,
   ]);
 
   // Global "Sync Adjust from Printers" — iterate every online printer, query
-  // its current PW/PH/DA/SB/GP/PA + speed/rotation via ^QP, and write those
+  // its current PW/PH/DA/SB/GP/PA + speed/rotation via documented reads, and write those
   // values back into the printer's stored copy of its current message. This
   // lets operators tweak settings on the printer HMI (press Save at the
   // printer) and then bring those changes back into CodeSync in one click so
@@ -2559,7 +2527,9 @@ const Index = () => {
     // Auto-capture HMI edits on the currently-selected message before we
     // switch away — preserves any Width/Delay/Speed the operator tweaked at
     // the printer keypad.
-    const currentlyOnPrinter = printer.currentMessage ?? null;
+    const currentlyOnPrinter = printer.id === connectionState.connectedPrinter?.id
+      ? (connectionState.status?.currentMessage ?? printer.currentMessage ?? null)
+      : (printer.currentMessage ?? null);
     if (currentlyOnPrinter && currentlyOnPrinter !== message.name) {
       await captureHmiAdjustSilently(printer, currentlyOnPrinter);
     }
@@ -2890,28 +2860,7 @@ const Index = () => {
             onSelect={async (message) => {
               const messageTargetPrinter = selectedPrinter ?? connectionState.connectedPrinter ?? null;
               if (!messageTargetPrinter) return false;
-              if (messageTargetPrinter.id === connectionState.connectedPrinter?.id) {
-                const ok = await selectMessage(message);
-                if (ok) {
-                  clearAllExpiryOverrides();
-                  await applyStoredAdjustSettings(messageTargetPrinter, message.name);
-                }
-                return ok;
-              }
-              const ok = await sendCommandToPrinter(messageTargetPrinter, `^SM ${message.name}`);
-              if (ok) {
-                updatePrinter(messageTargetPrinter.id, {
-                  currentMessage: message.name,
-                  lastSelectionResult: { messageName: message.name, success: true, at: Date.now() },
-                });
-                clearAllExpiryOverrides();
-                await applyStoredAdjustSettings(messageTargetPrinter, message.name);
-              } else {
-                updatePrinter(messageTargetPrinter.id, {
-                  lastSelectionResult: { messageName: message.name, success: false, reason: 'No ACK from printer', at: Date.now() },
-                });
-              }
-              return ok;
+              return selectMessageOnAnyPrinter(messageTargetPrinter, message);
             }}
             sourcePrinter={selectedPrinter ?? connectionState.connectedPrinter ?? null}
             siblingPrinters={(() => {
