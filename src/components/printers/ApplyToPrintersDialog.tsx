@@ -290,7 +290,7 @@ export function ApplyToPrintersDialog({
 
 
         {/* Card grid */}
-        <ScrollArea className="flex-1 min-h-0 -mx-2 px-2">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-2 px-2" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="space-y-4 py-2">
             {/* Source (locked in select mode; label-only in copy mode) */}
             <div>
@@ -328,7 +328,7 @@ export function ApplyToPrintersDialog({
               ))
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="border-t border-slate-700 pt-3">
           <Button
