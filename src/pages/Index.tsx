@@ -2864,6 +2864,10 @@ const Index = () => {
               const tp = selectedPrinter ?? connectionState.connectedPrinter ?? null;
               return tp ? printers.filter(p => p.id !== tp.id && p.isAvailable) : [];
             })()}
+            onSelectOnPrinter={selectMessageOnAnyPrinter}
+            onApplyPromptValuesOnPrinter={(printer, message, updatedDetails) =>
+              applyPromptValuesToPrinter(printer, message, updatedDetails)
+            }
             onCopyMessageToPrinters={(message, targets) =>
               copyMessageToPrinters(selectedPrinter ?? connectionState.connectedPrinter ?? null, message, targets)
             }
