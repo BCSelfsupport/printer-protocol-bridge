@@ -15,6 +15,13 @@ import { NavItem } from '@/components/layout/BottomNav';
 import { ModelBadge } from '@/components/branding/ModelBadge';
 import { WhatsNewButton, WhatsNewDialog } from '@/components/release/WhatsNewDialog';
 
+declare const __APP_VERSION__: string;
+
+const APP_BUILD_LABEL =
+  typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__
+    ? `v${__APP_VERSION__}`
+    : 'Dev build';
+
 interface DashboardProps {
   status: PrinterStatus | null;
   isConnected: boolean;
@@ -405,7 +412,7 @@ export function Dashboard({
     {onNavigate && (
       <div className="bg-sidebar h-16 md:h-14 flex items-center px-2 md:px-4 pb-safe flex-shrink-0">
         {/* Left version */}
-        <span className="text-sidebar-foreground text-xs md:text-sm whitespace-nowrap flex-shrink-0">Build 1.0.0</span>
+        <span className="text-sidebar-foreground text-xs md:text-sm whitespace-nowrap flex-shrink-0">{APP_BUILD_LABEL}</span>
         
         {/* Center nav buttons - horizontally scrollable on mobile */}
         <div className="flex-1 overflow-x-auto mx-2 md:mx-4">
