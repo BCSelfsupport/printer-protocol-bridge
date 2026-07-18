@@ -965,8 +965,13 @@ const Index = () => {
       return { success: false as const, reason: 'command' as const };
     }
 
+    // WP-2 — record that this printer has received this message so
+    // ApplyToPrintersDialog can pre-check it next time (Squid parity).
+    try { recordMessageSent(targetPrinter.id, messageName); } catch {}
+
     return { success: true as const, reason: null as 'switch' | 'command' | 'reselect' | 'protected' | null };
   }, [buildCounterConfigCommandSequence, buildEffectiveMessageDependentSettings, buildMessageCommands, sendVerifiedCommandSequence]);
+
 
   // After saving a message on the master, duplicate the full content to all
   // slaves. If the message is currently SELECTED on a slave with a different
