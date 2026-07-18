@@ -2480,6 +2480,7 @@ const Index = () => {
         if (printer.id === connectionState.connectedPrinter?.id) {
           const ok = await selectMessage(message);
           if (ok) {
+            try { recordMessageSent(printer.id, message.name); } catch {}
             clearAllExpiryOverrides();
             await applyStoredAdjustSettings(printer, message.name);
           }
@@ -2487,6 +2488,7 @@ const Index = () => {
         }
         const ok = await sendCommandToPrinter(printer, `^SM ${message.name}`);
         if (ok) {
+          try { recordMessageSent(printer.id, message.name); } catch {}
           updatePrinter(printer.id, {
             currentMessage: message.name,
             lastSelectionResult: { messageName: message.name, success: true, at: Date.now() },
@@ -2500,6 +2502,7 @@ const Index = () => {
         }
         return ok;
       };
+
 
       // Siblings = every other online printer the operator can pick as an
       // extra target in the ApplyToPrintersDialog. Exclude the source printer
