@@ -95,10 +95,15 @@ export function usePrinterStorage() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         let parsed: Printer[] = JSON.parse(stored);
-        // If not in emulator mode, reset all printers to offline on load.
-        // Actual availability will be determined by polling once a transport is available.
         const isEmulator = multiPrinterEmulator.enabled;
-        if (!isEmulator) {
+        if (isEmulator) {
+          // Prune any persisted printer whose IP is no longer part of the
+          // current emulator fleet (removes legacy "Line A"/"Line B" entries
+          // from previous emulator versions).
+          const validIps = new Set(EMULATED_PRINTER_IPS);
+          parsed = parsed.filter(p => validIps.has(p.ipAddress));
+        } else {
+          // If not in emulator mode, reset all printers to offline on load.
           parsed = parsed.map(p => ({
             ...p,
             isAvailable: false,
