@@ -3367,6 +3367,22 @@ const Index = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* WP-4: Retry / Ignore dialog for failed Copy-to-Printers pushes */}
+      <RetryFailuresDialog
+        open={!!copyRetryState}
+        messageName={copyRetryState?.message.name ?? ''}
+        action="copy"
+        failures={copyRetryState?.failures ?? []}
+        attempt={copyRetryState?.attempt ?? 1}
+        onIgnore={() => setCopyRetryState(null)}
+        onRetry={() => {
+          if (!copyRetryState) return;
+          const { source, message, failedTargets, attempt } = copyRetryState;
+          setCopyRetryState(null);
+          void copyMessageToPrinters(source, message, failedTargets, attempt + 1);
+        }}
+      />
+
     </div>
   );
 };
