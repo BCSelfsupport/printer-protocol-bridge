@@ -34,7 +34,10 @@
       window.__CS_MOUNTED = false;
       const isElectronRuntime = navigator.userAgent.includes('Electron');
       const isPreviewRuntime = location.hostname.includes('lovableproject.com') || location.hostname.includes('lovable.app');
-      const startupTimeoutMs = isElectronRuntime ? 20000 : (isPreviewRuntime ? 15000 : 8000);
+      // Mobile devices on cellular can easily take 20-30s for a cold bundle load.
+      // Give preview/mobile a much longer grace window before showing the crash screen.
+      const isMobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+      const startupTimeoutMs = isElectronRuntime ? 20000 : (isPreviewRuntime ? (isMobileUA ? 45000 : 20000) : (isMobileUA ? 30000 : 8000));
       setTimeout(function() {
         if (!window.__CS_MOUNTED) {
           var root = document.getElementById('root');
