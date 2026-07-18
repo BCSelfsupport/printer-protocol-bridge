@@ -1530,19 +1530,30 @@ const Index = () => {
           : `Copied to ${okCount} printer(s).`) + preservedNote,
         { id: 'copy-msg', duration: preservedNote ? 6000 : 4000 },
       );
+      // WP-4: clear any lingering retry dialog once every printer has succeeded.
+      setCopyRetryState(null);
     } else {
       const failed = results.filter(r => !r.ok);
       failed.forEach(f => {
         console.error(`[CopyMessage] FAILED on ${f.target.name} (${f.target.ipAddress ?? f.target.id}) — reason: ${f.reason ?? 'unknown'}`);
       });
-      const failedList = failed
-        .map(f => `${f.target.name} (${f.reason ?? 'unknown'})`)
-        .join(', ');
-      toast.error(
-        `Copied to ${okCount}.${preservedNote} Failed: ${failedList}`,
-        { id: 'copy-msg', duration: 8000 },
-      );
+      // Dismiss the loading toast and hand off to the Retry / Ignore dialog (WP-4).
+      toast.dismiss('copy-msg');
+      if (okCount > 0) {
+        toast.success(`Copied to ${okCount} printer(s).${preservedNote}`, { duration: 3000 });
+      }
+      setCopyRetryState({
+        source,
+        message,
+        attempt,
+        failedTargets: failed.map(f => f.target),
+        failures: failed.map(f => ({
+          printerName: f.target.name,
+          reason: f.reason ?? 'unknown',
+        })),
+      });
     }
+
   }, [
     connectionState.connectedPrinter,
     connectionState.isConnected,
