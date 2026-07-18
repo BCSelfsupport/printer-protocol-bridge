@@ -1232,10 +1232,12 @@ export function MessagesScreen({
           messageName={pendingApplyMessage.name}
           sourcePrinter={sourcePrinter}
           siblingPrinters={siblingPrinters}
+          defaultCheckedPrinterIds={getPrintersThatHaveRun(pendingApplyMessage.name).filter(id => id !== sourcePrinter.id)}
           onConfirm={(targets) => {
             void runSelectionAcrossTargets(targets);
           }}
         />
+
       )}
 
       {/* Copy-to-Printers Dialog — duplicates the selected message onto other printers. */}
