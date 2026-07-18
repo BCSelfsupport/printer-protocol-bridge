@@ -152,6 +152,14 @@ const Index = () => {
   const [licenseDialogOpen, setLicenseDialogOpen] = useState(false);
   const [slaveBlockDialogOpen, setSlaveBlockDialogOpen] = useState(false);
   const [slaveBlockPrinterName, setSlaveBlockPrinterName] = useState('');
+  // WP-4: Retry / Ignore dialog for failed copy pushes.
+  const [copyRetryState, setCopyRetryState] = useState<{
+    source: Printer;
+    message: PrintMessage;
+    failures: RetryFailureItem[];
+    failedTargets: Printer[];
+    attempt: number;
+  } | null>(null);
   
   
   
