@@ -787,12 +787,20 @@ export function usePrinterConnection() {
     // Expose all parsed faults for the FaultAlertDialog
     setActiveFaults(parsed.errors);
 
-    // Determine if there are ANY active errors (not just fluid-empty)
-    const hasAnyErrors = parsed.errors.length > 0;
-
     // Derive fluid levels from error messages
     const hasInkLow = parsed.errors.some(e => /ink/i.test(e.message) && /low/i.test(e.message));
     const hasMakeupLow = parsed.errors.some(e => /makeup/i.test(e.message) && /low/i.test(e.message));
+
+    // Determine if there are ANY *actionable* active errors. Fluid-LOW warnings
+    // (codes 10-0003 ink-low / 11-0003 makeup-low) are already surfaced by the
+    // fluid gauge chip and are a normal consumable state — they should NOT
+    // trigger the red WARNING badge. Fatal faults, EMPTY conditions, jet-stop,
+    // and other warnings continue to raise the badge as before.
+    const isLowFluidWarning = (e: { severity: string; message: string }) => {
+      const msg = e.message.toLowerCase();
+      return /low/.test(msg) && /(ink|makeup)/.test(msg) && !/empty/.test(msg);
+    };
+    const hasAnyErrors = parsed.errors.some(e => !isLowFluidWarning(e));
 
     // Always update state — both when faults appear AND when they clear
     setConnectionState((prev) => {
