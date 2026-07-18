@@ -56,6 +56,7 @@ import { useProductionStorage } from '@/hooks/useProductionStorage';
 import { logConsumption } from '@/lib/consumptionTracker';
 
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
+import { RetryFailuresDialog, RetryFailureItem } from '@/components/messages/RetryFailuresDialog';
 import { isRelayMode, printerTransport } from '@/lib/printerTransport';
 import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
 import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
@@ -151,6 +152,14 @@ const Index = () => {
   const [licenseDialogOpen, setLicenseDialogOpen] = useState(false);
   const [slaveBlockDialogOpen, setSlaveBlockDialogOpen] = useState(false);
   const [slaveBlockPrinterName, setSlaveBlockPrinterName] = useState('');
+  // WP-4: Retry / Ignore dialog for failed copy pushes.
+  const [copyRetryState, setCopyRetryState] = useState<{
+    source: Printer;
+    message: PrintMessage;
+    failures: RetryFailureItem[];
+    failedTargets: Printer[];
+    attempt: number;
+  } | null>(null);
   
   
   
@@ -1409,6 +1418,7 @@ const Index = () => {
     sourceCandidate: Printer | null | undefined,
     message: PrintMessage,
     targets: Printer[],
+    attempt: number = 1,
   ): Promise<void> => {
     const source = sourceCandidate ?? connectionState.connectedPrinter ?? null;
     if (!source) {
@@ -1520,19 +1530,30 @@ const Index = () => {
           : `Copied to ${okCount} printer(s).`) + preservedNote,
         { id: 'copy-msg', duration: preservedNote ? 6000 : 4000 },
       );
+      // WP-4: clear any lingering retry dialog once every printer has succeeded.
+      setCopyRetryState(null);
     } else {
       const failed = results.filter(r => !r.ok);
       failed.forEach(f => {
         console.error(`[CopyMessage] FAILED on ${f.target.name} (${f.target.ipAddress ?? f.target.id}) — reason: ${f.reason ?? 'unknown'}`);
       });
-      const failedList = failed
-        .map(f => `${f.target.name} (${f.reason ?? 'unknown'})`)
-        .join(', ');
-      toast.error(
-        `Copied to ${okCount}.${preservedNote} Failed: ${failedList}`,
-        { id: 'copy-msg', duration: 8000 },
-      );
+      // Dismiss the loading toast and hand off to the Retry / Ignore dialog (WP-4).
+      toast.dismiss('copy-msg');
+      if (okCount > 0) {
+        toast.success(`Copied to ${okCount} printer(s).${preservedNote}`, { duration: 3000 });
+      }
+      setCopyRetryState({
+        source,
+        message,
+        attempt,
+        failedTargets: failed.map(f => f.target),
+        failures: failed.map(f => ({
+          printerName: f.target.name,
+          reason: f.reason ?? 'unknown',
+        })),
+      });
     }
+
   }, [
     connectionState.connectedPrinter,
     connectionState.isConnected,
@@ -3345,6 +3366,22 @@ const Index = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* WP-4: Retry / Ignore dialog for failed Copy-to-Printers pushes */}
+      <RetryFailuresDialog
+        open={!!copyRetryState}
+        messageName={copyRetryState?.message.name ?? ''}
+        action="copy"
+        failures={copyRetryState?.failures ?? []}
+        attempt={copyRetryState?.attempt ?? 1}
+        onIgnore={() => setCopyRetryState(null)}
+        onRetry={() => {
+          if (!copyRetryState) return;
+          const { source, message, failedTargets, attempt } = copyRetryState;
+          setCopyRetryState(null);
+          void copyMessageToPrinters(source, message, failedTargets, attempt + 1);
+        }}
+      />
 
     </div>
   );
