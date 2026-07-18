@@ -101,7 +101,11 @@ export function usePrinterStorage() {
           // current emulator fleet (removes legacy "Line A"/"Line B" entries
           // from previous emulator versions).
           const validIps = new Set(EMULATED_PRINTER_IPS);
-          parsed = parsed.filter(p => validIps.has(p.ipAddress));
+          parsed = parsed
+            .filter(p => validIps.has(p.ipAddress))
+            // Reset any lingering master/slave assignments so emulator starts
+            // as a flat fleet (no sync configuration) by default.
+            .map(p => ({ ...p, role: undefined, masterId: undefined }));
         } else {
           // If not in emulator mode, reset all printers to offline on load.
           parsed = parsed.map(p => ({
@@ -204,7 +208,7 @@ export function usePrinterStorage() {
           }
         });
         
-        return applyDefaultEmulatorRoles(updatedPrinters);
+        return updatedPrinters;
       });
     };
 
