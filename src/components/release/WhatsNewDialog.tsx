@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'per-printer-message-settings',
+    type: 'feature',
+    title: 'Per-Printer Message Settings (Squid-Style Parity)',
+    date: '18 Jul 2026',
+    summary:
+      'Major rework of how message tuning is stored and shared across the fleet. Each printer now keeps its own Width, Delay, Bold, Gap and Speed for every message — the message name is shared, the tuned numbers are not. Copying a message to other printers refreshes only the content (fields, text, barcodes) and leaves each target printer\'s hard-won tuning alone. First-time sends to a printer that has never run a message seed from the source printer so the technician only tunes once. Rotation continues to come from the Printer Setup Card (Flip / Mirror Flip). The Copy and Select dialogs now pre-check every printer that has previously run the message, so a whole-fleet resend is one click. Failed pushes surface a Retry / Ignore dialog naming each printer and the exact reason, with retries capped at three. The message editor gains a collapsible "This message on other printers" panel showing each printer\'s current tuning, rotation and last-sent timestamp at a glance. Operators can also select any stored message directly at the printer HMI — the PC updates on the next poll and will not fight the operator by pushing a different message back.',
+  },
+  {
     id: 'faster-message-select',
     type: 'feature',
     title: 'Much Faster Message Selection Across the Fleet',
