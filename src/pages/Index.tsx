@@ -254,6 +254,24 @@ const Index = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectedPrinterId]);
 
+  // WP-7 migration & safety: on first mount, backfill sent-history for
+  // messages that already exist in storage (so pre-check in Copy/Select
+  // dialogs works for pre-existing deployments), and prune history entries
+  // for printers that have since been removed from the fleet.
+  const didRunHistoryMigrationRef = useRef(false);
+  useEffect(() => {
+    if (didRunHistoryMigrationRef.current) return;
+    if (!allStoredMessages) return;
+    didRunHistoryMigrationRef.current = true;
+    try {
+      backfillFromStoredKeys(Object.keys(allStoredMessages));
+      pruneRemovedPrinters(printers.map(p => p.id));
+    } catch (e) {
+      console.warn('[WP-7] history migration failed:', e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allStoredMessages]);
+
   
   // eslint-disable-next-line react-hooks/exhaustive-deps
 
