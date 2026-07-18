@@ -28,7 +28,12 @@ interface ApplyToPrintersDialogProps {
   /** 'select' (default) = apply-message-selection UX.
    *  'copy' = duplicate this message onto other printers. */
   mode?: 'select' | 'copy';
+  /** WP-3 — printer IDs to pre-check when the dialog opens (Squid parity:
+   *  every printer that has previously run this message). Overrides the
+   *  "last selection" default when provided and non-empty. */
+  defaultCheckedPrinterIds?: number[];
 }
+
 
 const LAST_SELECTION_KEY = 'apply-to-printers:last-selection';
 
