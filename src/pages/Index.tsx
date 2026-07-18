@@ -1914,6 +1914,53 @@ const Index = () => {
     }
   }, [printers, queryPrintSettingsForPrinter, getStoredMessageForPrinter, saveMessage, connectionState.connectedPrinter?.id, updateSettings]);
 
+  // Silent auto-capture — before we ^SM away from the current message, pull
+  // any Width/Delay/Bold/Gap/Pitch/Speed/Rotation the operator changed at the
+  // printer HMI back into our stored copy of THAT message. Otherwise the next
+  // time they re-select it we push stale numbers and clobber the operator's
+  // tweak (customer report 2026-07-18: 60-day white width kept reverting from
+  // 2 back to 15 after switching messages).
+  const captureHmiAdjustSilently = useCallback(async (printer: Printer, messageName: string | null) => {
+    if (!messageName) return;
+    try {
+      const queried = await queryPrintSettingsForPrinter(printer);
+      if (!queried) return;
+      const printerCurrent = queried.settings;
+      const stored = getStoredMessageForPrinter(messageName, printer);
+      if (!stored) return;
+      const storedAdjust = (stored.adjustSettings ?? {}) as Partial<PrintSettings>;
+      const storedMsgSettings = (stored.settings ?? {}) as Partial<PrintSettings>;
+      const mergedAdjust: Partial<PrintSettings> = { ...storedAdjust };
+      const mergedMsgSettings: Partial<PrintSettings> = { ...storedMsgSettings };
+      let changed = false;
+      for (const k of ['width', 'height', 'delay', 'bold', 'gap', 'pitch', 'speed', 'rotation'] as (keyof PrintSettings)[]) {
+        const pv = printerCurrent[k];
+        if (pv !== undefined && (pv !== storedAdjust[k] || pv !== storedMsgSettings[k])) {
+          (mergedAdjust as Record<string, unknown>)[k] = pv;
+          (mergedMsgSettings as Record<string, unknown>)[k] = pv;
+          changed = true;
+        }
+      }
+      if (changed) {
+        saveMessage({
+          ...stored,
+          adjustSettings: mergedAdjust as MessageDetails['adjustSettings'],
+          settings: mergedMsgSettings as MessageDetails['settings'],
+        }, printer.id);
+        console.log('[AutoCaptureHmiAdjust] captured HMI edits before switch', {
+          printerId: printer.id,
+          printerName: printer.name,
+          messageName,
+          mergedAdjust,
+        });
+      }
+    } catch (e) {
+      console.warn('[AutoCaptureHmiAdjust] failed (non-fatal)', e);
+    }
+  }, [queryPrintSettingsForPrinter, getStoredMessageForPrinter, saveMessage]);
+
+
+
 
 
   const applyPromptValuesToPrinter = useCallback(async (
