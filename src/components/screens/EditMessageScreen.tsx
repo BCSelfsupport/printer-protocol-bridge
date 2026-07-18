@@ -1213,6 +1213,13 @@ export function EditMessageScreen({
               </div>
             )}
 
+            {/* WP-5: Squid-style read-only view of this message on other printers */}
+            {otherPrinterRows && otherPrinterRows.length > 0 && (
+              <div className="mb-2 md:mb-3">
+                <MessageOnOtherPrintersPanel messageName={messageName} rows={otherPrinterRows} />
+              </div>
+            )}
+
             {/* Message Canvas - component handles its own horizontal scrolling */}
             <div
               ref={canvasScrollerRef}
