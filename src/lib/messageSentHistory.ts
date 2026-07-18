@@ -52,3 +52,55 @@ export function getLastSentAt(printerId: number, messageName: string): number | 
   const map = load();
   return map[messageName]?.[String(printerId)] ?? null;
 }
+
+/**
+ * WP-7 backfill: for every (printerId, messageName) pair already present in
+ * message storage, ensure a history entry exists. Uses epoch 1 as a sentinel
+ * "known-sent, timestamp unknown" so pre-check logic (WP-3) still fires for
+ * messages that were deployed before the history feature shipped. Idempotent —
+ * never overwrites a real timestamp. Safe to call on every app boot.
+ */
+export function backfillFromStoredKeys(compositeKeys: string[]): void {
+  if (!compositeKeys?.length) return;
+  const map = load();
+  let mutated = false;
+  for (const key of compositeKeys) {
+    const idx = key.indexOf(':');
+    if (idx <= 0) continue;
+    const printerId = Number(key.slice(0, idx));
+    const messageName = key.slice(idx + 1);
+    if (!Number.isFinite(printerId) || !messageName) continue;
+    const entry = map[messageName] ?? {};
+    if (entry[String(printerId)] == null) {
+      entry[String(printerId)] = 1; // sentinel: known-sent, timestamp unknown
+      map[messageName] = entry;
+      mutated = true;
+    }
+  }
+  if (mutated) save(map);
+}
+
+/**
+ * WP-7 safety: drop history entries for printers no longer present in the
+ * fleet. Prevents unbounded growth as printers are decommissioned. Message
+ * names are kept even if the printer no longer has them locally, since the
+ * printer may still hold the message on-device.
+ */
+export function pruneRemovedPrinters(existingPrinterIds: number[]): void {
+  const alive = new Set(existingPrinterIds.map(id => String(id)));
+  const map = load();
+  let mutated = false;
+  for (const [name, entry] of Object.entries(map)) {
+    for (const pid of Object.keys(entry)) {
+      if (!alive.has(pid)) {
+        delete entry[pid];
+        mutated = true;
+      }
+    }
+    if (Object.keys(entry).length === 0) {
+      delete map[name];
+      mutated = true;
+    }
+  }
+  if (mutated) save(map);
+}
