@@ -56,6 +56,7 @@ import { useProductionStorage } from '@/hooks/useProductionStorage';
 import { logConsumption } from '@/lib/consumptionTracker';
 
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
+import { RetryFailuresDialog, RetryFailureItem } from '@/components/messages/RetryFailuresDialog';
 import { isRelayMode, printerTransport } from '@/lib/printerTransport';
 import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
 import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
