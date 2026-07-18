@@ -2770,6 +2770,7 @@ const Index = () => {
             printerVariant={connectionState.status?.printerVariant}
             currentAdjustSettings={connectionState.settings}
             onSendCommand={sendCommand}
+            otherPrinterRows={buildOtherPrinterRows(editingMessage.name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id ?? null)}
           onSave={saveEditedMessage}
             onCancel={() => {
               setCurrentScreen('messages');
