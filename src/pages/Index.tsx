@@ -63,7 +63,7 @@ import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerW
 import { beginSaveBusy, waitForSaveIdle } from '@/lib/saveBusy';
 import { isPresetMessage } from '@/lib/hardcodedMessages';
 import { isMessageProtected } from '@/lib/protectedMessages';
-import { recordMessageSent, getPrintersThatHaveRun, getLastSentAt } from '@/lib/messageSentHistory';
+import { recordMessageSent, getPrintersThatHaveRun, getLastSentAt, backfillFromStoredKeys, pruneRemovedPrinters } from '@/lib/messageSentHistory';
 import type { OtherPrinterRow } from '@/components/messages/MessageOnOtherPrintersPanel';
 
 
@@ -165,7 +165,7 @@ const Index = () => {
   
   
   // Local message storage (persists to localStorage, scoped by printer ID)
-  const { saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId, saveToPcLibrary, getAllPcLibraryMessages, getPcLibraryMessages, deleteFromPcLibrary, getSwapSlot, setSwapSlot } = useMessageStorage();
+  const { messages: allStoredMessages, saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId, saveToPcLibrary, getAllPcLibraryMessages, getPcLibraryMessages, deleteFromPcLibrary, getSwapSlot, setSwapSlot } = useMessageStorage();
   
   // Consumable storage
   const consumableStorage = useConsumableStorage();
@@ -253,6 +253,24 @@ const Index = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectedPrinterId]);
+
+  // WP-7 migration & safety: on first mount, backfill sent-history for
+  // messages that already exist in storage (so pre-check in Copy/Select
+  // dialogs works for pre-existing deployments), and prune history entries
+  // for printers that have since been removed from the fleet.
+  const didRunHistoryMigrationRef = useRef(false);
+  useEffect(() => {
+    if (didRunHistoryMigrationRef.current) return;
+    if (!allStoredMessages) return;
+    didRunHistoryMigrationRef.current = true;
+    try {
+      backfillFromStoredKeys(Object.keys(allStoredMessages));
+      pruneRemovedPrinters(printers.map(p => p.id));
+    } catch (e) {
+      console.warn('[WP-7] history migration failed:', e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allStoredMessages]);
 
   
   // eslint-disable-next-line react-hooks/exhaustive-deps
