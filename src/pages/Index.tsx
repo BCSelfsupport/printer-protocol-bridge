@@ -2576,72 +2576,8 @@ const Index = () => {
     const isConnectedMessageTarget = messageTargetPrinter?.id === connectionState.connectedPrinter?.id;
 
     if (currentScreen === 'messages') {
-      // Per-printer ^SM select — used by both the source select and the
-      // multi-target "Apply to Printers" fan-out. Handles the connected vs
-      // background-printer socket paths and records the ACK/FAIL pip.
-      const selectMessageOnAnyPrinter = async (printer: Printer, message: PrintMessage): Promise<boolean> => {
-        // Before ^SM to any printer, if the stored message has a Line ID
-        // field (dynamicSource === 'lineId') whose baked-in data doesn't
-        // match THIS printer's configured Line ID, rewrite the message on
-        // the target first so the HMI shows the right line number. Without
-        // this, multi-target selects fan out the source printer's Line ID.
-        try {
-          const stored = getStoredMessageForPrinter(message.name, printer);
-          const targetLineId = printer.lineId?.trim();
-          const needsRewrite = !!stored && !!targetLineId && stored.fields.some(
-            (f) => (f as any).dynamicSource === 'lineId' && f.data !== targetLineId
-          );
-          if (needsRewrite && stored) {
-            const rewrittenFields = stored.fields.map((f) =>
-              (f as any).dynamicSource === 'lineId' && targetLineId
-                ? { ...f, data: targetLineId }
-                : f
-            );
-            const result = await replaceMessageWithoutDelete(printer, message.name, {
-              fields: rewrittenFields,
-              templateValue: stored.templateValue,
-              settings: stored.settings,
-              adjustSettings: stored.adjustSettings,
-              advancedSettings: stored.advancedSettings,
-            }, false);
-            if (result.success) {
-              saveMessage(
-                normalizeMessageForPrinter({ ...stored, fields: rewrittenFields }),
-                printer.id,
-              );
-            } else {
-              console.warn(`[LineIdSync] Failed to rewrite Line ID on ${printer.name}: ${result.reason}`);
-            }
-          }
-        } catch (e) {
-          console.error('[LineIdSync] Rewrite error before ^SM:', e);
-        }
 
-        if (printer.id === connectionState.connectedPrinter?.id) {
-          const ok = await selectMessage(message);
-          if (ok) {
-            try { recordMessageSent(printer.id, message.name); } catch {}
-            clearAllExpiryOverrides();
-            await applyStoredAdjustSettings(printer, message.name);
-          }
-          return ok;
-        }
-        const ok = await sendCommandToPrinter(printer, `^SM ${message.name}`);
-        if (ok) {
-          try { recordMessageSent(printer.id, message.name); } catch {}
-          updatePrinter(printer.id, {
-            currentMessage: message.name,
-            lastSelectionResult: { messageName: message.name, success: true, at: Date.now() },
-          });
-          clearAllExpiryOverrides();
-          await applyStoredAdjustSettings(printer, message.name);
-        } else {
-          updatePrinter(printer.id, {
-            lastSelectionResult: { messageName: message.name, success: false, reason: 'No ACK from printer', at: Date.now() },
-          });
-        }
-        return ok;
-      };
+
 
 
       // Siblings = every other online printer the operator can pick as an
