@@ -3,6 +3,8 @@ import { useProtectedMessages } from '@/lib/protectedMessages';
 import { PcLibraryEntry } from '@/hooks/useMessageStorage';
 import { Printer, PrintMessage } from '@/types/printer';
 import { ApplyToPrintersDialog } from '@/components/printers/ApplyToPrintersDialog';
+import { getPrintersThatHaveRun } from '@/lib/messageSentHistory';
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
@@ -1230,10 +1232,12 @@ export function MessagesScreen({
           messageName={pendingApplyMessage.name}
           sourcePrinter={sourcePrinter}
           siblingPrinters={siblingPrinters}
+          defaultCheckedPrinterIds={getPrintersThatHaveRun(pendingApplyMessage.name).filter(id => id !== sourcePrinter.id)}
           onConfirm={(targets) => {
             void runSelectionAcrossTargets(targets);
           }}
         />
+
       )}
 
       {/* Copy-to-Printers Dialog — duplicates the selected message onto other printers. */}
@@ -1248,6 +1252,8 @@ export function MessagesScreen({
           messageName={pendingCopyMessage.name}
           sourcePrinter={sourcePrinter}
           siblingPrinters={siblingPrinters}
+          defaultCheckedPrinterIds={getPrintersThatHaveRun(pendingCopyMessage.name).filter(id => id !== sourcePrinter.id)}
+
           onConfirm={async (targets) => {
             if (targets.length === 0) return;
             const msg = pendingCopyMessage;
