@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio, Link2, ChevronDown, Maximize2, DownloadCloud, PowerOff } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio, Link2, ChevronDown, Maximize2, DownloadCloud, PowerOff, X } from 'lucide-react';
 import { WhatsNewButton, WhatsNewDialog } from '@/components/release/WhatsNewDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
@@ -1104,17 +1104,30 @@ export function PrintersScreen({
       <Dialog open={expandedGridOpen} onOpenChange={setExpandedGridOpen}>
         <DialogContent className="max-w-[98vw] w-[98vw] h-[95vh] max-h-[95vh] p-0 flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 border-slate-800">
           <DialogHeader className="px-6 pt-5 pb-3 border-b border-slate-800">
-            <DialogTitle className="flex items-center gap-3 text-white">
-              <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center">
-                <PrinterIcon className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <div className="text-lg font-bold">Network Printers</div>
-                <div className="text-xs font-normal text-slate-400">
-                  {visiblePrinters.length} device{visiblePrinters.length !== 1 ? 's' : ''} · full-screen view
+            <div className="flex items-center justify-between gap-3">
+              <DialogTitle className="flex items-center gap-3 text-white">
+                <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <PrinterIcon className="w-5 h-5 text-primary" />
                 </div>
-              </div>
-            </DialogTitle>
+                <div>
+                  <div className="text-lg font-bold">Network Printers</div>
+                  <div className="text-xs font-normal text-slate-400">
+                    {visiblePrinters.length} device{visiblePrinters.length !== 1 ? 's' : ''} · full-screen view
+                  </div>
+                </div>
+              </DialogTitle>
+              <Button
+                onClick={() => setExpandedGridOpen(false)}
+                size="sm"
+                variant="outline"
+                className="h-9 px-3 border-slate-500 text-white bg-slate-700/50 hover:bg-slate-600 hover:text-white flex-shrink-0"
+                aria-label="Close full-screen printer view"
+              >
+                <X className="w-4 h-4 mr-1.5" />
+                <span className="hidden sm:inline">Close</span>
+                <span className="sm:hidden">Back</span>
+              </Button>
+            </div>
           </DialogHeader>
           <ScrollArea className="flex-1">
             <DndContext
