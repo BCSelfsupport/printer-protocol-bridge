@@ -3453,25 +3453,47 @@ export function usePrinterConnection() {
     if (shouldUseEmulator()) return null;
     if (!isElectron && !isRelayMode()) return null;
 
+    const speedReverseMap: Record<number, PrintSettings['speed']> = {
+      0: 'Fast', 1: 'Faster', 2: 'Fastest', 3: 'Ultra Fast',
+    };
+    const extractNumber = (resp: string, key: string, aliases: string[] = []): number | null => {
+      const cleaned = resp.replace(/^success$/gim, '').trim();
+      const withKey = cleaned.match(new RegExp(`\\^?${key}[:\\s=]*(-?\\d+)`, 'i'));
+      if (withKey) return parseInt(withKey[1], 10);
+      for (const alias of aliases) {
+        const m = cleaned.match(new RegExp(`${alias}[:\\s=]*(-?\\d+)`, 'i'));
+        if (m) return parseInt(m[1], 10);
+      }
+      const lines = cleaned.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      for (const line of lines) if (/^-?\d+$/.test(line)) return parseInt(line, 10);
+      return null;
+    };
+    const readNum = async (cmd: string, key: string, aliases: string[] = []): Promise<number | null> => {
+      try {
+        const r = await printerTransport.sendCommand(printer.id, cmd);
+        if (!r?.success || !r.response) return null;
+        const n = extractNumber(r.response, key, aliases);
+        console.log('[queryPrintSettingsForConnectedPrinter.read]', { cmd, response: r.response, parsed: n });
+        return n;
+      } catch { return null; }
+    };
+
     try {
-      const result = await printerTransport.sendCommand(printer.id, '^QP');
-      if (!result?.success || !result.response) return null;
-      const response = result.response;
-      const extract = (key: string): number | null => {
-        const m = response.match(new RegExp(`${key}[:\\s]*(\\d+)`, 'i'));
-        return m ? parseInt(m[1], 10) : null;
-      };
-      const speedReverseMap: Record<number, PrintSettings['speed']> = {
-        0: 'Fast', 1: 'Faster', 2: 'Fastest', 3: 'Ultra Fast',
-      };
-      const width = extract('Width');
-      const height = extract('Height');
-      const delay = extract('Delay');
-      const rotationNum = extract('Rotation');
-      const bold = extract('Bold');
-      const speedNum = extract('Speed');
-      const gap = extract('Gap');
-      const pitch = extract('Pitch');
+      const width = await readNum('^PW', 'PW', ['PadWidth', 'Pad Width', 'Print Width', 'Width']);
+      const height = await readNum('^PH', 'PH', ['PadHeight', 'Pad Height', 'Print Height', 'Height']);
+      const delay = await readNum('^DA', 'DA', ['FwdDelay', 'Fwd Delay', 'Forward Delay', 'Delay']);
+      const pitch = await readNum('^PA', 'PA', ['Pitch Adjust', 'Pitch']);
+      const bold = await readNum('^SB ?', 'SB', ['Bold']);
+      const gap = await readNum('^GP ?', 'GP', ['Gap']);
+      let rotationNum: number | null = null;
+      let speedNum: number | null = null;
+      const gm = await printerTransport.sendCommand(printer.id, '^GM');
+      if (gm?.success && gm.response) {
+        const s = gm.response.match(/S[:\s=]*(-?\d+)/i);
+        const o = gm.response.match(/O[:\s=]*(-?\d+)/i);
+        if (s) speedNum = parseInt(s[1], 10);
+        if (o) rotationNum = parseInt(o[1], 10);
+      }
       const parsed: Partial<PrintSettings> = {
         ...(width !== null && { width }),
         ...(height !== null && { height }),
