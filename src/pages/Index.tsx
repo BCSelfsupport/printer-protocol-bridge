@@ -2505,8 +2505,71 @@ const Index = () => {
     }
   }, [sendCommand, queryCounters, connectionState.status?.currentMessage, getMessage, saveMessage, connectedPrinterId]);
 
+  // Per-printer ^SM select — hoisted so both desktop and mobile MessagesScreen
+  // branches can pass it as onSelectOnPrinter. Handles Line ID rewrite,
+  // connected vs background-printer socket paths, and ACK/FAIL pip.
+  const selectMessageOnAnyPrinter = async (printer: Printer, message: PrintMessage): Promise<boolean> => {
+    try {
+      const stored = getStoredMessageForPrinter(message.name, printer);
+      const targetLineId = printer.lineId?.trim();
+      const needsRewrite = !!stored && !!targetLineId && stored.fields.some(
+        (f) => (f as any).dynamicSource === 'lineId' && f.data !== targetLineId
+      );
+      if (needsRewrite && stored) {
+        const rewrittenFields = stored.fields.map((f) =>
+          (f as any).dynamicSource === 'lineId' && targetLineId
+            ? { ...f, data: targetLineId }
+            : f
+        );
+        const result = await replaceMessageWithoutDelete(printer, message.name, {
+          fields: rewrittenFields,
+          templateValue: stored.templateValue,
+          settings: stored.settings,
+          adjustSettings: stored.adjustSettings,
+          advancedSettings: stored.advancedSettings,
+        }, false);
+        if (result.success) {
+          saveMessage(
+            normalizeMessageForPrinter({ ...stored, fields: rewrittenFields }),
+            printer.id,
+          );
+        } else {
+          console.warn(`[LineIdSync] Failed to rewrite Line ID on ${printer.name}: ${result.reason}`);
+        }
+      }
+    } catch (e) {
+      console.error('[LineIdSync] Rewrite error before ^SM:', e);
+    }
+
+    if (printer.id === connectionState.connectedPrinter?.id) {
+      const ok = await selectMessage(message);
+      if (ok) {
+        try { recordMessageSent(printer.id, message.name); } catch {}
+        clearAllExpiryOverrides();
+        await applyStoredAdjustSettings(printer, message.name);
+      }
+      return ok;
+    }
+    const ok = await sendCommandToPrinter(printer, `^SM ${message.name}`);
+    if (ok) {
+      try { recordMessageSent(printer.id, message.name); } catch {}
+      updatePrinter(printer.id, {
+        currentMessage: message.name,
+        lastSelectionResult: { messageName: message.name, success: true, at: Date.now() },
+      });
+      clearAllExpiryOverrides();
+      await applyStoredAdjustSettings(printer, message.name);
+    } else {
+      updatePrinter(printer.id, {
+        lastSelectionResult: { messageName: message.name, success: false, reason: 'No ACK from printer', at: Date.now() },
+      });
+    }
+    return ok;
+  };
+
 
   const getRightPanelContent = (): React.ReactNode | undefined => {
+
     if (isMobile) return undefined;
 
     const messageTargetPrinter = selectedPrinter ?? connectionState.connectedPrinter ?? null;
