@@ -204,7 +204,7 @@ export function usePrinterStorage() {
           }
         });
         
-        return applyDefaultEmulatorRoles(updatedPrinters);
+        return updatedPrinters;
       });
     };
 
