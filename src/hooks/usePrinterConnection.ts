@@ -3443,10 +3443,9 @@ export function usePrinterConnection() {
 
 
   // Query print settings from the connected printer and RETURN the parsed
-  // values without mutating connectionState. Used before re-pushing stored
-  // adjust settings so we can detect operator changes made at the printer HMI
-  // (width/speed/delay/bold/gap/pitch/rotation) and adopt them as the new
-  // baseline instead of overwriting them.
+  // values without mutating connectionState. Uses documented individual reads;
+  // do not use ^QP because it is unsupported on some firmware and can silently
+  // miss Width/Speed.
   const queryPrintSettingsForConnectedPrinter = useCallback(async (): Promise<Partial<PrintSettings> | null> => {
     if (!connectionState.isConnected || !connectionState.connectedPrinter) return null;
     const printer = connectionState.connectedPrinter;
@@ -3514,7 +3513,7 @@ export function usePrinterConnection() {
 
   // Query print settings from an ARBITRARY printer (connected or not).
   // Reuses the persistent transport when the target is the currently-connected
-  // printer; otherwise opens a guarded connect → ^QP → disconnect session so
+  // printer; otherwise opens a guarded connect → parameter reads → disconnect session so
   // multiple simultaneous fleet queries don't stomp on port 23.
   //
   // Also returns the printer's currently selected message name (from ^SM) so

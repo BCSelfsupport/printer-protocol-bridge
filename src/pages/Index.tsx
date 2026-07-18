@@ -228,7 +228,6 @@ const Index = () => {
     saveGlobalAdjust,
     saveMessageSettings,
     queryPrintSettings,
-    queryPrintSettingsForConnectedPrinter,
     queryPrintSettingsForPrinter,
     sendCommand,
     queryPrinterMetrics,
@@ -1754,7 +1753,7 @@ const Index = () => {
   ]);
 
   // Global "Sync Adjust from Printers" — iterate every online printer, query
-  // its current PW/PH/DA/SB/GP/PA + speed/rotation via ^QP, and write those
+  // its current PW/PH/DA/SB/GP/PA + speed/rotation via documented reads, and write those
   // values back into the printer's stored copy of its current message. This
   // lets operators tweak settings on the printer HMI (press Save at the
   // printer) and then bring those changes back into CodeSync in one click so
