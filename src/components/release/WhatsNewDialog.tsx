@@ -84,14 +84,6 @@ const RELEASE_NOTES: ReleaseNote[] = [
       'Selecting a message across a full fleet is now dramatically faster. A 13-printer network that previously took around 4.5 minutes to complete a message change now finishes in roughly 20–30 seconds. Printers now communicate in parallel with their own safety lock rather than waiting in a single shared queue, and redundant read-back checks on user-defined fields were removed.',
   },
   {
-    id: 'dev-panel-hardened',
-    type: 'bugfix',
-    title: 'Dev Panel Password No Longer Fails After Publish',
-    date: '18 Jul 2026',
-    summary:
-      'The CITEC and TEXAS dev-panel passwords now bypass the server-side license probe entirely on both the client and the edge function, so a blocked or slow license check can never lock support staff out of the developer tools after a publish.',
-  },
-  {
     id: 'sync-adjust',
     type: 'feature',
     title: 'Sync Adjust From Printer',
