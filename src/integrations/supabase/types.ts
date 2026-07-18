@@ -125,6 +125,7 @@ export type Database = {
           columns: string[]
           created_at: string
           id: string
+          license_id: string | null
           name: string
           updated_at: string
         }
@@ -132,6 +133,7 @@ export type Database = {
           columns?: string[]
           created_at?: string
           id?: string
+          license_id?: string | null
           name: string
           updated_at?: string
         }
@@ -139,10 +141,19 @@ export type Database = {
           columns?: string[]
           created_at?: string
           id?: string
+          license_id?: string | null
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "data_sources_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       developer_invites: {
         Row: {
@@ -628,6 +639,7 @@ export type Database = {
           data_source_id: string
           field_mappings: Json
           id: string
+          license_id: string | null
           message_name: string
           printer_id: number
           status: string
@@ -640,6 +652,7 @@ export type Database = {
           data_source_id: string
           field_mappings?: Json
           id?: string
+          license_id?: string | null
           message_name: string
           printer_id: number
           status?: string
@@ -652,6 +665,7 @@ export type Database = {
           data_source_id?: string
           field_mappings?: Json
           id?: string
+          license_id?: string | null
           message_name?: string
           printer_id?: number
           status?: string
@@ -664,6 +678,13 @@ export type Database = {
             columns: ["data_source_id"]
             isOneToOne: false
             referencedRelation: "data_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_jobs_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
             referencedColumns: ["id"]
           },
         ]
@@ -890,6 +911,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_license_id: { Args: never; Returns: string }
       has_valid_license_header: { Args: never; Returns: boolean }
     }
     Enums: {
