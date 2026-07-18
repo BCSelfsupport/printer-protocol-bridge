@@ -1566,6 +1566,43 @@ const Index = () => {
   ]);
 
 
+  // WP-5: build per-printer rows for the "on other printers" stack view.
+  // Read-only visibility panel that lists every printer that has this
+  // message stored or has previously received it, along with each
+  // printer's tuned adjust settings (W/D/Bold/Gap/Speed) and rotation.
+  const buildOtherPrinterRows = useCallback((
+    msgName: string,
+    focusPrinterId: number | null | undefined,
+  ): OtherPrinterRow[] => {
+    if (!msgName) return [];
+    return printers
+      .map((p): OtherPrinterRow | null => {
+        const stored = getStoredMessageForPrinter(msgName, p);
+        const last = getLastSentAt(p.id, msgName);
+        if (!stored && !last) return null;
+        const adj = stored?.adjustSettings ?? {};
+        return {
+          printerId: p.id,
+          printerName: p.name,
+          lineId: p.lineId,
+          isCurrent: p.id === focusPrinterId,
+          width: (adj as any).width,
+          delay: (adj as any).delay,
+          bold: (adj as any).bold,
+          gap: (adj as any).gap,
+          speed: (adj as any).speed,
+          rotation: p.rotation ?? (adj as any).rotation,
+          lastSentAt: last,
+        };
+      })
+      .filter((r): r is OtherPrinterRow => r !== null)
+      .sort((a, b) => {
+        if (a.isCurrent && !b.isCurrent) return -1;
+        if (b.isCurrent && !a.isCurrent) return 1;
+        return (b.lastSentAt ?? 0) - (a.lastSentAt ?? 0);
+      });
+  }, [printers, getStoredMessageForPrinter]);
+
 
   const applyStoredAdjustSettings = useCallback(async (
     targetPrinter: Printer,
