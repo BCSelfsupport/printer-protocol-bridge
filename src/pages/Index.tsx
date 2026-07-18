@@ -2556,8 +2556,16 @@ const Index = () => {
   // branches can pass it as onSelectOnPrinter. Handles Line ID rewrite,
   // connected vs background-printer socket paths, and ACK/FAIL pip.
   const selectMessageOnAnyPrinter = async (printer: Printer, message: PrintMessage): Promise<boolean> => {
+    // Auto-capture HMI edits on the currently-selected message before we
+    // switch away — preserves any Width/Delay/Speed the operator tweaked at
+    // the printer keypad.
+    const currentlyOnPrinter = printer.currentMessage ?? null;
+    if (currentlyOnPrinter && currentlyOnPrinter !== message.name) {
+      await captureHmiAdjustSilently(printer, currentlyOnPrinter);
+    }
     try {
       const stored = getStoredMessageForPrinter(message.name, printer);
+
       const targetLineId = printer.lineId?.trim();
       const needsRewrite = !!stored && !!targetLineId && stored.fields.some(
         (f) => (f as any).dynamicSource === 'lineId' && f.data !== targetLineId
