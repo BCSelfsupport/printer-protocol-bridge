@@ -62,6 +62,8 @@ import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerW
 import { beginSaveBusy, waitForSaveIdle } from '@/lib/saveBusy';
 import { isPresetMessage } from '@/lib/hardcodedMessages';
 import { isMessageProtected } from '@/lib/protectedMessages';
+import { recordMessageSent, getPrintersThatHaveRun } from '@/lib/messageSentHistory';
+
 
 
 
