@@ -3,6 +3,8 @@ import { useProtectedMessages } from '@/lib/protectedMessages';
 import { PcLibraryEntry } from '@/hooks/useMessageStorage';
 import { Printer, PrintMessage } from '@/types/printer';
 import { ApplyToPrintersDialog } from '@/components/printers/ApplyToPrintersDialog';
+import { getPrintersThatHaveRun } from '@/lib/messageSentHistory';
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
