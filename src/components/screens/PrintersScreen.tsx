@@ -1,4 +1,4 @@
-import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio, Link2, ChevronDown, Maximize2, DownloadCloud, PowerOff } from 'lucide-react';
+import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio, Link2, ChevronDown, Maximize2, DownloadCloud, PowerOff, X } from 'lucide-react';
 import { WhatsNewButton, WhatsNewDialog } from '@/components/release/WhatsNewDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
