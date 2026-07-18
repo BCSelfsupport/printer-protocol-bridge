@@ -1252,6 +1252,8 @@ export function MessagesScreen({
           messageName={pendingCopyMessage.name}
           sourcePrinter={sourcePrinter}
           siblingPrinters={siblingPrinters}
+          defaultCheckedPrinterIds={getPrintersThatHaveRun(pendingCopyMessage.name).filter(id => id !== sourcePrinter.id)}
+
           onConfirm={async (targets) => {
             if (targets.length === 0) return;
             const msg = pendingCopyMessage;
