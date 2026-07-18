@@ -97,15 +97,39 @@ export function usePrinterStorage() {
         let parsed: Printer[] = JSON.parse(stored);
         const isEmulator = multiPrinterEmulator.enabled;
         if (isEmulator) {
-          // Prune any persisted printer whose IP is no longer part of the
-          // current emulator fleet (removes legacy "Line A"/"Line B" entries
-          // from previous emulator versions).
-          const validIps = new Set(EMULATED_PRINTER_IPS);
-          parsed = parsed
-            .filter(p => validIps.has(p.ipAddress))
-            // Reset any lingering master/slave assignments so emulator starts
-            // as a flat fleet (no sync configuration) by default.
-            .map(p => ({ ...p, role: undefined, masterId: undefined }));
+          // Hard-normalize the emulator fleet:
+          //  - Rebuild from canonical emulator instances (one per ip:port).
+          //  - Drop any stale printers whose IP isn't in the current fleet
+          //    (e.g. legacy "Line A"/"Line B").
+          //  - Deduplicate by ip:port so we never end up with two "Printer 12".
+          //  - Force the canonical name/id from the emulator config.
+          //  - Clear any master/slave role so we start as a flat fleet.
+          //  - Clear the "removed" list so all 13 come back after this reset.
+          try { localStorage.removeItem(REMOVED_EMULATED_KEY); } catch {}
+
+          const byKey = new Map<string, Printer>();
+          for (const p of parsed) {
+            const key = `${p.ipAddress}:${p.port}`;
+            if (!byKey.has(key)) byKey.set(key, p);
+          }
+
+          parsed = multiPrinterEmulator.getEmulatedPrinters().map((ep) => {
+            const key = `${ep.ipAddress}:${ep.port}`;
+            const prev = byKey.get(key);
+            return {
+              ...(prev ?? {}),
+              id: ep.id,
+              name: ep.name,
+              ipAddress: ep.ipAddress,
+              port: ep.port,
+              isConnected: false,
+              isAvailable: true,
+              status: ep.status,
+              hasActiveErrors: false,
+              role: undefined,
+              masterId: undefined,
+            } as Printer;
+          });
         } else {
           // If not in emulator mode, reset all printers to offline on load.
           parsed = parsed.map(p => ({
