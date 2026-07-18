@@ -11,8 +11,6 @@ declare const __APP_VERSION__: string;
 declare const __APP_BUILD_TOKEN__: string;
 
 const APP_VERSION_STORAGE_KEY = "codesync-app-version";
-const APP_BOOT_TOKEN_STORAGE_KEY = "codesync-preview-boot-token";
-const APP_PREVIEW_SOURCE_VERSION_KEY = "codesync-preview-source-version";
 const STALE_GITHUB_STORAGE_KEYS = [
   "github_token",
   "github_token_expires_at",
@@ -56,12 +54,6 @@ const getCurrentAppCacheToken = () => {
   return [version, buildToken, buildStamp].filter(Boolean).join("::");
 };
 
-const reloadWithFreshPreviewBundle = () => {
-  const url = new URL(window.location.href);
-  url.searchParams.set("cs_v", getCurrentAppCacheToken() || String(Date.now()));
-  window.location.replace(url.toString());
-};
-
 const clearElectronPwaCaches = async () => {
   if (typeof window === "undefined" || !window.electronAPI) return;
 
@@ -99,9 +91,7 @@ const clearStaleWebPublishState = async (): Promise<boolean> => {
     const cacheKeys = "caches" in window ? await caches.keys() : [];
     const hadCachedState = previousVersion !== null || registrations.length > 0 || cacheKeys.length > 0;
 
-    sessionStorage.clear();
     localStorage.setItem(APP_VERSION_STORAGE_KEY, currentVersion);
-    sessionStorage.setItem(APP_BOOT_TOKEN_STORAGE_KEY, currentVersion);
 
     await Promise.all(registrations.map((registration) => registration.unregister()));
     await Promise.all(cacheKeys.map((key) => caches.delete(key)));
@@ -120,15 +110,6 @@ const clearStaleWebPublishState = async (): Promise<boolean> => {
 const clearStalePreviewState = async (): Promise<boolean> => {
   if (typeof window === "undefined" || window.electronAPI || !import.meta.env.DEV) return false;
 
-  const currentVersion = getCurrentAppCacheToken();
-  if (!currentVersion) return false;
-
-  const bootToken = sessionStorage.getItem(APP_BOOT_TOKEN_STORAGE_KEY);
-  sessionStorage.setItem(APP_BOOT_TOKEN_STORAGE_KEY, currentVersion);
-  localStorage.setItem(APP_VERSION_STORAGE_KEY, currentVersion);
-
-  if (bootToken === currentVersion) return false;
-
   try {
     if ("serviceWorker" in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
@@ -143,43 +124,7 @@ const clearStalePreviewState = async (): Promise<boolean> => {
     console.warn("[main.tsx] Failed to clear stale preview cache state:", error);
   }
 
-  const currentUrl = new URL(window.location.href);
-  if (currentUrl.searchParams.get("cs_v") !== currentVersion) {
-    reloadWithFreshPreviewBundle();
-    return true;
-  }
-
   return false;
-};
-
-const watchPreviewSourceVersion = () => {
-  if (typeof window === "undefined" || window.electronAPI || !import.meta.env.DEV) return;
-
-  const check = async () => {
-    try {
-      const res = await fetch(`/__codesync_version.json?t=${Date.now()}`, {
-        cache: "no-store",
-        headers: { "Cache-Control": "no-store" },
-      });
-      if (!res.ok) return;
-
-      const data = await res.json() as { sourceVersion?: number | string };
-      const sourceVersion = String(data.sourceVersion ?? "");
-      if (!sourceVersion) return;
-
-      const previous = sessionStorage.getItem(APP_PREVIEW_SOURCE_VERSION_KEY);
-      sessionStorage.setItem(APP_PREVIEW_SOURCE_VERSION_KEY, sourceVersion);
-
-      if (previous && previous !== sourceVersion) {
-        reloadWithFreshPreviewBundle();
-      }
-    } catch (error) {
-      console.warn("[main.tsx] Preview source-version check failed:", error);
-    }
-  };
-
-  void check();
-  window.setInterval(check, 2500);
 };
 
 const mountApp = () => {
@@ -317,8 +262,6 @@ const bootstrap = async () => {
   } catch (err) {
     showCrashReport(err);
   }
-
-  watchPreviewSourceVersion();
 
   // Run Electron cache cleanup in background so UI mount is never blocked
   void clearElectronPwaCaches();
