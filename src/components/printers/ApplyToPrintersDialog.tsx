@@ -100,6 +100,7 @@ export function ApplyToPrintersDialog({
   siblingPrinters,
   onConfirm,
   mode = 'select',
+  defaultCheckedPrinterIds,
 }: ApplyToPrintersDialogProps) {
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const isCopy = mode === 'copy';
@@ -111,16 +112,32 @@ export function ApplyToPrintersDialog({
     [siblingPrinters],
   );
 
-  // Prime from last-selection on open, filtered to still-available siblings.
+  // Stable key for the pre-check list so a new-array reference from the
+  // parent doesn't retrigger this effect and clobber operator toggles.
+  const defaultIdsKey = useMemo(
+    () => (defaultCheckedPrinterIds ?? []).slice().sort((a, b) => a - b).join(','),
+    [defaultCheckedPrinterIds],
+  );
+
+  // WP-3 — Prime the checkboxes on open. Priority:
+  //   1. defaultCheckedPrinterIds (printers that have already run this message)
+  //   2. last-selection remembered per source printer
   useEffect(() => {
     if (!open) return;
-    const last = loadLastSelection(sourcePrinter.id);
     const eligibleIds = siblingIdsKey ? siblingIdsKey.split(',').map(Number) : [];
     const eligible = new Set(eligibleIds);
-    const filtered = new Set([...last].filter(id => eligible.has(id)));
-    setChecked(filtered);
+    const primary = defaultIdsKey ? defaultIdsKey.split(',').map(Number) : [];
+    let seed: Set<number>;
+    if (primary.length > 0) {
+      seed = new Set(primary.filter(id => eligible.has(id)));
+    } else {
+      const last = loadLastSelection(sourcePrinter.id);
+      seed = new Set([...last].filter(id => eligible.has(id)));
+    }
+    setChecked(seed);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, sourcePrinter.id, siblingIdsKey]);
+  }, [open, sourcePrinter.id, siblingIdsKey, defaultIdsKey]);
+
 
   const groups = useMemo(() => groupPrinters(siblingPrinters), [siblingPrinters]);
   const totalTargets = isCopy ? checked.size : 1 + checked.size;
