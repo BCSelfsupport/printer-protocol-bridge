@@ -17,6 +17,7 @@ import { DateCodeBuilder, DateCodeBuilderResult } from '@/components/messages/Da
 import { CounterDialog } from '@/components/messages/CounterDialog';
 import { UserDefineDialog, UserDefineConfig } from '@/components/messages/UserDefineDialog';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
+import { MessageOnOtherPrintersPanel, OtherPrinterRow } from '@/components/messages/MessageOnOtherPrintersPanel';
 import { LinkedFieldDialog } from '@/components/messages/LinkedFieldDialog';
 import { collectMessageTokens, buildTokenMap, resolveFieldData, resolveAllFields, hasTokens } from '@/lib/tokenResolver';
 import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
