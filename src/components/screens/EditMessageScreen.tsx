@@ -17,6 +17,7 @@ import { DateCodeBuilder, DateCodeBuilderResult } from '@/components/messages/Da
 import { CounterDialog } from '@/components/messages/CounterDialog';
 import { UserDefineDialog, UserDefineConfig } from '@/components/messages/UserDefineDialog';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
+import { MessageOnOtherPrintersPanel, OtherPrinterRow } from '@/components/messages/MessageOnOtherPrintersPanel';
 import { LinkedFieldDialog } from '@/components/messages/LinkedFieldDialog';
 import { collectMessageTokens, buildTokenMap, resolveFieldData, resolveAllFields, hasTokens } from '@/lib/tokenResolver';
 import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/BarcodeFieldDialog';
@@ -155,6 +156,8 @@ interface EditMessageScreenProps {
   preset?: 'metrc-retail-id';
   currentAdjustSettings?: PrintSettings;
   onSendCommand?: (command: string) => Promise<any>;
+  /** WP-5: read-only per-printer stack view of this message across siblings. */
+  otherPrinterRows?: OtherPrinterRow[];
 }
 
 export function EditMessageScreen({
@@ -173,6 +176,7 @@ export function EditMessageScreen({
   preset,
   currentAdjustSettings,
   onSendCommand,
+  otherPrinterRows,
 }: EditMessageScreenProps) {
   // Filter templates and fonts based on connected printer model + variant
   const capabilities = getModelCapabilities(printerModel, printerVariant);
@@ -1206,6 +1210,13 @@ export function EditMessageScreen({
               <div className="mb-2 p-2 md:p-3 bg-destructive/10 border border-destructive rounded-lg text-destructive text-xs md:text-sm flex items-center gap-2">
                 <span className="font-medium">⚠️ Error:</span>
                 <span>{fieldError}</span>
+              </div>
+            )}
+
+            {/* WP-5: Squid-style read-only view of this message on other printers */}
+            {otherPrinterRows && otherPrinterRows.length > 0 && (
+              <div className="mb-2 md:mb-3">
+                <MessageOnOtherPrintersPanel messageName={messageName} rows={otherPrinterRows} />
               </div>
             )}
 
