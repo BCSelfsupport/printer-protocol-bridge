@@ -1418,6 +1418,7 @@ const Index = () => {
     sourceCandidate: Printer | null | undefined,
     message: PrintMessage,
     targets: Printer[],
+    attempt: number = 1,
   ): Promise<void> => {
     const source = sourceCandidate ?? connectionState.connectedPrinter ?? null;
     if (!source) {
