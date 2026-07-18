@@ -1441,76 +1441,22 @@ const Index = () => {
     toast.loading(`Copying "${message.name}" to ${eligible.length} printer(s)…`, { id: 'copy-msg' });
 
     const results = await Promise.all(eligible.map(async (target) => {
-      // Apply per-target rotation + expiry overrides the same way syncMessageToSlaves does.
-      const targetRotation = target.rotation ?? details!.adjustSettings?.rotation ?? 'Normal';
-      const targetAdjust = { ...(details!.adjustSettings ?? {}), rotation: targetRotation };
+      // WP-1 (Per-Printer Settings SOW):
+      // Rule 2 — Copy to Printers never overwrites tuned numbers. If the
+      // target already has its own copy of this message, keep its stored
+      // adjustSettings (W/D/Bold/Gap/Speed) untouched and only refresh the
+      // content (fields, text, barcodes).
+      // Rule 3 — First-time send seeds from the source printer's numbers.
+      // Rule 4 — Rotation always comes from the target's Printer Setup Card.
+      const existingTargetStored = getStoredMessageForPrinter(message.name, target);
+      const preservedTuning = !!existingTargetStored?.adjustSettings;
+      const baseAdjust = preservedTuning
+        ? { ...(existingTargetStored!.adjustSettings ?? {}) }   // keep tuned numbers
+        : { ...(details!.adjustSettings ?? {}) };               // seed from source
+      const targetRotation = target.rotation ?? baseAdjust.rotation ?? 'Normal';
+      const targetAdjust = { ...baseAdjust, rotation: targetRotation };
       const targetOffset = target.expiryOffsetDays;
-      // Per-target Line ID substitution: any field flagged as a printer-driven
-      // Line ID (dynamicSource === 'lineId') must be rewritten with THIS
-      // printer's configured lineId before we save to the target. Otherwise
-      // every copied printer keeps the source printer's Line ID on the HMI.
-      const targetLineId = target.lineId?.trim();
-      const targetFields = details!.fields.map((f) => {
-        let next = f;
-        if (targetOffset !== undefined) {
-          const isExpiry = f.autoCodeFieldType?.startsWith('date_expiry')
-            || (f.autoCodeExpiryDays ?? 0) > 0;
-          if (isExpiry) next = { ...next, autoCodeExpiryDays: targetOffset };
-        }
-        if ((f as any).dynamicSource === 'lineId' && targetLineId) {
-          next = { ...next, data: targetLineId };
-        }
-        return next;
-      });
 
-
-      try {
-        const result = await replaceMessageWithoutDelete(target, message.name, {
-          fields: targetFields,
-          templateValue: details!.templateValue,
-          settings: details!.settings,
-          adjustSettings: targetAdjust,
-          advancedSettings: details!.advancedSettings,
-        }, false);
-        if (result.success) {
-          const targetDetails = normalizeMessageForPrinter({
-            ...details!,
-            name: message.name,
-            fields: targetFields,
-            adjustSettings: targetAdjust,
-          });
-          saveMessage(targetDetails, target.id);
-        }
-        return { target, ok: result.success, reason: result.success ? undefined : result.reason };
-      } catch (e) {
-        console.error(`[CopyMessage] Failed on ${target.name}:`, e);
-        return { target, ok: false, reason: 'exception' };
-      }
-    }));
-
-    const okCount = results.filter(r => r.ok).length;
-    const failCount = results.length - okCount;
-    if (failCount === 0) {
-      toast.success(
-        skipped > 0
-          ? `Copied to ${okCount} printer(s) (${skipped} skipped: offline/source)`
-          : `Copied to ${okCount} printer(s)`,
-        { id: 'copy-msg' },
-      );
-    } else {
-      const failed = results.filter(r => !r.ok);
-      failed.forEach(f => {
-        console.error(`[CopyMessage] FAILED on ${f.target.name} (${f.target.ipAddress ?? f.target.id}) — reason: ${f.reason ?? 'unknown'}`);
-      });
-      const failedList = failed
-        .map(f => `${f.target.name} (${f.reason ?? 'unknown'})`)
-        .join(', ');
-      toast.error(
-        `Copied to ${okCount}. Failed: ${failedList}`,
-        { id: 'copy-msg', duration: 8000 },
-      );
-    }
-  }, [
     connectionState.connectedPrinter,
     connectionState.isConnected,
     getStoredMessageForPrinter,
