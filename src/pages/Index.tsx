@@ -1456,7 +1456,77 @@ const Index = () => {
       const targetRotation = target.rotation ?? baseAdjust.rotation ?? 'Normal';
       const targetAdjust = { ...baseAdjust, rotation: targetRotation };
       const targetOffset = target.expiryOffsetDays;
+      // Per-target Line ID substitution: any field flagged as a printer-driven
+      // Line ID (dynamicSource === 'lineId') must be rewritten with THIS
+      // printer's configured lineId before we save to the target. Otherwise
+      // every copied printer keeps the source printer's Line ID on the HMI.
+      const targetLineId = target.lineId?.trim();
+      const targetFields = details!.fields.map((f) => {
+        let next = f;
+        if (targetOffset !== undefined) {
+          const isExpiry = f.autoCodeFieldType?.startsWith('date_expiry')
+            || (f.autoCodeExpiryDays ?? 0) > 0;
+          if (isExpiry) next = { ...next, autoCodeExpiryDays: targetOffset };
+        }
+        if ((f as any).dynamicSource === 'lineId' && targetLineId) {
+          next = { ...next, data: targetLineId };
+        }
+        return next;
+      });
 
+      try {
+        const result = await replaceMessageWithoutDelete(target, message.name, {
+          fields: targetFields,
+          templateValue: details!.templateValue,
+          settings: details!.settings,
+          adjustSettings: targetAdjust,
+          advancedSettings: details!.advancedSettings,
+        }, false);
+        if (result.success) {
+          const targetDetails = normalizeMessageForPrinter({
+            ...details!,
+            name: message.name,
+            fields: targetFields,
+            adjustSettings: targetAdjust,
+          });
+          saveMessage(targetDetails, target.id);
+        }
+        return { target, ok: result.success, preservedTuning, reason: result.success ? undefined : result.reason };
+      } catch (e) {
+        console.error(`[CopyMessage] Failed on ${target.name}:`, e);
+        return { target, ok: false, preservedTuning, reason: 'exception' };
+      }
+    }));
+
+    const okCount = results.filter(r => r.ok).length;
+    const failCount = results.length - okCount;
+    const preservedNames = results
+      .filter(r => r.ok && r.preservedTuning)
+      .map(r => r.target.name);
+    const preservedNote = preservedNames.length > 0
+      ? ` Kept existing tuning on ${preservedNames.join(', ')}.`
+      : '';
+    if (failCount === 0) {
+      toast.success(
+        (skipped > 0
+          ? `Copied to ${okCount} printer(s) (${skipped} skipped: offline/source).`
+          : `Copied to ${okCount} printer(s).`) + preservedNote,
+        { id: 'copy-msg', duration: preservedNote ? 6000 : 4000 },
+      );
+    } else {
+      const failed = results.filter(r => !r.ok);
+      failed.forEach(f => {
+        console.error(`[CopyMessage] FAILED on ${f.target.name} (${f.target.ipAddress ?? f.target.id}) — reason: ${f.reason ?? 'unknown'}`);
+      });
+      const failedList = failed
+        .map(f => `${f.target.name} (${f.reason ?? 'unknown'})`)
+        .join(', ');
+      toast.error(
+        `Copied to ${okCount}.${preservedNote} Failed: ${failedList}`,
+        { id: 'copy-msg', duration: 8000 },
+      );
+    }
+  }, [
     connectionState.connectedPrinter,
     connectionState.isConnected,
     getStoredMessageForPrinter,
@@ -1465,6 +1535,7 @@ const Index = () => {
     normalizeMessageForPrinter,
     saveMessage,
   ]);
+
 
 
   const applyStoredAdjustSettings = useCallback(async (
