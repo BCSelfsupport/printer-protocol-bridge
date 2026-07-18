@@ -156,6 +156,8 @@ interface EditMessageScreenProps {
   preset?: 'metrc-retail-id';
   currentAdjustSettings?: PrintSettings;
   onSendCommand?: (command: string) => Promise<any>;
+  /** WP-5: read-only per-printer stack view of this message across siblings. */
+  otherPrinterRows?: OtherPrinterRow[];
 }
 
 export function EditMessageScreen({
