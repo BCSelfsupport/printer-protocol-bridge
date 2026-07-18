@@ -5,21 +5,7 @@ import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 const STORAGE_KEY = 'codesync-printers';
 const REMOVED_EMULATED_KEY = 'codesync-printers-removed-emulated';
 const EMULATED_MASTER_IP = '192.168.1.55';
-const EMULATED_PRINTER_IPS = [
-  '192.168.1.55',
-  '192.168.1.56',
-  '192.168.1.57',
-  '192.168.1.58',
-  '192.168.1.59',
-  '192.168.1.60',
-  '192.168.1.61',
-  '192.168.1.62',
-  '192.168.1.63',
-  '192.168.1.64',
-  '192.168.1.65',
-  '192.168.1.100',
-  '192.168.1.101',
-];
+const EMULATED_PRINTER_IPS = Array.from({ length: 13 }, (_, i) => `192.168.1.${55 + i}`);
 const EMULATED_PRINTER_CONFIGS = EMULATED_PRINTER_IPS.map((ipAddress) => ({ ipAddress, port: 23 }));
 
 // Track emulated printer IP:port pairs the user has explicitly removed,
