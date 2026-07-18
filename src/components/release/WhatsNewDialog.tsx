@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'faster-message-select',
+    type: 'feature',
+    title: 'Much Faster Message Selection Across the Fleet',
+    date: '18 Jul 2026',
+    summary:
+      'Selecting a message across a full fleet is now dramatically faster. A 13-printer network that previously took around 4.5 minutes to complete a message change now finishes in roughly 20–30 seconds. Printers now communicate in parallel with their own safety lock rather than waiting in a single shared queue, and redundant read-back checks on user-defined fields were removed. Per-printer safety and sequenced mass-jet operations are unchanged.',
+  },
+  {
     id: 'stop-all-jets',
     type: 'feature',
     title: 'One Button Stop All Jets',
