@@ -97,39 +97,40 @@ export function usePrinterStorage() {
         let parsed: Printer[] = JSON.parse(stored);
         const isEmulator = multiPrinterEmulator.enabled;
         if (isEmulator) {
-          // Hard-normalize the emulator fleet:
-          //  - Rebuild from canonical emulator instances (one per ip:port).
-          //  - Drop any stale printers whose IP isn't in the current fleet
-          //    (e.g. legacy "Line A"/"Line B").
-          //  - Deduplicate by ip:port so we never end up with two "Printer 12".
-          //  - Force the canonical name/id from the emulator config.
-          //  - Clear any master/slave role so we start as a flat fleet.
-          //  - Clear the "removed" list so all 13 come back after this reset.
-          try { localStorage.removeItem(REMOVED_EMULATED_KEY); } catch {}
+          // One-time normalization of the emulator fleet. Runs ONCE per
+          // browser, then user edits (removes, renames, role changes) stick.
+          const MIGRATION_KEY = 'codesync-emulator-fleet-migrated-v2';
+          const alreadyMigrated = localStorage.getItem(MIGRATION_KEY) === '1';
 
-          const byKey = new Map<string, Printer>();
-          for (const p of parsed) {
-            const key = `${p.ipAddress}:${p.port}`;
-            if (!byKey.has(key)) byKey.set(key, p);
+          if (!alreadyMigrated) {
+            try { localStorage.removeItem(REMOVED_EMULATED_KEY); } catch {}
+
+            const byKey = new Map<string, Printer>();
+            for (const p of parsed) {
+              const key = `${p.ipAddress}:${p.port}`;
+              if (!byKey.has(key)) byKey.set(key, p);
+            }
+
+            parsed = multiPrinterEmulator.getEmulatedPrinters().map((ep) => {
+              const key = `${ep.ipAddress}:${ep.port}`;
+              const prev = byKey.get(key);
+              return {
+                ...(prev ?? {}),
+                id: ep.id,
+                name: ep.name,
+                ipAddress: ep.ipAddress,
+                port: ep.port,
+                isConnected: false,
+                isAvailable: true,
+                status: ep.status,
+                hasActiveErrors: false,
+                role: undefined,
+                masterId: undefined,
+              } as Printer;
+            });
+
+            try { localStorage.setItem(MIGRATION_KEY, '1'); } catch {}
           }
-
-          parsed = multiPrinterEmulator.getEmulatedPrinters().map((ep) => {
-            const key = `${ep.ipAddress}:${ep.port}`;
-            const prev = byKey.get(key);
-            return {
-              ...(prev ?? {}),
-              id: ep.id,
-              name: ep.name,
-              ipAddress: ep.ipAddress,
-              port: ep.port,
-              isConnected: false,
-              isAvailable: true,
-              status: ep.status,
-              hasActiveErrors: false,
-              role: undefined,
-              masterId: undefined,
-            } as Printer;
-          });
         } else {
           // If not in emulator mode, reset all printers to offline on load.
           parsed = parsed.map(p => ({
