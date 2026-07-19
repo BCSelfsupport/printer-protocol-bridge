@@ -188,7 +188,7 @@ const Index = () => {
   
   
   // Local message storage (persists to localStorage, scoped by printer ID)
-  const { messages: allStoredMessages, saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId, saveToPcLibrary, getAllPcLibraryMessages, getPcLibraryMessages, deleteFromPcLibrary, getSwapSlot, setSwapSlot } = useMessageStorage();
+  const { messages: allStoredMessages, saveMessage, getMessage, getMessageStrict, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId, saveToPcLibrary, getAllPcLibraryMessages, getPcLibraryMessages, deleteFromPcLibrary, getSwapSlot, setSwapSlot } = useMessageStorage();
   
   // Consumable storage
   const consumableStorage = useConsumableStorage();
@@ -352,7 +352,7 @@ const Index = () => {
     const effectivePrintMode = details.settings?.printMode ?? 'Normal';
 
     const fullAdjustSettings: PrintSettings = {
-      ...connectionState.settings,
+      ...FLEET_DEFAULT_ADJUST_SETTINGS,
       width: details.adjustSettings?.width ?? FLEET_DEFAULT_ADJUST_SETTINGS.width,
       height: details.adjustSettings?.height ?? FLEET_DEFAULT_ADJUST_SETTINGS.height,
       delay: details.adjustSettings?.delay ?? FLEET_DEFAULT_ADJUST_SETTINGS.delay,
@@ -371,7 +371,7 @@ const Index = () => {
         printMode: effectivePrintMode,
       },
     };
-  }, [connectionState.settings, connectionState.connectedPrinter?.rotation]);
+  }, [connectionState.connectedPrinter?.rotation]);
 
 
   const buildMessageDependentCommandSequence = useCallback(({
@@ -1127,18 +1127,50 @@ const Index = () => {
     return results;
   }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, replaceMessageWithoutDelete, normalizeMessageForPrinter, saveMessage, updatePrinter]);
 
+  const getExactStoredMessageForPrinter = useCallback((messageName: string, targetPrinter?: Printer | null): MessageDetails | null => {
+    const targetPrinterId = targetPrinter?.id ?? connectionState.connectedPrinter?.id;
+    if (targetPrinterId === undefined) return getMessageStrict(messageName);
+    return getMessageStrict(messageName, targetPrinterId);
+  }, [connectionState.connectedPrinter?.id, getMessageStrict]);
+
+  const getStoredMessageForPrinter = useCallback((messageName: string, targetPrinter?: Printer | null): MessageDetails | null => {
+    const candidatePrinterIds = [
+      ...(targetPrinter?.id !== undefined ? [targetPrinter.id] : []),
+      ...(targetPrinter?.role === 'slave' && targetPrinter.masterId !== undefined ? [targetPrinter.masterId] : []),
+      ...(targetPrinter?.role !== 'slave' && targetPrinter?.masterId !== undefined ? [targetPrinter.masterId] : []),
+      ...(connectionState.connectedPrinter?.id !== undefined ? [connectionState.connectedPrinter.id] : []),
+    ];
+
+    const seen = new Set<number>();
+    for (const printerId of candidatePrinterIds) {
+      if (seen.has(printerId)) continue;
+      seen.add(printerId);
+
+      const stored = getMessageStrict(messageName, printerId);
+      if (stored) return stored;
+    }
+
+    return targetPrinter?.id !== undefined ? getMessage(messageName, targetPrinter.id) : getMessage(messageName);
+  }, [connectionState.connectedPrinter?.id, getMessage, getMessageStrict]);
+
   const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
     if (!editingMessage) return null;
 
 
     const targetName = isNew ? details.name : editingMessage.name;
+    const editTargetPrinter = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+    const editTargetPrinterId = editTargetPrinter?.id;
     const localDetails = normalizeMessageForPrinter({
       ...details,
       name: targetName,
     });
-    const cachedDetails = getMessage(editingMessage.name) ?? getMessage(targetName) ?? null;
+    const cachedDetails = getExactStoredMessageForPrinter(editingMessage.name, editTargetPrinter)
+      ?? getExactStoredMessageForPrinter(targetName, editTargetPrinter)
+      ?? getStoredMessageForPrinter(editingMessage.name, editTargetPrinter)
+      ?? getStoredMessageForPrinter(targetName, editTargetPrinter)
+      ?? null;
     const printerWriteNeeded = isNew || hasPrinterVisibleChanges(localDetails, cachedDetails);
-    const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(localDetails);
+    const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(localDetails, editTargetPrinter);
     const hasMessagePrinterSettings = !!(
       localDetails.settings
       || localDetails.adjustSettings?.speed !== undefined
@@ -1170,6 +1202,7 @@ const Index = () => {
       targetName,
       isNew: !!isNew,
       connectedPrinterId: connectionState.connectedPrinter?.id ?? null,
+      editTargetPrinterId: editTargetPrinterId ?? null,
       incomingAdjustSettings: details.adjustSettings ?? null,
       normalizedAdjustSettings: localDetails.adjustSettings ?? null,
       cachedAdjustSettings: cachedDetails?.adjustSettings ?? null,
@@ -1182,8 +1215,9 @@ const Index = () => {
 
     if (!printerWriteNeeded) {
       updateMessage(editingMessage.id, details.name);
-      saveMessage(localDetails);
+      saveMessage(localDetails, editTargetPrinterId);
       recentlySavedRef.current.set(targetName, Date.now());
+      if (editTargetPrinterId !== undefined) recentlySavedRef.current.set(`${editTargetPrinterId}:${targetName}`, Date.now());
       syncedMessagesRef.current.add(targetName);
       console.log('[onSave] Prompt metadata changed locally; skipping printer rewrite');
       return localDetails;
@@ -1263,8 +1297,9 @@ const Index = () => {
     if (!isNew) {
       updateMessage(editingMessage.id, details.name);
     }
-    saveMessage(localDetails);
+    saveMessage(localDetails, editTargetPrinterId);
     recentlySavedRef.current.set(targetName, Date.now());
+    if (editTargetPrinterId !== undefined) recentlySavedRef.current.set(`${editTargetPrinterId}:${targetName}`, Date.now());
     syncedMessagesRef.current.add(targetName);
     syncMessageToSlaves(targetName, localDetails, isNew);
 
@@ -1286,7 +1321,7 @@ const Index = () => {
             localAdjustSettings: localDetails.adjustSettings ?? null,
             mergedAdjustSettings: merged.adjustSettings ?? null,
           });
-          saveMessage(merged);
+          saveMessage(merged, editTargetPrinterId);
           // Only restore previous selection if the command sequence didn't already do it
           if (isNew && !restoredByCommandSequence) {
             const prevMessage = connectionState.status?.currentMessage;
@@ -1324,8 +1359,10 @@ const Index = () => {
     buildMessageDependentCommandSequence,
     buildCounterConfigCommandSequence,
     editingMessage,
+    selectedPrinter,
     normalizeMessageForPrinter,
-    getMessage,
+    getExactStoredMessageForPrinter,
+    getStoredMessageForPrinter,
     hasPrinterVisibleChanges,
     connectionState.connectedPrinter?.id,
     updateMessage,
@@ -1350,25 +1387,63 @@ const Index = () => {
     });
   }, [printers, updatePrinter]);
 
-  const getStoredMessageForPrinter = useCallback((messageName: string, targetPrinter?: Printer | null): MessageDetails | null => {
-    const candidatePrinterIds = [
-      ...(targetPrinter?.role === 'slave' && targetPrinter.masterId !== undefined ? [targetPrinter.masterId] : []),
-      ...(targetPrinter?.id !== undefined ? [targetPrinter.id] : []),
-      ...(targetPrinter?.role !== 'slave' && targetPrinter?.masterId !== undefined ? [targetPrinter.masterId] : []),
-      ...(connectionState.connectedPrinter?.id !== undefined ? [connectionState.connectedPrinter.id] : []),
-    ];
+  const updateSettingsAndPersistCurrentMessageAdjust = useCallback((next: Partial<PrintSettings>) => {
+    updateSettings(next);
 
-    const seen = new Set<number>();
-    for (const printerId of candidatePrinterIds) {
-      if (seen.has(printerId)) continue;
-      seen.add(printerId);
+    const targetPrinter = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+    if (!targetPrinter) return;
 
-      const stored = getMessage(messageName, printerId);
-      if (stored) return stored;
-    }
+    const messageName = targetPrinter.id === connectionState.connectedPrinter?.id
+      ? (connectionState.status?.currentMessage ?? targetPrinter.currentMessage ?? null)
+      : (targetPrinter.currentMessage ?? null);
+    if (!messageName) return;
 
-    return getMessage(messageName);
-  }, [connectionState.connectedPrinter?.id, getMessage]);
+    const stored = getExactStoredMessageForPrinter(messageName, targetPrinter)
+      ?? getStoredMessageForPrinter(messageName, targetPrinter);
+    if (!stored) return;
+
+    const mergedAdjust: PrintSettings = {
+      ...FLEET_DEFAULT_ADJUST_SETTINGS,
+      ...(stored.settings ?? {}),
+      ...(stored.adjustSettings ?? {}),
+      ...next,
+      // Rotation remains setup-card driven for fleet consistency. If no setup
+      // value exists, keep the edited/stored value as the fallback.
+      rotation: targetPrinter.rotation
+        ?? next.rotation
+        ?? stored.adjustSettings?.rotation
+        ?? stored.settings?.rotation
+        ?? FLEET_DEFAULT_ADJUST_SETTINGS.rotation,
+    };
+
+    saveMessage({
+      ...stored,
+      adjustSettings: mergedAdjust,
+      settings: {
+        ...(stored.settings ?? {}),
+        printMode: stored.settings?.printMode ?? 'Normal',
+        speed: mergedAdjust.speed,
+        rotation: mergedAdjust.rotation,
+        ...(next.speed !== undefined ? { speed: next.speed } : {}),
+      },
+    }, targetPrinter.id);
+    recentlySavedRef.current.set(`${targetPrinter.id}:${messageName}`, Date.now());
+    console.log('[AdjustDebug][dialog.persistCurrentMessage]', {
+      printerId: targetPrinter.id,
+      printerName: targetPrinter.name,
+      messageName,
+      next,
+      mergedAdjust,
+    });
+  }, [
+    selectedPrinter,
+    connectionState.connectedPrinter,
+    connectionState.status?.currentMessage,
+    updateSettings,
+    getExactStoredMessageForPrinter,
+    getStoredMessageForPrinter,
+    saveMessage,
+  ]);
 
   /** Push a PC Library message to the printer by replacing the swap slot */
   const pushPcLibraryToPrinter = useCallback(async (
@@ -1515,7 +1590,7 @@ const Index = () => {
       // content (fields, text, barcodes).
       // Rule 3 — First-time send seeds from the source printer's numbers.
       // Rule 4 — Rotation always comes from the target's Printer Setup Card.
-      const existingTargetStored = getStoredMessageForPrinter(message.name, target);
+      const existingTargetStored = getExactStoredMessageForPrinter(message.name, target);
       const preservedTuning = !!existingTargetStored?.adjustSettings;
       const baseAdjust = preservedTuning
         ? { ...(existingTargetStored!.adjustSettings ?? {}) }   // keep tuned numbers
@@ -1608,6 +1683,7 @@ const Index = () => {
     connectionState.connectedPrinter,
     connectionState.isConnected,
     getStoredMessageForPrinter,
+    getExactStoredMessageForPrinter,
     fetchMessageContent,
     replaceMessageWithoutDelete,
     normalizeMessageForPrinter,
@@ -1626,7 +1702,7 @@ const Index = () => {
     if (!msgName) return [];
     return printers
       .map((p): OtherPrinterRow | null => {
-        const stored = getStoredMessageForPrinter(msgName, p);
+        const stored = getExactStoredMessageForPrinter(msgName, p);
         const last = getLastSentAt(p.id, msgName);
         if (!stored && !last) return null;
         const adj = stored?.adjustSettings ?? {};
@@ -1650,14 +1726,16 @@ const Index = () => {
         if (b.isCurrent && !a.isCurrent) return 1;
         return (b.lastSentAt ?? 0) - (a.lastSentAt ?? 0);
       });
-  }, [printers, getStoredMessageForPrinter]);
+  }, [printers, getExactStoredMessageForPrinter]);
 
 
   const applyStoredAdjustSettings = useCallback(async (
     targetPrinter: Printer,
     messageName: string,
   ): Promise<void> => {
-    const storedRaw = getStoredMessageForPrinter(messageName, targetPrinter);
+    const exactStored = getExactStoredMessageForPrinter(messageName, targetPrinter);
+    const fallbackStored = exactStored ? null : getStoredMessageForPrinter(messageName, targetPrinter);
+    const storedRaw = exactStored ?? fallbackStored;
     // Legacy messages (created before we persisted per-message adjust settings)
     // used to be skipped here, which left the HMI's live values (often W15/D200)
     // untouched after a select. Instead, synthesize a stored record backed by
@@ -1675,6 +1753,25 @@ const Index = () => {
         targetPrinterId: targetPrinter.id,
         targetPrinterName: targetPrinter.name,
         messageName,
+      });
+    } else if (!exactStored) {
+      saveMessage({
+        ...storedRaw,
+        adjustSettings: {
+          ...FLEET_DEFAULT_ADJUST_SETTINGS,
+          ...(storedRaw.settings ?? {}),
+          ...(storedRaw.adjustSettings ?? {}),
+          rotation: targetPrinter.rotation
+            ?? storedRaw.adjustSettings?.rotation
+            ?? storedRaw.settings?.rotation
+            ?? FLEET_DEFAULT_ADJUST_SETTINGS.rotation,
+        },
+      }, targetPrinter.id);
+      console.log('[AdjustDebug][applyStoredAdjustSettings.seedExactTarget]', {
+        targetPrinterId: targetPrinter.id,
+        targetPrinterName: targetPrinter.name,
+        messageName,
+        seededFromFallback: true,
       });
     }
     const hasStoredMessageSettings = true;
@@ -1747,9 +1844,11 @@ const Index = () => {
     buildEffectiveMessageDependentSettings,
     buildMessageDependentCommandSequence,
     getStoredMessageForPrinter,
+    getExactStoredMessageForPrinter,
     connectionState.connectedPrinter?.id,
     sendVerifiedCommandSequence,
     updateSettings,
+    saveMessage,
   ]);
 
   // Global "Sync Adjust from Printers" — iterate every online printer, query
@@ -3350,7 +3449,7 @@ const Index = () => {
         open={adjustDialogOpen}
         onOpenChange={setAdjustDialogOpen}
         settings={connectionState.settings}
-        onUpdate={updateSettings}
+        onUpdate={updateSettingsAndPersistCurrentMessageAdjust}
         onSendCommand={sendCommand}
         isConnected={connectionState.isConnected}
         title="Adjust Settings (Global)"

@@ -157,6 +157,28 @@ export function useMessageStorage() {
     return resolved;
   }, [messages, printerId]);
 
+  // Get a specific message by exact printer scope only — no printer-0 or
+  // connected-printer fallback. Per-printer tuning must use this path so a
+  // target's Width/Delay/Speed is never mistaken for another printer's copy.
+  const getMessageStrict = useCallback((messageName: string, overridePrinterId?: number): MessageDetails | null => {
+    const hardcoded = getHardcodedMessage(messageName);
+    if (hardcoded) return hardcoded;
+
+    const pid = overridePrinterId ?? printerId;
+    const key = makeKey(pid, messageName);
+    const resolved = messages[key] ?? null;
+
+    console.log('[AdjustDebug][storage.getStrict]', {
+      requestedPrinterId: pid,
+      messageName,
+      directKey: key,
+      found: !!resolved,
+      adjustSettings: resolved?.adjustSettings ?? null,
+    });
+
+    return resolved;
+  }, [messages, printerId]);
+
   // Delete a message
   const deleteMessage = useCallback((messageName: string, overridePrinterId?: number) => {
     if (isReadOnlyMessage(messageName)) {
@@ -272,6 +294,7 @@ export function useMessageStorage() {
     messages,
     saveMessage,
     getMessage,
+    getMessageStrict,
     deleteMessage,
     getMessageNames,
     renameMessage,

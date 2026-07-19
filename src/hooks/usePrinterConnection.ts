@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { Printer, PrinterStatus, PrinterMetrics, PrintMessage, PrintSettings, ConnectionState } from '@/types/printer';
+import { Printer, PrinterStatus, PrinterMetrics, PrintMessage, PrintSettings, ConnectionState, FLEET_DEFAULT_ADJUST_SETTINGS } from '@/types/printer';
 import { usePrinterStorage } from '@/hooks/usePrinterStorage';
 import { supabase } from '@/integrations/supabase/client';
 import '@/types/electron.d.ts';
@@ -55,15 +55,7 @@ function parsePrinterDateTime(raw: string): Date | null {
 }
 
 const defaultSettings: PrintSettings = {
-  width: 15,
-  height: 8,
-  delay: 100,
-  rotation: 'Normal',
-  bold: 0,
-  speed: 'Fastest',
-  gap: 0,
-  pitch: 0,
-  repeatAmount: 0,
+  ...FLEET_DEFAULT_ADJUST_SETTINGS,
 };
 
 // BestCode HMI rotation order for message/printer orientation.
