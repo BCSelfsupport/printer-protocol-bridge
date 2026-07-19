@@ -188,7 +188,7 @@ const Index = () => {
   
   
   // Local message storage (persists to localStorage, scoped by printer ID)
-  const { messages: allStoredMessages, saveMessage, getMessage, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId, saveToPcLibrary, getAllPcLibraryMessages, getPcLibraryMessages, deleteFromPcLibrary, getSwapSlot, setSwapSlot } = useMessageStorage();
+  const { messages: allStoredMessages, saveMessage, getMessage, getMessageStrict, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId, saveToPcLibrary, getAllPcLibraryMessages, getPcLibraryMessages, deleteFromPcLibrary, getSwapSlot, setSwapSlot } = useMessageStorage();
   
   // Consumable storage
   const consumableStorage = useConsumableStorage();
@@ -1350,10 +1350,16 @@ const Index = () => {
     });
   }, [printers, updatePrinter]);
 
+  const getExactStoredMessageForPrinter = useCallback((messageName: string, targetPrinter?: Printer | null): MessageDetails | null => {
+    const targetPrinterId = targetPrinter?.id ?? connectionState.connectedPrinter?.id;
+    if (targetPrinterId === undefined) return getMessageStrict(messageName);
+    return getMessageStrict(messageName, targetPrinterId);
+  }, [connectionState.connectedPrinter?.id, getMessageStrict]);
+
   const getStoredMessageForPrinter = useCallback((messageName: string, targetPrinter?: Printer | null): MessageDetails | null => {
     const candidatePrinterIds = [
-      ...(targetPrinter?.role === 'slave' && targetPrinter.masterId !== undefined ? [targetPrinter.masterId] : []),
       ...(targetPrinter?.id !== undefined ? [targetPrinter.id] : []),
+      ...(targetPrinter?.role === 'slave' && targetPrinter.masterId !== undefined ? [targetPrinter.masterId] : []),
       ...(targetPrinter?.role !== 'slave' && targetPrinter?.masterId !== undefined ? [targetPrinter.masterId] : []),
       ...(connectionState.connectedPrinter?.id !== undefined ? [connectionState.connectedPrinter.id] : []),
     ];
@@ -1363,12 +1369,12 @@ const Index = () => {
       if (seen.has(printerId)) continue;
       seen.add(printerId);
 
-      const stored = getMessage(messageName, printerId);
+      const stored = getMessageStrict(messageName, printerId);
       if (stored) return stored;
     }
 
-    return getMessage(messageName);
-  }, [connectionState.connectedPrinter?.id, getMessage]);
+    return targetPrinter?.id !== undefined ? getMessage(messageName, targetPrinter.id) : getMessage(messageName);
+  }, [connectionState.connectedPrinter?.id, getMessage, getMessageStrict]);
 
   /** Push a PC Library message to the printer by replacing the swap slot */
   const pushPcLibraryToPrinter = useCallback(async (
