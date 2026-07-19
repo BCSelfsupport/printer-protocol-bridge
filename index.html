@@ -30,6 +30,27 @@
       </div>
     </noscript>
     <script>
+      // Preview/PWA stale-cache cleanup: this runs before the app bundle when
+      // the browser finally reaches fresh HTML, then gets out of the way.
+      (function() {
+        try {
+          var isElectronRuntime = navigator.userAgent.includes('Electron');
+          if (isElectronRuntime) return;
+          var host = location.hostname;
+          var isLovableRuntime = host === 'lovableproject.com' || host.endsWith('.lovableproject.com') || host === 'lovableproject-dev.com' || host.endsWith('.lovableproject-dev.com') || host === 'lovable.app' || host.endsWith('.lovable.app') || host.indexOf('id-preview--') === 0 || host.indexOf('preview--') === 0;
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              registrations.forEach(function(registration) { registration.unregister(); });
+            }).catch(function() {});
+          }
+          if (isLovableRuntime && 'caches' in window) {
+            caches.keys().then(function(keys) {
+              keys.forEach(function(key) { caches.delete(key); });
+            }).catch(function() {});
+          }
+        } catch (e) {}
+      })();
+
       // HTML-level crash catcher – keep this conservative in preview and Electron to avoid false timeouts on cold loads
       window.__CS_MOUNTED = false;
       const isElectronRuntime = navigator.userAgent.includes('Electron');
