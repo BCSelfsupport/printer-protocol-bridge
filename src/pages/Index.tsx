@@ -1127,6 +1127,32 @@ const Index = () => {
     return results;
   }, [isMaster, connectionState.connectedPrinter, getSlavesForMaster, replaceMessageWithoutDelete, normalizeMessageForPrinter, saveMessage, updatePrinter]);
 
+  const getExactStoredMessageForPrinter = useCallback((messageName: string, targetPrinter?: Printer | null): MessageDetails | null => {
+    const targetPrinterId = targetPrinter?.id ?? connectionState.connectedPrinter?.id;
+    if (targetPrinterId === undefined) return getMessageStrict(messageName);
+    return getMessageStrict(messageName, targetPrinterId);
+  }, [connectionState.connectedPrinter?.id, getMessageStrict]);
+
+  const getStoredMessageForPrinter = useCallback((messageName: string, targetPrinter?: Printer | null): MessageDetails | null => {
+    const candidatePrinterIds = [
+      ...(targetPrinter?.id !== undefined ? [targetPrinter.id] : []),
+      ...(targetPrinter?.role === 'slave' && targetPrinter.masterId !== undefined ? [targetPrinter.masterId] : []),
+      ...(targetPrinter?.role !== 'slave' && targetPrinter?.masterId !== undefined ? [targetPrinter.masterId] : []),
+      ...(connectionState.connectedPrinter?.id !== undefined ? [connectionState.connectedPrinter.id] : []),
+    ];
+
+    const seen = new Set<number>();
+    for (const printerId of candidatePrinterIds) {
+      if (seen.has(printerId)) continue;
+      seen.add(printerId);
+
+      const stored = getMessageStrict(messageName, printerId);
+      if (stored) return stored;
+    }
+
+    return targetPrinter?.id !== undefined ? getMessage(messageName, targetPrinter.id) : getMessage(messageName);
+  }, [connectionState.connectedPrinter?.id, getMessage, getMessageStrict]);
+
   const saveEditedMessage = useCallback(async (details: MessageDetails, isNew?: boolean): Promise<MessageDetails | null> => {
     if (!editingMessage) return null;
 
@@ -1360,32 +1386,6 @@ const Index = () => {
       }
     });
   }, [printers, updatePrinter]);
-
-  const getExactStoredMessageForPrinter = useCallback((messageName: string, targetPrinter?: Printer | null): MessageDetails | null => {
-    const targetPrinterId = targetPrinter?.id ?? connectionState.connectedPrinter?.id;
-    if (targetPrinterId === undefined) return getMessageStrict(messageName);
-    return getMessageStrict(messageName, targetPrinterId);
-  }, [connectionState.connectedPrinter?.id, getMessageStrict]);
-
-  const getStoredMessageForPrinter = useCallback((messageName: string, targetPrinter?: Printer | null): MessageDetails | null => {
-    const candidatePrinterIds = [
-      ...(targetPrinter?.id !== undefined ? [targetPrinter.id] : []),
-      ...(targetPrinter?.role === 'slave' && targetPrinter.masterId !== undefined ? [targetPrinter.masterId] : []),
-      ...(targetPrinter?.role !== 'slave' && targetPrinter?.masterId !== undefined ? [targetPrinter.masterId] : []),
-      ...(connectionState.connectedPrinter?.id !== undefined ? [connectionState.connectedPrinter.id] : []),
-    ];
-
-    const seen = new Set<number>();
-    for (const printerId of candidatePrinterIds) {
-      if (seen.has(printerId)) continue;
-      seen.add(printerId);
-
-      const stored = getMessageStrict(messageName, printerId);
-      if (stored) return stored;
-    }
-
-    return targetPrinter?.id !== undefined ? getMessage(messageName, targetPrinter.id) : getMessage(messageName);
-  }, [connectionState.connectedPrinter?.id, getMessage, getMessageStrict]);
 
   const updateSettingsAndPersistCurrentMessageAdjust = useCallback((next: Partial<PrintSettings>) => {
     updateSettings(next);
