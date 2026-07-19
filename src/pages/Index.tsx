@@ -1410,6 +1410,7 @@ const Index = () => {
       adjustSettings: mergedAdjust,
       settings: {
         ...(stored.settings ?? {}),
+        printMode: stored.settings?.printMode ?? 'Normal',
         speed: mergedAdjust.speed,
         rotation: mergedAdjust.rotation,
         ...(next.speed !== undefined ? { speed: next.speed } : {}),
@@ -3437,7 +3438,7 @@ const Index = () => {
         open={adjustDialogOpen}
         onOpenChange={setAdjustDialogOpen}
         settings={connectionState.settings}
-        onUpdate={updateSettings}
+        onUpdate={updateSettingsAndPersistCurrentMessageAdjust}
         onSendCommand={sendCommand}
         isConnected={connectionState.isConnected}
         title="Adjust Settings (Global)"
