@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { Printer, PrintSettings } from '@/types/printer';
+import { Printer, PrintSettings, FLEET_DEFAULT_ADJUST_SETTINGS } from '@/types/printer';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerEmulator } from '@/lib/printerEmulator';
 import type { MessageDetails } from '@/components/screens/EditMessageScreen';
@@ -503,7 +503,7 @@ export function useMasterSlaveSync({
             details.templateValue,
             false,
             {
-              speed: details.adjustSettings?.speed ?? details.settings?.speed ?? currentSettings?.speed ?? 'Fastest',
+              speed: details.adjustSettings?.speed ?? details.settings?.speed ?? currentSettings?.speed ?? FLEET_DEFAULT_ADJUST_SETTINGS.speed,
               rotation,
               printMode: details.settings?.printMode ?? 'Normal',
             },

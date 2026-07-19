@@ -352,7 +352,7 @@ const Index = () => {
     const effectivePrintMode = details.settings?.printMode ?? 'Normal';
 
     const fullAdjustSettings: PrintSettings = {
-      ...connectionState.settings,
+      ...FLEET_DEFAULT_ADJUST_SETTINGS,
       width: details.adjustSettings?.width ?? FLEET_DEFAULT_ADJUST_SETTINGS.width,
       height: details.adjustSettings?.height ?? FLEET_DEFAULT_ADJUST_SETTINGS.height,
       delay: details.adjustSettings?.delay ?? FLEET_DEFAULT_ADJUST_SETTINGS.delay,
@@ -371,7 +371,7 @@ const Index = () => {
         printMode: effectivePrintMode,
       },
     };
-  }, [connectionState.settings, connectionState.connectedPrinter?.rotation]);
+  }, [connectionState.connectedPrinter?.rotation]);
 
 
   const buildMessageDependentCommandSequence = useCallback(({
