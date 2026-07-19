@@ -1132,13 +1132,19 @@ const Index = () => {
 
 
     const targetName = isNew ? details.name : editingMessage.name;
+    const editTargetPrinter = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+    const editTargetPrinterId = editTargetPrinter?.id;
     const localDetails = normalizeMessageForPrinter({
       ...details,
       name: targetName,
     });
-    const cachedDetails = getMessage(editingMessage.name) ?? getMessage(targetName) ?? null;
+    const cachedDetails = getExactStoredMessageForPrinter(editingMessage.name, editTargetPrinter)
+      ?? getExactStoredMessageForPrinter(targetName, editTargetPrinter)
+      ?? getStoredMessageForPrinter(editingMessage.name, editTargetPrinter)
+      ?? getStoredMessageForPrinter(targetName, editTargetPrinter)
+      ?? null;
     const printerWriteNeeded = isNew || hasPrinterVisibleChanges(localDetails, cachedDetails);
-    const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(localDetails);
+    const { fullAdjustSettings, perMessageSettings } = buildEffectiveMessageDependentSettings(localDetails, editTargetPrinter);
     const hasMessagePrinterSettings = !!(
       localDetails.settings
       || localDetails.adjustSettings?.speed !== undefined
@@ -1170,6 +1176,7 @@ const Index = () => {
       targetName,
       isNew: !!isNew,
       connectedPrinterId: connectionState.connectedPrinter?.id ?? null,
+      editTargetPrinterId: editTargetPrinterId ?? null,
       incomingAdjustSettings: details.adjustSettings ?? null,
       normalizedAdjustSettings: localDetails.adjustSettings ?? null,
       cachedAdjustSettings: cachedDetails?.adjustSettings ?? null,
@@ -1182,8 +1189,9 @@ const Index = () => {
 
     if (!printerWriteNeeded) {
       updateMessage(editingMessage.id, details.name);
-      saveMessage(localDetails);
+      saveMessage(localDetails, editTargetPrinterId);
       recentlySavedRef.current.set(targetName, Date.now());
+      if (editTargetPrinterId !== undefined) recentlySavedRef.current.set(`${editTargetPrinterId}:${targetName}`, Date.now());
       syncedMessagesRef.current.add(targetName);
       console.log('[onSave] Prompt metadata changed locally; skipping printer rewrite');
       return localDetails;
@@ -1263,8 +1271,9 @@ const Index = () => {
     if (!isNew) {
       updateMessage(editingMessage.id, details.name);
     }
-    saveMessage(localDetails);
+    saveMessage(localDetails, editTargetPrinterId);
     recentlySavedRef.current.set(targetName, Date.now());
+    if (editTargetPrinterId !== undefined) recentlySavedRef.current.set(`${editTargetPrinterId}:${targetName}`, Date.now());
     syncedMessagesRef.current.add(targetName);
     syncMessageToSlaves(targetName, localDetails, isNew);
 
@@ -1286,7 +1295,7 @@ const Index = () => {
             localAdjustSettings: localDetails.adjustSettings ?? null,
             mergedAdjustSettings: merged.adjustSettings ?? null,
           });
-          saveMessage(merged);
+          saveMessage(merged, editTargetPrinterId);
           // Only restore previous selection if the command sequence didn't already do it
           if (isNew && !restoredByCommandSequence) {
             const prevMessage = connectionState.status?.currentMessage;
@@ -1324,8 +1333,10 @@ const Index = () => {
     buildMessageDependentCommandSequence,
     buildCounterConfigCommandSequence,
     editingMessage,
+    selectedPrinter,
     normalizeMessageForPrinter,
-    getMessage,
+    getExactStoredMessageForPrinter,
+    getStoredMessageForPrinter,
     hasPrinterVisibleChanges,
     connectionState.connectedPrinter?.id,
     updateMessage,
