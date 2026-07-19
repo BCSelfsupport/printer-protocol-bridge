@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'width-speed-persist-fix',
+    type: 'bugfix',
+    title: 'Width, Delay and Speed Now Stick Per Printer',
+    date: '19 Jul 2026',
+    summary:
+      'Fixed a bug where editing a message\'s Adjust settings on one printer and then copying or selecting that message on another printer would revert Width, Delay and Speed to the old defaults (Width 15, Delay 100, Fastest). CodeSync now reads each parameter individually from the printer, stores tuning against the exact message + printer combination, and pushes those stored values on every selection. First-time sends still seed from the source message so the technician only tunes once.',
+  },
+  {
     id: 'wp7-migration-safety',
     type: 'feature',
     title: 'Squid-Style Auto-Select Works for Existing Messages',
