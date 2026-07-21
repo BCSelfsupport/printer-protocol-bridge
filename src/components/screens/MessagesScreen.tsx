@@ -1123,19 +1123,30 @@ export function MessagesScreen({
               }
               return f;
             });
-            const tokenMap = buildTokenMap({ ...pendingMessageDetails, fields: bakedFields });
-            const updatedDetails = {
-              ...pendingMessageDetails,
-              fields: resolveAllFields(bakedFields, tokenMap, { preserveCounterTokens: true }),
-            };
 
             const targets = pendingApplyTargets;
             toast.loading(`Applying "${selectedMessage.name}" to ${targets.length} printer(s)…`, { id: 'multi-prompt' });
             try {
-              // Fan out in parallel — each printer has its own socket and
-              // runPrinterWriteExclusive lock, so this is safe.
+              // Fan out in parallel. IMPORTANT: for each target we re-resolve
+              // any dynamicSource:'lineId' field against THAT printer's Line
+              // ID (from its Setup Card), so the source printer's Line ID is
+              // never burnt into copies. Without this, selecting from Printer
+              // 2 would push "Line 2" onto every target.
               const results = await Promise.all(
-                targets.map(async (p) => ({ p, ok: await onApplyPromptValuesOnPrinter(p, selectedMessage, updatedDetails) }))
+                targets.map(async (p) => {
+                  const targetLineId = p.lineId?.trim();
+                  const perTargetFields = bakedFields.map(f =>
+                    (f as any).dynamicSource === 'lineId' && targetLineId
+                      ? { ...f, data: targetLineId }
+                      : f
+                  );
+                  const tokenMap = buildTokenMap({ ...pendingMessageDetails, fields: perTargetFields });
+                  const targetDetails = {
+                    ...pendingMessageDetails,
+                    fields: resolveAllFields(perTargetFields, tokenMap, { preserveCounterTokens: true }),
+                  };
+                  return { p, ok: await onApplyPromptValuesOnPrinter(p, selectedMessage, targetDetails) };
+                })
               );
               const okCount = results.filter(r => r.ok).length;
               const failCount = results.length - okCount;
@@ -1144,7 +1155,19 @@ export function MessagesScreen({
               } else {
                 toast.error(`Applied to ${okCount}, failed on ${failCount}. Check printer cards.`, { id: 'multi-prompt' });
               }
-              // Update local cache so the source printer's UI reflects the baked values.
+              // Update local cache using the source printer's resolved copy
+              // so the source printer's UI reflects the entered values.
+              const sourceLineId = connectedPrinterLineId?.trim();
+              const sourceFields = bakedFields.map(f =>
+                (f as any).dynamicSource === 'lineId' && sourceLineId
+                  ? { ...f, data: sourceLineId }
+                  : f
+              );
+              const sourceTokenMap = buildTokenMap({ ...pendingMessageDetails, fields: sourceFields });
+              const updatedDetails = {
+                ...pendingMessageDetails,
+                fields: resolveAllFields(sourceFields, sourceTokenMap, { preserveCounterTokens: true }),
+              };
               onSaveStoredMessage?.(updatedDetails);
               onPromptSaved?.(updatedDetails);
             } catch (e) {
