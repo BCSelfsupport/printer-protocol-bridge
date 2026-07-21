@@ -24,6 +24,10 @@ function isCodeSyncAppCache(name) {
 
 self.addEventListener("install", () => self.skipWaiting());
 
+self.addEventListener("fetch", (event) => {
+  event.respondWith(fetch(event.request, { cache: "reload" }).catch(() => caches.match(event.request)));
+});
+
 self.addEventListener("activate", (event) =>
   event.waitUntil(
     (async () => {
