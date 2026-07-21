@@ -2000,13 +2000,20 @@ const Index = () => {
       const mergedAdjust: Partial<PrintSettings> = { ...storedAdjust };
       const mergedMsgSettings: Partial<PrintSettings> = { ...storedMsgSettings };
       let changed = false;
+      // IMPORTANT: only capture HMI values for keys that don't already have an
+      // explicit stored value on this message. Some firmwares reset ^PW back
+      // to a per-template default on ^SM — unconditionally re-capturing HMI
+      // values would silently clobber the message's saved Width/etc.
+      // Legacy messages with no stored tuning still get seeded from HMI here;
+      // deliberate HMI edits are captured via "Sync Adjust" (explicit action).
       for (const k of ['width', 'height', 'delay', 'bold', 'gap', 'pitch', 'speed', 'rotation'] as (keyof PrintSettings)[]) {
         const pv = printerCurrent[k];
-        if (pv !== undefined && (pv !== storedAdjust[k] || pv !== storedMsgSettings[k])) {
-          (mergedAdjust as Record<string, unknown>)[k] = pv;
-          (mergedMsgSettings as Record<string, unknown>)[k] = pv;
-          changed = true;
-        }
+        if (pv === undefined) continue;
+        const alreadyStored = storedAdjust[k] !== undefined || storedMsgSettings[k] !== undefined;
+        if (alreadyStored) continue;
+        (mergedAdjust as Record<string, unknown>)[k] = pv;
+        (mergedMsgSettings as Record<string, unknown>)[k] = pv;
+        changed = true;
       }
       if (changed) {
         saveMessage({
