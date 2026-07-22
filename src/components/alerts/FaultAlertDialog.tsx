@@ -84,6 +84,8 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
 
   const [imageExtIndex, setImageExtIndex] = useState(0);
   const [imageVariantIndex, setImageVariantIndex] = useState(0);
+  const [imageFailed, setImageFailed] = useState(false);
+
 
   // Tracks the previously observed live fault count, used to detect when a
   // ^CA we sent did NOT reduce the live ^LE list — meaning the printer
@@ -229,7 +231,9 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
   useEffect(() => {
     setImageExtIndex(0);
     setImageVariantIndex(0);
+    setImageFailed(false);
   }, [currentFault?.code]);
+
 
   const handleDismiss = useCallback(() => {
     if (!currentFault) return;
@@ -237,9 +241,6 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
 
     // Send ^CA to the printer — this simulates pressing the OK button on the
     // printer's HMI event window, clearing one fault from the printer itself.
-    // Per Bestcode v2.6 §5.4: "^CA – Cancel ... simulates clicking the
-    // 'Cancel' button if both 'Cancel' and 'OK' buttons are displayed,
-    // or 'OK' if only the 'OK' button is displayed."
     if (onDismissFault) {
       pendingDismissesRef.current += 1;
       void onDismissFault('^CA').catch((err) => {
@@ -252,11 +253,25 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
     snoozedRef.current.set(dismissedCode, Date.now() + SNOOZE_DURATION_MS);
 
     const remaining = queueCodes.filter((c) => c !== dismissedCode);
-
-    // Pop the head of the queue. The open/close effect above will reopen
-    // the dialog automatically if there's another queued fault.
     setQueueCodes(remaining);
   }, [currentFault, queueCodes, onDismissFault]);
+
+  const handleDismissAll = useCallback(() => {
+    // Snooze every code currently in the queue and send one ^CA per fault so
+    // the printer's HMI event window count also drains.
+    const now = Date.now();
+    for (const code of queueCodes) {
+      snoozedRef.current.set(code, now + SNOOZE_DURATION_MS);
+      if (onDismissFault) {
+        pendingDismissesRef.current += 1;
+        void onDismissFault('^CA').catch((err) => {
+          console.error('[FaultAlertDialog] ^CA failed:', err);
+        });
+      }
+    }
+    setQueueCodes([]);
+  }, [queueCodes, onDismissFault]);
+
 
   // Allow snooze to expire so the fault can pop again later if still active.
   // We clear it lazily inside the sync effect above; nothing to do here.
@@ -276,10 +291,21 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
 
   const isLastFault = queueCodes.length <= 1;
 
+  const severityLabel =
+    currentFault.severity === 'F' ? 'FAULT' :
+    currentFault.severity === 'W' ? 'WARNING' :
+    currentFault.severity === 'I' ? 'INFO' : 'ALERT';
+  const severityClass =
+    currentFault.severity === 'F' ? 'bg-destructive text-destructive-foreground' :
+    currentFault.severity === 'W' ? 'bg-amber-500 text-white' :
+    'bg-sky-500 text-white';
+
+  const queueLen = queueCodes.length;
+  const showImage = !imageFailed && !!normalizedFaultCode;
+
   return (
     <AlertDialogPrimitive.Root open={open} onOpenChange={(next) => {
-      // Only honour "open=true" requests from us. If Radix tries to close
-      // (e.g., ESC), treat it as a dismiss so the queue advances.
+      // ESC / overlay-click routes through dismiss so the queue advances.
       if (!next && open) {
         handleDismiss();
       } else {
@@ -289,50 +315,75 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
       <AlertDialogPrimitive.Portal>
         <AlertDialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <AlertDialogPrimitive.Content
-          className="fixed left-[50%] top-[50%] z-[60] grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] border border-destructive/50 bg-card shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg overflow-hidden"
+          className="fixed left-[50%] top-[50%] z-[60] flex max-h-[90vh] w-[92vw] max-w-md translate-x-[-50%] translate-y-[-50%] flex-col overflow-hidden rounded-lg border border-destructive/60 bg-card shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
         >
-          {/* Hidden title/description for accessibility */}
-          <AlertDialogPrimitive.Title className="sr-only">
-            Fault {currentFault.code}
-          </AlertDialogPrimitive.Title>
-          <AlertDialogPrimitive.Description className="sr-only">
-            {currentFault.message}
-          </AlertDialogPrimitive.Description>
+          {/* Header — always visible, always readable */}
+          <div className="flex items-center justify-between gap-3 border-b border-border bg-card px-4 py-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold tracking-wider ${severityClass}`}>
+                {severityLabel}
+              </span>
+              <AlertDialogPrimitive.Title className="truncate font-mono text-sm font-semibold text-foreground">
+                {currentFault.code}
+              </AlertDialogPrimitive.Title>
+            </div>
+            {queueLen > 1 && (
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                1 of {queueLen}
+              </span>
+            )}
+          </div>
 
-          {/* Image with clickable OK hotspot overlay */}
-          <div className="relative">
-            <img
-              src={qrImagePath}
-              alt={`Fault ${currentFault.code}: ${currentFault.message}`}
-              className="w-full"
-              onError={() => {
-                if (imageVariantIndex < FAULT_IMAGE_VARIANTS.length - 1) {
-                  setImageVariantIndex((prev) => prev + 1);
-                } else if (imageExtIndex < FAULT_IMAGE_EXTENSIONS.length - 1) {
-                  setImageVariantIndex(0);
-                  setImageExtIndex((prev) => prev + 1);
-                }
-              }}
-            />
-            {/* Invisible clickable hotspot over the OK button area in the image.
-                NOTE: We intentionally use a plain <button> here, NOT
-                AlertDialogPrimitive.Action — Action triggers Radix's internal
-                close, which then re-fires onOpenChange(false) and would cause
-                handleDismiss() to run twice (skipping the next queued fault,
-                e.g. dismissing Makeup would also skip past Cooling). */}
+          {/* Body — text message + optional image */}
+          <div className="flex-1 overflow-y-auto">
+            <AlertDialogPrimitive.Description asChild>
+              <div className="px-4 py-3 text-sm leading-snug text-foreground">
+                {currentFault.message || 'Printer reported a fault.'}
+              </div>
+            </AlertDialogPrimitive.Description>
+
+            {showImage && (
+              <div className="border-t border-border bg-muted/30">
+                <img
+                  src={qrImagePath}
+                  alt=""
+                  className="block w-full"
+                  onError={() => {
+                    if (imageVariantIndex < FAULT_IMAGE_VARIANTS.length - 1) {
+                      setImageVariantIndex((prev) => prev + 1);
+                    } else if (imageExtIndex < FAULT_IMAGE_EXTENSIONS.length - 1) {
+                      setImageVariantIndex(0);
+                      setImageExtIndex((prev) => prev + 1);
+                    } else {
+                      // No more variants — collapse the image area entirely so
+                      // the visible footer buttons stay reachable.
+                      setImageFailed(true);
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Footer — visible controls guarantee the popup is always dismissable
+              even if the fault image never loads. */}
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border bg-card px-4 py-3">
+            {queueLen > 1 && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDismissAll(); }}
+                className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted"
+              >
+                Dismiss all ({queueLen})
+              </button>
+            )}
             <button
               type="button"
-              className="absolute cursor-pointer bg-transparent"
-              style={{ right: '8%', bottom: '4%', width: '25%', height: '12%' }}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleDismiss();
-              }}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDismiss(); }}
+              className="rounded-md bg-destructive px-4 py-1.5 text-sm font-semibold text-destructive-foreground shadow transition hover:bg-destructive/90"
+              autoFocus
             >
-              <span className="sr-only">
-                {!isLastFault ? 'Next Fault' : 'OK'}
-              </span>
+              {queueLen > 1 ? 'Next fault' : 'OK'}
             </button>
           </div>
         </AlertDialogPrimitive.Content>
@@ -340,3 +391,4 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
     </AlertDialogPrimitive.Root>
   );
 }
+
