@@ -271,20 +271,34 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
   // Allow snooze to expire so the fault can pop again later if still active.
   // We clear it lazily inside the sync effect above; nothing to do here.
 
-  if (!currentFault) return null;
-
-  // Build the fault image URL through authenticated asset serving
-  const normalizedFaultCode = normalizeFaultCodeForAsset(currentFault.code ?? '');
-  const qrImagePath = normalizedFaultCode
-    ? (() => {
-        const variant = FAULT_IMAGE_VARIANTS[imageVariantIndex];
-        const ext = FAULT_IMAGE_EXTENSIONS[imageExtIndex];
-        const suffix = variant ? `-${variant}` : '';
-        return getAuthenticatedAssetUrl(`fault-codes/${normalizedFaultCode}${suffix}.${ext}`);
-      })()
+  // Build the ordered list of candidate asset paths for the current fault
+  // image and hand it to the authenticated loader. The loader fetches with
+  // the required `apikey` header (something <img src> can't do), caches
+  // successful hits, and only reports failure once every candidate is truly
+  // unavailable. This guarantees the correct image loads whenever the file
+  // exists on the server.
+  const normalizedFaultCode = currentFault
+    ? normalizeFaultCodeForAsset(currentFault.code ?? '')
     : '';
+  const candidatePaths = useMemo(() => {
+    if (!normalizedFaultCode) return [];
+    const paths: string[] = [];
+    // Preferred variant order first, then extension fallbacks.
+    for (const ext of FAULT_IMAGE_EXTENSIONS) {
+      for (const variant of FAULT_IMAGE_VARIANTS) {
+        const suffix = variant ? `-${variant}` : '';
+        paths.push(`fault-codes/${normalizedFaultCode}${suffix}.${ext}`);
+      }
+      // Also try the bare code with no suffix for each extension.
+      paths.push(`fault-codes/${normalizedFaultCode}.${ext}`);
+    }
+    return paths;
+  }, [normalizedFaultCode]);
 
-  const isLastFault = queueCodes.length <= 1;
+  const { url: resolvedImageUrl, failed: imageFailed } =
+    useAuthenticatedImage(candidatePaths);
+
+  if (!currentFault) return null;
 
   const severityLabel =
     currentFault.severity === 'F' ? 'FAULT' :
@@ -296,7 +310,7 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
     'bg-sky-500 text-white';
 
   const queueLen = queueCodes.length;
-  const showImage = !imageFailed && !!normalizedFaultCode;
+  const showImage = !!resolvedImageUrl && !imageFailed;
 
   return (
     <AlertDialogPrimitive.Root open={open} onOpenChange={(next) => {
@@ -340,25 +354,14 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
             {showImage && (
               <div className="border-t border-border bg-muted/30">
                 <img
-                  src={qrImagePath}
+                  src={resolvedImageUrl!}
                   alt=""
                   className="block w-full"
-                  onError={() => {
-                    if (imageVariantIndex < FAULT_IMAGE_VARIANTS.length - 1) {
-                      setImageVariantIndex((prev) => prev + 1);
-                    } else if (imageExtIndex < FAULT_IMAGE_EXTENSIONS.length - 1) {
-                      setImageVariantIndex(0);
-                      setImageExtIndex((prev) => prev + 1);
-                    } else {
-                      // No more variants — collapse the image area entirely so
-                      // the visible footer buttons stay reachable.
-                      setImageFailed(true);
-                    }
-                  }}
                 />
               </div>
             )}
           </div>
+
 
           {/* Footer — visible controls guarantee the popup is always dismissable
               even if the fault image never loads. */}
