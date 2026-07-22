@@ -695,9 +695,12 @@ export function PrinterListItem({
         </div>
       )}
 
-      {/* Fluid levels + actions row */}
-      {(printer.inkLevel || printer.makeupLevel || (printer.isAvailable && onService) || showConnectButton) && (
-        <div className="flex items-center justify-between mt-1.5 ml-12">
+      {/* Flexible spacer — keeps every card the same height regardless of content */}
+      <div className="flex-1" />
+
+      {/* Fluid levels + actions row — always rendered for uniform card height */}
+      <div className="relative flex items-center justify-between mt-1.5 ml-12 min-h-[28px]">
+
           <div className="flex items-center gap-3">
             {(printer.inkLevel || printer.makeupLevel) && (
               <>
