@@ -139,6 +139,14 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       lineId: lineId.trim() || undefined,
       rotation,
       autoSyncSelection: effectiveRole === 'master' ? autoSyncSelection : undefined,
+      messageDefaults: {
+        width: Math.max(0, Math.min(1000, parseInt(defWidth, 10) || 0)),
+        delay: Math.max(0, parseInt(defDelay, 10) || 0),
+        bold: Math.max(0, Math.min(9, parseInt(defBold, 10) || 0)),
+        gap: Math.max(0, Math.min(9, parseInt(defGap, 10) || 0)),
+        pitch: Math.max(0, parseInt(defPitch, 10) || 0),
+        speed: defSpeed,
+      },
     });
 
     onOpenChange(false);
