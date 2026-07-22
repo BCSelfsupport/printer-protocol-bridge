@@ -46,6 +46,15 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
   const [lineId, setLineId] = useState('');
   const [rotation, setRotation] = useState<PrinterRotation>('Normal');
   const [autoSyncSelection, setAutoSyncSelection] = useState(false);
+  // Per-printer NEW-message defaults (Width / Delay / Speed / Bold / Gap / Pitch).
+  // Initialised from fleet defaults; any customised field is persisted onto the
+  // Printer record so future new messages on this printer inherit it.
+  const [defWidth, setDefWidth] = useState<string>('2');
+  const [defDelay, setDefDelay] = useState<string>('500');
+  const [defBold, setDefBold] = useState<string>('0');
+  const [defGap, setDefGap] = useState<string>('0');
+  const [defPitch, setDefPitch] = useState<string>('0');
+  const [defSpeed, setDefSpeed] = useState<PrintSettings['speed']>('Ultra Fast');
   const [ipError, setIpError] = useState('');
   // Sync form when printer changes
   useEffect(() => {
