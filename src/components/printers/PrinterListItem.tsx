@@ -550,7 +550,8 @@ export function PrinterListItem({
       />
 
       {/* Top row: icon + name/ip + status badge */}
-      <div className="flex items-center gap-2">
+      <div className="relative flex items-center gap-2">
+
         {/* Status indicator - clickable for edit */}
         <div className="flex flex-col items-center gap-1 flex-shrink-0">
           <button
