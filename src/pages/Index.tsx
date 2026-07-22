@@ -333,33 +333,37 @@ const Index = () => {
     details: MessageDetails,
     targetPrinter?: Printer | null,
   ) => {
-    // Fall back to the fleet-wide defaults (W2, D500, Ultra Fast) instead of
-    // whatever the HMI is currently showing. Legacy messages that never had
-    // adjustSettings persisted would otherwise inherit stale HMI values like
-    // W15/D200 on every select.
-    const effectiveSpeed = details.adjustSettings?.speed
+    // Per-printer setup card wins for ALL adjust fields so both new AND existing
+    // messages inherit the target printer's baseline (Width/Delay/Bold/Gap/
+    // Pitch/Speed/Rotation). Operator can still tweak at the HMI afterwards.
+    // Priority: printer setup card -> stored message value -> fleet fallback.
+    const printerForDefaults = targetPrinter ?? connectionState.connectedPrinter;
+    const printerDefaults = getPrinterMessageDefaults(printerForDefaults);
+
+    const effectiveSpeed = printerDefaults.speed
+      ?? details.adjustSettings?.speed
       ?? details.settings?.speed
       ?? FLEET_DEFAULT_ADJUST_SETTINGS.speed;
-    // Per-printer rotation override (from the printer setup card) always wins
-    // over any rotation stored in the message. When a target printer is
-    // supplied (slave sync, copy-to-printers, apply-adjust to a non-connected
-    // printer), use THAT printer's rotation — not the currently connected
-    // one — so each printer honors its own setup-card setting.
-    const rotationPrinter = targetPrinter ?? connectionState.connectedPrinter;
-    const effectiveRotation = rotationPrinter?.rotation
+    const effectiveRotation = printerForDefaults?.rotation
       ?? details.adjustSettings?.rotation
       ?? details.settings?.rotation
       ?? FLEET_DEFAULT_ADJUST_SETTINGS.rotation;
     const effectivePrintMode = details.settings?.printMode ?? 'Normal';
 
+    const stored = (details.adjustSettings ?? {}) as Partial<PrintSettings>;
+    const pick = <K extends keyof PrintSettings>(k: K): PrintSettings[K] =>
+      (printerDefaults[k] as PrintSettings[K])
+      ?? (stored[k] as PrintSettings[K])
+      ?? FLEET_DEFAULT_ADJUST_SETTINGS[k];
+
     const fullAdjustSettings: PrintSettings = {
       ...FLEET_DEFAULT_ADJUST_SETTINGS,
-      width: details.adjustSettings?.width ?? FLEET_DEFAULT_ADJUST_SETTINGS.width,
-      height: details.adjustSettings?.height ?? FLEET_DEFAULT_ADJUST_SETTINGS.height,
-      delay: details.adjustSettings?.delay ?? FLEET_DEFAULT_ADJUST_SETTINGS.delay,
-      bold: details.adjustSettings?.bold ?? FLEET_DEFAULT_ADJUST_SETTINGS.bold,
-      gap: details.adjustSettings?.gap ?? FLEET_DEFAULT_ADJUST_SETTINGS.gap,
-      pitch: details.adjustSettings?.pitch ?? FLEET_DEFAULT_ADJUST_SETTINGS.pitch,
+      width: pick('width'),
+      height: pick('height'),
+      delay: pick('delay'),
+      bold: pick('bold'),
+      gap: pick('gap'),
+      pitch: pick('pitch'),
       speed: effectiveSpeed,
       rotation: effectiveRotation,
     };
@@ -372,7 +376,8 @@ const Index = () => {
         printMode: effectivePrintMode,
       },
     };
-  }, [connectionState.connectedPrinter?.rotation]);
+  }, [connectionState.connectedPrinter]);
+
 
 
   const buildMessageDependentCommandSequence = useCallback(({
