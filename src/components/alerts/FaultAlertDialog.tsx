@@ -241,9 +241,6 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
 
     // Send ^CA to the printer — this simulates pressing the OK button on the
     // printer's HMI event window, clearing one fault from the printer itself.
-    // Per Bestcode v2.6 §5.4: "^CA – Cancel ... simulates clicking the
-    // 'Cancel' button if both 'Cancel' and 'OK' buttons are displayed,
-    // or 'OK' if only the 'OK' button is displayed."
     if (onDismissFault) {
       pendingDismissesRef.current += 1;
       void onDismissFault('^CA').catch((err) => {
@@ -256,11 +253,25 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
     snoozedRef.current.set(dismissedCode, Date.now() + SNOOZE_DURATION_MS);
 
     const remaining = queueCodes.filter((c) => c !== dismissedCode);
-
-    // Pop the head of the queue. The open/close effect above will reopen
-    // the dialog automatically if there's another queued fault.
     setQueueCodes(remaining);
   }, [currentFault, queueCodes, onDismissFault]);
+
+  const handleDismissAll = useCallback(() => {
+    // Snooze every code currently in the queue and send one ^CA per fault so
+    // the printer's HMI event window count also drains.
+    const now = Date.now();
+    for (const code of queueCodes) {
+      snoozedRef.current.set(code, now + SNOOZE_DURATION_MS);
+      if (onDismissFault) {
+        pendingDismissesRef.current += 1;
+        void onDismissFault('^CA').catch((err) => {
+          console.error('[FaultAlertDialog] ^CA failed:', err);
+        });
+      }
+    }
+    setQueueCodes([]);
+  }, [queueCodes, onDismissFault]);
+
 
   // Allow snooze to expire so the fault can pop again later if still active.
   // We clear it lazily inside the sync effect above; nothing to do here.
