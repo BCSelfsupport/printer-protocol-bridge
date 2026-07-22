@@ -269,16 +269,16 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
           {/* Per-printer NEW-message defaults. Applied only to messages CREATED
               on this printer — existing messages keep whatever they were saved
               with, and operators can still tweak everything at the HMI. */}
-          <div className="space-y-2 rounded-md border border-slate-700 bg-slate-800/50 p-3">
-            <Label className="text-slate-300 flex items-center gap-1.5">
+          <details className="rounded-md border border-slate-700 bg-slate-800/50 p-2 group">
+            <summary className="text-slate-300 flex items-center gap-1.5 cursor-pointer text-sm list-none">
               <SlidersHorizontal className="w-3.5 h-3.5" />
               New Message Defaults
-            </Label>
-            <p className="text-[10px] text-slate-500 -mt-1">
-              Seed values for any new message created on this printer. Change
-              anything you need to at the HMI later; these only apply at creation.
+              <span className="ml-auto text-[10px] text-slate-500 group-open:hidden">tap to edit</span>
+            </summary>
+            <p className="text-[10px] text-slate-500 mt-2">
+              Seed values for new messages created on this printer.
             </p>
-            <div className="grid grid-cols-3 gap-2 pt-1">
+            <div className="grid grid-cols-3 gap-2 pt-2">
               <div className="space-y-1">
                 <Label className="text-[10px] text-slate-400">Width</Label>
                 <Input type="number" min={0} max={1000} value={defWidth}
@@ -324,7 +324,8 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
                 </Select>
               </div>
             </div>
-          </div>
+          </details>
+
 
 
 
