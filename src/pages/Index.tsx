@@ -14,6 +14,7 @@ import { PrintersScreen } from '@/components/screens/PrintersScreen';
 import { MessagesScreen } from '@/components/screens/MessagesScreen';
 import { EditMessageScreen, MessageDetails } from '@/components/screens/EditMessageScreen';
 import { PrintSettings, FLEET_DEFAULT_ADJUST_SETTINGS } from '@/types/printer';
+import { getPrinterMessageDefaults } from '@/lib/fleetDefaults';
 import { AdjustDialog } from '@/components/adjust/AdjustDialog';
 import { SetupScreen } from '@/components/screens/SetupScreen';
 import { ServiceScreen } from '@/components/screens/ServiceScreen';
