@@ -178,6 +178,7 @@ export function EditMessageScreen({
   printerVariant,
   preset,
   currentAdjustSettings,
+  newMessageDefaults,
   onSendCommand,
   otherPrinterRows,
 }: EditMessageScreenProps) {
