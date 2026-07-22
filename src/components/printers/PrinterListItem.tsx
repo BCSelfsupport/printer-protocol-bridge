@@ -774,7 +774,7 @@ export function PrinterListItem({
             )}
           </div>
         </div>
-      )}
+
     </button>
   );
 }
