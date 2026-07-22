@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog';
-import { getAuthenticatedAssetUrl } from '@/lib/assetAuth';
+import { useAuthenticatedImage } from '@/lib/authenticatedImage';
+
 
 
 export interface PrinterFault {
