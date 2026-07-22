@@ -293,6 +293,8 @@ export function PrintersScreen({
   isSyncingAdjustFromPrinters = false,
   onStopAllJets,
   isStoppingAllJets = false,
+  onStartJets,
+  isStartingJets = false,
   onSlaveExpiryChange,
   onSelectedPrinterChange,
   getMessageContent,
