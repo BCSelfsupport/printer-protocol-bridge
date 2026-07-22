@@ -380,6 +380,7 @@ const Index = () => {
     perMessageSettings,
     includeMessageSettings,
     includeMessageSettingsCommand = false,
+    forcePushAllAdjust = false,
   }: {
     adjustSettings?: MessageDetails['adjustSettings'] | null;
     fullAdjustSettings: PrintSettings;
@@ -390,6 +391,7 @@ const Index = () => {
     };
     includeMessageSettings: boolean;
     includeMessageSettingsCommand?: boolean;
+    forcePushAllAdjust?: boolean;
   }): SequencedPrinterCommand[] => {
     const commands: SequencedPrinterCommand[] = [];
 
@@ -409,9 +411,13 @@ const Index = () => {
     // merged stored values with fleet defaults). This guarantees Width=2 /
     // Delay=500 / etc. actually reach the printer instead of leaving stale
     // HMI values (e.g. width=15) in place.
+    //
+    // `forcePushAllAdjust` covers brand-new messages: ^NM inherits the
+    // printer's baked-in defaults (W=15/D=100), so we must push the full
+    // fleet-default adjust set even when the user never opened the Adjust tab.
     const hasAnyStoredAdjust = !!adjustSettings && Object.keys(adjustSettings).length > 0;
     const pushKey = (key: keyof MessageDetails['adjustSettings'] & keyof PrintSettings) =>
-      hasAnyStoredAdjust || adjustSettings?.[key] !== undefined;
+      forcePushAllAdjust || hasAnyStoredAdjust || adjustSettings?.[key] !== undefined;
 
     if (pushKey('width')) commands.push({ command: `^PW ${fullAdjustSettings.width}`, delayAfterMs: 1200 });
     if (pushKey('height')) commands.push({ command: `^PH ${fullAdjustSettings.height}`, delayAfterMs: 900 });
