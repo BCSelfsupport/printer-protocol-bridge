@@ -83,9 +83,7 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
   // off the live faults list (so it can re-trigger if it comes back later).
   const seenCodesRef = useRef<Set<string>>(new Set());
 
-  const [imageExtIndex, setImageExtIndex] = useState(0);
-  const [imageVariantIndex, setImageVariantIndex] = useState(0);
-  const [imageFailed, setImageFailed] = useState(false);
+
 
 
   // Tracks the previously observed live fault count, used to detect when a
