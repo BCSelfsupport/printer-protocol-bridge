@@ -69,6 +69,15 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       setLineId(printer.lineId ?? '');
       setRotation(printer.rotation ?? 'Normal');
       setAutoSyncSelection(printer.autoSyncSelection ?? false);
+      // Seed the defaults inputs from stored per-printer overrides, falling
+      // back to the resolved fleet defaults so admins see today's live value.
+      const resolved = getPrinterMessageDefaults(printer);
+      setDefWidth(String(resolved.width));
+      setDefDelay(String(resolved.delay));
+      setDefBold(String(resolved.bold));
+      setDefGap(String(resolved.gap));
+      setDefPitch(String(resolved.pitch));
+      setDefSpeed(resolved.speed);
     }
   }, [printer]);
 
