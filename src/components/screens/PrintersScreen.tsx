@@ -314,6 +314,7 @@ export function PrintersScreen({
   const [expiryDialogCurrentDays, setExpiryDialogCurrentDays] = useState<number>(0);
   const [devTaps, setDevTaps] = useState<number[]>([]);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+  const [startJetsDialogOpen, setStartJetsDialogOpen] = useState(false);
   const devTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMobile = useIsMobile();
   const { canNetwork, canDatabase, canTwinCode, tier, isActivated, isDeveloper } = useLicense();
