@@ -520,7 +520,7 @@ export function PrintersScreen({
     setEditDialogOpen(true);
   };
 
-  const handleSaveEdit = (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: import('@/types/printer').PrinterRole; masterId?: number; serialNumber?: string; lineId?: string; rotation?: import('@/types/printer').Printer['rotation'] }) => {
+  const handleSaveEdit = (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: import('@/types/printer').PrinterRole; masterId?: number; serialNumber?: string; lineId?: string; rotation?: import('@/types/printer').Printer['rotation']; autoSyncSelection?: boolean; messageDefaults?: import('@/types/printer').Printer['messageDefaults'] }) => {
     onUpdatePrinter?.(printerId, updates);
   };
 
