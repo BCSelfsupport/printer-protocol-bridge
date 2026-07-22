@@ -2939,6 +2939,9 @@ const Index = () => {
             printerModel={connectionState.status?.printerModel}
             printerVariant={connectionState.status?.printerVariant}
             currentAdjustSettings={connectionState.settings}
+            newMessageDefaults={getPrinterMessageDefaults(
+              selectedPrinter ?? connectionState.connectedPrinter
+            )}
             onSendCommand={sendCommand}
             otherPrinterRows={buildOtherPrinterRows(editingMessage.name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id ?? null)}
           onSave={saveEditedMessage}
