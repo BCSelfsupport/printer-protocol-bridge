@@ -226,12 +226,8 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
     return dedupedFaults.find((f) => f.code === code);
   }, [queueCodes, dedupedFaults]);
 
-  // Reset image fallback indices when the displayed fault changes.
-  useEffect(() => {
-    setImageExtIndex(0);
-    setImageVariantIndex(0);
-    setImageFailed(false);
-  }, [currentFault?.code]);
+
+
 
 
   const handleDismiss = useCallback(() => {
