@@ -31,6 +31,14 @@ export interface Printer {
   // travel (e.g. R→L vs L→R) always print correctly regardless of what the
   // master message stores.
   rotation?: 'Normal' | 'Mirror' | 'Flip' | 'Mirror Flip';
+  // Per-printer NEW-message defaults. Different printers on different lines
+  // often need different Width / Delay / Speed baselines (photocell distance,
+  // head size, product speed). When set, these values seed the editor for any
+  // NEW message created for this printer and are pushed after ^NM so the
+  // printer's baked-in defaults (W=15 / D=100) are overwritten. Rotation is
+  // intentionally NOT part of this — it lives in its own field above.
+  // Missing fields fall back to the fleet-wide defaults.
+  messageDefaults?: Partial<Pick<PrintSettings, 'width' | 'height' | 'delay' | 'bold' | 'gap' | 'pitch' | 'speed'>>;
   // Master → Slave sync outcome tracking. Set to true when the last push to
   // this slave failed (timeout, rejected, offline). Cleared on a subsequent
   // successful sync. Used to render an "OUT OF SYNC" badge on the slave card.
