@@ -155,6 +155,9 @@ interface EditMessageScreenProps {
   printerVariant?: string | null;
   preset?: 'metrc-retail-id';
   currentAdjustSettings?: PrintSettings;
+  /** Per-printer NEW-message defaults (from the printer Setup Card). When set,
+   *  a new message starts with these values instead of the fleet fallback. */
+  newMessageDefaults?: PrintSettings;
   onSendCommand?: (command: string) => Promise<any>;
   /** WP-5: read-only per-printer stack view of this message across siblings. */
   otherPrinterRows?: OtherPrinterRow[];
