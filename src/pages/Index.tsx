@@ -350,9 +350,10 @@ const Index = () => {
       ?? FLEET_DEFAULT_ADJUST_SETTINGS.rotation;
     const effectivePrintMode = details.settings?.printMode ?? 'Normal';
 
+    const stored = (details.adjustSettings ?? {}) as Partial<PrintSettings>;
     const pick = <K extends keyof PrintSettings>(k: K): PrintSettings[K] =>
       (printerDefaults[k] as PrintSettings[K])
-      ?? (details.adjustSettings?.[k] as PrintSettings[K])
+      ?? (stored[k] as PrintSettings[K])
       ?? FLEET_DEFAULT_ADJUST_SETTINGS[k];
 
     const fullAdjustSettings: PrintSettings = {
