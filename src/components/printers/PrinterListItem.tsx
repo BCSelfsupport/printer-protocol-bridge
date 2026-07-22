@@ -518,20 +518,40 @@ export function PrinterListItem({
     );
   }
 
-  // Full mode – rebuilt to prevent right-side clipping
+  // Full mode – uniform height + fancy dark-glass styling
   return (
     <button
       onClick={onSelect}
-      className={`w-full text-left p-3 rounded-lg transition-all border overflow-hidden ${groupBorderClass} ${
-        isSelected 
-          ? 'bg-primary/20 border-primary shadow-lg' 
+      className={cn(
+        'group relative w-full text-left p-3 rounded-xl transition-all duration-300 border overflow-hidden',
+        'min-h-[168px] flex flex-col',
+        'shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_10px_30px_-18px_rgba(0,0,0,0.9)]',
+        'hover:-translate-y-0.5 hover:shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_18px_40px_-20px_rgba(0,0,0,0.95)]',
+        groupBorderClass,
+        isSelected
+          ? 'bg-gradient-to-br from-primary/25 via-primary/10 to-transparent border-primary ring-1 ring-primary/40'
           : effectiveColor
-            ? `${effectiveColor.bg} border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600`
-            : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600'
-      }`}
+            ? `${effectiveColor.bg} border-slate-700/60 hover:border-slate-500/80`
+            : 'bg-gradient-to-br from-slate-800/80 via-slate-800/50 to-slate-900/70 border-slate-700/60 hover:border-slate-500/80',
+      )}
     >
+      {/* Fancy top sheen */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+      />
+      {/* Availability glow (subtle) */}
+      <span
+        aria-hidden
+        className={cn(
+          'pointer-events-none absolute -top-16 -right-16 w-40 h-40 rounded-full blur-3xl opacity-40 transition-opacity duration-500 group-hover:opacity-60',
+          printer.isAvailable ? 'bg-success/20' : 'bg-slate-500/10',
+        )}
+      />
+
       {/* Top row: icon + name/ip + status badge */}
-      <div className="flex items-center gap-2">
+      <div className="relative flex items-center gap-2">
+
         {/* Status indicator - clickable for edit */}
         <div className="flex flex-col items-center gap-1 flex-shrink-0">
           <button
@@ -675,9 +695,12 @@ export function PrinterListItem({
         </div>
       )}
 
-      {/* Fluid levels + actions row */}
-      {(printer.inkLevel || printer.makeupLevel || (printer.isAvailable && onService) || showConnectButton) && (
-        <div className="flex items-center justify-between mt-1.5 ml-12">
+      {/* Flexible spacer — keeps every card the same height regardless of content */}
+      <div className="flex-1" />
+
+      {/* Fluid levels + actions row — always rendered for uniform card height */}
+      <div className="relative flex items-center justify-between mt-1.5 ml-12 min-h-[28px]">
+
           <div className="flex items-center gap-3">
             {(printer.inkLevel || printer.makeupLevel) && (
               <>
@@ -751,7 +774,7 @@ export function PrinterListItem({
             )}
           </div>
         </div>
-      )}
+
     </button>
   );
 }
