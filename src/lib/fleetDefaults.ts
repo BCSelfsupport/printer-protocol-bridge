@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { FLEET_DEFAULT_ADJUST_SETTINGS, PrintSettings } from '@/types/printer';
+import { FLEET_DEFAULT_ADJUST_SETTINGS, Printer, PrintSettings } from '@/types/printer';
 
 const STORAGE_KEY = 'codesync.fleetDefaults.v1';
 const CHANGE_EVENT = 'codesync:fleet-defaults-changed';
