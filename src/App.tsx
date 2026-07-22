@@ -65,6 +65,7 @@ const App = () => {
                   <Route path="/scan" element={<ScanPage />} />
                   <Route path="/twin-code" element={<TwinCodePage />} />
                   <Route path="/twin-code/screen" element={<TwinCodeScreenPage />} />
+                  <Route path="/fault-demo" element={<FaultDemoPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </HashRouter>
