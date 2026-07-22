@@ -777,7 +777,7 @@ export function PrintersScreen({
                     onService={() => handleOpenService(printer)}
                     showConnectButton={!showRightPanel}
                     isConnected={connectedPrinter?.id === printer.id}
-                    compact={!!showRightPanel}
+                    compact={true}
                     countdownType={getCountdown ? getCountdown(printer.id).type : (connectedPrinter?.id === printer.id ? countdownType : null)}
                     countdownSeconds={getCountdown ? getCountdown(printer.id).seconds : (connectedPrinter?.id === printer.id ? countdownSeconds : null)}
                     isMobile={isMobile}
