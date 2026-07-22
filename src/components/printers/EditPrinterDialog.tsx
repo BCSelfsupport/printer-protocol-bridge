@@ -266,6 +266,68 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
             </Select>
           </div>
 
+          {/* Per-printer NEW-message defaults. Applied only to messages CREATED
+              on this printer — existing messages keep whatever they were saved
+              with, and operators can still tweak everything at the HMI. */}
+          <div className="space-y-2 rounded-md border border-slate-700 bg-slate-800/50 p-3">
+            <Label className="text-slate-300 flex items-center gap-1.5">
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              New Message Defaults
+            </Label>
+            <p className="text-[10px] text-slate-500 -mt-1">
+              Seed values for any new message created on this printer. Change
+              anything you need to at the HMI later; these only apply at creation.
+            </p>
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              <div className="space-y-1">
+                <Label className="text-[10px] text-slate-400">Width</Label>
+                <Input type="number" min={0} max={1000} value={defWidth}
+                  onChange={(e) => setDefWidth(e.target.value)}
+                  className="bg-slate-900 border-slate-600 text-white font-mono h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-slate-400">Delay</Label>
+                <Input type="number" min={0} value={defDelay}
+                  onChange={(e) => setDefDelay(e.target.value)}
+                  className="bg-slate-900 border-slate-600 text-white font-mono h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-slate-400">Bold</Label>
+                <Input type="number" min={0} max={9} value={defBold}
+                  onChange={(e) => setDefBold(e.target.value)}
+                  className="bg-slate-900 border-slate-600 text-white font-mono h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-slate-400">Gap</Label>
+                <Input type="number" min={0} max={9} value={defGap}
+                  onChange={(e) => setDefGap(e.target.value)}
+                  className="bg-slate-900 border-slate-600 text-white font-mono h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-slate-400">Pitch</Label>
+                <Input type="number" min={0} value={defPitch}
+                  onChange={(e) => setDefPitch(e.target.value)}
+                  className="bg-slate-900 border-slate-600 text-white font-mono h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-slate-400">Speed</Label>
+                <Select value={defSpeed} onValueChange={(v) => setDefSpeed(v as PrintSettings['speed'])}>
+                  <SelectTrigger className="bg-slate-900 border-slate-600 text-white h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Fast">Fast</SelectItem>
+                    <SelectItem value="Faster">Faster</SelectItem>
+                    <SelectItem value="Fastest">Fastest</SelectItem>
+                    <SelectItem value="Ultra Fast">Ultra Fast</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+
+
 
 
 
