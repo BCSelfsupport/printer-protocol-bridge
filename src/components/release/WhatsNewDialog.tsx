@@ -20,6 +20,38 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'ui-cleanup-dashboard-sync',
+    type: 'feature',
+    title: 'Cleaner Dashboard and Printers Screen',
+    date: '22 Jul 2026',
+    summary:
+      'Removed the What\'s New tile from the mobile Dashboard (the sparkles button in the Network Printers sidebar is now the single entry point). Removed the fleet-wide Sync Adjust button and the per-printer Sync Adjust button from the Printers screen — the new per-printer "New Message Defaults" section on the Printer Setup Card makes manual syncing redundant.',
+  },
+  {
+    id: 'stop-all-jets-stale-flag-fix',
+    type: 'bugfix',
+    title: 'Stop All Jets Now Stops the Whole Fleet in One Click',
+    date: '22 Jul 2026',
+    summary:
+      'Fixed a bug where Stop All Jets would only shut down one printer per click, forcing the operator to press the button 13 times to cycle a full fleet down. Root cause was stale jetRunning flags coming from ping-only background polling — printers that were actually running were being skipped because CodeSync thought they were already off. Batch now pauses polling for its duration, targets every online, non-faulted, non-starting printer regardless of the cached flag, marks each successful stop optimistically in the UI, and reports a summary toast (stopped / skipped-starting / skipped-faulted / already-off).',
+  },
+  {
+    id: 'start-jets-selection',
+    type: 'feature',
+    title: 'Start Jets… With Per-Printer Selection',
+    date: '22 Jul 2026',
+    summary:
+      'Added a Start Jets… button alongside Stop All Jets on the Printers screen. Opens a multi-select dialog listing every online printer whose jet is currently off, with checkboxes and Select All, so the operator can start the whole fleet or just a subset (for example only the lines running that shift). Commands are sent serially with a 400 ms safety gap to avoid firmware collisions during the 66-second startup window.',
+  },
+  {
+    id: 'per-printer-new-message-defaults',
+    type: 'feature',
+    title: 'Per-Printer New Message Defaults on the Setup Card',
+    date: '21 Jul 2026',
+    summary:
+      'Added a "New Message Defaults" section to each Printer Setup Card so every printer can carry its own Width, Delay, Bold, Gap and Speed baseline for brand-new messages. Resolution priority is now Printer Setup Card → Fleet Defaults (Width 2, Delay 500, Ultra Fast) → Factory Fallback. Both new and existing messages inherit the correct baseline at Select time, and CodeSync pushes ^PW / ^DA / ^CM followed by ^SV so the values persist on the printer instead of reverting to HMI-side defaults (Width 15, Delay 100, Fastest).',
+  },
+  {
     id: 'width-speed-persist-fix',
     type: 'bugfix',
     title: 'Width, Delay and Speed Now Stick Per Printer',
