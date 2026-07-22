@@ -2555,33 +2555,31 @@ const Index = () => {
       setPollingPaused(true);
       await waitForPollingIdle(3000);
 
-      await runFleetWriteExclusive(async () => {
-        for (const printer of targets) {
-          try {
-            // If this iteration targets the currently-connected printer, arm the
-            // polling auto-disconnect grace window so we don't tear the socket
-            // down mid-shutdown (Issue 2 recurrence).
-            if (connectionState.connectedPrinter?.id === printer.id) {
-              armStopJetGrace?.(150);
-            }
-            const success = await sendCommandToPrinter(printer, '^SJ 0');
-            if (success) {
-              ok += 1;
-              startCountdown(printer.id, 'stopping');
-              updatePrinter(printer.id, { jetRunning: false });
-              console.log('[StopAllJets] stopped', { id: printer.id, name: printer.name });
-            } else {
-              fail += 1;
-              console.warn('[StopAllJets] failed', { id: printer.id, name: printer.name });
-            }
-          } catch (e) {
-            fail += 1;
-            console.error('[StopAllJets] error', { id: printer.id, name: printer.name, error: e });
+      for (const printer of targets) {
+        try {
+          // If this iteration targets the currently-connected printer, arm the
+          // polling auto-disconnect grace window so we don't tear the socket
+          // down mid-shutdown (Issue 2 recurrence).
+          if (connectionState.connectedPrinter?.id === printer.id) {
+            armStopJetGrace?.(150);
           }
-          // Safety gap between printers so a laggy ACK never overlaps the next open
-          await new Promise(r => setTimeout(r, 400));
+          const success = await sendCommandToPrinter(printer, '^SJ 0');
+          if (success) {
+            ok += 1;
+            startCountdown(printer.id, 'stopping');
+            updatePrinter(printer.id, { jetRunning: false });
+            console.log('[StopAllJets] stopped', { id: printer.id, name: printer.name });
+          } else {
+            fail += 1;
+            console.warn('[StopAllJets] failed', { id: printer.id, name: printer.name });
+          }
+        } catch (e) {
+          fail += 1;
+          console.error('[StopAllJets] error', { id: printer.id, name: printer.name, error: e });
         }
-      });
+        // Safety gap between printers so a laggy ACK never overlaps the next open
+        await new Promise(r => setTimeout(r, 400));
+      }
       const skipMsg = skipped > 0 ? ` (${skipped} already stopped)` : '';
       if (fail === 0) toast.success(`Stop Jet sent to ${ok} printer${ok === 1 ? '' : 's'}.${skipMsg}`);
       else toast.warning(`Stop Jet: ${ok} succeeded, ${fail} failed.${skipMsg} Check log.`);
