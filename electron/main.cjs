@@ -16,6 +16,20 @@ function logToFile(msg) {
 
 let mainWindow;
 let pollingPaused = false;
+let isQuitting = false;
+
+// Safe send to renderer — swallows sends after window/webContents destruction (app quit).
+function safeSend(channel, payload) {
+  if (isQuitting) return;
+  try {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    const wc = mainWindow.webContents;
+    if (!wc || wc.isDestroyed()) return;
+    wc.send(channel, payload);
+  } catch (_) {
+    // Object destroyed race during shutdown — ignore.
+  }
+}
 
 // Handler for Escape key to exit fullscreen
 function handleFullscreenEscape(event, input) {
