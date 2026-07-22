@@ -687,45 +687,74 @@ export function PrintersScreen({
             )}
           </div>
 
-          {/* End-of-shift: Stop All Jets — its own full-width row so it's
-              always visible and never clipped by the toolbar overflow. */}
-          {onStopAllJets && (() => {
+          {/* End-of-shift / Start-of-shift jet controls — side by side so both
+              are always visible without clipping the toolbar overflow. */}
+          {(onStopAllJets || onStartJets) && (() => {
             const onlineCount = printers.filter(p => p.isAvailable).length;
+            const startCandidates = printers.filter(
+              p => p.isAvailable && p.jetRunning === false,
+            );
             return (
-              <div className="mt-2">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full border-red-500/50 text-red-300 bg-red-500/10 hover:bg-red-500/20 hover:text-red-200 h-8"
-                      disabled={isStoppingAllJets || onlineCount === 0}
-                      title="End-of-shift: send Stop Jet to every online printer, one at a time (serialized to protect port 23)"
-                    >
-                      <PowerOff className={`w-3 h-3 mr-1 ${isStoppingAllJets ? 'animate-pulse' : ''}`} />
-                      <span className="text-xs">
-                        {isStoppingAllJets ? 'Stopping…' : `Stop All Jets${onlineCount > 0 ? ` (${onlineCount})` : ''}`}
-                      </span>
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Stop all jets?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will send Stop Jet (^SJ 0) to all {onlineCount} online printer{onlineCount === 1 ? '' : 's'}, one at a time, with a safe delay between each. Each printer will begin its ~2:14 shutdown cycle. Use this for end-of-shift cycle-down.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => { void onStopAllJets(); }}>
-                        Stop All Jets
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {onStartJets && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setStartJetsDialogOpen(true)}
+                    className="w-full border-emerald-500/50 text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 hover:text-emerald-200 h-8"
+                    disabled={isStartingJets || startCandidates.length === 0}
+                    title="Start of shift: pick which stopped printers to spin up. Serialized ^SJ 1."
+                  >
+                    <Power className={`w-3 h-3 mr-1 ${isStartingJets ? 'animate-pulse' : ''}`} />
+                    <span className="text-xs">
+                      {isStartingJets ? 'Starting…' : `Start Jets${startCandidates.length > 0 ? ` (${startCandidates.length})` : ''}`}
+                    </span>
+                  </Button>
+                )}
+                {onStopAllJets && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full border-red-500/50 text-red-300 bg-red-500/10 hover:bg-red-500/20 hover:text-red-200 h-8"
+                        disabled={isStoppingAllJets || onlineCount === 0}
+                        title="End-of-shift: send Stop Jet to every online printer, one at a time (serialized to protect port 23)"
+                      >
+                        <PowerOff className={`w-3 h-3 mr-1 ${isStoppingAllJets ? 'animate-pulse' : ''}`} />
+                        <span className="text-xs">
+                          {isStoppingAllJets ? 'Stopping…' : `Stop All Jets${onlineCount > 0 ? ` (${onlineCount})` : ''}`}
+                        </span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Stop all jets?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will send Stop Jet (^SJ 0) to all {onlineCount} online printer{onlineCount === 1 ? '' : 's'}, one at a time, with a safe delay between each. Each printer will begin its ~2:14 shutdown cycle. Use this for end-of-shift cycle-down.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => { void onStopAllJets(); }}>
+                          Stop All Jets
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
             );
           })()}
+
+          {onStartJets && (
+            <StartJetsSelectionDialog
+              open={startJetsDialogOpen}
+              onOpenChange={setStartJetsDialogOpen}
+              candidates={printers.filter(p => p.isAvailable && p.jetRunning === false)}
+              onConfirm={(targets) => { void onStartJets(targets); }}
+            />
+          )}
         </div>
 
 
