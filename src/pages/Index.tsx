@@ -2492,13 +2492,22 @@ const Index = () => {
     //   - must be reachable (isAvailable)
     //   - skip printers already in a 'stopping' countdown (avoid duplicate ^SJ 0
     //     which can re-lock a printer mid-shutdown)
+    //   - skip printers still in a 'starting' countdown — interrupting the
+    //     ~66s HV startup with ^SJ 0 races the firmware state machine and
+    //     is a known cause of faults / lockups (customer-reported bug).
+    //   - skip printers currently reporting active faults; stacking a stop
+    //     command on top of a faulted printer can escalate the fault.
     //   - skip any printer whose last-known jetRunning === false (emulator poll
     //     or connected-printer ^SU). Only skip when we KNOW it's off; undefined
     //     means we've never observed the state and we still send.
+    let skippedStarting = 0;
+    let skippedFaulted = 0;
     const targets = printers.filter(p => {
       if (!p.isAvailable) return false;
       const cd = getCountdown(p.id);
       if (cd.type === 'stopping') return false;
+      if (cd.type === 'starting') { skippedStarting += 1; return false; }
+      if (p.hasActiveErrors) { skippedFaulted += 1; return false; }
       if (p.jetRunning === false) return false;
       // Belt-and-braces for the connected printer: if live status says jet is
       // off (fresher than the persisted flag), skip it too.
@@ -2515,10 +2524,20 @@ const Index = () => {
     const skipped = printers.filter(p => p.isAvailable).length - targets.length;
 
     if (targets.length === 0) {
+      const bits: string[] = [];
+      if (skippedStarting > 0) bits.push(`${skippedStarting} still starting`);
+      if (skippedFaulted > 0) bits.push(`${skippedFaulted} in fault`);
+      const detail = bits.length ? ` (${bits.join(', ')})` : '';
       toast.info(skipped > 0
-        ? `All ${skipped} online printer${skipped === 1 ? '' : 's'} already stopped or stopping.`
+        ? `All ${skipped} online printer${skipped === 1 ? '' : 's'} already stopped or unsafe to stop${detail}.`
         : 'No online printers to stop.');
       return;
+    }
+    if (skippedStarting > 0 || skippedFaulted > 0) {
+      const bits: string[] = [];
+      if (skippedStarting > 0) bits.push(`${skippedStarting} still in startup`);
+      if (skippedFaulted > 0) bits.push(`${skippedFaulted} in fault`);
+      toast.info(`Skipping ${bits.join(' and ')} — stop those from the printer once safe.`);
     }
     setIsStoppingAllJets(true);
     console.log('[StopAllJets] starting', {
