@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'fault-popup-screen-lock-fix',
+    type: 'bugfix',
+    title: 'Fault Pop-Ups Can No Longer Lock the Screen',
+    date: '22 Jul 2026',
+    summary:
+      'Fixed a bug where a printer fault (for example "Fault 01-0001: Fluid not detected in gutter") could lock up CodeSync if the fault image failed to load. The dialog now always shows a visible header with the fault code and severity, renders the fault message text even when the image is missing, and provides reachable OK / Next fault and Dismiss all buttons in a footer. Image fallback logic cycles through variants and collapses the image area entirely if none are available, so the operator can always clear the alert and continue.',
+  },
+  {
     id: 'ui-cleanup-dashboard-sync',
     type: 'feature',
     title: 'Cleaner Dashboard and Printers Screen',
