@@ -14,6 +14,7 @@ import { PrintersScreen } from '@/components/screens/PrintersScreen';
 import { MessagesScreen } from '@/components/screens/MessagesScreen';
 import { EditMessageScreen, MessageDetails } from '@/components/screens/EditMessageScreen';
 import { PrintSettings, FLEET_DEFAULT_ADJUST_SETTINGS } from '@/types/printer';
+import { getPrinterMessageDefaults } from '@/lib/fleetDefaults';
 import { AdjustDialog } from '@/components/adjust/AdjustDialog';
 import { SetupScreen } from '@/components/screens/SetupScreen';
 import { ServiceScreen } from '@/components/screens/ServiceScreen';
@@ -2823,6 +2824,9 @@ const Index = () => {
           printerModel={connectionState.status?.printerModel}
           printerVariant={connectionState.status?.printerVariant}
           currentAdjustSettings={connectionState.settings}
+          newMessageDefaults={getPrinterMessageDefaults(
+            messageTargetPrinter ?? connectionState.connectedPrinter
+          )}
           onSendCommand={sendCommand}
           otherPrinterRows={buildOtherPrinterRows(editingMessage.name, messageTargetPrinter?.id ?? null)}
           onSave={saveEditedMessage}
@@ -2935,6 +2939,9 @@ const Index = () => {
             printerModel={connectionState.status?.printerModel}
             printerVariant={connectionState.status?.printerVariant}
             currentAdjustSettings={connectionState.settings}
+            newMessageDefaults={getPrinterMessageDefaults(
+              selectedPrinter ?? connectionState.connectedPrinter
+            )}
             onSendCommand={sendCommand}
             otherPrinterRows={buildOtherPrinterRows(editingMessage.name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id ?? null)}
           onSave={saveEditedMessage}

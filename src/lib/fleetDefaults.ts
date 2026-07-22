@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { FLEET_DEFAULT_ADJUST_SETTINGS, PrintSettings } from '@/types/printer';
+import { FLEET_DEFAULT_ADJUST_SETTINGS, Printer, PrintSettings } from '@/types/printer';
 
 const STORAGE_KEY = 'codesync.fleetDefaults.v1';
 const CHANGE_EVENT = 'codesync:fleet-defaults-changed';
@@ -85,4 +85,25 @@ export const useFleetDefaults = (): PrintSettings => {
   }, []);
 
   return value;
+};
+
+/**
+ * Resolve the NEW-message defaults for a specific printer.
+ * Priority: per-printer overrides (Setup Card) → fleet defaults → factory.
+ * Rotation is intentionally NOT included here — it's read from the printer's
+ * own `rotation` field by the message pipeline.
+ */
+export const getPrinterMessageDefaults = (printer?: Printer | null): PrintSettings => {
+  const fleet = getFleetDefaults();
+  const per = printer?.messageDefaults ?? {};
+  return {
+    ...fleet,
+    width: per.width ?? fleet.width,
+    height: per.height ?? fleet.height,
+    delay: per.delay ?? fleet.delay,
+    bold: per.bold ?? fleet.bold,
+    gap: per.gap ?? fleet.gap,
+    pitch: per.pitch ?? fleet.pitch,
+    speed: per.speed ?? fleet.speed,
+  };
 };

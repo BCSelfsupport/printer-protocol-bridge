@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Printer, PrinterRole } from '@/types/printer';
+import { Printer, PrinterRole, PrintSettings } from '@/types/printer';
+import { getPrinterMessageDefaults } from '@/lib/fleetDefaults';
 import { useTwinPair } from '@/twin-code/twinPairStore';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import {
@@ -18,15 +19,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Printer as PrinterIcon, Save, Trash2, Crown, Link, Hash, Tag, RotateCcw } from 'lucide-react';
+import { Printer as PrinterIcon, Save, Trash2, Crown, Link, Hash, Tag, RotateCcw, SlidersHorizontal } from 'lucide-react';
 
 type PrinterRotation = NonNullable<Printer['rotation']>;
+type MessageDefaults = NonNullable<Printer['messageDefaults']>;
 
 interface EditPrinterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   printer: Printer | null;
-  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string; lineId?: string; rotation?: PrinterRotation; autoSyncSelection?: boolean }) => void;
+  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string; lineId?: string; rotation?: PrinterRotation; autoSyncSelection?: boolean; messageDefaults?: MessageDefaults }) => void;
   onDelete?: (printerId: number) => void;
   allPrinters?: Printer[];
 }
@@ -44,6 +46,15 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
   const [lineId, setLineId] = useState('');
   const [rotation, setRotation] = useState<PrinterRotation>('Normal');
   const [autoSyncSelection, setAutoSyncSelection] = useState(false);
+  // Per-printer NEW-message defaults (Width / Delay / Speed / Bold / Gap / Pitch).
+  // Initialised from fleet defaults; any customised field is persisted onto the
+  // Printer record so future new messages on this printer inherit it.
+  const [defWidth, setDefWidth] = useState<string>('2');
+  const [defDelay, setDefDelay] = useState<string>('500');
+  const [defBold, setDefBold] = useState<string>('0');
+  const [defGap, setDefGap] = useState<string>('0');
+  const [defPitch, setDefPitch] = useState<string>('0');
+  const [defSpeed, setDefSpeed] = useState<PrintSettings['speed']>('Ultra Fast');
   const [ipError, setIpError] = useState('');
   // Sync form when printer changes
   useEffect(() => {
@@ -58,6 +69,15 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       setLineId(printer.lineId ?? '');
       setRotation(printer.rotation ?? 'Normal');
       setAutoSyncSelection(printer.autoSyncSelection ?? false);
+      // Seed the defaults inputs from stored per-printer overrides, falling
+      // back to the resolved fleet defaults so admins see today's live value.
+      const resolved = getPrinterMessageDefaults(printer);
+      setDefWidth(String(resolved.width));
+      setDefDelay(String(resolved.delay));
+      setDefBold(String(resolved.bold));
+      setDefGap(String(resolved.gap));
+      setDefPitch(String(resolved.pitch));
+      setDefSpeed(resolved.speed);
     }
   }, [printer]);
 
@@ -119,6 +139,14 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
       lineId: lineId.trim() || undefined,
       rotation,
       autoSyncSelection: effectiveRole === 'master' ? autoSyncSelection : undefined,
+      messageDefaults: {
+        width: Math.max(0, Math.min(1000, parseInt(defWidth, 10) || 0)),
+        delay: Math.max(0, parseInt(defDelay, 10) || 0),
+        bold: Math.max(0, Math.min(9, parseInt(defBold, 10) || 0)),
+        gap: Math.max(0, Math.min(9, parseInt(defGap, 10) || 0)),
+        pitch: Math.max(0, parseInt(defPitch, 10) || 0),
+        speed: defSpeed,
+      },
     });
 
     onOpenChange(false);
@@ -237,6 +265,68 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
               </SelectContent>
             </Select>
           </div>
+
+          {/* Per-printer NEW-message defaults. Applied only to messages CREATED
+              on this printer — existing messages keep whatever they were saved
+              with, and operators can still tweak everything at the HMI. */}
+          <div className="space-y-2 rounded-md border border-slate-700 bg-slate-800/50 p-3">
+            <Label className="text-slate-300 flex items-center gap-1.5">
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              New Message Defaults
+            </Label>
+            <p className="text-[10px] text-slate-500 -mt-1">
+              Seed values for any new message created on this printer. Change
+              anything you need to at the HMI later; these only apply at creation.
+            </p>
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              <div className="space-y-1">
+                <Label className="text-[10px] text-slate-400">Width</Label>
+                <Input type="number" min={0} max={1000} value={defWidth}
+                  onChange={(e) => setDefWidth(e.target.value)}
+                  className="bg-slate-900 border-slate-600 text-white font-mono h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-slate-400">Delay</Label>
+                <Input type="number" min={0} value={defDelay}
+                  onChange={(e) => setDefDelay(e.target.value)}
+                  className="bg-slate-900 border-slate-600 text-white font-mono h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-slate-400">Bold</Label>
+                <Input type="number" min={0} max={9} value={defBold}
+                  onChange={(e) => setDefBold(e.target.value)}
+                  className="bg-slate-900 border-slate-600 text-white font-mono h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-slate-400">Gap</Label>
+                <Input type="number" min={0} max={9} value={defGap}
+                  onChange={(e) => setDefGap(e.target.value)}
+                  className="bg-slate-900 border-slate-600 text-white font-mono h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-slate-400">Pitch</Label>
+                <Input type="number" min={0} value={defPitch}
+                  onChange={(e) => setDefPitch(e.target.value)}
+                  className="bg-slate-900 border-slate-600 text-white font-mono h-8" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-slate-400">Speed</Label>
+                <Select value={defSpeed} onValueChange={(v) => setDefSpeed(v as PrintSettings['speed'])}>
+                  <SelectTrigger className="bg-slate-900 border-slate-600 text-white h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Fast">Fast</SelectItem>
+                    <SelectItem value="Faster">Faster</SelectItem>
+                    <SelectItem value="Fastest">Fastest</SelectItem>
+                    <SelectItem value="Ultra Fast">Ultra Fast</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+
 
 
 

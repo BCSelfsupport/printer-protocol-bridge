@@ -155,6 +155,9 @@ interface EditMessageScreenProps {
   printerVariant?: string | null;
   preset?: 'metrc-retail-id';
   currentAdjustSettings?: PrintSettings;
+  /** Per-printer NEW-message defaults (from the printer Setup Card). When set,
+   *  a new message starts with these values instead of the fleet fallback. */
+  newMessageDefaults?: PrintSettings;
   onSendCommand?: (command: string) => Promise<any>;
   /** WP-5: read-only per-printer stack view of this message across siblings. */
   otherPrinterRows?: OtherPrinterRow[];
@@ -175,6 +178,7 @@ export function EditMessageScreen({
   printerVariant,
   preset,
   currentAdjustSettings,
+  newMessageDefaults,
   onSendCommand,
   otherPrinterRows,
 }: EditMessageScreenProps) {
@@ -245,8 +249,11 @@ export function EditMessageScreen({
   // their stored adjustSettings in the useEffect below.
   const [localAdjustSettings, setLocalAdjustSettings] = useState<PrintSettings>(() => {
     const FLEET_DEFAULTS: PrintSettings = { width: 2, height: 8, delay: 500, bold: 0, gap: 0, pitch: 0, repeatAmount: 0, rotation: 'Normal', speed: 'Ultra Fast' };
-    if (startEmpty) return FLEET_DEFAULTS;
-    return currentAdjustSettings ?? FLEET_DEFAULTS;
+    // Per-printer defaults (from the Setup Card) win over fleet fallback for
+    // brand-new messages so each printer seeds new messages with its own tuning.
+    const NEW_DEFAULTS: PrintSettings = newMessageDefaults ?? FLEET_DEFAULTS;
+    if (startEmpty) return NEW_DEFAULTS;
+    return currentAdjustSettings ?? NEW_DEFAULTS;
   });
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
