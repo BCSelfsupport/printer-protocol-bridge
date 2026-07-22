@@ -2825,7 +2825,7 @@ const Index = () => {
           printerVariant={connectionState.status?.printerVariant}
           currentAdjustSettings={connectionState.settings}
           newMessageDefaults={getPrinterMessageDefaults(
-            (messageTargetPrinter ?? connectionState.connectedPrinter) as any
+            messageTargetPrinter ?? connectionState.connectedPrinter
           )}
           onSendCommand={sendCommand}
           otherPrinterRows={buildOtherPrinterRows(editingMessage.name, messageTargetPrinter?.id ?? null)}
