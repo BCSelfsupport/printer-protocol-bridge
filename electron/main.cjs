@@ -1127,11 +1127,17 @@ app.whenReady().then(() => {
   if (tntCfg.enabled) startTntServer(tntCfg);
 });
 
-app.on('window-all-closed', () => {
-  // Close all printer connections
-  connections.forEach((socket) => socket.destroy());
+app.on('before-quit', () => {
+  isQuitting = true;
+  connections.forEach((socket) => { try { socket.removeAllListeners(); socket.destroy(); } catch (_) {} });
   connections.clear();
-  
+});
+
+app.on('window-all-closed', () => {
+  isQuitting = true;
+  connections.forEach((socket) => { try { socket.removeAllListeners(); socket.destroy(); } catch (_) {} });
+  connections.clear();
+
   if (process.platform !== 'darwin') {
     app.quit();
   }
