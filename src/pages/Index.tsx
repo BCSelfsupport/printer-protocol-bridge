@@ -3424,6 +3424,8 @@ const Index = () => {
         isSyncingAdjustFromPrinters={isSyncingAdjustFromPrinters}
         onStopAllJets={handleStopAllJets}
         isStoppingAllJets={isStoppingAllJets}
+        onStartJets={handleStartJets}
+        isStartingJets={isStartingJets}
         onSlaveExpiryChange={handleExpiryOffsetChange}
       />
     );
