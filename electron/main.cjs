@@ -16,6 +16,20 @@ function logToFile(msg) {
 
 let mainWindow;
 let pollingPaused = false;
+let isQuitting = false;
+
+// Safe send to renderer — swallows sends after window/webContents destruction (app quit).
+function safeSend(channel, payload) {
+  if (isQuitting) return;
+  try {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    const wc = mainWindow.webContents;
+    if (!wc || wc.isDestroyed()) return;
+    wc.send(channel, payload);
+  } catch (_) {
+    // Object destroyed race during shutdown — ignore.
+  }
+}
 
 // Handler for Escape key to exit fullscreen
 function handleFullscreenEscape(event, input) {
@@ -385,7 +399,7 @@ function connectPrinterSocket(printer, source = 'printer:connect') {
       } else if (!lostEmitted) {
         // Notify renderer that connection was lost — deduplicated so it fires exactly once.
         lostEmitted = true;
-        mainWindow?.webContents.send('printer:connection-lost', { printerId: printer.id });
+        safeSend('printer:connection-lost', { printerId: printer.id });
       }
     });
 
@@ -461,7 +475,7 @@ const oneToOneState = new Map(); // printerId → { lineBuf: '', listener: fn }
 
 function emitOneToOneEvent(printerId, payload) {
   try {
-    mainWindow?.webContents.send('oneToOne:ack', { printerId, ...payload });
+    safeSend('oneToOne:ack', { printerId, ...payload });
   } catch (_) {}
 }
 
@@ -611,7 +625,7 @@ if (autoUpdater) {
   autoUpdater.on('update-available', (info) => {
     logToFile(`[event] Update available: ${JSON.stringify(info)}`);
     cachedUpdateState = { stage: 'downloading', info, progress: null };
-    mainWindow?.webContents.send('update-available', info);
+    safeSend('update-available', info);
   });
 
   autoUpdater.on('update-not-available', (info) => {
@@ -627,13 +641,13 @@ if (autoUpdater) {
       total: progress.total,
     };
     cachedUpdateState.progress = progressData;
-    mainWindow?.webContents.send('update-download-progress', progressData);
+    safeSend('update-download-progress', progressData);
   });
 
   autoUpdater.on('update-downloaded', (info) => {
     logToFile(`[event] Update downloaded: ${JSON.stringify(info)}`);
     cachedUpdateState = { stage: 'ready', info, progress: null };
-    mainWindow?.webContents.send('update-downloaded', info);
+    safeSend('update-downloaded', info);
   });
 
   autoUpdater.on('error', (err) => {
@@ -805,13 +819,13 @@ function startRelayServer() {
         pollingPaused = true;
         logToFile('[relay] Polling PAUSED by mobile companion');
         // Notify renderer to pause polling
-        mainWindow?.webContents.send('polling:pause-changed', true);
+        safeSend('polling:pause-changed', true);
         sendJson(200, { success: true, paused: true });
 
       } else if (url === '/relay/resume-polling') {
         pollingPaused = false;
         logToFile('[relay] Polling RESUMED by mobile companion');
-        mainWindow?.webContents.send('polling:pause-changed', false);
+        safeSend('polling:pause-changed', false);
         sendJson(200, { success: true, paused: false });
 
       } else if (url === '/relay/polling-status') {
@@ -830,7 +844,7 @@ function startRelayServer() {
     logToFile(`[relay] Server listening on port ${RELAY_PORT}`);
     logToFile(`[relay] Local IPs: ${ips.join(', ')}`);
     // Notify renderer of relay info
-    mainWindow?.webContents.send('relay:info', { port: RELAY_PORT, ips });
+    safeSend('relay:info', { port: RELAY_PORT, ips });
   });
 
   relayServer.on('error', (err) => {
@@ -1037,7 +1051,7 @@ function startHotfolderWatcher(config) {
         try {
           const csvText = fs.readFileSync(filePath, 'utf8');
           // Notify renderer to import this CSV
-          mainWindow?.webContents.send('hotfolder:new-file', {
+          safeSend('hotfolder:new-file', {
             fileName,
             csvText,
           });
@@ -1084,8 +1098,8 @@ function writeTntConfig(cfg) {
 function startTntServer(cfg) {
   stopTntServer();
   tntServer = new TntServer({ port: cfg.port || 8101, logDir: app.getPath('userData') });
-  tntServer.on('frame', (entry) => { mainWindow?.webContents.send('tnt:frame', entry); });
-  tntServer.on('state', (state) => { mainWindow?.webContents.send('tnt:state', state); });
+  tntServer.on('frame', (entry) => { safeSend('tnt:frame', entry); });
+  tntServer.on('state', (state) => { safeSend('tnt:state', state); });
   tntServer.start();
   logToFile(`[tnt] server starting on port ${cfg.port || 8101}`);
 }
@@ -1113,11 +1127,17 @@ app.whenReady().then(() => {
   if (tntCfg.enabled) startTntServer(tntCfg);
 });
 
-app.on('window-all-closed', () => {
-  // Close all printer connections
-  connections.forEach((socket) => socket.destroy());
+app.on('before-quit', () => {
+  isQuitting = true;
+  connections.forEach((socket) => { try { socket.removeAllListeners(); socket.destroy(); } catch (_) {} });
   connections.clear();
-  
+});
+
+app.on('window-all-closed', () => {
+  isQuitting = true;
+  connections.forEach((socket) => { try { socket.removeAllListeners(); socket.destroy(); } catch (_) {} });
+  connections.clear();
+
   if (process.platform !== 'darwin') {
     app.quit();
   }
