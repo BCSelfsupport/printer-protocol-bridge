@@ -2561,6 +2561,60 @@ const Index = () => {
     }
   }, [printers, sendCommandToPrinter, startCountdown, getCountdown, connectionState.connectedPrinter, connectionState.status, armStopJetGrace]);
 
+  // Start-of-shift companion to Stop All Jets. Operator picks which stopped
+  // printers to spin up in StartJetsSelectionDialog; we serialize ^SJ 1 with
+  // the same 400ms gap used for ^SJ 0 so no two commands overlap the port-23
+  // window.
+  const [isStartingJets, setIsStartingJets] = useState(false);
+  const handleStartJets = useCallback(async (targets: Printer[]) => {
+    // Belt-and-braces filter: caller already restricts to online + jetRunning===false,
+    // but re-check here in case state moved between dialog open and confirm.
+    const filtered = targets.filter(p => {
+      if (!p.isAvailable) return false;
+      const cd = getCountdown(p.id);
+      if (cd.type === 'starting') return false;
+      if (p.jetRunning === true) return false;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      toast.info('No eligible printers to start (already running or offline).');
+      return;
+    }
+    setIsStartingJets(true);
+    console.log('[StartJets] starting', {
+      count: filtered.length,
+      ids: filtered.map(p => p.id),
+    });
+    let ok = 0;
+    let fail = 0;
+    try {
+      for (const printer of filtered) {
+        try {
+          const success = await sendCommandToPrinter(printer, '^SJ 1');
+          if (success) {
+            ok += 1;
+            startCountdown(printer.id, 'starting');
+            console.log('[StartJets] started', { id: printer.id, name: printer.name });
+          } else {
+            fail += 1;
+            console.warn('[StartJets] failed', { id: printer.id, name: printer.name });
+          }
+        } catch (e) {
+          fail += 1;
+          console.error('[StartJets] error', { id: printer.id, name: printer.name, error: e });
+        }
+        // Same safety gap as Stop All Jets — protect the port-23 window.
+        await new Promise(r => setTimeout(r, 400));
+      }
+      if (fail === 0) toast.success(`Start Jet sent to ${ok} printer${ok === 1 ? '' : 's'}.`);
+      else toast.warning(`Start Jet: ${ok} succeeded, ${fail} failed. Check log.`);
+    } finally {
+      setIsStartingJets(false);
+    }
+  }, [sendCommandToPrinter, startCountdown, getCountdown]);
+
+
 
   // Force Print handler: sends ^PT then advances the data source row for VDP messages
   const handleForcePrint = useCallback(async () => {
@@ -3370,6 +3424,8 @@ const Index = () => {
         isSyncingAdjustFromPrinters={isSyncingAdjustFromPrinters}
         onStopAllJets={handleStopAllJets}
         isStoppingAllJets={isStoppingAllJets}
+        onStartJets={handleStartJets}
+        isStartingJets={isStartingJets}
         onSlaveExpiryChange={handleExpiryOffsetChange}
       />
     );
