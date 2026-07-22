@@ -649,32 +649,6 @@ export function PrintersScreen({
                 <RefreshCw className={`w-3 h-3 ${isCheckingNetwork ? 'animate-spin' : ''}`} />
               </Button>
             )}
-            {onSyncAdjustFromPrinters && (
-              <Button
-                onClick={onSyncAdjustFromPrinters}
-                size="sm"
-                variant="outline"
-                className="border-amber-400/50 text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 hover:text-amber-100 h-8"
-                disabled={isSyncingAdjustFromPrinters}
-                title="Pull current Width/Speed/Delay/Bold/Gap/Pitch from every printer into stored messages"
-              >
-                <DownloadCloud className={`w-3 h-3 mr-1 ${isSyncingAdjustFromPrinters ? 'animate-pulse' : ''}`} />
-                <span className="text-xs">{isSyncingAdjustFromPrinters ? 'Syncing…' : 'Sync Adjust'}</span>
-              </Button>
-            )}
-            {onSyncAdjustFromPrinter && selectedPrinter && selectedPrinter.isAvailable && (
-              <Button
-                onClick={() => onSyncAdjustFromPrinter(selectedPrinter)}
-                size="sm"
-                variant="outline"
-                className="border-emerald-400/50 text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 hover:text-emerald-100 h-8 px-2"
-                disabled={isSyncingAdjustFromPrinters}
-                title={`Sync Adjust from ${selectedPrinter.name} — pull current Width/Speed/Delay/Bold/Gap/Pitch into its stored message`}
-                aria-label={`Sync Adjust from ${selectedPrinter.name}`}
-              >
-                <DownloadCloud className={`w-3.5 h-3.5 ${isSyncingAdjustFromPrinters ? 'animate-pulse' : ''}`} />
-              </Button>
-            )}
             {selectedPrinter && (
               <Button
                 onClick={handleRemoveSelected}
