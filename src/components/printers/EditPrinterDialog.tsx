@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Printer, PrinterRole } from '@/types/printer';
+import { Printer, PrinterRole, PrintSettings } from '@/types/printer';
+import { getPrinterMessageDefaults } from '@/lib/fleetDefaults';
 import { useTwinPair } from '@/twin-code/twinPairStore';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import {
