@@ -162,7 +162,7 @@ export function EditPrinterDialog({ open, onOpenChange, printer, onSave, onDelet
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-slate-900 border-slate-700">
+      <DialogContent className="sm:max-w-md bg-slate-900 border-slate-700 max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary">
             <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
