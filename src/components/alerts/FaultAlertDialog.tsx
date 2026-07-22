@@ -231,7 +231,9 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
   useEffect(() => {
     setImageExtIndex(0);
     setImageVariantIndex(0);
+    setImageFailed(false);
   }, [currentFault?.code]);
+
 
   const handleDismiss = useCallback(() => {
     if (!currentFault) return;
