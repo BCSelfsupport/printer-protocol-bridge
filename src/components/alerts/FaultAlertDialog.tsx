@@ -84,6 +84,8 @@ export function FaultAlertDialog({ faults, isConnected, onDismissFault }: FaultA
 
   const [imageExtIndex, setImageExtIndex] = useState(0);
   const [imageVariantIndex, setImageVariantIndex] = useState(0);
+  const [imageFailed, setImageFailed] = useState(false);
+
 
   // Tracks the previously observed live fault count, used to detect when a
   // ^CA we sent did NOT reduce the live ^LE list — meaning the printer
