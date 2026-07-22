@@ -911,8 +911,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      current_license_id: { Args: never; Returns: string }
-      has_valid_license_header: { Args: never; Returns: boolean }
+      [_ in never]: never
     }
     Enums: {
       license_tier: "lite" | "full" | "database" | "demo" | "twincode"
