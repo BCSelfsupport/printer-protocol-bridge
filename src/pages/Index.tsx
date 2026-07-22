@@ -1250,6 +1250,11 @@ const Index = () => {
       fullAdjustSettings,
       perMessageSettings,
       includeMessageSettings: hasMessagePrinterSettings,
+      // On brand-new messages, ^NM inherits the printer's baked-in defaults
+      // (Width=15, Delay=100, etc.). Force-push the full fleet-default adjust
+      // set so a newly created message doesn't get stuck on the printer's
+      // hard-coded 15 when the user never opened the Adjust tab.
+      forcePushAllAdjust: !!isNew,
     });
     // Counter formatting is now embedded in each ^AC field by saveMessageContent
     // (protocol v2.6 §5.33), so no separate post-save counter-config sequence
