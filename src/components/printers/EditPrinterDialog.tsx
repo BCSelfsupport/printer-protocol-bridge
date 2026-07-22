@@ -19,15 +19,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Printer as PrinterIcon, Save, Trash2, Crown, Link, Hash, Tag, RotateCcw } from 'lucide-react';
+import { Printer as PrinterIcon, Save, Trash2, Crown, Link, Hash, Tag, RotateCcw, SlidersHorizontal } from 'lucide-react';
 
 type PrinterRotation = NonNullable<Printer['rotation']>;
+type MessageDefaults = NonNullable<Printer['messageDefaults']>;
 
 interface EditPrinterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   printer: Printer | null;
-  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string; lineId?: string; rotation?: PrinterRotation; autoSyncSelection?: boolean }) => void;
+  onSave: (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: PrinterRole; masterId?: number; serialNumber?: string; lineId?: string; rotation?: PrinterRotation; autoSyncSelection?: boolean; messageDefaults?: MessageDefaults }) => void;
   onDelete?: (printerId: number) => void;
   allPrinters?: Printer[];
 }
