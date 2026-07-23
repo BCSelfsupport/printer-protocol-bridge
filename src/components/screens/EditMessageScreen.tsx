@@ -275,6 +275,13 @@ export function EditMessageScreen({
     if (startEmpty) return NEW_DEFAULTS;
     return currentAdjustSettings ?? NEW_DEFAULTS;
   });
+  // Per-message override flags — only these keys will beat the printer Setup
+  // Card at ^SM time. Existing messages start with no overrides (pure inherit);
+  // when the operator toggles "Override for this message" in the Adjust dialog,
+  // the flag flips to true and the stored value becomes authoritative for
+  // that message on every printer.
+  const [localAdjustOverrides, setLocalAdjustOverrides] = useState<import('./EditMessageScreen').MessageAdjustOverrides>({});
+
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
   const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
