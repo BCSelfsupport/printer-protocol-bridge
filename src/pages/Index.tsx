@@ -170,6 +170,9 @@ const Index = () => {
   const [openNewDialogOnMount, setOpenNewDialogOnMount] = useState(false);
   const [selectedPrinterId, setSelectedPrinterId] = useState<number | null>(null);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+  // Bottom-nav "Adjust" shortcut opens the connected printer's Setup Card,
+  // not the confusing global adjust dialog.
+  const [adjustSetupCardPrinter, setAdjustSetupCardPrinter] = useState<import('@/types/printer').Printer | null>(null);
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [helpDialogOpen, setHelpDialogOpen] = useState(false);
