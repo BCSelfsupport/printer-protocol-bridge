@@ -225,6 +225,7 @@ const parseSelectedMessageName = (raw: string): string | null => {
     .replace(/^\^SM\s*/i, '')
     .replace(/^MSG\s*:\s*/i, '')
     .replace(/^(Selected\s+)?Message\s*:\s*/i, '')
+    .replace(/>+$/g, '')
     .trim();
 
   if (!cleaned || cleaned.toUpperCase() === 'NONE') return null;
