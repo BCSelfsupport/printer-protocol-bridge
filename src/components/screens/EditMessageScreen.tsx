@@ -139,7 +139,7 @@ const MULTILINE_TEMPLATES = [
   { value: 'multi-3x7', label: '3L×7', height: 23, lines: 3, dotsPerLine: 7, file: '3L7U.BIN' },
   { value: 'multi-2x12', label: '2L×12', height: 25, lines: 2, dotsPerLine: 12, file: '2L12U.BIN' },
   { value: 'multi-2x9', label: '2L×9', height: 19, lines: 2, dotsPerLine: 9, file: '2L9U.BIN' },
-  { value: 'multi-2x7', label: '2L×7', height: 16, lines: 2, dotsPerLine: 7, file: '2L7U.BIN' },
+  { value: 'multi-2x7', label: '2L×7', height: 15, lines: 2, dotsPerLine: 7, file: '2L7U.BIN' },
   { value: 'multi-2x5', label: '2L×5', height: 11, lines: 2, dotsPerLine: 5, file: '2L5U.BIN' },
 ] as const;
 
