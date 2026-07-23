@@ -139,6 +139,7 @@ const DELETE_VERIFY_RETRIES = 6;
 const recentlyAddedMessages = new Set<string>();
 const ADDITION_GUARD_MS = 15000;
 const DELETE_VERIFY_DELAY_MS = 500;
+const DELETE_PARK_SETTLE_MS = 900;
 const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCODE_AUTO']);
 const SAVE_ACK_MAX_WAIT_MS = 30000;
 const SAVE_NM_IDLE_AFTER_DATA_MS = 1500;
@@ -222,23 +223,45 @@ const parseSelectedMessageName = (raw: string): string | null => {
 
   const cleaned = first
     .replace(/^\^SM\s*/i, '')
+    .replace(/^MSG\s*:\s*/i, '')
     .replace(/^(Selected\s+)?Message\s*:\s*/i, '')
+    .replace(/>+$/g, '')
     .trim();
 
   if (!cleaned || cleaned.toUpperCase() === 'NONE') return null;
   return cleaned.toUpperCase();
 };
 
-const chooseDeleteParkingMessage = (messageNames: string[], deletingName: string): string | null => {
+const chooseDeleteParkingMessage = (messageNames: string[], deletingName: string, currentName?: string | null): string | null => {
   const normalizedDeletingName = deletingName.trim().toUpperCase();
-  const normalizedNames = messageNames
+  const normalizedCurrentName = currentName?.trim().toUpperCase() || null;
+  const normalizedNames = [...new Set(messageNames
     .map(name => name.trim().toUpperCase())
-    .filter(Boolean);
+    .filter(Boolean))];
 
-  const bestcode = normalizedNames.find(name => RESERVED_PRINTER_MESSAGES.has(name));
-  if (bestcode && bestcode !== normalizedDeletingName) return bestcode;
+  const safeNames = normalizedNames.filter(name => name !== normalizedDeletingName);
+  const factorySafeNames = safeNames.filter(name => RESERVED_PRINTER_MESSAGES.has(name));
 
-  return normalizedNames.find(name => name !== normalizedDeletingName) ?? null;
+  // Prefer reloading the current saved message when it is not the delete target.
+  // This raw ^SM reload is used before ^DM to clear the printer HMI's
+  // dirty/yellow-Save edit buffer without sending any adjust commands that
+  // would mark the active message dirty again.
+  if (normalizedCurrentName && safeNames.includes(normalizedCurrentName)) {
+    return normalizedCurrentName;
+  }
+
+  const differentFactory = factorySafeNames.find(name => name !== normalizedCurrentName);
+  if (differentFactory) return differentFactory;
+
+  const differentSafe = safeNames.find(name => name !== normalizedCurrentName);
+  if (differentSafe) return differentSafe;
+
+  // If the only available safe message is already selected, re-select it anyway.
+  // On real firmware this acts as a saved-message reload and is still safer than
+  // deleting while the HMI Save button is yellow.
+  if (factorySafeNames[0]) return factorySafeNames[0];
+
+  return safeNames[0] ?? null;
 };
 
 // Resolve the correct emulator instance for a given printer IP.
@@ -2954,59 +2977,65 @@ export function usePrinterConnection() {
 
             if (liveCurrentMessage) updatePrinter(printer.id, { currentMessage: liveCurrentMessage });
 
+            const listBeforeDelete = await printerTransport.sendCommand(
+              printer.id,
+              '^LM',
+              { caller: 'deleteMessage:list-before-delete', maxWaitMs: 12000, idleAfterDataMs: 1000 },
+            );
+            const namesBeforeDelete = listBeforeDelete?.success && typeof listBeforeDelete.response === 'string'
+              ? parseLmMessageNames(listBeforeDelete.response)
+              : [];
+
+            const parkingMessage = chooseDeleteParkingMessage(namesBeforeDelete, normalizedName, liveCurrentMessage);
+            if (!parkingMessage) {
+              toast.error(`Can't delete "${msgName}" — no other printer message is available to reload first.`);
+              return false;
+            }
+
+            console.log('[deleteMessage] Reloading safe message before delete:', {
+              deleting: normalizedName,
+              liveCurrentMessage,
+              parkingMessage,
+            });
+            const parkResult = await printerTransport.sendCommand(
+              printer.id,
+              `^SM ${parkingMessage}`,
+              { caller: 'deleteMessage:reload-safe-message', maxWaitMs: 15000, idleAfterDataMs: 1000 },
+            );
+            const parkResponse = parkResult?.response ?? parkResult?.error ?? '';
+            if (!parkResult?.success || isProtocolCommandFailure(parkResponse)) {
+              toast.error(`Can't delete "${msgName}" — printer would not reload "${parkingMessage}" first.`);
+              return false;
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, DELETE_PARK_SETTLE_MS));
+
+            const parkedSelectedResult = await printerTransport.sendCommand(
+              printer.id,
+              '^SM',
+              { caller: 'deleteMessage:verify-safe-message', maxWaitMs: 12000, idleAfterDataMs: 1000 },
+            );
+            const parkedCurrentMessage = parkedSelectedResult?.success && parkedSelectedResult.response
+              ? parseSelectedMessageName(parkedSelectedResult.response)
+              : null;
+
+            if (parkedCurrentMessage === normalizedName) {
+              toast.error(`Can't delete "${msgName}" — it is still selected on the printer. If the printer Save button is yellow, press Save or exit the edit screen on the HMI, then retry.`);
+              return false;
+            }
+
+            if (parkedCurrentMessage) {
+              if (isConnectedTarget) {
+                setConnectionState(prev => ({
+                  ...prev,
+                  status: prev.status ? { ...prev.status, currentMessage: parkedCurrentMessage } : null,
+                }));
+              }
+              updatePrinter(printer.id, { currentMessage: parkedCurrentMessage });
+            }
+
             if (liveCurrentMessage === normalizedName) {
-              const listBeforeDelete = await printerTransport.sendCommand(
-                printer.id,
-                '^LM',
-                { caller: 'deleteMessage:list-for-park', maxWaitMs: 12000, idleAfterDataMs: 1000 },
-              );
-              const namesBeforeDelete = listBeforeDelete?.success && typeof listBeforeDelete.response === 'string'
-                ? parseLmMessageNames(listBeforeDelete.response)
-                : [];
-              const parkingMessage = chooseDeleteParkingMessage(namesBeforeDelete, normalizedName);
-
-              if (!parkingMessage) {
-                toast.error(`Can't delete "${msgName}" — it is currently selected and no other printer message is available to switch to.`);
-                return false;
-              }
-
-              console.log('[deleteMessage] Parking selected message before delete:', { deleting: normalizedName, parkingMessage });
-              const parkResult = await printerTransport.sendCommand(
-                printer.id,
-                `^SM ${parkingMessage}`,
-                { caller: 'deleteMessage:park-selected', maxWaitMs: 15000, idleAfterDataMs: 1000 },
-              );
-              const parkResponse = parkResult?.response ?? parkResult?.error ?? '';
-              if (!parkResult?.success || isProtocolCommandFailure(parkResponse)) {
-                toast.error(`Can't delete "${msgName}" — printer would not switch away from it first.`);
-                return false;
-              }
-
-              await new Promise((resolve) => setTimeout(resolve, 500));
-
-              const parkedSelectedResult = await printerTransport.sendCommand(
-                printer.id,
-                '^SM',
-                { caller: 'deleteMessage:verify-park', maxWaitMs: 12000, idleAfterDataMs: 1000 },
-              );
-              const parkedCurrentMessage = parkedSelectedResult?.success && parkedSelectedResult.response
-                ? parseSelectedMessageName(parkedSelectedResult.response)
-                : null;
-
-              if (parkedCurrentMessage === normalizedName) {
-                toast.error(`Can't delete "${msgName}" — it is still selected on the printer. If the printer Save button is yellow, press Save or exit the edit screen, then retry.`);
-                return false;
-              }
-
-              if (parkedCurrentMessage) {
-                if (isConnectedTarget) {
-                  setConnectionState(prev => ({
-                    ...prev,
-                    status: prev.status ? { ...prev.status, currentMessage: parkedCurrentMessage } : null,
-                  }));
-                }
-                updatePrinter(printer.id, { currentMessage: parkedCurrentMessage });
-              }
+              console.log('[deleteMessage] Target was selected before safe reload; continuing after verified switch-away.');
             }
 
             console.log('[deleteMessage] Sending:', deleteCommand, '| live current:', liveCurrentMessage ?? '(unknown)');
