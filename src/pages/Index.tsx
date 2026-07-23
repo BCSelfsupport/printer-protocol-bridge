@@ -3118,8 +3118,8 @@ const Index = () => {
             connectedPrinterId={connectionState.connectedPrinter?.id ?? null}
             connectedPrinterLineId={connectionState.connectedPrinter ? printers.find(p => p.id === connectionState.connectedPrinter!.id)?.lineId : undefined}
             isConnected={connectionState.isConnected}
-            printerModel={connectionState.status?.printerModel}
-            printerVariant={connectionState.status?.printerVariant}
+            printerModel={(selectedPrinter ?? connectionState.connectedPrinter)?.printerModel ?? connectionState.status?.printerModel}
+            printerVariant={(selectedPrinter ?? connectionState.connectedPrinter)?.printerVariant ?? connectionState.status?.printerVariant}
             currentAdjustSettings={connectionState.settings}
             newMessageDefaults={getPrinterMessageDefaults(
               selectedPrinter ?? connectionState.connectedPrinter
