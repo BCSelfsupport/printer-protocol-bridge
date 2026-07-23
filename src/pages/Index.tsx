@@ -2475,9 +2475,19 @@ const Index = () => {
 
   const handleNavigate = (item: NavItem) => {
     if (item === 'adjust') {
-      setAdjustDialogOpen(true);
+      // Adjust settings are per-printer, not global. Route the bottom-nav
+      // Adjust shortcut to the connected printer's Setup Card so operators
+      // land on the right context instead of the confusing global dialog.
+      const targetId = connectionState.connectedPrinter?.id ?? selectedPrinter?.id ?? null;
+      if (targetId != null) {
+        setAutoEditPrinterId(targetId);
+        setCurrentScreen('printers');
+      } else {
+        setCurrentScreen('printers');
+      }
       return;
     }
+
     if (item === 'setup') {
       setSetupDialogOpen(true);
       return;
