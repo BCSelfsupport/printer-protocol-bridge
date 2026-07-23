@@ -1782,6 +1782,7 @@ const Index = () => {
               name: message.name,
               fields: targetFields,
               adjustSettings: targetAdjust,
+              adjustOverrides: targetOverrides,
             });
             saveMessage(targetDetails, target.id);
 
