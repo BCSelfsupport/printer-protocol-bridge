@@ -2017,21 +2017,26 @@ const Index = () => {
       const mergedAdjust: Partial<PrintSettings> = { ...storedAdjust };
       const mergedMsgSettings: Partial<PrintSettings> = { ...storedMsgSettings };
       let changed = false;
-      // IMPORTANT: only capture HMI values for keys that don't already have an
-      // explicit stored value on this message. Some firmwares reset ^PW back
-      // to a per-template default on ^SM — unconditionally re-capturing HMI
-      // values would silently clobber the message's saved Width/etc.
-      // Legacy messages with no stored tuning still get seeded from HMI here;
-      // deliberate HMI edits are captured via "Sync Adjust" (explicit action).
+      // IMPORTANT: only refresh HMI values for keys that ALREADY have an
+      // explicit stored value on this message. Auto-seeding empty keys from
+      // the live HMI is what caused the 60DAYBACKUP / legacy-message regression
+      // where Width kept coming back as 15 — the printer's baked-in default
+      // was captured into storage and then re-pushed on every select.
+      // Deliberate HMI edits on untuned keys must go through "Sync Adjust".
+      // Legacy messages with no stored tuning are handled downstream by
+      // applyStoredAdjustSettings, which seeds them from FLEET defaults
+      // (Width=2 / Delay=500 / Ultra Fast).
       for (const k of ['width', 'height', 'delay', 'bold', 'gap', 'pitch', 'speed', 'rotation'] as (keyof PrintSettings)[]) {
         const pv = printerCurrent[k];
         if (pv === undefined) continue;
         const alreadyStored = storedAdjust[k] !== undefined || storedMsgSettings[k] !== undefined;
-        if (alreadyStored) continue;
+        if (!alreadyStored) continue; // do NOT seed from HMI — that's the bug
+        if (storedAdjust[k] === pv) continue;
         (mergedAdjust as Record<string, unknown>)[k] = pv;
         (mergedMsgSettings as Record<string, unknown>)[k] = pv;
         changed = true;
       }
+
       if (changed) {
         saveMessage({
           ...stored,
