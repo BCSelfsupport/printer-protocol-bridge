@@ -235,6 +235,7 @@ export function AdjustDialog({
   onRefreshFromPrinter,
   overrides,
   onOverridesChange,
+  onConfirm,
 }: AdjustDialogProps) {
   // Message-editor mode: caller provided an override map. Live-adjust mode:
   // no overrides prop → toggles hidden, values push directly to the printer.
