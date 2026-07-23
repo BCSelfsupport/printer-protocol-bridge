@@ -119,6 +119,12 @@ interface PrintersScreenProps {
   getMessageContent?: (name: string, printerId?: number) => MessageDetails | null;
   /** Reset all group expiry offsets back to message default and re-sync */
   onResetGroupExpiry?: (masterId: number) => void;
+  /** When set, auto-open the Printer Setup Card for this printer id (used
+   *  by the bottom-nav Adjust shortcut so operators land on the right card
+   *  instead of the confusing "global" adjust dialog). Consumed once, then
+   *  the parent should reset it via onAutoEditConsumed. */
+  autoEditPrinterId?: number | null;
+  onAutoEditConsumed?: () => void;
 }
 
 // Sortable wrapper for PrinterListItem
