@@ -1701,6 +1701,15 @@ const Index = () => {
           : { ...(details!.adjustSettings ?? {}) };               // seed from source
         const targetRotation = target.rotation ?? baseAdjust.rotation ?? 'Normal';
         const targetAdjust = { ...baseAdjust, rotation: targetRotation };
+        // First-time copies must NOT inherit the source printer's per-message
+        // overrides (adjustOverrides). If the source had explicitly overridden
+        // Width/Delay/etc. via the message Adjust dialog, carrying those flags
+        // over would cause pick() to prefer stored values (e.g. Width=15 from
+        // the source) instead of THIS target's Setup Card (e.g. Width=2). For
+        // preservedTuning we keep the target's own overrides untouched.
+        const targetOverrides = preservedTuning
+          ? { ...(existingTargetStored!.adjustOverrides ?? {}) }
+          : {};
         const targetOffset = target.expiryOffsetDays;
         // Per-target Line ID substitution: any field flagged as a printer-driven
         // Line ID (dynamicSource === 'lineId') must be rewritten with THIS
