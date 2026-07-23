@@ -84,6 +84,22 @@ export interface MessageAdjustSettings {
   rotation?: 'Normal' | 'Flip' | 'Mirror' | 'Mirror Flip';
 }
 
+/**
+ * Per-message override flags. When a flag is true, the corresponding stored
+ * value in `adjustSettings` takes precedence over the printer Setup Card /
+ * fleet default at ^SM time. When absent/false, the message inherits from
+ * the printer (existing behaviour).
+ */
+export interface MessageAdjustOverrides {
+  width?: boolean;
+  height?: boolean;
+  delay?: boolean;
+  bold?: boolean;
+  gap?: boolean;
+  pitch?: boolean;
+  speed?: boolean;
+}
+
 export interface MessageDetails {
   name: string;
   height: number;
@@ -93,7 +109,11 @@ export interface MessageDetails {
   settings?: MessageSettings; // Message-level print settings
   advancedSettings?: AdvancedSettings; // Advanced settings (pages 52-55)
   adjustSettings?: MessageAdjustSettings; // Per-message adjust (^PW, ^PH, ^DA, ^SB, ^GP, ^PA)
+  /** Per-field flags marking which adjustSettings keys the operator explicitly
+   *  set for this message. Only these keys override the printer Setup Card. */
+  adjustOverrides?: MessageAdjustOverrides;
 }
+
 
 // Template options - single heights for mixed font messages (loaded from .BIN files)
 const SINGLE_TEMPLATES = [
