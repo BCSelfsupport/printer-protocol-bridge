@@ -139,6 +139,7 @@ const DELETE_VERIFY_RETRIES = 6;
 const recentlyAddedMessages = new Set<string>();
 const ADDITION_GUARD_MS = 15000;
 const DELETE_VERIFY_DELAY_MS = 500;
+const DELETE_PARK_SETTLE_MS = 900;
 const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCODE_AUTO']);
 const SAVE_ACK_MAX_WAIT_MS = 30000;
 const SAVE_NM_IDLE_AFTER_DATA_MS = 1500;
@@ -229,16 +230,31 @@ const parseSelectedMessageName = (raw: string): string | null => {
   return cleaned.toUpperCase();
 };
 
-const chooseDeleteParkingMessage = (messageNames: string[], deletingName: string): string | null => {
+const chooseDeleteParkingMessage = (messageNames: string[], deletingName: string, currentName?: string | null): string | null => {
   const normalizedDeletingName = deletingName.trim().toUpperCase();
-  const normalizedNames = messageNames
+  const normalizedCurrentName = currentName?.trim().toUpperCase() || null;
+  const normalizedNames = [...new Set(messageNames
     .map(name => name.trim().toUpperCase())
-    .filter(Boolean);
+    .filter(Boolean))];
 
-  const bestcode = normalizedNames.find(name => RESERVED_PRINTER_MESSAGES.has(name));
-  if (bestcode && bestcode !== normalizedDeletingName) return bestcode;
+  const safeNames = normalizedNames.filter(name => name !== normalizedDeletingName);
+  const factorySafeNames = safeNames.filter(name => RESERVED_PRINTER_MESSAGES.has(name));
 
-  return normalizedNames.find(name => name !== normalizedDeletingName) ?? null;
+  // Prefer switching to a different saved message. This raw ^SM reload is used
+  // before ^DM to clear the printer HMI's dirty/yellow-Save edit buffer without
+  // sending any adjust commands that would mark the active message dirty again.
+  const differentFactory = factorySafeNames.find(name => name !== normalizedCurrentName);
+  if (differentFactory) return differentFactory;
+
+  const differentSafe = safeNames.find(name => name !== normalizedCurrentName);
+  if (differentSafe) return differentSafe;
+
+  // If the only available safe message is already selected, re-select it anyway.
+  // On real firmware this acts as a saved-message reload and is still safer than
+  // deleting while the HMI Save button is yellow.
+  if (factorySafeNames[0]) return factorySafeNames[0];
+
+  return safeNames[0] ?? null;
 };
 
 // Resolve the correct emulator instance for a given printer IP.
