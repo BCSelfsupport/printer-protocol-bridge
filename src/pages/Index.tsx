@@ -1008,7 +1008,24 @@ const Index = () => {
         }
       }
 
+      // Persist queued message edits to flash. Firmware ^HE (v2.6+) confirms
+      // ^SV = "Save queued messages"; without it, ^NM/^NF stay in the dirty
+      // RAM buffer and the HMI Save LED stays yellow, which blocks subsequent
+      // ^DM (delete) operations. Gary confirmed 2026-07-23 the older PDF that
+      // omitted ^SV was out of date. One trailing ^SV per write batch is the
+      // documented way to commit and clear the buffer.
+      const batchHadWrite = commandsToRun.some(({ command }) => {
+        const t = command.trim().toUpperCase();
+        return t.startsWith('^NM ') || t.startsWith('^NF ') || t.startsWith('^DM ');
+      });
+      if (batchHadWrite) {
+        const svStart = Date.now();
+        const svResult = await runCommand('^SV');
+        console.log(`[PrinterWrite] ${targetPrinter.name} ^SV ${svResult.success ? 'OK' : 'FAIL'} in ${Date.now() - svStart}ms`);
+      }
+
       return { success: true, failedIndex: null };
+
     } catch (error) {
       console.error('[PrinterWrite] Sequence failed:', error);
       return { success: false, failedIndex: 0 };
