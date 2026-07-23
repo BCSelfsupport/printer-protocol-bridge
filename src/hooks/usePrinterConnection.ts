@@ -223,6 +223,7 @@ const parseSelectedMessageName = (raw: string): string | null => {
 
   const cleaned = first
     .replace(/^\^SM\s*/i, '')
+    .replace(/^MSG\s*:\s*/i, '')
     .replace(/^(Selected\s+)?Message\s*:\s*/i, '')
     .trim();
 
