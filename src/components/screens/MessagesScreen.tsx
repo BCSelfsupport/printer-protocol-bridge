@@ -56,7 +56,7 @@ interface MessagesScreenProps {
   onSelect: (message: PrintMessage) => Promise<boolean>;
   onEdit: (message: PrintMessage) => void;
   onNew: (name: string, preset?: 'metrc-retail-id') => void;
-  onDelete: (message: PrintMessage) => void;
+  onDelete: (message: PrintMessage) => void | Promise<boolean | void>;
   onHome: () => void;
   openNewDialogOnMount?: boolean;
   onNewDialogOpened?: () => void;
@@ -155,6 +155,7 @@ export function MessagesScreen({
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [newMessageName, setNewMessageName] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
   const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
   const [pendingMessageDetails, setPendingMessageDetails] = useState<MessageDetails | null>(null);
@@ -923,10 +924,6 @@ export function MessagesScreen({
                 toast.error(`"${selectedMessage.name}" is protected — unlock it first to delete.`);
                 return;
               }
-              if (selectedMessage && selectedMessage.name === currentMessageName) {
-                toast.error("Can't delete this message — it is currently selected for printing on the printer.");
-                return;
-              }
               selectedMessage && setDeleteConfirmOpen(true);
             }}
             disabled={!selectedMessage || isSlave}
@@ -1081,17 +1078,27 @@ export function MessagesScreen({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                if (selectedMessage) {
-                  onDelete(selectedMessage);
-                  setSelectedMessage(null);
+              onClick={async (event) => {
+                event.preventDefault();
+                if (!selectedMessage || isDeleting) return;
+
+                setIsDeleting(true);
+                try {
+                  const deleted = await onDelete(selectedMessage);
+                  if (deleted !== false) {
+                    setSelectedMessage(null);
+                    setDeleteConfirmOpen(false);
+                  }
+                } finally {
+                  setIsDeleting(false);
                 }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
             >
-              Delete
+              {isDeleting ? 'Deleting…' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
