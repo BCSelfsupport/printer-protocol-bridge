@@ -134,7 +134,15 @@ function AdjustCard({
   };
 
   return (
-    <div className="bg-card rounded-lg p-3 border border-border shadow-sm">
+    <div
+      className={`rounded-lg p-3 border shadow-sm ${
+        onOverrideToggle
+          ? overridden
+            ? 'bg-primary/5 border-primary/40'
+            : 'bg-card border-border opacity-90'
+          : 'bg-card border-border'
+      }`}
+    >
       <div className="flex items-center gap-2">
         {/* Setting info */}
         <div className="flex-1 min-w-0">
@@ -152,7 +160,7 @@ function AdjustCard({
               max={max}
             />
           ) : (
-            <div className="text-lg font-bold text-foreground tabular-nums">
+            <div className={`text-lg font-bold tabular-nums ${onOverrideToggle && !overridden ? 'text-muted-foreground' : 'text-foreground'}`}>
               {typeof value === 'number' ? value.toLocaleString() : value}
             </div>
           )}
@@ -191,9 +199,25 @@ function AdjustCard({
           </button>
         </div>
       </div>
+      {onOverrideToggle && (
+        <label className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={!!overridden}
+            onChange={(e) => onOverrideToggle(e.target.checked)}
+            className="h-3.5 w-3.5 accent-primary"
+          />
+          <span>
+            {overridden
+              ? 'Override this printer default for this message'
+              : 'Inherits from printer Setup Card'}
+          </span>
+        </label>
+      )}
     </div>
   );
 }
+
 
 export function AdjustDialog({ 
   open, 
