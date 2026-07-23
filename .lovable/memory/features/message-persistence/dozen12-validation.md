@@ -17,7 +17,7 @@ type: constraint
 
 ## What works at this version
 - Prompt-before-print save flow (e.g. Dozen12) completes without printer firmware lockup
-- `^DM` + `^NM` + `^SV` + `^SM` sequence executes cleanly
+- `^DM` + `^NM` + `^SM` sequence executes cleanly; never add `^SV` because protocol v2.6 does not include it
 - Message selection after save is immediate and reliable
 - All scan workflow, counter, and license features developed in the prior 3 days are intact
 

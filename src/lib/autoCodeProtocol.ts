@@ -132,7 +132,7 @@ export function getProtocolFieldInfo(
 
   // Only use ^AE when there is an actual expiry offset. A date_expiry field
   // with 0/blank days has no D/W/M/Y extension and some firmware revs leave
-  // the message in RAM-only/yellow state or wedge during ^SV.
+  // the message in RAM-only/yellow state or wedge during the post-^NM digest.
   const hasExpiryOffset = Number.isFinite(autoCodeExpiryDays) && (autoCodeExpiryDays ?? 0) > 0;
   const useExpiry = (dateType === 'expiry' || dateType === 'expiry_rollover') && hasExpiryOffset;
   const useRollover = dateType === 'rollover' || dateType === 'expiry_rollover';

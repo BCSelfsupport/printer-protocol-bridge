@@ -97,7 +97,6 @@ export function SlaveSelectionAckTest() {
     if (master) {
       const masterInstance = multiPrinterEmulator.getInstanceById(master.id);
       masterInstance?.processCommand(`^NM ${requested}`);
-      masterInstance?.processCommand('^SV');
       masterInstance?.processCommand(`^SM ${requested}`);
       setMasterMessage(masterInstance?.getState().currentMessage ?? null);
     }
@@ -139,7 +138,6 @@ export function SlaveSelectionAckTest() {
         instance.processCommand(`^DM ${requested}`);
       } else {
         instance.processCommand(`^NM ${requested}`);
-        instance.processCommand('^SV');
       }
 
       const selectResult = instance.processCommand(`^SM ${requested}`);

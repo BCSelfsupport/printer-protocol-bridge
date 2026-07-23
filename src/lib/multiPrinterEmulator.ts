@@ -105,7 +105,7 @@ class PrinterEmulatorInstance {
   private readonly VERSION = 'v01.09.00.14';
   private readonly BUILD_DATE = 'Feb 06 2026 10:30:00';
 
-  // Test hook: when true, every write-side command (^NM, ^SV, ^DM) returns
+  // Test hook: when true, every write-side command (^NM, ^DM) returns
   // a simulated failure so we can exercise the Master → Slave sync failure
   // paths without unplugging a real printer. Toggle via
   // `multiPrinterEmulator.setSimulateWriteFailure(ip, boolean)` or the
@@ -255,7 +255,6 @@ class PrinterEmulatorInstance {
       // firmware) more closely than a full disconnect would.
       if (this.simulateWriteFailure) {
         const isWrite = trimmedCommand.startsWith('^NM')
-          || trimmedCommand === '^SV'
           || trimmedCommand.startsWith('^DM');
         if (isWrite) {
           response = this.formatError(99, 'SimulatedFail', 'Simulated write failure (dev)');
@@ -271,8 +270,6 @@ class PrinterEmulatorInstance {
         response = this.cmdEchoOn();
       } else if (trimmedCommand.startsWith('^EF')) {
         response = this.cmdEchoOff();
-      } else if (trimmedCommand === '^SV') {
-        response = this.cmdSave();
       } else if (trimmedCommand.startsWith('^SU')) {
         response = this.cmdStatusUpdate();
       } else if (trimmedCommand.startsWith('^SJ')) {
@@ -377,11 +374,6 @@ class PrinterEmulatorInstance {
   private cmdEchoOff(): string {
     this.state.echoOn = false;
     return '>';
-  }
-
-  private cmdSave(): string {
-    this.persistMessages();
-    return this.state.echoOn ? 'Command Successful!' : 'OK';
   }
 
   private cmdStatusUpdate(): string {
@@ -846,7 +838,7 @@ class MultiPrinterEmulatorManager {
 
   /**
    * Toggle the write-failure simulation on a specific emulator instance.
-   * When true, ^NM/^SV/^DM return a simulated error so we can reproduce
+   * When true, ^NM/^DM return a simulated error so we can reproduce
    * Master → Slave sync failures end-to-end.
    */
   setSimulateWriteFailure(ipAddress: string, port: number | undefined, value: boolean): boolean {

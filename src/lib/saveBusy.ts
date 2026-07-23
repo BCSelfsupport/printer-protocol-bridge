@@ -1,5 +1,5 @@
 /**
- * Tracks whether a printer save (^NM/^SV) is currently in flight.
+ * Tracks whether a printer save (^NM / ^NF / ^DM) is currently in flight.
  *
  * Background uploaders (Fleet telemetry/registration) check this and DEFER
  * their HTTP work while the printer save is committing. Heavy fields (8+)
@@ -35,7 +35,7 @@ export function isSaveBusy(): boolean {
  * Awaits until no save is in flight (and the grace window has passed).
  * Returns true if idle, false on timeout. Use to defer non-critical
  * writes (master→slave sync, broadcasts) so they don't collide with
- * the active ^NM/^SV digest window on the same TCP socket.
+ * the active post-^NM digest window on the same TCP socket.
  */
 export async function waitForSaveIdle(timeoutMs = 15000, pollMs = 150): Promise<boolean> {
   if (!isSaveBusy()) return true;

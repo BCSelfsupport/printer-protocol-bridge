@@ -68,7 +68,7 @@ interface MessagesScreenProps {
   onApplyPromptValues?: (message: PrintMessage, updatedDetails: MessageDetails) => Promise<boolean>;
   /** Get locally stored message details (includes promptBeforePrint metadata) */
   onGetStoredMessage?: (name: string) => MessageDetails | null;
-  /** Save message content to printer (^DM + ^NM + ^SV) — used to write prompted field values */
+  /** Save message content to printer (^DM + ^NM) — used to write prompted field values */
   onSaveMessageContent?: (
     messageName: string,
     fields: MessageDetails['fields'],
@@ -267,7 +267,7 @@ export function MessagesScreen({
       if (!selected) { toast.error('Saved but failed to select', { id: 'scan-apply' }); return; }
 
       // 3) Push counter resets AFTER save+select. Sending ^CC before the save
-      //    is unreliable: the ^DM/^NM/^SV/^SM sequence re-initialises the
+      //    is unreliable: the ^DM/^NM/^SM sequence re-initialises the
       //    counter to its configured Start Count, which would silently undo
       //    the operator's chosen starting value (resulting in the very first
       //    print using 0 instead of the requested number). Writing ^CC last
@@ -441,7 +441,7 @@ export function MessagesScreen({
       ) ?? [];
 
       // If the message has prompted fields, show the entry dialog so the operator
-      // can type values. On confirm we'll do a single atomic write (^DM + ^NM + ^SV)
+        // can type values. On confirm we'll do a single atomic write (^DM + ^NM)
       // with all values and settings baked in, then ^SM to select — no runtime
       // field mutation that would risk a firmware lockup.
       if (promptedFields.length > 0 && resolvedStored && onSaveMessageContent) {

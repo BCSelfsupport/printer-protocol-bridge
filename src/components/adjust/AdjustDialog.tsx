@@ -265,17 +265,15 @@ export function AdjustDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Debounced ^SV — every Adjust change writes to the live setting (^PW etc.),
-  // but committing to non-volatile storage on every nudge would burn flash.
-  // Coalesce a single ^SV ~800ms after the last edit so settings actually
-  // survive a printer reboot. (Was: edits were "live but not saved" — width
-  // would revert to 15 after a power cycle.)
+  // Debounce marker used only to avoid repeated close-time work. Adjust changes
+  // write live settings directly (^PW, ^DA, ^CM, etc.); protocol v2.6 has no
+  // separate ^SV command.
   const saveTimerRef = useState<{ t: ReturnType<typeof setTimeout> | null }>(() => ({ t: null }))[0];
   const scheduleSave = () => {
     if (saveTimerRef.t) clearTimeout(saveTimerRef.t);
     saveTimerRef.t = setTimeout(() => {
       saveTimerRef.t = null;
-      onSendCommand('^SV').catch(() => {});
+      // No persistence flush command exists in protocol v2.6.
     }, 800);
   };
   useEffect(() => () => { if (saveTimerRef.t) clearTimeout(saveTimerRef.t); }, [saveTimerRef]);
@@ -476,8 +474,7 @@ export function AdjustDialog({
           {/* Footer — explicit confirm button. All numeric edits are already
               applied live to state (and to the printer in live-adjust mode);
               this button just gives operators a clear "I'm done" action
-              instead of relying on the X. In live-adjust mode we also flush
-              any pending ^SV so settings survive a power cycle. */}
+              instead of relying on the X. */}
           <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
             <div className="text-[11px] text-muted-foreground">
               {isMessageMode
@@ -492,7 +489,7 @@ export function AdjustDialog({
                 if (saveTimerRef.t) {
                   clearTimeout(saveTimerRef.t);
                   saveTimerRef.t = null;
-                  if (!isMessageMode) onSendCommand('^SV').catch(() => {});
+                  // No persistence flush command exists in protocol v2.6.
                 }
                 if (isMessageMode && onConfirm) {
                   try { await onConfirm(); } catch { /* parent handles errors */ }
