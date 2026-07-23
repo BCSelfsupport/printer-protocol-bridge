@@ -30,6 +30,7 @@ import { TrainingVideosScreen } from '@/components/screens/TrainingVideosScreen'
 import { LicenseActivationDialog } from '@/components/license/LicenseActivationDialog';
 import { FaultAlertDialog } from '@/components/alerts/FaultAlertDialog';
 import { PausePollingButton } from '@/components/printers/PausePollingButton';
+import { EditPrinterDialog } from '@/components/printers/EditPrinterDialog';
 import {
   AlertDialog,
   AlertDialogAction,
