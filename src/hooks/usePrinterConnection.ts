@@ -2901,7 +2901,19 @@ export function usePrinterConnection() {
 
             if (stillExists) {
               deleteConfirmed = false;
-              toast.error(`Delete failed — "${msgName}" is still on the printer.`);
+              // Query ^SM to identify the actual reason (most common: it's the currently-selected message)
+              let reason = 'is still on the printer';
+              try {
+                const smResult = await printerTransport.sendCommand(
+                  connectionState.connectedPrinter.id,
+                  '^SM',
+                );
+                const smResp = (smResult?.response ?? '').toString().toUpperCase();
+                if (smResp.includes(normalizedName)) {
+                  reason = 'is currently selected on the printer. Select a different message first, then delete';
+                }
+              } catch { /* ignore */ }
+              toast.error(`Delete failed — "${msgName}" ${reason}.`);
             }
           }
         } catch (e) {
