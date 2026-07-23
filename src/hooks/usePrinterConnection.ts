@@ -670,7 +670,18 @@ export function usePrinterConnection() {
         ...(variant ? { printerVariant: variant } : {}),
       } : null,
     }));
-  }, []);
+    // Persist model + variant on the fleet Printer record so capability gates
+    // (template list, font list, HS1 restrictions) work for THIS printer even
+    // when the user is focused elsewhere. Without this, editing a message for
+    // Printer 2 while connected to Printer 1 would use Printer 1's hardware.
+    const connectedId = connectedPrinterIdRef.current;
+    if (connectedId != null && (model || variant)) {
+      updatePrinter(connectedId, {
+        ...(model ? { printerModel: model } : {}),
+        ...(variant ? { printerVariant: variant } : {}),
+      });
+    }
+  }, [updatePrinter]);
 
 
   const handleCounterResponse = useCallback((raw: string) => {
