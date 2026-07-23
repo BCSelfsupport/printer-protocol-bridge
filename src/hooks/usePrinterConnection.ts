@@ -198,7 +198,14 @@ const parseLmMessageNames = (raw: string): string[] => {
       continue;
     }
 
-    const cleanName = trimmed.replace(/\s*\(current\)\s*/gi, '').replace(/^\d+\.\s*/, '').trim().toUpperCase();
+    const cleanName = trimmed
+      .replace(/\s*\(current\)\s*/gi, '')
+      .replace(/^\d+\s*[:.)]\s*/, '')
+      .replace(/^CURRENT\s+(?:MESSAGE|MSG)\s*[:=]\s*/i, '')
+      .replace(/^(?:SELECTED|ACTIVE)\s+(?:MESSAGE|MSG)\s*[:=]\s*/i, '')
+      .replace(/^MSG\s*:\s*/i, '')
+      .trim()
+      .toUpperCase();
     if (cleanName) messageNames.push(cleanName);
   }
 
@@ -224,7 +231,7 @@ const parseSelectedMessageName = (raw: string): string | null => {
 
   const cleaned = first
     .replace(/^\^SM\s*/i, '')
-    .replace(/^\d+\.\s*/i, '')
+    .replace(/^\d+\s*[:.)]\s*/i, '')
     .replace(/^CURRENT\s+(?:MESSAGE|MSG)\s*[:=]\s*/i, '')
     .replace(/^(?:SELECTED|ACTIVE)\s+(?:MESSAGE|MSG)\s*[:=]\s*/i, '')
     .replace(/^MSG\s*:\s*/i, '')
