@@ -3645,6 +3645,21 @@ const Index = () => {
         onSendCommand={sendCommand}
       />
 
+      {/* Per-printer Setup Card opened from the bottom-nav "Adjust" shortcut.
+          Replaces the old global adjust dialog on the bottom nav so operators
+          land on the correct printer context. */}
+      <EditPrinterDialog
+        open={!!adjustSetupCardPrinter}
+        onOpenChange={(open) => { if (!open) setAdjustSetupCardPrinter(null); }}
+        printer={adjustSetupCardPrinter}
+        allPrinters={printers}
+        onSave={(printerId, updates) => {
+          updatePrinter(printerId, updates);
+          setAdjustSetupCardPrinter(null);
+        }}
+      />
+
+
       {/* Service Dialog */}
       <ServiceScreen
         open={serviceDialogOpen}
