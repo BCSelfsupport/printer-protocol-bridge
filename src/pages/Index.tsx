@@ -1833,6 +1833,12 @@ const Index = () => {
       perMessageSettings,
       includeMessageSettings: hasStoredMessageSettings,
       includeMessageSettingsCommand: true,
+      // Every ^SM must re-assert Width/Delay/Bold/Gap/Pitch — otherwise a
+      // message whose stored adjustSettings lost keys (via legacy save, race,
+      // or manual edit) would leave the printer sitting on its baked-in
+      // W=15/D=100 defaults. Force-push guarantees the resolved values
+      // (setup card → fleet → factory) actually reach the printer.
+      forcePushAllAdjust: true,
     });
 
     if (commands.length > 0) {
