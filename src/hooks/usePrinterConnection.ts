@@ -133,12 +133,12 @@ const shouldUseEmulator = () => printerEmulator.enabled || multiPrinterEmulator.
 // Track recently deleted message names so ^LM polling doesn't resurrect them
 const recentlyDeletedMessages = new Set<string>();
 const DELETION_GUARD_MS = 20000; // ignore deleted names for 20 seconds (polling cycle can take 10s+)
-const DELETE_VERIFY_RETRIES = 3;
+const DELETE_VERIFY_RETRIES = 6;
 
 // Track recently added message names so ^LM polling doesn't remove them before printer persists
 const recentlyAddedMessages = new Set<string>();
 const ADDITION_GUARD_MS = 15000;
-const DELETE_VERIFY_DELAY_MS = 250;
+const DELETE_VERIFY_DELAY_MS = 500;
 const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCODE_AUTO']);
 const SAVE_ACK_MAX_WAIT_MS = 30000;
 const SAVE_NM_IDLE_AFTER_DATA_MS = 1500;
@@ -227,6 +227,18 @@ const parseSelectedMessageName = (raw: string): string | null => {
 
   if (!cleaned || cleaned.toUpperCase() === 'NONE') return null;
   return cleaned.toUpperCase();
+};
+
+const chooseDeleteParkingMessage = (messageNames: string[], deletingName: string): string | null => {
+  const normalizedDeletingName = deletingName.trim().toUpperCase();
+  const normalizedNames = messageNames
+    .map(name => name.trim().toUpperCase())
+    .filter(Boolean);
+
+  const bestcode = normalizedNames.find(name => RESERVED_PRINTER_MESSAGES.has(name));
+  if (bestcode && bestcode !== normalizedDeletingName) return bestcode;
+
+  return normalizedNames.find(name => name !== normalizedDeletingName) ?? null;
 };
 
 // Resolve the correct emulator instance for a given printer IP.
@@ -2848,9 +2860,9 @@ export function usePrinterConnection() {
 
   // Delete a message — protocol ^DM <message>
   // Per protocol, delete fails for: non-existent, reserved, or currently-printing message.
-  const deleteMessage = useCallback(async (id: number) => {
+  const deleteMessage = useCallback(async (id: number, targetPrinter?: Printer | null, messageNameOverride?: string) => {
     const msg = connectionState.messages.find(m => m.id === id);
-    const msgName = msg?.name?.trim();
+    const msgName = messageNameOverride?.trim() || msg?.name?.trim();
     if (!msgName) return false;
 
     const normalizedName = msgName.toUpperCase();
@@ -2863,8 +2875,11 @@ export function usePrinterConnection() {
 
     let deleteConfirmed = true;
 
-    if (connectionState.isConnected && connectionState.connectedPrinter) {
-      const printer = connectionState.connectedPrinter;
+    const printer = targetPrinter ?? connectionState.connectedPrinter;
+    const isConnectedTarget = !!printer && printer.id === connectionState.connectedPrinter?.id;
+    const canUseTransport = !!printer && (isConnectedTarget ? connectionState.isConnected : (isElectron || isRelayMode()));
+
+    if (canUseTransport && printer) {
       const deleteCommand = `^DM ${msgName}`;
 
       if (shouldUseEmulator()) {
@@ -2888,14 +2903,38 @@ export function usePrinterConnection() {
         deleteConfirmed = await runPrinterWriteExclusive(printer.id, async () => {
           let confirmed = false;
           let guardTimer: ReturnType<typeof setTimeout> | null = null;
-          const releaseSaveBusy = beginSaveBusy();
+          let releaseSaveBusy = () => {};
+          let shouldDisconnectAfter = false;
 
           setPollingPaused(true);
           recentlyDeletedMessages.add(normalizedName);
-          console.log('[deleteMessage] Guarded delete start:', normalizedName);
+          console.log('[deleteMessage] Guarded delete start:', normalizedName, 'printer:', printer.name, printer.id);
 
           try {
             await waitForPollingIdle(3000);
+
+            if (!isConnectedTarget) {
+              const saveIdle = await waitForSaveIdle(20000);
+              if (!saveIdle) {
+                toast.error(`Cannot delete "${msgName}" — printer is still finishing another save.`);
+                return false;
+              }
+
+              const connectResult = await printerTransport.connect({
+                id: printer.id,
+                ipAddress: printer.ipAddress,
+                port: printer.port,
+              });
+
+              if (!connectResult?.success) {
+                toast.error(`Cannot delete "${msgName}" — ${printer.name} is not connected.`);
+                return false;
+              }
+
+              shouldDisconnectAfter = true;
+            }
+
+            releaseSaveBusy = beginSaveBusy();
 
             const selectedResult = await printerTransport.sendCommand(
               printer.id,
@@ -2906,17 +2945,68 @@ export function usePrinterConnection() {
               ? parseSelectedMessageName(selectedResult.response)
               : null;
 
-            if (liveCurrentMessage) {
+            if (liveCurrentMessage && isConnectedTarget) {
               setConnectionState(prev => ({
                 ...prev,
                 status: prev.status ? { ...prev.status, currentMessage: liveCurrentMessage } : null,
               }));
-              updatePrinter(printer.id, { currentMessage: liveCurrentMessage });
             }
 
+            if (liveCurrentMessage) updatePrinter(printer.id, { currentMessage: liveCurrentMessage });
+
             if (liveCurrentMessage === normalizedName) {
-              toast.error(`Can't delete "${msgName}" — it is currently selected for printing.`);
-              return false;
+              const listBeforeDelete = await printerTransport.sendCommand(
+                printer.id,
+                '^LM',
+                { caller: 'deleteMessage:list-for-park', maxWaitMs: 12000, idleAfterDataMs: 1000 },
+              );
+              const namesBeforeDelete = listBeforeDelete?.success && typeof listBeforeDelete.response === 'string'
+                ? parseLmMessageNames(listBeforeDelete.response)
+                : [];
+              const parkingMessage = chooseDeleteParkingMessage(namesBeforeDelete, normalizedName);
+
+              if (!parkingMessage) {
+                toast.error(`Can't delete "${msgName}" — it is currently selected and no other printer message is available to switch to.`);
+                return false;
+              }
+
+              console.log('[deleteMessage] Parking selected message before delete:', { deleting: normalizedName, parkingMessage });
+              const parkResult = await printerTransport.sendCommand(
+                printer.id,
+                `^SM ${parkingMessage}`,
+                { caller: 'deleteMessage:park-selected', maxWaitMs: 15000, idleAfterDataMs: 1000 },
+              );
+              const parkResponse = parkResult?.response ?? parkResult?.error ?? '';
+              if (!parkResult?.success || isProtocolCommandFailure(parkResponse)) {
+                toast.error(`Can't delete "${msgName}" — printer would not switch away from it first.`);
+                return false;
+              }
+
+              await new Promise((resolve) => setTimeout(resolve, 500));
+
+              const parkedSelectedResult = await printerTransport.sendCommand(
+                printer.id,
+                '^SM',
+                { caller: 'deleteMessage:verify-park', maxWaitMs: 12000, idleAfterDataMs: 1000 },
+              );
+              const parkedCurrentMessage = parkedSelectedResult?.success && parkedSelectedResult.response
+                ? parseSelectedMessageName(parkedSelectedResult.response)
+                : null;
+
+              if (parkedCurrentMessage === normalizedName) {
+                toast.error(`Can't delete "${msgName}" — it is still selected on the printer. If the printer Save button is yellow, press Save or exit the edit screen, then retry.`);
+                return false;
+              }
+
+              if (parkedCurrentMessage) {
+                if (isConnectedTarget) {
+                  setConnectionState(prev => ({
+                    ...prev,
+                    status: prev.status ? { ...prev.status, currentMessage: parkedCurrentMessage } : null,
+                  }));
+                }
+                updatePrinter(printer.id, { currentMessage: parkedCurrentMessage });
+              }
             }
 
             console.log('[deleteMessage] Sending:', deleteCommand, '| live current:', liveCurrentMessage ?? '(unknown)');
@@ -2988,6 +3078,9 @@ export function usePrinterConnection() {
             toast.error(`Failed to delete "${msgName}"`);
             return false;
           } finally {
+            if (shouldDisconnectAfter) {
+              try { await printerTransport.disconnect(printer.id); } catch { /* ignore disconnect cleanup */ }
+            }
             releaseSaveBusy();
             setPollingPaused(false);
             if (!confirmed) {
@@ -3005,10 +3098,12 @@ export function usePrinterConnection() {
     }
 
     // Remove from UI only after delete is confirmed
-    setConnectionState((prev) => ({
-      ...prev,
-      messages: prev.messages.filter(m => m.id !== id),
-    }));
+    if (!printer || printer.id === connectionState.connectedPrinter?.id) {
+      setConnectionState((prev) => ({
+        ...prev,
+        messages: prev.messages.filter(m => m.id !== id),
+      }));
+    }
 
     return true;
   }, [connectionState.messages, connectionState.isConnected, connectionState.connectedPrinter, updatePrinter]);

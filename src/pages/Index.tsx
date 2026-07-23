@@ -2961,7 +2961,7 @@ const Index = () => {
             setCurrentScreen('editMessage');
           }}
           onDelete={async (message) => {
-            const deleted = await deleteMessage(message.id);
+            const deleted = await deleteMessage(message.id, messageTargetPrinter, message.name);
             if (deleted) {
               deleteStoredMessage(message.name, messageTargetPrinter?.id);
             }
@@ -3214,9 +3214,10 @@ const Index = () => {
               setCurrentScreen('editMessage');
             }}
             onDelete={async (message) => {
-              const deleted = await deleteMessage(message.id);
+              const messageTargetPrinter = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+              const deleted = await deleteMessage(message.id, messageTargetPrinter, message.name);
               if (deleted) {
-                deleteStoredMessage(message.name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id);
+                deleteStoredMessage(message.name, messageTargetPrinter?.id);
               }
               return deleted;
             }}
