@@ -20,12 +20,20 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'adjust-dialog-overrides-and-nav',
+    type: 'feature',
+    title: 'Adjust Dialog Cleanup, Per-Message Overrides & Bottom-Nav Adjust Shortcut',
+    date: '23 Jul 2026',
+    summary:
+      'Reworked the Message Adjust dialog based on live feedback from the 13-printer fleet test. Rotation and Speed are now hidden inside the message editor because those are always resolved from the Printer Setup Card (Flip / Mirror Flip) and the printer-level Speed at Select time — showing them in the message was misleading. Override checkboxes are now inverted: unticked = inherit from Printer Setup Card / Fleet Defaults, ticked = "custom value for this message (ignores printer Setup Card)". A new Done / Done & Save footer button replaces the awkward X-to-close pattern — in the message editor Done & Save flushes ^SV and saves the message in one click; in live-adjust mode Done pushes ^SV and closes. The Printer Setup Card section is renamed "New Printer Defaults" to make it clear it seeds brand-new messages only. Finally, the mobile Bottom-Nav Adjust shortcut no longer opens the confusing global Adjust dialog — it opens the connected printer\'s Setup Card directly.',
+  },
+  {
     id: 'width-force-push-every-select',
     type: 'bugfix',
     title: 'Width Now Sticks on Every Message Select',
     date: '23 Jul 2026',
     summary:
-      'Fixed a follow-up to the Width 15 bug where the first select of a message pushed the correct Width (from the Printer Setup Card / Fleet Defaults) but a subsequent select on the same printer would revert to the printer\'s baked-in Width 15 / Delay 100. Root cause: if a message\'s stored adjustSettings had lost the width/delay/speed keys (via legacy save, race with the HMI sync, or partial capture), CodeSync silently skipped ^PW / ^DA and left the HMI\'s defaults in place. Every ^SM now unconditionally force-pushes the resolved Width, Delay, Bold, Gap and Pitch (Printer Setup Card → Fleet Defaults → Factory Fallback) followed by ^SV, so a second, third and Nth select always land on the correct values.',
+      'Fixed a follow-up to the Width 15 bug where the first select of a message pushed the correct Width (from the Printer Setup Card / Fleet Defaults) but a subsequent select on the same printer would revert to the printer\'s baked-in Width 15 / Delay 100. Root cause: if a message\'s stored adjustSettings had lost the width/delay/speed keys (via legacy save, race with the HMI sync, or partial capture), CodeSync silently skipped ^PW / ^DA and left the HMI\'s defaults in place. Every ^SM now unconditionally force-pushes the resolved Width, Delay, Bold, Gap and Pitch (Message Override → Printer Setup Card → Fleet Defaults → Factory Fallback) followed by a proper persistence flush, so a second, third and Nth select always land on the correct values. Update 23 Jul: also blocked bogus ^SV commands at the transport layer (^SV is not a v2.6 command) so they can never reach the printer and cause a rejection.',
   },
   {
     id: 'fault-popup-screen-lock-fix',

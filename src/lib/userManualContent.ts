@@ -285,6 +285,21 @@ export const MANUAL: ManualChapter[] = [
         ],
       },
       {
+        id: 'adjust-overrides',
+        title: 'Adjust dialog & per-message overrides',
+        body: `Open the **Adjust** dialog from the message editor toolbar to tune **Delay, Bold, Gap and Pitch** for the current message.\n\n**Resolution priority (highest to lowest):**\n\n1. **Per-Message Override** — tick the checkbox next to a value to lock it to this message\n2. **Printer Setup Card → New Printer Defaults** — inherited when no override is set\n3. **Fleet Defaults** — Width 2, Delay 500, Ultra Fast\n4. **Factory fallback** — hard-coded safety values\n\n**Checkbox convention (23 Jul 2026):** unticked = inherit; ticked = "custom value for this message (ignores printer Setup Card)". Most messages should leave every checkbox unticked so they follow the printer's baseline; only tick a box when this specific message needs its own value (e.g. a slow VDP job that needs a longer delay).\n\n**Rotation and Speed are intentionally hidden** in message-editor mode — Rotation is always resolved from the Printer Setup Card at Select time (so Flip and Mirror Flip printers on the same conveyor stay correct regardless of the source message), and Speed comes from the printer-level Speed. These fields still appear when the Adjust dialog is opened in live-adjust mode against a running printer.\n\n**Done & Save button:** clicking Done in message-editor mode flushes the settings to the message record and re-runs the same Save path as the main Save button, so overrides are persisted in one click. In live-adjust mode Done pushes the values to the connected printer and closes.`,
+      },
+      {
+        id: 'message-protection',
+        title: 'Message protection lock',
+        body: `Some messages (for example a **60DAYBACKUPCODE** manual-backup message using the printer's User Prompt function) contain fields that CodeSync does not yet fully support in its editor. Protecting them prevents accidental overwrite from Copy, Select or Sync operations.\n\n**How to protect:** on the Messages screen, click the **lock icon** on a message row. A protected message shows a solid lock; an unprotected one shows an open padlock. Click again to unlock.\n\n**What protection blocks:**\n- Copy to Printers — the message is skipped on any target where a protected message with the same name already lives\n- Automatic overwrites from the Sync flow\n- Bulk operations that would rewrite fields (Data Link resave, tuning re-push)\n\n**What protection does NOT block:**\n- Selecting the message for print (^SM)\n- Reading its current fields for display\n- Manual edits — you can still open the editor and save; the lock only defends against non-interactive rewrites`,
+      },
+      {
+        id: 'copy-to-printers',
+        title: 'Copy message to other printers',
+        body: `Click **Copy to…** on the Messages screen to duplicate the current message to any subset of sibling printers in the fleet.\n\n- Multi-select checkboxes with a **Select All** shortcut, presented as a compact 4-per-row printer grid\n- Pre-checks every printer that has previously run this message (from sent-to history)\n- Per-printer Line ID is re-resolved from each target's Setup Card at push time\n- Per-printer Rotation (Flip / Mirror Flip) is applied from each target's Setup Card — the source message's rotation is ignored\n- Per-printer Width / Delay / Bold / Gap / Speed are **left alone** on printers that have previously run the message; first-time targets are seeded from the source's Adjust settings so the technician tunes each printer only once\n- Protected messages on a target are skipped and reported in the summary\n\n**If any push fails**, a **Retry / Ignore** dialog lists every failed printer with the exact rejection reason (offline, command error, timeout). Try Again re-runs only the failed subset, capped at three attempts.`,
+      },
+      {
         id: 'new-field',
         title: 'Adding a new field',
         body: `Click **+ New** to open the field type chooser:\n\n- **Text Field** — static or mixed-case text\n- **Scanned Field** — value supplied by a barcode scan (PC USB scanner or paired mobile camera) at message-select time\n- **Line ID** — resolves to the printer's configured Line ID at print time\n- **User Define** — operator is prompted at message-select time\n- **AutoCode Field** — Time, Date, Counter, or Shift codes\n- **Barcode Field** — 1D & 2D barcodes\n- **Graphic Field** — bitmap from the printer's graphic library`,
@@ -585,6 +600,11 @@ export const MANUAL: ManualChapter[] = [
     intro: 'Printer-level configuration: counters, programmable date/time codes, network, line ID.',
     sections: [
       {
+        id: 'new-printer-defaults',
+        title: 'New Printer Defaults',
+        body: `The **New Printer Defaults** section of the Printer Setup Card holds this printer's baseline **Width, Delay, Bold, Gap** and **Speed** values. These are the fallback used whenever a message does not carry its own per-message override (see Chapter 6 → Adjust dialog & per-message overrides).\n\n**Resolution priority at Select time:**\n\n1. Per-Message Override (from the message's Adjust dialog)\n2. **New Printer Defaults** (this section)\n3. Fleet Defaults — Width 2, Delay 500, Ultra Fast\n4. Factory fallback\n\nEditing a value here does **not** immediately push to the printer — it takes effect the next time any message is Selected onto this printer. To push new values immediately, Select the current message again after saving.\n\n**Rotation** (Flip / Mirror Flip) also lives on the Setup Card and is authoritative for every message sent to this printer, regardless of what the source message stored.`,
+      },
+      {
         id: 'counters',
         title: 'Counters',
         body: `View and reset Print Count, Product Count, and Run Count. Counters are polled every 3 seconds via the ^CN command.`,
@@ -663,6 +683,11 @@ export const MANUAL: ManualChapter[] = [
         id: 'fault-codes',
         title: 'Fault codes',
         body: `Active faults are shown with the official BestCode fault code, description, and a photo of the relevant component when available. The ^LE command is the authoritative source for active errors. A red **WARNING** badge appears on the printer card in the sidebar; click it to view active fault details.\n\nFault Alerts auto-popup as a modal when a new error is detected so operators don't miss critical issues.`,
+      },
+      {
+        id: 'fleet-jet-controls',
+        title: 'Fleet jet controls (Start / Stop All Jets)',
+        body: `The Printers screen has two fleet-wide jet controls sitting side by side above the printer list.\n\n**Stop All Jets** — shuts down every online, non-faulted printer whose jet is currently running. Commands are sent serially with a 400 ms gap to avoid firmware collisions during the 134-second shutdown window. During the batch, the status poller is paused so stale jetRunning flags cannot cause a printer to be skipped, and each successful stop is marked optimistically in the UI. A summary toast reports Stopped / Skipped-Faulted / Already-Off / Failed counts.\n\n**Start Jets…** — opens a multi-select dialog listing every online printer whose jet is currently off. Checkboxes plus a Select All shortcut let the operator start the whole fleet or just the lines running that shift. Commands are again serialised with a 400 ms gap because the 66-second startup window is when the ink system is most sensitive to collisions.\n\n**Auto-reconnect grace window** — a 150-second grace window after any Stop Jet command prevents spurious "offline" flags while the printer completes its shutdown sequence. Dropped connections during long production runs are automatically retried up to three times over 60 seconds.`,
       },
       {
         id: 'diagnostic-test',
