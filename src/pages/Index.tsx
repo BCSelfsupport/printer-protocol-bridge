@@ -137,6 +137,39 @@ const isSaveSequenceCommand = (command: string) => {
   return trimmed.startsWith('^NM ') || trimmed.startsWith('^NF ');
 };
 
+const parseCurrentMessageFromSmResponse = (rawResponse?: string): string | null => {
+  const lines = (rawResponse ?? '')
+    .split(/\r?\n/)
+    .map((line) => line.replace(/[^\x20-\x7E]/g, '').trim())
+    .filter((line) => {
+      const upper = line.toUpperCase();
+      return line
+        && line !== '>'
+        && upper !== '^SM'
+        && upper !== 'SUCCESS'
+        && upper !== 'OK'
+        && !upper.includes('COMMAND SUCCESSFUL');
+    });
+
+  const first = lines[0];
+  if (!first) return null;
+
+  const cleaned = first
+    .replace(/^\^SM\s*/i, '')
+    .replace(/^\d+\s*[:.)]\s*/i, '')
+    .replace(/^CURRENT\s+(?:MESSAGE|MSG)\s*[:=]\s*/i, '')
+    .replace(/^(?:SELECTED|ACTIVE)\s+(?:MESSAGE|MSG)\s*[:=]\s*/i, '')
+    .replace(/^MSG\s*:\s*/i, '')
+    .replace(/^(Selected\s+)?Message\s*:\s*/i, '')
+    .replace(/\s*\(current\)\s*/gi, '')
+    .replace(/>+$/g, '')
+    .trim()
+    .toUpperCase();
+
+  if (!cleaned || cleaned === 'NONE') return null;
+  return cleaned;
+};
+
 const getSaveCommandDelay = (command: string, fieldCount: number) => {
   const trimmed = command.trim().toUpperCase();
   if (trimmed.startsWith('^NM ')) {
