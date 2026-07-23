@@ -91,6 +91,10 @@ interface AdjustCardProps {
   showInput?: boolean;
   min?: number;
   max?: number;
+  /** When defined, renders a small "Override for this message" toggle
+   *  under the label. Reflects the per-message override state. */
+  overridden?: boolean;
+  onOverrideToggle?: (next: boolean) => void;
 }
 
 function AdjustCard({ 
@@ -103,7 +107,10 @@ function AdjustCard({
   showInput = true,
   min = 0,
   max = 9999,
+  overridden,
+  onOverrideToggle,
 }: AdjustCardProps) {
+
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value.toString());
 
