@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'width-force-push-every-select',
+    type: 'bugfix',
+    title: 'Width Now Sticks on Every Message Select',
+    date: '23 Jul 2026',
+    summary:
+      'Fixed a follow-up to the Width 15 bug where the first select of a message pushed the correct Width (from the Printer Setup Card / Fleet Defaults) but a subsequent select on the same printer would revert to the printer\'s baked-in Width 15 / Delay 100. Root cause: if a message\'s stored adjustSettings had lost the width/delay/speed keys (via legacy save, race with the HMI sync, or partial capture), CodeSync silently skipped ^PW / ^DA and left the HMI\'s defaults in place. Every ^SM now unconditionally force-pushes the resolved Width, Delay, Bold, Gap and Pitch (Printer Setup Card → Fleet Defaults → Factory Fallback) followed by ^SV, so a second, third and Nth select always land on the correct values.',
+  },
+  {
     id: 'fault-popup-screen-lock-fix',
     type: 'bugfix',
     title: 'Fault Pop-Ups Can No Longer Lock the Screen',
