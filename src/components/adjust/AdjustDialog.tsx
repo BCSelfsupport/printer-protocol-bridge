@@ -209,9 +209,10 @@ function AdjustCard({
           />
           <span>
             {overridden
-              ? 'Override this printer default for this message'
-              : 'Inherits from printer Setup Card'}
+              ? 'Custom value for this message (ignores printer Setup Card)'
+              : 'Use a custom value for this message'}
           </span>
+
         </label>
       )}
     </div>
