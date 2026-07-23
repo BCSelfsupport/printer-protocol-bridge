@@ -43,6 +43,10 @@ interface AdjustDialogProps {
    *  toggles rendered — current behaviour). */
   overrides?: AdjustOverrides;
   onOverridesChange?: (partial: Partial<AdjustOverrides>) => void;
+  /** Optional: called when the operator presses Done in message-editor mode.
+   *  Lets the parent persist the message immediately so users don't need to
+   *  press Save separately after adjusting. */
+  onConfirm?: () => Promise<void> | void;
 }
 
 
