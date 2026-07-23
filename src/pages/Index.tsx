@@ -516,7 +516,13 @@ const Index = () => {
       ...fetched,
       templateValue: preferCachedTemplate ? cached.templateValue ?? fetched.templateValue : fetched.templateValue,
       height: preferCachedTemplate ? cached.height ?? fetched.height : fetched.height,
-      adjustSettings: fetched.adjustSettings ?? cached.adjustSettings,
+      // Cached (the local copy the user just saved / stored per-printer) is
+      // authoritative for adjust values and override flags. The fetched copy
+      // reflects the HMI *right now* which, immediately after ^NM, can be the
+      // printer's reset defaults (W=15/D=0) before our post-save ^PW/^DA has
+      // settled — using it here would clobber the operator's saved overrides.
+      adjustSettings: cached.adjustSettings ?? fetched.adjustSettings,
+      adjustOverrides: cached.adjustOverrides ?? fetched.adjustOverrides,
       settings: fetched.settings ?? cached.settings,
       advancedSettings: fetched.advancedSettings ?? cached.advancedSettings,
       fields: fetched.fields.map((f, i) => {
