@@ -2831,18 +2831,27 @@ const Index = () => {
     }
 
     if (printer.id === connectionState.connectedPrinter?.id) {
-      // Pause polling around the ^SM + adjust push so ^PW/^DA follow ^SM
-      // back-to-back on the wire with no intervening ^SU. This removes the
-      // brief "Width 15" flash the HMI shows between message load and the
-      // stored-adjust push.
+      // Pause polling around the adjust-push + ^SM + adjust-push sequence.
+      // Pre-pushing ^PW/^DA/etc. BEFORE ^SM ensures the printer's global
+      // adjust values are already the target (Width=2, Delay=500) when the
+      // message loads — so the HMI never briefly shows the firmware baked-in
+      // W=15/D=0 defaults. We then re-push AFTER ^SM as a backstop in case
+      // the firmware resets any of these on message load.
       setPollingPaused(true);
       let ok = false;
       try {
         await waitForPollingIdle(3000);
+        // Pre-push: seed adjust values before ^SM so there's no flash window.
+        try {
+          await applyStoredAdjustSettings(printer, message.name, { pollingAlreadyPaused: true });
+        } catch (e) {
+          console.warn('[selectMessageOnAnyPrinter] pre-adjust push failed (non-fatal):', e);
+        }
         ok = await selectMessage(message);
         if (ok) {
           try { recordMessageSent(printer.id, message.name); } catch {}
           clearAllExpiryOverrides();
+          // Post-push backstop: re-assert in case ^SM clobbered any value.
           await applyStoredAdjustSettings(printer, message.name, { pollingAlreadyPaused: true });
         }
       } finally {
@@ -2850,6 +2859,7 @@ const Index = () => {
       }
       return ok;
     }
+
     const ok = await sendCommandToPrinter(printer, `^SM ${message.name}`);
     if (ok) {
       try { recordMessageSent(printer.id, message.name); } catch {}
