@@ -340,6 +340,11 @@ export function EditMessageScreen({
                 rotation: resolvedDetails.adjustSettings?.rotation ?? prev.rotation,
               }));
             }
+            // Restore per-message override flags (empty = pure inherit).
+            if (resolvedDetails.adjustOverrides) {
+              setLocalAdjustOverrides({ ...resolvedDetails.adjustOverrides });
+            }
+
             if (resolvedDetails.fields.length > 0) {
               setSelectedFieldId(resolvedDetails.fields[0].id);
             }
