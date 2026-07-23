@@ -924,10 +924,6 @@ export function MessagesScreen({
                 toast.error(`"${selectedMessage.name}" is protected — unlock it first to delete.`);
                 return;
               }
-              if (selectedMessage && selectedMessage.name === currentMessageName) {
-                toast.error("Can't delete this message — it is currently selected for printing on the printer.");
-                return;
-              }
               selectedMessage && setDeleteConfirmOpen(true);
             }}
             disabled={!selectedMessage || isSlave}
