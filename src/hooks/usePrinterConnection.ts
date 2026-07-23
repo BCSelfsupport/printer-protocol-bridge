@@ -2903,7 +2903,7 @@ export function usePrinterConnection() {
         deleteConfirmed = await runPrinterWriteExclusive(printer.id, async () => {
           let confirmed = false;
           let guardTimer: ReturnType<typeof setTimeout> | null = null;
-          const releaseSaveBusy = beginSaveBusy();
+          let releaseSaveBusy = () => {};
           let shouldDisconnectAfter = false;
 
           setPollingPaused(true);
@@ -2933,6 +2933,8 @@ export function usePrinterConnection() {
 
               shouldDisconnectAfter = true;
             }
+
+            releaseSaveBusy = beginSaveBusy();
 
             const selectedResult = await printerTransport.sendCommand(
               printer.id,
