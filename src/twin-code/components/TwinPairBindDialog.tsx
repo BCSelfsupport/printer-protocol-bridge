@@ -390,7 +390,7 @@ export function TwinPairBindDialog({ open, onOpenChange }: { open: boolean; onOp
             <span className="font-semibold text-foreground">Wire format on bind:</span>{" "}
             <code className="font-mono">^MB</code> →{" "}
             <code className="font-mono">^LM</code> check →{" "}
-            <code className="font-mono">^DM/^NM/^SV</code> if missing →{" "}
+            <code className="font-mono">^DM/^NM</code> if missing →{" "}
             <code className="font-mono">^SM &lt;message&gt;</code> →{" "}
             <code className="font-mono">^MD^&lt;BD|TD&gt;&lt;field&gt;;&lt;serial&gt;</code> per print →{" "}
             <code className="font-mono">^ME</code> on unbind.

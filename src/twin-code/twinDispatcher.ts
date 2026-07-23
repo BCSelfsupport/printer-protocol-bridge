@@ -112,10 +112,9 @@ function isPrinterCommandAccepted(result: { success?: boolean; response?: string
 // IMPORTANT: For the HMI run counters (Print=0, Product=6) we ALSO have to
 // zero the *start* value (`S0`) — not just the current value. Without this,
 // the next `^SM` activation reloads the counter to whatever start value was
-// previously persisted into the message (commonly the pre-bind reading like
-// 84), making the counters visibly snap back to old values the moment the
-// real production message becomes active. Setting `S0` then `^SV` permanently
-// pins the message's saved snapshot at 0.
+// previously stored in the message (commonly the pre-bind reading like 84),
+// making the counters visibly snap back to old values the moment the real
+// production message becomes active. Setting `S0` pins the saved snapshot at 0.
 const ALL_COUNTER_ZERO_COMMANDS = [
   '^CC 0;S0',
   '^CC 0;0',
@@ -142,8 +141,6 @@ async function forceZeroHmiRunCountersForPrinter(printerId: number, label: 'A' |
   };
   trace('hmi-counter-zero:start', { phase });
   await sweep();
-  const save = await printerTransport.sendCommand(printerId, '^SV', { maxWaitMs: 3000 }).catch(() => null);
-  console.info(`[TwinBind:${label}] hmi-counter-zero:save`, { printerId, phase, ok: !!save?.success, response: save?.response?.trim?.()?.slice(0, 120) });
   await new Promise(res => setTimeout(res, 700));
 
   let cn = await printerTransport.sendCommand(printerId, '^CN').catch(() => null);
@@ -151,8 +148,6 @@ async function forceZeroHmiRunCountersForPrinter(printerId: number, label: 'A' |
   if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
     trace('hmi-counter-zero:retry', { phase, product: counts.product, print: counts.print });
     await sweep();
-    const retrySave = await printerTransport.sendCommand(printerId, '^SV', { maxWaitMs: 3000 }).catch(() => null);
-    console.info(`[TwinBind:${label}] hmi-counter-zero:retry-save`, { printerId, phase, ok: !!retrySave?.success, response: retrySave?.response?.trim?.()?.slice(0, 120) });
     await new Promise(res => setTimeout(res, 700));
     cn = await printerTransport.sendCommand(printerId, '^CN').catch(() => null);
     counts = parseCounterCounts(cn?.response || '');
@@ -270,8 +265,6 @@ class PrinterSession {
         await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 3000 }).catch(() => {});
         await new Promise(res => setTimeout(res, 300));
       }
-      // Persist to non-volatile so the values survive ^SM activation.
-      await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 3000 }).catch(() => {});
       await new Promise(res => setTimeout(res, 300));
       trace('preSelect:done');
     };
@@ -284,7 +277,6 @@ class PrinterSession {
         console.info(`[TwinBind:${this.label}] postSelect:cmd`, { printerId: this.printerId, cmd, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
         await new Promise(res => setTimeout(res, 300));
       }
-      await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 3000 }).catch(() => {});
       await new Promise(res => setTimeout(res, 300));
       trace('postSelect:done');
     };
@@ -301,7 +293,6 @@ class PrinterSession {
         // must NOT switch to ^MB or ^CM p1 because either path can make the
         // printer wait on host-controlled flow and ignore the hardware Print Go.
         `^CM s${TWIN_DEFAULT_SPEED_CODE};o0;p0`,
-        '^SV',
       ];
       for (const cmd of commands) {
         const r = await printerTransport.sendCommand(this.printerId, cmd, { maxWaitMs: 4000 });
@@ -586,8 +577,6 @@ class PrinterSession {
    * Wire sequence on miss:
    *   ^DM <name>  (defensive — ignored if message doesn't exist)
    *   ^NM <template>;<speed>;<orient>;<mode>;<name>^A<field>...
-   *   ^SV         (commit to non-volatile storage)
-   *
    * Returns `seeded: false` when the message was already there.
    */
   /**
@@ -735,10 +724,6 @@ class PrinterSession {
       const nm = await printerTransport.sendCommand(this.printerId, `^NM 1;0;0;0;${parkName}^AT1;0;0;2;P`, { maxWaitMs: 4000 });
       responses.push(`^NM ${parkName} → ${nm?.success ? 'ACK' : 'NAK'}${nm?.response ? ` "${nm.response.trim().slice(0, 80)}"` : ''}`);
       if (!nm?.success) return { ok: false, error: `parking message create failed`, responses };
-      await new Promise(res => setTimeout(res, 300));
-      const sv = await printerTransport.sendCommand(this.printerId, '^SV', { maxWaitMs: 4000 });
-      responses.push(`^SV park → ${sv?.success ? 'ACK' : 'NAK'}${sv?.response ? ` "${sv.response.trim().slice(0, 80)}"` : ''}`);
-      if (!sv?.success) return { ok: false, error: `parking message save failed`, responses };
       await new Promise(res => setTimeout(res, 500));
       selectedPark = parkName;
     }
@@ -1236,7 +1221,7 @@ export async function seedTwinPairMessages(
       ]);
       if (!resA.ok || !resB.ok) return { ok: false, error: resA.error || resB.error || 'Message auto-create failed' };
 
-      // Give freshly-seeded ^NM/^SV a beat to commit before any follow-on cmds.
+      // Give freshly-seeded ^NM/^NF a beat to commit before any follow-on cmds.
       if (resA.seeded || resB.seeded) await new Promise(res => setTimeout(res, 600));
 
       // Print params are safe before ^SM-select, but counter *current value*
@@ -1267,8 +1252,6 @@ export async function seedTwinPairMessages(
         }
 
         await new Promise(res => setTimeout(res, 300));
-        await printerTransport.sendCommand(pid, '^SV', { maxWaitMs: 3000 }).catch(() => {});
-        await new Promise(res => setTimeout(res, 300));
       }
 
       // Now ^SM-select the bound LID/SIDE messages — counters and print
@@ -1289,7 +1272,6 @@ export async function seedTwinPairMessages(
           const r = await printerTransport.sendCommand(pid, `^CC ${slot};${start}`, { maxWaitMs: 3000 }).catch(() => null);
           console.info('[TwinSeed] post-select counter reset', { printerId: pid, slot, start, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
           await new Promise(res => setTimeout(res, 300));
-          await printerTransport.sendCommand(pid, '^SV', { maxWaitMs: 3000 }).catch(() => {});
         }
       }
 
@@ -1400,7 +1382,6 @@ class TwinDispatcher {
           await printerTransport.sendCommand(t.id, cmd, { maxWaitMs: 3000 }).catch(() => null);
           await new Promise(res => setTimeout(res, 150));
         }
-        await printerTransport.sendCommand(t.id, '^SV', { maxWaitMs: 3000 }).catch(() => null);
       }
       autoCodeSerialMirror.resetForNext(start);
       this.mirrorBaseline = seed;

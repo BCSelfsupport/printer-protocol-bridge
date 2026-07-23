@@ -14,7 +14,7 @@ top failure mode for first-time hardware bring-up.
 
 ## Wire sequence on bind (per side)
 ```
-^MB → ^LM → if message missing: ^DM <name> → ^NM ... → ^SV → ^SM <name>
+^MB → ^LM → if message missing: ^DM <name> → ^NM ... → ^SM <name>
 ```
 Existing messages are **never overwritten** — the dispatcher only seeds when
 ^LM does not return the configured name. Idempotent on every subsequent bind.
@@ -25,7 +25,6 @@ Existing messages are **never overwritten** — the dispatcher only seeds when
 ```
 ^DM __NAME__
 ^NM 16;0;0;0;__NAME__^AB 0;0;7;5;DRYRUN0000000
-^SV
 ```
 - Template = 16-dot strip (Model 88 capable; caps height for ≥200 units/min)
 - Single field 1: native ECC200 DataMatrix, size param `s=5` → 16×16
@@ -37,7 +36,6 @@ Existing messages are **never overwritten** — the dispatcher only seeds when
 ```
 ^DM __NAME__
 ^NM 7;0;0;0;__NAME__^AT 0;0;1;DRYRUN0000000
-^SV
 ```
 - Template = **7-dot strip** (matches Standard 7×5 font height — no wasted vertical space on a side printer that only carries the human-readable serial)
 - Single field 1: text, font `1` = Standard 7×5
@@ -74,7 +72,7 @@ missing") with the seed description inline. Default ON. Operator can opt out
 per side when they want to run a hand-built message instead.
 
 The dialog footer documents the full wire sequence including the ^LM check
-and conditional ^DM/^NM/^SV path.
+and conditional ^DM/^NM path. Never add ^SV; it is not a valid command.
 
 ## Files
 - `src/twin-code/messageSeeds.ts` — new, canonical LID/SIDE seeds + helpers

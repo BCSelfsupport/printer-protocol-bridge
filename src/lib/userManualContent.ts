@@ -260,7 +260,7 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'editor',
         title: 'Message editor',
-        body: `The editor is a dot-matrix canvas matching the print head's physical resolution.\n\n**Adding fields:** Click **+ New** and choose Text, Line ID, User Define, AutoCode, Barcode, or Graphic.\n\n**Moving fields:** Click and drag. Use marquee selection (drag in empty space) to select multiple fields.\n\n**Field settings:** With a field selected, the bottom panel shows font size, template, bold, gap (character spacing), rotation, and auto-numerals.\n\n**Saving:** Click **Save**. CodeSync sends ^NM and ^SV to the printer and waits for confirmation. If the printer rejects the message, the exact reason is displayed.`,
+        body: `The editor is a dot-matrix canvas matching the print head's physical resolution.\n\n**Adding fields:** Click **+ New** and choose Text, Line ID, User Define, AutoCode, Barcode, or Graphic.\n\n**Moving fields:** Click and drag. Use marquee selection (drag in empty space) to select multiple fields.\n\n**Field settings:** With a field selected, the bottom panel shows font size, template, bold, gap (character spacing), rotation, and auto-numerals.\n\n**Saving:** Click **Save**. CodeSync sends ^NM to the printer and waits for confirmation. If the printer rejects the message, the exact reason is displayed.`,
         screenshot: '/manual-screenshots/09-message-editor.png',
         callouts: [
           { label: 'Editor toolbar', text: 'Save, Settings, Advanced, Data, Undo/Redo, Zoom — the headline actions for the message' },
@@ -268,7 +268,7 @@ export const MANUAL: ManualChapter[] = [
           { label: 'Selected field', text: 'click any field to select; drag-to-move; marquee in empty space to multi-select' },
           { label: 'Field Settings panel', text: 'font / template / bold / gap / rotation / auto-numerals for the selected field; updates live as you type' },
           { label: '+ New Field', text: 'opens the field type chooser (Text, Scanned, Line ID, User Define, AutoCode, Barcode, Graphic)' },
-          { label: 'Save', text: 'sends ^NM + ^SV to the printer; rejection reason from the firmware is surfaced verbatim if it fails' },
+          { label: 'Save', text: 'sends ^NM to the printer; rejection reason from the firmware is surfaced verbatim if it fails' },
         ],
       },
       {
@@ -308,7 +308,7 @@ export const MANUAL: ManualChapter[] = [
           { label: 'Text Field', text: 'static text — supports mixed case (no forced uppercase) and {TOKEN} substitution from prompted/scanned fields' },
           { label: 'Scanned Field', text: 'specialized prompted field — value comes from a barcode scan at select time (USB scanner or paired phone camera)' },
           { label: 'Line ID', text: 'resolves to the connected printer\'s Line ID config at print time — required to be set on the printer record' },
-          { label: 'User Define', text: 'operator types the value at message-select time; baked into the message via atomic ^DM+^NM+^SV save' },
+          { label: 'User Define', text: 'operator types the value at message-select time; baked into the message via the ^NM save flow' },
           { label: 'AutoCode', text: 'opens the AutoCode chooser (Time / Date / Counter / Shift)' },
           { label: 'Barcode', text: 'opens the Barcode wizard — 10+ types including ECC200 Data Matrix rendered client-side via bwip-js' },
           { label: 'Graphic', text: 'inserts a bitmap from the printer\'s onboard graphic library (TRUPOINT.BMP, LOGO1.BMP, etc.)' },
@@ -390,13 +390,13 @@ export const MANUAL: ManualChapter[] = [
           { label: 'Prompt Label', text: 'shown to the operator at select time and used as the {TOKEN} name for cross-field references' },
           { label: 'Max Characters', text: 'enforced at prompt time; also used to size the placeholder block on the canvas' },
           { label: 'Default value', text: 'pre-fills the operator prompt — useful for setup pieces or "no change" defaults' },
-          { label: 'Save', text: 'value is baked into the message via atomic ^DM + ^NM + ^SV at select time, then ^SM selects the new copy' },
+          { label: 'Save', text: 'value is baked into the message via ^NM at select time, then ^SM selects the new copy' },
         ],
       },
       {
         id: 'scanned-field',
         title: 'Scanned fields (barcode capture)',
-        body: `**Scanned Field** is a specialized prompted field whose value comes from a barcode scan instead of typed input. Use it for serialized cartons, METRC tags, lot stickers, and any workflow where the operator already has a printed code in front of them.\n\n**Creating one:**\n1. In the editor, click **+ New** and pick **Scanned Field**\n2. Set the **Prompt Label** (e.g. "SCAN UID") and **Max Length**\n3. Place the field on the canvas like any other text field\n\n**At print-select time** the operator sees a scan dialog instead of a keyboard. They can:\n\n- Scan with a **USB / wedge scanner** plugged into the PC (most reliable)\n- Scan with a **paired mobile phone's camera** — the request appears automatically on the phone, the result is pushed back to the PC and applied to the message (see Chapter 13)\n- Type the value manually as a fallback\n\nThe scanned value is baked into the message via the same atomic ^DM + ^NM + ^SV save flow used by User Define, so the printer always prints exactly what was scanned — no race conditions.\n\n**Token linking:** Scanned (and User Define) fields can be referenced from other fields using {LABEL} placeholders, so one scan can populate a barcode, a date code, and a human-readable text field at the same time. Edit any text field and type the prompt label inside curly braces, e.g. \`Lot {LOT CODE}\`.`,
+        body: `**Scanned Field** is a specialized prompted field whose value comes from a barcode scan instead of typed input. Use it for serialized cartons, METRC tags, lot stickers, and any workflow where the operator already has a printed code in front of them.\n\n**Creating one:**\n1. In the editor, click **+ New** and pick **Scanned Field**\n2. Set the **Prompt Label** (e.g. "SCAN UID") and **Max Length**\n3. Place the field on the canvas like any other text field\n\n**At print-select time** the operator sees a scan dialog instead of a keyboard. They can:\n\n- Scan with a **USB / wedge scanner** plugged into the PC (most reliable)\n- Scan with a **paired mobile phone's camera** — the request appears automatically on the phone, the result is pushed back to the PC and applied to the message (see Chapter 13)\n- Type the value manually as a fallback\n\nThe scanned value is baked into the message via the same ^NM save flow used by User Define, so the printer always prints exactly what was scanned — no race conditions.\n\n**Token linking:** Scanned (and User Define) fields can be referenced from other fields using {LABEL} placeholders, so one scan can populate a barcode, a date code, and a human-readable text field at the same time. Edit any text field and type the prompt label inside curly braces, e.g. \`Lot {LOT CODE}\`.`,
       },
       {
         id: 'data-link',
@@ -980,7 +980,7 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'tokens-how-it-works',
         title: 'How tokens work',
-        body: `Every **User Define** or **Scanned Field** has a **Prompt Label** (e.g. \`LOT CODE\`, \`SCAN UID\`). That label becomes a token that any other text or barcode field can embed using curly braces:\n\n- A text field with the literal value \`Lot {LOT CODE}\` resolves at print time to \`Lot ABC123\` after the operator types or scans \`ABC123\`.\n- A barcode field whose data is set to \`{SCAN UID}\` resolves to the scanned UID — so a single scan populates both the human-readable text and the barcode.\n- Tokens can be combined in one field: \`Batch {LOT CODE} / Run {RUN ID}\`.\n\n**Resolution order:** scanned values override typed values override defaults. Resolution happens in the same atomic save (^DM + ^NM + ^SV) that bakes prompted values into the message, so the printer always prints exactly the resolved value — no race conditions.`,
+        body: `Every **User Define** or **Scanned Field** has a **Prompt Label** (e.g. \`LOT CODE\`, \`SCAN UID\`). That label becomes a token that any other text or barcode field can embed using curly braces:\n\n- A text field with the literal value \`Lot {LOT CODE}\` resolves at print time to \`Lot ABC123\` after the operator types or scans \`ABC123\`.\n- A barcode field whose data is set to \`{SCAN UID}\` resolves to the scanned UID — so a single scan populates both the human-readable text and the barcode.\n- Tokens can be combined in one field: \`Batch {LOT CODE} / Run {RUN ID}\`.\n\n**Resolution order:** scanned values override typed values override defaults. Resolution happens in the same ^NM save flow that bakes prompted values into the message, so the printer always prints exactly the resolved value — no race conditions.`,
       },
       {
         id: 'tokens-creating',
@@ -1024,7 +1024,7 @@ export const MANUAL: ManualChapter[] = [
           { label: 'Dispatch Config', text: 'message name + field # the dispatcher writes into each cycle (defaults: LID/SIDE, field 1)' },
           { label: '^MD subcommand toggle', text: 'pick ^BD (barcode data) for A and ^TD (text data) for B — pre-set per side, change only for non-standard templates' },
           { label: 'Auto-create on bind', text: 'if the message does not exist on the printer, CodeSync seeds the canonical 16×16 DM or 7-dot text template and saves it' },
-          { label: 'Wire format hint', text: 'shows the exact protocol sequence (^MB → ^LM check → ^DM/^NM/^SV → ^SM → per-print ^MD) — useful for diagnostics' },
+          { label: 'Wire format hint', text: 'shows the exact protocol sequence (^MB → ^LM check → ^DM/^NM → ^SM → per-print ^MD) — useful for diagnostics' },
         ],
       },
       {
@@ -1099,7 +1099,7 @@ export const MANUAL: ManualChapter[] = [
       {
         id: 'protocol',
         title: 'Protocol commands (advanced)',
-        body: `CodeSync uses BestCode protocol v2.6 over TCP port 23. Key commands:\n\n- **^SU** — Status update (polled every 5s)\n- **^LE** — List errors (authoritative for faults)\n- **^CN** — Counter values\n- **^TM** — Runtime metrics\n- **^NM / ^SV** — New message / save\n- **^SM** — Select message\n- **^DM** — Delete message\n- **^PR 1 / 0** — Print run / stop\n- **^VV** — Version / model identification\n\nAdvanced users can send raw commands via the Service Tools panel.`,
+        body: `CodeSync uses BestCode protocol v2.6 over TCP port 23. Key commands:\n\n- **^SU** — Status update (polled every 5s)\n- **^LE** — List errors (authoritative for faults)\n- **^CN** — Counter values\n- **^TM** — Runtime metrics\n- **^NM / ^NF** — New message / append fields\n- **^SM** — Select message\n- **^DM** — Delete message\n- **^PR 1 / 0** — Print run / stop\n- **^VV** — Version / model identification\n\nAdvanced users can send raw commands via the Service Tools panel.`,
       },
       {
         id: 'support',

@@ -57,7 +57,7 @@ interface Props {
 // used by save/select paths. Without this, running the diagnostic suite on a
 // printer with an active main-app session could open a second Telnet socket
 // (forbidden on BestCode hardware — see port-23-single-session memory) or
-// interleave with an in-flight ^NM/^SV digest and lock the printer.
+// interleave with an in-flight post-^NM digest and lock the printer.
 import { runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
 import { waitForSaveIdle } from '@/lib/saveBusy';
 import { printerTransport } from '@/lib/printerTransport';

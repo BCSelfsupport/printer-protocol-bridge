@@ -12,7 +12,7 @@ The PC Library stores messages in localStorage (`bestcode-pc-library`) keyed by 
 
 **Swap slot mechanism**: Each printer has one configurable swap slot (`bestcode-swap-slot` in localStorage). When pushing:
 - The current swap slot message is saved to PC Library first
-- The PC Library message is created on the printer via `^DM + ^NM + ^SV`
+- The PC Library message is created on the printer via `^DM + ^NM` (never `^SV`; it is not a valid command)
 - The pushed message becomes the new swap slot
 - The pushed message is removed from PC Library (it's now on the printer)
 

@@ -6,12 +6,12 @@ type: constraint
 
 # Port-23 lockup prevention — invariants
 
-BestCode printers lock up (requiring power-cycle) when two writers overlap on the single port-23 Telnet session, especially during the ^NM/^SV digest window. These layers together prevent it. **Do not remove or bypass any of them.**
+BestCode printers lock up (requiring power-cycle) when two writers overlap on the single port-23 Telnet session, especially during the post-^NM digest window. These layers together prevent it. **Do not remove or bypass any of them.** There is no `^SV` command in protocol v2.6.
 
 ## The layers
 
 1. **`runPrinterWriteExclusive(printerId, fn)`** in `src/lib/printerWriteQueue.ts` — per-printer serial promise chain. Also tracks `activeLocks` set so the transport tripwire can detect unguarded writes.
-2. **`beginSaveBusy()` / `isSaveBusy()`** in `src/lib/saveBusy.ts` — sticky flag (with 4s grace) around ^NM/^SV. Fleet telemetry and polling defer while true.
+2. **`beginSaveBusy()` / `isSaveBusy()`** in `src/lib/saveBusy.ts` — sticky flag (with 4s grace) around save-class commands (`^NM`, `^NF`, `^DM`). Fleet telemetry and polling defer while true.
 3. **`printerTransport.sendCommand` tripwire** in `src/lib/printerTransport.ts` — in DEV, logs `[portGuard] UNSAFE WRITE during saveBusy without exclusive lock` with stack trace whenever a caller bypasses the guards. Also records every command to the ring buffer regardless of build mode.
 4. **`printerCommandLog`** in `src/lib/printerCommandLog.ts` — 500-entry per-printer ring buffer. `window.exportPrinterLog(printerId)` downloads a plain-text post-mortem for support tickets.
 
@@ -21,7 +21,7 @@ BestCode printers lock up (requiring power-cycle) when two writers overlap on th
 - ✅ `useMasterSlaveSync sendCommandToPrinter` / `sendCommandSequenceToPrinter`
 - ✅ `useSerializedPolling` — the whole tick runs inside `runPrinterWriteExclusive(printerId, ...)`, with `isSaveBusy` fast-path bail AND re-check after lock acquisition
 - ✅ `useServiceStatusPolling` — same pattern
-- ✅ `DevPanel handleSendCommand` / `handleQuickCommand` — via `dispatchGuardedCommand` (waits for save-idle, takes exclusive lock, marks save-busy for ^NM/^NF/^SV/^DM)
+- ✅ `DevPanel handleSendCommand` / `handleQuickCommand` — via `dispatchGuardedCommand` (waits for save-idle, takes exclusive lock, marks save-busy for ^NM/^NF/^DM)
 - ✅ `DiagnosticTestProcedure` — `connectPrinter` / `disconnectPrinter` / `sendCmd` all take the exclusive lock; connect waits for save-idle first
 - ✅ `oneToOneController` — runs on the connected printer's persistent socket, serialized by main.cjs command queue
 - ❌ `useElectronPrinter.ts` — **DELETED**. Was dead code and would bypass every guard. Do NOT re-add.
@@ -29,7 +29,7 @@ BestCode printers lock up (requiring power-cycle) when two writers overlap on th
 ## Rules for new code
 
 - Any new file that calls `window.electronAPI.printer.sendCommand` or `.connect` directly is WRONG. Use `printerTransport.sendCommand` instead, wrapped in `runPrinterWriteExclusive` when the caller is starting a multi-command transaction or a mutation.
-- Save-class commands (`^NM`, `^NF`, `^SV`, `^DM`) MUST be wrapped in `beginSaveBusy()` so background uploaders/polling defer.
+- Save-class commands (`^NM`, `^NF`, `^DM`) MUST be wrapped in `beginSaveBusy()` so background uploaders/polling defer. Never add `^SV`; it is not a valid command.
 - Background polling loops MUST bail on `isSaveBusy()` at BOTH tick entry AND before each write inside the loop (TOCTOU).
 - If a diagnostic or maintenance tool needs its own socket, take `runPrinterWriteExclusive` and `waitForSaveIdle` first — never open a second Telnet session on a printer the main app already has connected.
 

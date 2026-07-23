@@ -15,7 +15,7 @@ Master group / Ungrouped, remembers last selection per source in
 
 - **Keyboard prompt** — `UserDefineEntryDialog` opens once, value baked into
   fields, then `onApplyPromptValuesOnPrinter` (= `applyPromptValuesToPrinter`)
-  is called in parallel per target. Uses switch-away + `^NM` + `^SV` + `^SM`.
+  is called in parallel per target. Uses switch-away + `^NM` + `^SM`; never `^SV`.
   No HMI interaction on any target.
 - **No prompt** — `onSelectOnPrinter` (= `selectMessageOnAnyPrinter`) fires
   plain `^SM` per target in parallel.

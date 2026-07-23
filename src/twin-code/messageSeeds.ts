@@ -1,14 +1,14 @@
 /**
  * Twin Code — Canonical message seeds (auto-create on bind)
  * ----------------------------------------------------------
- * Hand-validated ^DM/^NM/^SV sequences that guarantee the LID and SIDE
+ * Hand-validated ^DM/^NM sequences that guarantee the LID and SIDE
  * printers each have exactly the message + field shape the dispatcher
  * expects. Seeded ONCE per printer; subsequent binds skip seeding when
  * ^LM shows the message already exists.
  *
  * Why a seed instead of programmatic synthesis?
  *   - Removes operator error during first hardware bring-up (wrong field
- *     type, off-by-one index, missing ^SV, mismatched template).
+ *     type, off-by-one index, mismatched template).
  *   - The dispatcher hot path (^MD^BD1 / ^MD^TD1) is dead simple as long
  *     as the field shape is exactly right — so we lock that shape here.
  *   - Single-source-of-truth for the customer's physical layout
@@ -25,7 +25,6 @@
  *   §5.30 ^NM  — New Message (template;speed;orient;printMode;name + fields)
  *   §5.33.2.1 ^AB — Barcode field (DataMatrix s=5 → 16×16)
  *   §5.33.x   ^AT — Text field (font, position, data)
- *   §5.50 ^SV  — Save (commits ^NM to non-volatile storage)
  *   §6.1      one-to-one mode (^MD^BD / ^MD^TD)
  */
 
@@ -37,7 +36,7 @@ export interface MessageSeed {
   description: string;
   /**
    * Ordered protocol commands to send when the message is missing.
-   * Sent sequentially through the regular transport with ^SV at the end.
+   * Sent sequentially through the regular transport.
    * Placeholder `__NAME__` is replaced with the actual message name at send time
    * so operator-renamed pairs still work.
    */
@@ -97,7 +96,6 @@ export const LID_SEED: MessageSeed = {
     //
     // Template code 4 = 1×16-dot strip (per templateToProtocolCode mapping).
     "^NM 4;0;0;0;__NAME__^AB1;0;0;0;7;5;DRYRUN0000000",
-    "^SV",
   ],
 };
 
@@ -144,7 +142,6 @@ export const SIDE_SEED: MessageSeed = {
     //     f=2   font code 2 = Standard 7-high
     //     data  placeholder; dispatcher overwrites per print via ^MD^TD1
     "^NM 1;0;0;0;__NAME__^AT1;0;0;2;DRYRUN0000000",
-    "^SV",
   ],
 };
 
@@ -163,7 +160,6 @@ export const LOADING_SEED: MessageSeed = {
   commandsTemplate: [
     "^DM __NAME__",
     "^NM 1;0;0;0;__NAME__^AT1;0;0;2;LOADING",
-    "^SV",
   ],
 };
 
@@ -295,7 +291,6 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
         // (DataMatrix has NO `r` segment): n;x;y;f;t;s;data
         // t=7 DataMatrix, s=5 16×16 ECC200.
         `^NM 4;0;0;0;__NAME__^AB1;0;0;0;7;5;${sample}`,
-        "^SV",
       ],
     };
   }
@@ -332,9 +327,9 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
   const TEMPLATE = 1;
 
   // PROTOCOL v2.6 §5.30/§5.31 — multi-field messages MUST use ^NM with the
-  // FIRST field inline, then ^NF <message>; per additional field, then ^SV.
+  // FIRST field inline, then ^NF <message>; per additional field.
   // Cramming all 5 fields into a single ^NM ACKs (echoes) but is silently
-  // rejected by the firmware; ^SV then returns CmdNotRec (nothing pending).
+  // rejected by the firmware.
   // This is the same fix used for the 12-field DOZEN12 message — see
   // mem://features/message-persistence/nm-nf-field-append-flow.
   // ^AC extended form (protocol v2.6 §5.33 counter field):
@@ -375,7 +370,6 @@ export function buildAutoCodeSeed(opts: AutoCodeSeedOpts, side: "A" | "B" = "B")
       "^DM __NAME__",
       `^NM ${TEMPLATE};0;0;0;__NAME__${firstField}`,
       ...appendFields.map((f) => `^NF __NAME__;${f}`),
-      "^SV",
     ],
   };
 }

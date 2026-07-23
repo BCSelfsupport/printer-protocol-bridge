@@ -95,7 +95,6 @@ const MESSAGE_RELOAD_SETTLE_MS = 900;
 const SAVE_PUSH_SETTLE_MS = 1500;
 const SAVE_ACK_MAX_WAIT_MS = 30000;
 const SAVE_NM_IDLE_AFTER_DATA_MS = 1500;
-const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 5000;
 const SAVE_PENDING_ACK_EXTRA_SETTLE_MS = 3000;
 
 const SPEED_TO_PROTOCOL_CODE: Record<PrintSettings['speed'], number> = {
@@ -135,7 +134,7 @@ const hasCompleteSaveAck = (rawResponse?: string): boolean => {
 
 const isSaveSequenceCommand = (command: string) => {
   const trimmed = command.trim().toUpperCase();
-  return trimmed.startsWith('^NM ') || trimmed.startsWith('^NF ') || trimmed === '^SV';
+  return trimmed.startsWith('^NM ') || trimmed.startsWith('^NF ');
 };
 
 const getSaveCommandDelay = (command: string, fieldCount: number) => {
@@ -147,7 +146,6 @@ const getSaveCommandDelay = (command: string, fieldCount: number) => {
     return Math.min(4000, 1000 + fieldCount * 250);
   }
   if (trimmed.startsWith('^NF ')) return 1500;
-  if (trimmed === '^SV') return SAVE_PUSH_SETTLE_MS;
   return 300;
 };
 
@@ -420,7 +418,7 @@ const Index = () => {
     // During a message save, speed/orientation/print-mode are embedded in ^NM
     // and we must not send an immediate follow-up ^CM. During a plain ^SM
     // selection, however, ^CM is required so the selected stored message adopts
-    // its saved per-printer speed/rotation before ^SV persists it.
+    // its saved per-printer speed/rotation.
     if (includeMessageSettings && includeMessageSettingsCommand) {
       const speedCode = SPEED_TO_PROTOCOL_CODE[perMessageSettings.speed] ?? 0;
       const rotationCode = ROTATION_TO_PROTOCOL_CODE[perMessageSettings.rotation] ?? 0;
@@ -873,12 +871,10 @@ const Index = () => {
       const trimmed = command.trim().toUpperCase();
       const saveOptions = (trimmed.startsWith('^NM ') || trimmed.startsWith('^NF '))
         ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_NM_IDLE_AFTER_DATA_MS }
-        : trimmed === '^SV'
-          ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS }
-          : undefined;
+        : undefined;
       const validateResult = (result: { success?: boolean; response?: string; error?: string }) => {
         const response = result?.response ?? result?.error ?? '';
-        const requiresSaveAck = (window.electronAPI || isRelayMode()) && (trimmed.startsWith('^NM ') || trimmed.startsWith('^NF ') || trimmed === '^SV');
+        const requiresSaveAck = (window.electronAPI || isRelayMode()) && (trimmed.startsWith('^NM ') || trimmed.startsWith('^NF '));
         const missingSaveAck = requiresSaveAck && !hasCompleteSaveAck(response);
         const partialPendingSave = missingSaveAck && !!response.trim();
         return {
@@ -958,8 +954,7 @@ const Index = () => {
         console.log(`[PrinterWrite] ${targetPrinter.name} #${index + 1}/${commandsToRun.length} OK in ${Date.now() - startedAt}ms: ${command.trim().slice(0, 96)}`);
 
         const pendingAckDelay = 'partialPendingSave' in result && result.partialPendingSave ? SAVE_PENDING_ACK_EXTRA_SETTLE_MS : 0;
-        const isFinalFlush = index === commandsToRun.length - 1 && command.trim().toUpperCase() === '^SV';
-        if ((index < commandsToRun.length - 1 || isFinalFlush) && delayAfterMs + pendingAckDelay > 0) {
+        if (index < commandsToRun.length - 1 && delayAfterMs + pendingAckDelay > 0) {
           await new Promise(resolve => setTimeout(resolve, delayAfterMs + pendingAckDelay));
         }
       }
@@ -1027,7 +1022,7 @@ const Index = () => {
     // slave, restore the park → delete → recreate flow in this branch.
     const commands = rawCommands.filter((cmd) => {
       const upper = cmd.trim().toUpperCase();
-      return upper !== '^SV' && !upper.startsWith('^DM ');
+      return !upper.startsWith('^DM ');
     });
 
     const sequence: string[] = [];
@@ -1035,7 +1030,6 @@ const Index = () => {
     // field by buildMessageCommands per protocol v2.6 §5.33 — no separate
     // ^CC slot config command needed (and the firmware does not accept one).
     sequence.push(...commands);
-    sequence.push('^SV');
     // Only re-select the message if the caller asks for it. In bulk "Sync
     // Slaves" we push many messages back-to-back; issuing ^SM after each
     // would make the slave visibly cycle through every message and land on
@@ -1302,10 +1296,6 @@ const Index = () => {
       // so avoid sending an immediate redundant ^SM on heavy saves.
       commandSequence.push(...messageDependentCommands);
 
-      if (hasAdjustSettings || hasMessagePrinterSettings) {
-        commandSequence.push('^SV');
-      }
-
       if (restorePreviousSelection && currentlySelectedName) {
         commandSequence.push({
           command: `^SM ${currentlySelectedName}`,
@@ -1318,7 +1308,7 @@ const Index = () => {
         // No pre-sequence sleep / waitForPollingIdle: forbidden by
         // mem://features/message-persistence/dozen12-validation. saveMessageContent
         // already paused polling and added the ^NM digest pause; the firmware is
-        // ready for the settings sequence as soon as ^NM/^SV ack returns.
+        // ready for the settings sequence as soon as ^NM ack returns.
         const result = await sendVerifiedCommandSequence(connectionState.connectedPrinter, commandSequence, followUpSettleMs);
         if (!result.success) {
           toast.error(`Saved "${targetName}", but failed to apply the message settings on the printer.`);
@@ -1518,7 +1508,7 @@ const Index = () => {
         }
       }
 
-      // Create the library message on the printer (saveMessageContent handles ^DM + ^NM + ^SV)
+      // Create the library message on the printer (saveMessageContent handles the ^NM write)
       const ok = await saveMessageContent(
         libraryMessage.name,
         libraryMessage.fields,
@@ -1862,10 +1852,6 @@ const Index = () => {
       // (setup card → fleet → factory) actually reach the printer.
       forcePushAllAdjust: true,
     });
-
-    if (commands.length > 0) {
-      commands.push({ command: '^SV', delayAfterMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS });
-    }
 
     console.log('[AdjustDebug][applyStoredAdjustSettings.start]', {
       targetPrinterId: targetPrinter.id,
@@ -2269,7 +2255,7 @@ const Index = () => {
       };
 
       // Use replaceMessageWithoutDelete for the switch-away flow
-      // This handles: ^SM BESTCODE → ^NM (with new offset, no ^SV) → ^SM back
+      // This handles: ^SM BESTCODE → ^NM (with new offset) → ^SM back
       const rewriteTarget = syncedMasterMessage
         ? { ...targetPrinter, currentMessage: messageName }
         : targetPrinter;
@@ -3376,7 +3362,7 @@ const Index = () => {
         onTurnOff={handleTurnOff}
         onSyncMaster={async (masterId) => {
           // If the master is the currently connected printer, push full message
-          // content (^DM → ^NM → ^SV via replaceMessageWithoutDelete) for every
+          // content (^NM via replaceMessageWithoutDelete) for every
           // message. Bare `^NM <name>` won't populate fields on the slave.
           const isConnectedMaster =
             connectionState.connectedPrinter?.id === masterId && isMaster;
