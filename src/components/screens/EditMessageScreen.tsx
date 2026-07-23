@@ -1793,6 +1793,7 @@ export function EditMessageScreen({
             title="Adjust Settings (Message)"
             overrides={localAdjustOverrides}
             onOverridesChange={(partial) => setLocalAdjustOverrides(prev => ({ ...prev, ...partial }))}
+            onConfirm={async () => { await handleSaveMessage(); }}
           />
 
         </>
