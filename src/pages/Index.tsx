@@ -2932,9 +2932,12 @@ const Index = () => {
             setEditingMessage({ id: newId, name });
             setCurrentScreen('editMessage');
           }}
-          onDelete={(message) => {
-            deleteMessage(message.id);
-            deleteStoredMessage(message.name, messageTargetPrinter?.id);
+          onDelete={async (message) => {
+            const deleted = await deleteMessage(message.id);
+            if (deleted) {
+              deleteStoredMessage(message.name, messageTargetPrinter?.id);
+            }
+            return deleted;
           }}
           onHome={() => setCurrentScreen('home')}
           openNewDialogOnMount={openNewDialogOnMount}
@@ -3182,9 +3185,12 @@ const Index = () => {
               setEditingMessage({ id: newId, name });
               setCurrentScreen('editMessage');
             }}
-            onDelete={(message) => {
-              deleteMessage(message.id);
-              deleteStoredMessage(message.name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id);
+            onDelete={async (message) => {
+              const deleted = await deleteMessage(message.id);
+              if (deleted) {
+                deleteStoredMessage(message.name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id);
+              }
+              return deleted;
             }}
             onHome={() => setCurrentScreen('control')}
             openNewDialogOnMount={openNewDialogOnMount}
