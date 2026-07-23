@@ -134,6 +134,28 @@ export function MessageCanvas({
   // Calculate blocked rows (from top)
   const blockedRows = TOTAL_ROWS - templateHeight;
   const visibleCols = Math.floor(canvasWidth / DOT_SIZE);
+
+  const getMultilineLinePositions = useCallback((): number[] => {
+    if (!multilineTemplate) return [];
+
+    const protocolPositions = getValidCanvasYPositions(
+      templateValue,
+      templateHeight,
+      multilineTemplate.dotsPerLine,
+    );
+
+    if (protocolPositions.length >= multilineTemplate.lines) {
+      return protocolPositions.slice(0, multilineTemplate.lines);
+    }
+
+    const fallbackPositions: number[] = [];
+    let currentY = blockedRows;
+    for (let line = 0; line < multilineTemplate.lines; line++) {
+      fallbackPositions.push(currentY);
+      currentY += multilineTemplate.dotsPerLine + 1;
+    }
+    return fallbackPositions;
+  }, [blockedRows, multilineTemplate, templateHeight, templateValue]);
   
   // Update canvas width when container resizes
   useEffect(() => {
@@ -278,16 +300,18 @@ export function MessageCanvas({
 
     // Draw multi-line template spacing as filled red rows (1 dot between each line)
     if (multilineTemplate && multilineTemplate.lines > 1) {
-      const { lines, dotsPerLine } = multilineTemplate;
-      const gap = 1; // Always 1 dot spacing between lines
+      const { dotsPerLine } = multilineTemplate;
+      const linePositions = getMultilineLinePositions();
 
-      // Draw filled red rows for inter-line spacing
-      let currentY = blockedRows;
-      for (let line = 0; line < lines; line++) {
-        currentY += dotsPerLine;
-        if (line < lines - 1) {
-          const gapY = currentY * DOT_SIZE;
-          const gapHeight = gap * DOT_SIZE;
+      // Draw filled red rows for inter-line spacing using the same protocol
+      // line positions that text snapping uses. For 2L×7 this leaves row 24
+      // blocked between line rows 17-23 and 25-31.
+      for (let line = 0; line < linePositions.length - 1; line++) {
+        const gapStart = linePositions[line] + dotsPerLine;
+        const gapEnd = linePositions[line + 1];
+        if (gapEnd > gapStart) {
+          const gapY = gapStart * DOT_SIZE;
+          const gapHeight = (gapEnd - gapStart) * DOT_SIZE;
           
           // Fill with same red as blocked area
           ctx.fillStyle = 'rgba(220, 90, 100, 0.9)';
@@ -311,7 +335,6 @@ export function MessageCanvas({
           ctx.lineTo(canvas.width, gapY + gapHeight);
           ctx.stroke();
           
-          currentY += gap;
         }
       }
     }
@@ -515,7 +538,7 @@ export function MessageCanvas({
       ctx.strokeRect(mx, my, mw, mh);
       ctx.setLineDash([]);
     }
-  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, selectedFieldIds, canvasWidth, multilineTemplate, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible, barcodeImages, isMarquee, marqueeStart, marqueeEnd]);
+  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, selectedFieldIds, canvasWidth, multilineTemplate, getMultilineLinePositions, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible, barcodeImages, isMarquee, marqueeStart, marqueeEnd]);
   
   const getMousePosition = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -555,18 +578,13 @@ export function MessageCanvas({
   const getLineForY = (y: number): { lineIndex: number; lineY: number; lineHeight: number } | null => {
     if (!multilineTemplate) return null;
     
-    const { lines, dotsPerLine } = multilineTemplate;
-    const gap = 1; // Always 1 dot spacing between lines
-    
-    let currentY = blockedRows;
-    for (let i = 0; i < lines; i++) {
-      const lineY = currentY;
+    const { dotsPerLine } = multilineTemplate;
+    const linePositions = getMultilineLinePositions();
+
+    for (let i = 0; i < linePositions.length; i++) {
+      const lineY = linePositions[i];
       if (y >= lineY && y < lineY + dotsPerLine) {
         return { lineIndex: i, lineY, lineHeight: dotsPerLine };
-      }
-      currentY += dotsPerLine;
-      if (i < lines - 1) {
-        currentY += gap;
       }
     }
     return null;
