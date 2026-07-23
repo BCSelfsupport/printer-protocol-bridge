@@ -1713,6 +1713,25 @@ const Index = () => {
             // selection) to force the firmware to reload from flash and drop
             // any dirty HMI edit buffer left over from the ^NM update.
             const reloadName = currentSelectionBefore ?? message.name;
+            // Protocol v2.6 §5.4 ^CA + §5.40 ^RE: dismiss any HMI "Save changes?"
+            // event window that ^NM may have opened (yellow Save LED), then
+            // refresh the display before reloading from flash.
+            try {
+              await printerTransport.sendCommand(target.id, '^CA', {
+                caller: 'copy:cancel-hmi-dialog',
+                maxWaitMs: 4000,
+                idleAfterDataMs: 400,
+              });
+              await new Promise((r) => setTimeout(r, 150));
+              await printerTransport.sendCommand(target.id, '^RE', {
+                caller: 'copy:refresh-display',
+                maxWaitMs: 4000,
+                idleAfterDataMs: 400,
+              });
+              await new Promise((r) => setTimeout(r, 200));
+            } catch (err) {
+              console.warn(`[CopyMessage] ^CA/^RE pass threw on ${target.name} — continuing`, err);
+            }
             try {
               await printerTransport.sendCommand(target.id, `^SM ${reloadName}`, {
                 caller: 'copy:clear-edit-buffer',
