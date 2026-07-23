@@ -1506,7 +1506,9 @@ export function EditMessageScreen({
                           speed: localAdjustSettings.speed,
                           rotation: localAdjustSettings.rotation,
                         },
+                        adjustOverrides: { ...localAdjustOverrides },
                       };
+
                       const result = await onSave(messageWithAdjust, !hasSavedToPrinterRef.current);
                       if (!result) return;
 
