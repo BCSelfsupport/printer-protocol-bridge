@@ -3052,25 +3052,12 @@ export function usePrinterConnection() {
               parkingMessage,
             });
 
-            // Protocol v2.6 §5.4 ^CA + §5.40 ^RE: dismiss any open HMI event
-            // window (the "Save changes?" prompt behind the yellow Save LED)
-            // and force the display to redraw before we switch messages.
-            try {
-              await printerTransport.sendCommand(printer.id, '^CA', {
-                caller: 'deleteMessage:cancel-hmi-dialog',
-                maxWaitMs: 4000,
-                idleAfterDataMs: 400,
-              });
-              await delay(150);
-              await printerTransport.sendCommand(printer.id, '^RE', {
-                caller: 'deleteMessage:refresh-display',
-                maxWaitMs: 4000,
-                idleAfterDataMs: 400,
-              });
-              await delay(200);
-            } catch (err) {
-              console.warn('[deleteMessage] ^CA/^RE pre-park pass threw — continuing.', err);
-            }
+            // Protocol v2.6 has no documented command that clears the
+            // "unsaved edits" (yellow Save LED) state — ^CA (§5.4) only
+            // dismisses event popups and ^RE (§5.40) only redraws the screen.
+            // The park + re-park ^SM sequence below is the documented way to
+            // force the firmware to reload the printing message from flash
+            // and thereby discard the dirty HMI edit buffer.
             const parkResult = await printerTransport.sendCommand(
               printer.id,
               `^SM ${parkingMessage}`,
