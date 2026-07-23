@@ -786,6 +786,22 @@ const Index = () => {
           instance.processCommand('^PR 1');
         }
       }
+      // Background printers only get ping polls (not ^SU), so their card would
+      // stay "NOT READY" until the operator clicked in. Mirror the stopping
+      // path: optimistically flip to ready/jetRunning=true so the fleet grid
+      // updates immediately after the 66s startup countdown completes. The
+      // next ^SU (when the operator opens the printer) will confirm/correct.
+      console.log('[handleCountdownComplete] Start countdown complete for', printerId, '- setting ready');
+      updatePrinter(printerId, {
+        status: 'ready',
+        hasActiveErrors: false,
+        jetRunning: true,
+      });
+      if (connectedPrinterId === printerId) {
+        sendCommand('^SU').then(result => {
+          console.log('[handleCountdownComplete] Post-start ^SU check:', result?.success, result?.response?.substring(0, 300));
+        }).catch(() => {});
+      }
     } else if (type === 'stopping') {
       // After the stop countdown finishes, the printer should have fully shut down.
       // Immediately set the UI state to not-ready/jet-off as a safety net.
