@@ -25,6 +25,14 @@ export interface Printer {
   serialNumber?: string; // User-entered serial number for fleet tracking
   expiryOffsetDays?: number; // Per-printer expiration date offset in days (e.g., +1, +2, +7)
   lineId?: string; // Line ID label used for Line ID field in messages
+  // Per-printer hardware identity captured from ^VV the last time we connected
+  // to this specific printer. Persisted on the fleet Printer record so the
+  // message editor and capability gates know that (e.g.) Printer 2 is an
+  // "88 HS1" even when the currently-focused connection is a different model.
+  // Without this, background printers fall back to the connected printer's
+  // model/variant and HS1 heads get offered templates their firmware rejects.
+  printerModel?: string | null;
+  printerVariant?: string | null;
   // Per-printer print orientation override. When set, master → slave sync
   // rewrites every synced message on this printer with this rotation baked
   // into the ^NM header, so lines running in the opposite direction of
