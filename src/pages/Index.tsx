@@ -1708,25 +1708,45 @@ const Index = () => {
             });
             saveMessage(targetDetails, target.id);
 
-            // Yellow-Save-LED clear: re-select the currently displayed message
-            // (or fall back to the copied message if we couldn't read a
-            // selection) to force the firmware to reload from flash and drop
-            // any dirty HMI edit buffer left over from the ^NM update.
+            // Yellow-Save-LED clear (park + re-select).
+            //
+            // Root cause: on printers where the currently-selected message
+            // has the SAME name as the one we just ^NM'd, a subsequent
+            // `^SM <sameName>` is a no-op on the firmware and does NOT
+            // reload from flash — the dirty HMI edit buffer stays put and
+            // the Save LED stays yellow (matches the reproducer on printers
+            // 2 & 3, where the copied message was already active; printer 1
+            // never saw it because the source printer is excluded from the
+            // copy loop).
+            //
+            // Fix: always park to a different message first (BESTCODE, the
+            // factory-reserved parking message present on every BestCode
+            // fleet unit) and THEN re-select the intended message. That
+            // guarantees an actual flash reload and drops the dirty buffer.
             //
             // Protocol v2.6 note: neither ^CA (§5.4, only dismisses event
-            // popups) nor ^RE (§5.40, only redraws the screen) is documented
-            // to clear the unsaved-edits state. ^SM is the only documented
-            // command that forces a flash reload of the printing message and
-            // therefore the only reliable way to drop the dirty buffer.
+            // popups) nor ^RE (§5.40, only redraws the screen) clears the
+            // unsaved-edits state. ^SM is the only documented lever, and it
+            // must switch AWAY and back to actually reload from flash.
             const reloadName = currentSelectionBefore ?? message.name;
+            const parkName = reloadName.toUpperCase() === 'BESTCODE' ? 'BESTCODE AUTO' : 'BESTCODE';
+            try {
+              await printerTransport.sendCommand(target.id, `^SM ${parkName}`, {
+                caller: 'copy:park-for-edit-buffer-clear',
+                maxWaitMs: 10000,
+                idleAfterDataMs: 800,
+              });
+            } catch (err) {
+              console.warn(`[CopyMessage] Park to ${parkName} threw on ${target.name} — continuing`, err);
+            }
             try {
               await printerTransport.sendCommand(target.id, `^SM ${reloadName}`, {
-                caller: 'copy:clear-edit-buffer',
+                caller: 'copy:reselect-after-park',
                 maxWaitMs: 12000,
                 idleAfterDataMs: 1000,
               });
             } catch (err) {
-              console.warn(`[CopyMessage] Edit-buffer clear (^SM ${reloadName}) threw on ${target.name} — continuing`, err);
+              console.warn(`[CopyMessage] Re-select ^SM ${reloadName} threw on ${target.name} — continuing`, err);
             }
           }
           results.push({ target, ok: result.success, preservedTuning, reason: result.success ? undefined : result.reason });
