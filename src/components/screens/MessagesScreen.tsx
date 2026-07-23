@@ -394,16 +394,15 @@ export function MessagesScreen({
         return;
       }
 
-      // No prompt → plain ^SM to every target. Keep this strictly sequential:
-      // BestCode port-23 firmware can lock up if a fleet selection opens many
-      // sessions at once while message writes are still settling.
+      // No prompt → plain ^SM to every target. Run in parallel — each printer
+      // has its own TCP socket + per-printer write lock (runPrinterWriteExclusive)
+      // so concurrent ^SM fan-out is safe. This restores the ~30s fleet
+      // selection timing. The lockup risk applies only to heavy ^NM message
+      // WRITES (Copy to Printers), which remain sequential.
       toast.loading(`Selecting "${selectedMessage.name}" on ${targets.length} printer(s)…`, { id: 'multi-select' });
-      const results: Array<{ p: Printer; ok: boolean }> = [];
-      for (const [index, p] of targets.entries()) {
-        toast.loading(`Selecting "${selectedMessage.name}" on ${p.name} (${index + 1}/${targets.length})…`, { id: 'multi-select' });
-        const ok = await onSelectOnPrinter(p, selectedMessage);
-        results.push({ p, ok });
-      }
+      const results = await Promise.all(
+        targets.map(async (p) => ({ p, ok: await onSelectOnPrinter(p, selectedMessage) }))
+      );
       const okCount = results.filter(r => r.ok).length;
       const failCount = results.length - okCount;
       if (failCount === 0) {
