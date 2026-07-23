@@ -1138,14 +1138,15 @@ export function MessagesScreen({
             const targets = pendingApplyTargets;
             toast.loading(`Applying "${selectedMessage.name}" to ${targets.length} printer(s)…`, { id: 'multi-prompt' });
             try {
-              // Apply one printer at a time. IMPORTANT: for each target we re-resolve
-              // any dynamicSource:'lineId' field against THAT printer's Line
-              // ID (from its Setup Card), so the source printer's Line ID is
-              // never burnt into copies. Without this, selecting from Printer
-              // 2 would push "Line 2" onto every target.
-              const results: Array<{ p: Printer; ok: boolean }> = [];
-              for (const [index, p] of targets.entries()) {
-                toast.loading(`Applying "${selectedMessage.name}" to ${p.name} (${index + 1}/${targets.length})…`, { id: 'multi-prompt' });
+              // Parallel per-printer apply. Each printer has its own port-23
+              // socket + write lock (see printerWriteQueue), so running the
+              // rewrites concurrently is safe and turns an N × ~13s serial
+              // walk into a single ~13s wall-clock window. IMPORTANT: for each
+              // target we still re-resolve any dynamicSource:'lineId' field
+              // against THAT printer's Line ID so the source printer's Line ID
+              // is never burnt into copies.
+              let completed = 0;
+              const results = await Promise.all(targets.map(async (p) => {
                 const targetLineId = p.lineId?.trim();
                 const perTargetFields = bakedFields.map(f =>
                   (f as any).dynamicSource === 'lineId' && targetLineId
@@ -1158,8 +1159,10 @@ export function MessagesScreen({
                   fields: resolveAllFields(perTargetFields, tokenMap, { preserveCounterTokens: true }),
                 };
                 const ok = await onApplyPromptValuesOnPrinter(p, selectedMessage, targetDetails);
-                results.push({ p, ok });
-              }
+                completed += 1;
+                toast.loading(`Applying "${selectedMessage.name}" to ${targets.length} printer(s)… (${completed}/${targets.length})`, { id: 'multi-prompt' });
+                return { p, ok };
+              }));
               const okCount = results.filter(r => r.ok).length;
               const failCount = results.length - okCount;
               if (failCount === 0) {
