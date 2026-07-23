@@ -1869,17 +1869,24 @@ const Index = () => {
     }
 
     if (targetPrinter.id === connectionState.connectedPrinter?.id) {
-      setPollingPaused(true);
+      const alreadyPaused = options?.pollingAlreadyPaused === true;
+      if (!alreadyPaused) setPollingPaused(true);
       try {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        await waitForPollingIdle(3000);
+        // When caller has already paused polling around the ^SM (e.g.
+        // selectMessageOnAnyPrinter), skip the settle/wait entirely so
+        // ^PW/^DA follow ^SM back-to-back — this eliminates the brief
+        // "Width 15" flash on the HMI between load and adjust push.
+        if (!alreadyPaused) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          await waitForPollingIdle(3000);
+        }
         const result = await sendVerifiedCommandSequence(targetPrinter, commands, 300);
         if (!result.success) {
           console.error('[AdjustDebug][applyStoredAdjustSettings.failed]', { targetPrinterId: targetPrinter.id, messageName, result });
           return;
         }
       } finally {
-        setPollingPaused(false);
+        if (!alreadyPaused) setPollingPaused(false);
       }
     } else {
       const result = await sendVerifiedCommandSequence(targetPrinter, commands, 300);
