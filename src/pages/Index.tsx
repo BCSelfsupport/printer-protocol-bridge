@@ -1712,26 +1712,13 @@ const Index = () => {
             // (or fall back to the copied message if we couldn't read a
             // selection) to force the firmware to reload from flash and drop
             // any dirty HMI edit buffer left over from the ^NM update.
+            //
+            // Protocol v2.6 note: neither ^CA (§5.4, only dismisses event
+            // popups) nor ^RE (§5.40, only redraws the screen) is documented
+            // to clear the unsaved-edits state. ^SM is the only documented
+            // command that forces a flash reload of the printing message and
+            // therefore the only reliable way to drop the dirty buffer.
             const reloadName = currentSelectionBefore ?? message.name;
-            // Protocol v2.6 §5.4 ^CA + §5.40 ^RE: dismiss any HMI "Save changes?"
-            // event window that ^NM may have opened (yellow Save LED), then
-            // refresh the display before reloading from flash.
-            try {
-              await printerTransport.sendCommand(target.id, '^CA', {
-                caller: 'copy:cancel-hmi-dialog',
-                maxWaitMs: 4000,
-                idleAfterDataMs: 400,
-              });
-              await new Promise((r) => setTimeout(r, 150));
-              await printerTransport.sendCommand(target.id, '^RE', {
-                caller: 'copy:refresh-display',
-                maxWaitMs: 4000,
-                idleAfterDataMs: 400,
-              });
-              await new Promise((r) => setTimeout(r, 200));
-            } catch (err) {
-              console.warn(`[CopyMessage] ^CA/^RE pass threw on ${target.name} — continuing`, err);
-            }
             try {
               await printerTransport.sendCommand(target.id, `^SM ${reloadName}`, {
                 caller: 'copy:clear-edit-buffer',
