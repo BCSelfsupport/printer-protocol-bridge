@@ -242,9 +242,14 @@ const chooseDeleteParkingMessage = (messageNames: string[], deletingName: string
   const safeNames = normalizedNames.filter(name => name !== normalizedDeletingName);
   const factorySafeNames = safeNames.filter(name => RESERVED_PRINTER_MESSAGES.has(name));
 
-  // Prefer switching to a different saved message. This raw ^SM reload is used
-  // before ^DM to clear the printer HMI's dirty/yellow-Save edit buffer without
-  // sending any adjust commands that would mark the active message dirty again.
+  // Prefer reloading the current saved message when it is not the delete target.
+  // This raw ^SM reload is used before ^DM to clear the printer HMI's
+  // dirty/yellow-Save edit buffer without sending any adjust commands that
+  // would mark the active message dirty again.
+  if (normalizedCurrentName && safeNames.includes(normalizedCurrentName)) {
+    return normalizedCurrentName;
+  }
+
   const differentFactory = factorySafeNames.find(name => name !== normalizedCurrentName);
   if (differentFactory) return differentFactory;
 
