@@ -2359,6 +2359,13 @@ const Index = () => {
         const selected = await selectMessage(message);
         if (selected) {
           clearAllExpiryOverrides();
+          // Prompt-rewrite path bypasses selectMessageOnAnyPrinter, so we must
+          // push the target's stored Adjust settings here — otherwise the
+          // printer keeps whatever Width/Delay was in RAM (often firmware
+          // default Width=15), which is exactly the bug Gary reported on
+          // prompted messages like Egg.
+          try { await applyStoredAdjustSettings(targetPrinter, message.name); }
+          catch (e) { console.warn('[PromptWrite] applyStoredAdjustSettings failed (connected):', e); }
         }
         await pushToSlaves();
         return selected;
@@ -2382,10 +2389,14 @@ const Index = () => {
     if (ok) {
       updatePrinter(targetPrinter.id, { currentMessage: message.name });
       clearAllExpiryOverrides();
+      // Same reason as above — push per-printer Adjust for non-connected targets.
+      try { await applyStoredAdjustSettings(targetPrinter, message.name); }
+      catch (e) { console.warn('[PromptWrite] applyStoredAdjustSettings failed (non-connected):', e); }
     }
     await pushToSlaves();
     return ok;
-  }, [clearAllExpiryOverrides, connectionState.connectedPrinter?.id, getSlavesForMaster, replaceMessageWithoutDelete, selectMessage, sendCommandToPrinter, updatePrinter]);
+  }, [applyStoredAdjustSettings, clearAllExpiryOverrides, connectionState.connectedPrinter?.id, getSlavesForMaster, replaceMessageWithoutDelete, selectMessage, sendCommandToPrinter, updatePrinter]);
+
 
   // Per-printer expiry offset change — uses switch-away flow to rewrite ^NM with new ^AE offset
   const handleExpiryOffsetChange = useCallback(async (printerId: number, newDays: number) => {
