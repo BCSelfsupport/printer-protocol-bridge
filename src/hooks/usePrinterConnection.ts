@@ -223,8 +223,12 @@ const parseSelectedMessageName = (raw: string): string | null => {
 
   const cleaned = first
     .replace(/^\^SM\s*/i, '')
+    .replace(/^\d+\.\s*/i, '')
+    .replace(/^CURRENT\s+(?:MESSAGE|MSG)\s*[:=]\s*/i, '')
+    .replace(/^(?:SELECTED|ACTIVE)\s+(?:MESSAGE|MSG)\s*[:=]\s*/i, '')
     .replace(/^MSG\s*:\s*/i, '')
     .replace(/^(Selected\s+)?Message\s*:\s*/i, '')
+    .replace(/\s*\(current\)\s*/gi, '')
     .replace(/>+$/g, '')
     .trim();
 
@@ -272,6 +276,13 @@ const getEmulatorForPrinter = (ipAddress?: string, port?: number) => {
     if (instance) return instance;
   }
   return printerEmulator;
+};
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const isSlowHandshakePrinter = (printer?: Printer | null): boolean => {
+  const identity = `${printer?.printerModel ?? ''} ${printer?.printerVariant ?? ''}`.toUpperCase();
+  return identity.includes('HS1');
 };
 
 export function usePrinterConnection() {
