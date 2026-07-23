@@ -186,27 +186,10 @@ export const printerTransport = {
     let result: { success: boolean; response?: string; error?: string } | null = null;
     let thrown: unknown = null;
 
-    // ^SV is NOT a real command in BestCode Remote Protocol v2.6. The printer
-    // returns "command not recognized" (verified via Dev Panel manual entry).
-    // ^NM itself persists messages; ^PW/^DA/^CM/^SB/^GP/^PA are persisted
-    // immediately per §5.x. Short-circuit here so we keep all timing/lock
-    // scaffolding built around the old ^SV calls without hitting the wire.
-    const trimmedForShortCircuit = command.trim().toUpperCase();
-    if (trimmedForShortCircuit === '^SV') {
-      const durationMs = Date.now() - startedAt;
-      recordCommand({
-        printerId,
-        command,
-        startedAt,
-        durationMs,
-        ok: true,
-        response: '[skipped: ^SV not in protocol v2.6]',
-        saveBusy,
-        lockHeld,
-        caller: options?.caller,
-      });
-      return { success: true, response: '' };
-    }
+    // ^SV ("Save queued messages") IS valid per firmware ^HE output (Gary
+    // confirmed 2026-07-23). Older protocol PDF omitted it. Pass through.
+
+
 
     try {
       if (isRelayMode()) {
