@@ -1804,11 +1804,11 @@ const Index = () => {
 
             if (!copiedMessageWasActive && parkedAfterRewrite) {
               try {
-              await printerTransport.sendCommand(target.id, `^SM ${reloadName}`, {
-                caller: 'copy:reselect-after-park',
-                maxWaitMs: 12000,
-                idleAfterDataMs: 1000,
-              });
+                await printerTransport.sendCommand(target.id, `^SM ${reloadName}`, {
+                  caller: 'copy:reselect-after-park',
+                  maxWaitMs: 12000,
+                  idleAfterDataMs: 1000,
+                });
                 updatePrinter(target.id, { currentMessage: reloadName });
               } catch (err) {
                 console.warn(`[CopyMessage] Re-select ^SM ${reloadName} threw on ${target.name} — continuing`, err);
