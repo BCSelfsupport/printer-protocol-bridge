@@ -16,6 +16,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+export interface AdjustOverrides {
+  width?: boolean;
+  height?: boolean;
+  delay?: boolean;
+  bold?: boolean;
+  gap?: boolean;
+  pitch?: boolean;
+  speed?: boolean;
+}
+
 interface AdjustDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -27,7 +37,14 @@ interface AdjustDialogProps {
   /** Optional: query current settings from the printer. When provided,
    *  the dialog auto-refreshes on open and shows a manual refresh button. */
   onRefreshFromPrinter?: () => Promise<void> | void;
+  /** Per-message override flags. When provided, each numeric field renders
+   *  an "Override for this message" toggle. Only overridden keys will beat
+   *  the printer Setup Card at ^SM time. Absent = live-adjust mode (no
+   *  toggles rendered — current behaviour). */
+  overrides?: AdjustOverrides;
+  onOverridesChange?: (partial: Partial<AdjustOverrides>) => void;
 }
+
 
 
 // Validation constraints from BestCode v2.0 protocol documentation
@@ -74,6 +91,10 @@ interface AdjustCardProps {
   showInput?: boolean;
   min?: number;
   max?: number;
+  /** When defined, renders a small "Override for this message" toggle
+   *  under the label. Reflects the per-message override state. */
+  overridden?: boolean;
+  onOverrideToggle?: (next: boolean) => void;
 }
 
 function AdjustCard({ 
@@ -86,7 +107,10 @@ function AdjustCard({
   showInput = true,
   min = 0,
   max = 9999,
+  overridden,
+  onOverrideToggle,
 }: AdjustCardProps) {
+
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value.toString());
 
@@ -110,7 +134,15 @@ function AdjustCard({
   };
 
   return (
-    <div className="bg-card rounded-lg p-3 border border-border shadow-sm">
+    <div
+      className={`rounded-lg p-3 border shadow-sm ${
+        onOverrideToggle
+          ? overridden
+            ? 'bg-primary/5 border-primary/40'
+            : 'bg-card border-border opacity-90'
+          : 'bg-card border-border'
+      }`}
+    >
       <div className="flex items-center gap-2">
         {/* Setting info */}
         <div className="flex-1 min-w-0">
@@ -128,7 +160,7 @@ function AdjustCard({
               max={max}
             />
           ) : (
-            <div className="text-lg font-bold text-foreground tabular-nums">
+            <div className={`text-lg font-bold tabular-nums ${onOverrideToggle && !overridden ? 'text-muted-foreground' : 'text-foreground'}`}>
               {typeof value === 'number' ? value.toLocaleString() : value}
             </div>
           )}
@@ -167,9 +199,25 @@ function AdjustCard({
           </button>
         </div>
       </div>
+      {onOverrideToggle && (
+        <label className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={!!overridden}
+            onChange={(e) => onOverrideToggle(e.target.checked)}
+            className="h-3.5 w-3.5 accent-primary"
+          />
+          <span>
+            {overridden
+              ? 'Override this printer default for this message'
+              : 'Inherits from printer Setup Card'}
+          </span>
+        </label>
+      )}
     </div>
   );
 }
+
 
 export function AdjustDialog({ 
   open, 
@@ -180,7 +228,16 @@ export function AdjustDialog({
   isConnected,
   title = 'Adjust Settings',
   onRefreshFromPrinter,
+  overrides,
+  onOverridesChange,
 }: AdjustDialogProps) {
+  // Message-editor mode: caller provided an override map. Live-adjust mode:
+  // no overrides prop → toggles hidden, values push directly to the printer.
+  const isMessageMode = !!onOverridesChange;
+  const overrideFor = (key: keyof AdjustOverrides) => !!overrides?.[key];
+  const toggleOverride = (key: keyof AdjustOverrides) => (next: boolean) =>
+    onOverridesChange?.({ [key]: next } as Partial<AdjustOverrides>);
+
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
@@ -270,6 +327,11 @@ export function AdjustDialog({
 
 
         <div className="space-y-4">
+          {isMessageMode && (
+            <div className="text-[11px] text-muted-foreground bg-muted/40 border border-border rounded-md px-3 py-2">
+              By default this message inherits Width / Delay / Bold / Gap / Pitch from each printer's Setup Card. Tick <span className="font-semibold text-foreground">Override</span> on any field below to force this message to use its own value on every printer.
+            </div>
+          )}
           {/* Settings grid - single column on mobile, 2 columns on tablet+ */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* Width: 0-16000 */}
@@ -282,6 +344,8 @@ export function AdjustDialog({
               disabled={!isConnected}
               min={CONSTRAINTS.width.min}
               max={CONSTRAINTS.width.max}
+              overridden={isMessageMode ? overrideFor('width') : undefined}
+              onOverrideToggle={isMessageMode ? toggleOverride('width') : undefined}
             />
 
             {/* Height: 0-10 */}
@@ -294,6 +358,8 @@ export function AdjustDialog({
               disabled={!isConnected}
               min={CONSTRAINTS.height.min}
               max={CONSTRAINTS.height.max}
+              overridden={isMessageMode ? overrideFor('height') : undefined}
+              onOverrideToggle={isMessageMode ? toggleOverride('height') : undefined}
             />
 
             {/* Delay: 0-4,000,000,000 */}
@@ -306,6 +372,8 @@ export function AdjustDialog({
               disabled={!isConnected}
               min={CONSTRAINTS.delay.min}
               max={CONSTRAINTS.delay.max}
+              overridden={isMessageMode ? overrideFor('delay') : undefined}
+              onOverrideToggle={isMessageMode ? toggleOverride('delay') : undefined}
             />
 
             {/* Bold: 0-9 */}
@@ -318,6 +386,8 @@ export function AdjustDialog({
               disabled={!isConnected}
               min={CONSTRAINTS.bold.min}
               max={CONSTRAINTS.bold.max}
+              overridden={isMessageMode ? overrideFor('bold') : undefined}
+              onOverrideToggle={isMessageMode ? toggleOverride('bold') : undefined}
             />
 
             {/* Gap: 0-9 */}
@@ -330,6 +400,8 @@ export function AdjustDialog({
               disabled={!isConnected}
               min={CONSTRAINTS.gap.min}
               max={CONSTRAINTS.gap.max}
+              overridden={isMessageMode ? overrideFor('gap') : undefined}
+              onOverrideToggle={isMessageMode ? toggleOverride('gap') : undefined}
             />
 
             {/* Pitch: 0-4,000,000,000 */}
@@ -342,7 +414,10 @@ export function AdjustDialog({
               disabled={!isConnected}
               min={CONSTRAINTS.pitch.min}
               max={CONSTRAINTS.pitch.max}
+              overridden={isMessageMode ? overrideFor('pitch') : undefined}
+              onOverrideToggle={isMessageMode ? toggleOverride('pitch') : undefined}
             />
+
 
             {/* Rotation: Select dropdown */}
             <div className="bg-card rounded-lg p-3 border border-border shadow-sm">

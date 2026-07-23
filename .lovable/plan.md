@@ -1,53 +1,73 @@
+# Width=15 Revert + Per-Message Delay Override
 
-## What we're changing
+Two related issues on the same code path (message-adjust resolution).
 
-Today, when the operator selects a message on the **Master**, it automatically fires the same selection to every printer in that Master's group. The customer wants the reverse: **no automatic fan-out**. Instead, whenever any printer (Master, Slave, or ungrouped) has a message selected on it, the app pops up a dialog asking *"Also select this on which other printers?"* — the operator ticks the ones they want and only those get the message (with a single user-prompt entry if the message has one).
+## Part 1 — Why Width sometimes reverts to 15
 
-## New selection flow
+### What we know
+- Fleet default: Width=2, Delay=500, Speed=Ultra Fast.
+- On every `^SM`, `applyStoredAdjustSettings` pushes `^PW / ^DA / ^SB / ^GP / ^PA` with `forcePushAllAdjust: true`.
+- Resolution order for Width is currently: **Printer Setup Card override → Fleet default → Factory**. The stored per-message value is **never** used (Setup Card always wins because `getPrinterMessageDefaults` fills every key).
 
-1. Operator picks any printer in the sidebar and opens Messages.
-2. Operator taps **Select** on a message.
-3. **New dialog opens**: "Apply *MessageName* to which printers?"
-   - Grid of large cards, one per online printer (excluding the source printer, which is implicit)
-   - Each card shows: printer number, Pack Line ID (falls back to printer name), IP, current selected message, an obvious checkbox
-   - Group headers (Group A / Group B / Ungrouped) so the operator can visually scan by line
-   - Header controls: **Select all**, **Select all in this group**, **Clear**
-   - Footer: **Cancel** and **Select on N printer(s)**
-4. If the message has a **user-prompt field**, hitting Select opens the existing `UserDefineEntryDialog` **once** — the value is baked and pushed to every checked printer (source + checked targets) exactly the way the Broadcast dialog does it today. No HMI interaction on any slave.
-5. If no prompt, Select fires straight to all checked printers.
+### Likely root causes (ranked)
+1. **Setup Card override contains 15.** If a printer's `messageDefaults.width` was ever saved as 15 (or seeded from HMI), every select for that printer sends `^PW 15`. High-probability. We should surface / clear stale per-printer overrides.
+2. **`captureHmiAdjustSilently` writes 15 back into a message.** Guard is `alreadyStored` — if the previous select stored width=2, and HMI later reports 15 (e.g. `^PW` push didn't take, or a slow-follow HMI edit), the stored copy becomes 15. Even though Setup Card should still win on next select, if a customer inspected the message in CodeSync they'd see 15 and lose trust.
+3. **`^PW` not actually landing.** If `sendVerifiedCommandSequence` reports success but the printer rejected `^PW` (e.g. Jet Off, message locked), UI updates local settings anyway. Silent divergence.
+4. **`^SV` still in the sequence** (line 1845) — harmless (transport short-circuits), but pointless timing noise.
 
-Each target printer gets the same atomic write sequence we already use: `^DM` → `^NM` (fields baked) → `^SV` → `^SM`, in parallel per-socket. The existing `runPrinterWriteExclusive` lock, 28 s prompt-ack ceiling, and FAIL/OK pip on each printer card still apply.
+### Diagnostic + fix plan
+- Add a one-line log at the top of `applyStoredAdjustSettings` printing `{ setupCardOverrides, fleetDefaults, storedAdjust, resolvedFull }` so we can prove which layer produced Width for any given select.
+- Verify `^PW` ACK: promote the existing sequence log to warn-level when the printer's response is not the expected `^PW ok`. Currently we only log `failed` on overall sequence failure — individual command replies are dropped.
+- Add a "Reset to Fleet Defaults" affordance in the Setup Card's message-defaults section so a stale 15 saved there can be cleared in one click.
+- Remove the dead `^SV` push from `applyStoredAdjustSettings` (keep the 300 ms flush by rewriting to a plain delay — no protocol traffic).
 
-## What happens to the old Master→Slave auto-sync
+## Part 2 — Per-message Delay override
 
-Kept as a **per-group option**, defaulted **OFF** for new/existing groups. Group settings gets a toggle:
+### Current behaviour
+Setup Card wins for Width/Delay/Bold/Gap/Pitch/Speed for **every** message on that printer. There is no way to say "this specific message needs Delay=800". This is what the customer is asking for.
 
-> **Auto-sync message selection from Master** — When ON, selecting a message on the Master immediately applies it to all Slaves in this group (legacy behaviour). When OFF (default), use the "Apply to printers" dialog to choose targets each time.
+### Design
+Change the resolution order to give explicit per-message values priority, without breaking the "printer wins for untuned messages" behaviour:
 
-That preserves the workflow for anyone who wants hands-off group sync, but the customer's default experience is the new opt-in dialog.
+```text
+Per-message stored value (only if explicitly set)
+  → Printer Setup Card override
+    → Fleet default
+      → Factory
+```
 
-## What we're NOT changing
+The pivot: `pick()` must distinguish "message has no opinion" from "message says 500". Today `stored[k]` gets skipped because `printerDefaults[k]` is always defined. We introduce `hasExplicitStored(k)` — true only when the operator set it in the Edit Message → Adjust panel (or Sync Adjust captured a deliberate HMI edit into an already-stored key).
 
-- Master/Slave grouping, roles, and everything else that depends on them (fault sync, expiry offsets, sync-status pip) — untouched.
-- The existing **Broadcast dialog** (per-slave user-define values, used when different lines need different data) — stays as-is, still reachable from the Master card.
-- Message editing, save flow, `^NM`/`^SV`/`^SM` protocol — unchanged.
-- Offline detection, polling, port 23 handling — unchanged.
+Applies to **Delay, Width, Bold, Gap, Pitch** (all adjust keys). Speed and Rotation keep current behaviour (rotation always from printer; speed default from fleet/printer but overridable per-message the same way).
 
-## Open questions before I build
+### UI change
+In Edit Message → Adjust tab, each field gets a small "Use printer default" checkbox (or a clear "×" next to the number). Unchecked = inherit from Setup Card (current behaviour). Checked / value entered = explicit per-message override. Visually distinguish inherited vs overridden values (muted text vs bold).
 
-1. **Default checkbox state** in the new dialog: all printers **pre-checked**, all **unchecked**, or **remember the last selection** the operator made? My recommendation is *remember last selection* so a line running the same fleet-wide message doesn't force re-ticking every time.
-2. **Card label priority**: show **Pack Line ID first, printer name as fallback**, or always show both? (I'd show Line ID prominently with printer name as small subtitle.)
-3. **Should the source printer appear as a locked/checked card** in the grid (visual confirmation "this one is definitely getting it") or be hidden entirely? I lean toward showing it locked-checked at the top.
-4. Confirm the **legacy auto-sync toggle** should default OFF for **existing** groups too (i.e. this changes behaviour on tomorrow's push), or stay ON for existing groups and OFF only for newly created ones?
+### Storage
+`adjustSettings` already supports partial values. We adopt the convention: **key present = explicit override, key absent = inherit**. Migration: existing messages that were auto-seeded with the full FLEET set need cleanup — we'll add a one-time migration on load that strips keys equal to the resolved printer default (so nothing appears "overridden" that wasn't intentionally set).
 
----
+## Technical section
 
-## Technical notes (for reference)
+### Files to change
+- `src/pages/Index.tsx`
+  - `buildEffectiveMessageDependentSettings`: new `pick()` that honours explicit per-message values above printer defaults.
+  - `applyStoredAdjustSettings`: add diagnostic log; drop `^SV` push; on success, do NOT overwrite stored message adjust with resolved full-set (only write keys we truly pushed as overrides).
+  - `captureHmiAdjustSilently`: keep `alreadyStored` guard; also skip when the HMI value equals the resolved printer-card default (avoids "capturing" what was already inherited).
+- `src/lib/fleetDefaults.ts`: no logic change; export a helper `isExplicitMessageOverride(details, key, printer)` for the UI.
+- `src/components/screens/EditMessageScreen.tsx` (Adjust tab): per-field inherit/override toggle + inherited-value hint.
+- `src/components/printers/EditPrinterDialog.tsx`: "Reset to Fleet Defaults" button in the message-defaults section.
+- One-time migration in the messages store loader to strip auto-seeded full sets (keys equal to printer default) so existing messages don't appear overridden.
 
-- New component: `src/components/printers/ApplyToPrintersDialog.tsx` — grid of `PrinterTargetCard`s grouped by A/B/Ungrouped, driven by `printers` from `usePrinterStorage`.
-- Hook the dialog into `MessagesScreen.handleSelectMessage` **before** the current select path: if the group's `autoSyncSelection` flag is OFF (new default), open the picker; on confirm, run the existing prompt/scan/select path once per checked printer (parallel, per-socket, using the same code paths as Broadcast).
-- Add `autoSyncSelection: boolean` (default `false`) to the group config in `usePrinterStorage`, with a migration that sets existing groups to whatever we decide in Q4.
-- Gate `useMasterSlaveSync`'s selection-fanout branch on `group.autoSyncSelection === true`. All other sync (fault mirror, sync-status pip) stays live.
-- Prompt handling reuses `UserDefineEntryDialog` + the same "bake fields into `^NM` and fan out in parallel" logic already in `BroadcastMessageDialog` — no new firmware interactions.
+### Non-goals
+- No protocol change. All existing `^PW / ^DA / ^SB / ^GP / ^PA` pushes remain.
+- No change to rotation handling (still driven by Setup Card).
+- No change to Speed default source, only the "explicit per-message override" gains a real code path.
 
-Once you answer the 4 questions above I'll build it.
+### Test cases
+1. New message, no overrides → select on Printer A (Setup Card W=2, D=500) → printer receives `^PW 2 ^DA 500`.
+2. New message, per-message Delay override = 800 → select on Printer A → `^PW 2 ^DA 800`.
+3. Same message → select on Printer B (Setup Card W=5, D=300) → `^PW 5 ^DA 800` (delay override travels, width inherits).
+4. Legacy message previously auto-seeded with W=15 → migration strips it → next select uses Setup Card W=2.
+5. Setup Card has stale `messageDefaults.width = 15` → new "Reset to Fleet Defaults" clears it → next select uses fleet W=2.
+
+Approve and I'll implement.

@@ -84,6 +84,22 @@ export interface MessageAdjustSettings {
   rotation?: 'Normal' | 'Flip' | 'Mirror' | 'Mirror Flip';
 }
 
+/**
+ * Per-message override flags. When a flag is true, the corresponding stored
+ * value in `adjustSettings` takes precedence over the printer Setup Card /
+ * fleet default at ^SM time. When absent/false, the message inherits from
+ * the printer (existing behaviour).
+ */
+export interface MessageAdjustOverrides {
+  width?: boolean;
+  height?: boolean;
+  delay?: boolean;
+  bold?: boolean;
+  gap?: boolean;
+  pitch?: boolean;
+  speed?: boolean;
+}
+
 export interface MessageDetails {
   name: string;
   height: number;
@@ -93,7 +109,11 @@ export interface MessageDetails {
   settings?: MessageSettings; // Message-level print settings
   advancedSettings?: AdvancedSettings; // Advanced settings (pages 52-55)
   adjustSettings?: MessageAdjustSettings; // Per-message adjust (^PW, ^PH, ^DA, ^SB, ^GP, ^PA)
+  /** Per-field flags marking which adjustSettings keys the operator explicitly
+   *  set for this message. Only these keys override the printer Setup Card. */
+  adjustOverrides?: MessageAdjustOverrides;
 }
+
 
 // Template options - single heights for mixed font messages (loaded from .BIN files)
 const SINGLE_TEMPLATES = [
@@ -255,6 +275,13 @@ export function EditMessageScreen({
     if (startEmpty) return NEW_DEFAULTS;
     return currentAdjustSettings ?? NEW_DEFAULTS;
   });
+  // Per-message override flags — only these keys will beat the printer Setup
+  // Card at ^SM time. Existing messages start with no overrides (pure inherit);
+  // when the operator toggles "Override for this message" in the Adjust dialog,
+  // the flag flips to true and the stored value becomes authoritative for
+  // that message on every printer.
+  const [localAdjustOverrides, setLocalAdjustOverrides] = useState<MessageAdjustOverrides>({});
+
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
   const [userDefinePrompts, setUserDefinePrompts] = useState<UserDefinePrompt[]>([]);
@@ -313,6 +340,11 @@ export function EditMessageScreen({
                 rotation: resolvedDetails.adjustSettings?.rotation ?? prev.rotation,
               }));
             }
+            // Restore per-message override flags (empty = pure inherit).
+            if (resolvedDetails.adjustOverrides) {
+              setLocalAdjustOverrides({ ...resolvedDetails.adjustOverrides });
+            }
+
             if (resolvedDetails.fields.length > 0) {
               setSelectedFieldId(resolvedDetails.fields[0].id);
             }
@@ -1474,7 +1506,9 @@ export function EditMessageScreen({
                           speed: localAdjustSettings.speed,
                           rotation: localAdjustSettings.rotation,
                         },
+                        adjustOverrides: { ...localAdjustOverrides },
                       };
+
                       const result = await onSave(messageWithAdjust, !hasSavedToPrinterRef.current);
                       if (!result) return;
 
@@ -1699,7 +1733,7 @@ export function EditMessageScreen({
                 <Button
                   onClick={async () => {
                     if (validateMessageName(saveAsName).valid) {
-                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch, speed: localAdjustSettings.speed, rotation: localAdjustSettings.rotation } }, true);
+                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch, speed: localAdjustSettings.speed, rotation: localAdjustSettings.rotation }, adjustOverrides: { ...localAdjustOverrides } }, true);
                       setSaveAsDialogOpen(false);
                       if (result && result.fields.length > 0) {
                         setMessage(prev => ({
@@ -1762,7 +1796,10 @@ export function EditMessageScreen({
             onSendCommand={onSendCommand ?? (async () => ({}))}
             isConnected={isConnected}
             title="Adjust Settings (Message)"
+            overrides={localAdjustOverrides}
+            onOverridesChange={(partial) => setLocalAdjustOverrides(prev => ({ ...prev, ...partial }))}
           />
+
         </>
       )}
     </div>
