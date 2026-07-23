@@ -285,7 +285,22 @@ export const MANUAL: ManualChapter[] = [
         ],
       },
       {
-        id: 'new-field',
+        id: 'adjust-overrides',
+        title: 'Adjust dialog & per-message overrides',
+        body: `Open the **Adjust** dialog from the message editor toolbar to tune **Delay, Bold, Gap and Pitch** for the current message.\n\n**Resolution priority (highest to lowest):**\n\n1. **Per-Message Override** — tick the checkbox next to a value to lock it to this message\n2. **Printer Setup Card → New Printer Defaults** — inherited when no override is set\n3. **Fleet Defaults** — Width 2, Delay 500, Ultra Fast\n4. **Factory fallback** — hard-coded safety values\n\n**Checkbox convention (23 Jul 2026):** unticked = inherit; ticked = "custom value for this message (ignores printer Setup Card)". Most messages should leave every checkbox unticked so they follow the printer's baseline; only tick a box when this specific message needs its own value (e.g. a slow VDP job that needs a longer delay).\n\n**Rotation and Speed are intentionally hidden** in message-editor mode — Rotation is always resolved from the Printer Setup Card at Select time (so Flip and Mirror Flip printers on the same conveyor stay correct regardless of the source message), and Speed comes from the printer-level Speed. These fields still appear when the Adjust dialog is opened in live-adjust mode against a running printer.\n\n**Done & Save button:** clicking Done in message-editor mode flushes the settings to the message record and re-runs the same Save path as the main Save button, so overrides are persisted in one click. In live-adjust mode Done pushes the values to the connected printer and closes.`,
+      },
+      {
+        id: 'message-protection',
+        title: 'Message protection lock',
+        body: `Some messages (for example a **60DAYBACKUPCODE** manual-backup message using the printer's User Prompt function) contain fields that CodeSync does not yet fully support in its editor. Protecting them prevents accidental overwrite from Copy, Select or Sync operations.\n\n**How to protect:** on the Messages screen, click the **lock icon** on a message row. A protected message shows a solid lock; an unprotected one shows an open padlock. Click again to unlock.\n\n**What protection blocks:**\n- Copy to Printers — the message is skipped on any target where a protected message with the same name already lives\n- Automatic overwrites from the Sync flow\n- Bulk operations that would rewrite fields (Data Link resave, tuning re-push)\n\n**What protection does NOT block:**\n- Selecting the message for print (^SM)\n- Reading its current fields for display\n- Manual edits — you can still open the editor and save; the lock only defends against non-interactive rewrites`,
+      },
+      {
+        id: 'copy-to-printers',
+        title: 'Copy message to other printers',
+        body: `Click **Copy to…** on the Messages screen to duplicate the current message to any subset of sibling printers in the fleet.\n\n- Multi-select checkboxes with a **Select All** shortcut, presented as a compact 4-per-row printer grid\n- Pre-checks every printer that has previously run this message (from sent-to history)\n- Per-printer Line ID is re-resolved from each target's Setup Card at push time\n- Per-printer Rotation (Flip / Mirror Flip) is applied from each target's Setup Card — the source message's rotation is ignored\n- Per-printer Width / Delay / Bold / Gap / Speed are **left alone** on printers that have previously run the message; first-time targets are seeded from the source's Adjust settings so the technician tunes each printer only once\n- Protected messages on a target are skipped and reported in the summary\n\n**If any push fails**, a **Retry / Ignore** dialog lists every failed printer with the exact rejection reason (offline, command error, timeout). Try Again re-runs only the failed subset, capped at three attempts.`,
+      },
+      {
+
         title: 'Adding a new field',
         body: `Click **+ New** to open the field type chooser:\n\n- **Text Field** — static or mixed-case text\n- **Scanned Field** — value supplied by a barcode scan (PC USB scanner or paired mobile camera) at message-select time\n- **Line ID** — resolves to the printer's configured Line ID at print time\n- **User Define** — operator is prompted at message-select time\n- **AutoCode Field** — Time, Date, Counter, or Shift codes\n- **Barcode Field** — 1D & 2D barcodes\n- **Graphic Field** — bitmap from the printer's graphic library`,
         screenshot: '/manual-screenshots/09c-new-field.png',
