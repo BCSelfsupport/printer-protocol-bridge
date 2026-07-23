@@ -2011,8 +2011,11 @@ export function usePrinterConnection() {
       return false;
     } else if (isElectron || isRelayMode()) {
       try {
-        console.log('[selectMessage] Sending ^SM command:', message.name);
-        const result = await printerTransport.sendCommand(printer.id, `^SM ${message.name}`);
+        await waitForSaveIdle(20000).catch(() => undefined);
+        console.log('[selectMessage] Sending guarded ^SM command:', message.name);
+        const result = await runFleetWriteExclusive(() => runPrinterWriteExclusive(printer.id, async () => {
+          return printerTransport.sendCommand(printer.id, `^SM ${message.name}`, { caller: 'selectMessage' });
+        }));
         console.log('[selectMessage] Result:', JSON.stringify(result));
 
         const responseText = result?.response ?? '';
