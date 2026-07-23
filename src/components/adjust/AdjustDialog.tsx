@@ -468,8 +468,35 @@ export function AdjustDialog({
 
           </div>
 
+          {/* Footer — explicit confirm button. All numeric edits are already
+              applied live to state (and to the printer in live-adjust mode);
+              this button just gives operators a clear "I'm done" action
+              instead of relying on the X. In live-adjust mode we also flush
+              any pending ^SV so settings survive a power cycle. */}
+          <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
+            <div className="text-[11px] text-muted-foreground">
+              {isMessageMode
+                ? 'Changes apply when you press Save in the message editor.'
+                : 'Changes are sent to the printer as you make them.'}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (saveTimerRef.t) {
+                  clearTimeout(saveTimerRef.t);
+                  saveTimerRef.t = null;
+                  if (!isMessageMode) onSendCommand('^SV').catch(() => {});
+                }
+                onOpenChange(false);
+              }}
+              className="industrial-button text-white px-4 py-2 rounded text-sm font-semibold"
+            >
+              Done
+            </button>
+          </div>
         </div>
       </DialogContent>
+
     </Dialog>
   );
 }
