@@ -394,11 +394,16 @@ export function MessagesScreen({
         return;
       }
 
-      // No prompt → plain ^SM to every target, in parallel.
+      // No prompt → plain ^SM to every target. Keep this strictly sequential:
+      // BestCode port-23 firmware can lock up if a fleet selection opens many
+      // sessions at once while message writes are still settling.
       toast.loading(`Selecting "${selectedMessage.name}" on ${targets.length} printer(s)…`, { id: 'multi-select' });
-      const results = await Promise.all(
-        targets.map(async (p) => ({ p, ok: await onSelectOnPrinter(p, selectedMessage) }))
-      );
+      const results: Array<{ p: Printer; ok: boolean }> = [];
+      for (const [index, p] of targets.entries()) {
+        toast.loading(`Selecting "${selectedMessage.name}" on ${p.name} (${index + 1}/${targets.length})…`, { id: 'multi-select' });
+        const ok = await onSelectOnPrinter(p, selectedMessage);
+        results.push({ p, ok });
+      }
       const okCount = results.filter(r => r.ok).length;
       const failCount = results.length - okCount;
       if (failCount === 0) {
@@ -1134,27 +1139,28 @@ export function MessagesScreen({
             const targets = pendingApplyTargets;
             toast.loading(`Applying "${selectedMessage.name}" to ${targets.length} printer(s)…`, { id: 'multi-prompt' });
             try {
-              // Fan out in parallel. IMPORTANT: for each target we re-resolve
+              // Apply one printer at a time. IMPORTANT: for each target we re-resolve
               // any dynamicSource:'lineId' field against THAT printer's Line
               // ID (from its Setup Card), so the source printer's Line ID is
               // never burnt into copies. Without this, selecting from Printer
               // 2 would push "Line 2" onto every target.
-              const results = await Promise.all(
-                targets.map(async (p) => {
-                  const targetLineId = p.lineId?.trim();
-                  const perTargetFields = bakedFields.map(f =>
-                    (f as any).dynamicSource === 'lineId' && targetLineId
-                      ? { ...f, data: targetLineId }
-                      : f
-                  );
-                  const tokenMap = buildTokenMap({ ...pendingMessageDetails, fields: perTargetFields });
-                  const targetDetails = {
-                    ...pendingMessageDetails,
-                    fields: resolveAllFields(perTargetFields, tokenMap, { preserveCounterTokens: true }),
-                  };
-                  return { p, ok: await onApplyPromptValuesOnPrinter(p, selectedMessage, targetDetails) };
-                })
-              );
+              const results: Array<{ p: Printer; ok: boolean }> = [];
+              for (const [index, p] of targets.entries()) {
+                toast.loading(`Applying "${selectedMessage.name}" to ${p.name} (${index + 1}/${targets.length})…`, { id: 'multi-prompt' });
+                const targetLineId = p.lineId?.trim();
+                const perTargetFields = bakedFields.map(f =>
+                  (f as any).dynamicSource === 'lineId' && targetLineId
+                    ? { ...f, data: targetLineId }
+                    : f
+                );
+                const tokenMap = buildTokenMap({ ...pendingMessageDetails, fields: perTargetFields });
+                const targetDetails = {
+                  ...pendingMessageDetails,
+                  fields: resolveAllFields(perTargetFields, tokenMap, { preserveCounterTokens: true }),
+                };
+                const ok = await onApplyPromptValuesOnPrinter(p, selectedMessage, targetDetails);
+                results.push({ p, ok });
+              }
               const okCount = results.filter(r => r.ok).length;
               const failCount = results.length - okCount;
               if (failCount === 0) {
