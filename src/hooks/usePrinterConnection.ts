@@ -17,7 +17,7 @@ import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
 import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
-import { setPollingPaused } from '@/lib/pollingPause';
+import { setPollingPaused, waitForPollingIdle } from '@/lib/pollingPause';
 import { beginSaveBusy, waitForSaveIdle } from '@/lib/saveBusy';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
 
@@ -201,6 +201,32 @@ const parseLmMessageNames = (raw: string): string[] => {
   }
 
   return messageNames;
+};
+
+const parseSelectedMessageName = (raw: string): string | null => {
+  const lines = raw
+    .split(/\r?\n/)
+    .map(line => line.replace(/[^\x20-\x7E]/g, '').trim())
+    .filter(line => {
+      const upper = line.toUpperCase();
+      return line
+        && line !== '>'
+        && upper !== '^SM'
+        && upper !== 'SUCCESS'
+        && upper !== 'OK'
+        && !upper.includes('COMMAND SUCCESSFUL');
+    });
+
+  const first = lines[0];
+  if (!first) return null;
+
+  const cleaned = first
+    .replace(/^\^SM\s*/i, '')
+    .replace(/^(Selected\s+)?Message\s*:\s*/i, '')
+    .trim();
+
+  if (!cleaned || cleaned.toUpperCase() === 'NONE') return null;
+  return cleaned.toUpperCase();
 };
 
 // Resolve the correct emulator instance for a given printer IP.
