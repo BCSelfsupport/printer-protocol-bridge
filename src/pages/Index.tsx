@@ -30,6 +30,7 @@ import { TrainingVideosScreen } from '@/components/screens/TrainingVideosScreen'
 import { LicenseActivationDialog } from '@/components/license/LicenseActivationDialog';
 import { FaultAlertDialog } from '@/components/alerts/FaultAlertDialog';
 import { PausePollingButton } from '@/components/printers/PausePollingButton';
+import { EditPrinterDialog } from '@/components/printers/EditPrinterDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -170,6 +171,9 @@ const Index = () => {
   const [openNewDialogOnMount, setOpenNewDialogOnMount] = useState(false);
   const [selectedPrinterId, setSelectedPrinterId] = useState<number | null>(null);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+  // Bottom-nav "Adjust" shortcut opens the connected printer's Setup Card,
+  // not the confusing global adjust dialog.
+  const [adjustSetupCardPrinter, setAdjustSetupCardPrinter] = useState<import('@/types/printer').Printer | null>(null);
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [helpDialogOpen, setHelpDialogOpen] = useState(false);
@@ -2475,9 +2479,16 @@ const Index = () => {
 
   const handleNavigate = (item: NavItem) => {
     if (item === 'adjust') {
-      setAdjustDialogOpen(true);
+      // Adjust is per-printer, not global. Route the bottom-nav Adjust
+      // shortcut to the connected printer's Setup Card so operators land
+      // on the right context instead of the confusing global dialog.
+      const target = connectionState.connectedPrinter ?? selectedPrinter ?? null;
+      const stored = target ? printers.find(p => p.id === target.id) ?? null : null;
+      setAdjustSetupCardPrinter(stored ?? target ?? null);
       return;
     }
+
+
     if (item === 'setup') {
       setSetupDialogOpen(true);
       return;
@@ -3633,6 +3644,21 @@ const Index = () => {
         onOpenChange={setSetupDialogOpen}
         onSendCommand={sendCommand}
       />
+
+      {/* Per-printer Setup Card opened from the bottom-nav "Adjust" shortcut.
+          Replaces the old global adjust dialog on the bottom nav so operators
+          land on the correct printer context. */}
+      <EditPrinterDialog
+        open={!!adjustSetupCardPrinter}
+        onOpenChange={(open) => { if (!open) setAdjustSetupCardPrinter(null); }}
+        printer={adjustSetupCardPrinter}
+        allPrinters={printers}
+        onSave={(printerId, updates) => {
+          updatePrinter(printerId, updates);
+          setAdjustSetupCardPrinter(null);
+        }}
+      />
+
 
       {/* Service Dialog */}
       <ServiceScreen

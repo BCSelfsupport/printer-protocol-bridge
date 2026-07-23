@@ -119,6 +119,12 @@ interface PrintersScreenProps {
   getMessageContent?: (name: string, printerId?: number) => MessageDetails | null;
   /** Reset all group expiry offsets back to message default and re-sync */
   onResetGroupExpiry?: (masterId: number) => void;
+  /** When set, auto-open the Printer Setup Card for this printer id (used
+   *  by the bottom-nav Adjust shortcut so operators land on the right card
+   *  instead of the confusing "global" adjust dialog). Consumed once, then
+   *  the parent should reset it via onAutoEditConsumed. */
+  autoEditPrinterId?: number | null;
+  onAutoEditConsumed?: () => void;
 }
 
 // Sortable wrapper for PrinterListItem
@@ -299,6 +305,8 @@ export function PrintersScreen({
   onSelectedPrinterChange,
   getMessageContent,
   onResetGroupExpiry,
+  autoEditPrinterId,
+  onAutoEditConsumed,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -526,6 +534,19 @@ export function PrintersScreen({
     setPrinterToEdit(printer);
     setEditDialogOpen(true);
   };
+
+  // Bottom-nav Adjust shortcut: parent asks us to open the setup card for a
+  // specific printer id. Consume the request so re-renders don't re-open it.
+  useEffect(() => {
+    if (autoEditPrinterId == null) return;
+    const target = printers.find(p => p.id === autoEditPrinterId);
+    if (target) {
+      setPrinterToEdit(target);
+      setEditDialogOpen(true);
+    }
+    onAutoEditConsumed?.();
+  }, [autoEditPrinterId, printers, onAutoEditConsumed]);
+
 
   const handleSaveEdit = (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: import('@/types/printer').PrinterRole; masterId?: number; serialNumber?: string; lineId?: string; rotation?: import('@/types/printer').Printer['rotation']; autoSyncSelection?: boolean; messageDefaults?: import('@/types/printer').Printer['messageDefaults'] }) => {
     onUpdatePrinter?.(printerId, updates);
