@@ -1704,13 +1704,11 @@ const Index = () => {
         });
 
         try {
-          // Capture what the HMI is currently displaying BEFORE ^NM so we can
-          // reload it from flash afterward. Some firmware revisions leave the
-          // Save LED yellow after a ^NM update if the operator (or a previous
-          // remote command) has an unsaved edit pending on any message.
-          // Re-selecting the CURRENTLY active message forces a flash reload
-          // that discards the dirty buffer without changing what the printer
-          // is printing.
+          // Capture what the HMI is currently displaying BEFORE ^NM. If the
+          // target message is already active, park away BEFORE rewriting it.
+          // Printers 2/3 showed that parking after ^NM can be too late: the
+          // active edit buffer is already dirty and the HMI Save LED remains
+          // yellow even after a manual BESTCODE → target reselect.
           let currentSelectionBefore: string | null = null;
           try {
             const cur = await printerTransport.sendCommand(target.id, '^SM', {
@@ -1719,11 +1717,31 @@ const Index = () => {
               idleAfterDataMs: 800,
             });
             if (cur?.success && typeof cur.response === 'string') {
-              const m = cur.response.match(/([A-Z0-9_\-.# ]{1,32})/i);
-              const raw = m?.[1]?.trim().replace(/[>]+$/g, '').trim().toUpperCase();
-              if (raw && raw !== 'NONE') currentSelectionBefore = raw;
+              currentSelectionBefore = parseCurrentMessageFromSmResponse(cur.response);
             }
           } catch { /* best effort */ }
+
+          const copiedMessageWasActive = currentSelectionBefore === message.name.trim().toUpperCase();
+          const reloadName = currentSelectionBefore ?? message.name;
+          const parkName = reloadName.toUpperCase() === 'BESTCODE' ? 'BESTCODE AUTO' : 'BESTCODE';
+
+          if (copiedMessageWasActive) {
+            try {
+              const parkResult = await printerTransport.sendCommand(target.id, `^SM ${parkName}`, {
+                caller: 'copy:pre-park-before-active-message-rewrite',
+                maxWaitMs: 12000,
+                idleAfterDataMs: 1000,
+              });
+              const parkResponse = parkResult?.response ?? parkResult?.error ?? '';
+              if (!parkResult?.success || isTransportCommandFailure(parkResponse)) {
+                console.warn(`[CopyMessage] Pre-park to ${parkName} was rejected on ${target.name}; copy will continue but HMI Save LED may stay yellow.`, parkResponse);
+              } else {
+                await new Promise(resolve => setTimeout(resolve, MESSAGE_RELOAD_SETTLE_MS));
+              }
+            } catch (err) {
+              console.warn(`[CopyMessage] Pre-park to ${parkName} threw on ${target.name} — continuing`, err);
+            }
+          }
 
           const result = await replaceMessageWithoutDelete(target, message.name, {
             fields: targetFields,
@@ -1761,16 +1779,17 @@ const Index = () => {
             // popups) nor ^RE (§5.40, only redraws the screen) clears the
             // unsaved-edits state. ^SM is the only documented lever, and it
             // must switch AWAY and back to actually reload from flash.
-            const reloadName = currentSelectionBefore ?? message.name;
-            const parkName = reloadName.toUpperCase() === 'BESTCODE' ? 'BESTCODE AUTO' : 'BESTCODE';
-            try {
-              await printerTransport.sendCommand(target.id, `^SM ${parkName}`, {
-                caller: 'copy:park-for-edit-buffer-clear',
-                maxWaitMs: 10000,
-                idleAfterDataMs: 800,
-              });
-            } catch (err) {
-              console.warn(`[CopyMessage] Park to ${parkName} threw on ${target.name} — continuing`, err);
+            if (!copiedMessageWasActive) {
+              try {
+                await printerTransport.sendCommand(target.id, `^SM ${parkName}`, {
+                  caller: 'copy:park-for-edit-buffer-clear',
+                  maxWaitMs: 10000,
+                  idleAfterDataMs: 800,
+                });
+                await new Promise(resolve => setTimeout(resolve, MESSAGE_RELOAD_SETTLE_MS));
+              } catch (err) {
+                console.warn(`[CopyMessage] Park to ${parkName} threw on ${target.name} — continuing`, err);
+              }
             }
             try {
               await printerTransport.sendCommand(target.id, `^SM ${reloadName}`, {
