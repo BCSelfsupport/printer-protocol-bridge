@@ -3064,6 +3064,29 @@ export function usePrinterConnection() {
 
             await delay(isSlowHandshakePrinter(printer) ? DELETE_PARK_SETTLE_HS1_MS : DELETE_PARK_SETTLE_MS);
 
+            // "Yellow Save button" clear pass. On HS1 (and occasionally on other
+            // variants) the HMI edit buffer can stay dirty after a single ^SM
+            // switch-away — the physical Save LED stays yellow and ^DM is
+            // rejected until the operator taps Save. Re-selecting the SAME
+            // parking message forces the firmware to reload the message body
+            // from flash, discarding any pending unsaved edits. If it was the
+            // target message that had the dirty buffer, this second ^SM also
+            // guarantees the printer is no longer displaying / holding it.
+            try {
+              const clearResult = await printerTransport.sendCommand(
+                printer.id,
+                `^SM ${parkingMessage}`,
+                { caller: 'deleteMessage:clear-edit-buffer', maxWaitMs: 15000, idleAfterDataMs: 1000 },
+              );
+              const clearResponse = clearResult?.response ?? clearResult?.error ?? '';
+              if (!clearResult?.success || isProtocolCommandFailure(clearResponse)) {
+                console.warn('[deleteMessage] Second ^SM (edit-buffer clear) rejected — continuing anyway.', clearResponse);
+              }
+            } catch (err) {
+              console.warn('[deleteMessage] Second ^SM (edit-buffer clear) threw — continuing anyway.', err);
+            }
+            await delay(isSlowHandshakePrinter(printer) ? DELETE_PARK_SETTLE_HS1_MS : DELETE_PARK_SETTLE_MS);
+
             const parkedSelectedResult = await printerTransport.sendCommand(
               printer.id,
               '^SM',
