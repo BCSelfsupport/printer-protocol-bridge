@@ -600,6 +600,11 @@ export const MANUAL: ManualChapter[] = [
     intro: 'Printer-level configuration: counters, programmable date/time codes, network, line ID.',
     sections: [
       {
+        id: 'new-printer-defaults',
+        title: 'New Printer Defaults',
+        body: `The **New Printer Defaults** section of the Printer Setup Card holds this printer's baseline **Width, Delay, Bold, Gap** and **Speed** values. These are the fallback used whenever a message does not carry its own per-message override (see Chapter 6 → Adjust dialog & per-message overrides).\n\n**Resolution priority at Select time:**\n\n1. Per-Message Override (from the message's Adjust dialog)\n2. **New Printer Defaults** (this section)\n3. Fleet Defaults — Width 2, Delay 500, Ultra Fast\n4. Factory fallback\n\nEditing a value here does **not** immediately push to the printer — it takes effect the next time any message is Selected onto this printer. To push new values immediately, Select the current message again after saving.\n\n**Rotation** (Flip / Mirror Flip) also lives on the Setup Card and is authoritative for every message sent to this printer, regardless of what the source message stored.`,
+      },
+      {
         id: 'counters',
         title: 'Counters',
         body: `View and reset Print Count, Product Count, and Run Count. Counters are polled every 3 seconds via the ^CN command.`,
