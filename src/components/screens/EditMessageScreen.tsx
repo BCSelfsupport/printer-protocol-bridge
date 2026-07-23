@@ -1796,7 +1796,10 @@ export function EditMessageScreen({
             onSendCommand={onSendCommand ?? (async () => ({}))}
             isConnected={isConnected}
             title="Adjust Settings (Message)"
+            overrides={localAdjustOverrides}
+            onOverridesChange={(partial) => setLocalAdjustOverrides(prev => ({ ...prev, ...partial }))}
           />
+
         </>
       )}
     </div>
