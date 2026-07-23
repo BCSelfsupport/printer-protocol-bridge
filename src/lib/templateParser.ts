@@ -73,16 +73,16 @@ export function parseTemplateData(data: Uint8Array, name: string = 'unknown'): P
     const numLines = parseInt(lineMatch[1]);
     const dotsPerLine = parseInt(lineMatch[2]);
     
-    // Calculate actual template height - for 2L7U, printer uses 16 dots (2x7 + 2 spacing)
+    // Calculate actual template height using standard 1-dot inter-line gap
+    // (confirmed against HMI for all 2L templates, including 2L7).
     let totalHeight = numLines * dotsPerLine;
-    
-    // Add inter-line spacing for multi-line templates
+
     if (numLines === 2 && dotsPerLine === 7) {
-      totalHeight = 16; // 2x7 + 2 dots spacing = 16 total
+      totalHeight = 15; // 7 + 1 + 7 = 15
     } else if (numLines === 2 && dotsPerLine === 9) {
-      totalHeight = 18; // 2x9 = 18
+      totalHeight = 19; // 9 + 1 + 9 = 19
     } else if (numLines === 2 && dotsPerLine === 12) {
-      totalHeight = 24; // 2x12 = 24  
+      totalHeight = 25; // 12 + 1 + 12 = 25
     }
     
     // Generate line definitions - lines are evenly distributed within the template height
