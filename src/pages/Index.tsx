@@ -1791,7 +1791,32 @@ const Index = () => {
         seededFromFallback: true,
       });
     }
+    // Backfill: legacy exactStored records may have empty/missing adjustSettings,
+    // which would leave pushKey() false and skip ^PW/^DA entirely — the HMI's
+    // 15/100 defaults would remain. Seed with fleet defaults so the select
+    // actually pushes Width=2 / Delay=500 / Ultra Fast.
+    if (exactStored) {
+      const cur = (exactStored.adjustSettings ?? {}) as Partial<PrintSettings>;
+      const missing = ['width','delay','speed'].some(k => (cur as any)[k] === undefined);
+      if (missing) {
+        const seeded = {
+          ...FLEET_DEFAULT_ADJUST_SETTINGS,
+          ...(exactStored.settings ?? {}),
+          ...cur,
+          rotation: targetPrinter.rotation
+            ?? cur.rotation
+            ?? exactStored.settings?.rotation
+            ?? FLEET_DEFAULT_ADJUST_SETTINGS.rotation,
+        };
+        saveMessage({ ...exactStored, adjustSettings: seeded as MessageDetails['adjustSettings'] }, targetPrinter.id);
+        (stored as MessageDetails).adjustSettings = seeded as MessageDetails['adjustSettings'];
+        console.log('[AdjustDebug][applyStoredAdjustSettings.backfillLegacyEmpty]', {
+          targetPrinterId: targetPrinter.id, messageName, seeded,
+        });
+      }
+    }
     const hasStoredMessageSettings = true;
+
 
     // Important: do NOT adopt the printer's live values here. At this point we
     // have already switched to the target message, so the live HMI values may
@@ -2017,21 +2042,26 @@ const Index = () => {
       const mergedAdjust: Partial<PrintSettings> = { ...storedAdjust };
       const mergedMsgSettings: Partial<PrintSettings> = { ...storedMsgSettings };
       let changed = false;
-      // IMPORTANT: only capture HMI values for keys that don't already have an
-      // explicit stored value on this message. Some firmwares reset ^PW back
-      // to a per-template default on ^SM — unconditionally re-capturing HMI
-      // values would silently clobber the message's saved Width/etc.
-      // Legacy messages with no stored tuning still get seeded from HMI here;
-      // deliberate HMI edits are captured via "Sync Adjust" (explicit action).
+      // IMPORTANT: only refresh HMI values for keys that ALREADY have an
+      // explicit stored value on this message. Auto-seeding empty keys from
+      // the live HMI is what caused the 60DAYBACKUP / legacy-message regression
+      // where Width kept coming back as 15 — the printer's baked-in default
+      // was captured into storage and then re-pushed on every select.
+      // Deliberate HMI edits on untuned keys must go through "Sync Adjust".
+      // Legacy messages with no stored tuning are handled downstream by
+      // applyStoredAdjustSettings, which seeds them from FLEET defaults
+      // (Width=2 / Delay=500 / Ultra Fast).
       for (const k of ['width', 'height', 'delay', 'bold', 'gap', 'pitch', 'speed', 'rotation'] as (keyof PrintSettings)[]) {
         const pv = printerCurrent[k];
         if (pv === undefined) continue;
         const alreadyStored = storedAdjust[k] !== undefined || storedMsgSettings[k] !== undefined;
-        if (alreadyStored) continue;
+        if (!alreadyStored) continue; // do NOT seed from HMI — that's the bug
+        if (storedAdjust[k] === pv) continue;
         (mergedAdjust as Record<string, unknown>)[k] = pv;
         (mergedMsgSettings as Record<string, unknown>)[k] = pv;
         changed = true;
       }
+
       if (changed) {
         saveMessage({
           ...stored,
