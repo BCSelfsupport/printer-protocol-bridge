@@ -140,6 +140,7 @@ const recentlyAddedMessages = new Set<string>();
 const ADDITION_GUARD_MS = 15000;
 const DELETE_VERIFY_DELAY_MS = 500;
 const DELETE_PARK_SETTLE_MS = 900;
+const DELETE_PARK_SETTLE_HS1_MS = 1800;
 const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCODE_AUTO']);
 const SAVE_ACK_MAX_WAIT_MS = 30000;
 const SAVE_NM_IDLE_AFTER_DATA_MS = 1500;
@@ -246,19 +247,20 @@ const chooseDeleteParkingMessage = (messageNames: string[], deletingName: string
   const safeNames = normalizedNames.filter(name => name !== normalizedDeletingName);
   const factorySafeNames = safeNames.filter(name => RESERVED_PRINTER_MESSAGES.has(name));
 
-  // Prefer reloading the current saved message when it is not the delete target.
-  // This raw ^SM reload is used before ^DM to clear the printer HMI's
-  // dirty/yellow-Save edit buffer without sending any adjust commands that
-  // would mark the active message dirty again.
-  if (normalizedCurrentName && safeNames.includes(normalizedCurrentName)) {
-    return normalizedCurrentName;
-  }
-
+  // Prefer an actual switch-away, not a no-op reselect of the already-active
+  // message. On printers with a yellow HMI Save button, selecting a different
+  // saved message is the most reliable way to clear the edit buffer before ^DM.
   const differentFactory = factorySafeNames.find(name => name !== normalizedCurrentName);
   if (differentFactory) return differentFactory;
 
   const differentSafe = safeNames.find(name => name !== normalizedCurrentName);
   if (differentSafe) return differentSafe;
+
+  // If there is no different message available, reloading the current saved
+  // message is still better than deleting while the HMI edit buffer is dirty.
+  if (normalizedCurrentName && safeNames.includes(normalizedCurrentName)) {
+    return normalizedCurrentName;
+  }
 
   // If the only available safe message is already selected, re-select it anyway.
   // On real firmware this acts as a saved-message reload and is still safer than
@@ -2922,7 +2924,15 @@ export function usePrinterConnection() {
 
     const printer = targetPrinter ?? connectionState.connectedPrinter;
     const isConnectedTarget = !!printer && printer.id === connectionState.connectedPrinter?.id;
-    const canUseTransport = !!printer && (isConnectedTarget ? connectionState.isConnected : (isElectron || isRelayMode()));
+    const canUseTransport = !!printer && (
+      shouldUseEmulator()
+      || (isConnectedTarget ? connectionState.isConnected : (isElectron || isRelayMode()))
+    );
+
+    if (!canUseTransport || !printer) {
+      toast.error(`Cannot delete "${msgName}" — printer is not connected.`);
+      return false;
+    }
 
     if (canUseTransport && printer) {
       const deleteCommand = `^DM ${msgName}`;
@@ -2935,8 +2945,13 @@ export function usePrinterConnection() {
 
         const selected = emulator.getState?.()?.currentMessage?.trim().toUpperCase();
         if (selected && selected === normalizedName) {
-          toast.error(`Can't delete "${msgName}" — it is currently selected for printing.`);
-          return false;
+          const namesBeforeDelete = emulator.getState?.()?.messages ?? [];
+          const parkingMessage = chooseDeleteParkingMessage(namesBeforeDelete, normalizedName, selected);
+          if (!parkingMessage) {
+            toast.error(`Can't delete "${msgName}" — no other printer message is available to reload first.`);
+            return false;
+          }
+          emulator.processCommand(`^SM ${parkingMessage}`);
         }
 
         const result = emulator.processCommand(deleteCommand);
@@ -2965,11 +2980,21 @@ export function usePrinterConnection() {
                 return false;
               }
 
-              const connectResult = await printerTransport.connect({
+              let connectResult = await printerTransport.connect({
                 id: printer.id,
                 ipAddress: printer.ipAddress,
                 port: printer.port,
               });
+
+              if (!connectResult?.success) {
+                console.warn('[deleteMessage] Initial background connect failed, retrying once:', printer.name, connectResult?.error);
+                await delay(isSlowHandshakePrinter(printer) ? 1500 : 700);
+                connectResult = await printerTransport.connect({
+                  id: printer.id,
+                  ipAddress: printer.ipAddress,
+                  port: printer.port,
+                });
+              }
 
               if (!connectResult?.success) {
                 toast.error(`Cannot delete "${msgName}" — ${printer.name} is not connected.`);
@@ -3030,7 +3055,7 @@ export function usePrinterConnection() {
               return false;
             }
 
-            await new Promise((resolve) => setTimeout(resolve, DELETE_PARK_SETTLE_MS));
+            await delay(isSlowHandshakePrinter(printer) ? DELETE_PARK_SETTLE_HS1_MS : DELETE_PARK_SETTLE_MS);
 
             const parkedSelectedResult = await printerTransport.sendCommand(
               printer.id,
@@ -3080,7 +3105,7 @@ export function usePrinterConnection() {
             let stillExists = true;
             for (let attempt = 1; attempt <= DELETE_VERIFY_RETRIES; attempt += 1) {
               if (attempt > 1) {
-                await new Promise((resolve) => setTimeout(resolve, DELETE_VERIFY_DELAY_MS));
+                await delay(DELETE_VERIFY_DELAY_MS);
               }
 
               const verifyList = await printerTransport.sendCommand(
