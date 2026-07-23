@@ -333,28 +333,39 @@ const Index = () => {
     details: MessageDetails,
     targetPrinter?: Printer | null,
   ) => {
-    // Per-printer setup card wins for ALL adjust fields so both new AND existing
-    // messages inherit the target printer's baseline (Width/Delay/Bold/Gap/
-    // Pitch/Speed/Rotation). Operator can still tweak at the HMI afterwards.
-    // Priority: printer setup card -> stored message value -> fleet fallback.
+    // Resolution order per adjust key:
+    //   1. Per-message explicit override (adjustOverrides[k] === true AND
+    //      adjustSettings[k] defined)
+    //   2. Per-printer Setup Card (messageDefaults) or fleet default
+    //   3. Stored per-message value (legacy fallback)
+    //   4. Factory fallback (FLEET_DEFAULT_ADJUST_SETTINGS)
+    // Rotation always follows the printer Setup Card; speed can be per-message
+    // overridden the same way as numeric fields.
     const printerForDefaults = targetPrinter ?? connectionState.connectedPrinter;
     const printerDefaults = getPrinterMessageDefaults(printerForDefaults);
 
-    const effectiveSpeed = printerDefaults.speed
-      ?? details.adjustSettings?.speed
-      ?? details.settings?.speed
-      ?? FLEET_DEFAULT_ADJUST_SETTINGS.speed;
+    const stored = (details.adjustSettings ?? {}) as Partial<PrintSettings>;
+    const overrides = (details.adjustOverrides ?? {}) as Record<string, boolean>;
+    const isOverridden = (k: string) => overrides[k] === true && (stored as Record<string, unknown>)[k] !== undefined;
+
+    const pick = <K extends keyof PrintSettings>(k: K): PrintSettings[K] => {
+      if (isOverridden(k as string)) return stored[k] as PrintSettings[K];
+      return (printerDefaults[k] as PrintSettings[K])
+        ?? (stored[k] as PrintSettings[K])
+        ?? FLEET_DEFAULT_ADJUST_SETTINGS[k];
+    };
+
+    const effectiveSpeed: PrintSettings['speed'] = isOverridden('speed')
+      ? (stored.speed as PrintSettings['speed'])
+      : (printerDefaults.speed
+        ?? stored.speed
+        ?? details.settings?.speed
+        ?? FLEET_DEFAULT_ADJUST_SETTINGS.speed);
     const effectiveRotation = printerForDefaults?.rotation
-      ?? details.adjustSettings?.rotation
+      ?? stored.rotation
       ?? details.settings?.rotation
       ?? FLEET_DEFAULT_ADJUST_SETTINGS.rotation;
     const effectivePrintMode = details.settings?.printMode ?? 'Normal';
-
-    const stored = (details.adjustSettings ?? {}) as Partial<PrintSettings>;
-    const pick = <K extends keyof PrintSettings>(k: K): PrintSettings[K] =>
-      (printerDefaults[k] as PrintSettings[K])
-      ?? (stored[k] as PrintSettings[K])
-      ?? FLEET_DEFAULT_ADJUST_SETTINGS[k];
 
     const fullAdjustSettings: PrintSettings = {
       ...FLEET_DEFAULT_ADJUST_SETTINGS,
@@ -377,6 +388,7 @@ const Index = () => {
       },
     };
   }, [connectionState.connectedPrinter]);
+
 
 
 
