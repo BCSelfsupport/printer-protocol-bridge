@@ -681,7 +681,30 @@ export function buildMessageDetails(
     // Invert Y: printer Y (0=bottom) → canvas Y (0=top)
     const fieldHeight = pf.height || fontHeight;
     const templateRelativeY = templateHeight - pf.y - fieldHeight;
-    const canvasY = Math.max(0, templateRelativeY + blockedRows);
+    let canvasY = Math.max(0, templateRelativeY + blockedRows);
+
+    // Multi-line firmware can report the upper 2L×7 line as Y=7 even though
+    // the HMI reserves a blank separator row and the editor must render that
+    // line at canvas Y=17 (rows 17-23), not Y=18 (rows 18-24). Snap near-line
+    // ^LF coordinates back to the authoritative template slots so the one-dot
+    // inter-line gap remains visible in CodeSync.
+    if (templateValue.startsWith('multi-')) {
+      const validCanvasYs = getValidCanvasYPositions(templateValue, templateHeight, fieldHeight);
+      if (validCanvasYs.length > 0) {
+        let nearestY = validCanvasYs[0];
+        let nearestDistance = Math.abs(canvasY - nearestY);
+        for (const validY of validCanvasYs) {
+          const distance = Math.abs(canvasY - validY);
+          if (distance < nearestDistance) {
+            nearestY = validY;
+            nearestDistance = distance;
+          }
+        }
+        if (nearestDistance <= 1) {
+          canvasY = nearestY;
+        }
+      }
+    }
 
     // For barcode fields, wrap data with [ENCODING] prefix
     let fieldData = pf.elementData || '';
