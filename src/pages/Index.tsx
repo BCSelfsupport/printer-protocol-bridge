@@ -1671,6 +1671,27 @@ const Index = () => {
         });
 
         try {
+          // Capture what the HMI is currently displaying BEFORE ^NM so we can
+          // reload it from flash afterward. Some firmware revisions leave the
+          // Save LED yellow after a ^NM update if the operator (or a previous
+          // remote command) has an unsaved edit pending on any message.
+          // Re-selecting the CURRENTLY active message forces a flash reload
+          // that discards the dirty buffer without changing what the printer
+          // is printing.
+          let currentSelectionBefore: string | null = null;
+          try {
+            const cur = await printerTransport.sendCommand(target.id, '^SM', {
+              caller: 'copy:read-current-selection',
+              maxWaitMs: 8000,
+              idleAfterDataMs: 800,
+            });
+            if (cur?.success && typeof cur.response === 'string') {
+              const m = cur.response.match(/([A-Z0-9_\-.# ]{1,32})/i);
+              const raw = m?.[1]?.trim().replace(/[>]+$/g, '').trim().toUpperCase();
+              if (raw && raw !== 'NONE') currentSelectionBefore = raw;
+            }
+          } catch { /* best effort */ }
+
           const result = await replaceMessageWithoutDelete(target, message.name, {
             fields: targetFields,
             templateValue: details!.templateValue,
@@ -1686,6 +1707,21 @@ const Index = () => {
               adjustSettings: targetAdjust,
             });
             saveMessage(targetDetails, target.id);
+
+            // Yellow-Save-LED clear: re-select the currently displayed message
+            // (or fall back to the copied message if we couldn't read a
+            // selection) to force the firmware to reload from flash and drop
+            // any dirty HMI edit buffer left over from the ^NM update.
+            const reloadName = currentSelectionBefore ?? message.name;
+            try {
+              await printerTransport.sendCommand(target.id, `^SM ${reloadName}`, {
+                caller: 'copy:clear-edit-buffer',
+                maxWaitMs: 12000,
+                idleAfterDataMs: 1000,
+              });
+            } catch (err) {
+              console.warn(`[CopyMessage] Edit-buffer clear (^SM ${reloadName}) threw on ${target.name} — continuing`, err);
+            }
           }
           results.push({ target, ok: result.success, preservedTuning, reason: result.success ? undefined : result.reason });
         } catch (e) {
