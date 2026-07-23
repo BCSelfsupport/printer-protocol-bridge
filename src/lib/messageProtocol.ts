@@ -97,9 +97,8 @@ const PROTOCOL_CODE_TO_TEMPLATE: Record<number, string> = {
 
 /** Template value → total height in dots.
  * Multi-line heights = (lines × dotsPerLine) + ((lines - 1) × gap).
- * Gap is 1 dot for all templates EXCEPT 2x7 and 2x7s which use 2-dot gap
- * (7 + 2 + 7 = 16). This is confirmed by the ^LF example in the protocol doc
- * (BESTCODE message: H:16, Field 2 at Y:9, Field 3 at Y:0, both H:7).
+ * Gap is 1 dot for every multi-line template — confirmed against the HMI
+ * (2×7 shows a single blank dot-row between the two 7-dot lines).
  */
 const TEMPLATE_HEIGHTS: Record<string, number> = {
   '3': 3,
@@ -113,8 +112,8 @@ const TEMPLATE_HEIGHTS: Record<string, number> = {
   'multi-3x7': 23,   // 3×7 + 2×1 = 23
   'multi-2x12': 25,  // 2×12 + 1×1 = 25
   'multi-2x9': 19,   // 2×9 + 1×1 = 19
-  'multi-2x7': 16,   // 2×7 + 1×2 = 16  (2-dot gap)
-  'multi-2x7s': 16,  // 2×7 + 1×2 = 16  (2-dot gap)
+  'multi-2x7': 15,   // 2×7 + 1×1 = 15  (1-dot gap, matches HMI)
+  'multi-2x7s': 15,  // 2×7 + 1×1 = 15  (1-dot gap, matches HMI)
   'multi-2x5': 11,   // 2×5 + 1×1 = 11
 };
 
