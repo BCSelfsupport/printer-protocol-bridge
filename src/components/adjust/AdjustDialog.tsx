@@ -228,7 +228,16 @@ export function AdjustDialog({
   isConnected,
   title = 'Adjust Settings',
   onRefreshFromPrinter,
+  overrides,
+  onOverridesChange,
 }: AdjustDialogProps) {
+  // Message-editor mode: caller provided an override map. Live-adjust mode:
+  // no overrides prop → toggles hidden, values push directly to the printer.
+  const isMessageMode = !!onOverridesChange;
+  const overrideFor = (key: keyof AdjustOverrides) => !!overrides?.[key];
+  const toggleOverride = (key: keyof AdjustOverrides) => (next: boolean) =>
+    onOverridesChange?.({ [key]: next } as Partial<AdjustOverrides>);
+
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
