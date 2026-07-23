@@ -1759,7 +1759,7 @@ const Index = () => {
             });
             saveMessage(targetDetails, target.id);
 
-            // Yellow-Save-LED clear (park + re-select).
+            // Yellow-Save-LED clear (park away from the rewritten message).
             //
             // Root cause: on printers where the currently-selected message
             // has the SAME name as the one we just ^NM'd, a subsequent
@@ -1770,35 +1770,51 @@ const Index = () => {
             // never saw it because the source printer is excluded from the
             // copy loop).
             //
-            // Fix: always park to a different message first (BESTCODE, the
-            // factory-reserved parking message present on every BestCode
-            // fleet unit) and THEN re-select the intended message. That
-            // guarantees an actual flash reload and drops the dirty buffer.
+            // Fix: always park to a different message after ^NM (BESTCODE, the
+            // factory-reserved parking message present on every BestCode fleet
+            // unit). If the copied message was already active, leave it parked;
+            // re-selecting the rewritten message immediately can bring the HMI
+            // Save LED back yellow on F8/F9/HS1 firmware. The operator's next
+            // normal Select action will then load the message clean from flash.
             //
             // Protocol v2.6 note: neither ^CA (§5.4, only dismisses event
             // popups) nor ^RE (§5.40, only redraws the screen) clears the
             // unsaved-edits state. ^SM is the only documented lever, and it
             // must switch AWAY and back to actually reload from flash.
-            if (!copiedMessageWasActive) {
-              try {
-                await printerTransport.sendCommand(target.id, `^SM ${parkName}`, {
-                  caller: 'copy:park-for-edit-buffer-clear',
-                  maxWaitMs: 10000,
-                  idleAfterDataMs: 800,
-                });
-                await new Promise(resolve => setTimeout(resolve, MESSAGE_RELOAD_SETTLE_MS));
-              } catch (err) {
-                console.warn(`[CopyMessage] Park to ${parkName} threw on ${target.name} — continuing`, err);
-              }
-            }
+            let parkedAfterRewrite = false;
             try {
+              const parkAfterResult = await printerTransport.sendCommand(target.id, `^SM ${parkName}`, {
+                caller: copiedMessageWasActive
+                  ? 'copy:park-and-leave-after-active-message-rewrite'
+                  : 'copy:park-for-edit-buffer-clear',
+                maxWaitMs: 10000,
+                idleAfterDataMs: 800,
+              });
+              const parkAfterResponse = parkAfterResult?.response ?? parkAfterResult?.error ?? '';
+              if (!parkAfterResult?.success || isTransportCommandFailure(parkAfterResponse)) {
+                console.warn(`[CopyMessage] Park to ${parkName} was rejected on ${target.name}; HMI Save LED may stay yellow.`, parkAfterResponse);
+              } else {
+                parkedAfterRewrite = true;
+                updatePrinter(target.id, { currentMessage: parkName });
+                await new Promise(resolve => setTimeout(resolve, MESSAGE_RELOAD_SETTLE_MS));
+              }
+            } catch (err) {
+              console.warn(`[CopyMessage] Park to ${parkName} threw on ${target.name} — continuing`, err);
+            }
+
+            if (!copiedMessageWasActive && parkedAfterRewrite) {
+              try {
               await printerTransport.sendCommand(target.id, `^SM ${reloadName}`, {
                 caller: 'copy:reselect-after-park',
                 maxWaitMs: 12000,
                 idleAfterDataMs: 1000,
               });
-            } catch (err) {
-              console.warn(`[CopyMessage] Re-select ^SM ${reloadName} threw on ${target.name} — continuing`, err);
+                updatePrinter(target.id, { currentMessage: reloadName });
+              } catch (err) {
+                console.warn(`[CopyMessage] Re-select ^SM ${reloadName} threw on ${target.name} — continuing`, err);
+              }
+            } else if (copiedMessageWasActive && parkedAfterRewrite) {
+              console.log(`[CopyMessage] ${target.name} left parked on ${parkName} after rewriting active message to avoid yellow Save LED.`);
             }
           }
           results.push({ target, ok: result.success, preservedTuning, reason: result.success ? undefined : result.reason });
@@ -1859,6 +1875,7 @@ const Index = () => {
     replaceMessageWithoutDelete,
     normalizeMessageForPrinter,
     saveMessage,
+    updatePrinter,
   ]);
 
 
