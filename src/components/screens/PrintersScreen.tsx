@@ -535,6 +535,19 @@ export function PrintersScreen({
     setEditDialogOpen(true);
   };
 
+  // Bottom-nav Adjust shortcut: parent asks us to open the setup card for a
+  // specific printer id. Consume the request so re-renders don't re-open it.
+  useEffect(() => {
+    if (autoEditPrinterId == null) return;
+    const target = printers.find(p => p.id === autoEditPrinterId);
+    if (target) {
+      setPrinterToEdit(target);
+      setEditDialogOpen(true);
+    }
+    onAutoEditConsumed?.();
+  }, [autoEditPrinterId, printers, onAutoEditConsumed]);
+
+
   const handleSaveEdit = (printerId: number, updates: { name: string; ipAddress: string; port: number; role?: import('@/types/printer').PrinterRole; masterId?: number; serialNumber?: string; lineId?: string; rotation?: import('@/types/printer').Printer['rotation']; autoSyncSelection?: boolean; messageDefaults?: import('@/types/printer').Printer['messageDefaults'] }) => {
     onUpdatePrinter?.(printerId, updates);
   };
