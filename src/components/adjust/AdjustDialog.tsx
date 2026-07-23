@@ -327,6 +327,11 @@ export function AdjustDialog({
 
 
         <div className="space-y-4">
+          {isMessageMode && (
+            <div className="text-[11px] text-muted-foreground bg-muted/40 border border-border rounded-md px-3 py-2">
+              By default this message inherits Width / Delay / Bold / Gap / Pitch from each printer's Setup Card. Tick <span className="font-semibold text-foreground">Override</span> on any field below to force this message to use its own value on every printer.
+            </div>
+          )}
           {/* Settings grid - single column on mobile, 2 columns on tablet+ */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* Width: 0-16000 */}
@@ -339,6 +344,8 @@ export function AdjustDialog({
               disabled={!isConnected}
               min={CONSTRAINTS.width.min}
               max={CONSTRAINTS.width.max}
+              overridden={isMessageMode ? overrideFor('width') : undefined}
+              onOverrideToggle={isMessageMode ? toggleOverride('width') : undefined}
             />
 
             {/* Height: 0-10 */}
@@ -351,6 +358,8 @@ export function AdjustDialog({
               disabled={!isConnected}
               min={CONSTRAINTS.height.min}
               max={CONSTRAINTS.height.max}
+              overridden={isMessageMode ? overrideFor('height') : undefined}
+              onOverrideToggle={isMessageMode ? toggleOverride('height') : undefined}
             />
 
             {/* Delay: 0-4,000,000,000 */}
@@ -363,6 +372,8 @@ export function AdjustDialog({
               disabled={!isConnected}
               min={CONSTRAINTS.delay.min}
               max={CONSTRAINTS.delay.max}
+              overridden={isMessageMode ? overrideFor('delay') : undefined}
+              onOverrideToggle={isMessageMode ? toggleOverride('delay') : undefined}
             />
 
             {/* Bold: 0-9 */}
@@ -375,6 +386,8 @@ export function AdjustDialog({
               disabled={!isConnected}
               min={CONSTRAINTS.bold.min}
               max={CONSTRAINTS.bold.max}
+              overridden={isMessageMode ? overrideFor('bold') : undefined}
+              onOverrideToggle={isMessageMode ? toggleOverride('bold') : undefined}
             />
 
             {/* Gap: 0-9 */}
@@ -387,6 +400,8 @@ export function AdjustDialog({
               disabled={!isConnected}
               min={CONSTRAINTS.gap.min}
               max={CONSTRAINTS.gap.max}
+              overridden={isMessageMode ? overrideFor('gap') : undefined}
+              onOverrideToggle={isMessageMode ? toggleOverride('gap') : undefined}
             />
 
             {/* Pitch: 0-4,000,000,000 */}
@@ -399,7 +414,10 @@ export function AdjustDialog({
               disabled={!isConnected}
               min={CONSTRAINTS.pitch.min}
               max={CONSTRAINTS.pitch.max}
+              overridden={isMessageMode ? overrideFor('pitch') : undefined}
+              onOverrideToggle={isMessageMode ? toggleOverride('pitch') : undefined}
             />
+
 
             {/* Rotation: Select dropdown */}
             <div className="bg-card rounded-lg p-3 border border-border shadow-sm">
