@@ -3137,9 +3137,23 @@ export function usePrinterConnection() {
               return false;
             }
 
+            // Persist the delete to flash. Firmware ^HE (v2.6+) exposes ^SV
+            // ("Save queued messages"); without it, ^DM can linger in the RAM
+            // buffer and ^LM may still list the message on the next poll.
+            try {
+              await printerTransport.sendCommand(
+                printer.id,
+                '^SV',
+                { caller: 'deleteMessage:commit', maxWaitMs: 8000, idleAfterDataMs: 500 },
+              );
+            } catch (err) {
+              console.warn('[deleteMessage] ^SV after ^DM failed (continuing to verify):', err);
+            }
+
             // Verify with fresh ^LM (retry with small delay) so UI updates only after confirmed deletion.
             // Some firmware acks ^DM before the message list has refreshed.
             let stillExists = true;
+
             for (let attempt = 1; attempt <= DELETE_VERIFY_RETRIES; attempt += 1) {
               if (attempt > 1) {
                 await delay(DELETE_VERIFY_DELAY_MS);
