@@ -125,9 +125,9 @@ const TEMPLATE_HEIGHTS: Record<string, number> = {
  * Lines are ordered bottom-to-top (line 1 = bottom row at Y=0).
  */
 export const TEMPLATE_LINE_Y_POSITIONS: Record<string, number[]> = {
-  // 2×7: gap=2 → Y=0, Y=9   (7+2=9)
-  'multi-2x7':  [0, 9],
-  'multi-2x7s': [0, 9],
+  // 2×7: gap=1 → Y=0, Y=8   (7+1=8) — matches HMI 1-dot spacing
+  'multi-2x7':  [0, 8],
+  'multi-2x7s': [0, 8],
   // 2×9: gap=1 → Y=0, Y=10  (9+1=10)
   'multi-2x9':  [0, 10],
   // 2×12: gap=1 → Y=0, Y=13 (12+1=13)
