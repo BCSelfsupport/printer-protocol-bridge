@@ -1627,63 +1627,75 @@ const Index = () => {
 
     toast.loading(`Copying "${message.name}" to ${eligible.length} printer(s)…`, { id: 'copy-msg' });
 
-    const results = await Promise.all(eligible.map(async (target) => {
-      // WP-1 (Per-Printer Settings SOW):
-      // Rule 2 — Copy to Printers never overwrites tuned numbers. If the
-      // target already has its own copy of this message, keep its stored
-      // adjustSettings (W/D/Bold/Gap/Speed) untouched and only refresh the
-      // content (fields, text, barcodes).
-      // Rule 3 — First-time send seeds from the source printer's numbers.
-      // Rule 4 — Rotation always comes from the target's Printer Setup Card.
-      const existingTargetStored = getExactStoredMessageForPrinter(message.name, target);
-      const preservedTuning = !!existingTargetStored?.adjustSettings;
-      const baseAdjust = preservedTuning
-        ? { ...(existingTargetStored!.adjustSettings ?? {}) }   // keep tuned numbers
-        : { ...(details!.adjustSettings ?? {}) };               // seed from source
-      const targetRotation = target.rotation ?? baseAdjust.rotation ?? 'Normal';
-      const targetAdjust = { ...baseAdjust, rotation: targetRotation };
-      const targetOffset = target.expiryOffsetDays;
-      // Per-target Line ID substitution: any field flagged as a printer-driven
-      // Line ID (dynamicSource === 'lineId') must be rewritten with THIS
-      // printer's configured lineId before we save to the target. Otherwise
-      // every copied printer keeps the source printer's Line ID on the HMI.
-      const targetLineId = target.lineId?.trim();
-      const targetFields = details!.fields.map((f) => {
-        let next = f;
-        if (targetOffset !== undefined) {
-          const isExpiry = f.autoCodeFieldType?.startsWith('date_expiry')
-            || (f.autoCodeExpiryDays ?? 0) > 0;
-          if (isExpiry) next = { ...next, autoCodeExpiryDays: targetOffset };
-        }
-        if ((f as any).dynamicSource === 'lineId' && targetLineId) {
-          next = { ...next, data: targetLineId };
-        }
-        return next;
-      });
-
-      try {
-        const result = await replaceMessageWithoutDelete(target, message.name, {
-          fields: targetFields,
-          templateValue: details!.templateValue,
-          settings: details!.settings,
-          adjustSettings: targetAdjust,
-          advancedSettings: details!.advancedSettings,
-        }, false);
-        if (result.success) {
-          const targetDetails = normalizeMessageForPrinter({
-            ...details!,
-            name: message.name,
-            fields: targetFields,
-            adjustSettings: targetAdjust,
-          });
-          saveMessage(targetDetails, target.id);
-        }
-        return { target, ok: result.success, preservedTuning, reason: result.success ? undefined : result.reason };
-      } catch (e) {
-        console.error(`[CopyMessage] Failed on ${target.name}:`, e);
-        return { target, ok: false, preservedTuning, reason: 'exception' };
+    const results: Array<{ target: Printer; ok: boolean; preservedTuning: boolean; reason?: string }> = [];
+    setPollingPaused(true);
+    try {
+      const pollingIdle = await waitForPollingIdle(5000);
+      if (!pollingIdle) {
+        console.warn('[CopyMessage] Starting copy while polling is still draining');
       }
-    }));
+
+      for (const [index, target] of eligible.entries()) {
+        toast.loading(`Copying "${message.name}" to ${target.name} (${index + 1}/${eligible.length})…`, { id: 'copy-msg' });
+        // WP-1 (Per-Printer Settings SOW):
+        // Rule 2 — Copy to Printers never overwrites tuned numbers. If the
+        // target already has its own copy of this message, keep its stored
+        // adjustSettings (W/D/Bold/Gap/Speed) untouched and only refresh the
+        // content (fields, text, barcodes).
+        // Rule 3 — First-time send seeds from the source printer's numbers.
+        // Rule 4 — Rotation always comes from the target's Printer Setup Card.
+        const existingTargetStored = getExactStoredMessageForPrinter(message.name, target);
+        const preservedTuning = !!existingTargetStored?.adjustSettings;
+        const baseAdjust = preservedTuning
+          ? { ...(existingTargetStored!.adjustSettings ?? {}) }   // keep tuned numbers
+          : { ...(details!.adjustSettings ?? {}) };               // seed from source
+        const targetRotation = target.rotation ?? baseAdjust.rotation ?? 'Normal';
+        const targetAdjust = { ...baseAdjust, rotation: targetRotation };
+        const targetOffset = target.expiryOffsetDays;
+        // Per-target Line ID substitution: any field flagged as a printer-driven
+        // Line ID (dynamicSource === 'lineId') must be rewritten with THIS
+        // printer's configured lineId before we save to the target. Otherwise
+        // every copied printer keeps the source printer's Line ID on the HMI.
+        const targetLineId = target.lineId?.trim();
+        const targetFields = details!.fields.map((f) => {
+          let next = f;
+          if (targetOffset !== undefined) {
+            const isExpiry = f.autoCodeFieldType?.startsWith('date_expiry')
+              || (f.autoCodeExpiryDays ?? 0) > 0;
+            if (isExpiry) next = { ...next, autoCodeExpiryDays: targetOffset };
+          }
+          if ((f as any).dynamicSource === 'lineId' && targetLineId) {
+            next = { ...next, data: targetLineId };
+          }
+          return next;
+        });
+
+        try {
+          const result = await replaceMessageWithoutDelete(target, message.name, {
+            fields: targetFields,
+            templateValue: details!.templateValue,
+            settings: details!.settings,
+            adjustSettings: targetAdjust,
+            advancedSettings: details!.advancedSettings,
+          }, false);
+          if (result.success) {
+            const targetDetails = normalizeMessageForPrinter({
+              ...details!,
+              name: message.name,
+              fields: targetFields,
+              adjustSettings: targetAdjust,
+            });
+            saveMessage(targetDetails, target.id);
+          }
+          results.push({ target, ok: result.success, preservedTuning, reason: result.success ? undefined : result.reason });
+        } catch (e) {
+          console.error(`[CopyMessage] Failed on ${target.name}:`, e);
+          results.push({ target, ok: false, preservedTuning, reason: 'exception' });
+        }
+      }
+    } finally {
+      setTimeout(() => setPollingPaused(false), 1000);
+    }
 
     const okCount = results.filter(r => r.ok).length;
     const failCount = results.length - okCount;
