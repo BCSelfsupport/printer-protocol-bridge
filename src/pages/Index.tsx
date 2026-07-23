@@ -1761,6 +1761,7 @@ const Index = () => {
   const applyStoredAdjustSettings = useCallback(async (
     targetPrinter: Printer,
     messageName: string,
+    options?: { pollingAlreadyPaused?: boolean },
   ): Promise<void> => {
     const exactStored = getExactStoredMessageForPrinter(messageName, targetPrinter);
     const fallbackStored = exactStored ? null : getStoredMessageForPrinter(messageName, targetPrinter);
