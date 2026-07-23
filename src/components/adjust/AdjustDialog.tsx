@@ -419,43 +419,52 @@ export function AdjustDialog({
             />
 
 
-            {/* Rotation: Select dropdown */}
-            <div className="bg-card rounded-lg p-3 border border-border shadow-sm">
-              <div className="text-xs text-muted-foreground font-medium mb-1">Rotation</div>
-              <Select
-                value={settings.rotation}
-                onValueChange={handleRotationChange}
-                disabled={!isConnected}
-              >
-                <SelectTrigger className="h-9 text-sm font-bold">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROTATION_OPTIONS.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Rotation & Speed are always sourced from the printer Setup Card
+                (Rotation) and Setup Card / Fleet Defaults (Speed) at ^SM time,
+                so we don't expose them as per-message adjust fields. They
+                remain available in live-adjust mode (dashboard Adjust button). */}
+            {!isMessageMode && (
+              <>
+                {/* Rotation: Select dropdown */}
+                <div className="bg-card rounded-lg p-3 border border-border shadow-sm">
+                  <div className="text-xs text-muted-foreground font-medium mb-1">Rotation</div>
+                  <Select
+                    value={settings.rotation}
+                    onValueChange={handleRotationChange}
+                    disabled={!isConnected}
+                  >
+                    <SelectTrigger className="h-9 text-sm font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROTATION_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* Speed: Select dropdown */}
-            <div className="bg-card rounded-lg p-3 border border-border shadow-sm">
-              <div className="text-xs text-muted-foreground font-medium mb-1">Speed</div>
-              <Select
-                value={settings.speed}
-                onValueChange={(v) => handleSpeedChange(v as PrintSettings['speed'])}
-                disabled={!isConnected}
-              >
-                <SelectTrigger className="h-9 text-sm font-bold">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SPEED_OPTIONS.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                {/* Speed: Select dropdown */}
+                <div className="bg-card rounded-lg p-3 border border-border shadow-sm">
+                  <div className="text-xs text-muted-foreground font-medium mb-1">Speed</div>
+                  <Select
+                    value={settings.speed}
+                    onValueChange={(v) => handleSpeedChange(v as PrintSettings['speed'])}
+                    disabled={!isConnected}
+                  >
+                    <SelectTrigger className="h-9 text-sm font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SPEED_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
           </div>
 
         </div>
