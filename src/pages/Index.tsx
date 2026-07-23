@@ -2831,11 +2831,22 @@ const Index = () => {
     }
 
     if (printer.id === connectionState.connectedPrinter?.id) {
-      const ok = await selectMessage(message);
-      if (ok) {
-        try { recordMessageSent(printer.id, message.name); } catch {}
-        clearAllExpiryOverrides();
-        await applyStoredAdjustSettings(printer, message.name);
+      // Pause polling around the ^SM + adjust push so ^PW/^DA follow ^SM
+      // back-to-back on the wire with no intervening ^SU. This removes the
+      // brief "Width 15" flash the HMI shows between message load and the
+      // stored-adjust push.
+      setPollingPaused(true);
+      let ok = false;
+      try {
+        await waitForPollingIdle(3000);
+        ok = await selectMessage(message);
+        if (ok) {
+          try { recordMessageSent(printer.id, message.name); } catch {}
+          clearAllExpiryOverrides();
+          await applyStoredAdjustSettings(printer, message.name, { pollingAlreadyPaused: true });
+        }
+      } finally {
+        setPollingPaused(false);
       }
       return ok;
     }
