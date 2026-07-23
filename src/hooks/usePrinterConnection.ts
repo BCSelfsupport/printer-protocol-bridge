@@ -2858,60 +2858,91 @@ export function usePrinterConnection() {
       return false;
     }
 
-    // Protocol guard: current printing message cannot be deleted
-    const currentMessage = connectionState.status?.currentMessage?.trim().toUpperCase();
-    if (currentMessage && currentMessage === normalizedName) {
-      toast.error(`Can't delete "${msgName}" — it is currently selected for printing.`);
-      return false;
-    }
-
     let deleteConfirmed = true;
 
     if (connectionState.isConnected && connectionState.connectedPrinter) {
-      // Guard against ^LM polling race while delete is being processed
-      console.log('[deleteMessage] Adding guard for:', normalizedName, '| all guards:', [...recentlyDeletedMessages, normalizedName]);
-      recentlyDeletedMessages.add(normalizedName);
-      setTimeout(() => {
-        recentlyDeletedMessages.delete(normalizedName);
-        console.log('[deleteMessage] Guard expired for:', normalizedName);
-      }, DELETION_GUARD_MS);
-
+      const printer = connectionState.connectedPrinter;
       const deleteCommand = `^DM ${msgName}`;
-      console.log('[deleteMessage] Sending:', deleteCommand);
 
       if (shouldUseEmulator()) {
         const emulator = getEmulatorForPrinter(
-          connectionState.connectedPrinter.ipAddress,
-          connectionState.connectedPrinter.port,
+          printer.ipAddress,
+          printer.port,
         );
+
+        const selected = emulator.getState?.()?.currentMessage?.trim().toUpperCase();
+        if (selected && selected === normalizedName) {
+          toast.error(`Can't delete "${msgName}" — it is currently selected for printing.`);
+          return false;
+        }
+
         const result = emulator.processCommand(deleteCommand);
         deleteConfirmed = !!result?.success;
         if (!deleteConfirmed) {
           toast.error(`Failed to delete "${msgName}"`);
         }
       } else if (isElectron || isRelayMode()) {
-        try {
-          const result = await printerTransport.sendCommand(
-            connectionState.connectedPrinter.id,
-            deleteCommand,
-          );
+        deleteConfirmed = await runPrinterWriteExclusive(printer.id, async () => {
+          let confirmed = false;
+          let guardTimer: ReturnType<typeof setTimeout> | null = null;
+          const releaseSaveBusy = beginSaveBusy();
 
-          const responseText = result?.response ?? '';
-          console.log('[deleteMessage] ^DM result:', result);
+          setPollingPaused(true);
+          recentlyDeletedMessages.add(normalizedName);
+          console.log('[deleteMessage] Guarded delete start:', normalizedName);
 
-          if (!result?.success || isProtocolCommandFailure(responseText)) {
-            deleteConfirmed = false;
-            toast.error(`Cannot delete "${msgName}": ${result?.error || responseText || 'Printer rejected command'}`);
-          }
+          try {
+            await waitForPollingIdle(3000);
 
-          // Verify with fresh ^LM (retry with small delay) so UI updates only after confirmed deletion
-          if (deleteConfirmed) {
+            const selectedResult = await printerTransport.sendCommand(
+              printer.id,
+              '^SM',
+              { caller: 'deleteMessage:check-selected' },
+            );
+            const liveCurrentMessage = selectedResult?.success && selectedResult.response
+              ? parseSelectedMessageName(selectedResult.response)
+              : null;
+
+            if (liveCurrentMessage) {
+              setConnectionState(prev => ({
+                ...prev,
+                status: prev.status ? { ...prev.status, currentMessage: liveCurrentMessage } : null,
+              }));
+              updatePrinter(printer.id, { currentMessage: liveCurrentMessage });
+            }
+
+            if (liveCurrentMessage === normalizedName) {
+              toast.error(`Can't delete "${msgName}" — it is currently selected for printing.`);
+              return false;
+            }
+
+            console.log('[deleteMessage] Sending:', deleteCommand, '| live current:', liveCurrentMessage ?? '(unknown)');
+            const result = await printerTransport.sendCommand(
+              printer.id,
+              deleteCommand,
+              { caller: 'deleteMessage:delete', maxWaitMs: 15000, idleAfterDataMs: 1000 },
+            );
+
+            const responseText = result?.response ?? '';
+            console.log('[deleteMessage] ^DM result:', result);
+
+            if (!result?.success || isProtocolCommandFailure(responseText)) {
+              toast.error(`Cannot delete "${msgName}": ${result?.error || responseText || 'Printer rejected command'}`);
+              return false;
+            }
+
+            // Verify with fresh ^LM (retry with small delay) so UI updates only after confirmed deletion.
+            // Some firmware acks ^DM before the message list has refreshed.
             let stillExists = true;
-
             for (let attempt = 1; attempt <= DELETE_VERIFY_RETRIES; attempt += 1) {
+              if (attempt > 1) {
+                await new Promise((resolve) => setTimeout(resolve, DELETE_VERIFY_DELAY_MS));
+              }
+
               const verifyList = await printerTransport.sendCommand(
-                connectionState.connectedPrinter.id,
+                printer.id,
                 '^LM',
+                { caller: `deleteMessage:verify-${attempt}`, maxWaitMs: 12000, idleAfterDataMs: 1000 },
               );
 
               if (verifyList?.success && typeof verifyList.response === 'string') {
@@ -2919,34 +2950,49 @@ export function usePrinterConnection() {
                 stillExists = namesAfterDelete.includes(normalizedName);
                 if (!stillExists) break;
               }
-
-              if (attempt < DELETE_VERIFY_RETRIES) {
-                await new Promise((resolve) => setTimeout(resolve, DELETE_VERIFY_DELAY_MS));
-              }
             }
 
             if (stillExists) {
-              deleteConfirmed = false;
-              // Query ^SM to identify the actual reason (most common: it's the currently-selected message)
               let reason = 'is still on the printer';
               try {
                 const smResult = await printerTransport.sendCommand(
-                  connectionState.connectedPrinter.id,
+                  printer.id,
                   '^SM',
+                  { caller: 'deleteMessage:diagnose-selected' },
                 );
-                const smResp = (smResult?.response ?? '').toString().toUpperCase();
-                if (smResp.includes(normalizedName)) {
+                const selectedAfterDelete = smResult?.success && smResult.response
+                  ? parseSelectedMessageName(smResult.response)
+                  : null;
+
+                if (selectedAfterDelete === normalizedName) {
                   reason = 'is currently selected on the printer. Select a different message first, then delete';
                 }
-              } catch { /* ignore */ }
+              } catch { /* ignore diagnostic failure */ }
+
               toast.error(`Delete failed — "${msgName}" ${reason}.`);
+              return false;
+            }
+
+            confirmed = true;
+            guardTimer = setTimeout(() => {
+              recentlyDeletedMessages.delete(normalizedName);
+              console.log('[deleteMessage] Guard expired for:', normalizedName);
+            }, DELETION_GUARD_MS);
+
+            return true;
+          } catch (e) {
+            console.error('[deleteMessage] Failed to delete:', e);
+            toast.error(`Failed to delete "${msgName}"`);
+            return false;
+          } finally {
+            releaseSaveBusy();
+            setPollingPaused(false);
+            if (!confirmed) {
+              recentlyDeletedMessages.delete(normalizedName);
+              if (guardTimer) clearTimeout(guardTimer);
             }
           }
-        } catch (e) {
-          console.error('[deleteMessage] Failed to send ^DM:', e);
-          deleteConfirmed = false;
-          toast.error(`Failed to delete "${msgName}"`);
-        }
+        });
       }
 
       if (!deleteConfirmed) {
@@ -2962,7 +3008,7 @@ export function usePrinterConnection() {
     }));
 
     return true;
-  }, [connectionState.messages, connectionState.isConnected, connectionState.connectedPrinter, connectionState.status?.currentMessage]);
+  }, [connectionState.messages, connectionState.isConnected, connectionState.connectedPrinter, updatePrinter]);
 
   // Reset or set a counter value using ^CC command
   // Counter IDs: 0 = Print Counter, 1-4 = Custom Counters, 6 = Product Counter
