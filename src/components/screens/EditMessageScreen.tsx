@@ -289,6 +289,52 @@ export function EditMessageScreen({
   const printerOffsetMsRef = useRef(0);
   const hasSavedToPrinterRef = useRef(!startEmpty);
 
+  // Shared save handler — used by the Save button and by the "Done & Save"
+  // action inside AdjustDialog so operators don't need two clicks after
+  // tweaking per-message overrides.
+  const handleSaveMessage = async (): Promise<boolean> => {
+    setIsSaving(true);
+    try {
+      const messageWithAdjust: MessageDetails = {
+        ...message,
+        adjustSettings: {
+          width: localAdjustSettings.width,
+          height: localAdjustSettings.height,
+          delay: localAdjustSettings.delay,
+          bold: localAdjustSettings.bold,
+          gap: localAdjustSettings.gap,
+          pitch: localAdjustSettings.pitch,
+          speed: localAdjustSettings.speed,
+          rotation: localAdjustSettings.rotation,
+        },
+        adjustOverrides: { ...localAdjustOverrides },
+      };
+      const result = await onSave(messageWithAdjust, !hasSavedToPrinterRef.current);
+      if (!result) return false;
+      hasSavedToPrinterRef.current = true;
+      if (result.fields.length > 0) {
+        const positionsChanged = result.fields.some((rf, i) => {
+          const ef = message.fields[i];
+          return ef && (rf.y !== ef.y || rf.x !== ef.x);
+        });
+        setMessage(prev => ({
+          ...prev,
+          fields: result.fields,
+          templateValue: result.templateValue ?? prev.templateValue,
+          height: result.height ?? prev.height,
+        }));
+        if (positionsChanged) toast.info('Field positions adjusted by printer firmware');
+        else toast.success('Message saved');
+      } else {
+        toast.success('Message saved');
+      }
+      return true;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+
   useEffect(() => {
     printerOffsetMsRef.current = printerTime ? printerTime.getTime() - Date.now() : 0;
   }, [printerTime]);
@@ -1486,58 +1532,7 @@ export function EditMessageScreen({
 
                 <button
                   disabled={isSaving}
-                  onClick={async () => {
-                    setIsSaving(true);
-                    try {
-                      // Include adjust settings in the saved message.
-                      // Tokens (e.g. {COUNTER1}) stay as templates here — they're
-                      // resolved at the lowest layer (saveMessageContent) so the
-                      // printer always receives baked data while the editor keeps
-                      // the template for re-editing.
-                      const messageWithAdjust: MessageDetails = {
-                        ...message,
-                        adjustSettings: {
-                          width: localAdjustSettings.width,
-                          height: localAdjustSettings.height,
-                          delay: localAdjustSettings.delay,
-                          bold: localAdjustSettings.bold,
-                          gap: localAdjustSettings.gap,
-                          pitch: localAdjustSettings.pitch,
-                          speed: localAdjustSettings.speed,
-                          rotation: localAdjustSettings.rotation,
-                        },
-                        adjustOverrides: { ...localAdjustOverrides },
-                      };
-
-                      const result = await onSave(messageWithAdjust, !hasSavedToPrinterRef.current);
-                      if (!result) return;
-
-                      hasSavedToPrinterRef.current = true;
-
-                      if (result.fields.length > 0) {
-                        // Check if printer adjusted any positions
-                        const positionsChanged = result.fields.some((rf, i) => {
-                          const ef = message.fields[i];
-                          return ef && (rf.y !== ef.y || rf.x !== ef.x);
-                        });
-                        setMessage(prev => ({
-                          ...prev,
-                          fields: result.fields,
-                          templateValue: result.templateValue ?? prev.templateValue,
-                          height: result.height ?? prev.height,
-                        }));
-                        if (positionsChanged) {
-                          toast.info('Field positions adjusted by printer firmware');
-                        } else {
-                          toast.success('Message saved');
-                        }
-                      } else {
-                        toast.success('Message saved');
-                      }
-                    } finally {
-                      setIsSaving(false);
-                    }
-                  }}
+                  onClick={() => { void handleSaveMessage(); }}
                   className="industrial-button-success text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px] disabled:opacity-60"
                 >
                   {isSaving ? <Loader2 className="w-4 h-4 md:w-6 md:h-6 mb-0.5 animate-spin" /> : <Save className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />}
@@ -1798,6 +1793,7 @@ export function EditMessageScreen({
             title="Adjust Settings (Message)"
             overrides={localAdjustOverrides}
             onOverridesChange={(partial) => setLocalAdjustOverrides(prev => ({ ...prev, ...partial }))}
+            onConfirm={async () => { await handleSaveMessage(); }}
           />
 
         </>

@@ -43,6 +43,10 @@ interface AdjustDialogProps {
    *  toggles rendered — current behaviour). */
   overrides?: AdjustOverrides;
   onOverridesChange?: (partial: Partial<AdjustOverrides>) => void;
+  /** Optional: called when the operator presses Done in message-editor mode.
+   *  Lets the parent persist the message immediately so users don't need to
+   *  press Save separately after adjusting. */
+  onConfirm?: () => Promise<void> | void;
 }
 
 
@@ -231,6 +235,7 @@ export function AdjustDialog({
   onRefreshFromPrinter,
   overrides,
   onOverridesChange,
+  onConfirm,
 }: AdjustDialogProps) {
   // Message-editor mode: caller provided an override map. Live-adjust mode:
   // no overrides prop → toggles hidden, values push directly to the printer.
@@ -476,22 +481,27 @@ export function AdjustDialog({
           <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
             <div className="text-[11px] text-muted-foreground">
               {isMessageMode
-                ? 'Changes apply when you press Save in the message editor.'
+                ? onConfirm
+                  ? 'Done saves the message with these settings.'
+                  : 'Changes apply when you press Save in the message editor.'
                 : 'Changes are sent to the printer as you make them.'}
             </div>
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 if (saveTimerRef.t) {
                   clearTimeout(saveTimerRef.t);
                   saveTimerRef.t = null;
                   if (!isMessageMode) onSendCommand('^SV').catch(() => {});
                 }
+                if (isMessageMode && onConfirm) {
+                  try { await onConfirm(); } catch { /* parent handles errors */ }
+                }
                 onOpenChange(false);
               }}
               className="industrial-button text-white px-4 py-2 rounded text-sm font-semibold"
             >
-              Done
+              {isMessageMode && onConfirm ? 'Done & Save' : 'Done'}
             </button>
           </div>
         </div>
