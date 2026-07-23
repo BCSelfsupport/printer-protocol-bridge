@@ -280,7 +280,7 @@ export function EditMessageScreen({
   // when the operator toggles "Override for this message" in the Adjust dialog,
   // the flag flips to true and the stored value becomes authoritative for
   // that message on every printer.
-  const [localAdjustOverrides, setLocalAdjustOverrides] = useState<import('./EditMessageScreen').MessageAdjustOverrides>({});
+  const [localAdjustOverrides, setLocalAdjustOverrides] = useState<MessageAdjustOverrides>({});
 
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [userDefineEntryOpen, setUserDefineEntryOpen] = useState(false);
