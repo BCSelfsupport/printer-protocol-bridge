@@ -481,22 +481,27 @@ export function AdjustDialog({
           <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
             <div className="text-[11px] text-muted-foreground">
               {isMessageMode
-                ? 'Changes apply when you press Save in the message editor.'
+                ? onConfirm
+                  ? 'Done saves the message with these settings.'
+                  : 'Changes apply when you press Save in the message editor.'
                 : 'Changes are sent to the printer as you make them.'}
             </div>
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 if (saveTimerRef.t) {
                   clearTimeout(saveTimerRef.t);
                   saveTimerRef.t = null;
                   if (!isMessageMode) onSendCommand('^SV').catch(() => {});
                 }
+                if (isMessageMode && onConfirm) {
+                  try { await onConfirm(); } catch { /* parent handles errors */ }
+                }
                 onOpenChange(false);
               }}
               className="industrial-button text-white px-4 py-2 rounded text-sm font-semibold"
             >
-              Done
+              {isMessageMode && onConfirm ? 'Done & Save' : 'Done'}
             </button>
           </div>
         </div>
