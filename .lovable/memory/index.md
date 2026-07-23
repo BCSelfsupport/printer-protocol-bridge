@@ -29,7 +29,7 @@ Updated: today
 - [PWA Specs](mem://integration/pwa-technical-spec) — Service worker disabled, version-based bootstrap
 - [Authentication](mem://features/printer-authentication) — Admin password TEXAS, no remote sign-in
 - [Date/Time Sync](mem://features/datetime-sync) — 500ms loop, regex substitution for HMI parity
-- [Persistence Protocol](mem://features/message-persistence-protocol) — ^SV required after ^NM, delete-recreate flow
+- [Persistence Protocol](mem://features/message-persistence-protocol) — ^NM self-persists; no ^SV command exists; delete-recreate flow
 - [Print Modes](mem://features/print-mode-configuration) — Integer mapping for ^CM command (0-6)
 - [Relay System](mem://architecture/mobile-relay-system) — HTTP relay on port 8766 for mobile PWA
 - [Protocol Limits](mem://constraints/protocol-functional-limitations) — Read-only metrics, no remote maintenance
@@ -59,7 +59,7 @@ Updated: today
 - [Wire/Cable Spec](mem://features/wire-cable/technical-spec) — Distance estimation, encoder calibration
 - [Auto Update](mem://integration/auto-update-system) — Electron silent background updates via GitHub
 - [Hardware Limits](mem://constraints/hardware-specific-limits) — Model 82 (25-dot), 86 (19-dot), 88 (32-dot)
-- [Message Deletion](mem://features/message-deletion-protocol) — 20s guard, ^LM verification, explicit ^SV
+- [Message Deletion](mem://features/message-deletion-protocol) — 20s guard, ^LM verification; no ^SV command exists
 - [Variable Data Printing](mem://features/variable-data-printing) — Pause after ^NM for Print Go, scrolling UI
 - [METRC Detection](mem://integration/metrc-csv-detection) — Auto-detect CSV headers for tracking tags
 - [Data Ingestion](mem://integration/automated-data-ingestion) — REST API, Hotfolder, ODBC/SQL support
@@ -114,7 +114,7 @@ Updated: today
 - [Firmware Grace](mem://architecture/firmware-processing-grace-periods) — 15s grace period for state parity
 - [Sync Matching](mem://features/message-metadata-sync-matching) — Prioritize by exact data content
 - [Fleet printer identity isolation](mem://constraints/fleet-printer-identity-isolation) — Never share firmware or serial metadata across printers; each fleet printer record represents a distinct physical device.
-- [^NM Digest Pause](mem://features/message-persistence/nm-digest-pause) — Scale ^NM→^SV delay (300+60ms/field, cap 3s) to fix Dozen12 12-field lockup
+- [^NM Digest Pause](mem://features/message-persistence/nm-digest-pause) — Scale post-^NM digest pause (300+60ms/field, cap 3s); no ^SV command exists
 - [Protocol ^NM/^NF Flow](mem://features/message-persistence/nm-nf-field-append-flow) — Use ^NF after field 7; avoid F8 ^NM lockup; deselect slaves before rewrite.
 - [Save Busy Defers Fleet Push](mem://features/message-persistence/save-busy-defers-fleet-push) — Concurrent Fleet HTTP pushes locked up F8/F9 saves; saveBusy flag gates uploaders.
 - [Twin Counter Zero on Bind](mem://features/twin-code-counter-zero-on-bind) — Bind preSelect zeros HMI Print (^CC 0;0) and Product (^CC 6;0) counters on A+B for parity with HUD/CSV.

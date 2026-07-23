@@ -140,13 +140,8 @@ const recentlyAddedMessages = new Set<string>();
 const ADDITION_GUARD_MS = 15000;
 const DELETE_VERIFY_DELAY_MS = 250;
 const RESERVED_PRINTER_MESSAGES = new Set(['BESTCODE', 'BESTCODE AUTO', 'BESTCODE_AUTO']);
-// ^SV flushes the firmware's queued message writes/deletes to NOR filesystem.
-// Without this, ^DM and ^NM changes are only queued in RAM until a manual save
-// or shutdown occurs on the printer HMI.
-const FLUSH_COMMAND = '^SV';
 const SAVE_ACK_MAX_WAIT_MS = 30000;
 const SAVE_NM_IDLE_AFTER_DATA_MS = 1500;
-const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 5000;
 const SAVE_PENDING_ACK_EXTRA_SETTLE_MS = 3000;
 const SAVE_RECOVERY_QUIET_MS = 10000;
 
@@ -1623,7 +1618,7 @@ export function usePrinterConnection() {
         // Serialize the socket close behind any in-flight write on this printer.
         // Tearing down the TCP session while ^SJ/^PR/^NM is still on the wire
         // has been observed to lock BestCode firmware (requires power-cycle).
-        // Also wait briefly for save-idle so an in-flight ^NM/^SV digest can
+        // Also wait briefly for save-idle so an in-flight ^NM/^NF digest can
         // complete before we drop the socket.
         await waitForSaveIdle(5000).catch(() => undefined);
         await runPrinterWriteExclusive(printerToClose.id, async () => {
@@ -2378,8 +2373,6 @@ export function usePrinterConnection() {
       try {
         const result = await printerTransport.sendCommand(connectionState.connectedPrinter.id, minimalNM);
         console.log('[createMessageOnPrinter] ^NM result:', result);
-        // Flush to NOR so the message persists
-        await printerTransport.sendCommand(connectionState.connectedPrinter.id, FLUSH_COMMAND);
         return true;
       } catch (e) {
         console.error('[createMessageOnPrinter] Failed to send ^NM:', e);
@@ -2543,8 +2536,8 @@ export function usePrinterConnection() {
     // needing ^DM. The park-on-BESTCODE + ^DM dance was only required when
     // the destructive delete-recreate flow was used (^DM is rejected on the
     // active message). Since the editor constrains template height to the
-    // printer's capability, plain ^NM → ^SV is sufficient and shaves ~3s
-    // per save by avoiding the parking ^SM and the delete handshake.
+    // printer's capability, plain ^NM is sufficient and shaves time by avoiding
+    // the parking ^SM and the delete handshake.
     //
     // NOTE: If a future change ever needs to alter template height, restore
     // the park → delete → recreate sequence here.
@@ -2552,11 +2545,10 @@ export function usePrinterConnection() {
     // Insert ^NG (graphic upload) commands before ^NM
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
-    commands.push(FLUSH_COMMAND);
     // When selectAfterSave is set, chain ^SM inside the same polling-pause
-    // window so no ^SU / ^LM can interleave between ^SV and ^SM. This is the
+    // window so no ^SU / ^LM can interleave between ^NM and ^SM. This is the
     // hot path for messages with prompted (User Define) fields — running ^SM
-    // concurrently with a post-^SV poll was locking the firmware.
+    // concurrently with a post-save poll was locking the firmware.
     if (selectAfterSave) {
       commands.push(`^SM ${messageName}`);
     }
@@ -2582,7 +2574,7 @@ export function usePrinterConnection() {
       return true;
     } else if (isElectron || isRelayMode()) {
       // Pause status polling to prevent ^SU commands from interleaving
-      // with the ^DM → ^NM → ^SV save sequence on the shared TCP socket.
+      // with the message save sequence on the shared TCP socket.
       setPollingPaused(true);
       // Also signal background uploaders (Fleet telemetry) to defer — concurrent
       // HTTP pushes during the ^NM digest window were locking up F8/F9 saves.
@@ -2592,19 +2584,14 @@ export function usePrinterConnection() {
           const cmd = commands[cmdIdx];
           const isNmCommand = cmd.startsWith('^NM ');
           const isNfCommand = cmd.startsWith('^NF ');
-          const isFlushCommand = cmd === FLUSH_COMMAND;
           const cmdOptions = (isNmCommand || isNfCommand)
             ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_NM_IDLE_AFTER_DATA_MS }
-            : isFlushCommand
-              ? { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS }
-              : undefined;
+            : undefined;
           console.log('[saveMessageContent] Sending:', cmd);
           let result = await printerTransport.sendCommand(printer.id, cmd, cmdOptions);
           console.log('[saveMessageContent] Result:', JSON.stringify(result));
-          // Firmware sometimes drops the TCP socket during heavy ^NM digests.
-          // If the very next command (typically ^SV) hits ECONNRESET/EPIPE,
-          // reconnect once and retry — the message data is already in firmware
-          // RAM, ^SV just commits to NOR.
+          // Firmware sometimes drops the TCP socket during heavy message writes.
+          // Reconnect once and retry the current command.
           const transportErr = String(result?.error || '').toLowerCase();
           const socketDropped = !result?.success && (
             transportErr.includes('econnreset') ||
@@ -2632,7 +2619,7 @@ export function usePrinterConnection() {
           const responseText = result?.response ?? '';
           const errorText = result?.error ?? '';
           const rejectedByPrinter = isProtocolCommandFailure(responseText);
-          const missingSaveAck = (isNmCommand || isNfCommand || isFlushCommand) && !hasCompleteSaveAck(responseText);
+          const missingSaveAck = (isNmCommand || isNfCommand) && !hasCompleteSaveAck(responseText);
           const echoOnlySaveResponse = missingSaveAck && !!responseText.trim();
 
           // Don't fail on ^DM error (message might not exist yet)
@@ -2648,21 +2635,19 @@ export function usePrinterConnection() {
 
           if (echoOnlySaveResponse) {
             console.warn('[saveMessageContent] Save command returned partial ack; treating as pending and extending settle:', {
-              command: isNmCommand ? '^NM' : isNfCommand ? '^NF' : '^SV',
+              command: isNmCommand ? '^NM' : '^NF',
               response: responseText,
             });
           }
 
-          // Inter-command delay: ^NM must fully acknowledge before ^SV, then
-          // heavy multi-field saves get a firmware digest floor before flush.
+          // Inter-command delay: ^NM must fully acknowledge, then heavy
+          // multi-field saves get a firmware digest floor before follow-up work.
           let delayAfterCommand = 300;
           if (cmd.startsWith('^SM ')) {
             delayAfterCommand = 800;
           } else if (isNmCommand) {
             delayAfterCommand = getNmDigestPauseMs(validFields.length);
             console.log(`[saveMessageContent] ^NM digest pause: ${delayAfterCommand}ms (${validFields.length} fields)`);
-          } else if (isFlushCommand) {
-            delayAfterCommand = 1000;
           }
           if (echoOnlySaveResponse) {
             delayAfterCommand += SAVE_PENDING_ACK_EXTRA_SETTLE_MS;
@@ -2821,7 +2806,6 @@ export function usePrinterConnection() {
     // Insert ^NG commands before ^NM
     commands.push(...dmUploadCmds);
     commands.push(nmCommand);
-    commands.push(FLUSH_COMMAND);
     return commands;
   }, []);
 
@@ -2892,12 +2876,6 @@ export function usePrinterConnection() {
           if (!result?.success || isProtocolCommandFailure(responseText)) {
             deleteConfirmed = false;
             toast.error(`Cannot delete "${msgName}": ${result?.error || responseText || 'Printer rejected command'}`);
-          }
-
-          // Flush the queued deletion to NOR filesystem
-          if (deleteConfirmed) {
-            console.log('[deleteMessage] Flushing with ^SV');
-            await printerTransport.sendCommand(connectionState.connectedPrinter.id, FLUSH_COMMAND);
           }
 
           // Verify with fresh ^LM (retry with small delay) so UI updates only after confirmed deletion

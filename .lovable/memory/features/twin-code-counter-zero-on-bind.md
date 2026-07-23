@@ -19,12 +19,12 @@ number and the audit CSV `bottleIndex`.
 B before and after ^SM-activating the production message, then performs a final
 forced Product/Print reset after all message select / print-mode commands and
 verifies with ^CN. The final reset must be the last bind action; do not follow it
-with ^SV, ^SM, or ^CM because those can reload the message-saved HMI counter
+with ^SM or ^CM because those can reload the message-saved HMI counter
 snapshot and make counts jump back from 0.
 
 CRITICAL: For the HMI run counters (Print=0, Product=6) the dispatcher writes
 **both** the start value AND the current value (`^CC 0;S0` then `^CC 0;0`,
-same for id 6) before `^SV`. Without zeroing the start (`S`), the next `^SM`
+same for id 6). Without zeroing the start (`S`), the next `^SM`
 that activates the user's saved message reloads the counter to the message's
 persisted start (often the pre-bind reading like 84) — operators saw counters
 go to 0 during the LOADING screen, then snap back to old values the moment

@@ -67,7 +67,6 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const SAVE_ACK_MAX_WAIT_MS = 30000;
 const SAVE_NM_IDLE_AFTER_DATA_MS = 1500;
-const SAVE_FLUSH_IDLE_AFTER_DATA_MS = 5000;
 
 // Prompt-before-print messages force the printer through a longer internal
 // handshake on ^SM (prompt config parse + display). A 15 s HTTP ceiling can
@@ -91,9 +90,6 @@ const getCommandOptions = (command: string): TransportCommandOptions | undefined
   if (trimmed.startsWith('^NM ') || trimmed.startsWith('^NF ')) {
     return { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_NM_IDLE_AFTER_DATA_MS };
   }
-  if (trimmed === '^SV') {
-    return { maxWaitMs: SAVE_ACK_MAX_WAIT_MS, idleAfterDataMs: SAVE_FLUSH_IDLE_AFTER_DATA_MS };
-  }
   return undefined;
 };
 
@@ -104,7 +100,7 @@ const messageHasPrompt = (details: MessageDetails | null): boolean => {
 
 const isSaveCommand = (command: string) => {
   const trimmed = command.trim().toUpperCase();
-  return trimmed.startsWith('^NM ') || trimmed.startsWith('^NF ') || trimmed === '^SV';
+  return trimmed.startsWith('^NM ') || trimmed.startsWith('^NF ');
 };
 
 const isProtocolFailureResponse = (rawResponse?: string) => {
@@ -140,7 +136,6 @@ const getSyncCommandDelay = (command: string, fieldCount: number) => {
     if (fieldCount >= 6) return 7000;
     return Math.min(4000, 1000 + fieldCount * 250);
   }
-  if (trimmed === '^SV') return 1500;
   return 300;
 };
 
@@ -259,7 +254,7 @@ export function useMasterSlaveSync({
 
   // Send a full write/select sequence through ONE guarded session per target
   // printer. This is the critical path for master→slave changes: do not open a
-  // new Telnet connection for every ^NM/^SV/^SM command.
+  // new Telnet connection for every ^NM/^SM command.
   const sendCommandSequenceToPrinter = useCallback(async (
     printer: Printer,
     commands: SequencedCommand[],
@@ -602,8 +597,8 @@ export function useMasterSlaveSync({
   }, [isMaster, currentMessage, runSelectionSync, connectedPrinter?.autoSyncSelection]);
 
   // Message content is pushed by Index.syncMessageToSlaves after save using the
-  // full ^DM → ^NM → ^SV sequence. Do not also send a bare ^NM here: that can
-  // leave slaves RAM-yellow and can race the master's save/restore flow.
+  // full message write sequence. Do not also send a bare ^NM here: that can
+  // race the master's save/restore flow.
   useEffect(() => {
     const currentNames = messages.map(m => m.name).sort();
     prevMessageListRef.current = currentNames;

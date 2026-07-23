@@ -27,7 +27,7 @@ serials feed the dispatcher; cycle target ≈300ms (200 units/min).
 1. **Bind dialog** — operator picks A/B IPs and per-side message/field/subcommand,
    confirms the wire sequence in the dialog footer.
 2. **Auto-create on bind** — `^LM` check; if the configured message name is missing,
-   the dispatcher seeds the canonical shape and `^SV`s before `^SM` selects it
+   the dispatcher seeds the canonical shape with `^NM` before `^SM` selects it; never `^SV`
    (mem://features/twin-code-auto-create-messages).
 3. **^LF field-shape sanity check** — after `^SM`, the dispatcher verifies the
    target field index exists AND has the right type (`text` for `^TD`, `barcode`

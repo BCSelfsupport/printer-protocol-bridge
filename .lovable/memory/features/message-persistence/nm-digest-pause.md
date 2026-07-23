@@ -1,13 +1,13 @@
 ---
-name: ^NM → ^SV digest pause + saveEditedMessage settle stripping
-description: The ONLY size-scaled delay in the save flow is the per-^NM digest pause inside saveMessageContent. saveEditedMessage in Index.tsx must NOT scale settle/reload by field count and must NOT call waitForPollingIdle around the save handoff. Heavy messages (≥6 fields) and extended-date messages skip the post-save ^GM/^LF reload entirely.
+name: ^NM digest pause + saveEditedMessage settle stripping
+description: There is no ^SV command. The ONLY size-scaled delay in the save flow is the post-^NM digest pause inside saveMessageContent. saveEditedMessage in Index.tsx must NOT scale settle/reload by field count and must NOT call waitForPollingIdle around the save handoff. Heavy messages (≥6 fields) and extended-date messages skip the post-save ^GM/^LF reload entirely.
 type: feature
 ---
 
 # ^NM digest pause + post-save settle policy
 
 ## The only legitimate size-scaled delay
-Inside `saveMessageContent` (usePrinterConnection.ts), between `^NM` and `^SV`:
+Inside `saveMessageContent` (usePrinterConnection.ts), after `^NM` returns while the printer digests the message:
 
 ```
 delay = min(3000, 300 + validFields.length * 60)  // ms
@@ -33,7 +33,7 @@ holding `setPollingPaused(true)` while sleeping/idle-waiting; the lockup =
 ## Current rules (post-fix)
 - `followUpSettleMs = MESSAGE_RELOAD_SETTLE_MS` (constant, NOT scaled)
 - `reloadSettleMs   = MESSAGE_RELOAD_SETTLE_MS` (constant, NOT scaled)
-- Settings sequence runs immediately after `^NM`/`^SV` ack — no pre-sleep, no
+- Settings sequence runs immediately after `^NM` ack and its digest pause — no pre-sleep, no
   `waitForPollingIdle`. The ^NM digest pause already covered firmware headroom.
 - Post-save reload (`^GM`/`^LF`) is SKIPPED for messages with `fields.length >= 6`
   or any extended-date field. The local merged copy is authoritative.
@@ -43,6 +43,6 @@ holding `setPollingPaused(true)` while sleeping/idle-waiting; the lockup =
 
 ## Validation
 - 1–5 field messages: full save + reload, completes in <2s
-- 6–11 field messages: save + skip reload, completes when ^NM/^SV acks
+- 6–11 field messages: save + skip reload, completes when ^NM acks and digest pause finishes
 - 12-field prompt message (Dozen12): saves and selects without lockup, spinner
-  releases as soon as ^NM/^SV ack returns
+  releases as soon as ^NM ack and digest pause finish

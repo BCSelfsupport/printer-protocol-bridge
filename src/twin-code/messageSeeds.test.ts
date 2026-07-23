@@ -11,7 +11,7 @@ describe("messageSeeds — protocol v2.6 conformance", () => {
     const cmds = buildSeedCommands(LID_SEED, "LID");
     expect(cmds[0]).toBe("^DM LID");
     expect(cmds[1]).toBe("^NM 4;0;0;0;LID^AB1;0;0;0;7;5;DRYRUN0000000");
-    expect(cmds[2]).toBe("^SV");
+    expect(cmds).not.toContain("^SV");
     // ^AB DataMatrix must be exactly 6 segments after `n` (x;y;f;t;s;data) — no `r`
     const ab = cmds[1].split("^AB1;")[1];
     expect(ab.split(";").length).toBe(6);
@@ -26,8 +26,8 @@ describe("messageSeeds — protocol v2.6 conformance", () => {
   it("Auto-code seed uses ^NM + named ^NF append flow (DOZEN12 pattern), font 2, ^AP type 8", () => {
     const seed = buildAutoCodeSeed({ line: "27", unit: "U", counterSlot: 1 });
     const cmds = buildSeedCommands(seed, "AUTO");
-    // ^DM, ^NM (header + first field), ^NF x4, ^SV  =  7 commands
-    expect(cmds.length).toBe(7);
+    // ^DM, ^NM (header + first field), ^NF x4 = 6 commands
+    expect(cmds.length).toBe(6);
     expect(cmds[0]).toBe("^DM AUTO");
     expect(cmds[1].startsWith("^NM 1;0;0;0;AUTO^AT1;0;0;2;27")).toBe(true);
     // No additional inline fields after the first one in ^NM
@@ -39,7 +39,7 @@ describe("messageSeeds — protocol v2.6 conformance", () => {
     expect(cmds[3]).toMatch(/^\^NF AUTO;\^AD3;\d+;0;2;4$/);
     expect(cmds[4]).toMatch(/^\^NF AUTO;\^AC4;\d+;0;2;1;6;1$/);
     expect(cmds[5]).toMatch(/^\^NF AUTO;\^AT5;\d+;0;2;U$/);
-    expect(cmds[6]).toBe("^SV");
+    expect(cmds).not.toContain("^SV");
   });
 
   it("buildSeedCommands passes ^AP type codes through verbatim (spec §5.33.2.7 allows any d/t)", () => {

@@ -127,7 +127,7 @@ export const TRAINING_STAGES: TrainingStage[] = [
         id: 'bind-auto-create',
         title: 'Auto-create on bind',
         body:
-          'If the configured message name doesn\'t exist on the printer yet, the dispatcher will seed it with the canonical shape and ^SV (save) before selecting it. Leave this ON for fresh printers; turn it OFF if you want to fail fast on a missing message (useful for production parity audits).',
+          'If the configured message name doesn\'t exist on the printer yet, the dispatcher will seed it with the canonical shape before selecting it. Leave this ON for fresh printers; turn it OFF if you want to fail fast on a missing message (useful for production parity audits).',
         target: 'bind-auto-create',
         placement: 'left',
       },
