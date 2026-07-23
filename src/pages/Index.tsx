@@ -1791,7 +1791,32 @@ const Index = () => {
         seededFromFallback: true,
       });
     }
+    // Backfill: legacy exactStored records may have empty/missing adjustSettings,
+    // which would leave pushKey() false and skip ^PW/^DA entirely — the HMI's
+    // 15/100 defaults would remain. Seed with fleet defaults so the select
+    // actually pushes Width=2 / Delay=500 / Ultra Fast.
+    if (exactStored) {
+      const cur = (exactStored.adjustSettings ?? {}) as Partial<PrintSettings>;
+      const missing = ['width','delay','speed'].some(k => (cur as any)[k] === undefined);
+      if (missing) {
+        const seeded = {
+          ...FLEET_DEFAULT_ADJUST_SETTINGS,
+          ...(exactStored.settings ?? {}),
+          ...cur,
+          rotation: targetPrinter.rotation
+            ?? cur.rotation
+            ?? exactStored.settings?.rotation
+            ?? FLEET_DEFAULT_ADJUST_SETTINGS.rotation,
+        };
+        saveMessage({ ...exactStored, adjustSettings: seeded as MessageDetails['adjustSettings'] }, targetPrinter.id);
+        (stored as MessageDetails).adjustSettings = seeded as MessageDetails['adjustSettings'];
+        console.log('[AdjustDebug][applyStoredAdjustSettings.backfillLegacyEmpty]', {
+          targetPrinterId: targetPrinter.id, messageName, seeded,
+        });
+      }
+    }
     const hasStoredMessageSettings = true;
+
 
     // Important: do NOT adopt the printer's live values here. At this point we
     // have already switched to the target message, so the live HMI values may
