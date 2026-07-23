@@ -16,6 +16,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+export interface AdjustOverrides {
+  width?: boolean;
+  height?: boolean;
+  delay?: boolean;
+  bold?: boolean;
+  gap?: boolean;
+  pitch?: boolean;
+  speed?: boolean;
+}
+
 interface AdjustDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -27,7 +37,14 @@ interface AdjustDialogProps {
   /** Optional: query current settings from the printer. When provided,
    *  the dialog auto-refreshes on open and shows a manual refresh button. */
   onRefreshFromPrinter?: () => Promise<void> | void;
+  /** Per-message override flags. When provided, each numeric field renders
+   *  an "Override for this message" toggle. Only overridden keys will beat
+   *  the printer Setup Card at ^SM time. Absent = live-adjust mode (no
+   *  toggles rendered — current behaviour). */
+  overrides?: AdjustOverrides;
+  onOverridesChange?: (partial: Partial<AdjustOverrides>) => void;
 }
+
 
 
 // Validation constraints from BestCode v2.0 protocol documentation
