@@ -6,6 +6,7 @@ Updated: today
 ## Core
 - BestCode Printer management (Electron app + PWA).
 - Protocol v2.6 authoritative. `^NM` self-persists — there is NO `^SV` command (verified via Dev Panel manual: printer replies "not recognized"). Transport layer short-circuits any legacy `^SV` sends.
+- ALWAYS verify any printer command against `Bestcode_Remote_Comm_2.6-8.pdf` before writing or suggesting it. Never guess command names/params — if not in the doc, it does not exist.
 - 1 persistent TCP socket (port 23) per printer. Only one telnet session allowed by hardware.
 - Never background-probe port 23 on idle printers; use ICMP only until explicit connect.
 - Admin password: `TEXAS`. Emulator: `CITEC`. Dev panel: gated by license-key + TOTP 2FA (no shared password).
