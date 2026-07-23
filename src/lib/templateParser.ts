@@ -85,11 +85,15 @@ export function parseTemplateData(data: Uint8Array, name: string = 'unknown'): P
       totalHeight = 25; // 12 + 1 + 12 = 25
     }
     
-    // Generate line definitions - lines are evenly distributed within the template height
+    // Generate line definitions - honor 1-dot inter-line gap when present
+    // so the canvas mirrors the HMI (lines must not visually touch).
     const lines: TemplateLine[] = [];
     const startY = 32 - totalHeight; // Start from top of usable area
-    const lineSpacing = Math.floor(totalHeight / numLines);
-    
+    const gap = numLines > 1
+      ? Math.max(0, Math.floor((totalHeight - numLines * dotsPerLine) / (numLines - 1)))
+      : 0;
+    const lineSpacing = dotsPerLine + gap;
+
     for (let i = 0; i < numLines; i++) {
       lines.push({
         index: i,
