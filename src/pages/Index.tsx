@@ -1761,6 +1761,7 @@ const Index = () => {
   const applyStoredAdjustSettings = useCallback(async (
     targetPrinter: Printer,
     messageName: string,
+    options?: { pollingAlreadyPaused?: boolean },
   ): Promise<void> => {
     const exactStored = getExactStoredMessageForPrinter(messageName, targetPrinter);
     const fallbackStored = exactStored ? null : getStoredMessageForPrinter(messageName, targetPrinter);
@@ -1868,17 +1869,24 @@ const Index = () => {
     }
 
     if (targetPrinter.id === connectionState.connectedPrinter?.id) {
-      setPollingPaused(true);
+      const alreadyPaused = options?.pollingAlreadyPaused === true;
+      if (!alreadyPaused) setPollingPaused(true);
       try {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        await waitForPollingIdle(3000);
+        // When caller has already paused polling around the ^SM (e.g.
+        // selectMessageOnAnyPrinter), skip the settle/wait entirely so
+        // ^PW/^DA follow ^SM back-to-back — this eliminates the brief
+        // "Width 15" flash on the HMI between load and adjust push.
+        if (!alreadyPaused) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          await waitForPollingIdle(3000);
+        }
         const result = await sendVerifiedCommandSequence(targetPrinter, commands, 300);
         if (!result.success) {
           console.error('[AdjustDebug][applyStoredAdjustSettings.failed]', { targetPrinterId: targetPrinter.id, messageName, result });
           return;
         }
       } finally {
-        setPollingPaused(false);
+        if (!alreadyPaused) setPollingPaused(false);
       }
     } else {
       const result = await sendVerifiedCommandSequence(targetPrinter, commands, 300);
@@ -2823,11 +2831,22 @@ const Index = () => {
     }
 
     if (printer.id === connectionState.connectedPrinter?.id) {
-      const ok = await selectMessage(message);
-      if (ok) {
-        try { recordMessageSent(printer.id, message.name); } catch {}
-        clearAllExpiryOverrides();
-        await applyStoredAdjustSettings(printer, message.name);
+      // Pause polling around the ^SM + adjust push so ^PW/^DA follow ^SM
+      // back-to-back on the wire with no intervening ^SU. This removes the
+      // brief "Width 15" flash the HMI shows between message load and the
+      // stored-adjust push.
+      setPollingPaused(true);
+      let ok = false;
+      try {
+        await waitForPollingIdle(3000);
+        ok = await selectMessage(message);
+        if (ok) {
+          try { recordMessageSent(printer.id, message.name); } catch {}
+          clearAllExpiryOverrides();
+          await applyStoredAdjustSettings(printer, message.name, { pollingAlreadyPaused: true });
+        }
+      } finally {
+        setPollingPaused(false);
       }
       return ok;
     }
