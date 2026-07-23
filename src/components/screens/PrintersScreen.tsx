@@ -305,6 +305,8 @@ export function PrintersScreen({
   onSelectedPrinterChange,
   getMessageContent,
   onResetGroupExpiry,
+  autoEditPrinterId,
+  onAutoEditConsumed,
 }: PrintersScreenProps) {
   const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
