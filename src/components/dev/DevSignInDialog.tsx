@@ -118,21 +118,43 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
         {stage === 'verify' && (
           <form onSubmit={handleVerify} className="space-y-4">
             <p className="text-sm">Use the developer password to open the panel.</p>
-            {isDevAccessRuntime() && (
-              <p className="text-xs text-muted-foreground">
-                Preview / Electron build — password: <code className="font-mono bg-muted px-1 py-0.5 rounded">CITEC</code>
-              </p>
-            )}
             <Input
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="Developer password"
               type="password"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="characters"
+              spellCheck={false}
               autoFocus
             />
             <Button type="submit" disabled={busy || !code.trim()} className="w-full">
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign in'}
             </Button>
+            {isDevAccessRuntime() && (
+              <div className="pt-2 border-t space-y-2">
+                <p className="text-xs text-muted-foreground text-center">Mobile quick sign-in</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => { onSuccess(); onOpenChange(false); }}
+                  >
+                    CITEC
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => { onSuccess(); onOpenChange(false); }}
+                  >
+                    TEXAS
+                  </Button>
+                </div>
+              </div>
+            )}
           </form>
         )}
 
