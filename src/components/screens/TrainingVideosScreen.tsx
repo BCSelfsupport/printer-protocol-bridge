@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Play, Film, Download, Link2, Video, Search, BookOpen, LayoutGrid, Scissors, Undo2, Trash2 } from 'lucide-react';
+import { Play, Film, Download, Link2, Video, Search, BookOpen, LayoutGrid, Scissors, Undo2, Trash2, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
@@ -24,9 +24,11 @@ interface TrainingVideosScreenProps {
   onBack: () => void;
   recorderState?: ScreenRecorderState;
   recorderActions?: ScreenRecorderActions;
+  /** Dev-portal users can lock/unlock videos to protect them from edits. */
+  isDevSignedIn?: boolean;
 }
 
-export function TrainingVideosScreen({ onBack, recorderState, recorderActions }: TrainingVideosScreenProps) {
+export function TrainingVideosScreen({ onBack, recorderState, recorderActions, isDevSignedIn = false }: TrainingVideosScreenProps) {
   const [videos, setVideos] = useState<TrainingVideoRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<TrainingVideoRecord | null>(null);
@@ -37,6 +39,25 @@ export function TrainingVideosScreen({ onBack, recorderState, recorderActions }:
   const [trimOpen, setTrimOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [lockBusy, setLockBusy] = useState(false);
+
+  const toggleLock = useCallback(async (video: TrainingVideoRecord) => {
+    setLockBusy(true);
+    try {
+      const { error } = await supabase.functions.invoke('training-videos', {
+        method: 'PATCH',
+        body: { id: video.id, is_locked: !video.is_locked },
+      });
+      if (error) throw error;
+      toast.success(video.is_locked ? 'Video unlocked' : 'Video locked — edits and deletion are blocked');
+      setSelectedVideo(prev => (prev ? { ...prev, is_locked: !video.is_locked } : prev));
+      await loadVideos();
+    } catch (err: any) {
+      toast.error('Could not change lock: ' + err.message);
+    } finally {
+      setLockBusy(false);
+    }
+  }, []);
 
 
   // Auto-close the dialog as soon as countdown begins or recording starts
@@ -102,9 +123,27 @@ export function TrainingVideosScreen({ onBack, recorderState, recorderActions }:
             {selectedVideo.description && (
               <p className="text-sm text-muted-foreground">{selectedVideo.description}</p>
             )}
+            {selectedVideo.is_locked && (
+              <div className="flex items-center gap-1.5 text-xs text-primary">
+                <Lock className="w-3.5 h-3.5" />
+                Locked — trimming and deletion are disabled
+              </div>
+            )}
           </div>
           <div className="flex gap-2 flex-shrink-0">
-            {selectedVideo.previous_file_path && (
+            {isDevSignedIn && (
+              <Button
+                size="sm"
+                variant={selectedVideo.is_locked ? 'default' : 'outline'}
+                className="gap-2"
+                disabled={lockBusy}
+                onClick={() => toggleLock(selectedVideo)}
+              >
+                {selectedVideo.is_locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                {selectedVideo.is_locked ? 'Locked' : 'Lock'}
+              </Button>
+            )}
+            {!selectedVideo.is_locked && selectedVideo.previous_file_path && (
               <Button
                 size="sm"
                 variant="outline"
@@ -133,10 +172,12 @@ export function TrainingVideosScreen({ onBack, recorderState, recorderActions }:
                 Undo Trim
               </Button>
             )}
-            <Button size="sm" variant="outline" className="gap-2" onClick={() => setTrimOpen(true)}>
-              <Scissors className="w-4 h-4" />
-              Trim / Edit
-            </Button>
+            {!selectedVideo.is_locked && (
+              <Button size="sm" variant="outline" className="gap-2" onClick={() => setTrimOpen(true)}>
+                <Scissors className="w-4 h-4" />
+                Trim / Edit
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -176,15 +217,17 @@ export function TrainingVideosScreen({ onBack, recorderState, recorderActions }:
               <Download className="w-4 h-4" />
               Download
             </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              className="gap-2"
-              onClick={() => setConfirmDelete(true)}
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete
-            </Button>
+            {!selectedVideo.is_locked && (
+              <Button
+                size="sm"
+                variant="destructive"
+                className="gap-2"
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </Button>
+            )}
           </div>
         </div>
 
@@ -382,6 +425,12 @@ function VideoCard({ video, onPlay }: { video: TrainingVideoRecord; onPlay: () =
           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{video.description}</p>
         )}
         <div className="mt-2 flex flex-wrap gap-1.5">
+          {video.is_locked && (
+            <Badge variant="default" className="text-[10px] gap-1">
+              <Lock className="w-2.5 h-2.5" />
+              Locked
+            </Badge>
+          )}
           <Badge variant="outline" className="text-[10px]">
             {CATEGORY_LABELS[video.category] || video.category}
           </Badge>

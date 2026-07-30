@@ -751,6 +751,7 @@ export type Database = {
           file_path: string
           file_size_bytes: number | null
           id: string
+          is_locked: boolean
           manual_chapter_id: string | null
           manual_section_id: string | null
           previous_file_path: string | null
@@ -767,6 +768,7 @@ export type Database = {
           file_path: string
           file_size_bytes?: number | null
           id?: string
+          is_locked?: boolean
           manual_chapter_id?: string | null
           manual_section_id?: string | null
           previous_file_path?: string | null
@@ -783,6 +785,7 @@ export type Database = {
           file_path?: string
           file_size_bytes?: number | null
           id?: string
+          is_locked?: boolean
           manual_chapter_id?: string | null
           manual_section_id?: string | null
           previous_file_path?: string | null

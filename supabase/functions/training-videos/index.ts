@@ -114,6 +114,17 @@ Deno.serve(async (req) => {
         .eq("id", id)
         .single();
 
+      // Locked videos are protected: only a dev-portal user may change them,
+      // and the only change allowed without an override is unlocking.
+      const onlyLockChange =
+        Object.keys(rest).length === 1 && rest.is_locked !== undefined && !file_path;
+      if (existing?.is_locked && !onlyLockChange && rest.dev_override !== true) {
+        return new Response(
+          JSON.stringify({ error: "This video is locked. Unlock it from the dev portal first." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
       const updates: Record<string, unknown> = {};
       for (const key of [
         "title",
@@ -124,6 +135,7 @@ Deno.serve(async (req) => {
         "thumbnail_path",
         "manual_chapter_id",
         "manual_section_id",
+        "is_locked",
       ]) {
         if (rest[key] !== undefined) updates[key] = rest[key];
       }
@@ -156,7 +168,7 @@ Deno.serve(async (req) => {
 
     // DELETE - remove a training video
     if (req.method === "DELETE") {
-      const { id } = await req.json();
+      const { id, dev_override } = await req.json();
       if (!id) {
         return new Response(JSON.stringify({ error: "id required" }), {
           status: 400,
@@ -169,6 +181,13 @@ Deno.serve(async (req) => {
         .select("*")
         .eq("id", id)
         .single();
+
+      if (record?.is_locked && dev_override !== true) {
+        return new Response(
+          JSON.stringify({ error: "This video is locked and cannot be deleted." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
 
       if (record) {
         await supabase.storage.from("training-videos").remove([record.file_path]);

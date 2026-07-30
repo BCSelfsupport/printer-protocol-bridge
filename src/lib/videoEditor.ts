@@ -124,7 +124,7 @@ export interface EditVideoOptions {
   onPoster?: (poster: Blob) => void;
 }
 
-const BRAND_LOGO_SRC = '/codesync-icon.png';
+const BRAND_LOGO_SRC = '/codesync-wordmark.png';
 
 function loadLogo(): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
@@ -280,9 +280,14 @@ function drawCard(ctx: CanvasRenderingContext2D, w: number, h: number, raw: numb
   // --- Logo -----------------------------------------------------------------
   const logoP = easeOut(p / 0.3);
   if (card.logo) {
-    const size = (centered ? 200 : 108) * s;
-    const lx = centered ? cx - size / 2 : left;
-    const ly = centered ? h * 0.24 : h * 0.30 - size;
+    // The brand mark is a wide wordmark — fit it to a target width and keep
+    // its natural aspect ratio so it never stretches.
+    const targetW = (centered ? 520 : 340) * s;
+    const ratio = (card.logo.naturalHeight || 72) / (card.logo.naturalWidth || 280);
+    const lw = targetW;
+    const lh = targetW * ratio;
+    const lx = centered ? cx - lw / 2 : left;
+    const ly = centered ? h * 0.24 : h * 0.30 - lh;
     ctx.save();
     ctx.globalAlpha = A * logoP;
     ctx.shadowColor = 'rgba(59,130,246,0.6)';
@@ -290,10 +295,10 @@ function drawCard(ctx: CanvasRenderingContext2D, w: number, h: number, raw: numb
     const pop = 0.92 + 0.08 * logoP;
     ctx.drawImage(
       card.logo,
-      lx + (size * (1 - pop)) / 2,
-      ly + (size * (1 - pop)) / 2 + (1 - logoP) * 18 * s,
-      size * pop,
-      size * pop,
+      lx + (lw * (1 - pop)) / 2,
+      ly + (lh * (1 - pop)) / 2 + (1 - logoP) * 18 * s,
+      lw * pop,
+      lh * pop,
     );
     ctx.restore();
   }
