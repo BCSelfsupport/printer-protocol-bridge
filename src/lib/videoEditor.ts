@@ -116,6 +116,12 @@ export interface EditVideoOptions {
   outro?: boolean;
   /** Seconds of closing card (default 2.2). */
   outroSec?: number;
+  /**
+   * Receives a poster frame grabbed straight off the render canvas (the branded
+   * title card when an intro is used). Far more reliable than seeking the
+   * finished WebM, which often returns frame 0.
+   */
+  onPoster?: (poster: Blob) => void;
 }
 
 const BRAND_LOGO_SRC = '/codesync-icon.png';
