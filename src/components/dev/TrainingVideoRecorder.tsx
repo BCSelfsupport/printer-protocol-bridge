@@ -44,11 +44,12 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   // Editing state — local override of the hook's blob/url
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [croppedUrl, setCroppedUrl] = useState<string | null>(null);
-  const [cropTopPx, setCropTopPx] = useState<number>(80);
+  const [cropTopPx, setCropTopPx] = useState<number>(120);
   const [cropping, setCropping] = useState(false);
   const [cropProgress, setCropProgress] = useState(0);
   const [videoNaturalHeight, setVideoNaturalHeight] = useState<number>(0);
   const previewRef = useRef<HTMLVideoElement | null>(null);
+  const autoCropDoneRef = useRef(false);
 
   // Trim state
   const [srcDuration, setSrcDuration] = useState(0);
