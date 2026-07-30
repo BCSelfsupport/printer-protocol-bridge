@@ -50,13 +50,18 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
         const blob = await res.blob();
         const meta = await probeVideo(blob);
         if (cancelled) return;
+        // Some recorded webm files report no duration; fall back to the stored value.
+        const dur = meta.duration > 0.3 ? meta.duration : (video.duration_seconds ?? 0);
+        if (!(dur > 0.3)) {
+          throw new Error('Could not read this video’s length, so trimming is disabled for it');
+        }
         objectUrl = URL.createObjectURL(blob);
         setSourceBlob(blob);
         setSourceUrl(objectUrl);
-        setDuration(meta.duration);
+        setDuration(dur);
         setNaturalHeight(meta.height);
         setTrimStart(0);
-        setTrimEnd(meta.duration);
+        setTrimEnd(dur);
         setCropTopPx(0);
       } catch (err: any) {
         toast.error('Load failed: ' + err.message);
