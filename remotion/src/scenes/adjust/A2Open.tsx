@@ -127,7 +127,7 @@ export const A2Open: React.FC = () => {
           })}
         </div>
 
-        <Cursor from={[520, 120]} to={[476, 545]} start={30} travel={36} />
+        <Cursor from={[560, 140]} to={[700, 545]} start={30} travel={36} />
       </Panel>
     </AbsoluteFill>
   );
