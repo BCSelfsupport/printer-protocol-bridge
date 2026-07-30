@@ -63,24 +63,52 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   const activeBlob = croppedBlob ?? recordedBlob;
   const activeUrl = croppedUrl ?? recordedUrl;
 
-  // Probe the raw recording for real duration/size once it exists
+  // Probe the raw recording for real duration/size once it exists.
+  // We also auto-crop the top of the recording so the red floating stop
+  // overlay is visible to the operator during recording but never appears
+  // in the saved/played-back video.
   useEffect(() => {
     let cancelled = false;
     if (!recordedBlob) {
       setSrcDuration(0);
       setTrimStart(0);
       setTrimEnd(0);
+      autoCropDoneRef.current = false;
       return;
     }
+    const autoCropTopPx = cropTopPx;
     setProbing(true);
     probeVideo(recordedBlob)
-      .then(({ duration, height }) => {
+      .then(async ({ duration, height }) => {
         if (cancelled) return;
         const d = duration > 0 ? duration : 0;
         setSrcDuration(d);
         setTrimStart(0);
         setTrimEnd(d);
         if (height) setVideoNaturalHeight(height);
+
+        if (height && autoCropTopPx > 0 && !autoCropDoneRef.current) {
+          autoCropDoneRef.current = true;
+          setCropping(true);
+          try {
+            const blob = await editVideo(
+              recordedBlob,
+              { cropTopPx: autoCropTopPx, startSec: 0, endSec: d > 0 ? d : undefined },
+              setCropProgress,
+            );
+            if (!cancelled) {
+              if (croppedUrl) URL.revokeObjectURL(croppedUrl);
+              setCroppedBlob(blob);
+              setCroppedUrl(URL.createObjectURL(blob));
+              toast.success(`Auto-cropped top ${autoCropTopPx}px — recording overlay hidden in final video`);
+            }
+          } catch (err: any) {
+            console.warn('Auto-crop failed:', err);
+            toast.error('Could not auto-hide recording overlay: ' + err.message);
+          } finally {
+            if (!cancelled) setCropping(false);
+          }
+        }
       })
       .catch(() => {})
       .finally(() => { if (!cancelled) setProbing(false); });
