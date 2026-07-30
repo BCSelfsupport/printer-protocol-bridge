@@ -1,0 +1,1 @@
+ALTER TABLE public.training_videos ADD COLUMN IF NOT EXISTS is_locked boolean NOT NULL DEFAULT false;
