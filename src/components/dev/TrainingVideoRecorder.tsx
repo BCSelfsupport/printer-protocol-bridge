@@ -65,60 +65,37 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   const activeBlob = croppedBlob ?? recordedBlob;
   const activeUrl = croppedUrl ?? recordedUrl;
 
+  // Signature of the edit settings that produced `croppedBlob`.
+  const appliedSigRef = useRef<string | null>(null);
+  const currentSig = `${cropTopPx}|${trimStart.toFixed(2)}|${trimEnd.toFixed(2)}|${addSplash ? title.trim() + '::' + description.trim() : 'nosplash'}`;
+
   // Probe the raw recording for real duration/size once it exists.
-  // We also auto-crop the top of the recording so the red floating stop
-  // overlay is visible to the operator during recording but never appears
-  // in the saved/played-back video.
+  // No auto-edit here: crop/trim/splash are baked in when the operator clicks
+  // "Apply Edit", or automatically right before upload if they skipped it.
   useEffect(() => {
     let cancelled = false;
     if (!recordedBlob) {
       setSrcDuration(0);
       setTrimStart(0);
       setTrimEnd(0);
-      autoCropDoneRef.current = false;
+      appliedSigRef.current = null;
       return;
     }
-    const autoCropTopPx = cropTopPx;
     setProbing(true);
     probeVideo(recordedBlob)
-      .then(async ({ duration, height }) => {
+      .then(({ duration, height }) => {
         if (cancelled) return;
         const d = duration > 0 ? duration : 0;
         setSrcDuration(d);
         setTrimStart(0);
         setTrimEnd(d);
         if (height) setVideoNaturalHeight(height);
-
-        if (height && autoCropTopPx > 0 && !autoCropDoneRef.current) {
-          autoCropDoneRef.current = true;
-          setCropping(true);
-          try {
-            const blob = await editVideo(
-              recordedBlob,
-              { cropTopPx: autoCropTopPx, startSec: 0, endSec: d > 0 ? d : undefined },
-              setCropProgress,
-            );
-            if (!cancelled) {
-              if (croppedUrl) URL.revokeObjectURL(croppedUrl);
-              setCroppedBlob(blob);
-              setCroppedUrl(URL.createObjectURL(blob));
-              toast.success(`Auto-cropped top ${autoCropTopPx}px — recording overlay hidden in final video`);
-            }
-          } catch (err: any) {
-            console.warn('Auto-crop failed:', err);
-            toast.error('Could not auto-hide recording overlay: ' + err.message);
-          } finally {
-            if (!cancelled) setCropping(false);
-          }
-        }
       })
       .catch(() => {})
       .finally(() => { if (!cancelled) setProbing(false); });
     return () => { cancelled = true; };
-    // Dependencies intentionally limited to recordedBlob; cropTopPx is captured
-    // at the moment a new recording arrives so the auto-crop uses the default.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordedBlob]);
+
 
   const seekPreview = (t: number) => {
     const el = previewRef.current;
