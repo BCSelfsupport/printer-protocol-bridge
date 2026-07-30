@@ -245,14 +245,15 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
       // Upload video directly to storage (bypasses edge function payload limits)
       const { error: uploadError } = await supabase.storage
         .from('training-videos')
-        .upload(filePath, activeBlob, {
+        .upload(filePath, uploadBlob, {
           contentType: 'video/webm',
           upsert: false,
         });
       if (uploadError) throw uploadError;
 
       // Upload thumbnail directly
-      const thumbnail = await captureThumbnail();
+      const thumbUrl = URL.createObjectURL(uploadBlob);
+      const thumbnail = await captureThumbnail(thumbUrl).finally(() => URL.revokeObjectURL(thumbUrl));
       let thumbnailPath: string | null = null;
       if (thumbnail) {
         thumbnailPath = `thumbnails/${timestamp}.png`;
