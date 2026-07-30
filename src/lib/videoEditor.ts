@@ -104,99 +104,26 @@ function loadLogo(): Promise<HTMLImageElement | null> {
   });
 }
 
-const easeOut = (t: number) => 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 3);
+const clamp01 = (t: number) => Math.max(0, Math.min(1, t));
+const easeOut = (t: number) => 1 - Math.pow(1 - clamp01(t), 3);
+const easeInOut = (t: number) => {
+  const x = clamp01(t);
+  return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+};
 
 interface CardSpec {
   title: string;
   subtitle?: string;
   kicker?: string;
   logo: HTMLImageElement | null;
+  variant: 'intro' | 'outro';
 }
 
-/** Draw one frame of a branded title/closing card. `p` = 0..1 progress. */
-function drawCard(
-  ctx: CanvasRenderingContext2D,
-  w: number,
-  h: number,
-  p: number,
-  card: CardSpec,
-) {
-  const s = h / 1080; // scale relative to 1080p design
+const INK = '#3b82f6';
+const INK_2 = '#10b981';
 
-  // Background: deep navy gradient with a soft blue/emerald glow
-  const bg = ctx.createLinearGradient(0, 0, w, h);
-  bg.addColorStop(0, '#070b16');
-  bg.addColorStop(0.55, '#0d1626');
-  bg.addColorStop(1, '#08131a');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, w, h);
-
-  const glow = ctx.createRadialGradient(w * 0.72, h * 0.22, 0, w * 0.72, h * 0.22, w * 0.55);
-  glow.addColorStop(0, 'rgba(59,130,246,0.20)');
-  glow.addColorStop(1, 'rgba(59,130,246,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, w, h);
-
-  const glow2 = ctx.createRadialGradient(w * 0.18, h * 0.85, 0, w * 0.18, h * 0.85, w * 0.45);
-  glow2.addColorStop(0, 'rgba(16,185,129,0.16)');
-  glow2.addColorStop(1, 'rgba(16,185,129,0)');
-  ctx.fillStyle = glow2;
-  ctx.fillRect(0, 0, w, h);
-
-  // Subtle grid
-  ctx.strokeStyle = 'rgba(148,163,184,0.06)';
-  ctx.lineWidth = Math.max(1, s);
-  const step = 80 * s;
-  for (let x = 0; x < w; x += step) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
-  for (let y = 0; y < h; y += step) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
-
-  const cx = w / 2;
-  const inP = easeOut(p / 0.35);
-  const outFade = p > 0.88 ? 1 - (p - 0.88) / 0.12 : 1;
-  const alpha = Math.max(0, Math.min(1, inP)) * Math.max(0, outFade);
-
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.textAlign = 'center';
-
-  // Logo
-  const logoSize = 190 * s;
-  const logoY = h * 0.30 - logoSize / 2 + (1 - inP) * 30 * s;
-  if (card.logo) {
-    ctx.save();
-    ctx.shadowColor = 'rgba(59,130,246,0.55)';
-    ctx.shadowBlur = 48 * s;
-    ctx.drawImage(card.logo, cx - logoSize / 2, logoY, logoSize, logoSize);
-    ctx.restore();
-  }
-
-  // Kicker
-  if (card.kicker) {
-    ctx.fillStyle = 'rgba(148,197,253,0.95)';
-    ctx.font = `600 ${Math.round(30 * s)}px "Inter", system-ui, sans-serif`;
-    const letters = card.kicker.toUpperCase().split('').join('\u2009 ');
-    ctx.fillText(letters, cx, h * 0.50);
-  }
-
-  // Accent rule that wipes in
-  const ruleW = 420 * s * easeOut((p - 0.15) / 0.4);
-  if (ruleW > 0) {
-    const g = ctx.createLinearGradient(cx - ruleW / 2, 0, cx + ruleW / 2, 0);
-    g.addColorStop(0, 'rgba(59,130,246,0)');
-    g.addColorStop(0.5, '#3b82f6');
-    g.addColorStop(1, 'rgba(16,185,129,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(cx - ruleW / 2, h * 0.535, ruleW, Math.max(2, 4 * s));
-  }
-
-  // Title (wraps to 2 lines)
-  const titleP = easeOut((p - 0.12) / 0.4);
-  ctx.globalAlpha = alpha * Math.max(0, Math.min(1, titleP));
-  ctx.fillStyle = '#f8fafc';
-  let fontSize = Math.round(76 * s);
-  ctx.font = `700 ${fontSize}px "Inter", system-ui, sans-serif`;
-  const maxW = w * 0.8;
-  const words = card.title.split(/\s+/);
+function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxW: number, max = 2): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let line = '';
   for (const word of words) {
@@ -205,19 +132,220 @@ function drawCard(
     else line = test;
   }
   if (line) lines.push(line);
-  while (lines.length > 2) lines.splice(2);
+  return lines.slice(0, max);
+}
 
-  const baseY = h * 0.635 + (1 - titleP) * 24 * s;
-  lines.forEach((l, i) => ctx.fillText(l, cx, baseY + i * fontSize * 1.15));
+/**
+ * Dot-matrix "print head" field — a nod to how a CIJ printer lays down a code.
+ * A vertical head sweeps across the frame; dots behind it are inked, ahead dim.
+ */
+function drawDotField(ctx: CanvasRenderingContext2D, w: number, h: number, p: number, s: number) {
+  const gap = 26 * s;
+  const r = 1.7 * s;
+  const head = easeInOut(p / 0.72) * (w + gap * 6) - gap * 3;
 
-  // Subtitle
-  if (card.subtitle) {
-    const subP = easeOut((p - 0.3) / 0.4);
-    ctx.globalAlpha = alpha * Math.max(0, Math.min(1, subP));
-    ctx.fillStyle = 'rgba(203,213,225,0.85)';
-    ctx.font = `400 ${Math.round(34 * s)}px "Inter", system-ui, sans-serif`;
-    ctx.fillText(card.subtitle, cx, baseY + lines.length * fontSize * 1.15 + 26 * s);
+  for (let x = gap / 2; x < w; x += gap) {
+    const behind = head - x;
+    if (behind < -gap) continue;
+    // Fresh ink glows, then settles into a faint dot.
+    const fresh = clamp01(1 - behind / (gap * 10));
+    for (let y = gap / 2; y < h; y += gap) {
+      const wave = 0.5 + 0.5 * Math.sin(x * 0.008 + y * 0.011 + p * 5);
+      const a = 0.045 + fresh * 0.5 * wave;
+      ctx.fillStyle = fresh > 0.05
+        ? `rgba(96,165,250,${a})`
+        : `rgba(148,163,184,${0.05 + wave * 0.03})`;
+      ctx.beginPath();
+      ctx.arc(x, y, r * (1 + fresh * 1.3), 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
+
+  // The head itself
+  if (head > 0 && head < w) {
+    const g = ctx.createLinearGradient(head - 90 * s, 0, head + 6 * s, 0);
+    g.addColorStop(0, 'rgba(59,130,246,0)');
+    g.addColorStop(1, 'rgba(147,197,253,0.35)');
+    ctx.fillStyle = g;
+    ctx.fillRect(head - 90 * s, 0, 96 * s, h);
+    ctx.fillStyle = 'rgba(191,219,254,0.55)';
+    ctx.fillRect(head, 0, Math.max(1, 2 * s), h);
+  }
+}
+
+/** Draw one frame of a branded title / closing card. `p` = 0..1 progress. */
+function drawCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: number, card: CardSpec) {
+  const s = h / 1080;
+  const outFade = p > 0.9 ? 1 - (p - 0.9) / 0.1 : 1;
+  const A = clamp01(outFade);
+
+  // --- Background -----------------------------------------------------------
+  const bg = ctx.createLinearGradient(0, 0, w * 0.4, h);
+  bg.addColorStop(0, '#080c15');
+  bg.addColorStop(0.6, '#050810');
+  bg.addColorStop(1, '#04070c');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  const glowA = ctx.createRadialGradient(w * 0.14, h * 0.9, 0, w * 0.14, h * 0.9, w * 0.6);
+  glowA.addColorStop(0, 'rgba(37,99,235,0.28)');
+  glowA.addColorStop(1, 'rgba(37,99,235,0)');
+  ctx.fillStyle = glowA;
+  ctx.fillRect(0, 0, w, h);
+
+  const glowB = ctx.createRadialGradient(w * 0.88, h * 0.08, 0, w * 0.88, h * 0.08, w * 0.5);
+  glowB.addColorStop(0, 'rgba(16,185,129,0.16)');
+  glowB.addColorStop(1, 'rgba(16,185,129,0)');
+  ctx.fillStyle = glowB;
+  ctx.fillRect(0, 0, w, h);
+
+  drawDotField(ctx, w, h, p, s);
+
+  // Vignette
+  const vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.3, w / 2, h / 2, h * 0.95);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.6)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.save();
+  ctx.globalAlpha = A;
+
+  // Corner brackets
+  const m = 56 * s;
+  const len = 70 * s * easeOut((p - 0.05) / 0.35);
+  ctx.strokeStyle = 'rgba(148,163,184,0.35)';
+  ctx.lineWidth = Math.max(1, 2 * s);
+  if (len > 1) {
+    const corners: Array<[number, number, number, number]> = [
+      [m, m, 1, 1], [w - m, m, -1, 1], [m, h - m, 1, -1], [w - m, h - m, -1, -1],
+    ];
+    for (const [x, y, dx, dy] of corners) {
+      ctx.beginPath();
+      ctx.moveTo(x + dx * len, y);
+      ctx.lineTo(x, y);
+      ctx.lineTo(x, y + dy * len);
+      ctx.stroke();
+    }
+  }
+
+  const centered = card.variant === 'outro';
+  const left = w * 0.115;
+  const cx = centered ? w / 2 : left;
+  ctx.textAlign = centered ? 'center' : 'left';
+
+  // --- Logo -----------------------------------------------------------------
+  const logoP = easeOut(p / 0.3);
+  if (card.logo) {
+    const size = (centered ? 200 : 108) * s;
+    const lx = centered ? cx - size / 2 : left;
+    const ly = centered ? h * 0.24 : h * 0.30 - size;
+    ctx.save();
+    ctx.globalAlpha = A * logoP;
+    ctx.shadowColor = 'rgba(59,130,246,0.6)';
+    ctx.shadowBlur = 60 * s;
+    const pop = 0.92 + 0.08 * logoP;
+    ctx.drawImage(
+      card.logo,
+      lx + (size * (1 - pop)) / 2,
+      ly + (size * (1 - pop)) / 2 + (1 - logoP) * 18 * s,
+      size * pop,
+      size * pop,
+    );
+    ctx.restore();
+  }
+
+  // --- Kicker ---------------------------------------------------------------
+  const kickP = easeOut((p - 0.1) / 0.3);
+  if (card.kicker && kickP > 0) {
+    ctx.globalAlpha = A * kickP;
+    ctx.fillStyle = 'rgba(147,197,253,0.9)';
+    ctx.font = `600 ${Math.round(24 * s)}px "JetBrains Mono", "SFMono-Regular", ui-monospace, monospace`;
+    const spaced = card.kicker.toUpperCase().split('').join('\u2009');
+    const ky = centered ? h * 0.60 : h * 0.395;
+    ctx.fillText(spaced, cx, ky);
+  }
+
+  // --- Accent rule ----------------------------------------------------------
+  const ruleP = easeOut((p - 0.16) / 0.4);
+  if (ruleP > 0) {
+    const rw = (centered ? 340 : 260) * s * ruleP;
+    const rx = centered ? cx - rw / 2 : left;
+    const ry = centered ? h * 0.635 : h * 0.435;
+    const g = ctx.createLinearGradient(rx, 0, rx + rw, 0);
+    g.addColorStop(0, INK);
+    g.addColorStop(1, centered ? 'rgba(16,185,129,0)' : INK_2);
+    ctx.globalAlpha = A;
+    ctx.fillStyle = g;
+    ctx.fillRect(rx, ry, rw, Math.max(2, 5 * s));
+  }
+
+  // --- Title (word-by-word reveal) -----------------------------------------
+  let fontSize = Math.round((centered ? 96 : 88) * s);
+  const maxW = w * (centered ? 0.74 : 0.78);
+  ctx.font = `800 ${fontSize}px "Inter", system-ui, sans-serif`;
+  let lines = wrapLines(ctx, card.title, maxW);
+  while (lines.length && ctx.measureText(lines[0]).width > maxW && fontSize > 30 * s) {
+    fontSize = Math.round(fontSize * 0.92);
+    ctx.font = `800 ${fontSize}px "Inter", system-ui, sans-serif`;
+    lines = wrapLines(ctx, card.title, maxW);
+  }
+
+  const baseY = centered ? h * 0.76 : h * 0.56;
+  let wordIndex = 0;
+  const totalWords = Math.max(1, card.title.split(/\s+/).length);
+  lines.forEach((lineText, li) => {
+    const words = lineText.split(' ');
+    const lineW = ctx.measureText(lineText).width;
+    let penX = centered ? cx - lineW / 2 : left;
+    const prevAlign = ctx.textAlign;
+    ctx.textAlign = 'left';
+    for (const word of words) {
+      const delay = 0.2 + (wordIndex / totalWords) * 0.35;
+      const wp = easeOut((p - delay) / 0.32);
+      ctx.globalAlpha = A * clamp01(wp);
+      ctx.fillStyle = '#f8fafc';
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 18 * s;
+      ctx.fillText(word, penX, baseY + li * fontSize * 1.12 + (1 - clamp01(wp)) * 26 * s);
+      ctx.restore();
+      penX += ctx.measureText(word + ' ').width;
+      wordIndex++;
+    }
+    ctx.textAlign = prevAlign;
+  });
+
+  // --- Subtitle -------------------------------------------------------------
+  if (card.subtitle) {
+    const subP = easeOut((p - 0.45) / 0.35);
+    ctx.globalAlpha = A * clamp01(subP);
+    ctx.fillStyle = 'rgba(203,213,225,0.82)';
+    ctx.font = `400 ${Math.round(34 * s)}px "Inter", system-ui, sans-serif`;
+    ctx.fillText(
+      card.subtitle,
+      cx,
+      baseY + (lines.length - 1) * fontSize * 1.12 + 62 * s,
+    );
+  }
+
+  // --- Footer rule + marks --------------------------------------------------
+  ctx.globalAlpha = A;
+  const fy = h - 56 * s;
+  const fw = (w - 2 * left) * easeOut((p - 0.25) / 0.5);
+  const fg = ctx.createLinearGradient(left, 0, left + fw, 0);
+  fg.addColorStop(0, 'rgba(59,130,246,0.75)');
+  fg.addColorStop(1, 'rgba(16,185,129,0)');
+  ctx.fillStyle = fg;
+  ctx.fillRect(left, fy, fw, Math.max(1, 2 * s));
+
+  ctx.globalAlpha = A * easeOut((p - 0.35) / 0.4);
+  ctx.fillStyle = 'rgba(148,163,184,0.75)';
+  ctx.font = `500 ${Math.round(20 * s)}px "JetBrains Mono", ui-monospace, monospace`;
+  ctx.textAlign = 'left';
+  ctx.fillText('BESTCODE  ·  CODESYNC', left, fy + 34 * s);
+  ctx.textAlign = 'right';
+  ctx.fillText(card.variant === 'intro' ? 'TRAINING' : 'END OF LESSON', w - left, fy + 34 * s);
 
   ctx.restore();
 }
@@ -240,6 +368,7 @@ function playCard(
     tick();
   });
 }
+
 
 
 export async function editVideo(
