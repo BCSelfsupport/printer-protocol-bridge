@@ -3497,6 +3497,7 @@ const Index = () => {
             onBack={handleHome}
             recorderState={screenRecorder.state}
             recorderActions={screenRecorder.actions}
+            isDevSignedIn={isDevSignedIn}
           />
         );
     }
