@@ -13,12 +13,13 @@ export const DotText: React.FC<{
 }> = ({
   children,
   size,
-  color = "#DFF3FF",
+  color = "#EAFBFF",
   dot = 4,
   bold = true,
   letterSpacing = 2,
   opacity = 1,
 }) => {
+
   return (
     <span
       style={{
