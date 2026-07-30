@@ -464,23 +464,26 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
                     <Button
                       size="sm"
                       onClick={applyCrop}
-                      disabled={cropping || cropTopPx === 0}
+                      disabled={cropping || (cropTopPx === 0 && !trimmed)}
                       className="gap-1.5 h-8 text-xs"
                     >
-                      {cropping ? <Loader2 className="w-3 h-3 animate-spin" /> : <Crop className="w-3 h-3" />}
-                      {cropping ? `Cropping ${cropProgress.toFixed(0)}%` : `Apply Crop (${cropTopPx}px)`}
+                      {cropping ? <Loader2 className="w-3 h-3 animate-spin" /> : <Scissors className="w-3 h-3" />}
+                      {cropping
+                        ? `Processing ${cropProgress.toFixed(0)}%`
+                        : `Apply Edit${cropTopPx > 0 ? ` (crop ${cropTopPx}px)` : ''}${trimmed ? ` (trim ${(trimEnd - trimStart).toFixed(1)}s)` : ''}`}
                     </Button>
                   ) : (
                     <Button size="sm" variant="ghost" onClick={resetCrop} className="h-8 text-xs">
-                      Undo Crop
+                      Undo Edit
                     </Button>
                   )}
                   <p className="text-[10px] text-muted-foreground flex-1">
                     {croppedBlob
-                      ? 'Crop applied. Save to upload the cropped version.'
+                      ? 'Edit applied. Save to upload the edited version.'
                       : 'Red overlay shows what gets removed. Re-encodes when applied.'}
                   </p>
                 </div>
+
               </div>
 
               <div className="space-y-2">
