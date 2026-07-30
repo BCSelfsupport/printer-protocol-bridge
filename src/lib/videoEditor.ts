@@ -139,7 +139,7 @@ function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxW: number, ma
  * Dot-matrix "print head" field — a nod to how a CIJ printer lays down a code.
  * A vertical head sweeps across the frame; dots behind it are inked, ahead dim.
  */
-function drawDotField(ctx: CanvasRenderingContext2D, w: number, h: number, p: number, s: number) {
+function drawDotField(ctx: CanvasRenderingContext2D, w: number, h: number, p: number, s: number, t = p) {
   const gap = 26 * s;
   const r = 1.7 * s;
   const head = easeInOut(p / 0.72) * (w + gap * 6) - gap * 3;
@@ -150,7 +150,9 @@ function drawDotField(ctx: CanvasRenderingContext2D, w: number, h: number, p: nu
     // Fresh ink glows, then settles into a faint dot.
     const fresh = clamp01(1 - behind / (gap * 10));
     for (let y = gap / 2; y < h; y += gap) {
-      const wave = 0.5 + 0.5 * Math.sin(x * 0.008 + y * 0.011 + p * 5);
+      // `t` keeps a slow ambient shimmer alive during the hold, so the card
+      // never looks like a frozen still while the viewer reads it.
+      const wave = 0.5 + 0.5 * Math.sin(x * 0.008 + y * 0.011 + t * 4);
       const a = 0.045 + fresh * 0.5 * wave;
       ctx.fillStyle = fresh > 0.05
         ? `rgba(96,165,250,${a})`
