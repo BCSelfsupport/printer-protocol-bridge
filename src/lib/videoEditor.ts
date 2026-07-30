@@ -453,11 +453,12 @@ export async function editVideo(
     const introTitle = options.introTitle?.trim();
     if (introTitle) {
       const logo = await loadLogo();
-      await playCard(ctx, outW, outH, Math.max(1, options.introSec ?? 2.6), {
+      await playCard(ctx, outW, outH, Math.max(1, options.introSec ?? 3.2), {
         title: introTitle,
         subtitle: options.introSubtitle?.trim() || 'BestCode CodeSync — Training',
-        kicker: 'CodeSync',
+        kicker: 'Training',
         logo,
+        variant: 'intro',
       });
     }
 
