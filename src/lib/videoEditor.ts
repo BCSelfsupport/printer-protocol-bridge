@@ -517,7 +517,7 @@ export async function editVideo(
         ctx,
         outW,
         outH,
-        Math.max(1, options.introSec ?? 5.5),
+        Math.max(1, options.introSec ?? 9),
         {
           title: introTitle,
           subtitle: options.introSubtitle?.trim() || 'BestCode CodeSync — Training',

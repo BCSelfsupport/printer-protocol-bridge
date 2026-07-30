@@ -291,7 +291,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           category,
           duration_seconds: Math.max(
             1,
-            Math.round((trimmed ? trimEnd - trimStart : srcDuration || elapsed) + (addSplash ? 4.8 : 0)),
+            Math.round((trimmed ? trimEnd - trimStart : srcDuration || elapsed) + (addSplash ? 12.5 : 0)),
           ),
           file_path: filePath,
           thumbnail_path: thumbnailPath,
