@@ -32,10 +32,11 @@ export const DotText: React.FC<{
         color: "transparent",
         WebkitBackgroundClip: "text",
         backgroundClip: "text",
-        backgroundImage: `radial-gradient(${color} 42%, transparent 46%)`,
+        backgroundImage: `radial-gradient(${color} 52%, transparent 56%)`,
         backgroundSize: `${dot}px ${dot}px`,
-        filter: `drop-shadow(0 0 ${dot * 2}px ${color}55)`,
+        filter: `drop-shadow(0 0 ${dot * 2.4}px ${color}88)`,
         whiteSpace: "pre",
+
       }}
     >
       {children}
