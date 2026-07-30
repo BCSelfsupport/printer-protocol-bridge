@@ -51,7 +51,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   const [cropProgress, setCropProgress] = useState(0);
   const [videoNaturalHeight, setVideoNaturalHeight] = useState<number>(0);
   const previewRef = useRef<HTMLVideoElement | null>(null);
-  const autoCropDoneRef = useRef(false);
+  
 
   // Trim state
   const [srcDuration, setSrcDuration] = useState(0);
