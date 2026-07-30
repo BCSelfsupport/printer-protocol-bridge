@@ -494,21 +494,45 @@ export async function editVideo(
     const recordStartedAt = performance.now();
     recorder.start(500);
 
+    // Poster frame: grabbed off the live render canvas so it always matches the
+    // final edited video (branded card when there is an intro).
+    let posterTaken = false;
+    const grabPoster = () => {
+      if (posterTaken || !options.onPoster) return;
+      posterTaken = true;
+      const pc = document.createElement('canvas');
+      pc.width = 640;
+      pc.height = Math.max(1, Math.round((outH / outW) * 640));
+      const pctx = pc.getContext('2d');
+      if (!pctx) return;
+      pctx.drawImage(canvas, 0, 0, pc.width, pc.height);
+      pc.toBlob(b => { if (b) options.onPoster!(b); }, 'image/png');
+    };
+
     // Branded opening card
     const introTitle = options.introTitle?.trim();
     if (introTitle) {
       const logo = await loadLogo();
-      await playCard(ctx, outW, outH, Math.max(1, options.introSec ?? 5.5), {
-        title: introTitle,
-        subtitle: options.introSubtitle?.trim() || 'BestCode CodeSync — Training',
-        kicker: 'Training',
-        logo,
-        variant: 'intro',
-      });
+      await playCard(
+        ctx,
+        outW,
+        outH,
+        Math.max(1, options.introSec ?? 5.5),
+        {
+          title: introTitle,
+          subtitle: options.introSubtitle?.trim() || 'BestCode CodeSync — Training',
+          kicker: 'Training',
+          logo,
+          variant: 'intro',
+        },
+        (p) => { if (p >= 0.62) grabPoster(); },
+      );
     }
 
     let raf = 0;
     let stopRequested = false;
+
+
 
 
     const draw = () => {
