@@ -347,10 +347,80 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="w-3 h-3" />
                 {formatTime(elapsed)} • {formatFileSize(activeBlob?.size ?? 0)}
-                {croppedBlob && <Badge variant="outline" className="text-[9px] px-1 py-0">CROPPED</Badge>}
+                {croppedBlob && <Badge variant="outline" className="text-[9px] px-1 py-0">EDITED</Badge>}
+              </div>
+
+              {/* Trim controls */}
+              <div className="space-y-3 border border-dashed border-border rounded-md p-3 bg-background/50">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <Scissors className="w-3 h-3" /> Trim start / end
+                  </Label>
+                  <span className="text-xs font-mono font-semibold text-foreground">
+                    {probing ? 'reading…' : `${formatClock(trimStart)} → ${formatClock(trimEnd)}`}
+                    {srcDuration > 0 && (
+                      <span className="text-muted-foreground ml-1">
+                        ({Math.max(0, trimEnd - trimStart).toFixed(1)}s)
+                      </span>
+                    )}
+                  </span>
+                </div>
+
+                <Slider
+                  value={[trimStart, trimEnd]}
+                  onValueChange={(v) => {
+                    const [a, b] = v;
+                    if (a !== trimStart) { setTrimStart(Math.min(a, trimEnd - 0.2)); seekPreview(a); }
+                    if (b !== trimEnd) { setTrimEnd(Math.max(b, trimStart + 0.2)); seekPreview(b); }
+                  }}
+                  min={0}
+                  max={srcDuration || 1}
+                  step={0.1}
+                  disabled={cropping || !!croppedBlob || srcDuration <= 0}
+                />
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-[10px] gap-1"
+                    disabled={cropping || !!croppedBlob || srcDuration <= 0}
+                    onClick={() => {
+                      const t = previewRef.current?.currentTime ?? 0;
+                      setTrimStart(Math.min(t, trimEnd - 0.2));
+                    }}
+                  >
+                    <SkipBack className="w-3 h-3" /> Set start here
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-[10px] gap-1"
+                    disabled={cropping || !!croppedBlob || srcDuration <= 0}
+                    onClick={() => {
+                      const t = previewRef.current?.currentTime ?? srcDuration;
+                      setTrimEnd(Math.max(t, trimStart + 0.2));
+                    }}
+                  >
+                    <SkipForward className="w-3 h-3" /> Set end here
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-[10px]"
+                    disabled={cropping || !!croppedBlob || srcDuration <= 0}
+                    onClick={() => { setTrimStart(0); setTrimEnd(srcDuration); seekPreview(0); }}
+                  >
+                    Reset
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground w-full">
+                    Scrub the preview then use “Set start/end here”, or drag the two handles.
+                  </p>
+                </div>
               </div>
 
               {/* Crop top controls */}
+
               <div className="space-y-3 border border-dashed border-border rounded-md p-3 bg-background/50">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs flex items-center gap-1.5">
