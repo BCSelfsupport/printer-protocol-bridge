@@ -39,7 +39,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   const [videos, setVideos] = useState<TrainingVideo[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Cropping state — local override of the hook's blob/url
+  // Editing state — local override of the hook's blob/url
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [croppedUrl, setCroppedUrl] = useState<string | null>(null);
   const [cropTopPx, setCropTopPx] = useState<number>(80);
@@ -48,9 +48,49 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   const [videoNaturalHeight, setVideoNaturalHeight] = useState<number>(0);
   const previewRef = useRef<HTMLVideoElement | null>(null);
 
-  // The blob/url that should be uploaded and previewed (cropped wins if present)
+  // Trim state
+  const [srcDuration, setSrcDuration] = useState(0);
+  const [trimStart, setTrimStart] = useState(0);
+  const [trimEnd, setTrimEnd] = useState(0);
+  const [probing, setProbing] = useState(false);
+
+  const trimmed = srcDuration > 0 && (trimStart > 0.05 || trimEnd < srcDuration - 0.05);
+
+  // The blob/url that should be uploaded and previewed (edited wins if present)
   const activeBlob = croppedBlob ?? recordedBlob;
   const activeUrl = croppedUrl ?? recordedUrl;
+
+  // Probe the raw recording for real duration/size once it exists
+  useEffect(() => {
+    let cancelled = false;
+    if (!recordedBlob) {
+      setSrcDuration(0);
+      setTrimStart(0);
+      setTrimEnd(0);
+      return;
+    }
+    setProbing(true);
+    probeVideo(recordedBlob)
+      .then(({ duration, height }) => {
+        if (cancelled) return;
+        const d = duration > 0 ? duration : 0;
+        setSrcDuration(d);
+        setTrimStart(0);
+        setTrimEnd(d);
+        if (height) setVideoNaturalHeight(height);
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setProbing(false); });
+    return () => { cancelled = true; };
+  }, [recordedBlob]);
+
+  const seekPreview = (t: number) => {
+    const el = previewRef.current;
+    if (el) {
+      try { el.currentTime = t; } catch { /* noop */ }
+    }
+  };
+
 
   const fetchVideos = useCallback(async () => {
     try {
