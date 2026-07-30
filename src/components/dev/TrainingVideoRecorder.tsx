@@ -51,7 +51,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   const [cropProgress, setCropProgress] = useState(0);
   const [videoNaturalHeight, setVideoNaturalHeight] = useState<number>(0);
   const previewRef = useRef<HTMLVideoElement | null>(null);
-  const autoCropDoneRef = useRef(false);
+  
 
   // Trim state
   const [srcDuration, setSrcDuration] = useState(0);
@@ -65,60 +65,37 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   const activeBlob = croppedBlob ?? recordedBlob;
   const activeUrl = croppedUrl ?? recordedUrl;
 
+  // Signature of the edit settings that produced `croppedBlob`.
+  const appliedSigRef = useRef<string | null>(null);
+  const currentSig = `${cropTopPx}|${trimStart.toFixed(2)}|${trimEnd.toFixed(2)}|${addSplash ? title.trim() + '::' + description.trim() : 'nosplash'}`;
+
   // Probe the raw recording for real duration/size once it exists.
-  // We also auto-crop the top of the recording so the red floating stop
-  // overlay is visible to the operator during recording but never appears
-  // in the saved/played-back video.
+  // No auto-edit here: crop/trim/splash are baked in when the operator clicks
+  // "Apply Edit", or automatically right before upload if they skipped it.
   useEffect(() => {
     let cancelled = false;
     if (!recordedBlob) {
       setSrcDuration(0);
       setTrimStart(0);
       setTrimEnd(0);
-      autoCropDoneRef.current = false;
+      appliedSigRef.current = null;
       return;
     }
-    const autoCropTopPx = cropTopPx;
     setProbing(true);
     probeVideo(recordedBlob)
-      .then(async ({ duration, height }) => {
+      .then(({ duration, height }) => {
         if (cancelled) return;
         const d = duration > 0 ? duration : 0;
         setSrcDuration(d);
         setTrimStart(0);
         setTrimEnd(d);
         if (height) setVideoNaturalHeight(height);
-
-        if (height && autoCropTopPx > 0 && !autoCropDoneRef.current) {
-          autoCropDoneRef.current = true;
-          setCropping(true);
-          try {
-            const blob = await editVideo(
-              recordedBlob,
-              { cropTopPx: autoCropTopPx, startSec: 0, endSec: d > 0 ? d : undefined },
-              setCropProgress,
-            );
-            if (!cancelled) {
-              if (croppedUrl) URL.revokeObjectURL(croppedUrl);
-              setCroppedBlob(blob);
-              setCroppedUrl(URL.createObjectURL(blob));
-              toast.success(`Auto-cropped top ${autoCropTopPx}px — recording overlay hidden in final video`);
-            }
-          } catch (err: any) {
-            console.warn('Auto-crop failed:', err);
-            toast.error('Could not auto-hide recording overlay: ' + err.message);
-          } finally {
-            if (!cancelled) setCropping(false);
-          }
-        }
       })
       .catch(() => {})
       .finally(() => { if (!cancelled) setProbing(false); });
     return () => { cancelled = true; };
-    // Dependencies intentionally limited to recordedBlob; cropTopPx is captured
-    // at the moment a new recording arrives so the auto-crop uses the default.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordedBlob]);
+
 
   const seekPreview = (t: number) => {
     const el = previewRef.current;
@@ -164,12 +141,9 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
     }
   };
 
-  const applyCrop = async () => {
-    if (!recordedBlob) return;
-    if (addSplash && !title.trim()) {
-      toast.error('Enter a Title first — it is used on the opening card');
-      return;
-    }
+  /** Bake crop + trim + splash screens into the recording. Returns the edited blob. */
+  const runEdit = async (silent = false): Promise<Blob | null> => {
+    if (!recordedBlob) return null;
     setCropping(true);
     setCropProgress(0);
     try {
@@ -188,18 +162,33 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
       if (croppedUrl) URL.revokeObjectURL(croppedUrl);
       setCroppedBlob(blob);
       setCroppedUrl(URL.createObjectURL(blob));
-      const parts: string[] = [];
-      if (cropTopPx > 0) parts.push(`cropped ${cropTopPx}px`);
-      if (trimmed) parts.push(`trimmed to ${(trimEnd - trimStart).toFixed(1)}s`);
-      if (addSplash) parts.push('intro + outro added');
-      toast.success(`${parts.join(' • ') || 'Edited'} (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`);
-
-    } catch (err: any) {
-      toast.error('Edit failed: ' + err.message);
+      appliedSigRef.current = currentSig;
+      if (!silent) {
+        const parts: string[] = [];
+        if (cropTopPx > 0) parts.push(`cropped ${cropTopPx}px`);
+        if (trimmed) parts.push(`trimmed to ${(trimEnd - trimStart).toFixed(1)}s`);
+        if (addSplash) parts.push('intro + outro added');
+        toast.success(`${parts.join(' • ') || 'Edited'} (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`);
+      }
+      return blob;
     } finally {
       setCropping(false);
     }
   };
+
+  const applyCrop = async () => {
+    if (!recordedBlob) return;
+    if (addSplash && !title.trim()) {
+      toast.error('Enter a Title first — it is used on the opening card');
+      return;
+    }
+    try {
+      await runEdit();
+    } catch (err: any) {
+      toast.error('Edit failed: ' + err.message);
+    }
+  };
+
 
 
   const resetCrop = () => {
@@ -207,13 +196,14 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
     setCroppedBlob(null);
     setCroppedUrl(null);
     setCropProgress(0);
+    appliedSigRef.current = null;
   };
 
-  const captureThumbnail = (): Promise<Blob | null> => {
+  const captureThumbnail = (url: string): Promise<Blob | null> => {
     return new Promise((resolve) => {
-      if (!activeUrl) return resolve(null);
+      if (!url) return resolve(null);
       const video = document.createElement('video');
-      video.src = activeUrl;
+      video.src = url;
       video.currentTime = 1;
       video.muted = true;
       video.onloadeddata = () => { video.currentTime = 1; };
@@ -232,26 +222,38 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   };
 
   const uploadVideo = async () => {
-    if (!activeBlob || !title.trim()) {
+    if (!recordedBlob || !title.trim()) {
       toast.error('Please enter a title');
       return;
     }
     setUploading(true);
     try {
+      // Make sure the current crop / trim / splash settings are baked in before
+      // upload — the operator may never have pressed "Apply Edit".
+      let uploadBlob = activeBlob!;
+      const needsEdit = cropTopPx > 0 || trimmed || addSplash;
+      if (needsEdit && appliedSigRef.current !== currentSig) {
+        toast.info('Applying crop, trim and intro/outro before upload…');
+        const edited = await runEdit(true);
+        if (edited) uploadBlob = edited;
+      }
+
       const timestamp = Date.now();
+
       const filePath = `videos/${timestamp}.webm`;
 
       // Upload video directly to storage (bypasses edge function payload limits)
       const { error: uploadError } = await supabase.storage
         .from('training-videos')
-        .upload(filePath, activeBlob, {
+        .upload(filePath, uploadBlob, {
           contentType: 'video/webm',
           upsert: false,
         });
       if (uploadError) throw uploadError;
 
       // Upload thumbnail directly
-      const thumbnail = await captureThumbnail();
+      const thumbUrl = URL.createObjectURL(uploadBlob);
+      const thumbnail = await captureThumbnail(thumbUrl).finally(() => URL.revokeObjectURL(thumbUrl));
       let thumbnailPath: string | null = null;
       if (thumbnail) {
         thumbnailPath = `thumbnails/${timestamp}.png`;
@@ -274,16 +276,19 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           title: title.trim(),
           description: description.trim() || null,
           category,
-          duration_seconds: croppedBlob ? Math.max(1, Math.round(trimEnd - trimStart)) : elapsed,
+          duration_seconds: Math.max(
+            1,
+            Math.round((trimmed ? trimEnd - trimStart : srcDuration || elapsed) + (addSplash ? 4.8 : 0)),
+          ),
           file_path: filePath,
           thumbnail_path: thumbnailPath,
-          file_size_bytes: activeBlob.size,
+          file_size_bytes: uploadBlob.size,
           manual_chapter_id: manualTopic ? manualTopic.split('::')[0] : null,
           manual_section_id: manualTopic ? manualTopic.split('::')[1] : null,
         },
       });
       if (error) throw error;
-      toast.success(`Video uploaded (${(activeBlob.size / (1024 * 1024)).toFixed(1)} MB)`);
+      toast.success(`Video uploaded (${(uploadBlob.size / (1024 * 1024)).toFixed(1)} MB)`);
       discardRecording();
       fetchVideos();
     } catch (err: any) {
