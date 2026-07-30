@@ -63,6 +63,8 @@ Deno.serve(async (req) => {
         file_path,
         thumbnail_path = null,
         file_size_bytes = 0,
+        manual_chapter_id = null,
+        manual_section_id = null,
       } = body;
 
       if (!title || !file_path) {
@@ -82,6 +84,8 @@ Deno.serve(async (req) => {
           thumbnail_path,
           duration_seconds,
           file_size_bytes,
+          manual_chapter_id,
+          manual_section_id,
         })
         .select()
         .single();
