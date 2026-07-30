@@ -96,10 +96,16 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
         pct => setProgress(pct),
       );
 
-      // Safety: never replace the published file with an unplayable/empty clip.
+      // Safety: never replace the published file with a short/unplayable clip.
+      const expected = Math.max(0.5, trimEnd - trimStart);
       const check = await probeVideo(edited);
       if (!edited.size || !(check.duration > 0.3)) {
         throw new Error('The trimmed clip came out empty — nothing was replaced. Try again.');
+      }
+      if (check.duration < expected * 0.7) {
+        throw new Error(
+          `Only ${check.duration.toFixed(1)}s of the expected ${expected.toFixed(1)}s was captured — nothing was replaced. Keep this tab visible while trimming and try again.`,
+        );
       }
 
       const filePath = `videos/${Date.now()}.webm`;
@@ -113,7 +119,7 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
         body: {
           id: video.id,
           file_path: filePath,
-          duration_seconds: Math.max(1, Math.round(trimEnd - trimStart)),
+          duration_seconds: Math.max(1, Math.round(check.duration)),
           file_size_bytes: edited.size,
         },
       });
