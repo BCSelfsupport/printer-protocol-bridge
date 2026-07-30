@@ -124,6 +124,18 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
         .upload(filePath, edited, { contentType: 'video/webm', upsert: false });
       if (uploadError) throw uploadError;
 
+      // Refresh the poster frame from the trimmed file so the library card no
+      // longer shows a frame from the original, untrimmed recording.
+      let thumbnailPath: string | null = null;
+      const thumb = await captureVideoThumbnail(edited, addSplash ? 6.5 : 1);
+      if (thumb) {
+        const p = `thumbnails/${Date.now()}.png`;
+        const { error: thumbError } = await supabase.storage
+          .from('training-videos')
+          .upload(p, thumb, { contentType: 'image/png', upsert: false });
+        if (!thumbError) thumbnailPath = p;
+      }
+
       const { error } = await supabase.functions.invoke('training-videos', {
         method: 'PATCH',
         body: {
@@ -131,6 +143,7 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
           file_path: filePath,
           duration_seconds: Math.max(1, Math.round(check.duration)),
           file_size_bytes: edited.size,
+          ...(thumbnailPath ? { thumbnail_path: thumbnailPath } : {}),
         },
       });
       if (error) throw error;
