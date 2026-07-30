@@ -211,7 +211,7 @@ function drawCard(ctx: CanvasRenderingContext2D, w: number, h: number, raw: numb
   ctx.fillStyle = glowB;
   ctx.fillRect(0, 0, w, h);
 
-  drawDotField(ctx, w, h, p, s);
+  drawDotField(ctx, w, h, p, s, raw);
 
   // Vignette
   const vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.3, w / 2, h / 2, h * 0.95);
