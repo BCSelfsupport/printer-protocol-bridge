@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { editVideo, probeVideo } from '@/lib/videoEditor';
+import { editVideo, probeVideo, captureVideoThumbnail } from '@/lib/videoEditor';
 import type { TrainingVideoRecord } from '@/lib/trainingVideoLibrary';
 
 interface Props {
