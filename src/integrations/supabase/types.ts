@@ -751,6 +751,8 @@ export type Database = {
           file_path: string
           file_size_bytes: number | null
           id: string
+          manual_chapter_id: string | null
+          manual_section_id: string | null
           sort_order: number | null
           thumbnail_path: string | null
           title: string
@@ -764,6 +766,8 @@ export type Database = {
           file_path: string
           file_size_bytes?: number | null
           id?: string
+          manual_chapter_id?: string | null
+          manual_section_id?: string | null
           sort_order?: number | null
           thumbnail_path?: string | null
           title: string
@@ -777,6 +781,8 @@ export type Database = {
           file_path?: string
           file_size_bytes?: number | null
           id?: string
+          manual_chapter_id?: string | null
+          manual_section_id?: string | null
           sort_order?: number | null
           thumbnail_path?: string | null
           title?: string
