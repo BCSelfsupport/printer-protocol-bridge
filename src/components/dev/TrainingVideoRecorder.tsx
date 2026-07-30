@@ -68,6 +68,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
 
   // Signature of the edit settings that produced `croppedBlob`.
   const appliedSigRef = useRef<string | null>(null);
+  const posterRef = useRef<Blob | null>(null);
   const currentSig = `${cropTopPx}|${trimStart.toFixed(2)}|${trimEnd.toFixed(2)}|${addSplash ? title.trim() + '::' + description.trim() : 'nosplash'}`;
 
   // Probe the raw recording for real duration/size once it exists.
