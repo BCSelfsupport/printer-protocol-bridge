@@ -504,18 +504,28 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
                     </Button>
                   ))}
                 </div>
+                <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={addSplash}
+                    onChange={(e) => setAddSplash(e.target.checked)}
+                    disabled={cropping || !!croppedBlob}
+                    className="accent-primary"
+                  />
+                  Add branded opening title card + BestCode CodeSync closing card (uses the Title below)
+                </label>
                 <div className="flex items-center gap-2">
                   {!croppedBlob ? (
                     <Button
                       size="sm"
                       onClick={applyCrop}
-                      disabled={cropping || (cropTopPx === 0 && !trimmed)}
+                      disabled={cropping || (cropTopPx === 0 && !trimmed && !addSplash)}
                       className="gap-1.5 h-8 text-xs"
                     >
                       {cropping ? <Loader2 className="w-3 h-3 animate-spin" /> : <Scissors className="w-3 h-3" />}
                       {cropping
                         ? `Processing ${cropProgress.toFixed(0)}%`
-                        : `Apply Edit${cropTopPx > 0 ? ` (crop ${cropTopPx}px)` : ''}${trimmed ? ` (trim ${(trimEnd - trimStart).toFixed(1)}s)` : ''}`}
+                        : `Apply Edit${cropTopPx > 0 ? ` (crop ${cropTopPx}px)` : ''}${trimmed ? ` (trim ${(trimEnd - trimStart).toFixed(1)}s)` : ''}${addSplash ? ' + intro/outro' : ''}`}
                     </Button>
                   ) : (
                     <Button size="sm" variant="ghost" onClick={resetCrop} className="h-8 text-xs">
@@ -525,9 +535,10 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
                   <p className="text-[10px] text-muted-foreground flex-1">
                     {croppedBlob
                       ? 'Edit applied. Save to upload the edited version.'
-                      : 'Red overlay shows what gets removed. Re-encodes when applied.'}
+                      : 'Trim first, then apply — the intro/outro cards are added around the trimmed clip.'}
                   </p>
                 </div>
+
 
               </div>
 
