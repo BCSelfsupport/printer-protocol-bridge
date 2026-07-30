@@ -259,9 +259,8 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
         });
       if (uploadError) throw uploadError;
 
-      // Upload thumbnail directly
-      const thumbUrl = URL.createObjectURL(uploadBlob);
-      const thumbnail = await captureThumbnail(thumbUrl).finally(() => URL.revokeObjectURL(thumbUrl));
+      // Poster frame is taken from the final (trimmed) file, past the intro card
+      const thumbnail = await captureVideoThumbnail(uploadBlob, addSplash ? 6.5 : 1);
       let thumbnailPath: string | null = null;
       if (thumbnail) {
         thumbnailPath = `thumbnails/${timestamp}.png`;
