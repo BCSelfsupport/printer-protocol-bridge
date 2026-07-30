@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Video, Upload, Loader2, Trash2, Play, Clock, AlertCircle, Download, Mic, MicOff, Crop } from 'lucide-react';
+import { Video, Upload, Loader2, Trash2, Play, Clock, AlertCircle, Download, Mic, MicOff, Crop, Scissors, SkipBack, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { ScreenRecorderState, ScreenRecorderActions } from '@/hooks/useScreenRecorder';
-import { cropVideoTop } from '@/lib/videoCropper';
+import { editVideo, probeVideo } from '@/lib/videoEditor';
 
 interface TrainingVideo {
   id: string;
@@ -39,7 +39,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   const [videos, setVideos] = useState<TrainingVideo[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Cropping state — local override of the hook's blob/url
+  // Editing state — local override of the hook's blob/url
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [croppedUrl, setCroppedUrl] = useState<string | null>(null);
   const [cropTopPx, setCropTopPx] = useState<number>(80);
@@ -48,9 +48,49 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   const [videoNaturalHeight, setVideoNaturalHeight] = useState<number>(0);
   const previewRef = useRef<HTMLVideoElement | null>(null);
 
-  // The blob/url that should be uploaded and previewed (cropped wins if present)
+  // Trim state
+  const [srcDuration, setSrcDuration] = useState(0);
+  const [trimStart, setTrimStart] = useState(0);
+  const [trimEnd, setTrimEnd] = useState(0);
+  const [probing, setProbing] = useState(false);
+
+  const trimmed = srcDuration > 0 && (trimStart > 0.05 || trimEnd < srcDuration - 0.05);
+
+  // The blob/url that should be uploaded and previewed (edited wins if present)
   const activeBlob = croppedBlob ?? recordedBlob;
   const activeUrl = croppedUrl ?? recordedUrl;
+
+  // Probe the raw recording for real duration/size once it exists
+  useEffect(() => {
+    let cancelled = false;
+    if (!recordedBlob) {
+      setSrcDuration(0);
+      setTrimStart(0);
+      setTrimEnd(0);
+      return;
+    }
+    setProbing(true);
+    probeVideo(recordedBlob)
+      .then(({ duration, height }) => {
+        if (cancelled) return;
+        const d = duration > 0 ? duration : 0;
+        setSrcDuration(d);
+        setTrimStart(0);
+        setTrimEnd(d);
+        if (height) setVideoNaturalHeight(height);
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setProbing(false); });
+    return () => { cancelled = true; };
+  }, [recordedBlob]);
+
+  const seekPreview = (t: number) => {
+    const el = previewRef.current;
+    if (el) {
+      try { el.currentTime = t; } catch { /* noop */ }
+    }
+  };
+
 
   const fetchVideos = useCallback(async () => {
     try {
@@ -93,17 +133,29 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
     setCropping(true);
     setCropProgress(0);
     try {
-      const blob = await cropVideoTop(recordedBlob, cropTopPx, setCropProgress);
+      const blob = await editVideo(
+        recordedBlob,
+        {
+          cropTopPx,
+          startSec: trimStart,
+          endSec: trimEnd > 0 ? trimEnd : undefined,
+        },
+        setCropProgress,
+      );
       if (croppedUrl) URL.revokeObjectURL(croppedUrl);
       setCroppedBlob(blob);
       setCroppedUrl(URL.createObjectURL(blob));
-      toast.success(`Cropped ${cropTopPx}px from top (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`);
+      const parts: string[] = [];
+      if (cropTopPx > 0) parts.push(`cropped ${cropTopPx}px`);
+      if (trimmed) parts.push(`trimmed to ${(trimEnd - trimStart).toFixed(1)}s`);
+      toast.success(`${parts.join(' • ') || 'Edited'} (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`);
     } catch (err: any) {
-      toast.error('Crop failed: ' + err.message);
+      toast.error('Edit failed: ' + err.message);
     } finally {
       setCropping(false);
     }
   };
+
 
   const resetCrop = () => {
     if (croppedUrl) URL.revokeObjectURL(croppedUrl);
@@ -177,7 +229,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           title: title.trim(),
           description: description.trim() || null,
           category,
-          duration_seconds: elapsed,
+          duration_seconds: croppedBlob ? Math.max(1, Math.round(trimEnd - trimStart)) : elapsed,
           file_path: filePath,
           thumbnail_path: thumbnailPath,
           file_size_bytes: activeBlob.size,
@@ -213,6 +265,15 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
     const sec = s % 60;
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
+
+  const formatClock = (s: number) => {
+    if (!isFinite(s) || s < 0) s = 0;
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    const tenths = Math.floor((s % 1) * 10);
+    return `${m}:${sec.toString().padStart(2, '0')}.${tenths}`;
+  };
+
 
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return '--';
@@ -295,10 +356,80 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="w-3 h-3" />
                 {formatTime(elapsed)} • {formatFileSize(activeBlob?.size ?? 0)}
-                {croppedBlob && <Badge variant="outline" className="text-[9px] px-1 py-0">CROPPED</Badge>}
+                {croppedBlob && <Badge variant="outline" className="text-[9px] px-1 py-0">EDITED</Badge>}
+              </div>
+
+              {/* Trim controls */}
+              <div className="space-y-3 border border-dashed border-border rounded-md p-3 bg-background/50">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <Scissors className="w-3 h-3" /> Trim start / end
+                  </Label>
+                  <span className="text-xs font-mono font-semibold text-foreground">
+                    {probing ? 'reading…' : `${formatClock(trimStart)} → ${formatClock(trimEnd)}`}
+                    {srcDuration > 0 && (
+                      <span className="text-muted-foreground ml-1">
+                        ({Math.max(0, trimEnd - trimStart).toFixed(1)}s)
+                      </span>
+                    )}
+                  </span>
+                </div>
+
+                <Slider
+                  value={[trimStart, trimEnd]}
+                  onValueChange={(v) => {
+                    const [a, b] = v;
+                    if (a !== trimStart) { setTrimStart(Math.min(a, trimEnd - 0.2)); seekPreview(a); }
+                    if (b !== trimEnd) { setTrimEnd(Math.max(b, trimStart + 0.2)); seekPreview(b); }
+                  }}
+                  min={0}
+                  max={srcDuration || 1}
+                  step={0.1}
+                  disabled={cropping || !!croppedBlob || srcDuration <= 0}
+                />
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-[10px] gap-1"
+                    disabled={cropping || !!croppedBlob || srcDuration <= 0}
+                    onClick={() => {
+                      const t = previewRef.current?.currentTime ?? 0;
+                      setTrimStart(Math.min(t, trimEnd - 0.2));
+                    }}
+                  >
+                    <SkipBack className="w-3 h-3" /> Set start here
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-[10px] gap-1"
+                    disabled={cropping || !!croppedBlob || srcDuration <= 0}
+                    onClick={() => {
+                      const t = previewRef.current?.currentTime ?? srcDuration;
+                      setTrimEnd(Math.max(t, trimStart + 0.2));
+                    }}
+                  >
+                    <SkipForward className="w-3 h-3" /> Set end here
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-[10px]"
+                    disabled={cropping || !!croppedBlob || srcDuration <= 0}
+                    onClick={() => { setTrimStart(0); setTrimEnd(srcDuration); seekPreview(0); }}
+                  >
+                    Reset
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground w-full">
+                    Scrub the preview then use “Set start/end here”, or drag the two handles.
+                  </p>
+                </div>
               </div>
 
               {/* Crop top controls */}
+
               <div className="space-y-3 border border-dashed border-border rounded-md p-3 bg-background/50">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs flex items-center gap-1.5">
@@ -342,23 +473,26 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
                     <Button
                       size="sm"
                       onClick={applyCrop}
-                      disabled={cropping || cropTopPx === 0}
+                      disabled={cropping || (cropTopPx === 0 && !trimmed)}
                       className="gap-1.5 h-8 text-xs"
                     >
-                      {cropping ? <Loader2 className="w-3 h-3 animate-spin" /> : <Crop className="w-3 h-3" />}
-                      {cropping ? `Cropping ${cropProgress.toFixed(0)}%` : `Apply Crop (${cropTopPx}px)`}
+                      {cropping ? <Loader2 className="w-3 h-3 animate-spin" /> : <Scissors className="w-3 h-3" />}
+                      {cropping
+                        ? `Processing ${cropProgress.toFixed(0)}%`
+                        : `Apply Edit${cropTopPx > 0 ? ` (crop ${cropTopPx}px)` : ''}${trimmed ? ` (trim ${(trimEnd - trimStart).toFixed(1)}s)` : ''}`}
                     </Button>
                   ) : (
                     <Button size="sm" variant="ghost" onClick={resetCrop} className="h-8 text-xs">
-                      Undo Crop
+                      Undo Edit
                     </Button>
                   )}
                   <p className="text-[10px] text-muted-foreground flex-1">
                     {croppedBlob
-                      ? 'Crop applied. Save to upload the cropped version.'
+                      ? 'Edit applied. Save to upload the edited version.'
                       : 'Red overlay shows what gets removed. Re-encodes when applied.'}
                   </p>
                 </div>
+
               </div>
 
               <div className="space-y-2">
