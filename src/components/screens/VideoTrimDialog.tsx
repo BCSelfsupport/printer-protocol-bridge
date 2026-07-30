@@ -254,7 +254,7 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
               <span>
                 Add branded opening card (“{video?.title}”) and a BestCode CodeSync closing card
                 <span className="block text-[10px] text-muted-foreground">
-                  Adds about 5 seconds total around the trimmed clip.
+                  Adds about 9 seconds total around the trimmed clip, held long enough to read.
                 </span>
               </span>
             </label>

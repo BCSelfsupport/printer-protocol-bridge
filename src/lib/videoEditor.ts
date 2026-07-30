@@ -465,7 +465,7 @@ export async function editVideo(
     const introTitle = options.introTitle?.trim();
     if (introTitle) {
       const logo = await loadLogo();
-      await playCard(ctx, outW, outH, Math.max(1, options.introSec ?? 3.2), {
+      await playCard(ctx, outW, outH, Math.max(1, options.introSec ?? 5.5), {
         title: introTitle,
         subtitle: options.introSubtitle?.trim() || 'BestCode CodeSync — Training',
         kicker: 'Training',
@@ -544,7 +544,7 @@ export async function editVideo(
     const wantOutro = options.outro ?? Boolean(options.introTitle?.trim());
     if (wantOutro) {
       const logo = await loadLogo();
-      await playCard(ctx, outW, outH, Math.max(1, options.outroSec ?? 2.8), {
+      await playCard(ctx, outW, outH, Math.max(1, options.outroSec ?? 4), {
         title: 'BestCode CodeSync',
         subtitle: 'Smarter coding. Connected printers.',
         kicker: 'Thanks for watching',
