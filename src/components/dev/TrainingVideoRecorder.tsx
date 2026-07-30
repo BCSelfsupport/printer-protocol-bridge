@@ -9,7 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { ScreenRecorderState, ScreenRecorderActions } from '@/hooks/useScreenRecorder';
-import { editVideo, probeVideo } from '@/lib/videoEditor';
+import { editVideo, probeVideo, captureVideoThumbnail } from '@/lib/videoEditor';
 import { MANUAL_TOPIC_OPTIONS } from '@/lib/trainingVideoLibrary';
 import { RECORDING_OVERLAY_BOTTOM_PX } from '@/components/dev/RecordingOverlay';
 
@@ -259,9 +259,8 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
         });
       if (uploadError) throw uploadError;
 
-      // Upload thumbnail directly
-      const thumbUrl = URL.createObjectURL(uploadBlob);
-      const thumbnail = await captureThumbnail(thumbUrl).finally(() => URL.revokeObjectURL(thumbUrl));
+      // Poster frame is taken from the final (trimmed) file, past the intro card
+      const thumbnail = await captureVideoThumbnail(uploadBlob, addSplash ? 6.5 : 1);
       let thumbnailPath: string | null = null;
       if (thumbnail) {
         thumbnailPath = `thumbnails/${timestamp}.png`;

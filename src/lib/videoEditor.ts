@@ -74,6 +74,31 @@ export async function probeVideo(blob: Blob): Promise<{ duration: number; width:
   }
 }
 
+/**
+ * Grab a poster frame from a video blob. `atSec` is clamped into the clip so the
+ * thumbnail always comes from the finished (trimmed) file, never the original.
+ */
+export async function captureVideoThumbnail(blob: Blob, atSec = 1): Promise<Blob | null> {
+  const url = URL.createObjectURL(blob);
+  try {
+    const video = await loadVideo(url);
+    const duration = await resolveDuration(video);
+    const t = duration > 0 ? Math.min(Math.max(0.1, atSec), Math.max(0.1, duration - 0.1)) : atSec;
+    await seekTo(video, t);
+    const canvas = document.createElement('canvas');
+    canvas.width = 320;
+    canvas.height = 180;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(video, 0, 0, 320, 180);
+    return await new Promise<Blob | null>(resolve => canvas.toBlob(b => resolve(b), 'image/png'));
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export interface EditVideoOptions {
   /** Pixels to remove from the top of the frame. */
   cropTopPx?: number;
