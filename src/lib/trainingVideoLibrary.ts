@@ -20,6 +20,8 @@ export interface TrainingVideoRecord {
   created_at: string;
   manual_chapter_id?: string | null;
   manual_section_id?: string | null;
+  /** File this video pointed at before the last trim (used for undo). */
+  previous_file_path?: string | null;
 }
 
 export const CATEGORY_LABELS: Record<string, string> = {
