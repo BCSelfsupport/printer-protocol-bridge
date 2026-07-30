@@ -4,7 +4,18 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const stills = process.argv.includes("--stills");
+const args = process.argv.slice(2);
+const stills = args.includes("--stills");
+const arg = (name, fallback) => {
+  const hit = args.find((a) => a.startsWith(`--${name}=`));
+  return hit ? hit.split("=").slice(1).join("=") : fallback;
+};
+
+const id = arg("id", "main");
+const out = arg("out", "/mnt/documents/codesync-create-message.mp4");
+const stillFrames = arg("frames", "40,150,260,400,560,660")
+  .split(",")
+  .map((n) => Number(n.trim()));
 
 const bundled = await bundle({
   entryPoint: path.resolve(__dirname, "../src/index.ts"),
@@ -17,15 +28,15 @@ const browser = await openBrowser("chrome", {
   chromeMode: "chrome-for-testing",
 });
 
-const composition = await selectComposition({ serveUrl: bundled, id: "main", puppeteerInstance: browser });
+const composition = await selectComposition({ serveUrl: bundled, id, puppeteerInstance: browser });
 
 if (stills) {
-  for (const f of [40, 150, 260, 400, 560, 660]) {
+  for (const f of stillFrames) {
     await renderStill({
       composition,
       serveUrl: bundled,
       frame: f,
-      output: `/tmp/qa/frame-${f}.png`,
+      output: `/tmp/qa/${id}-${f}.png`,
       puppeteerInstance: browser,
       overwrite: true,
     });
@@ -36,7 +47,7 @@ if (stills) {
     composition,
     serveUrl: bundled,
     codec: "h264",
-    outputLocation: "/mnt/documents/codesync-create-message.mp4",
+    outputLocation: out,
     puppeteerInstance: browser,
     muted: true,
     concurrency: 1,
