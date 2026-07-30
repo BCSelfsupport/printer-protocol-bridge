@@ -320,8 +320,21 @@ export async function editVideo(
     const recordStartedAt = performance.now();
     recorder.start(500);
 
+    // Branded opening card
+    const introTitle = options.introTitle?.trim();
+    if (introTitle) {
+      const logo = await loadLogo();
+      await playCard(ctx, outW, outH, Math.max(1, options.introSec ?? 2.6), {
+        title: introTitle,
+        subtitle: options.introSubtitle?.trim() || 'BestCode CodeSync — Training',
+        kicker: 'CodeSync',
+        logo,
+      });
+    }
+
     let raf = 0;
     let stopRequested = false;
+
 
     const draw = () => {
       if (stopRequested) return;
