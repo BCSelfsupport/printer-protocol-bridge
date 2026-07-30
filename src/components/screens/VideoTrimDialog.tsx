@@ -94,9 +94,17 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
     try {
       const edited = await editVideo(
         sourceBlob,
-        { cropTopPx, startSec: trimStart, endSec: trimEnd },
+        {
+          cropTopPx,
+          startSec: trimStart,
+          endSec: trimEnd,
+          introTitle: addSplash ? video.title : undefined,
+          introSubtitle: addSplash ? (video.description?.trim() || undefined) : undefined,
+          outro: addSplash,
+        },
         pct => setProgress(pct),
       );
+
 
       // Safety: never replace the published file with a short/unplayable clip.
       const expected = Math.max(0.5, trimEnd - trimStart);
