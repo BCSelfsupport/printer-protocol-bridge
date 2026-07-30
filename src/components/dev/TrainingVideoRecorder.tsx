@@ -45,6 +45,8 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [croppedUrl, setCroppedUrl] = useState<string | null>(null);
   const [cropTopPx, setCropTopPx] = useState<number>(120);
+  const [addSplash, setAddSplash] = useState(true);
+
   const [cropping, setCropping] = useState(false);
   const [cropProgress, setCropProgress] = useState(0);
   const [videoNaturalHeight, setVideoNaturalHeight] = useState<number>(0);
@@ -164,6 +166,10 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
 
   const applyCrop = async () => {
     if (!recordedBlob) return;
+    if (addSplash && !title.trim()) {
+      toast.error('Enter a Title first — it is used on the opening card');
+      return;
+    }
     setCropping(true);
     setCropProgress(0);
     try {
@@ -173,6 +179,9 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           cropTopPx,
           startSec: trimStart,
           endSec: trimEnd > 0 ? trimEnd : undefined,
+          introTitle: addSplash ? title.trim() : undefined,
+          introSubtitle: addSplash ? (description.trim() || undefined) : undefined,
+          outro: addSplash,
         },
         setCropProgress,
       );
@@ -182,7 +191,9 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
       const parts: string[] = [];
       if (cropTopPx > 0) parts.push(`cropped ${cropTopPx}px`);
       if (trimmed) parts.push(`trimmed to ${(trimEnd - trimStart).toFixed(1)}s`);
+      if (addSplash) parts.push('intro + outro added');
       toast.success(`${parts.join(' • ') || 'Edited'} (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`);
+
     } catch (err: any) {
       toast.error('Edit failed: ' + err.message);
     } finally {
@@ -504,18 +515,28 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
                     </Button>
                   ))}
                 </div>
+                <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={addSplash}
+                    onChange={(e) => setAddSplash(e.target.checked)}
+                    disabled={cropping || !!croppedBlob}
+                    className="accent-primary"
+                  />
+                  Add branded opening title card + BestCode CodeSync closing card (uses the Title below)
+                </label>
                 <div className="flex items-center gap-2">
                   {!croppedBlob ? (
                     <Button
                       size="sm"
                       onClick={applyCrop}
-                      disabled={cropping || (cropTopPx === 0 && !trimmed)}
+                      disabled={cropping || (cropTopPx === 0 && !trimmed && !addSplash)}
                       className="gap-1.5 h-8 text-xs"
                     >
                       {cropping ? <Loader2 className="w-3 h-3 animate-spin" /> : <Scissors className="w-3 h-3" />}
                       {cropping
                         ? `Processing ${cropProgress.toFixed(0)}%`
-                        : `Apply Edit${cropTopPx > 0 ? ` (crop ${cropTopPx}px)` : ''}${trimmed ? ` (trim ${(trimEnd - trimStart).toFixed(1)}s)` : ''}`}
+                        : `Apply Edit${cropTopPx > 0 ? ` (crop ${cropTopPx}px)` : ''}${trimmed ? ` (trim ${(trimEnd - trimStart).toFixed(1)}s)` : ''}${addSplash ? ' + intro/outro' : ''}`}
                     </Button>
                   ) : (
                     <Button size="sm" variant="ghost" onClick={resetCrop} className="h-8 text-xs">
@@ -525,9 +546,10 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
                   <p className="text-[10px] text-muted-foreground flex-1">
                     {croppedBlob
                       ? 'Edit applied. Save to upload the edited version.'
-                      : 'Red overlay shows what gets removed. Re-encodes when applied.'}
+                      : 'Trim first, then apply — the intro/outro cards are added around the trimmed clip.'}
                   </p>
                 </div>
+
 
               </div>
 

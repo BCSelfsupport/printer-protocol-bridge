@@ -81,7 +81,166 @@ export interface EditVideoOptions {
   startSec?: number;
   /** Trim end in seconds (defaults to full duration). */
   endSec?: number;
+  /** Branded opening card: the video title (omit to skip the intro). */
+  introTitle?: string;
+  /** Small line under the title on the opening card. */
+  introSubtitle?: string;
+  /** Seconds of opening card (default 2.6). */
+  introSec?: number;
+  /** Branded closing card (default on when introTitle is set). */
+  outro?: boolean;
+  /** Seconds of closing card (default 2.2). */
+  outroSec?: number;
 }
+
+const BRAND_LOGO_SRC = '/codesync-icon.png';
+
+function loadLogo(): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = BRAND_LOGO_SRC;
+  });
+}
+
+const easeOut = (t: number) => 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 3);
+
+interface CardSpec {
+  title: string;
+  subtitle?: string;
+  kicker?: string;
+  logo: HTMLImageElement | null;
+}
+
+/** Draw one frame of a branded title/closing card. `p` = 0..1 progress. */
+function drawCard(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  p: number,
+  card: CardSpec,
+) {
+  const s = h / 1080; // scale relative to 1080p design
+
+  // Background: deep navy gradient with a soft blue/emerald glow
+  const bg = ctx.createLinearGradient(0, 0, w, h);
+  bg.addColorStop(0, '#070b16');
+  bg.addColorStop(0.55, '#0d1626');
+  bg.addColorStop(1, '#08131a');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  const glow = ctx.createRadialGradient(w * 0.72, h * 0.22, 0, w * 0.72, h * 0.22, w * 0.55);
+  glow.addColorStop(0, 'rgba(59,130,246,0.20)');
+  glow.addColorStop(1, 'rgba(59,130,246,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, w, h);
+
+  const glow2 = ctx.createRadialGradient(w * 0.18, h * 0.85, 0, w * 0.18, h * 0.85, w * 0.45);
+  glow2.addColorStop(0, 'rgba(16,185,129,0.16)');
+  glow2.addColorStop(1, 'rgba(16,185,129,0)');
+  ctx.fillStyle = glow2;
+  ctx.fillRect(0, 0, w, h);
+
+  // Subtle grid
+  ctx.strokeStyle = 'rgba(148,163,184,0.06)';
+  ctx.lineWidth = Math.max(1, s);
+  const step = 80 * s;
+  for (let x = 0; x < w; x += step) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+  for (let y = 0; y < h; y += step) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+
+  const cx = w / 2;
+  const inP = easeOut(p / 0.35);
+  const outFade = p > 0.88 ? 1 - (p - 0.88) / 0.12 : 1;
+  const alpha = Math.max(0, Math.min(1, inP)) * Math.max(0, outFade);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.textAlign = 'center';
+
+  // Logo
+  const logoSize = 190 * s;
+  const logoY = h * 0.30 - logoSize / 2 + (1 - inP) * 30 * s;
+  if (card.logo) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(59,130,246,0.55)';
+    ctx.shadowBlur = 48 * s;
+    ctx.drawImage(card.logo, cx - logoSize / 2, logoY, logoSize, logoSize);
+    ctx.restore();
+  }
+
+  // Kicker
+  if (card.kicker) {
+    ctx.fillStyle = 'rgba(148,197,253,0.95)';
+    ctx.font = `600 ${Math.round(30 * s)}px "Inter", system-ui, sans-serif`;
+    const letters = card.kicker.toUpperCase().split('').join('\u2009 ');
+    ctx.fillText(letters, cx, h * 0.50);
+  }
+
+  // Accent rule that wipes in
+  const ruleW = 420 * s * easeOut((p - 0.15) / 0.4);
+  if (ruleW > 0) {
+    const g = ctx.createLinearGradient(cx - ruleW / 2, 0, cx + ruleW / 2, 0);
+    g.addColorStop(0, 'rgba(59,130,246,0)');
+    g.addColorStop(0.5, '#3b82f6');
+    g.addColorStop(1, 'rgba(16,185,129,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - ruleW / 2, h * 0.535, ruleW, Math.max(2, 4 * s));
+  }
+
+  // Title (wraps to 2 lines)
+  const titleP = easeOut((p - 0.12) / 0.4);
+  ctx.globalAlpha = alpha * Math.max(0, Math.min(1, titleP));
+  ctx.fillStyle = '#f8fafc';
+  let fontSize = Math.round(76 * s);
+  ctx.font = `700 ${fontSize}px "Inter", system-ui, sans-serif`;
+  const maxW = w * 0.8;
+  const words = card.title.split(/\s+/);
+  const lines: string[] = [];
+  let line = '';
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = word; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  while (lines.length > 2) lines.splice(2);
+
+  const baseY = h * 0.635 + (1 - titleP) * 24 * s;
+  lines.forEach((l, i) => ctx.fillText(l, cx, baseY + i * fontSize * 1.15));
+
+  // Subtitle
+  if (card.subtitle) {
+    const subP = easeOut((p - 0.3) / 0.4);
+    ctx.globalAlpha = alpha * Math.max(0, Math.min(1, subP));
+    ctx.fillStyle = 'rgba(203,213,225,0.85)';
+    ctx.font = `400 ${Math.round(34 * s)}px "Inter", system-ui, sans-serif`;
+    ctx.fillText(card.subtitle, cx, baseY + lines.length * fontSize * 1.15 + 26 * s);
+  }
+
+  ctx.restore();
+}
+
+function playCard(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  durationSec: number,
+  card: CardSpec,
+): Promise<void> {
+  return new Promise((resolve) => {
+    const start = performance.now();
+    const tick = () => {
+      const p = (performance.now() - start) / (durationSec * 1000);
+      drawCard(ctx, w, h, Math.min(1, p), card);
+      if (p >= 1) { resolve(); return; }
+      requestAnimationFrame(tick);
+    };
+    tick();
+  });
+}
+
 
 export async function editVideo(
   sourceBlob: Blob,
@@ -161,8 +320,21 @@ export async function editVideo(
     const recordStartedAt = performance.now();
     recorder.start(500);
 
+    // Branded opening card
+    const introTitle = options.introTitle?.trim();
+    if (introTitle) {
+      const logo = await loadLogo();
+      await playCard(ctx, outW, outH, Math.max(1, options.introSec ?? 2.6), {
+        title: introTitle,
+        subtitle: options.introSubtitle?.trim() || 'BestCode CodeSync — Training',
+        kicker: 'CodeSync',
+        logo,
+      });
+    }
+
     let raf = 0;
     let stopRequested = false;
+
 
     const draw = () => {
       if (stopRequested) return;
@@ -226,7 +398,20 @@ export async function editVideo(
     try { video.pause(); } catch {}
     try { ctx.drawImage(video, 0, crop, srcW, outH, 0, 0, outW, outH); } catch {}
 
+    // Branded closing card
+    const wantOutro = options.outro ?? Boolean(options.introTitle?.trim());
+    if (wantOutro) {
+      const logo = await loadLogo();
+      await playCard(ctx, outW, outH, Math.max(1, options.outroSec ?? 2.2), {
+        title: 'BestCode CodeSync',
+        subtitle: 'Smarter coding. Connected printers.',
+        kicker: 'Thanks for watching',
+        logo,
+      });
+    }
+
     await new Promise(r => setTimeout(r, 300));
+
     if (recorder.state !== 'inactive') recorder.stop();
     let blob = await stopped;
     const recordedMs = Math.max(100, Math.round(performance.now() - recordStartedAt));
