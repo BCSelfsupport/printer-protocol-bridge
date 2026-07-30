@@ -89,7 +89,14 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
         setSrcDuration(d);
         setTrimStart(0);
         setTrimEnd(d);
-        if (height) setVideoNaturalHeight(height);
+        if (height) {
+          setVideoNaturalHeight(height);
+          // Scale the on-screen position of the stop pill into video pixels so
+          // the overlay is always cropped away, whatever the capture size is.
+          const ratio = RECORDING_OVERLAY_BOTTOM_PX / Math.max(1, window.innerHeight);
+          const auto = Math.ceil(height * ratio) + 20;
+          setCropTopPx(Math.min(Math.floor(height / 3), Math.max(56, auto)));
+        }
       })
       .catch(() => {})
       .finally(() => { if (!cancelled) setProbing(false); });
