@@ -32,6 +32,8 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(0);
   const [cropTopPx, setCropTopPx] = useState(0);
+  const [addSplash, setAddSplash] = useState(true);
+
   const [loading, setLoading] = useState(false);
   const [working, setWorking] = useState(false);
   const [progress, setProgress] = useState(0);
