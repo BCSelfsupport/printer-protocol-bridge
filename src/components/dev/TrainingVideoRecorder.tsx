@@ -354,7 +354,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           {isRecording && (
             <p className="text-xs text-muted-foreground">
               <AlertCircle className="w-3 h-3 inline mr-1" />
-              Recording in progress — close the Dev Panel to capture the screen. Use the floating stop button to finish.
+              Recording in progress — close the Dev Panel to capture the screen. Use the floating stop button to finish; it will be cropped out of the saved video automatically.
             </p>
           )}
 
