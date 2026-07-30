@@ -91,6 +91,7 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
     if (!video || !sourceBlob) return;
     setWorking(true);
     setProgress(0);
+    let poster: Blob | null = null;
     try {
       const edited = await editVideo(
         sourceBlob,
@@ -101,6 +102,7 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
           introTitle: addSplash ? video.title : undefined,
           introSubtitle: addSplash ? (video.description?.trim() || undefined) : undefined,
           outro: addSplash,
+          onPoster: (p) => { poster = p; },
         },
         pct => setProgress(pct),
       );
