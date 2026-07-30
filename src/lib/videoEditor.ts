@@ -177,11 +177,23 @@ function drawDotField(ctx: CanvasRenderingContext2D, w: number, h: number, p: nu
 
 /** Draw one frame of a branded title / closing card. `p` = 0..1 progress. */
 function drawCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: number, card: CardSpec) {
+/**
+ * Draw one frame of a branded title / closing card.
+ * `raw` = 0..1 real progress through the card.
+ *
+ * The reveal choreography is compressed into the first `REVEAL` of the card and
+ * then HOLDS, fully legible and static, until the closing fade. That hold is
+ * what makes the wording readable — the card is on screen for seconds, not the
+ * fraction of a second the animation itself takes.
+ */
+function drawCard(ctx: CanvasRenderingContext2D, w: number, h: number, raw: number, card: CardSpec) {
+  const REVEAL = 0.36;
+  const FADE_AT = 0.93;
+  const p = clamp01(raw / REVEAL);
   const s = h / 1080;
-  const outFade = p > 0.9 ? 1 - (p - 0.9) / 0.1 : 1;
+  const outFade = raw > FADE_AT ? 1 - (raw - FADE_AT) / (1 - FADE_AT) : 1;
   const A = clamp01(outFade);
 
-  // --- Background -----------------------------------------------------------
   const bg = ctx.createLinearGradient(0, 0, w * 0.4, h);
   bg.addColorStop(0, '#080c15');
   bg.addColorStop(0.6, '#050810');
