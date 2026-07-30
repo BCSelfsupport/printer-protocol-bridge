@@ -139,7 +139,7 @@ function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxW: number, ma
  * Dot-matrix "print head" field — a nod to how a CIJ printer lays down a code.
  * A vertical head sweeps across the frame; dots behind it are inked, ahead dim.
  */
-function drawDotField(ctx: CanvasRenderingContext2D, w: number, h: number, p: number, s: number) {
+function drawDotField(ctx: CanvasRenderingContext2D, w: number, h: number, p: number, s: number, t = p) {
   const gap = 26 * s;
   const r = 1.7 * s;
   const head = easeInOut(p / 0.72) * (w + gap * 6) - gap * 3;
@@ -150,7 +150,9 @@ function drawDotField(ctx: CanvasRenderingContext2D, w: number, h: number, p: nu
     // Fresh ink glows, then settles into a faint dot.
     const fresh = clamp01(1 - behind / (gap * 10));
     for (let y = gap / 2; y < h; y += gap) {
-      const wave = 0.5 + 0.5 * Math.sin(x * 0.008 + y * 0.011 + p * 5);
+      // `t` keeps a slow ambient shimmer alive during the hold, so the card
+      // never looks like a frozen still while the viewer reads it.
+      const wave = 0.5 + 0.5 * Math.sin(x * 0.008 + y * 0.011 + t * 4);
       const a = 0.045 + fresh * 0.5 * wave;
       ctx.fillStyle = fresh > 0.05
         ? `rgba(96,165,250,${a})`
@@ -173,13 +175,23 @@ function drawDotField(ctx: CanvasRenderingContext2D, w: number, h: number, p: nu
   }
 }
 
-/** Draw one frame of a branded title / closing card. `p` = 0..1 progress. */
-function drawCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: number, card: CardSpec) {
+/**
+ * Draw one frame of a branded title / closing card.
+ * `raw` = 0..1 real progress through the card.
+ *
+ * The reveal choreography is compressed into the first `REVEAL` of the card and
+ * then HOLDS, fully legible and static, until the closing fade. That hold is
+ * what makes the wording readable — the card is on screen for seconds, not the
+ * fraction of a second the animation itself takes.
+ */
+function drawCard(ctx: CanvasRenderingContext2D, w: number, h: number, raw: number, card: CardSpec) {
+  const REVEAL = 0.36;
+  const FADE_AT = 0.93;
+  const p = clamp01(raw / REVEAL);
   const s = h / 1080;
-  const outFade = p > 0.9 ? 1 - (p - 0.9) / 0.1 : 1;
+  const outFade = raw > FADE_AT ? 1 - (raw - FADE_AT) / (1 - FADE_AT) : 1;
   const A = clamp01(outFade);
 
-  // --- Background -----------------------------------------------------------
   const bg = ctx.createLinearGradient(0, 0, w * 0.4, h);
   bg.addColorStop(0, '#080c15');
   bg.addColorStop(0.6, '#050810');
@@ -199,7 +211,7 @@ function drawCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: number
   ctx.fillStyle = glowB;
   ctx.fillRect(0, 0, w, h);
 
-  drawDotField(ctx, w, h, p, s);
+  drawDotField(ctx, w, h, p, s, raw);
 
   // Vignette
   const vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.3, w / 2, h / 2, h * 0.95);
@@ -453,7 +465,7 @@ export async function editVideo(
     const introTitle = options.introTitle?.trim();
     if (introTitle) {
       const logo = await loadLogo();
-      await playCard(ctx, outW, outH, Math.max(1, options.introSec ?? 3.2), {
+      await playCard(ctx, outW, outH, Math.max(1, options.introSec ?? 5.5), {
         title: introTitle,
         subtitle: options.introSubtitle?.trim() || 'BestCode CodeSync — Training',
         kicker: 'Training',
@@ -532,7 +544,7 @@ export async function editVideo(
     const wantOutro = options.outro ?? Boolean(options.introTitle?.trim());
     if (wantOutro) {
       const logo = await loadLogo();
-      await playCard(ctx, outW, outH, Math.max(1, options.outroSec ?? 2.8), {
+      await playCard(ctx, outW, outH, Math.max(1, options.outroSec ?? 4), {
         title: 'BestCode CodeSync',
         subtitle: 'Smarter coding. Connected printers.',
         kicker: 'Thanks for watching',
