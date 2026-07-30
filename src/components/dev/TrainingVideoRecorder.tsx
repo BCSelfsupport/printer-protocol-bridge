@@ -166,6 +166,10 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
 
   const applyCrop = async () => {
     if (!recordedBlob) return;
+    if (addSplash && !title.trim()) {
+      toast.error('Enter a Title first — it is used on the opening card');
+      return;
+    }
     setCropping(true);
     setCropProgress(0);
     try {
@@ -175,6 +179,9 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           cropTopPx,
           startSec: trimStart,
           endSec: trimEnd > 0 ? trimEnd : undefined,
+          introTitle: addSplash ? title.trim() : undefined,
+          introSubtitle: addSplash ? (description.trim() || undefined) : undefined,
+          outro: addSplash,
         },
         setCropProgress,
       );
@@ -184,7 +191,9 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
       const parts: string[] = [];
       if (cropTopPx > 0) parts.push(`cropped ${cropTopPx}px`);
       if (trimmed) parts.push(`trimmed to ${(trimEnd - trimStart).toFixed(1)}s`);
+      if (addSplash) parts.push('intro + outro added');
       toast.success(`${parts.join(' • ') || 'Edited'} (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`);
+
     } catch (err: any) {
       toast.error('Edit failed: ' + err.message);
     } finally {
