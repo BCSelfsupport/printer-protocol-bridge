@@ -532,11 +532,12 @@ export async function editVideo(
     const wantOutro = options.outro ?? Boolean(options.introTitle?.trim());
     if (wantOutro) {
       const logo = await loadLogo();
-      await playCard(ctx, outW, outH, Math.max(1, options.outroSec ?? 2.2), {
+      await playCard(ctx, outW, outH, Math.max(1, options.outroSec ?? 2.8), {
         title: 'BestCode CodeSync',
         subtitle: 'Smarter coding. Connected printers.',
         kicker: 'Thanks for watching',
         logo,
+        variant: 'outro',
       });
     }
 
