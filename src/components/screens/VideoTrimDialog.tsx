@@ -91,6 +91,7 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
     if (!video || !sourceBlob) return;
     setWorking(true);
     setProgress(0);
+    let poster: Blob | null = null;
     try {
       const edited = await editVideo(
         sourceBlob,
@@ -101,6 +102,7 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
           introTitle: addSplash ? video.title : undefined,
           introSubtitle: addSplash ? (video.description?.trim() || undefined) : undefined,
           outro: addSplash,
+          onPoster: (p) => { poster = p; },
         },
         pct => setProgress(pct),
       );
@@ -127,7 +129,8 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
       // Refresh the poster frame from the trimmed file so the library card no
       // longer shows a frame from the original, untrimmed recording.
       let thumbnailPath: string | null = null;
-      const thumb = await captureVideoThumbnail(edited, addSplash ? 6.5 : 1);
+      const thumb: Blob | null =
+        (poster as Blob | null) ?? (await captureVideoThumbnail(edited, addSplash ? 6.5 : 1));
       if (thumb) {
         const p = `thumbnails/${Date.now()}.png`;
         const { error: thumbError } = await supabase.storage

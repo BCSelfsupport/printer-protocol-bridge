@@ -68,6 +68,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
 
   // Signature of the edit settings that produced `croppedBlob`.
   const appliedSigRef = useRef<string | null>(null);
+  const posterRef = useRef<Blob | null>(null);
   const currentSig = `${cropTopPx}|${trimStart.toFixed(2)}|${trimEnd.toFixed(2)}|${addSplash ? title.trim() + '::' + description.trim() : 'nosplash'}`;
 
   // Probe the raw recording for real duration/size once it exists.
@@ -80,6 +81,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
       setTrimStart(0);
       setTrimEnd(0);
       appliedSigRef.current = null;
+      posterRef.current = null;
       return;
     }
     setProbing(true);
@@ -164,6 +166,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           introTitle: addSplash ? title.trim() : undefined,
           introSubtitle: addSplash ? (description.trim() || undefined) : undefined,
           outro: addSplash,
+          onPoster: (p) => { posterRef.current = p; },
         },
         setCropProgress,
       );
@@ -205,6 +208,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
     setCroppedUrl(null);
     setCropProgress(0);
     appliedSigRef.current = null;
+    posterRef.current = null;
   };
 
   const captureThumbnail = (url: string): Promise<Blob | null> => {
@@ -259,8 +263,10 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
         });
       if (uploadError) throw uploadError;
 
-      // Poster frame is taken from the final (trimmed) file, past the intro card
-      const thumbnail = await captureVideoThumbnail(uploadBlob, addSplash ? 6.5 : 1);
+      // Poster frame comes straight off the render canvas (branded title card);
+      // only fall back to seeking the encoded file if that failed.
+      const thumbnail =
+        posterRef.current ?? (await captureVideoThumbnail(uploadBlob, addSplash ? 6.5 : 1));
       let thumbnailPath: string | null = null;
       if (thumbnail) {
         thumbnailPath = `thumbnails/${timestamp}.png`;
