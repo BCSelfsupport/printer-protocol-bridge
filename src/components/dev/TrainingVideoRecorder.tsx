@@ -9,7 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { ScreenRecorderState, ScreenRecorderActions } from '@/hooks/useScreenRecorder';
-import { editVideo, probeVideo } from '@/lib/videoEditor';
+import { editVideo, probeVideo, captureVideoThumbnail } from '@/lib/videoEditor';
 import { MANUAL_TOPIC_OPTIONS } from '@/lib/trainingVideoLibrary';
 import { RECORDING_OVERLAY_BOTTOM_PX } from '@/components/dev/RecordingOverlay';
 
