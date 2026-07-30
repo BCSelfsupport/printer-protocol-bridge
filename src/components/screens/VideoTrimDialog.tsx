@@ -232,8 +232,25 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
               />
             </div>
 
+            {/* Branded cards */}
+            <label className="flex items-start gap-2 text-xs border border-dashed border-border rounded-md p-3 bg-muted/20">
+              <input
+                type="checkbox"
+                checked={addSplash}
+                onChange={e => setAddSplash(e.target.checked)}
+                disabled={working}
+                className="mt-0.5 accent-primary"
+              />
+              <span>
+                Add branded opening card (“{video?.title}”) and a BestCode CodeSync closing card
+                <span className="block text-[10px] text-muted-foreground">
+                  Adds about 5 seconds total around the trimmed clip.
+                </span>
+              </span>
+            </label>
+
             <div className="flex items-center gap-2">
-              <Button onClick={applyAndSave} disabled={working || !hasEdit} className="gap-2">
+              <Button onClick={applyAndSave} disabled={working || (!hasEdit && !addSplash)} className="gap-2">
                 {working ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scissors className="w-4 h-4" />}
                 {working ? `Processing ${progress.toFixed(0)}%` : 'Apply & Replace Video'}
               </Button>
@@ -244,6 +261,7 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
                 Re-encodes in the browser and replaces the published file.
               </p>
             </div>
+
           </div>
         )}
       </DialogContent>
