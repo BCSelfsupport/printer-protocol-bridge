@@ -465,8 +465,8 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
 
               <div className="space-y-3 border border-dashed border-border rounded-md p-3 bg-background/50">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs flex items-center gap-1.5">
-                    <Crop className="w-3 h-3" /> Crop top (hide Lovable banner)
+                <Label className="text-xs flex items-center gap-1.5">
+                    <Crop className="w-3 h-3" /> Crop top (hide Lovable banner + recording overlay)
                   </Label>
                   <span className="text-xs font-mono font-semibold text-foreground">
                     {cropTopPx}px
