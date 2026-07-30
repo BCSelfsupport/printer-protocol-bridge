@@ -165,6 +165,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           introTitle: addSplash ? title.trim() : undefined,
           introSubtitle: addSplash ? (description.trim() || undefined) : undefined,
           outro: addSplash,
+          onPoster: (p) => { posterRef.current = p; },
         },
         setCropProgress,
       );
