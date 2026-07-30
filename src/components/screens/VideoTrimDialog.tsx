@@ -91,6 +91,12 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
         pct => setProgress(pct),
       );
 
+      // Safety: never replace the published file with an unplayable/empty clip.
+      const check = await probeVideo(edited);
+      if (!edited.size || !(check.duration > 0.3)) {
+        throw new Error('The trimmed clip came out empty — nothing was replaced. Try again.');
+      }
+
       const filePath = `videos/${Date.now()}.webm`;
       const { error: uploadError } = await supabase.storage
         .from('training-videos')
