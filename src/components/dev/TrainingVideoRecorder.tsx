@@ -276,16 +276,19 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           title: title.trim(),
           description: description.trim() || null,
           category,
-          duration_seconds: croppedBlob ? Math.max(1, Math.round(trimEnd - trimStart)) : elapsed,
+          duration_seconds: Math.max(
+            1,
+            Math.round((trimmed ? trimEnd - trimStart : srcDuration || elapsed) + (addSplash ? 4.8 : 0)),
+          ),
           file_path: filePath,
           thumbnail_path: thumbnailPath,
-          file_size_bytes: activeBlob.size,
+          file_size_bytes: uploadBlob.size,
           manual_chapter_id: manualTopic ? manualTopic.split('::')[0] : null,
           manual_section_id: manualTopic ? manualTopic.split('::')[1] : null,
         },
       });
       if (error) throw error;
-      toast.success(`Video uploaded (${(activeBlob.size / (1024 * 1024)).toFixed(1)} MB)`);
+      toast.success(`Video uploaded (${(uploadBlob.size / (1024 * 1024)).toFixed(1)} MB)`);
       discardRecording();
       fetchVideos();
     } catch (err: any) {
