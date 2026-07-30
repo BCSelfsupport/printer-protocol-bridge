@@ -113,6 +113,9 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
       .catch(() => {})
       .finally(() => { if (!cancelled) setProbing(false); });
     return () => { cancelled = true; };
+    // Dependencies intentionally limited to recordedBlob; cropTopPx is captured
+    // at the moment a new recording arrives so the auto-crop uses the default.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordedBlob]);
 
   const seekPreview = (t: number) => {
