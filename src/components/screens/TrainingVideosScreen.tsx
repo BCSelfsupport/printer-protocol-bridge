@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Play, Film, Download, Link2, Video, Search, BookOpen, LayoutGrid, Scissors } from 'lucide-react';
+import { Play, Film, Download, Link2, Video, Search, BookOpen, LayoutGrid, Scissors, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -100,6 +101,35 @@ export function TrainingVideosScreen({ onBack, recorderState, recorderActions }:
             )}
           </div>
           <div className="flex gap-2 flex-shrink-0">
+            {selectedVideo.previous_file_path && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2"
+                onClick={async () => {
+                  try {
+                    const { error } = await supabase.functions.invoke('training-videos', {
+                      method: 'PATCH',
+                      body: {
+                        id: selectedVideo.id,
+                        file_path: selectedVideo.previous_file_path,
+                        previous_file_path: null,
+                      },
+                    });
+                    if (error) throw error;
+                    toast.success('Restored the version before the last trim');
+                    setSelectedVideo(null);
+                    setLoading(true);
+                    await loadVideos();
+                  } catch (err: any) {
+                    toast.error('Restore failed: ' + err.message);
+                  }
+                }}
+              >
+                <Undo2 className="w-4 h-4" />
+                Undo Trim
+              </Button>
+            )}
             <Button size="sm" variant="outline" className="gap-2" onClick={() => setTrimOpen(true)}>
               <Scissors className="w-4 h-4" />
               Trim / Edit

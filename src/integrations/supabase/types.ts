@@ -753,6 +753,7 @@ export type Database = {
           id: string
           manual_chapter_id: string | null
           manual_section_id: string | null
+          previous_file_path: string | null
           sort_order: number | null
           thumbnail_path: string | null
           title: string
@@ -768,6 +769,7 @@ export type Database = {
           id?: string
           manual_chapter_id?: string | null
           manual_section_id?: string | null
+          previous_file_path?: string | null
           sort_order?: number | null
           thumbnail_path?: string | null
           title: string
@@ -783,6 +785,7 @@ export type Database = {
           id?: string
           manual_chapter_id?: string | null
           manual_section_id?: string | null
+          previous_file_path?: string | null
           sort_order?: number | null
           thumbnail_path?: string | null
           title?: string

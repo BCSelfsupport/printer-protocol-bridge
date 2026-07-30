@@ -128,6 +128,13 @@ Deno.serve(async (req) => {
         if (rest[key] !== undefined) updates[key] = rest[key];
       }
       if (file_path) updates.file_path = file_path;
+      // Keep the file the row previously pointed at so a bad trim can be reverted.
+      if (file_path && existing?.file_path && existing.file_path !== file_path) {
+        updates.previous_file_path = existing.file_path;
+      }
+      if (rest.previous_file_path !== undefined) {
+        updates.previous_file_path = rest.previous_file_path;
+      }
       updates.updated_at = new Date().toISOString();
 
       const { data: record, error: updateError } = await supabase
@@ -139,10 +146,8 @@ Deno.serve(async (req) => {
 
       if (updateError) throw updateError;
 
-      // Clean up the replaced file once the row points at the new one
-      if (file_path && existing?.file_path && existing.file_path !== file_path) {
-        await supabase.storage.from("training-videos").remove([existing.file_path]);
-      }
+      // NOTE: the replaced file is intentionally kept in storage as a backup.
+
 
       return new Response(JSON.stringify(record), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
