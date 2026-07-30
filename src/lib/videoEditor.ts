@@ -175,8 +175,6 @@ function drawDotField(ctx: CanvasRenderingContext2D, w: number, h: number, p: nu
   }
 }
 
-/** Draw one frame of a branded title / closing card. `p` = 0..1 progress. */
-function drawCard(ctx: CanvasRenderingContext2D, w: number, h: number, p: number, card: CardSpec) {
 /**
  * Draw one frame of a branded title / closing card.
  * `raw` = 0..1 real progress through the card.
