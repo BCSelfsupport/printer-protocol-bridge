@@ -176,8 +176,60 @@ export function TrainingVideosScreen({ onBack, recorderState, recorderActions }:
               <Download className="w-4 h-4" />
               Download
             </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="gap-2"
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </Button>
           </div>
         </div>
+
+        <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete this video?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              "{selectedVideo.title}" and its stored file will be permanently removed from the training library. This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deleting}
+                onClick={async () => {
+                  setDeleting(true);
+                  try {
+                    const { error } = await supabase.functions.invoke('training-videos', {
+                      method: 'DELETE',
+                      body: { id: selectedVideo.id },
+                    });
+                    if (error) throw error;
+                    toast.success('Video deleted');
+                    setConfirmDelete(false);
+                    setSelectedVideo(null);
+                    setLoading(true);
+                    await loadVideos();
+                  } catch (err: any) {
+                    toast.error('Delete failed: ' + err.message);
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+
 
         <VideoTrimDialog
           video={selectedVideo}
