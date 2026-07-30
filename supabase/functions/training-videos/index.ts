@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-license-key, x-admin-token, x-license-key, x-admin-token",
-  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
 };
 
 Deno.serve(async (req) => {
@@ -91,6 +91,58 @@ Deno.serve(async (req) => {
         .single();
 
       if (insertError) throw insertError;
+
+      return new Response(JSON.stringify(record), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // PATCH - update metadata and/or replace the video file (after trimming)
+    if (req.method === "PATCH") {
+      const body = await req.json();
+      const { id, file_path, ...rest } = body;
+      if (!id) {
+        return new Response(JSON.stringify({ error: "id required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: existing } = await supabase
+        .from("training_videos")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      const updates: Record<string, unknown> = {};
+      for (const key of [
+        "title",
+        "description",
+        "category",
+        "duration_seconds",
+        "file_size_bytes",
+        "thumbnail_path",
+        "manual_chapter_id",
+        "manual_section_id",
+      ]) {
+        if (rest[key] !== undefined) updates[key] = rest[key];
+      }
+      if (file_path) updates.file_path = file_path;
+      updates.updated_at = new Date().toISOString();
+
+      const { data: record, error: updateError } = await supabase
+        .from("training_videos")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      // Clean up the replaced file once the row points at the new one
+      if (file_path && existing?.file_path && existing.file_path !== file_path) {
+        await supabase.storage.from("training-videos").remove([existing.file_path]);
+      }
 
       return new Response(JSON.stringify(record), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

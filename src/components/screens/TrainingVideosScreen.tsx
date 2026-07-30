@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Play, Film, Download, Link2, Video, Search, BookOpen, LayoutGrid } from 'lucide-react';
+import { Play, Film, Download, Link2, Video, Search, BookOpen, LayoutGrid, Scissors } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
+import { VideoTrimDialog } from './VideoTrimDialog';
 import type { ScreenRecorderState, ScreenRecorderActions } from '@/hooks/useScreenRecorder';
 import {
   CATEGORY_LABELS,
@@ -32,6 +33,7 @@ export function TrainingVideosScreen({ onBack, recorderState, recorderActions }:
   const [search, setSearch] = useState('');
   const [groupByManual, setGroupByManual] = useState(true);
   const [recordDialogOpen, setRecordDialogOpen] = useState(false);
+  const [trimOpen, setTrimOpen] = useState(false);
 
   // Auto-close the dialog as soon as countdown begins or recording starts
   // (so screen capture doesn't show this dialog), and reopen once a blob is ready.
@@ -98,6 +100,10 @@ export function TrainingVideosScreen({ onBack, recorderState, recorderActions }:
             )}
           </div>
           <div className="flex gap-2 flex-shrink-0">
+            <Button size="sm" variant="outline" className="gap-2" onClick={() => setTrimOpen(true)}>
+              <Scissors className="w-4 h-4" />
+              Trim / Edit
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -139,6 +145,17 @@ export function TrainingVideosScreen({ onBack, recorderState, recorderActions }:
             </Button>
           </div>
         </div>
+
+        <VideoTrimDialog
+          video={selectedVideo}
+          open={trimOpen}
+          onOpenChange={setTrimOpen}
+          onSaved={async () => {
+            setSelectedVideo(null);
+            setLoading(true);
+            await loadVideos();
+          }}
+        />
       </div>
     );
   }
