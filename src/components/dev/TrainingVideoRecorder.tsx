@@ -45,6 +45,8 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [croppedUrl, setCroppedUrl] = useState<string | null>(null);
   const [cropTopPx, setCropTopPx] = useState<number>(120);
+  const [addSplash, setAddSplash] = useState(true);
+
   const [cropping, setCropping] = useState(false);
   const [cropProgress, setCropProgress] = useState(0);
   const [videoNaturalHeight, setVideoNaturalHeight] = useState<number>(0);
