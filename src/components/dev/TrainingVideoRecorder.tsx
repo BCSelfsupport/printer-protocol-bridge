@@ -579,7 +579,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           {!isRecording && !recordedBlob && (
             <p className="text-xs text-muted-foreground">
               <AlertCircle className="w-3 h-3 inline mr-1" />
-              Click "Start Recording" to capture your screen. Max 5 minutes, no audio. A floating stop button will appear so you can close this panel during recording.
+              Click "Start Recording" to capture your screen. Max 5 minutes, no audio. A floating stop button appears while recording so you can close this panel; it is automatically cropped out of the saved video.
             </p>
           )}
         </div>
