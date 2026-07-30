@@ -261,8 +261,10 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
         });
       if (uploadError) throw uploadError;
 
-      // Poster frame is taken from the final (trimmed) file, past the intro card
-      const thumbnail = await captureVideoThumbnail(uploadBlob, addSplash ? 6.5 : 1);
+      // Poster frame comes straight off the render canvas (branded title card);
+      // only fall back to seeking the encoded file if that failed.
+      const thumbnail =
+        posterRef.current ?? (await captureVideoThumbnail(uploadBlob, addSplash ? 6.5 : 1));
       let thumbnailPath: string | null = null;
       if (thumbnail) {
         thumbnailPath = `thumbnails/${timestamp}.png`;
