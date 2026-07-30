@@ -542,6 +542,7 @@ export async function editVideo(
       } catch {
         // ignore transient draw errors
       }
+      if (video.currentTime > startSec + 0.5) grabPoster();
       onProgress?.(Math.max(0, Math.min(99, ((video.currentTime - startSec) / span) * 100)));
       raf = requestAnimationFrame(draw);
     };
