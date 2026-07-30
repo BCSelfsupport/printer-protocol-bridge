@@ -266,6 +266,15 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
+  const formatClock = (s: number) => {
+    if (!isFinite(s) || s < 0) s = 0;
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    const tenths = Math.floor((s % 1) * 10);
+    return `${m}:${sec.toString().padStart(2, '0')}.${tenths}`;
+  };
+
+
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return '--';
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
