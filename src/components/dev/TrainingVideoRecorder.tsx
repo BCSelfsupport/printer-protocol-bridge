@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { ScreenRecorderState, ScreenRecorderActions } from '@/hooks/useScreenRecorder';
 import { editVideo, probeVideo } from '@/lib/videoEditor';
+import { MANUAL_TOPIC_OPTIONS } from '@/lib/trainingVideoLibrary';
 
 interface TrainingVideo {
   id: string;
@@ -35,6 +36,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('general');
+  const [manualTopic, setManualTopic] = useState('');
   const [uploading, setUploading] = useState(false);
   const [videos, setVideos] = useState<TrainingVideo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -233,6 +235,8 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           file_path: filePath,
           thumbnail_path: thumbnailPath,
           file_size_bytes: activeBlob.size,
+          manual_chapter_id: manualTopic ? manualTopic.split('::')[0] : null,
+          manual_section_id: manualTopic ? manualTopic.split('::')[1] : null,
         },
       });
       if (error) throw error;
@@ -513,6 +517,24 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
                     <option value="maintenance">Maintenance</option>
                     <option value="troubleshooting">Troubleshooting</option>
                   </select>
+                </div>
+                <div>
+                  <Label className="text-xs">User Manual topic</Label>
+                  <select
+                    value={manualTopic}
+                    onChange={(e) => setManualTopic(e.target.value)}
+                    className="w-full h-8 text-sm rounded-md border border-input bg-background px-2"
+                  >
+                    <option value="">— Not linked to the manual —</option>
+                    {MANUAL_TOPIC_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.chapterTitle} › {opt.sectionTitle}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Linking files the video under this manual topic and shows it inside the User Manual.
+                  </p>
                 </div>
               </div>
               <div className="flex gap-2">

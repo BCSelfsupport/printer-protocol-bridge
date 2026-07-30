@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { MANUAL, MANUAL_TITLE, MANUAL_VERSION, type ManualChapter, type ManualSection } from '@/lib/userManualContent';
 import { generateUserManualPdf, downloadManualPdf } from '@/lib/manualPdfExport';
 import { ScreenshotZoom } from './ScreenshotZoom';
+import { ManualSectionVideos } from './ManualSectionVideos';
 import { toast } from 'sonner';
 
 interface Props {
@@ -240,6 +241,8 @@ export function UserManualDialog({ open, onOpenChange }: Props) {
               )}
 
               <div className="space-y-3">{renderBody(activeSection.body)}</div>
+
+              <ManualSectionVideos chapterId={activeChapter.id} sectionId={activeSection.id} />
 
               {/* Prev / Next */}
               <ManualNav
