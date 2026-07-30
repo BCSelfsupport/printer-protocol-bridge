@@ -10,6 +10,8 @@
  * anything else.
  */
 
+import fixWebmDuration from 'fix-webm-duration';
+
 const log = (...args: any[]) => console.log('[videoEditor]', ...args);
 
 async function loadVideo(url: string): Promise<HTMLVideoElement> {
