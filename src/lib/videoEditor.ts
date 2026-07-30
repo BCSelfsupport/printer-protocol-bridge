@@ -399,12 +399,14 @@ function playCard(
   h: number,
   durationSec: number,
   card: CardSpec,
+  onFrame?: (p: number) => void,
 ): Promise<void> {
   return new Promise((resolve) => {
     const start = performance.now();
     const tick = () => {
-      const p = (performance.now() - start) / (durationSec * 1000);
-      drawCard(ctx, w, h, Math.min(1, p), card);
+      const p = Math.min(1, (performance.now() - start) / (durationSec * 1000));
+      drawCard(ctx, w, h, p, card);
+      onFrame?.(p);
       if (p >= 1) { resolve(); return; }
       requestAnimationFrame(tick);
     };
