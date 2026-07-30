@@ -81,6 +81,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
       setTrimStart(0);
       setTrimEnd(0);
       appliedSigRef.current = null;
+      posterRef.current = null;
       return;
     }
     setProbing(true);
@@ -207,6 +208,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
     setCroppedUrl(null);
     setCropProgress(0);
     appliedSigRef.current = null;
+    posterRef.current = null;
   };
 
   const captureThumbnail = (url: string): Promise<Blob | null> => {
