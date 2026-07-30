@@ -22,6 +22,8 @@ export interface TrainingVideoRecord {
   manual_section_id?: string | null;
   /** File this video pointed at before the last trim (used for undo). */
   previous_file_path?: string | null;
+  /** Locked videos cannot be trimmed, restored or deleted (dev portal only). */
+  is_locked?: boolean | null;
 }
 
 export const CATEGORY_LABELS: Record<string, string> = {
