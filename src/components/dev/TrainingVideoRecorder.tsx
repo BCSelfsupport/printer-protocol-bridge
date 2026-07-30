@@ -133,17 +133,29 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
     setCropping(true);
     setCropProgress(0);
     try {
-      const blob = await cropVideoTop(recordedBlob, cropTopPx, setCropProgress);
+      const blob = await editVideo(
+        recordedBlob,
+        {
+          cropTopPx,
+          startSec: trimStart,
+          endSec: trimEnd > 0 ? trimEnd : undefined,
+        },
+        setCropProgress,
+      );
       if (croppedUrl) URL.revokeObjectURL(croppedUrl);
       setCroppedBlob(blob);
       setCroppedUrl(URL.createObjectURL(blob));
-      toast.success(`Cropped ${cropTopPx}px from top (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`);
+      const parts: string[] = [];
+      if (cropTopPx > 0) parts.push(`cropped ${cropTopPx}px`);
+      if (trimmed) parts.push(`trimmed to ${(trimEnd - trimStart).toFixed(1)}s`);
+      toast.success(`${parts.join(' • ') || 'Edited'} (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`);
     } catch (err: any) {
-      toast.error('Crop failed: ' + err.message);
+      toast.error('Edit failed: ' + err.message);
     } finally {
       setCropping(false);
     }
   };
+
 
   const resetCrop = () => {
     if (croppedUrl) URL.revokeObjectURL(croppedUrl);
