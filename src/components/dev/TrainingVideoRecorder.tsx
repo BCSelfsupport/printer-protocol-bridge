@@ -196,13 +196,14 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
     setCroppedBlob(null);
     setCroppedUrl(null);
     setCropProgress(0);
+    appliedSigRef.current = null;
   };
 
-  const captureThumbnail = (): Promise<Blob | null> => {
+  const captureThumbnail = (url: string): Promise<Blob | null> => {
     return new Promise((resolve) => {
-      if (!activeUrl) return resolve(null);
+      if (!url) return resolve(null);
       const video = document.createElement('video');
-      video.src = activeUrl;
+      video.src = url;
       video.currentTime = 1;
       video.muted = true;
       video.onloadeddata = () => { video.currentTime = 1; };
@@ -221,13 +222,24 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   };
 
   const uploadVideo = async () => {
-    if (!activeBlob || !title.trim()) {
+    if (!recordedBlob || !title.trim()) {
       toast.error('Please enter a title');
       return;
     }
     setUploading(true);
     try {
+      // Make sure the current crop / trim / splash settings are baked in before
+      // upload — the operator may never have pressed "Apply Edit".
+      let uploadBlob = activeBlob!;
+      const needsEdit = cropTopPx > 0 || trimmed || addSplash;
+      if (needsEdit && appliedSigRef.current !== currentSig) {
+        toast.info('Applying crop, trim and intro/outro before upload…');
+        const edited = await runEdit(true);
+        if (edited) uploadBlob = edited;
+      }
+
       const timestamp = Date.now();
+
       const filePath = `videos/${timestamp}.webm`;
 
       // Upload video directly to storage (bypasses edge function payload limits)
