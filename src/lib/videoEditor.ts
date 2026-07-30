@@ -156,6 +156,7 @@ export async function editVideo(
       recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
     });
 
+    const recordStartedAt = performance.now();
     recorder.start(500);
 
     let raf = 0;
