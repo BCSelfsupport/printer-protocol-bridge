@@ -44,11 +44,12 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   // Editing state — local override of the hook's blob/url
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [croppedUrl, setCroppedUrl] = useState<string | null>(null);
-  const [cropTopPx, setCropTopPx] = useState<number>(80);
+  const [cropTopPx, setCropTopPx] = useState<number>(120);
   const [cropping, setCropping] = useState(false);
   const [cropProgress, setCropProgress] = useState(0);
   const [videoNaturalHeight, setVideoNaturalHeight] = useState<number>(0);
   const previewRef = useRef<HTMLVideoElement | null>(null);
+  const autoCropDoneRef = useRef(false);
 
   // Trim state
   const [srcDuration, setSrcDuration] = useState(0);
@@ -62,28 +63,59 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
   const activeBlob = croppedBlob ?? recordedBlob;
   const activeUrl = croppedUrl ?? recordedUrl;
 
-  // Probe the raw recording for real duration/size once it exists
+  // Probe the raw recording for real duration/size once it exists.
+  // We also auto-crop the top of the recording so the red floating stop
+  // overlay is visible to the operator during recording but never appears
+  // in the saved/played-back video.
   useEffect(() => {
     let cancelled = false;
     if (!recordedBlob) {
       setSrcDuration(0);
       setTrimStart(0);
       setTrimEnd(0);
+      autoCropDoneRef.current = false;
       return;
     }
+    const autoCropTopPx = cropTopPx;
     setProbing(true);
     probeVideo(recordedBlob)
-      .then(({ duration, height }) => {
+      .then(async ({ duration, height }) => {
         if (cancelled) return;
         const d = duration > 0 ? duration : 0;
         setSrcDuration(d);
         setTrimStart(0);
         setTrimEnd(d);
         if (height) setVideoNaturalHeight(height);
+
+        if (height && autoCropTopPx > 0 && !autoCropDoneRef.current) {
+          autoCropDoneRef.current = true;
+          setCropping(true);
+          try {
+            const blob = await editVideo(
+              recordedBlob,
+              { cropTopPx: autoCropTopPx, startSec: 0, endSec: d > 0 ? d : undefined },
+              setCropProgress,
+            );
+            if (!cancelled) {
+              if (croppedUrl) URL.revokeObjectURL(croppedUrl);
+              setCroppedBlob(blob);
+              setCroppedUrl(URL.createObjectURL(blob));
+              toast.success(`Auto-cropped top ${autoCropTopPx}px — recording overlay hidden in final video`);
+            }
+          } catch (err: any) {
+            console.warn('Auto-crop failed:', err);
+            toast.error('Could not auto-hide recording overlay: ' + err.message);
+          } finally {
+            if (!cancelled) setCropping(false);
+          }
+        }
       })
       .catch(() => {})
       .finally(() => { if (!cancelled) setProbing(false); });
     return () => { cancelled = true; };
+    // Dependencies intentionally limited to recordedBlob; cropTopPx is captured
+    // at the moment a new recording arrives so the auto-crop uses the default.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordedBlob]);
 
   const seekPreview = (t: number) => {
@@ -325,7 +357,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           {isRecording && (
             <p className="text-xs text-muted-foreground">
               <AlertCircle className="w-3 h-3 inline mr-1" />
-              Recording in progress — close the Dev Panel to capture the screen. Use the floating stop button to finish.
+              Recording in progress — close the Dev Panel to capture the screen. Use the floating stop button to finish; it will be cropped out of the saved video automatically.
             </p>
           )}
 
@@ -436,8 +468,8 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
 
               <div className="space-y-3 border border-dashed border-border rounded-md p-3 bg-background/50">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs flex items-center gap-1.5">
-                    <Crop className="w-3 h-3" /> Crop top (hide Lovable banner)
+                <Label className="text-xs flex items-center gap-1.5">
+                    <Crop className="w-3 h-3" /> Crop top (hide Lovable banner + recording overlay)
                   </Label>
                   <span className="text-xs font-mono font-semibold text-foreground">
                     {cropTopPx}px
@@ -550,7 +582,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           {!isRecording && !recordedBlob && (
             <p className="text-xs text-muted-foreground">
               <AlertCircle className="w-3 h-3 inline mr-1" />
-              Click "Start Recording" to capture your screen. Max 5 minutes, no audio. A floating stop button will appear so you can close this panel during recording.
+              Click "Start Recording" to capture your screen. Max 5 minutes, no audio. A floating stop button appears while recording so you can close this panel; it is automatically cropped out of the saved video.
             </p>
           )}
         </div>
