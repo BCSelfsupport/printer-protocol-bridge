@@ -129,7 +129,8 @@ export function VideoTrimDialog({ video, open, onOpenChange, onSaved }: Props) {
       // Refresh the poster frame from the trimmed file so the library card no
       // longer shows a frame from the original, untrimmed recording.
       let thumbnailPath: string | null = null;
-      const thumb = await captureVideoThumbnail(edited, addSplash ? 6.5 : 1);
+      const thumb: Blob | null =
+        (poster as Blob | null) ?? (await captureVideoThumbnail(edited, addSplash ? 6.5 : 1));
       if (thumb) {
         const p = `thumbnails/${Date.now()}.png`;
         const { error: thumbError } = await supabase.storage
