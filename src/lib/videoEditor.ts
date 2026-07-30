@@ -226,10 +226,20 @@ export async function editVideo(
 
     await new Promise(r => setTimeout(r, 300));
     if (recorder.state !== 'inactive') recorder.stop();
-    const blob = await stopped;
+    let blob = await stopped;
+    const recordedMs = Math.max(100, Math.round(performance.now() - recordStartedAt));
     try { await audioCtx?.close(); } catch {}
+
+    // MediaRecorder webm files carry no duration in their header, so players
+    // report 0:00. Patch the duration into the container before returning.
+    try {
+      blob = await fixWebmDuration(blob, recordedMs, { logger: false });
+    } catch (e) {
+      log('webm duration fix failed', e);
+    }
+
     onProgress?.(100);
-    log('done, output blob', blob.size, 'bytes');
+    log('done, output blob', blob.size, 'bytes,', recordedMs, 'ms');
     return blob;
   } finally {
     URL.revokeObjectURL(url);
