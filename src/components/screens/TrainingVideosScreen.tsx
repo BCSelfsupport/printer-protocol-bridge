@@ -35,6 +35,9 @@ export function TrainingVideosScreen({ onBack, recorderState, recorderActions }:
   const [groupByManual, setGroupByManual] = useState(true);
   const [recordDialogOpen, setRecordDialogOpen] = useState(false);
   const [trimOpen, setTrimOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
 
   // Auto-close the dialog as soon as countdown begins or recording starts
   // (so screen capture doesn't show this dialog), and reopen once a blob is ready.
