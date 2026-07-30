@@ -229,7 +229,7 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
           title: title.trim(),
           description: description.trim() || null,
           category,
-          duration_seconds: elapsed,
+          duration_seconds: croppedBlob ? Math.max(1, Math.round(trimEnd - trimStart)) : elapsed,
           file_path: filePath,
           thumbnail_path: thumbnailPath,
           file_size_bytes: activeBlob.size,
