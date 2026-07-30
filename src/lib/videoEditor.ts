@@ -398,7 +398,20 @@ export async function editVideo(
     try { video.pause(); } catch {}
     try { ctx.drawImage(video, 0, crop, srcW, outH, 0, 0, outW, outH); } catch {}
 
+    // Branded closing card
+    const wantOutro = options.outro ?? Boolean(options.introTitle?.trim());
+    if (wantOutro) {
+      const logo = await loadLogo();
+      await playCard(ctx, outW, outH, Math.max(1, options.outroSec ?? 2.2), {
+        title: 'BestCode CodeSync',
+        subtitle: 'Smarter coding. Connected printers.',
+        kicker: 'Thanks for watching',
+        logo,
+      });
+    }
+
     await new Promise(r => setTimeout(r, 300));
+
     if (recorder.state !== 'inactive') recorder.stop();
     let blob = await stopped;
     const recordedMs = Math.max(100, Math.round(performance.now() - recordStartedAt));
