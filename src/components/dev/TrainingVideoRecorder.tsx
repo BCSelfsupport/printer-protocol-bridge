@@ -141,12 +141,9 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
     }
   };
 
-  const applyCrop = async () => {
-    if (!recordedBlob) return;
-    if (addSplash && !title.trim()) {
-      toast.error('Enter a Title first — it is used on the opening card');
-      return;
-    }
+  /** Bake crop + trim + splash screens into the recording. Returns the edited blob. */
+  const runEdit = async (silent = false): Promise<Blob | null> => {
+    if (!recordedBlob) return null;
     setCropping(true);
     setCropProgress(0);
     try {
@@ -165,18 +162,33 @@ export function TrainingVideoRecorder({ recorderState, recorderActions }: Traini
       if (croppedUrl) URL.revokeObjectURL(croppedUrl);
       setCroppedBlob(blob);
       setCroppedUrl(URL.createObjectURL(blob));
-      const parts: string[] = [];
-      if (cropTopPx > 0) parts.push(`cropped ${cropTopPx}px`);
-      if (trimmed) parts.push(`trimmed to ${(trimEnd - trimStart).toFixed(1)}s`);
-      if (addSplash) parts.push('intro + outro added');
-      toast.success(`${parts.join(' • ') || 'Edited'} (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`);
-
-    } catch (err: any) {
-      toast.error('Edit failed: ' + err.message);
+      appliedSigRef.current = currentSig;
+      if (!silent) {
+        const parts: string[] = [];
+        if (cropTopPx > 0) parts.push(`cropped ${cropTopPx}px`);
+        if (trimmed) parts.push(`trimmed to ${(trimEnd - trimStart).toFixed(1)}s`);
+        if (addSplash) parts.push('intro + outro added');
+        toast.success(`${parts.join(' • ') || 'Edited'} (${(blob.size / (1024 * 1024)).toFixed(1)} MB)`);
+      }
+      return blob;
     } finally {
       setCropping(false);
     }
   };
+
+  const applyCrop = async () => {
+    if (!recordedBlob) return;
+    if (addSplash && !title.trim()) {
+      toast.error('Enter a Title first — it is used on the opening card');
+      return;
+    }
+    try {
+      await runEdit();
+    } catch (err: any) {
+      toast.error('Edit failed: ' + err.message);
+    }
+  };
+
 
 
   const resetCrop = () => {
