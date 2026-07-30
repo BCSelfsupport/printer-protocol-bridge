@@ -359,18 +359,20 @@ function drawCard(ctx: CanvasRenderingContext2D, w: number, h: number, raw: numb
     ctx.textAlign = prevAlign;
   });
 
-  // --- Subtitle -------------------------------------------------------------
+  // --- Subtitle (wraps up to 3 lines so long descriptions stay readable) ----
   if (card.subtitle) {
     const subP = easeOut((p - 0.45) / 0.35);
     ctx.globalAlpha = A * clamp01(subP);
-    ctx.fillStyle = 'rgba(203,213,225,0.82)';
-    ctx.font = `400 ${Math.round(34 * s)}px "Inter", system-ui, sans-serif`;
-    ctx.fillText(
-      card.subtitle,
-      cx,
-      baseY + (lines.length - 1) * fontSize * 1.12 + 62 * s,
-    );
+    ctx.fillStyle = 'rgba(203,213,225,0.86)';
+    const subSize = Math.round(32 * s);
+    ctx.font = `400 ${subSize}px "Inter", system-ui, sans-serif`;
+    const subLines = wrapLines(ctx, card.subtitle, maxW, 3);
+    const subTop = baseY + (lines.length - 1) * fontSize * 1.12 + 62 * s;
+    subLines.forEach((text, i) => {
+      ctx.fillText(text, cx, subTop + i * subSize * 1.28);
+    });
   }
+
 
   // --- Footer rule + marks --------------------------------------------------
   ctx.globalAlpha = A;
