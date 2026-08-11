@@ -12,6 +12,51 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
+interface ClampedNumberInputProps {
+  value: number;
+  min: number;
+  max: number;
+  onCommit: (value: number) => void;
+  className?: string;
+}
+
+function ClampedNumberInput({ value, min, max, onCommit, className }: ClampedNumberInputProps) {
+  const [editValue, setEditValue] = useState(value.toString());
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing) setEditValue(value.toString());
+  }, [value, isEditing]);
+
+  const commit = () => {
+    const num = parseInt(editValue, 10);
+    if (!isNaN(num)) {
+      onCommit(Math.max(min, Math.min(max, num)));
+    } else {
+      setEditValue(value.toString());
+    }
+    setIsEditing(false);
+  };
+
+  return (
+    <Input
+      type="number"
+      inputMode="numeric"
+      value={editValue}
+      onFocus={() => {
+        setIsEditing(true);
+        setEditValue(value.toString());
+      }}
+      onChange={(e) => setEditValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === 'Enter' && commit()}
+      className={className}
+      min={min}
+      max={max}
+    />
+  );
+}
+
 // Advanced settings following BestCode manual pages 52-55
 export interface AdvancedSettings {
   // General Tab
@@ -453,47 +498,51 @@ export function AdvancedSettingsDialog({
               min={0}
               max={4000000000}
             />
-            <div className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={settings.selectCode.enabled}
-                  onCheckedChange={(v) => onUpdate({ selectCode: { ...settings.selectCode, enabled: v } })}
-                />
-                <Label className="text-sm font-medium">Select Code</Label>
-              </div>
-              {settings.selectCode.enabled && (
-                <div className="flex items-center gap-1">
-                  <Input
-                    type="number"
+            <div className="bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={settings.selectCode.enabled}
+                    onCheckedChange={(v) => onUpdate({ selectCode: { ...settings.selectCode, enabled: v } })}
+                  />
+                  <Label className="text-sm font-medium">Select ID Code</Label>
+                </div>
+                {settings.selectCode.enabled && (
+                  <ClampedNumberInput
                     value={settings.selectCode.value}
-                    onChange={(e) => onUpdate({ selectCode: { enabled: true, value: Math.max(1, Math.min(255, parseInt(e.target.value) || 1)) } })}
-                    className="w-16 h-7 text-sm"
                     min={1}
                     max={255}
+                    onCommit={(value) => onUpdate({ selectCode: { enabled: true, value } })}
+                    className="w-16 h-7 text-sm"
                   />
-                </div>
-              )}
-            </div>
-            <div className="flex items-center justify-between bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={settings.repeatPrint.enabled}
-                  onCheckedChange={(v) => onUpdate({ repeatPrint: { ...settings.repeatPrint, enabled: v } })}
-                />
-                <Label className="text-sm font-medium">Repeat</Label>
+                )}
               </div>
-              {settings.repeatPrint.enabled && (
-                <div className="flex items-center gap-1">
-                  <Input
-                    type="number"
+              <p className="text-[10px] text-muted-foreground mt-1 pl-10">
+                Used with Print Mode = Select ID. Enter the message ID (1-255) to print.
+              </p>
+            </div>
+            <div className="bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={settings.repeatPrint.enabled}
+                    onCheckedChange={(v) => onUpdate({ repeatPrint: { ...settings.repeatPrint, enabled: v } })}
+                  />
+                  <Label className="text-sm font-medium">Repeat Print</Label>
+                </div>
+                {settings.repeatPrint.enabled && (
+                  <ClampedNumberInput
                     value={settings.repeatPrint.value}
-                    onChange={(e) => onUpdate({ repeatPrint: { enabled: true, value: Math.max(1, Math.min(32000, parseInt(e.target.value) || 1)) } })}
-                    className="w-20 h-7 text-sm"
                     min={1}
                     max={32000}
+                    onCommit={(value) => onUpdate({ repeatPrint: { enabled: true, value } })}
+                    className="w-20 h-7 text-sm"
                   />
-                </div>
-              )}
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1 pl-10">
+                Print Mode must be set to Repeat. Extra prints after the first Print Go.
+              </p>
             </div>
           </TabsContent>
         </Tabs>
