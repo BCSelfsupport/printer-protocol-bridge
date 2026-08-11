@@ -12,6 +12,51 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
+interface ClampedNumberInputProps {
+  value: number;
+  min: number;
+  max: number;
+  onCommit: (value: number) => void;
+  className?: string;
+}
+
+function ClampedNumberInput({ value, min, max, onCommit, className }: ClampedNumberInputProps) {
+  const [editValue, setEditValue] = useState(value.toString());
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing) setEditValue(value.toString());
+  }, [value, isEditing]);
+
+  const commit = () => {
+    const num = parseInt(editValue, 10);
+    if (!isNaN(num)) {
+      onCommit(Math.max(min, Math.min(max, num)));
+    } else {
+      setEditValue(value.toString());
+    }
+    setIsEditing(false);
+  };
+
+  return (
+    <Input
+      type="number"
+      inputMode="numeric"
+      value={editValue}
+      onFocus={() => {
+        setIsEditing(true);
+        setEditValue(value.toString());
+      }}
+      onChange={(e) => setEditValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === 'Enter' && commit()}
+      className={className}
+      min={min}
+      max={max}
+    />
+  );
+}
+
 // Advanced settings following BestCode manual pages 52-55
 export interface AdvancedSettings {
   // General Tab
