@@ -23,6 +23,7 @@ export interface AdjustOverrides {
   bold?: boolean;
   gap?: boolean;
   pitch?: boolean;
+  repeatAmount?: boolean;
   speed?: boolean;
 }
 
@@ -59,6 +60,7 @@ const CONSTRAINTS = {
   bold: { min: 0, max: 9, cmd: 'SB' },         // ^SB command: 0-9
   gap: { min: 0, max: 9, cmd: 'GP' },          // ^GP command: 0-9
   pitch: { min: 0, max: 4000000000, cmd: 'PA' }, // ^PA command: 0-4B
+  repeatAmount: { min: 0, max: 30000, cmd: 'RA' }, // ^RA command: 0-30000 (Repeat print mode only)
 } as const;
 
 const ROTATION_OPTIONS = [
@@ -333,7 +335,7 @@ export function AdjustDialog({
         <div className="space-y-4">
           {isMessageMode && (
             <div className="text-[11px] text-muted-foreground bg-muted/40 border border-border rounded-md px-3 py-2">
-              By default this message inherits Width / Delay / Bold / Gap / Pitch from each printer's Setup Card. Tick <span className="font-semibold text-foreground">Override</span> on any field below to force this message to use its own value on every printer.
+              By default this message inherits Width / Delay / Bold / Gap / Pitch / Repeat from each printer's Setup Card. Tick <span className="font-semibold text-foreground">Override</span> on any field below to force this message to use its own value on every printer.
             </div>
           )}
           {/* Settings grid - single column on mobile, 2 columns on tablet+ */}
@@ -420,6 +422,22 @@ export function AdjustDialog({
               max={CONSTRAINTS.pitch.max}
               overridden={isMessageMode ? overrideFor('pitch') : undefined}
               onOverrideToggle={isMessageMode ? toggleOverride('pitch') : undefined}
+            />
+
+            {/* Repeat: 0-30000 — extra prints after the Print Go trigger.
+                Only takes effect when the message's Print Mode is "Repeat";
+                each repeat is spaced by the Pitch value above. */}
+            <AdjustCard
+              label="Repeat (Repeat mode)"
+              value={settings.repeatAmount ?? 0}
+              onIncrease={() => handleLiveUpdate('repeatAmount', (settings.repeatAmount ?? 0) + 1)}
+              onDecrease={() => handleLiveUpdate('repeatAmount', (settings.repeatAmount ?? 0) - 1)}
+              onEdit={(val) => handleLiveUpdate('repeatAmount', val)}
+              disabled={!isConnected}
+              min={CONSTRAINTS.repeatAmount.min}
+              max={CONSTRAINTS.repeatAmount.max}
+              overridden={isMessageMode ? overrideFor('repeatAmount') : undefined}
+              onOverrideToggle={isMessageMode ? toggleOverride('repeatAmount') : undefined}
             />
 
 
