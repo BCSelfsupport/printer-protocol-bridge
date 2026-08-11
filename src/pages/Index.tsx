@@ -410,6 +410,7 @@ const Index = () => {
       bold: pick('bold'),
       gap: pick('gap'),
       pitch: pick('pitch'),
+      repeatAmount: pick('repeatAmount'),
       speed: effectiveSpeed,
       rotation: effectiveRotation,
     };
@@ -478,6 +479,15 @@ const Index = () => {
     if (pushKey('bold')) commands.push({ command: `^SB ${fullAdjustSettings.bold}`, delayAfterMs: 700 });
     if (pushKey('gap')) commands.push({ command: `^GP ${fullAdjustSettings.gap}`, delayAfterMs: 700 });
     if (pushKey('pitch')) commands.push({ command: `^PA ${fullAdjustSettings.pitch}`, delayAfterMs: 700 });
+
+    // ^RA (Repeat Adjust, 0-30000) is only valid while the message is in
+    // Repeat print mode (^CM p2): the message prints once on Print Go and
+    // then repeats this many additional times, spaced by ^PA (Pitch).
+    // Sending it in Normal mode is rejected by the firmware, so gate it.
+    if (perMessageSettings.printMode === 'Repeat') {
+      const repeat = Math.max(0, Math.min(30000, Math.trunc(fullAdjustSettings.repeatAmount ?? 0)));
+      commands.push({ command: `^RA ${repeat}`, delayAfterMs: 700 });
+    }
 
     return commands;
   }, []);

@@ -80,6 +80,10 @@ export interface MessageAdjustSettings {
   bold?: number;
   gap?: number;
   pitch?: number;
+  /** Repeat Print count (^RA, 0-30000). Only applied when the message's
+   *  print mode is "Repeat": the message prints once on Print Go, then this
+   *  many additional times spaced by Pitch. */
+  repeatAmount?: number;
   speed?: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
   rotation?: 'Normal' | 'Flip' | 'Mirror' | 'Mirror Flip';
 }
@@ -97,6 +101,7 @@ export interface MessageAdjustOverrides {
   bold?: boolean;
   gap?: boolean;
   pitch?: boolean;
+  repeatAmount?: boolean;
   speed?: boolean;
 }
 
@@ -304,6 +309,7 @@ export function EditMessageScreen({
           bold: localAdjustSettings.bold,
           gap: localAdjustSettings.gap,
           pitch: localAdjustSettings.pitch,
+          repeatAmount: localAdjustSettings.repeatAmount,
           speed: localAdjustSettings.speed,
           rotation: localAdjustSettings.rotation,
         },
@@ -382,6 +388,7 @@ export function EditMessageScreen({
                 bold: resolvedDetails.adjustSettings?.bold ?? prev.bold,
                 gap: resolvedDetails.adjustSettings?.gap ?? prev.gap,
                 pitch: resolvedDetails.adjustSettings?.pitch ?? prev.pitch,
+                repeatAmount: resolvedDetails.adjustSettings?.repeatAmount ?? prev.repeatAmount,
                 speed: resolvedDetails.adjustSettings?.speed ?? prev.speed,
                 rotation: resolvedDetails.adjustSettings?.rotation ?? prev.rotation,
               }));
@@ -1728,7 +1735,7 @@ export function EditMessageScreen({
                 <Button
                   onClick={async () => {
                     if (validateMessageName(saveAsName).valid) {
-                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch, speed: localAdjustSettings.speed, rotation: localAdjustSettings.rotation }, adjustOverrides: { ...localAdjustOverrides } }, true);
+                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch, repeatAmount: localAdjustSettings.repeatAmount, speed: localAdjustSettings.speed, rotation: localAdjustSettings.rotation }, adjustOverrides: { ...localAdjustOverrides } }, true);
                       setSaveAsDialogOpen(false);
                       if (result && result.fields.length > 0) {
                         setMessage(prev => ({
