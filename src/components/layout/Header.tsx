@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize, Stethoscope, HelpCircle, MessageSquare, Video, BookOpen, QrCode } from 'lucide-react';
+import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize, Stethoscope, HelpCircle, MessageSquare, Video, BookOpen, QrCode, MonitorPlay } from 'lucide-react';
+import { printerEmulator } from '@/lib/printerEmulator';
+import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { getRelayConfig } from '@/lib/printerTransport';
@@ -80,6 +82,24 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
   const [showFeedback, setShowFeedback] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [showPairMobile, setShowPairMobile] = useState(false);
+  const [demoMode, setDemoMode] = useState(
+    () => printerEmulator.enabled || multiPrinterEmulator.enabled
+  );
+
+  // Keep the header toggle in sync when the emulator is switched elsewhere (dev panel)
+  useEffect(() => {
+    const unsub = multiPrinterEmulator.subscribeToEnabled?.((v: boolean) => setDemoMode(v));
+    return () => { try { unsub?.(); } catch { /* noop */ } };
+  }, []);
+
+  const toggleDemoMode = () => {
+    const next = !demoMode;
+    printerEmulator.enabled = next;
+    multiPrinterEmulator.enabled = next;
+    setDemoMode(next);
+  };
+
+
 
   // Show "Pair Mobile" button on PC only (Electron or desktop browser, not mobile devices)
   const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
@@ -183,6 +203,17 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
                 ) : (
                   <Maximize className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
                 )}
+              </button>
+
+              <button
+                onClick={toggleDemoMode}
+                className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
+                  demoMode ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-muted-foreground/50 hover:bg-muted-foreground/70'
+                }`}
+                title={demoMode ? 'Demo Mode ON (simulated printers) — click to turn off' : 'Demo Mode OFF — click to simulate printers'}
+                aria-pressed={demoMode}
+              >
+                <MonitorPlay className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
               </button>
 
               <button
