@@ -82,21 +82,21 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
   const [showFeedback, setShowFeedback] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [showPairMobile, setShowPairMobile] = useState(false);
-  const [demoMode, setDemoMode] = useState(
+  const [emulateMode, setEmulateMode] = useState(
     () => printerEmulator.enabled || multiPrinterEmulator.enabled
   );
 
   // Keep the header toggle in sync when the emulator is switched elsewhere (dev panel)
   useEffect(() => {
-    const unsub = multiPrinterEmulator.subscribeToEnabled?.((v: boolean) => setDemoMode(v));
+    const unsub = multiPrinterEmulator.subscribeToEnabled?.((v: boolean) => setEmulateMode(v));
     return () => { try { unsub?.(); } catch { /* noop */ } };
   }, []);
 
-  const toggleDemoMode = () => {
-    const next = !demoMode;
+  const toggleEmulateMode = () => {
+    const next = !emulateMode;
     printerEmulator.enabled = next;
     multiPrinterEmulator.enabled = next;
-    setDemoMode(next);
+    setEmulateMode(next);
   };
 
 
