@@ -20,6 +20,38 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'multi-line-7-template-spacing',
+    type: 'bugfix',
+    title: 'Multi-Line 7-Dot Template Spacing Fixed',
+    date: '12 Aug 2026',
+    summary:
+      'Fixed the on-screen preview for 2-line and 3-line 7-dot templates so lines no longer touch vertically. The template parser now applies a standard 1-dot inter-line gap across all multi-line templates, matching the printer HMI layout. 2L×7 lines are now rendered at the correct heights and 3L×7 lines are spaced at 9 / 17 / 25 instead of being pushed down and overlapping.',
+  },
+  {
+    id: 'bottom-nav-adjust-button-restored',
+    type: 'bugfix',
+    title: 'Bottom-Nav Adjust Button Opens Adjust Dialog Again',
+    date: '12 Aug 2026',
+    summary:
+      'Fixed the bottom navigation Adjust shortcut so it opens the Width / Delay / Bold / Gap / Speed / Rotation Adjust dialog again, instead of opening the printer Setup Card. The Setup Card is still reachable from the printer list and printer detail views.',
+  },
+  {
+    id: 'message-name-hyphen-allowed',
+    type: 'bugfix',
+    title: 'Message Names Now Accept Dashes',
+    date: '12 Aug 2026',
+    summary:
+      'Fixed message name validation so part numbers and other names containing hyphens (for example "ABC-123") are accepted when creating or renaming messages.',
+  },
+  {
+    id: 'hmi-yellow-save-button-fix',
+    type: 'bugfix',
+    title: 'Yellow Save Button Now Clears After Copy / Select / Delete',
+    date: '11 Aug 2026',
+    summary:
+      'Fixed the persistent HMI "Save" LED (yellow button) that appeared on some printers after copying, selecting or deleting a message. CodeSync now sends the correct ^SV flash-save command after write batches, which tells the firmware to commit the edit buffer and release the Save LED. This also prevents the dirty-buffer state from blocking message deletion.',
+  },
+  {
     id: 'adjust-dialog-overrides-and-nav',
     type: 'feature',
     title: 'Adjust Dialog Cleanup, Per-Message Overrides & Bottom-Nav Adjust Shortcut',
@@ -33,7 +65,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
     title: 'Width Now Sticks on Every Message Select',
     date: '23 Jul 2026',
     summary:
-      'Fixed a follow-up to the Width 15 bug where the first select of a message pushed the correct Width (from the Printer Setup Card / Fleet Defaults) but a subsequent select on the same printer would revert to the printer\'s baked-in Width 15 / Delay 100. Root cause: if a message\'s stored adjustSettings had lost the width/delay/speed keys (via legacy save, race with the HMI sync, or partial capture), CodeSync silently skipped ^PW / ^DA and left the HMI\'s defaults in place. Every ^SM now unconditionally force-pushes the resolved Width, Delay, Bold, Gap and Pitch (Message Override → Printer Setup Card → Fleet Defaults → Factory Fallback), so a second, third and Nth select always land on the correct values. Update 23 Jul: removed bogus ^SV sends entirely (^SV is not a v2.6 command), with a transport-layer guard left in place so any legacy call can never reach the printer.',
+      'Fixed a follow-up to the Width 15 bug where the first select of a message pushed the correct Width (from the Printer Setup Card / Fleet Defaults) but a subsequent select on the same printer would revert to the printer\'s baked-in Width 15 / Delay 100. Root cause: if a message\'s stored adjustSettings had lost the width/delay/speed keys (via legacy save, race with the HMI sync, or partial capture), CodeSync silently skipped ^PW / ^DA and left the HMI\'s defaults in place. Every ^SM now unconditionally force-pushes the resolved Width, Delay, Bold, Gap and Pitch (Message Override → Printer Setup Card → Fleet Defaults → Factory Fallback), so a second, third and Nth select always land on the correct values. Update 11 Aug: ^SV was reinstated as the correct flash-save command after the protocol document was confirmed to be out of date; it is now sent after write batches to commit the edit buffer.',
   },
   {
     id: 'fault-popup-screen-lock-fix',
