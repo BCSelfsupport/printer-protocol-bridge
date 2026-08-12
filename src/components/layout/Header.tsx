@@ -82,6 +82,24 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
   const [showFeedback, setShowFeedback] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [showPairMobile, setShowPairMobile] = useState(false);
+  const [demoMode, setDemoMode] = useState(
+    () => printerEmulator.enabled || multiPrinterEmulator.enabled
+  );
+
+  // Keep the header toggle in sync when the emulator is switched elsewhere (dev panel)
+  useEffect(() => {
+    const unsub = multiPrinterEmulator.subscribeToEnabled?.((v: boolean) => setDemoMode(v));
+    return () => { try { unsub?.(); } catch { /* noop */ } };
+  }, []);
+
+  const toggleDemoMode = () => {
+    const next = !demoMode;
+    printerEmulator.enabled = next;
+    multiPrinterEmulator.enabled = next;
+    setDemoMode(next);
+  };
+
+
 
   // Show "Pair Mobile" button on PC only (Electron or desktop browser, not mobile devices)
   const isMobileDevice = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
