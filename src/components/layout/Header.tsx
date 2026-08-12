@@ -146,8 +146,20 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
         </div>
 
         <div className="flex items-center min-w-0 flex-1 justify-end gap-2">
+          <button
+            onClick={toggleDemoMode}
+            className={`h-8 md:h-12 px-2 md:px-3 rounded-full flex items-center gap-1 transition-colors flex-shrink-0 ${
+              demoMode ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-muted-foreground/50 hover:bg-muted-foreground/70'
+            }`}
+            title={demoMode ? 'Demo Mode ON (simulated printers) — tap to turn off' : 'Demo Mode OFF — tap to simulate printers'}
+            aria-pressed={demoMode}
+          >
+            <MonitorPlay className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+            <span className="text-[9px] md:text-xs font-semibold text-card">Demo</span>
+          </button>
           <div className="flex-1 min-w-0 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex w-max flex-nowrap items-center gap-1 md:gap-4 pl-2">
+
               {/* Relay mode indicator for mobile PWA */}
               {!window.electronAPI && onRelayConnect && /Android|iPhone|iPad|iPod|Mobile/i.test(typeof navigator !== 'undefined' ? navigator.userAgent : '') && (
                 <button
