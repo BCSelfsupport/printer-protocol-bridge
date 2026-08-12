@@ -2686,12 +2686,8 @@ const Index = () => {
 
   const handleNavigate = (item: NavItem) => {
     if (item === 'adjust') {
-      // Adjust is per-printer, not global. Route the bottom-nav Adjust
-      // shortcut to the connected printer's Setup Card so operators land
-      // on the right context instead of the confusing global dialog.
-      const target = connectionState.connectedPrinter ?? selectedPrinter ?? null;
-      const stored = target ? printers.find(p => p.id === target.id) ?? null : null;
-      setAdjustSetupCardPrinter(stored ?? target ?? null);
+      // Opens the Adjust dialog (width, delay, bold, gap, speed, rotation…)
+      setAdjustDialogOpen(true);
       return;
     }
 
