@@ -206,6 +206,17 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
               </button>
 
               <button
+                onClick={toggleDemoMode}
+                className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
+                  demoMode ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-muted-foreground/50 hover:bg-muted-foreground/70'
+                }`}
+                title={demoMode ? 'Demo Mode ON (simulated printers) — click to turn off' : 'Demo Mode OFF — click to simulate printers'}
+                aria-pressed={demoMode}
+              >
+                <MonitorPlay className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+              </button>
+
+              <button
                 onClick={() => setShowFeedback(true)}
                 className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
                 title="Send Feedback"
