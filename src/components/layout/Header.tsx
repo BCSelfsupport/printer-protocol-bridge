@@ -154,7 +154,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
             title={emulateMode ? 'Emulate Printers ON (simulated printers) — tap to turn off' : 'Emulate Printers OFF — tap to simulate printers'}
             aria-pressed={emulateMode}
           >
-            <MonitorPlay className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+            <Printer className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
             <span className="hidden md:inline text-xs font-semibold text-card">Emulate Printers</span>
             <span className="md:hidden text-[9px] font-semibold text-card">Emulate</span>
           </button>
