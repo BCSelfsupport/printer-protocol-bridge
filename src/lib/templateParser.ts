@@ -73,26 +73,18 @@ export function parseTemplateData(data: Uint8Array, name: string = 'unknown'): P
     const numLines = parseInt(lineMatch[1]);
     const dotsPerLine = parseInt(lineMatch[2]);
     
-    // Calculate actual template height using standard 1-dot inter-line gap
-    // (confirmed against HMI for all 2L templates, including 2L7).
-    let totalHeight = numLines * dotsPerLine;
+    // Every multi-line template uses a 1-dot inter-line gap (confirmed against
+    // the HMI for 2L and 3L templates), so height = lines*dots + (lines-1).
+    const gap = numLines > 1 ? 1 : 0;
+    let totalHeight = numLines * dotsPerLine + (numLines - 1) * gap;
+    if (totalHeight > 32) totalHeight = 32;
 
-    if (numLines === 2 && dotsPerLine === 7) {
-      totalHeight = 15; // 7 + 1 + 7 = 15
-    } else if (numLines === 2 && dotsPerLine === 9) {
-      totalHeight = 19; // 9 + 1 + 9 = 19
-    } else if (numLines === 2 && dotsPerLine === 12) {
-      totalHeight = 25; // 12 + 1 + 12 = 25
-    }
-    
-    // Generate line definitions - honor 1-dot inter-line gap when present
-    // so the canvas mirrors the HMI (lines must not visually touch).
+    // Generate line definitions - honor the 1-dot inter-line gap so the canvas
+    // mirrors the HMI (lines must not visually touch).
     const lines: TemplateLine[] = [];
     const startY = 32 - totalHeight; // Start from top of usable area
-    const gap = numLines > 1
-      ? Math.max(0, Math.floor((totalHeight - numLines * dotsPerLine) / (numLines - 1)))
-      : 0;
     const lineSpacing = dotsPerLine + gap;
+
 
     for (let i = 0; i < numLines; i++) {
       lines.push({
