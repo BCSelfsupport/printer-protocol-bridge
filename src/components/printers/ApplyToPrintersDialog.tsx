@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, X, Printer as PrinterIcon, Tag, Crown, Link as LinkIcon } from 'lucide-react';
+import { Check, X, Printer as PrinterIcon, Crown, Link as LinkIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
