@@ -418,8 +418,8 @@ export function PrinterListItem({
               </div>
             )}
             
-            {/* Fluid levels */}
-            {(printer.inkLevel || printer.makeupLevel) && (
+            {/* Fluid levels — only meaningful when the printer is reachable */}
+            {printer.isAvailable && (printer.inkLevel || printer.makeupLevel) && (
               <div className="flex items-center gap-3 mt-1">
                 <div className="flex items-center gap-1" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
                   <Palette className={`w-3.5 h-3.5 ${getFluidColor(printer.inkLevel)}`} />
