@@ -255,10 +255,10 @@ export function PrinterListItem({
       <button
         onClick={onSelect}
         className={`w-full text-left p-2.5 rounded-xl transition-all border ${groupBorderClass} ${
-          isConnected
-            ? 'bg-success/20 border-success ring-2 ring-success/30'
-            : isSelected 
-              ? 'bg-primary/20 border-primary' 
+          isSelected
+            ? 'bg-primary/20 border-primary ring-2 ring-primary/40'
+            : isConnected
+              ? 'bg-success/10 border-success/50'
               : effectiveColor
                 ? `${effectiveColor.bg} border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600`
                 : 'bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 hover:border-slate-600'
