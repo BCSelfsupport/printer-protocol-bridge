@@ -229,7 +229,9 @@ export function PrinterListItem({
   const subTextColor = isSelected ? 'text-primary' : isConnected ? 'text-success/80' : 'text-slate-300';
   const mutedTextColor = isSelected ? 'text-primary/70' : 'text-slate-400';
 
-  const selectionOutcomePip = printer.lastSelectionResult ? (
+  // Selection outcome pip: only meaningful when the printer is reachable.
+  // An offline printer is not "OK" even if its last selection succeeded.
+  const selectionOutcomePip = printer.isAvailable && printer.lastSelectionResult ? (
     printer.lastSelectionResult.success ? (
       <span
         className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success/20 border border-success/40 text-success text-[9px] font-bold uppercase tracking-wide"
