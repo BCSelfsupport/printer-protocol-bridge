@@ -47,6 +47,11 @@ export function usePrinterStorage() {
     return getDefaultPrinters();
   });
 
+  // Emulation mirrors the user-owned Network Printers list exactly. It never
+  // seeds or retains extra demo printers that are absent from this list.
+  useEffect(() => {
+    multiPrinterEmulator.syncConfiguredPrinters(printers);
+  }, [printers]);
 
   // Subscribe to emulator state changes to update simulated printer status
   useEffect(() => {

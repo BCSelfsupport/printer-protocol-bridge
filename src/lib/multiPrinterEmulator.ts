@@ -715,6 +715,15 @@ class PrinterEmulatorInstance {
     this.notifyListeners();
     this.notifyLogListeners();
   }
+
+  dispose() {
+    if (this.hoursTimer) {
+      clearInterval(this.hoursTimer);
+      this.hoursTimer = null;
+    }
+    this.listeners.clear();
+    this.logListeners.clear();
+  }
 }
 
 /**
@@ -725,10 +734,40 @@ class MultiPrinterEmulatorManager {
   private enabledListeners: Set<(enabled: boolean) => void> = new Set();
   private _enabled: boolean = false;
 
-  constructor() {
-    // Initialize all predefined emulated printers
-    EMULATED_PRINTERS.forEach(config => {
-      const key = `${config.ipAddress}:${config.port}`;
+  constructor() {}
+
+  /**
+   * Keep emulator instances aligned exactly with the operator-owned Network
+   * Printers list. Existing instances are retained so their simulated state
+   * and online/offline choice survive ordinary printer-card updates.
+   */
+  syncConfiguredPrinters(printers: Array<{ id: number; name: string; ipAddress: string; port: number }>) {
+    const configuredKeys = new Set(printers.map(printer => `${printer.ipAddress}:${printer.port}`));
+
+    this.instances.forEach((instance, key) => {
+      if (!configuredKeys.has(key)) {
+        instance.dispose();
+        this.instances.delete(key);
+      }
+    });
+
+    printers.forEach(printer => {
+      const key = `${printer.ipAddress}:${printer.port}`;
+      if (this.instances.has(key)) return;
+
+      const predefined = EMULATED_PRINTERS.find(config => config.id === printer.id);
+      const config: EmulatedPrinterConfig = {
+        id: printer.id,
+        name: printer.name,
+        ipAddress: printer.ipAddress,
+        port: printer.port,
+        model: predefined?.model ?? 'N-86 STD',
+        initialState: predefined?.initialState ?? {
+          currentMessage: 'BESTCODE',
+          hvOn: true,
+          jetRunning: true,
+        },
+      };
       this.instances.set(key, new PrinterEmulatorInstance(config));
     });
   }
@@ -790,9 +829,8 @@ class MultiPrinterEmulatorManager {
     
     // Try with port first
     const keyWithPort = `${ipAddress}:${port || 23}`;
-    if (this.instances.has(keyWithPort)) {
-      return this.instances.get(keyWithPort)!;
-    }
+    const exactInstance = this.instances.get(keyWithPort);
+    if (exactInstance) return exactInstance;
     
     // Try matching just IP
     for (const [key, instance] of this.instances) {
