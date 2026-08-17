@@ -75,31 +75,48 @@ serve(async (req) => {
 
     const repo = 'BCSelfsupport/printer-protocol-bridge';
 
-    const response = await fetch(
-      `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${githubPat}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ref: workflowRef }),
-      }
-    );
+    // GitHub occasionally returns transient 5xx ("No server is currently available").
+    // Retry a few times with backoff before giving up.
+    let response: Response | null = null;
+    let errorText = '';
+    for (let attempt = 0; attempt < 4; attempt++) {
+      response = await fetch(
+        `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${githubPat}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'codesync-trigger-build',
+          },
+          body: JSON.stringify({ ref: workflowRef }),
+        }
+      );
 
-    if (response.status === 204) {
-      return new Response(JSON.stringify({ success: true, message: `${target === 'dev' ? 'Dev test' : 'Production'} build triggered from ${workflowRef}!` }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      if (response.status === 204) {
+        return new Response(JSON.stringify({ success: true, message: `${target === 'dev' ? 'Dev test' : 'Production'} build triggered from ${workflowRef}!` }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      errorText = await response.text();
+      console.error(`GitHub API error (attempt ${attempt + 1}):`, response.status, errorText);
+
+      // Only retry on transient server-side failures / rate limits
+      if (response.status < 500 && response.status !== 429) break;
+      await new Promise((r) => setTimeout(r, 800 * Math.pow(2, attempt)));
     }
 
-    const errorText = await response.text();
-    console.error('GitHub API error:', response.status, errorText);
-    return new Response(JSON.stringify({ error: 'Failed to trigger build' }), {
+    return new Response(JSON.stringify({
+      error: 'Failed to trigger build',
+      status: response?.status ?? 0,
+      details: errorText.slice(0, 500),
+    }), {
       status: 502,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (error) {
     console.error('Trigger build error:', error);
     return new Response(JSON.stringify({ error: 'An internal error occurred' }), {
