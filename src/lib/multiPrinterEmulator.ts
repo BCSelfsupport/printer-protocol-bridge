@@ -846,9 +846,12 @@ class MultiPrinterEmulatorManager {
         return instance;
       }
     }
-    
-    return null;
+
+    // Unknown address while emulating: register it on the fly so every
+    // printer in the operator's list behaves like a simulated machine.
+    return this.ensurePrinter(ipAddress, port ?? 23);
   }
+
 
   /**
    * Get emulator instance by printer ID
