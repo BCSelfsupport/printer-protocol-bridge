@@ -163,16 +163,12 @@ export function usePrinterStorage() {
     // Update all emulated printers from their respective emulator states
     const updateFromEmulators = () => {
       if (!multiPrinterEmulator.enabled) return;
-      
-      // Get all emulated printer configs
-        const emulatedConfigs = EMULATED_PRINTER_CONFIGS;
-      
+
       setPrinters(prev => {
-        // Create a map of existing printers by IP:port for quick lookup
-        const existingByKey = new Map(prev.map(p => [`${p.ipAddress}:${p.port}`, p]));
-        
-        // Start with updated existing printers
-        const updatedPrinters = prev.map(p => {
+        // Only ever UPDATE printers the user has configured. Never add new
+        // cards here — the fleet list is user-owned (seeding happens once,
+        // on first run, in the initial-state migration above).
+        return prev.map(p => {
           const instance = multiPrinterEmulator.getInstanceByIp(p.ipAddress, p.port);
           if (instance) {
             // Simulated offline: leave last-known fields UNTOUCHED so the
@@ -202,40 +198,9 @@ export function usePrinterStorage() {
           }
           return p;
         });
-        
-        // Add any missing emulated printers (skip those the user explicitly removed)
-        const removed = getRemovedEmulatedKeys();
-        emulatedConfigs.forEach(cfg => {
-          const key = `${cfg.ipAddress}:${cfg.port}`;
-          if (!existingByKey.has(key) && !removed.has(key)) {
-            const instance = multiPrinterEmulator.getInstanceByIp(cfg.ipAddress, cfg.port);
-            if (instance) {
-              const state = instance.getState();
-              const simPrinter = instance.getSimulatedPrinter();
-              const newId = updatedPrinters.length > 0 
-                ? Math.max(...updatedPrinters.map(p => p.id)) + 1 
-                : 1;
-              updatedPrinters.push({
-                id: newId,
-                name: simPrinter.name,
-                ipAddress: cfg.ipAddress,
-                port: cfg.port,
-                isConnected: false,
-                isAvailable: true,
-                status: simPrinter.status,
-                hasActiveErrors: hasErrors(state?.inkLevel, state?.makeupLevel),
-                inkLevel: state?.inkLevel,
-                makeupLevel: state?.makeupLevel,
-                currentMessage: state?.currentMessage,
-                printCount: state?.printCount,
-              });
-            }
-          }
-        });
-        
-        return updatedPrinters;
       });
     };
+
 
     // When emulator is toggled on/off, update printer availability
     const unsubEnabled = multiPrinterEmulator.subscribeToEnabled((enabled) => {
