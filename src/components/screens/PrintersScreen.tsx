@@ -573,7 +573,11 @@ export function PrintersScreen({
   // Desktop shows split-view with Dashboard when connected (or rightPanelContent override)
   // Pair-selected on a TwinCode license takes priority over dashboard / external rightPanelContent.
   const showTwinCodePanel = !isMobile && pairSelected && !!pairPrinters;
-  const showDashboardInPanel = !isMobile && isConnected && connectedPrinter && !showTwinCodePanel;
+  // If the operator has selected an offline printer, never show live data —
+  // fall through to the empty placeholder instead of the connected view.
+  const selectedIsOffline = !!selectedPrinter && selectedPrinter.isAvailable === false;
+  const showDashboardInPanel =
+    !isMobile && isConnected && connectedPrinter && !showTwinCodePanel && !selectedIsOffline;
   const showRightPanel = showTwinCodePanel || showDashboardInPanel || (!isMobile && rightPanelContent);
 
   return (
