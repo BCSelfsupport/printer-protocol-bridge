@@ -2741,6 +2741,14 @@ const Index = () => {
   // directly instead of letting jetStart()/jetStop() hit the connected printer.
   const handleStartPrint = useCallback(() => {
     const focused = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+    if (focused && !focused.isAvailable && focused.id !== connectedPrinterId) {
+      toast({
+        title: 'Printer offline',
+        description: `${focused.name} is not reachable on the network — the jet can't be started until it's online.`,
+        variant: 'destructive',
+      });
+      return;
+    }
     if (focused && focused.id !== connectedPrinterId) {
       startCountdown(focused.id, 'starting');
       void sendCommandToPrinter(focused, '^SJ 1');
@@ -2752,6 +2760,14 @@ const Index = () => {
 
   const handleJetStop = useCallback(() => {
     const focused = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+    if (focused && !focused.isAvailable && focused.id !== connectedPrinterId) {
+      toast({
+        title: 'Printer offline',
+        description: `${focused.name} is not reachable on the network.`,
+        variant: 'destructive',
+      });
+      return;
+    }
     if (focused && focused.id !== connectedPrinterId) {
       startCountdown(focused.id, 'stopping');
       void sendCommandToPrinter(focused, '^SJ 0');
