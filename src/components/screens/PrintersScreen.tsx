@@ -1085,8 +1085,19 @@ export function PrintersScreen({
           <div className="hidden md:flex flex-1 items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl border border-slate-700 overflow-hidden">
             <div className="text-center text-slate-500">
               <Server className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">Select a Printer</p>
-              <p className="text-sm mt-1">Click a printer from the list to connect</p>
+              {selectedIsOffline ? (
+                <>
+                  <p className="text-lg font-medium">Printer Offline</p>
+                  <p className="text-sm mt-1">
+                    {selectedPrinter?.name ?? 'This printer'} is not reachable — no live data available
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-lg font-medium">Select a Printer</p>
+                  <p className="text-sm mt-1">Click a printer from the list to connect</p>
+                </>
+              )}
             </div>
           </div>
         )}
