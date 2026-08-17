@@ -4,6 +4,7 @@ import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 
 const STORAGE_KEY = 'codesync-printers';
 const REMOVED_EMULATED_KEY = 'codesync-printers-removed-emulated';
+const SEEDED_KEY = 'codesync-emulator-fleet-seeded-v1';
 const EMULATED_MASTER_IP = '192.168.1.55';
 const EMULATED_PRINTER_IPS = Array.from({ length: 13 }, (_, i) => `192.168.1.${55 + i}`);
 const EMULATED_PRINTER_CONFIGS = EMULATED_PRINTER_IPS.map((ipAddress) => ({ ipAddress, port: 23 }));
