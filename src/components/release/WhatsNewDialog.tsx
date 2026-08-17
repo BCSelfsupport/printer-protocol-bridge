@@ -20,6 +20,38 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'header-emulate-toggle',
+    type: 'feature',
+    title: 'Emulate Printers Toggle in the Main Header',
+    date: '17 Aug 2026',
+    summary:
+      'The Emulate Printers toggle is no longer hidden behind the Developer Portal. A green button is now pinned in the main top toolbar (desktop) and labelled Emulate on mobile, so sales teams can demo the fleet without opening dev tools.',
+  },
+  {
+    id: 'start-jet-targets-selected-printer',
+    type: 'bugfix',
+    title: 'Start Jet Countdown Now Appears on the Correct Printer',
+    date: '17 Aug 2026',
+    summary:
+      'Fixed a bug where pressing Start Jet on one printer could start the countdown on a different card. Jet Start/Stop now targets the operator-selected printer in the list, not the globally connected printer, so the 66 s startup animation appears on the printer you actually clicked.',
+  },
+  {
+    id: 'connected-vs-selected-cards',
+    type: 'bugfix',
+    title: 'Printer Cards Distinguish Connected vs Selected',
+    date: '17 Aug 2026',
+    summary:
+      'Tightened the visual priority of printer cards so only the operator-clicked selection shows the blue ring. The currently connected printer is now shown with a subtle green border and a small CONNECTED chip, preventing confusion when two cards looked highlighted.',
+  },
+  {
+    id: 'printer-card-name-only',
+    type: 'bugfix',
+    title: 'Copy/Select Printer Cards Show Only the Printer Name',
+    date: '17 Aug 2026',
+    summary:
+      'Removed the Line ID chip from the Copy-to-Printers and Select-Message dialogs. Cards now display the printer name exactly as configured (e.g. Printer 1, Printer 2), so the Line ID can no longer be mistaken for part of the name.',
+  },
+  {
     id: 'multi-line-7-template-spacing',
     type: 'bugfix',
     title: 'Multi-Line 7-Dot Template Spacing Fixed',
