@@ -756,6 +756,51 @@ class MultiPrinterEmulatorManager {
   }
 
   /**
+   * Register an emulated printer on demand. Any printer the operator has in
+   * their list (whatever IP they typed) becomes emulatable, so the Emulate
+   * menu covers the whole visible fleet — not just the seeded 192.168.1.55+
+   * block.
+   */
+  ensurePrinter(ipAddress: string, port: number = 23, name?: string): PrinterEmulatorInstance {
+    const key = `${ipAddress}:${port}`;
+    const existing = this.instances.get(key);
+    if (existing) {
+      if (name) existing.config.name = name;
+      return existing;
+    }
+    const nextId = Math.max(0, ...Array.from(this.instances.values()).map(i => i.config.id)) + 1;
+    const inst = new PrinterEmulatorInstance({
+      id: nextId,
+      name: name || `Printer ${nextId}`,
+      ipAddress,
+      port,
+      model: 'N-86 STD',
+      initialState: {
+        currentMessage: 'BESTCODE',
+        printCount: 1000 + nextId * 137,
+        productCount: 5000 + nextId * 421,
+        inkLevel: 'FULL',
+        makeupLevel: 'FULL',
+        hvOn: true,
+        jetRunning: true,
+      },
+    });
+    this.instances.set(key, inst);
+    return inst;
+  }
+
+  /**
+   * Seed emulator instances from the operator's saved printer list so the
+   * Emulate menu lists exactly the printers they see in the sidebar.
+   */
+  syncFromSavedPrinters(printers: Array<{ ipAddress: string; port?: number; name?: string }>) {
+    printers.forEach(p => {
+      if (!p?.ipAddress) return;
+      this.ensurePrinter(p.ipAddress, p.port ?? 23, p.name);
+    });
+  }
+
+  /**
    * Every emulated printer regardless of the enabled flag — used by the
    * Emulate menu so online/offline can be picked before/while emulating.
    */
@@ -772,14 +817,15 @@ class MultiPrinterEmulatorManager {
   /** Mark a single emulated printer online/offline. */
   setOffline(ipAddress: string, port: number, offline: boolean) {
     const key = `${ipAddress}:${port}`;
-    const inst = this.instances.get(key);
-    if (inst) inst.simulateOffline = offline;
+    const inst = this.instances.get(key) ?? this.ensurePrinter(ipAddress, port);
+    inst.simulateOffline = offline;
   }
 
   /** Mark every emulated printer online/offline. */
   setAllOffline(offline: boolean) {
     this.instances.forEach(inst => { inst.simulateOffline = offline; });
   }
+
 
 
   /**
