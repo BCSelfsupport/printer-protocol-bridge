@@ -34,23 +34,11 @@ export function EmulationPrintersDialog({
 }: EmulationPrintersDialogProps) {
   const [rows, setRows] = useState<Row[]>([]);
 
-  const refresh = useCallback(() => {
-    // Make sure every printer in the operator's saved list is emulatable,
-    // not just the seeded 192.168.1.55+ block.
-    try {
-      const raw = localStorage.getItem('codesync-printers');
-      if (raw) {
-        const saved = JSON.parse(raw);
-        if (Array.isArray(saved)) multiPrinterEmulator.syncFromSavedPrinters(saved);
-      }
-    } catch { /* ignore */ }
-    setRows(multiPrinterEmulator.listAll());
-  }, []);
+  const refresh = useCallback(() => setRows(multiPrinterEmulator.listAll()), []);
 
   useEffect(() => {
     if (open) refresh();
   }, [open, refresh]);
-
 
   const toggle = (row: Row) => {
     multiPrinterEmulator.setOffline(row.ipAddress, row.port, !row.offline);
