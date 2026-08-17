@@ -203,35 +203,44 @@ export function usePrinterStorage() {
           return p;
         });
         
-        // Add any missing emulated printers (skip those the user explicitly removed)
-        const removed = getRemovedEmulatedKeys();
-        emulatedConfigs.forEach(cfg => {
-          const key = `${cfg.ipAddress}:${cfg.port}`;
-          if (!existingByKey.has(key) && !removed.has(key)) {
-            const instance = multiPrinterEmulator.getInstanceByIp(cfg.ipAddress, cfg.port);
-            if (instance) {
-              const state = instance.getState();
-              const simPrinter = instance.getSimulatedPrinter();
-              const newId = updatedPrinters.length > 0 
-                ? Math.max(...updatedPrinters.map(p => p.id)) + 1 
-                : 1;
-              updatedPrinters.push({
-                id: newId,
-                name: simPrinter.name,
-                ipAddress: cfg.ipAddress,
-                port: cfg.port,
-                isConnected: false,
-                isAvailable: true,
-                status: simPrinter.status,
-                hasActiveErrors: hasErrors(state?.inkLevel, state?.makeupLevel),
-                inkLevel: state?.inkLevel,
-                makeupLevel: state?.makeupLevel,
-                currentMessage: state?.currentMessage,
-                printCount: state?.printCount,
-              });
+        // Seed the emulated fleet ONCE per browser. After that the operator's
+        // list is authoritative — deleting or re-IP'ing a card must never be
+        // undone by this loop re-adding the hard-coded 192.168.1.55+ block.
+        const alreadySeeded = (() => {
+          try { return localStorage.getItem(SEEDED_KEY) === '1'; } catch { return false; }
+        })();
+        if (!alreadySeeded) {
+          const removed = getRemovedEmulatedKeys();
+          emulatedConfigs.forEach(cfg => {
+            const key = `${cfg.ipAddress}:${cfg.port}`;
+            if (!existingByKey.has(key) && !removed.has(key)) {
+              const instance = multiPrinterEmulator.getInstanceByIp(cfg.ipAddress, cfg.port);
+              if (instance) {
+                const state = instance.getState();
+                const simPrinter = instance.getSimulatedPrinter();
+                const newId = updatedPrinters.length > 0
+                  ? Math.max(...updatedPrinters.map(p => p.id)) + 1
+                  : 1;
+                updatedPrinters.push({
+                  id: newId,
+                  name: simPrinter.name,
+                  ipAddress: cfg.ipAddress,
+                  port: cfg.port,
+                  isConnected: false,
+                  isAvailable: true,
+                  status: simPrinter.status,
+                  hasActiveErrors: hasErrors(state?.inkLevel, state?.makeupLevel),
+                  inkLevel: state?.inkLevel,
+                  makeupLevel: state?.makeupLevel,
+                  currentMessage: state?.currentMessage,
+                  printCount: state?.printCount,
+                });
+              }
             }
-          }
-        });
+          });
+          try { localStorage.setItem(SEEDED_KEY, '1'); } catch { /* ignore */ }
+        }
+
         
         return updatedPrinters;
       });
