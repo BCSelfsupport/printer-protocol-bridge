@@ -206,11 +206,6 @@ export function ApplyToPrintersDialog({
             <span className="text-xs font-bold text-white truncate">
               {printer.name}
             </span>
-            {printer.lineId?.trim() && (
-              <span className="text-[9px] px-1 py-0 rounded bg-slate-700 text-slate-300 font-bold uppercase tracking-wide">
-                {printer.lineId.trim()}
-              </span>
-            )}
             {locked && (
               <span className="text-[9px] px-1 py-0 rounded bg-primary/30 text-primary font-bold uppercase tracking-wide">
                 Source
