@@ -50,7 +50,7 @@ function groupPrinters(all: Printer[]): { label: string; printers: Printer[] }[]
   for (const m of masters) {
     const slaves = all.filter(p => p.role === 'slave' && p.masterId === m.id);
     groups.push({
-      label: m.lineId ? `${m.lineId} (Master group)` : `${m.name} (Master group)`,
+      label: m.lineId?.trim() ? `${m.name} · ${m.lineId.trim()} (Master group)` : `${m.name} (Master group)`,
       printers: [m, ...slaves],
     });
   }
