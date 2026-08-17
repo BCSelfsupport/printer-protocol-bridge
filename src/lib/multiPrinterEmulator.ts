@@ -753,7 +753,12 @@ class MultiPrinterEmulatorManager {
 
     printers.forEach(printer => {
       const key = `${printer.ipAddress}:${printer.port}`;
-      if (this.instances.has(key)) return;
+      const existing = this.instances.get(key);
+      if (existing) {
+        existing.config.id = printer.id;
+        existing.config.name = printer.name;
+        return;
+      }
 
       const predefined = EMULATED_PRINTERS.find(config => config.id === printer.id);
       const config: EmulatedPrinterConfig = {
