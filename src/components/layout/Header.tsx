@@ -10,6 +10,7 @@ import { FeedbackDialog } from '@/components/feedback/FeedbackDialog';
 import { UserManualDialog } from '@/components/help/UserManualDialog';
 import { PairMobileDialog } from '@/components/license/PairMobileDialog';
 import { ModelBadge } from '@/components/branding/ModelBadge';
+import { EmulationPrintersDialog } from '@/components/dev/EmulationPrintersDialog';
 
 declare const __APP_VERSION__: string;
 
@@ -92,11 +93,18 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
     return () => { try { unsub?.(); } catch { /* noop */ } };
   }, []);
 
+  const [showEmulateMenu, setShowEmulateMenu] = useState(false);
+
+  // Clicking the Emulate button always opens the picker. If emulation was off
+  // it is switched on first so the operator can immediately choose which
+  // simulated printers are online / offline.
   const toggleEmulateMode = () => {
-    const next = !emulateMode;
-    printerEmulator.enabled = next;
-    multiPrinterEmulator.enabled = next;
-    setEmulateMode(next);
+    if (!emulateMode) {
+      printerEmulator.enabled = true;
+      multiPrinterEmulator.enabled = true;
+      setEmulateMode(true);
+    }
+    setShowEmulateMenu(true);
   };
 
 
@@ -151,7 +159,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
             className={`h-8 md:h-12 px-2 md:px-3 rounded-full flex items-center gap-1 transition-colors flex-shrink-0 ${
               emulateMode ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-muted-foreground/50 hover:bg-muted-foreground/70'
             }`}
-            title={emulateMode ? 'Emulate Printers ON (simulated printers) — tap to turn off' : 'Emulate Printers OFF — tap to simulate printers'}
+            title={emulateMode ? 'Emulate Printers ON — tap to choose which printers are online/offline' : 'Emulate Printers OFF — tap to simulate printers'}
             aria-pressed={emulateMode}
           >
             <Printer className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
@@ -286,6 +294,11 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
       <FeedbackDialog open={showFeedback} onOpenChange={setShowFeedback} appVersion={appVersion} />
       <UserManualDialog open={showManual} onOpenChange={setShowManual} />
       <PairMobileDialog open={showPairMobile} onOpenChange={setShowPairMobile} />
+      <EmulationPrintersDialog
+        open={showEmulateMenu}
+        onOpenChange={setShowEmulateMenu}
+        onEmulationOff={() => setEmulateMode(false)}
+      />
     </header>
   );
 }

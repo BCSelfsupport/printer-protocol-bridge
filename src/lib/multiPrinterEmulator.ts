@@ -756,6 +756,33 @@ class MultiPrinterEmulatorManager {
   }
 
   /**
+   * Every emulated printer regardless of the enabled flag — used by the
+   * Emulate menu so online/offline can be picked before/while emulating.
+   */
+  listAll(): Array<{ id: number; name: string; ipAddress: string; port: number; offline: boolean }> {
+    return Array.from(this.instances.values()).map(inst => ({
+      id: inst.config.id,
+      name: inst.config.name,
+      ipAddress: inst.config.ipAddress,
+      port: inst.config.port,
+      offline: inst.simulateOffline,
+    }));
+  }
+
+  /** Mark a single emulated printer online/offline. */
+  setOffline(ipAddress: string, port: number, offline: boolean) {
+    const key = `${ipAddress}:${port}`;
+    const inst = this.instances.get(key);
+    if (inst) inst.simulateOffline = offline;
+  }
+
+  /** Mark every emulated printer online/offline. */
+  setAllOffline(offline: boolean) {
+    this.instances.forEach(inst => { inst.simulateOffline = offline; });
+  }
+
+
+  /**
    * Get emulator instance by IP address (with or without port)
    */
   getInstanceByIp(ipAddress: string, port?: number): PrinterEmulatorInstance | null {
