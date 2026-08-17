@@ -3,154 +3,50 @@ import { Printer } from '@/types/printer';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 
 const STORAGE_KEY = 'codesync-printers';
-const REMOVED_EMULATED_KEY = 'codesync-printers-removed-emulated';
-const EMULATED_MASTER_IP = '192.168.1.55';
 const EMULATED_PRINTER_IPS = Array.from({ length: 13 }, (_, i) => `192.168.1.${55 + i}`);
 const EMULATED_PRINTER_CONFIGS = EMULATED_PRINTER_IPS.map((ipAddress) => ({ ipAddress, port: 23 }));
 
-// Track emulated printer IP:port pairs the user has explicitly removed,
-// so they don't get re-added by the auto-sync loop.
-const getRemovedEmulatedKeys = (): Set<string> => {
-  try {
-    const raw = localStorage.getItem(REMOVED_EMULATED_KEY);
-    if (raw) return new Set(JSON.parse(raw));
-  } catch (e) {
-    console.error('Failed to load removed emulated printers:', e);
-  }
-  return new Set();
-};
-
-const saveRemovedEmulatedKeys = (set: Set<string>) => {
-  try {
-    localStorage.setItem(REMOVED_EMULATED_KEY, JSON.stringify(Array.from(set)));
-  } catch (e) {
-    console.error('Failed to save removed emulated printers:', e);
-  }
-};
-
-const applyDefaultEmulatorRoles = (printers: Printer[]): Printer[] => {
-  const master = printers.find((printer) => printer.ipAddress === EMULATED_MASTER_IP && printer.port === 23);
-  if (!master) return printers;
-  const hasAnyEmulatorSyncRole = printers.some((printer) =>
-    EMULATED_PRINTER_IPS.includes(printer.ipAddress)
-    && printer.port === 23
-    && (printer.role === 'master' || printer.role === 'slave')
-  );
-
-  return printers.map((printer) => {
-    if (!EMULATED_PRINTER_IPS.includes(printer.ipAddress) || printer.port !== 23) {
-      return printer;
-    }
-
-    if (hasAnyEmulatorSyncRole && printer.role !== undefined) {
-      return printer;
-    }
-
-    if (printer.id === master.id) {
-      return { ...printer, role: 'master' as const, masterId: undefined };
-    }
-
-    return { ...printer, role: 'slave' as const, masterId: master.id };
-  });
-};
-
-// Get default printers from emulator when enabled, or single default when disabled
-const getDefaultPrinters = (): Printer[] => {
-  // Check if we have emulated printers available
-  const emulatedPrinters = multiPrinterEmulator.getEmulatedPrinters();
-  const removed = getRemovedEmulatedKeys();
-  if (emulatedPrinters.length > 0) {
-    return emulatedPrinters
-      .filter(ep => !removed.has(`${ep.ipAddress}:${ep.port}`))
-      .map(ep => ({
-        id: ep.id,
-        name: ep.name,
-        ipAddress: ep.ipAddress,
-        port: ep.port,
-        isConnected: false,
-        isAvailable: true,
-        status: ep.status,
-        hasActiveErrors: false,
-      }));
-  }
-  
-  // Default single printer when emulator is off
-  return [
-    {
-      id: 1,
-      name: 'Printer 1',
-      ipAddress: '192.168.1.55',
-      port: 23,
-      isConnected: false,
-      isAvailable: false,
-      status: 'offline',
-      hasActiveErrors: false,
-    },
-  ];
-};
+// The printer list is entirely user-owned: printers are added and addressed by
+// the operator. Nothing is ever seeded — emulation only simulates the printers
+// that already exist in this list.
+const getDefaultPrinters = (): Printer[] => [
+  {
+    id: 1,
+    name: 'Printer 1',
+    ipAddress: '192.168.1.55',
+    port: 23,
+    isConnected: false,
+    isAvailable: false,
+    status: 'offline',
+    hasActiveErrors: false,
+  },
+];
 
 export function usePrinterStorage() {
   const [printers, setPrinters] = useState<Printer[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        let parsed: Printer[] = JSON.parse(stored);
-        const isEmulator = multiPrinterEmulator.enabled;
-        if (isEmulator) {
-          // One-time normalization of the emulator fleet. Runs ONCE per
-          // browser, then user edits (removes, renames, role changes) stick.
-          const MIGRATION_KEY = 'codesync-emulator-fleet-migrated-v2';
-          const alreadyMigrated = localStorage.getItem(MIGRATION_KEY) === '1';
-
-          if (!alreadyMigrated) {
-            try { localStorage.removeItem(REMOVED_EMULATED_KEY); } catch {}
-
-            const byKey = new Map<string, Printer>();
-            for (const p of parsed) {
-              const key = `${p.ipAddress}:${p.port}`;
-              if (!byKey.has(key)) byKey.set(key, p);
-            }
-
-            parsed = multiPrinterEmulator.getEmulatedPrinters().map((ep) => {
-              const key = `${ep.ipAddress}:${ep.port}`;
-              const prev = byKey.get(key);
-              return {
-                ...(prev ?? {}),
-                id: ep.id,
-                name: ep.name,
-                ipAddress: ep.ipAddress,
-                port: ep.port,
-                isConnected: false,
-                isAvailable: true,
-                status: ep.status,
-                hasActiveErrors: false,
-                role: undefined,
-                masterId: undefined,
-              } as Printer;
-            });
-
-            try { localStorage.setItem(MIGRATION_KEY, '1'); } catch {}
-          }
-        } else {
-          // If not in emulator mode, reset all printers to offline on load.
-          parsed = parsed.map(p => ({
-            ...p,
-            isAvailable: false,
-            status: 'offline' as const,
-            hasActiveErrors: false,
-            inkLevel: undefined,
-            makeupLevel: undefined,
-            currentMessage: undefined,
-            printCount: undefined,
-          }));
-        }
-        return parsed;
+        const parsed: Printer[] = JSON.parse(stored);
+        if (multiPrinterEmulator.enabled) return parsed;
+        // Not in emulator mode: reset all printers to offline on load.
+        return parsed.map(p => ({
+          ...p,
+          isAvailable: false,
+          status: 'offline' as const,
+          hasActiveErrors: false,
+          inkLevel: undefined,
+          makeupLevel: undefined,
+          currentMessage: undefined,
+          printCount: undefined,
+        }));
       }
     } catch (e) {
       console.error('Failed to load printers from storage:', e);
     }
     return getDefaultPrinters();
   });
+
 
   // Subscribe to emulator state changes to update simulated printer status
   useEffect(() => {
