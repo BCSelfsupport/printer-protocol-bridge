@@ -68,6 +68,7 @@ Updated: today
 - [METRC Template](mem://features/metrc-retail-id-template) — F1 QR x:0 y:7, F2 Text x:38 y:17
 - [Electron Layout](mem://style/electron-layout-constraints) — flex-1 overflow-auto, collapse inactive tabs
 - [Fault Synchronization](mem://features/fault-state-synchronization) — ^LE authoritative for hasActiveErrors
+- [Card OK Pip](mem://features/printer-card-selection-pip) — Green OK pip = last ^SM selection acknowledged, not printer health
 - [Asset Protection](mem://security/proprietary-asset-protection) — Private bucket, require valid license
 - [Message Editor](mem://features/message-editor) — Reload from printer after save for parity
 - [Branding](mem://design/branding) — Blue/emerald palette, codesync-icon.png 512px
