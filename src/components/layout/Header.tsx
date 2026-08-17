@@ -294,6 +294,11 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
       <FeedbackDialog open={showFeedback} onOpenChange={setShowFeedback} appVersion={appVersion} />
       <UserManualDialog open={showManual} onOpenChange={setShowManual} />
       <PairMobileDialog open={showPairMobile} onOpenChange={setShowPairMobile} />
+      <EmulationPrintersDialog
+        open={showEmulateMenu}
+        onOpenChange={setShowEmulateMenu}
+        onEmulationOff={() => setEmulateMode(false)}
+      />
     </header>
   );
 }
