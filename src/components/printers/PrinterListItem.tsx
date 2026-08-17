@@ -231,7 +231,9 @@ export function PrinterListItem({
   const subTextColor = isSelected ? 'text-primary' : 'text-slate-300';
   const mutedTextColor = isSelected ? 'text-primary/70' : 'text-slate-400';
 
-  const selectionOutcomePip = printer.lastSelectionResult ? (
+  // Selection outcome pip: only meaningful when the printer is reachable.
+  // An offline printer is not "OK" even if its last selection succeeded.
+  const selectionOutcomePip = printer.isAvailable && printer.lastSelectionResult ? (
     printer.lastSelectionResult.success ? (
       <span
         className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-success/20 border border-success/40 text-success text-[9px] font-bold uppercase tracking-wide"
@@ -418,8 +420,8 @@ export function PrinterListItem({
               </div>
             )}
             
-            {/* Fluid levels */}
-            {(printer.inkLevel || printer.makeupLevel) && (
+            {/* Fluid levels — only meaningful when the printer is reachable */}
+            {printer.isAvailable && (printer.inkLevel || printer.makeupLevel) && (
               <div className="flex items-center gap-3 mt-1">
                 <div className="flex items-center gap-1" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
                   <Palette className={`w-3.5 h-3.5 ${getFluidColor(printer.inkLevel)}`} />
@@ -709,7 +711,8 @@ export function PrinterListItem({
       <div className="relative flex items-center justify-between mt-1.5 ml-12 min-h-[28px]">
 
           <div className="flex items-center gap-3">
-            {(printer.inkLevel || printer.makeupLevel) && (
+            {/* Fluid levels — only meaningful when the printer is reachable */}
+            {printer.isAvailable && (printer.inkLevel || printer.makeupLevel) && (
               <>
                 <div className="flex items-center gap-1" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
                   <Palette className={`w-3 h-3 ${getFluidColor(printer.inkLevel)}`} />
