@@ -224,9 +224,11 @@ export function PrinterListItem({
     }
   };
   
-  // Text color classes based on selection state
-  const textColor = isSelected ? 'text-primary' : isConnected ? 'text-success' : 'text-slate-200';
-  const subTextColor = isSelected ? 'text-primary' : isConnected ? 'text-success/80' : 'text-slate-300';
+  // Text color classes — only the operator's manual selection tints the text
+  // (blue). The connected printer is indicated by the CONNECTED chip / border
+  // only, so switching cards never repaints another card's text green.
+  const textColor = isSelected ? 'text-primary' : 'text-slate-200';
+  const subTextColor = isSelected ? 'text-primary' : 'text-slate-300';
   const mutedTextColor = isSelected ? 'text-primary/70' : 'text-slate-400';
 
   const selectionOutcomePip = printer.lastSelectionResult ? (
