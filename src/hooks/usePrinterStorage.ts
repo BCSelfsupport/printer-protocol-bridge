@@ -4,6 +4,7 @@ import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 
 const STORAGE_KEY = 'codesync-printers';
 const REMOVED_EMULATED_KEY = 'codesync-printers-removed-emulated';
+const SEEDED_KEY = 'codesync-emulator-fleet-seeded-v1';
 const EMULATED_MASTER_IP = '192.168.1.55';
 const EMULATED_PRINTER_IPS = Array.from({ length: 13 }, (_, i) => `192.168.1.${55 + i}`);
 const EMULATED_PRINTER_CONFIGS = EMULATED_PRINTER_IPS.map((ipAddress) => ({ ipAddress, port: 23 }));
@@ -203,35 +204,44 @@ export function usePrinterStorage() {
           return p;
         });
         
-        // Add any missing emulated printers (skip those the user explicitly removed)
-        const removed = getRemovedEmulatedKeys();
-        emulatedConfigs.forEach(cfg => {
-          const key = `${cfg.ipAddress}:${cfg.port}`;
-          if (!existingByKey.has(key) && !removed.has(key)) {
-            const instance = multiPrinterEmulator.getInstanceByIp(cfg.ipAddress, cfg.port);
-            if (instance) {
-              const state = instance.getState();
-              const simPrinter = instance.getSimulatedPrinter();
-              const newId = updatedPrinters.length > 0 
-                ? Math.max(...updatedPrinters.map(p => p.id)) + 1 
-                : 1;
-              updatedPrinters.push({
-                id: newId,
-                name: simPrinter.name,
-                ipAddress: cfg.ipAddress,
-                port: cfg.port,
-                isConnected: false,
-                isAvailable: true,
-                status: simPrinter.status,
-                hasActiveErrors: hasErrors(state?.inkLevel, state?.makeupLevel),
-                inkLevel: state?.inkLevel,
-                makeupLevel: state?.makeupLevel,
-                currentMessage: state?.currentMessage,
-                printCount: state?.printCount,
-              });
+        // Seed the emulated fleet ONCE per browser. After that the operator's
+        // list is authoritative — deleting or re-IP'ing a card must never be
+        // undone by this loop re-adding the hard-coded 192.168.1.55+ block.
+        const alreadySeeded = (() => {
+          try { return localStorage.getItem(SEEDED_KEY) === '1'; } catch { return false; }
+        })();
+        if (!alreadySeeded) {
+          const removed = getRemovedEmulatedKeys();
+          emulatedConfigs.forEach(cfg => {
+            const key = `${cfg.ipAddress}:${cfg.port}`;
+            if (!existingByKey.has(key) && !removed.has(key)) {
+              const instance = multiPrinterEmulator.getInstanceByIp(cfg.ipAddress, cfg.port);
+              if (instance) {
+                const state = instance.getState();
+                const simPrinter = instance.getSimulatedPrinter();
+                const newId = updatedPrinters.length > 0
+                  ? Math.max(...updatedPrinters.map(p => p.id)) + 1
+                  : 1;
+                updatedPrinters.push({
+                  id: newId,
+                  name: simPrinter.name,
+                  ipAddress: cfg.ipAddress,
+                  port: cfg.port,
+                  isConnected: false,
+                  isAvailable: true,
+                  status: simPrinter.status,
+                  hasActiveErrors: hasErrors(state?.inkLevel, state?.makeupLevel),
+                  inkLevel: state?.inkLevel,
+                  makeupLevel: state?.makeupLevel,
+                  currentMessage: state?.currentMessage,
+                  printCount: state?.printCount,
+                });
+              }
             }
-          }
-        });
+          });
+          try { localStorage.setItem(SEEDED_KEY, '1'); } catch { /* ignore */ }
+        }
+
         
         return updatedPrinters;
       });
@@ -345,6 +355,16 @@ export function usePrinterStorage() {
     setPrinters(prev => prev.map(p => {
       if (p.id !== printerId) return p;
       const safeUpdates = { ...updates };
+      // If the operator re-IP'd (or re-ported) an emulated card, remember the
+      // old address as removed so the seed block can never bring it back.
+      const newIp = safeUpdates.ipAddress ?? p.ipAddress;
+      const newPort = safeUpdates.port ?? p.port;
+      if ((newIp !== p.ipAddress || newPort !== p.port)
+        && multiPrinterEmulator.isEmulatedIp(p.ipAddress, p.port)) {
+        const removed = getRemovedEmulatedKeys();
+        removed.add(`${p.ipAddress}:${p.port}`);
+        saveRemovedEmulatedKeys(removed);
+      }
       // Never let an offline card's selected message be overwritten by an
       // optimistic path. A currentMessage change is only trusted when the same
       // patch explicitly proves the printer is available/live again.
