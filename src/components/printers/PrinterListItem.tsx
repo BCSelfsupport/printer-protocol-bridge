@@ -709,7 +709,8 @@ export function PrinterListItem({
       <div className="relative flex items-center justify-between mt-1.5 ml-12 min-h-[28px]">
 
           <div className="flex items-center gap-3">
-            {(printer.inkLevel || printer.makeupLevel) && (
+            {/* Fluid levels — only meaningful when the printer is reachable */}
+            {printer.isAvailable && (printer.inkLevel || printer.makeupLevel) && (
               <>
                 <div className="flex items-center gap-1" title={`Ink: ${printer.inkLevel || 'Unknown'}`}>
                   <Palette className={`w-3 h-3 ${getFluidColor(printer.inkLevel)}`} />
