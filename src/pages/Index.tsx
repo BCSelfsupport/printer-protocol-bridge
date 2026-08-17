@@ -2734,16 +2734,32 @@ const Index = () => {
     }
   };
   
-  // Wrapped handlers that trigger countdown
+  // Wrapped handlers that trigger countdown.
+  // The jet buttons must act on the printer the operator has focused in the UI.
+  // When that printer is NOT the connected one (e.g. clicking Printer 1 while
+  // Printer 2 holds the socket), route the ^SJ command to the focused printer
+  // directly instead of letting jetStart()/jetStop() hit the connected printer.
   const handleStartPrint = useCallback(() => {
+    const focused = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+    if (focused && focused.id !== connectedPrinterId) {
+      startCountdown(focused.id, 'starting');
+      void sendCommandToPrinter(focused, '^SJ 1');
+      return;
+    }
     jetStart();
     if (connectedPrinterId) startCountdown(connectedPrinterId, 'starting');
-  }, [jetStart, startCountdown, connectedPrinterId]);
-  
+  }, [jetStart, startCountdown, connectedPrinterId, selectedPrinter, connectionState.connectedPrinter, sendCommandToPrinter]);
+
   const handleJetStop = useCallback(() => {
+    const focused = selectedPrinter ?? connectionState.connectedPrinter ?? null;
+    if (focused && focused.id !== connectedPrinterId) {
+      startCountdown(focused.id, 'stopping');
+      void sendCommandToPrinter(focused, '^SJ 0');
+      return;
+    }
     jetStop();
     if (connectedPrinterId) startCountdown(connectedPrinterId, 'stopping');
-  }, [jetStop, startCountdown, connectedPrinterId]);
+  }, [jetStop, startCountdown, connectedPrinterId, selectedPrinter, connectionState.connectedPrinter, sendCommandToPrinter]);
 
   // End-of-shift: send ^SJ 0 to every online safe printer, serialized so no
   // two stop-jet commands share the port-23 window. For non-connected printers
