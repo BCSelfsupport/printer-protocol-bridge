@@ -573,7 +573,11 @@ export function PrintersScreen({
   // Desktop shows split-view with Dashboard when connected (or rightPanelContent override)
   // Pair-selected on a TwinCode license takes priority over dashboard / external rightPanelContent.
   const showTwinCodePanel = !isMobile && pairSelected && !!pairPrinters;
-  const showDashboardInPanel = !isMobile && isConnected && connectedPrinter && !showTwinCodePanel;
+  // If the operator has selected an offline printer, never show live data —
+  // fall through to the empty placeholder instead of the connected view.
+  const selectedIsOffline = !!selectedPrinter && selectedPrinter.isAvailable === false;
+  const showDashboardInPanel =
+    !isMobile && isConnected && connectedPrinter && !showTwinCodePanel && !selectedIsOffline;
   const showRightPanel = showTwinCodePanel || showDashboardInPanel || (!isMobile && rightPanelContent);
 
   return (
@@ -1081,8 +1085,19 @@ export function PrintersScreen({
           <div className="hidden md:flex flex-1 items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl border border-slate-700 overflow-hidden">
             <div className="text-center text-slate-500">
               <Server className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">Select a Printer</p>
-              <p className="text-sm mt-1">Click a printer from the list to connect</p>
+              {selectedIsOffline ? (
+                <>
+                  <p className="text-lg font-medium">Printer Offline</p>
+                  <p className="text-sm mt-1">
+                    {selectedPrinter?.name ?? 'This printer'} is not reachable — no live data available
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-lg font-medium">Select a Printer</p>
+                  <p className="text-sm mt-1">Click a printer from the list to connect</p>
+                </>
+              )}
             </div>
           </div>
         )}
