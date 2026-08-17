@@ -355,6 +355,16 @@ export function usePrinterStorage() {
     setPrinters(prev => prev.map(p => {
       if (p.id !== printerId) return p;
       const safeUpdates = { ...updates };
+      // If the operator re-IP'd (or re-ported) an emulated card, remember the
+      // old address as removed so the seed block can never bring it back.
+      const newIp = safeUpdates.ipAddress ?? p.ipAddress;
+      const newPort = safeUpdates.port ?? p.port;
+      if ((newIp !== p.ipAddress || newPort !== p.port)
+        && multiPrinterEmulator.isEmulatedIp(p.ipAddress, p.port)) {
+        const removed = getRemovedEmulatedKeys();
+        removed.add(`${p.ipAddress}:${p.port}`);
+        saveRemovedEmulatedKeys(removed);
+      }
       // Never let an offline card's selected message be overwritten by an
       // optimistic path. A currentMessage change is only trusted when the same
       // patch explicitly proves the printer is available/live again.
