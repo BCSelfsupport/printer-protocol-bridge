@@ -229,7 +229,7 @@ export class PrintMessageCounter {
  * ECC200 square symbol capacities (ISO/IEC 16022) — used to sanity-check that
  * the lid DataMatrix is large enough for the real payload.
  *
- * The seeded lid field is 16×16 (`^AB … s=5`), which holds only 10 alphanumeric
+ * The seeded lid field is 16×16 (`^AB … s=5`), which holds only 16 alphanumeric
  * characters — NOT enough for a 17- or 24-char Print Message. Preflight must
  * flag this so the operator/protocol table picks a larger symbol.
  */

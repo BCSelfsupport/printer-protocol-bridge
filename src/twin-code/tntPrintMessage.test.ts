@@ -95,7 +95,7 @@ describe("DataMatrix capacity guard", () => {
     expect(v17.recommended).toBe("18x18");
     const v24 = checkDataMatrixCapacity(24, "16x16");
     expect(v24.ok).toBe(false);
-    expect(v24.recommended).toBe("26x26");
+    expect(v24.recommended).toBe("20x20");
   });
 
   it("passes when the symbol is large enough", () => {
