@@ -163,6 +163,17 @@ class TntServer extends EventEmitter {
           continue;
         }
         this._record('in', f.opcode, f.payload);
+        // Config handler stub: validate the §5 shape at the edge. The ACK on
+        // receipt still goes out (Q10: ack = received, not accepted); we log
+        // and flag invalid Configs so the renderer session can latch the
+        // Category 1 (fatal) fault via tntSessionController.
+        if (f.opcode === OPCODES.CONFIG) {
+          const err = validateConfigPayload(parseJsonPayload(f.payload));
+          if (err) {
+            this._writeLog(`${stamp()} CONFIG-INVALID ${err}`);
+            this.emit('config-invalid', { reason: err, at: stamp() });
+          }
+        }
         // Authentix Q10 (2026-07-17): "The Ack is for Msg received
         // acknowledgement, and not related to any actual print operation."
         // So we ack the moment the frame is decoded — never block on the
