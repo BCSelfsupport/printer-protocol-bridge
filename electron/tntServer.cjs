@@ -24,6 +24,29 @@ const ACK_ON_RECEIPT = new Set([OPCODES.CONFIG, OPCODES.PRINT, OPCODES.REQUEST])
 
 function stamp() { return new Date().toISOString(); }
 
+// ── Config handler stub (Phase 2) ──────────────────────────────────────────
+// PROVISIONAL: field names/offsets pending Interface Spec §4/§5 + pcap.
+// Validates the §5 Print Message shape (17 chars no lot / 24 with lot,
+// uppercase A-Z / 0-9 after stripping spaces) so obviously-malformed Configs
+// are NACKed at the edge instead of poisoning the renderer session.
+// Full end-to-end handling (counter seeding, Category-1 fatal latching) lives
+// in src/twin-code/tntSessionController.ts.
+function validateConfigPayload(json) {
+  if (!json || typeof json !== 'object') return 'Config payload is missing or not an object';
+  const msg = json.printMessage || json.message || json.startMessage || null;
+  if (typeof msg !== 'string' || msg.trim() === '') {
+    return 'Config payload has no printMessage field (provisional name — confirm §4)';
+  }
+  const compact = msg.replace(/\s+/g, '');
+  if (compact.length !== 17 && compact.length !== 24) {
+    return `Print Message must be 17 or 24 chars; got ${compact.length}`;
+  }
+  if (!/^[A-Z0-9]+$/.test(compact)) {
+    return 'Print Message must be uppercase A-Z / 0-9 only';
+  }
+  return null;
+}
+
 class TntServer extends EventEmitter {
   constructor({ port = DEFAULT_PORT, logDir } = {}) {
     super();
@@ -140,6 +163,17 @@ class TntServer extends EventEmitter {
           continue;
         }
         this._record('in', f.opcode, f.payload);
+        // Config handler stub: validate the §5 shape at the edge. The ACK on
+        // receipt still goes out (Q10: ack = received, not accepted); we log
+        // and flag invalid Configs so the renderer session can latch the
+        // Category 1 (fatal) fault via tntSessionController.
+        if (f.opcode === OPCODES.CONFIG) {
+          const err = validateConfigPayload(parseJsonPayload(f.payload));
+          if (err) {
+            this._writeLog(`${stamp()} CONFIG-INVALID ${err}`);
+            this.emit('config-invalid', { reason: err, at: stamp() });
+          }
+        }
         // Authentix Q10 (2026-07-17): "The Ack is for Msg received
         // acknowledgement, and not related to any actual print operation."
         // So we ack the moment the frame is decoded — never block on the
