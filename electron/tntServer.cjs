@@ -19,6 +19,9 @@ const { encodeFrame, FrameDecoder, OPCODES, OPCODE_NAMES, parseJsonPayload } = r
 const DEFAULT_PORT = 8101;
 const MAX_LOG_BYTES = 5 * 1024 * 1024; // 5 MB rolling per line
 
+// Inbound opcodes that are acknowledged on RECEIPT (not on physical print).
+const ACK_ON_RECEIPT = new Set([OPCODES.CONFIG, OPCODES.PRINT, OPCODES.REQUEST]);
+
 function stamp() { return new Date().toISOString(); }
 
 class TntServer extends EventEmitter {
