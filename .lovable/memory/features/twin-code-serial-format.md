@@ -1,39 +1,48 @@
 ---
-name: TwinCode serial format — 13-char alphanumeric, identical on both printers
-description: Customer-confirmed serial shape for the bonded TwinCode pair (Authentix). 13 chars, mixed letters+digits, identical string on lid (DataMatrix) and side (text), case-significant.
+name: TwinCode serial / print-message format
+description: Authentix-confirmed print message shape — 17 chars (no lot code) / 24 chars (with lot code), serial incremented by CodeSync inside the format; identical string on lid (DataMatrix) and side (text).
 type: feature
 ---
 
-# TwinCode Serial Format
+# TwinCode Print Message Format
 
-## Customer-confirmed example (2026-04-23)
+## Authoritative (Authentix, 2026-07-17)
 
-> "Alphanumeric and 2D have the same data: Example `25X221546754U`."
-> — Thomas Pawlik, Authentix
+> "Section 5 of our Interface spec lays out the full Print Message format,
+> 17 char for No Lot Code msg, 24 char for With Lot code. The Serial No in the
+> Print message indicates the **starting** Serial Code. The BestCode logic will
+> need to use this full message format and increment the Serial Code within the
+> overall format."
 
-## Shape
+- **Length:** 17 chars (no lot code) or 24 chars (with lot code) — the whole
+  formatted string is what gets printed, e.g. `3 001 08 A180 220274 U`.
+- **Serial authority:** TnT sends the *starting* serial in the Config/Print msg;
+  CodeSync increments the serial sub-field per bottle, preserving the surrounding
+  fixed template characters and zero-padding.
+- **Re-Config:** TnT supplies the correct next starting serial. CodeSync never
+  rewinds or resumes on its own — treat re-Config identically to an original Config.
 
-- **Length:** 13 characters
-- **Charset:** uppercase A–Z + 0–9 (case-significant — `X` and `U` are payload, not decoration)
-- **Identity rule:** the **exact same string** is dispatched to both printers
-  - A (lid) → encoded into the 16×16 ECC200 DataMatrix via `^MD^BD<fieldA>;<serial>`
-  - B (side) → printed as human-readable text via `^MD^TD<fieldB>;<serial>`
-- **No per-side transform** — no padding, prefixing, case-folding, or check-digit
-  recomputation. The catalog row IS what goes on the wire on both sides.
+## Identity rule
+The **exact same full string** goes to both printers:
+- A (lid) → ECC200 DataMatrix via `^MD^BD<fieldA>;<message>`
+- B (side) → human-readable text via `^MD^TD<fieldB>;<message>`
+
+No per-side transform (no padding, prefixing, case-folding, check digits).
 
 ## Implications
-
 | Concern | Resolution |
 |---|---|
-| DataMatrix size | 16×16 (s=5 in `^AB`) is correct — comfortably encodes 13 alphanumeric chars in ECC200 |
-| Code128 vs DataMatrix | Not relevant — lid is always 2D DataMatrix per customer spec |
-| Mixed case in editor | The side-printer text field MUST allow mixed case (see `mem://features/mixed-case-text-support`). Forced uppercase would corrupt this payload — but since the payload is already uppercase + digits, the failure mode is silent on this dataset. Don't rely on it. |
-| Catalog validation | Reject rows that aren't `/^[A-Z0-9]{13}$/`. CSVs with leading zeros stripped by Excel ARE a real risk — load as text columns. |
-| Dry-run seed | When `catalog.peek()` returns null, the dispatcher synthesises `DRYRUNxxxx` (10 chars, won't match production length). For a more realistic dry-run, prefer loading a real catalog first. |
+| DataMatrix size | 16×16 encodes 13 chars; **17–24 alphanumeric chars needs a larger ECC200 size** — re-check `^AB` size param against the real payload length before go-live. |
+| Side text width | 17–24 chars at 7×5 font must fit the print window — validate template width in preflight. |
+| Mixed case / spaces | Payload contains spaces and uppercase letters; text field must not force-uppercase or trim (see `mem://features/mixed-case-text-support`). |
+| Catalog CSVs | Prior `/^[A-Z0-9]{13}$/` validation is obsolete — validate against the §5 format instead; load columns as text. |
+
+## Historical note
+Earlier guidance (2026-04-23, "Alphanumeric and 2D have the same data:
+`25X221546754U`", 13 chars) described only the serial portion. The 17/24-char
+full-message format above supersedes it for wire payloads.
 
 ## Reference
-
-- Dispatcher: `src/twin-code/twinDispatcher.ts` — `dispatch(serial)` writes the
-  same `serial` to both sides
-- BD vs TD subcommand routing: `mem://integration/datamatrix-bd-vs-ng`
-- Mixed-case text fields: `mem://features/mixed-case-text-support`
+- Dispatcher: `src/twin-code/twinDispatcher.ts`
+- BD vs TD routing: `mem://integration/datamatrix-bd-vs-ng`
+- Full Q&A: `mem://integration/authentix-tnt-answers-2026-07`
