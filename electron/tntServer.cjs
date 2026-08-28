@@ -19,6 +19,9 @@ const { encodeFrame, FrameDecoder, OPCODES, OPCODE_NAMES, parseJsonPayload } = r
 const DEFAULT_PORT = 8101;
 const MAX_LOG_BYTES = 5 * 1024 * 1024; // 5 MB rolling per line
 
+// Inbound opcodes that are acknowledged on RECEIPT (not on physical print).
+const ACK_ON_RECEIPT = new Set([OPCODES.CONFIG, OPCODES.PRINT, OPCODES.REQUEST]);
+
 function stamp() { return new Date().toISOString(); }
 
 class TntServer extends EventEmitter {
@@ -137,6 +140,11 @@ class TntServer extends EventEmitter {
           continue;
         }
         this._record('in', f.opcode, f.payload);
+        // Authentix Q10 (2026-07-17): "The Ack is for Msg received
+        // acknowledgement, and not related to any actual print operation."
+        // So we ack the moment the frame is decoded — never block on the
+        // printer's physical 'C' response.
+        if (ACK_ON_RECEIPT.has(f.opcode)) this.ack(f.opcode, { received: true });
       }
     });
 
