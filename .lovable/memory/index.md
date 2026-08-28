@@ -120,3 +120,5 @@ Updated: today
 - [Save Busy Defers Fleet Push](mem://features/message-persistence/save-busy-defers-fleet-push) — Concurrent Fleet HTTP pushes locked up F8/F9 saves; saveBusy flag gates uploaders.
 - [Twin Counter Zero on Bind](mem://features/twin-code-counter-zero-on-bind) — Bind preSelect zeros HMI Print (^CC 0;0) and Product (^CC 6;0) counters on A+B for parity with HUD/CSV.
 - [Apply to Printers](mem://features/apply-to-printers-selection) — Message Select opens target-picker dialog; auto Master→Slave fan-out is opt-in via `Printer.autoSyncSelection`; slave selection unblocked
+- [Authentix TnT Answers 07/2026](mem://integration/authentix-tnt-answers-2026-07) — Cat1 fatal line-stop, ack-on-receipt, no TLS, TnT owns serial increment start
+- [TwinCode Print Format](mem://features/twin-code-serial-format) — 17-char (no lot) / 24-char (with lot) full message; CodeSync increments serial inside format
