@@ -20,7 +20,5 @@ export const isDevAccessRuntime = () => {
 
 export const isPreviewDevPassword = (password: string) => {
   const p = normalizeDevPassword(password);
-  // Accept CITEC (dev/emulator) and TEXAS (admin) in preview/Electron so the
-  // dev portal opens whether the user recalls the dev or the admin password.
-  return p === PREVIEW_DEV_PASSWORD || p === 'TEXAS';
+  return p === PREVIEW_DEV_PASSWORD;
 };

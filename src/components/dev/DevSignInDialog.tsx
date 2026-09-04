@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Shield, Loader2 } from 'lucide-react';
 import { useLicense } from '@/contexts/LicenseContext';
-import { isDevAccessRuntime, isPreviewDevPassword, normalizeDevPassword } from '@/lib/devAccess';
+import { isPreviewDevPassword, normalizeDevPassword } from '@/lib/devAccess';
 
 interface DevSignInDialogProps {
   open: boolean;
@@ -132,29 +132,8 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
             <Button type="submit" disabled={busy || !code.trim()} className="w-full">
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Sign in'}
             </Button>
-            {isDevAccessRuntime() && (
-              <div className="pt-2 border-t space-y-2">
-                <p className="text-xs text-muted-foreground text-center">Mobile quick sign-in</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={() => { onSuccess(); onOpenChange(false); }}
-                  >
-                    CITEC
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={() => { onSuccess(); onOpenChange(false); }}
-                  >
-                    TEXAS
-                  </Button>
-                </div>
-              </div>
-            )}
+
+
           </form>
         )}
 
