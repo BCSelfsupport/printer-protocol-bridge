@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Shield, Loader2 } from 'lucide-react';
 import { useLicense } from '@/contexts/LicenseContext';
-import { isDevAccessRuntime, isPreviewDevPassword, normalizeDevPassword } from '@/lib/devAccess';
+import { isPreviewDevPassword, normalizeDevPassword } from '@/lib/devAccess';
 
 interface DevSignInDialogProps {
   open: boolean;
