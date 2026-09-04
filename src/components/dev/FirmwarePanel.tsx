@@ -141,7 +141,7 @@ export function FirmwarePanel() {
     [packages, selectedPackageId],
   );
 
-  /** Download every file in the package and write it to the USB drive. */
+  /** Download the package (zip or loose files) and write the extracted layout to the USB drive. */
   const handlePrepareDrive = async () => {
     if (!selectedPackage || !selectedDrive) return;
     setBusy('write');
@@ -156,14 +156,21 @@ export function FirmwarePanel() {
         const res = await fetch(file.url);
         if (!res.ok) throw new Error(`Could not download ${file.path}`);
         const buf = new Uint8Array(await res.arrayBuffer());
-        let binary = '';
-        const chunk = 0x8000;
-        for (let o = 0; o < buf.length; o += chunk) {
-          binary += String.fromCharCode(...buf.subarray(o, o + chunk));
+
+        if (isZipName(file.path)) {
+          // Extract exactly as "extract here" onto the drive root.
+          const entries = unzipSync(buf);
+          for (const [name, data] of Object.entries(entries)) {
+            if (name.endsWith('/') || data.length === 0) continue;
+            payload.push({ path: normaliseZipPath(name), dataBase64: toBase64(data) });
+          }
+        } else {
+          payload.push({ path: file.path, dataBase64: toBase64(buf) });
         }
-        payload.push({ path: file.path, dataBase64: btoa(binary) });
         setProgress(Math.round(((i + 1) / files.length) * 80));
       }
+
+      if (payload.length === 0) throw new Error('The firmware package is empty');
 
       // Top-level folders in the package, cleared first so no stale files remain.
       const topFolders = Array.from(
@@ -189,6 +196,7 @@ export function FirmwarePanel() {
       setTimeout(() => setProgress(0), 1500);
     }
   };
+
 
   const handleUpload = async () => {
     if (!newVersion.trim() || pendingFiles.length === 0) return;
