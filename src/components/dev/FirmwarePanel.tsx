@@ -239,6 +239,7 @@ export function FirmwarePanel() {
       setNewNotes('');
       setPendingFiles([]);
       if (folderInputRef.current) folderInputRef.current.value = '';
+      if (zipInputRef.current) zipInputRef.current.value = '';
       loadPackages();
     } catch (err) {
       toast.error('Upload failed', {
