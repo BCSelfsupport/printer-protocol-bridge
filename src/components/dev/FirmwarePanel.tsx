@@ -87,6 +87,8 @@ export function FirmwarePanel() {
   const [newNotes, setNewNotes] = useState('');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const zipInputRef = useRef<HTMLInputElement>(null);
+  const pendingZip = pendingFiles.length === 1 && isZipName(pendingFiles[0].name) ? pendingFiles[0] : null;
 
   const callApi = useCallback(
     async (body: Record<string, unknown>) => {
