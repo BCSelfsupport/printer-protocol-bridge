@@ -435,6 +435,13 @@ export function FirmwarePanel() {
           onChange={(e) => setNewNotes(e.target.value)}
         />
         <input
+          ref={zipInputRef}
+          type="file"
+          accept=".zip,application/zip"
+          className="hidden"
+          onChange={(e) => setPendingFiles(Array.from(e.target.files ?? []))}
+        />
+        <input
           ref={folderInputRef}
           type="file"
           // @ts-expect-error non-standard but supported in Chromium/Electron
@@ -446,18 +453,30 @@ export function FirmwarePanel() {
         />
         <Button
           size="sm"
-          variant="outline"
           className="h-8 w-full"
+          variant="outline"
+          onClick={() => zipInputRef.current?.click()}
+        >
+          <FileArchive className="mr-1 h-3.5 w-3.5" />
+          {pendingZip ? pendingZip.name : 'Choose firmware .zip'}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 w-full text-[10px] text-muted-foreground"
           onClick={() => folderInputRef.current?.click()}
         >
-          <Upload className="mr-1 h-3.5 w-3.5" />
-          {pendingFiles.length ? `${pendingFiles.length} files selected` : 'Choose firmware folder'}
+          <Upload className="mr-1 h-3 w-3" />
+          {!pendingZip && pendingFiles.length ? `${pendingFiles.length} files selected` : 'or choose an unzipped folder'}
         </Button>
         {pendingFiles.length > 0 && (
           <p className="text-[10px] text-muted-foreground">
-            Folder layout is preserved exactly as it appears on a working thumb drive.
+            {pendingZip
+              ? 'The zip is stored as-is and extracted straight onto the drive root, so the folder layout stays exactly right.'
+              : 'Folder layout is preserved exactly as it appears on a working thumb drive.'}
           </p>
         )}
+
         {busy === 'upload' && <Progress value={progress} className="h-1.5" />}
         <Button
           size="sm"
