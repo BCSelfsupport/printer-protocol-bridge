@@ -1120,6 +1120,142 @@ ipcMain.handle('tnt:send', (_e, { opcode, payload }) => {
   return { success: ok };
 });
 
+// ============================================================
+// Firmware USB preparation (Dev Portal utility)
+//
+// The printer CPU reads firmware from a USB mass-storage device via its own
+// host port; there is no PC->printer device/serial firmware path in the rear
+// port protocol (v2.6). So the desktop app cannot flash over a cable — what it
+// CAN do is remove the manual file-copy step: build the exact folder/file
+// layout on the removable drive and verify every byte.
+// ============================================================
+
+function bytesToNiceSize(n) {
+  if (!n) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let i = 0; let v = n;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i += 1; }
+  return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
+function listWindowsDrives() {
+  return new Promise((resolve) => {
+    const ps =
+      '[Console]::OutputEncoding=[Text.Encoding]::UTF8; ' +
+      'Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID,VolumeName,DriveType,Size,FreeSpace | ConvertTo-Json -Compress';
+    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { timeout: 10000 }, (err, stdout) => {
+      if (err) return resolve([]);
+      let rows = [];
+      try {
+        const parsed = JSON.parse(stdout.trim() || '[]');
+        rows = Array.isArray(parsed) ? parsed : [parsed];
+      } catch (_) { return resolve([]); }
+      resolve(
+        rows
+          .filter((r) => r && r.DeviceID)
+          .map((r) => ({
+            path: `${r.DeviceID}\\`,
+            label: r.VolumeName || 'Removable Disk',
+            removable: Number(r.DriveType) === 2,
+            totalBytes: Number(r.Size) || 0,
+            freeBytes: Number(r.FreeSpace) || 0,
+            freeLabel: bytesToNiceSize(Number(r.FreeSpace) || 0),
+          }))
+      );
+    });
+  });
+}
+
+function listUnixVolumes() {
+  const roots = process.platform === 'darwin'
+    ? ['/Volumes']
+    : ['/media', `/media/${os.userInfo().username}`, '/run/media', `/run/media/${os.userInfo().username}`, '/mnt'];
+  const out = [];
+  for (const root of roots) {
+    try {
+      for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        const full = path.join(root, entry.name);
+        if (out.some((d) => d.path === full)) continue;
+        out.push({ path: full, label: entry.name, removable: true, totalBytes: 0, freeBytes: 0, freeLabel: '' });
+      }
+    } catch (_) { /* root doesn't exist on this machine */ }
+  }
+  return out;
+}
+
+ipcMain.handle('firmware:list-drives', async () => {
+  try {
+    const drives = process.platform === 'win32' ? await listWindowsDrives() : listUnixVolumes();
+    return { success: true, drives };
+  } catch (err) {
+    return { success: false, error: String(err && err.message ? err.message : err), drives: [] };
+  }
+});
+
+// Reject anything that could escape the chosen drive root.
+function resolveInsideRoot(root, relPath) {
+  const cleaned = String(relPath || '').replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!cleaned) return null;
+  if (cleaned.split('/').some((s) => s === '' || s === '.' || s === '..')) return null;
+  const full = path.resolve(root, cleaned);
+  const rootResolved = path.resolve(root) + path.sep;
+  if (!full.startsWith(rootResolved)) return null;
+  return full;
+}
+
+/**
+ * Write a firmware package to a removable drive.
+ * files: [{ path: 'FIRMWARE/app.bin', dataBase64: '...' }]
+ */
+ipcMain.handle('firmware:write-package', async (_e, { drivePath, files, clearPaths }) => {
+  try {
+    if (!drivePath || !fs.existsSync(drivePath)) {
+      return { success: false, error: 'Drive not found. Re-insert the USB drive and refresh the list.' };
+    }
+    if (!Array.isArray(files) || files.length === 0) {
+      return { success: false, error: 'No firmware files supplied.' };
+    }
+
+    // Optionally remove previous firmware folders so stale files can't be picked up.
+    for (const rel of clearPaths || []) {
+      const target = resolveInsideRoot(drivePath, rel);
+      if (target && fs.existsSync(target)) {
+        fs.rmSync(target, { recursive: true, force: true });
+      }
+    }
+
+    const written = [];
+    for (const file of files) {
+      const target = resolveInsideRoot(drivePath, file.path);
+      if (!target) return { success: false, error: `Unsafe file path in package: ${file.path}` };
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      const buf = Buffer.from(file.dataBase64, 'base64');
+      fs.writeFileSync(target, buf);
+      written.push({ path: file.path, bytes: buf.length, expected: buf.length });
+    }
+
+    // Verify: every file exists on the drive at the expected size.
+    const mismatches = [];
+    for (const w of written) {
+      const target = resolveInsideRoot(drivePath, w.path);
+      let actual = -1;
+      try { actual = fs.statSync(target).size; } catch (_) { actual = -1; }
+      if (actual !== w.expected) mismatches.push(`${w.path} (${actual} of ${w.expected} bytes)`);
+    }
+    if (mismatches.length) {
+      return { success: false, error: `Verification failed for: ${mismatches.join(', ')}` };
+    }
+
+    const totalBytes = written.reduce((n, w) => n + w.bytes, 0);
+    return { success: true, fileCount: written.length, totalBytes, totalLabel: bytesToNiceSize(totalBytes) };
+  } catch (err) {
+    return { success: false, error: String(err && err.message ? err.message : err) };
+  }
+});
+
+
+
 app.whenReady().then(() => {
   createWindow();
   startRelayServer();

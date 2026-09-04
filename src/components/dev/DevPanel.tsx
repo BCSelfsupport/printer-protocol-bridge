@@ -34,8 +34,10 @@ import {
   Signal,
   Video,
   AlertTriangle,
-  Activity
+  Activity,
+  Usb
 } from 'lucide-react';
+
 import { CommandTerminal } from '@/components/terminal/CommandTerminal';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
@@ -50,6 +52,7 @@ import { FeedbackPanel } from '@/components/dev/FeedbackPanel';
 import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
 import { ParameterSnapshot } from '@/components/dev/ParameterSnapshot';
 import { DevInvitePanel } from '@/components/dev/DevInvitePanel';
+import { FirmwarePanel } from '@/components/dev/FirmwarePanel';
 import { SlaveSelectionAckTest } from '@/components/dev/SlaveSelectionAckTest';
 import { TwinPairBindDialog } from '@/twin-code/components/TwinPairBindDialog';
 import { useTwinPair } from '@/twin-code/twinPairStore';
@@ -534,6 +537,11 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   <Activity className="w-3.5 h-3.5" />
                   Twin Code
                 </TabsTrigger>
+                <TabsTrigger value="firmware" className="text-xs gap-1 flex-shrink-0">
+                  <Usb className="w-3.5 h-3.5" />
+                  Firmware
+                </TabsTrigger>
+
                 {isOwnerDeveloper && (
                   <TabsTrigger value="devs" className="text-xs gap-1 flex-shrink-0">
                     <Shield className="w-3.5 h-3.5" />
@@ -1076,7 +1084,12 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
               <FeedbackPanel />
             </TabsContent>
 
-            {/* Training Videos Tab */}
+            {/* Firmware Tab */}
+            <TabsContent value="firmware" className="flex-1 overflow-auto m-0 p-4">
+              <FirmwarePanel />
+            </TabsContent>
+
+            {/* Training Tab */}
             <TabsContent value="training" className="flex-1 overflow-hidden m-0">
               {recorderState && recorderActions ? (
                 <TrainingVideoRecorder recorderState={recorderState} recorderActions={recorderActions} />
@@ -1084,6 +1097,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                 <div className="p-4 text-xs text-muted-foreground">Recorder not available</div>
               )}
             </TabsContent>
+
 
             {/* Twin Code Tab */}
             <TabsContent value="twincode" className="flex-1 overflow-auto m-0 p-4">

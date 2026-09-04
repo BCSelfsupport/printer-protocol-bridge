@@ -275,6 +275,45 @@ export type Database = {
         }
         Relationships: []
       }
+      firmware_packages: {
+        Row: {
+          created_at: string
+          created_by_license_id: string | null
+          files: Json
+          id: string
+          is_published: boolean
+          model: string | null
+          notes: string | null
+          total_bytes: number
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_license_id?: string | null
+          files?: Json
+          id?: string
+          is_published?: boolean
+          model?: string | null
+          notes?: string | null
+          total_bytes?: number
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          created_at?: string
+          created_by_license_id?: string | null
+          files?: Json
+          id?: string
+          is_published?: boolean
+          model?: string | null
+          notes?: string | null
+          total_bytes?: number
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
       fleet_events: {
         Row: {
           category: string
