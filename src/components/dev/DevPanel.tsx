@@ -512,7 +512,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             </div>
           </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="mx-4 mt-2">
               <TabsList className="flex h-auto flex-wrap justify-start gap-1">
                 <TabsTrigger value="status" className="text-xs gap-1 flex-shrink-0"><Gauge className="w-3.5 h-3.5" />Status</TabsTrigger>
@@ -1150,7 +1150,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
           </Tabs>
 
           {/* Build Status & Push Update Footer */}
-          <div className="p-3 border-t border-border space-y-3 overflow-y-auto flex-shrink-0">
+          <div className="p-3 border-t border-border space-y-3 overflow-y-auto flex-shrink-0 max-h-[45dvh]">
 
             {/* DEV BUILD SECTION */}
             <div className="bg-warning/5 rounded-lg border border-warning/30 p-2 space-y-2">
