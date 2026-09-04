@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import {
   AlertTriangle,
+  FileArchive,
   CheckCircle2,
   HardDrive,
   Loader2,
