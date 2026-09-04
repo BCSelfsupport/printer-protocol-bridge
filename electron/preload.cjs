@@ -31,6 +31,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   hotfolder: {
     configure: (config) => ipcRenderer.invoke('hotfolder:configure', config),
   },
+
+  // Firmware USB preparation (Dev Portal utility)
+  firmware: {
+    listDrives: () => ipcRenderer.invoke('firmware:list-drives'),
+    writePackage: (payload) => ipcRenderer.invoke('firmware:write-package', payload),
+  },
+
   relay: {
     getInfo: () => ipcRenderer.invoke('relay:get-info'),
   },
