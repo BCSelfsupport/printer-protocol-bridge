@@ -34,8 +34,10 @@ import {
   Signal,
   Video,
   AlertTriangle,
-  Activity
+  Activity,
+  Usb
 } from 'lucide-react';
+
 import { CommandTerminal } from '@/components/terminal/CommandTerminal';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
