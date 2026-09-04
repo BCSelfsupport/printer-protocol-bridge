@@ -1083,14 +1083,12 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
               <FeedbackPanel />
             </TabsContent>
 
-            {/* Training Videos Tab */}
-            <TabsContent value="training" className="flex-1 overflow-hidden m-0">
-              {recorderState && recorderActions ? (
-                <TrainingVideoRecorder recorderState={recorderState} recorderActions={recorderActions} />
-              ) : (
-                <div className="p-4 text-xs text-muted-foreground">Recorder not available</div>
-              )}
+            {/* Firmware Tab */}
+            <TabsContent value="firmware" className="flex-1 overflow-auto m-0 p-4">
+              <FirmwarePanel />
             </TabsContent>
+
+
 
             {/* Twin Code Tab */}
             <TabsContent value="twincode" className="flex-1 overflow-auto m-0 p-4">
