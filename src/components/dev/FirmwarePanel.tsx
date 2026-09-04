@@ -24,6 +24,7 @@ import {
   Usb,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { unzipSync } from 'fflate';
 import { useLicense } from '@/contexts/LicenseContext';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
