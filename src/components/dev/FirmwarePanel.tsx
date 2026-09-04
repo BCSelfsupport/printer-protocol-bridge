@@ -505,3 +505,26 @@ function stripRootFolder(relPath: string): string {
   const parts = relPath.replace(/\\/g, '/').split('/');
   return parts.length > 1 ? parts.slice(1).join('/') : relPath;
 }
+
+/** Firmware releases ship as a zip; treat it as the whole package. */
+function isZipName(name: string): boolean {
+  return /\.zip$/i.test(name);
+}
+
+/** Entry paths inside the zip, cleaned so they land on the drive root. */
+function normaliseZipPath(name: string): string {
+  return name
+    .replace(/\\/g, '/')
+    .split('/')
+    .filter((seg) => seg && seg !== '.' && seg !== '..' && seg !== '__MACOSX')
+    .join('/');
+}
+
+function toBase64(buf: Uint8Array): string {
+  let binary = '';
+  const chunk = 0x8000;
+  for (let o = 0; o < buf.length; o += chunk) {
+    binary += String.fromCharCode(...buf.subarray(o, o + chunk));
+  }
+  return btoa(binary);
+}
