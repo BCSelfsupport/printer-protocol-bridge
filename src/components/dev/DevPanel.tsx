@@ -52,6 +52,7 @@ import { FeedbackPanel } from '@/components/dev/FeedbackPanel';
 import { TrainingVideoRecorder } from '@/components/dev/TrainingVideoRecorder';
 import { ParameterSnapshot } from '@/components/dev/ParameterSnapshot';
 import { DevInvitePanel } from '@/components/dev/DevInvitePanel';
+import { FirmwarePanel } from '@/components/dev/FirmwarePanel';
 import { SlaveSelectionAckTest } from '@/components/dev/SlaveSelectionAckTest';
 import { TwinPairBindDialog } from '@/twin-code/components/TwinPairBindDialog';
 import { useTwinPair } from '@/twin-code/twinPairStore';
