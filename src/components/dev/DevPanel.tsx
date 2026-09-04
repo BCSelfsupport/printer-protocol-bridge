@@ -534,6 +534,11 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   <Activity className="w-3.5 h-3.5" />
                   Twin Code
                 </TabsTrigger>
+                <TabsTrigger value="firmware" className="text-xs gap-1 flex-shrink-0">
+                  <Usb className="w-3.5 h-3.5" />
+                  Firmware
+                </TabsTrigger>
+
                 {isOwnerDeveloper && (
                   <TabsTrigger value="devs" className="text-xs gap-1 flex-shrink-0">
                     <Shield className="w-3.5 h-3.5" />
