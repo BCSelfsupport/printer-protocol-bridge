@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import {
   AlertTriangle,
+  FileArchive,
   CheckCircle2,
   HardDrive,
   Loader2,
@@ -24,6 +25,7 @@ import {
   Usb,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { unzipSync } from 'fflate';
 import { useLicense } from '@/contexts/LicenseContext';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -85,6 +87,8 @@ export function FirmwarePanel() {
   const [newNotes, setNewNotes] = useState('');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const zipInputRef = useRef<HTMLInputElement>(null);
+  const pendingZip = pendingFiles.length === 1 && isZipName(pendingFiles[0].name) ? pendingFiles[0] : null;
 
   const callApi = useCallback(
     async (body: Record<string, unknown>) => {
@@ -140,7 +144,7 @@ export function FirmwarePanel() {
     [packages, selectedPackageId],
   );
 
-  /** Download every file in the package and write it to the USB drive. */
+  /** Download the package (zip or loose files) and write the extracted layout to the USB drive. */
   const handlePrepareDrive = async () => {
     if (!selectedPackage || !selectedDrive) return;
     setBusy('write');
@@ -155,14 +159,21 @@ export function FirmwarePanel() {
         const res = await fetch(file.url);
         if (!res.ok) throw new Error(`Could not download ${file.path}`);
         const buf = new Uint8Array(await res.arrayBuffer());
-        let binary = '';
-        const chunk = 0x8000;
-        for (let o = 0; o < buf.length; o += chunk) {
-          binary += String.fromCharCode(...buf.subarray(o, o + chunk));
+
+        if (isZipName(file.path)) {
+          // Extract exactly as "extract here" onto the drive root.
+          const entries = unzipSync(buf);
+          for (const [name, data] of Object.entries(entries)) {
+            if (name.endsWith('/') || data.length === 0) continue;
+            payload.push({ path: normaliseZipPath(name), dataBase64: toBase64(data) });
+          }
+        } else {
+          payload.push({ path: file.path, dataBase64: toBase64(buf) });
         }
-        payload.push({ path: file.path, dataBase64: btoa(binary) });
         setProgress(Math.round(((i + 1) / files.length) * 80));
       }
+
+      if (payload.length === 0) throw new Error('The firmware package is empty');
 
       // Top-level folders in the package, cleared first so no stale files remain.
       const topFolders = Array.from(
@@ -188,6 +199,7 @@ export function FirmwarePanel() {
       setTimeout(() => setProgress(0), 1500);
     }
   };
+
 
   const handleUpload = async () => {
     if (!newVersion.trim() || pendingFiles.length === 0) return;
@@ -227,6 +239,7 @@ export function FirmwarePanel() {
       setNewNotes('');
       setPendingFiles([]);
       if (folderInputRef.current) folderInputRef.current.value = '';
+      if (zipInputRef.current) zipInputRef.current.value = '';
       loadPackages();
     } catch (err) {
       toast.error('Upload failed', {
@@ -426,6 +439,13 @@ export function FirmwarePanel() {
           onChange={(e) => setNewNotes(e.target.value)}
         />
         <input
+          ref={zipInputRef}
+          type="file"
+          accept=".zip,application/zip"
+          className="hidden"
+          onChange={(e) => setPendingFiles(Array.from(e.target.files ?? []))}
+        />
+        <input
           ref={folderInputRef}
           type="file"
           // @ts-expect-error non-standard but supported in Chromium/Electron
@@ -437,18 +457,30 @@ export function FirmwarePanel() {
         />
         <Button
           size="sm"
-          variant="outline"
           className="h-8 w-full"
+          variant="outline"
+          onClick={() => zipInputRef.current?.click()}
+        >
+          <FileArchive className="mr-1 h-3.5 w-3.5" />
+          {pendingZip ? pendingZip.name : 'Choose firmware .zip'}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 w-full text-[10px] text-muted-foreground"
           onClick={() => folderInputRef.current?.click()}
         >
-          <Upload className="mr-1 h-3.5 w-3.5" />
-          {pendingFiles.length ? `${pendingFiles.length} files selected` : 'Choose firmware folder'}
+          <Upload className="mr-1 h-3 w-3" />
+          {!pendingZip && pendingFiles.length ? `${pendingFiles.length} files selected` : 'or choose an unzipped folder'}
         </Button>
         {pendingFiles.length > 0 && (
           <p className="text-[10px] text-muted-foreground">
-            Folder layout is preserved exactly as it appears on a working thumb drive.
+            {pendingZip
+              ? 'The zip is stored as-is and extracted straight onto the drive root, so the folder layout stays exactly right.'
+              : 'Folder layout is preserved exactly as it appears on a working thumb drive.'}
           </p>
         )}
+
         {busy === 'upload' && <Progress value={progress} className="h-1.5" />}
         <Button
           size="sm"
@@ -473,4 +505,27 @@ function f_isFolder(files: Array<{ path: string }>, segment: string): boolean {
 function stripRootFolder(relPath: string): string {
   const parts = relPath.replace(/\\/g, '/').split('/');
   return parts.length > 1 ? parts.slice(1).join('/') : relPath;
+}
+
+/** Firmware releases ship as a zip; treat it as the whole package. */
+function isZipName(name: string): boolean {
+  return /\.zip$/i.test(name);
+}
+
+/** Entry paths inside the zip, cleaned so they land on the drive root. */
+function normaliseZipPath(name: string): string {
+  return name
+    .replace(/\\/g, '/')
+    .split('/')
+    .filter((seg) => seg && seg !== '.' && seg !== '..' && seg !== '__MACOSX')
+    .join('/');
+}
+
+function toBase64(buf: Uint8Array): string {
+  let binary = '';
+  const chunk = 0x8000;
+  for (let o = 0; o < buf.length; o += chunk) {
+    binary += String.fromCharCode(...buf.subarray(o, o + chunk));
+  }
+  return btoa(binary);
 }
