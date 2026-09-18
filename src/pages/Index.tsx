@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { CountdownType } from '@/hooks/useJetCountdown';
@@ -2944,8 +2945,8 @@ const Index = () => {
     let fail = 0;
     for (const printer of filtered) {
       const now = new Date();
-      const dateStr = formatDateFns(now, 'MM/dd/yyyy');
-      const timeStr = formatDateFns(now, 'HH:mm:ss');
+      const dateStr = format(now, 'MM/dd/yyyy');
+      const timeStr = format(now, 'HH:mm:ss');
       try {
         const dOk = await sendCommandToPrinter(printer, `^DS ${dateStr}`);
         await new Promise(r => setTimeout(r, 300));
