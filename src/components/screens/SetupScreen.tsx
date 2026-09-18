@@ -17,6 +17,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
+import { Printer } from '@/types/printer';
+import { SyncClocksDialog } from '@/components/printers/SyncClocksDialog';
 
 interface SetupDialogProps {
   open: boolean;
