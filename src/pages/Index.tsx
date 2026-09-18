@@ -2941,26 +2941,43 @@ const Index = () => {
       toast.info('No online printers to sync.');
       return;
     }
+    if (isSyncingClocks) {
+      toast.info('A clock sync is already running.');
+      return;
+    }
     let ok = 0;
     let fail = 0;
-    for (const printer of filtered) {
-      const now = new Date();
-      const dateStr = format(now, 'MM/dd/yyyy');
-      const timeStr = format(now, 'HH:mm:ss');
-      try {
-        const dOk = await sendCommandToPrinter(printer, `^DS ${dateStr}`);
-        await new Promise(r => setTimeout(r, 300));
-        const tOk = await sendCommandToPrinter(printer, `^TS ${timeStr}`);
-        if (dOk && tOk) ok += 1; else fail += 1;
-      } catch (e) {
-        fail += 1;
-        console.error('[SyncClocks] error', { id: printer.id, error: e });
+    setIsSyncingClocks(true);
+    // Quiesce status polling first: concurrent ^SU traffic on port 23 is what has
+    // knocked printers offline during fleet operations in the past.
+    setPollingPaused(true);
+    try {
+      await waitForPollingIdle(3000);
+      for (const printer of filtered) {
+        const now = new Date();
+        const dateStr = format(now, 'MM/dd/yyyy');
+        const timeStr = format(now, 'HH:mm:ss');
+        try {
+          // One printer at a time, one command at a time — never parallel.
+          const dOk = await sendCommandToPrinter(printer, `^DS ${dateStr}`);
+          await new Promise(r => setTimeout(r, 300));
+          const tOk = await sendCommandToPrinter(printer, `^TS ${timeStr}`);
+          if (dOk && tOk) ok += 1; else fail += 1;
+        } catch (e) {
+          fail += 1;
+          console.error('[SyncClocks] error', { id: printer.id, error: e });
+        }
+        // Safety gap between printers so each socket fully settles.
+        await new Promise(r => setTimeout(r, 400));
       }
-      await new Promise(r => setTimeout(r, 300));
+      if (fail === 0) toast.success(`Clock synced on ${ok} printer${ok === 1 ? '' : 's'}.`);
+      else toast.warning(`Clock sync: ${ok} succeeded, ${fail} failed.`);
+    } finally {
+      // Let the last socket close before polling resumes.
+      setTimeout(() => setPollingPaused(false), 1000);
+      setIsSyncingClocks(false);
     }
-    if (fail === 0) toast.success(`Clock synced on ${ok} printer${ok === 1 ? '' : 's'}.`);
-    else toast.warning(`Clock sync: ${ok} succeeded, ${fail} failed.`);
-  }, [sendCommandToPrinter]);
+  }, [sendCommandToPrinter, isSyncingClocks]);
 
 
 
