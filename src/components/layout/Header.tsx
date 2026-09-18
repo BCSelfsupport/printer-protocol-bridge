@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize, Stethoscope, HelpCircle, MessageSquare, Video, BookOpen, QrCode, Printer } from 'lucide-react';
+import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize, Stethoscope, HelpCircle, MessageSquare, Video, BookOpen, QrCode, Printer, CalendarClock } from 'lucide-react';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { useNavigate } from 'react-router-dom';
@@ -24,9 +24,10 @@ interface HeaderProps {
   printerModel?: string | null;
   printerVariant?: string | null;
   onTrainingVideos?: () => void;
+  onDateTimeSetup?: () => void;
 }
 
-export function Header({ isConnected, connectedIp, onSettings, onHome, printerTime, onRelayConnect, printerModel, printerVariant, onTrainingVideos }: HeaderProps) {
+export function Header({ isConnected, connectedIp, onSettings, onHome, printerTime, onRelayConnect, printerModel, printerVariant, onTrainingVideos, onDateTimeSetup }: HeaderProps) {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const { theme, setTheme } = useTheme();
@@ -226,6 +227,16 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
                 )}
               </button>
 
+
+              {onDateTimeSetup && (
+                <button
+                  onClick={onDateTimeSetup}
+                  className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+                  title="Printer Date / Time (sync clock to PC)"
+                >
+                  <CalendarClock className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+                </button>
+              )}
 
               <button
                 onClick={() => setShowFeedback(true)}

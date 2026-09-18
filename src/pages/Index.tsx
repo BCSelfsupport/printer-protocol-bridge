@@ -3801,6 +3801,7 @@ const Index = () => {
         printerModel={connectionState.status?.printerModel}
         printerVariant={connectionState.status?.printerVariant}
         onTrainingVideos={() => setCurrentScreen('training')}
+        onDateTimeSetup={() => setSetupDialogOpen(true)}
       />
 
       {/* Floating recording overlay - visible in main screen when recording */}

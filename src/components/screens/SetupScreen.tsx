@@ -89,9 +89,11 @@ export function SetupScreen({ open, onOpenChange, onSendCommand }: SetupDialogPr
 
   const handleSetTime = useCallback(async () => {
     if (!onSendCommand) return;
+    // Some browsers return HH:mm from <input type="time"> — firmware needs HH:MM:SS
+    const timeStr = selectedTime.split(':').length === 2 ? `${selectedTime}:00` : selectedTime;
     try {
-      await onSendCommand(`^TS ${selectedTime}`);
-      toast.success(`Time set to ${selectedTime}`);
+      await onSendCommand(`^TS ${timeStr}`);
+      toast.success(`Time set to ${timeStr}`);
     } catch {
       toast.error('Failed to set time');
     }
@@ -104,6 +106,8 @@ export function SetupScreen({ open, onOpenChange, onSendCommand }: SetupDialogPr
     const timeStr = format(now, 'HH:mm:ss');
     try {
       await onSendCommand(`^DS ${dateStr}`);
+      // 300ms inter-command delay required by printer firmware
+      await new Promise((r) => setTimeout(r, 300));
       await onSendCommand(`^TS ${timeStr}`);
       setSelectedDate(now);
       setSelectedTime(timeStr);
