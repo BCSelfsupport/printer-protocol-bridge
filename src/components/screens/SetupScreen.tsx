@@ -106,6 +106,8 @@ export function SetupScreen({ open, onOpenChange, onSendCommand }: SetupDialogPr
     const timeStr = format(now, 'HH:mm:ss');
     try {
       await onSendCommand(`^DS ${dateStr}`);
+      // 300ms inter-command delay required by printer firmware
+      await new Promise((r) => setTimeout(r, 300));
       await onSendCommand(`^TS ${timeStr}`);
       setSelectedDate(now);
       setSelectedTime(timeStr);
