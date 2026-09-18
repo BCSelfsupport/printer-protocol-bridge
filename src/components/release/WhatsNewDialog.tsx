@@ -20,6 +20,22 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'sync-all-printer-clocks',
+    type: 'feature',
+    title: 'Sync All Printer Clocks From Your PC',
+    date: '18 Sep 2026',
+    summary:
+      'Added a "Sync All Printers…" button next to "Sync to PC" on the Date / Time screen (calendar-clock button in the top toolbar). It lists every online printer with all pre-ticked, so you can untick any you want to skip, then sets each one\'s date and time from your PC one printer at a time. Network safety is built in: fleet status polling is paused before the sync starts, printers are updated strictly one at a time with settling gaps between commands, and polling only resumes a second after the last printer finishes — so syncing the whole fleet will not cause the dropped-connection issues seen in the past. A confirmation shows how many printers synced and any that failed.',
+  },
+  {
+    id: 'clock-sync-button-toolbar',
+    type: 'feature',
+    title: 'Printer Clock Sync Now Reachable From the Toolbar',
+    date: '18 Sep 2026',
+    summary:
+      'The Date / Time setup screen existed but was previously unreachable from the UI. A calendar-clock button is now pinned in the top toolbar and opens "Setup: Date / Time" directly, where "Sync to PC" sets the connected printer\'s date and time from your PC. Time entries without seconds are now accepted, and the date and time commands are sent with the correct settling delay so the printer accepts both reliably.',
+  },
+  {
     id: 'header-emulate-toggle',
     type: 'feature',
     title: 'Emulate Printers Toggle in the Main Header',
