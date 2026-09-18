@@ -228,6 +228,16 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
               </button>
 
 
+              {onDateTimeSetup && (
+                <button
+                  onClick={onDateTimeSetup}
+                  className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+                  title="Printer Date / Time (sync clock to PC)"
+                >
+                  <CalendarClock className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+                </button>
+              )}
+
               <button
                 onClick={() => setShowFeedback(true)}
                 className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
