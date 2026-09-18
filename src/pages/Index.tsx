@@ -3918,6 +3918,8 @@ const Index = () => {
         open={setupDialogOpen}
         onOpenChange={setSetupDialogOpen}
         onSendCommand={sendCommand}
+        syncCandidates={printers.filter(p => p.isAvailable)}
+        onSyncPrinters={handleSyncClocks}
       />
 
       {/* Per-printer Setup Card opened from the bottom-nav "Adjust" shortcut.
