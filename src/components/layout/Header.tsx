@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize, Stethoscope, HelpCircle, MessageSquare, Video, BookOpen, QrCode, Printer } from 'lucide-react';
+import { Settings, Sun, Moon, Home, Smartphone, Maximize, Minimize, Stethoscope, HelpCircle, MessageSquare, Video, BookOpen, QrCode, Printer, CalendarClock } from 'lucide-react';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { useNavigate } from 'react-router-dom';
@@ -24,9 +24,10 @@ interface HeaderProps {
   printerModel?: string | null;
   printerVariant?: string | null;
   onTrainingVideos?: () => void;
+  onDateTimeSetup?: () => void;
 }
 
-export function Header({ isConnected, connectedIp, onSettings, onHome, printerTime, onRelayConnect, printerModel, printerVariant, onTrainingVideos }: HeaderProps) {
+export function Header({ isConnected, connectedIp, onSettings, onHome, printerTime, onRelayConnect, printerModel, printerVariant, onTrainingVideos, onDateTimeSetup }: HeaderProps) {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const { theme, setTheme } = useTheme();
