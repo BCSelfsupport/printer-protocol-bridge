@@ -2933,6 +2933,7 @@ const Index = () => {
     }
   }, [sendCommandToPrinter, startCountdown, getCountdown]);
 
+  const syncClocksBusyRef = useRef(false);
   // Fleet clock sync — sets date (^DS) then time (^TS) on each selected printer
   // from the PC clock. Serialized with the 300ms firmware gap to protect port 23.
   const handleSyncClocks = useCallback(async (targets: Printer[]) => {
@@ -2941,13 +2942,13 @@ const Index = () => {
       toast.info('No online printers to sync.');
       return;
     }
-    if (isSyncingClocks) {
+    if (syncClocksBusyRef.current) {
       toast.info('A clock sync is already running.');
       return;
     }
     let ok = 0;
     let fail = 0;
-    setIsSyncingClocks(true);
+    syncClocksBusyRef.current = true;
     // Quiesce status polling first: concurrent ^SU traffic on port 23 is what has
     // knocked printers offline during fleet operations in the past.
     setPollingPaused(true);
@@ -2975,9 +2976,9 @@ const Index = () => {
     } finally {
       // Let the last socket close before polling resumes.
       setTimeout(() => setPollingPaused(false), 1000);
-      setIsSyncingClocks(false);
+      syncClocksBusyRef.current = false;
     }
-  }, [sendCommandToPrinter, isSyncingClocks]);
+  }, [sendCommandToPrinter]);
 
 
 
