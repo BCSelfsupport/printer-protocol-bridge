@@ -167,6 +167,15 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
             <span className="hidden md:inline text-xs font-semibold text-card">Emulate Printers</span>
             <span className="md:hidden text-[9px] font-semibold text-card">Emulate</span>
           </button>
+          {onDateTimeSetup && (
+            <button
+              onClick={onDateTimeSetup}
+              className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
+              title="Printer Date / Time (sync clock to PC)"
+            >
+              <CalendarClock className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+            </button>
+          )}
           <div className="flex-1 min-w-0 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex w-max flex-nowrap items-center gap-1 md:gap-4 pl-2">
 
@@ -227,16 +236,6 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
                 )}
               </button>
 
-
-              {onDateTimeSetup && (
-                <button
-                  onClick={onDateTimeSetup}
-                  className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
-                  title="Printer Date / Time (sync clock to PC)"
-                >
-                  <CalendarClock className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
-                </button>
-              )}
 
               <button
                 onClick={() => setShowFeedback(true)}
