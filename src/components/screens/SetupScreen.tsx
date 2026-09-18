@@ -22,6 +22,10 @@ interface SetupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSendCommand?: (command: string) => Promise<any>;
+  /** Online printers eligible for a fleet-wide clock sync. */
+  syncCandidates?: Printer[];
+  /** Serialized fleet clock sync handler (provided by Index). */
+  onSyncPrinters?: (targets: Printer[]) => Promise<void> | void;
 }
 
 const DATE_FORMATS = ['MMDDYYYY', 'DDMMYYYY', 'YYYYMMDD'] as const;
