@@ -17,11 +17,17 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
+import { Printer } from '@/types/printer';
+import { SyncClocksDialog } from '@/components/printers/SyncClocksDialog';
 
 interface SetupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSendCommand?: (command: string) => Promise<any>;
+  /** Online printers eligible for a fleet-wide clock sync. */
+  syncCandidates?: Printer[];
+  /** Serialized fleet clock sync handler (provided by Index). */
+  onSyncPrinters?: (targets: Printer[]) => Promise<void> | void;
 }
 
 const DATE_FORMATS = ['MMDDYYYY', 'DDMMYYYY', 'YYYYMMDD'] as const;
@@ -60,7 +66,8 @@ function CycleRow({
   );
 }
 
-export function SetupScreen({ open, onOpenChange, onSendCommand }: SetupDialogProps) {
+export function SetupScreen({ open, onOpenChange, onSendCommand, syncCandidates = [], onSyncPrinters }: SetupDialogProps) {
+  const [fleetSyncOpen, setFleetSyncOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string>(format(new Date(), 'HH:mm:ss'));
@@ -164,17 +171,36 @@ export function SetupScreen({ open, onOpenChange, onSendCommand }: SetupDialogPr
           <DialogTitle>Setup: Date / Time</DialogTitle>
         </DialogHeader>
 
-        <div className="flex justify-end -mt-2">
+        <div className="flex justify-end gap-2 -mt-2 flex-wrap">
           <button
             onClick={handleSyncToPc}
             disabled={!onSendCommand}
             className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-2 disabled:opacity-50"
-            title="Sync printer clock to PC time"
+            title="Sync connected printer clock to PC time"
           >
             <RefreshCw className="w-5 h-5" />
             <span className="text-sm font-medium">Sync to PC</span>
           </button>
+          {onSyncPrinters && (
+            <button
+              onClick={() => setFleetSyncOpen(true)}
+              className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-2"
+              title="Sync several printers' clocks to PC time"
+            >
+              <RefreshCw className="w-5 h-5" />
+              <span className="text-sm font-medium">Sync All Printers…</span>
+            </button>
+          )}
         </div>
+
+        {onSyncPrinters && (
+          <SyncClocksDialog
+            open={fleetSyncOpen}
+            onOpenChange={setFleetSyncOpen}
+            candidates={syncCandidates}
+            onConfirm={(targets) => { void onSyncPrinters(targets); }}
+          />
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           {/* Date + Format */}

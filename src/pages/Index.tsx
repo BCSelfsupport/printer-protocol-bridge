@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { CountdownType } from '@/hooks/useJetCountdown';
@@ -2932,6 +2933,35 @@ const Index = () => {
     }
   }, [sendCommandToPrinter, startCountdown, getCountdown]);
 
+  // Fleet clock sync — sets date (^DS) then time (^TS) on each selected printer
+  // from the PC clock. Serialized with the 300ms firmware gap to protect port 23.
+  const handleSyncClocks = useCallback(async (targets: Printer[]) => {
+    const filtered = targets.filter(p => p.isAvailable);
+    if (filtered.length === 0) {
+      toast.info('No online printers to sync.');
+      return;
+    }
+    let ok = 0;
+    let fail = 0;
+    for (const printer of filtered) {
+      const now = new Date();
+      const dateStr = format(now, 'MM/dd/yyyy');
+      const timeStr = format(now, 'HH:mm:ss');
+      try {
+        const dOk = await sendCommandToPrinter(printer, `^DS ${dateStr}`);
+        await new Promise(r => setTimeout(r, 300));
+        const tOk = await sendCommandToPrinter(printer, `^TS ${timeStr}`);
+        if (dOk && tOk) ok += 1; else fail += 1;
+      } catch (e) {
+        fail += 1;
+        console.error('[SyncClocks] error', { id: printer.id, error: e });
+      }
+      await new Promise(r => setTimeout(r, 300));
+    }
+    if (fail === 0) toast.success(`Clock synced on ${ok} printer${ok === 1 ? '' : 's'}.`);
+    else toast.warning(`Clock sync: ${ok} succeeded, ${fail} failed.`);
+  }, [sendCommandToPrinter]);
+
 
 
   // Force Print handler: sends ^PT then advances the data source row for VDP messages
@@ -3888,6 +3918,8 @@ const Index = () => {
         open={setupDialogOpen}
         onOpenChange={setSetupDialogOpen}
         onSendCommand={sendCommand}
+        syncCandidates={printers.filter(p => p.isAvailable)}
+        onSyncPrinters={handleSyncClocks}
       />
 
       {/* Per-printer Setup Card opened from the bottom-nav "Adjust" shortcut.
