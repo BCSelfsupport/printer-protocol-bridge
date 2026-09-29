@@ -123,3 +123,4 @@ Updated: today
 - [Authentix TnT Answers 07/2026](mem://integration/authentix-tnt-answers-2026-07) — Cat1 fatal line-stop, ack-on-receipt, no TLS, TnT owns serial increment start
 - [TwinCode Print Format](mem://features/twin-code-serial-format) — 17-char (no lot) / 24-char (with lot) full message; CodeSync increments serial inside format
 - [TnT Session Controller](mem://features/tnt-session-controller) — Config reseed, Print dispatch, Cat-1 fatal latch, Cat-2 placeholder sub-codes
+- [Wire & Cable package](mem://features/wire-cable-package) — wirecable tier; sheet barcode = job ID lookup → ^NM/^SV/^SM; job log, flip-flop, tower

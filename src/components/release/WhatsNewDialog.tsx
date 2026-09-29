@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'wire-cable-package',
+    type: 'feature',
+    title: 'New Wire & Cable Package: Scan-to-Print Cable Jobs',
+    date: '29 Sep 2026',
+    summary:
+      'A new Wire & Cable licence (includes everything in Database). The Cable screen now has four tabs. Scan to Print: scan the job barcode on the production sheet with a USB scanner (works anywhere on the screen) or the phone companion; CodeSync looks the job up in your job table, shows a confirmation, then writes the job data into the message on the chosen printer, saves it and selects it, with no typing or picking from a list. Scan a printer label like "P3" to choose the printer. Job Setup: pick the job table, the job ID column, an optional message-name column and which column fills each message field; optionally reset the print counter on every new job and set a length counter start value. Line Setup: the existing pitch, encoder, metre/foot, tower and flip-flop settings. Job Log: every job with its printer, operator, length and print count, exportable to CSV.',
+  },
+  {
     id: 'sync-all-printer-clocks',
     type: 'feature',
     title: 'Sync All Printer Clocks From Your PC',
