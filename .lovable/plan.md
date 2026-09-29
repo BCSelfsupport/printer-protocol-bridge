@@ -20,7 +20,7 @@ No typing and no picking from a list, so the wrong message can't be chosen by mi
 3. **Scan-to-print**:
    - USB scanner: an always-listening scan box on the Wire & Cable screen. It catches the fast keystrokes a scanner types and the Enter key at the end.
    - Phone camera: reuses the mobile companion scan feature that already exists.
-   - Two ways to read the sheet code: **Lookup** (the code is a job ID, matched against the job table) or **Direct** (the code holds all the fields, split by a separator you set). You choose the mode in settings until your colleague sends a sample sheet.
+   - The sheet code is a job ID. It's looked up in the job table, and that row supplies the message and all the data to print. If no job matches, the operator sees a clear "Job not found" alert and nothing is sent.
    - Printer choice: scan a printer's label first (for example "P3"), or use the printer that's currently selected.
    - A confirm screen shows the job, the printer and a message preview, then sends it using the existing safe save sequence (create the message, save it, then select it).
 4. **Metre/foot numbering**: a running length mark driven by the encoder and pitch settings we already have. Choose metres or feet, a starting value and the step size. Where the printer's own counter can do it, the count runs on the printer itself.
@@ -31,7 +31,7 @@ No typing and no picking from a list, so the wrong message can't be chosen by mi
 The workspace is laid out so more cable features can be added later. Non-transfer ink notes are left out for now.
 
 ## Open items (questions for your colleague)
-- A sample production sheet, so we know what's in the barcode and whether it's a 1D or 2D code.
+- A sample production sheet, so we can see the job ID format and whether it's a 1D or 2D code.
 - The job database they use (Excel/CSV export, SQL, or another system).
 - Whether the printer needs to show running metres itself or whether the PC count is enough.
 
