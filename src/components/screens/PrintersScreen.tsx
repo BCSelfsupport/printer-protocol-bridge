@@ -42,6 +42,8 @@ import { CSS } from '@dnd-kit/utilities';
 
 
 import { NavItem } from '@/components/layout/BottomNav';
+import twinCodeLogo from '@/assets/twin-code-logo.png';
+import wireCableLogo from '@/assets/wire-cable-logo.png';
 
 interface PrintersScreenProps {
   printers: Printer[];

@@ -155,14 +155,6 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
               v{appVersion}
             </span>
           )}
-          {tier === 'wirecable' && (
-            <img
-              src={wireCableLogo}
-              alt="Wire & Cable"
-              title="Wire & Cable package"
-              className="h-7 w-7 md:h-10 md:w-10 object-contain ml-1"
-            />
-          )}
         </div>
 
         <div className="flex items-center min-w-0 flex-1 justify-end gap-2">
