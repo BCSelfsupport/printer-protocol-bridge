@@ -1,1 +1,2 @@
 - Wire & Cable package lives in `src/wire-cable/` as tabs inside `WireCableScreen` (not a separate route) — sending needs Index's printer connection helpers (`sendCableJob`).
+- Tower Print is message-level state: combine it with each target printer's base rotation to emit protocol orientation 4–7.

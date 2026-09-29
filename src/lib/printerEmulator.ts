@@ -52,6 +52,10 @@ export interface EmulatorState {
   repeatCount: number;
   gap: number;
   bold: number;
+  messageTemplate: number;
+  messageSpeed: number;
+  messageOrientation: number;
+  messagePrintMode: number;
   
   // Runtime
   powerHours: number;
@@ -196,6 +200,10 @@ const defaultState: EmulatorState = {
   repeatCount: 1,
   gap: 1,
   bold: 0,
+  messageTemplate: 4,
+  messageSpeed: 0,
+  messageOrientation: 0,
+  messagePrintMode: 0,
   
   powerHours: 165.0,
   streamHours: 120.5,
@@ -779,8 +787,7 @@ class PrinterEmulator {
   }
 
   private cmdGetMessageParams(_cmd: string): string {
-    // Simplified response
-    return `T:4 S:0 O:0 P:0`;
+    return `T:${this.state.messageTemplate} S:${this.state.messageSpeed} O:${this.state.messageOrientation} P:${this.state.messagePrintMode}`;
   }
 
   private cmdListFields(_cmd: string): string {
@@ -816,9 +823,13 @@ class PrinterEmulator {
     // ^NM MSGNAME (simple format)
     let msgName: string | null = null;
     
-    const fullMatch = cmd.match(/\^NM\s*\d*;\d*;\d*;\d*;(\w+)/);
+    const fullMatch = cmd.match(/\^NM\s*(\d+);(\d+);(\d+);(\d+);([\w-]+)/);
     if (fullMatch) {
-      msgName = fullMatch[1].toUpperCase();
+      this.state.messageTemplate = Number.parseInt(fullMatch[1], 10);
+      this.state.messageSpeed = Number.parseInt(fullMatch[2], 10);
+      this.state.messageOrientation = Number.parseInt(fullMatch[3], 10);
+      this.state.messagePrintMode = Number.parseInt(fullMatch[4], 10);
+      msgName = fullMatch[5].toUpperCase();
     } else {
       const simpleMatch = cmd.match(/\^NM\s+(\w+)/);
       if (simpleMatch) {
@@ -860,7 +871,16 @@ class PrinterEmulator {
     return this.formatError(2, 'CmdFormat', 'Usage: ^NG name;width;height;hexdata');
   }
 
-  private cmdChangeMessage(_cmd: string): string {
+  private cmdChangeMessage(cmd: string): string {
+    const namedValues = [...cmd.matchAll(/(?:^|;)\s*([tsop])(\d+)/gi)];
+    for (const match of namedValues) {
+      const value = Number.parseInt(match[2], 10);
+      if (match[1].toLowerCase() === 't') this.state.messageTemplate = value;
+      if (match[1].toLowerCase() === 's') this.state.messageSpeed = value;
+      if (match[1].toLowerCase() === 'o') this.state.messageOrientation = value;
+      if (match[1].toLowerCase() === 'p') this.state.messagePrintMode = value;
+    }
+    this.notifyListeners();
     return this.formatSuccess();
   }
 
