@@ -149,12 +149,9 @@ interface MessageSettingsDialogProps {
   onOpenChange: (open: boolean) => void;
   settings: MessageSettings;
   onUpdate: (settings: Partial<MessageSettings>) => void;
-  allowTower?: boolean;
 }
 
-const rotationValues: MessageSettings['rotation'][] = [
-  'Normal', 'Flip', 'Mirror', 'Mirror Flip', 'Tower', 'Tower Flip', 'Tower Mirror', 'Tower Mirror Flip'
-];
+const rotationValues: MessageSettings['rotation'][] = ['Normal', 'Flip', 'Mirror', 'Mirror Flip'];
 const speedValues: MessageSettings['speed'][] = ['Fast', 'Faster', 'Fastest', 'Ultra Fast'];
 const printModeValues: MessageSettings['printMode'][] = ['Normal', 'Auto', 'Repeat', 'Reverse', 'Auto Encoder', 'Auto Encoder Reverse'];
 
@@ -163,12 +160,10 @@ export function MessageSettingsDialog({
   onOpenChange,
   settings,
   onUpdate,
-  allowTower = false,
 }: MessageSettingsDialogProps) {
   const cycleRotation = () => {
-    const allowedRotations = allowTower ? rotationValues : rotationValues.slice(0, 4);
-    const idx = allowedRotations.indexOf(settings.rotation);
-    onUpdate({ rotation: allowedRotations[(Math.max(0, idx) + 1) % allowedRotations.length] });
+    const idx = rotationValues.indexOf(settings.rotation);
+    onUpdate({ rotation: rotationValues[(Math.max(0, idx) + 1) % rotationValues.length] });
   };
 
   const cycleSpeedUp = () => {

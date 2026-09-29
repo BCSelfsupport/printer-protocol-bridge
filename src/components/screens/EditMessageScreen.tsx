@@ -1723,7 +1723,6 @@ export function EditMessageScreen({
             open={settingsDialogOpen}
             onOpenChange={setSettingsDialogOpen}
             settings={message.settings || defaultMessageSettings}
-            allowTower={canTowerPrint}
             onUpdate={(newSettings) => {
               setMessage((prev) => ({
                 ...prev,
