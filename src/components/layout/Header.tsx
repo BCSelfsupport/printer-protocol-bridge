@@ -11,8 +11,6 @@ import { UserManualDialog } from '@/components/help/UserManualDialog';
 import { PairMobileDialog } from '@/components/license/PairMobileDialog';
 import { ModelBadge } from '@/components/branding/ModelBadge';
 import { EmulationPrintersDialog } from '@/components/dev/EmulationPrintersDialog';
-import { useLicense } from '@/contexts/LicenseContext';
-import wireCableLogo from '@/assets/wire-cable-logo.png';
 
 declare const __APP_VERSION__: string;
 
@@ -33,7 +31,6 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const { theme, setTheme } = useTheme();
-  const { tier } = useLicense();
   const [mounted, setMounted] = useState(false);
   const [appVersion, setAppVersion] = useState<string>(
     (() => {
@@ -154,14 +151,6 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
             <span className="text-[10px] text-muted-foreground font-mono ml-1 self-end mb-0.5">
               v{appVersion}
             </span>
-          )}
-          {tier === 'wirecable' && (
-            <img
-              src={wireCableLogo}
-              alt="Wire & Cable"
-              title="Wire & Cable package"
-              className="h-7 w-7 md:h-10 md:w-10 object-contain ml-1"
-            />
           )}
         </div>
 

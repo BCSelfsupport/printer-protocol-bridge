@@ -42,6 +42,8 @@ import { CSS } from '@dnd-kit/utilities';
 
 
 import { NavItem } from '@/components/layout/BottomNav';
+import twinCodeLogo from '@/assets/twin-code-logo.png';
+import wireCableLogo from '@/assets/wire-cable-logo.png';
 
 interface PrintersScreenProps {
   printers: Printer[];
@@ -584,6 +586,20 @@ export function PrintersScreen({
     <div className="flex-1 flex flex-col md:flex-row bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-3 md:p-4 gap-3 md:gap-4 overflow-y-auto md:overflow-hidden">
       {/* Left Panel - Printer List (narrower on desktop when showing Dashboard) */}
       <div className={`w-full md:w-[28%] md:max-w-[400px] md:min-w-[320px] flex-shrink-0 flex flex-col bg-slate-900/50 rounded-xl border border-slate-800 overflow-visible md:overflow-hidden`}>
+        {/* Product branding (TwinCode / Wire & Cable licences) */}
+        {(tier === 'twincode' || tier === 'wirecable') && (
+          <div className="flex flex-col items-center gap-1 pt-3 pb-2 px-3 bg-slate-900/80 border-b border-slate-800">
+            <img
+              src={tier === 'twincode' ? twinCodeLogo : wireCableLogo}
+              alt={tier === 'twincode' ? 'TwinCode' : 'Wire & Cable'}
+              className="h-16 w-16 object-contain"
+            />
+            <span className="text-xs font-bold tracking-wide">
+              <span className="text-blue-400">{tier === 'twincode' ? 'Twin' : 'Wire'}</span>
+              <span className="text-emerald-400">{tier === 'twincode' ? 'Code' : ' & Cable'}</span>
+            </span>
+          </div>
+        )}
         {/* Header */}
         <div className="p-3 border-b border-slate-800 bg-slate-900/80">
           <div className="flex items-center justify-between mb-3">
