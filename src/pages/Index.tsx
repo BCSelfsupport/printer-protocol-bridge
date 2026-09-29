@@ -397,7 +397,7 @@ const Index = () => {
       ?? stored.rotation
       ?? details.settings?.rotation
       ?? FLEET_DEFAULT_ADJUST_SETTINGS.rotation;
-    const effectiveRotation = withTowerRotation(baseRotation, !!details.towerPrint);
+    const effectiveRotation = withTowerRotation(baseRotation, !!details.towerPrint, !!details.towerReverse);
     const effectivePrintMode = details.settings?.printMode ?? 'Normal';
 
     const fullAdjustSettings: PrintSettings = {
@@ -1056,7 +1056,7 @@ const Index = () => {
   const replaceMessageWithoutDelete = useCallback(async (
     targetPrinter: Printer,
     messageName: string,
-    details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings' | 'advancedSettings' | 'towerPrint'>,
+    details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings' | 'advancedSettings' | 'towerPrint' | 'towerReverse'>,
     reselectAfter: boolean = true,
   ) => {
     // Protected messages are safety-net messages on the printer (e.g. a
@@ -1180,7 +1180,7 @@ const Index = () => {
       let ok = false;
       // Per-printer rotation override: always force the printer card setting
       // into the message header so message-stored rotation is ignored.
-      const slaveRotation = withTowerRotation(slave.rotation ?? 'Normal', !!details.towerPrint);
+      const slaveRotation = withTowerRotation(slave.rotation ?? 'Normal', !!details.towerPrint, !!details.towerReverse);
       const slaveAdjust = { ...(details.adjustSettings ?? {}), rotation: slaveRotation };
       // Per-printer expiry offset override: apply slave.expiryOffsetDays to
       // any expiry date field so each line uses its own offset.
@@ -1784,6 +1784,7 @@ const Index = () => {
             adjustSettings: targetAdjust,
             advancedSettings: details!.advancedSettings,
             towerPrint: details!.towerPrint,
+            towerReverse: details!.towerReverse,
           }, false);
           if (result.success) {
             const targetDetails = normalizeMessageForPrinter({
@@ -3162,6 +3163,7 @@ const Index = () => {
         fields, templateValue: stored.templateValue, settings: stored.settings,
         adjustSettings: stored.adjustSettings, advancedSettings: stored.advancedSettings,
         towerPrint: stored.towerPrint,
+        towerReverse: stored.towerReverse,
       }, false);
       if (!res.success) return { ok: false, reason: `Printer rejected the message (${res.reason})` };
       await sendCommandToPrinter(printer, '^SV');

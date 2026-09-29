@@ -52,6 +52,7 @@ interface MessageCanvasProps {
   /** Let parent temporarily disable its horizontal scroller while dragging */
   onScrollLockChange?: (locked: boolean) => void;
   towerPrint?: boolean;
+  towerReverse?: boolean;
 }
 
 const TOTAL_ROWS = 32;
@@ -73,6 +74,7 @@ export function MessageCanvas({
   onFieldError,
   onScrollLockChange,
   towerPrint = false,
+  towerReverse = false,
 }: MessageCanvasProps) {
   const [scrollX, setScrollX] = useState(0); // derived from scroller scrollLeft (in dots)
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -483,10 +485,18 @@ export function MessageCanvas({
         ctx.fillStyle = '#1a1a1a';
         if (towerPrint) {
           const advance = (fontInfo.height + (field.gap ?? 1)) * DOT_SIZE;
-          Array.from(field.data).forEach((character, index) => {
+          const chars = Array.from(field.data);
+          chars.forEach((character, index) => {
             ctx.save();
-            ctx.translate(fieldX + index * advance + fontInfo.height * DOT_SIZE, fieldY);
-            ctx.rotate(Math.PI / 2);
+            if (towerReverse) {
+              // 180° turn of the whole tower: characters rotate the other way and order reverses
+              const slot = chars.length - 1 - index;
+              ctx.translate(fieldX + slot * advance, fieldY + fontInfo.charWidth * DOT_SIZE);
+              ctx.rotate(-Math.PI / 2);
+            } else {
+              ctx.translate(fieldX + index * advance + fontInfo.height * DOT_SIZE, fieldY);
+              ctx.rotate(Math.PI / 2);
+            }
             renderText(ctx, character, 0, 0, field.fontSize, DOT_SIZE, 0);
             ctx.restore();
           });
@@ -552,7 +562,7 @@ export function MessageCanvas({
       ctx.strokeRect(mx, my, mw, mh);
       ctx.setLineDash([]);
     }
-  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, selectedFieldIds, canvasWidth, multilineTemplate, getMultilineLinePositions, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible, barcodeImages, isMarquee, marqueeStart, marqueeEnd, towerPrint]);
+  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, selectedFieldIds, canvasWidth, multilineTemplate, getMultilineLinePositions, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible, barcodeImages, isMarquee, marqueeStart, marqueeEnd, towerPrint, towerReverse]);
   
   const getMousePosition = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current?.getBoundingClientRect();
