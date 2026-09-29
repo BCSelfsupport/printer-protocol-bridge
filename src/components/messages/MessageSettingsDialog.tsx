@@ -149,6 +149,7 @@ interface MessageSettingsDialogProps {
   onOpenChange: (open: boolean) => void;
   settings: MessageSettings;
   onUpdate: (settings: Partial<MessageSettings>) => void;
+  allowTower?: boolean;
 }
 
 const rotationValues: MessageSettings['rotation'][] = [
@@ -162,10 +163,12 @@ export function MessageSettingsDialog({
   onOpenChange,
   settings,
   onUpdate,
+  allowTower = false,
 }: MessageSettingsDialogProps) {
   const cycleRotation = () => {
-    const idx = rotationValues.indexOf(settings.rotation);
-    onUpdate({ rotation: rotationValues[(idx + 1) % rotationValues.length] });
+    const allowedRotations = allowTower ? rotationValues : rotationValues.slice(0, 4);
+    const idx = allowedRotations.indexOf(settings.rotation);
+    onUpdate({ rotation: allowedRotations[(Math.max(0, idx) + 1) % allowedRotations.length] });
   };
 
   const cycleSpeedUp = () => {
