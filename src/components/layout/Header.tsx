@@ -12,7 +12,6 @@ import { PairMobileDialog } from '@/components/license/PairMobileDialog';
 import { ModelBadge } from '@/components/branding/ModelBadge';
 import { EmulationPrintersDialog } from '@/components/dev/EmulationPrintersDialog';
 import { useLicense } from '@/contexts/LicenseContext';
-import wireCableLogo from '@/assets/wire-cable-logo.png';
 
 declare const __APP_VERSION__: string;
 
