@@ -35,10 +35,10 @@ export function basePrinterRotation(rotation: MessageOrientation | string | unde
 }
 
 const ROTATE_180: Record<PrinterRotation, PrinterRotation> = {
-  Normal: 'Mirror Flip', 'Mirror Flip': 'Normal', Flip: 'Mirror', Mirror: 'Flip',
+  Normal: 'Flip', Flip: 'Normal', Mirror: 'Mirror Flip', 'Mirror Flip': 'Mirror',
 };
 
-/** towerReverse rotates the tower print 180° (Mirror+Flip) so it reads the opposite direction (ABC vs CBA). */
+/** towerReverse turns each tower character the opposite way (Tower Flip) while keeping character order, so it reads the opposite direction (ABC vs CBA). */
 export function withTowerRotation(rotation: MessageOrientation | string | undefined, towerPrint: boolean, towerReverse = false): MessageOrientation {
   let base = basePrinterRotation(rotation);
   if (!towerPrint) return base;
