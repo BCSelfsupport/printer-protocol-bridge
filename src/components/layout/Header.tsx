@@ -11,7 +11,6 @@ import { UserManualDialog } from '@/components/help/UserManualDialog';
 import { PairMobileDialog } from '@/components/license/PairMobileDialog';
 import { ModelBadge } from '@/components/branding/ModelBadge';
 import { EmulationPrintersDialog } from '@/components/dev/EmulationPrintersDialog';
-import { useLicense } from '@/contexts/LicenseContext';
 
 declare const __APP_VERSION__: string;
 
@@ -32,7 +31,6 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const { theme, setTheme } = useTheme();
-  const { tier } = useLicense();
   const [mounted, setMounted] = useState(false);
   const [appVersion, setAppVersion] = useState<string>(
     (() => {
