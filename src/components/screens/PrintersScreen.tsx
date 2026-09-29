@@ -588,12 +588,13 @@ export function PrintersScreen({
       <div className={`w-full md:w-[28%] md:max-w-[400px] md:min-w-[320px] flex-shrink-0 flex flex-col bg-slate-900/50 rounded-xl border border-slate-800 overflow-visible md:overflow-hidden`}>
         {/* Product branding (TwinCode / Wire & Cable licences) */}
         {(tier === 'twincode' || tier === 'wirecable') && (
-          <div className="flex flex-col items-center gap-1 pt-3 pb-2 px-3 bg-slate-900/80 border-b border-slate-800">
+          <div className="flex items-center justify-center gap-0.5 pt-3 pb-3 px-3 bg-slate-900/80 border-b border-slate-800">
             <img
               src={tier === 'twincode' ? twinCodeLogo : wireCableLogo}
               alt={tier === 'twincode' ? 'TwinCode' : 'Wire & Cable'}
-              className="h-20 w-auto max-w-full object-contain"
+              className="h-20 w-auto max-w-[calc(100%-1rem)] object-contain"
             />
+            <sup className="text-xs font-semibold text-slate-300 self-start mt-1">TM</sup>
             <span className="text-xs font-bold tracking-wide">
               <span className="text-blue-400">{tier === 'twincode' ? 'Twin' : 'Wire'}</span>
               <span className="text-emerald-400">{tier === 'twincode' ? 'Code' : ' & Cable'}</span>
