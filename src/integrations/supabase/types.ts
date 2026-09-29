@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      cable_job_log: {
+        Row: {
+          created_at: string
+          data_source_id: string | null
+          ended_at: string | null
+          error_message: string | null
+          field_values: Json
+          id: string
+          job_code: string
+          length_printed: number
+          license_id: string | null
+          message_name: string
+          operator: string | null
+          print_count: number
+          printer_id: number
+          printer_name: string | null
+          started_at: string
+          status: string
+          unit: string
+        }
+        Insert: {
+          created_at?: string
+          data_source_id?: string | null
+          ended_at?: string | null
+          error_message?: string | null
+          field_values?: Json
+          id?: string
+          job_code: string
+          length_printed?: number
+          license_id?: string | null
+          message_name: string
+          operator?: string | null
+          print_count?: number
+          printer_id: number
+          printer_name?: string | null
+          started_at?: string
+          status?: string
+          unit?: string
+        }
+        Update: {
+          created_at?: string
+          data_source_id?: string | null
+          ended_at?: string | null
+          error_message?: string | null
+          field_values?: Json
+          id?: string
+          job_code?: string
+          length_printed?: number
+          license_id?: string | null
+          message_name?: string
+          operator?: string | null
+          print_count?: number
+          printer_id?: number
+          printer_name?: string | null
+          started_at?: string
+          status?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cable_job_log_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companion_sessions: {
         Row: {
           companion_machine_id: string | null
@@ -965,7 +1033,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      license_tier: "lite" | "full" | "database" | "demo" | "twincode"
+      license_tier:
+        | "lite"
+        | "full"
+        | "database"
+        | "demo"
+        | "twincode"
+        | "wirecable"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1093,7 +1167,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      license_tier: ["lite", "full", "database", "demo", "twincode"],
+      license_tier: [
+        "lite",
+        "full",
+        "database",
+        "demo",
+        "twincode",
+        "wirecable",
+      ],
     },
   },
 } as const
