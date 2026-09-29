@@ -595,9 +595,6 @@ export function PrintersScreen({
               className="h-20 w-auto max-w-[calc(100%-1rem)] object-contain"
             />
             <sup className="text-xs font-semibold text-slate-300 self-start mt-1">TM</sup>
-            <span className="text-xs font-bold tracking-wide">
-              <span className="text-blue-400">{tier === 'twincode' ? 'Twin' : 'Wire'}</span>
-              <span className="text-emerald-400">{tier === 'twincode' ? 'Code' : ' & Cable'}</span>
             </span>
           </div>
         )}
