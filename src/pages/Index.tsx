@@ -15,6 +15,7 @@ import { PrintersScreen } from '@/components/screens/PrintersScreen';
 import { MessagesScreen } from '@/components/screens/MessagesScreen';
 import { EditMessageScreen, MessageDetails } from '@/components/screens/EditMessageScreen';
 import { PrintSettings, FLEET_DEFAULT_ADJUST_SETTINGS } from '@/types/printer';
+import { MESSAGE_ORIENTATION_TO_CODE, withTowerRotation } from '@/lib/messageOrientation';
 import { getPrinterMessageDefaults } from '@/lib/fleetDefaults';
 import { AdjustDialog } from '@/components/adjust/AdjustDialog';
 import { SetupScreen } from '@/components/screens/SetupScreen';
@@ -105,12 +106,7 @@ const SPEED_TO_PROTOCOL_CODE: Record<PrintSettings['speed'], number> = {
   'Ultra Fast': 3,
 };
 
-const ROTATION_TO_PROTOCOL_CODE: Record<PrintSettings['rotation'], number> = {
-  Normal: 0,
-  Flip: 1,
-  Mirror: 2,
-  'Mirror Flip': 3,
-};
+const ROTATION_TO_PROTOCOL_CODE = MESSAGE_ORIENTATION_TO_CODE;
 
 const PRINT_MODE_TO_PROTOCOL_CODE: Record<string, number> = {
   Normal: 0,
@@ -397,10 +393,11 @@ const Index = () => {
         ?? stored.speed
         ?? details.settings?.speed
         ?? FLEET_DEFAULT_ADJUST_SETTINGS.speed);
-    const effectiveRotation = printerForDefaults?.rotation
+    const baseRotation = printerForDefaults?.rotation
       ?? stored.rotation
       ?? details.settings?.rotation
       ?? FLEET_DEFAULT_ADJUST_SETTINGS.rotation;
+    const effectiveRotation = withTowerRotation(baseRotation, !!details.towerPrint);
     const effectivePrintMode = details.settings?.printMode ?? 'Normal';
 
     const fullAdjustSettings: PrintSettings = {
@@ -1059,7 +1056,7 @@ const Index = () => {
   const replaceMessageWithoutDelete = useCallback(async (
     targetPrinter: Printer,
     messageName: string,
-    details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings' | 'advancedSettings'>,
+    details: Pick<MessageDetails, 'fields' | 'templateValue' | 'settings' | 'adjustSettings' | 'advancedSettings' | 'towerPrint'>,
     reselectAfter: boolean = true,
   ) => {
     // Protected messages are safety-net messages on the printer (e.g. a
@@ -1183,7 +1180,7 @@ const Index = () => {
       let ok = false;
       // Per-printer rotation override: always force the printer card setting
       // into the message header so message-stored rotation is ignored.
-      const slaveRotation = slave.rotation ?? 'Normal';
+      const slaveRotation = withTowerRotation(slave.rotation ?? 'Normal', !!details.towerPrint);
       const slaveAdjust = { ...(details.adjustSettings ?? {}), rotation: slaveRotation };
       // Per-printer expiry offset override: apply slave.expiryOffsetDays to
       // any expiry date field so each line uses its own offset.
@@ -1786,6 +1783,7 @@ const Index = () => {
             settings: details!.settings,
             adjustSettings: targetAdjust,
             advancedSettings: details!.advancedSettings,
+            towerPrint: details!.towerPrint,
           }, false);
           if (result.success) {
             const targetDetails = normalizeMessageForPrinter({
@@ -3163,6 +3161,7 @@ const Index = () => {
       const res = await replaceMessageWithoutDelete(printer, messageName, {
         fields, templateValue: stored.templateValue, settings: stored.settings,
         adjustSettings: stored.adjustSettings, advancedSettings: stored.advancedSettings,
+        towerPrint: stored.towerPrint,
       }, false);
       if (!res.success) return { ok: false, reason: `Printer rejected the message (${res.reason})` };
       await sendCommandToPrinter(printer, '^SV');
@@ -3310,6 +3309,7 @@ const Index = () => {
           )}
           onSendCommand={sendCommand}
           otherPrinterRows={buildOtherPrinterRows(editingMessage.name, messageTargetPrinter?.id ?? null)}
+          canTowerPrint={canWireCable}
           onSave={saveEditedMessage}
           onCancel={() => {
             setCurrentScreen('messages');
@@ -3425,6 +3425,7 @@ const Index = () => {
             )}
             onSendCommand={sendCommand}
             otherPrinterRows={buildOtherPrinterRows(editingMessage.name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id ?? null)}
+            canTowerPrint={canWireCable}
           onSave={saveEditedMessage}
             onCancel={() => {
               setCurrentScreen('messages');
@@ -3863,7 +3864,7 @@ const Index = () => {
     );
   };
 
-  const { isActivated, isLoading: licenseLoading, error: licenseError, canNetwork } = useLicense();
+  const { isActivated, isLoading: licenseLoading, error: licenseError, canNetwork, canWireCable } = useLicense();
 
   // Full lockout: if no valid license, show only the activation dialog
   if (!isActivated && !licenseLoading) {
