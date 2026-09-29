@@ -382,7 +382,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   }, [state.productKey]);
 
   return (
-    <LicenseContext.Provider value={{ ...state, tier: effectiveTier, activate, deactivate, pairAsCompanion, generatePairingCode, listPairedCompanions, revokeCompanion, setDevTierOverride, devTierOverride, canNetwork, canDatabase, canTwinCode, isDemo, isDeveloper, isOwnerDeveloper }}>
+    <LicenseContext.Provider value={{ ...state, tier: effectiveTier, activate, deactivate, pairAsCompanion, generatePairingCode, listPairedCompanions, revokeCompanion, setDevTierOverride, devTierOverride, canNetwork, canDatabase, canTwinCode, canWireCable, isDemo, isDeveloper, isOwnerDeveloper }}>
       {children}
     </LicenseContext.Provider>
   );
