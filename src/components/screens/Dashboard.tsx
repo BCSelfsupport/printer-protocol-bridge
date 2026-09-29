@@ -95,7 +95,7 @@ export function Dashboard({
 }: DashboardProps) {
   const [countersDialogOpen, setCountersDialogOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
-  const { canDatabase } = useLicense();
+  const { canDatabase, canWireCable } = useLicense();
 
   // Filter status for the gauge
   const filterStatus = useMemo(() => {
