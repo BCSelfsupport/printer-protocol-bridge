@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { toast } from 'sonner';
 import { isDevAccessRuntime } from '@/lib/devAccess';
 
-export type LicenseTier = 'lite' | 'full' | 'database' | 'demo' | 'dev' | 'twincode';
+export type LicenseTier = 'lite' | 'full' | 'database' | 'demo' | 'dev' | 'twincode' | 'wirecable';
 
 interface LicenseState {
   tier: LicenseTier;
@@ -37,6 +37,8 @@ interface LicenseContextValue extends LicenseState {
   canDatabase: boolean;
   /** TwinCode (bonded 2-printer mode) — only the dedicated 'twincode' tier or 'dev' unlocks it. */
   canTwinCode: boolean;
+  /** Wire & Cable package (scan-to-print jobs, cable marking) — 'wirecable' or 'dev'. */
+  canWireCable: boolean;
   isDemo: boolean;
   /** True if this license key is registered in developer_licenses (dev-mode bypass returns true). */
   isDeveloper: boolean;
@@ -333,7 +335,8 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
 
   // TwinCode and dev tiers also get full network access (they manage paired printers).
   const canNetwork = effectiveTier !== 'lite';
-  const canDatabase = effectiveTier === 'database' || effectiveTier === 'demo' || effectiveTier === 'dev';
+  const canDatabase = effectiveTier === 'database' || effectiveTier === 'demo' || effectiveTier === 'dev' || effectiveTier === 'wirecable';
+  const canWireCable = effectiveTier === 'wirecable' || effectiveTier === 'dev';
   const canTwinCode = effectiveTier === 'twincode' || effectiveTier === 'dev';
   const isDemo = effectiveTier === 'demo';
 
@@ -379,7 +382,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   }, [state.productKey]);
 
   return (
-    <LicenseContext.Provider value={{ ...state, tier: effectiveTier, activate, deactivate, pairAsCompanion, generatePairingCode, listPairedCompanions, revokeCompanion, setDevTierOverride, devTierOverride, canNetwork, canDatabase, canTwinCode, isDemo, isDeveloper, isOwnerDeveloper }}>
+    <LicenseContext.Provider value={{ ...state, tier: effectiveTier, activate, deactivate, pairAsCompanion, generatePairingCode, listPairedCompanions, revokeCompanion, setDevTierOverride, devTierOverride, canNetwork, canDatabase, canTwinCode, canWireCable, isDemo, isDeveloper, isOwnerDeveloper }}>
       {children}
     </LicenseContext.Provider>
   );

@@ -1,0 +1,1 @@
+- Wire & Cable package lives in `src/wire-cable/` as tabs inside `WireCableScreen` (not a separate route) — sending needs Index's printer connection helpers (`sendCableJob`).

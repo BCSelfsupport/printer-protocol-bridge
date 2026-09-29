@@ -40,6 +40,7 @@ export function LicenseActivationDialog({ open, onOpenChange }: LicenseActivatio
     full: { label: 'FULL', color: 'bg-blue-100 text-blue-700' },
     database: { label: 'DATABASE', color: 'bg-purple-100 text-purple-700' },
     twincode: { label: 'TWINCODE', color: 'bg-emerald-100 text-emerald-700' },
+    wirecable: { label: 'WIRE & CABLE', color: 'bg-orange-100 text-orange-700' },
     demo: { label: 'DEMO', color: 'bg-amber-100 text-amber-700' },
     dev: { label: 'DEVELOPER', color: 'bg-green-100 text-green-700' },
   };

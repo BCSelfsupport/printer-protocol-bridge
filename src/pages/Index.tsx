@@ -3140,6 +3140,54 @@ const Index = () => {
     return ok;
   };
 
+  // Wire & Cable scan-to-print: write the job's data into the message on the
+  // target printer (^NM → ^SV), select it (^SM), optionally zero counters.
+  // Strictly serialized with polling paused to protect the port-23 session.
+  const cableJobBusyRef = useRef(false);
+  const sendCableJob = async (
+    printer: Printer,
+    messageName: string,
+    mapFields: (fields: MessageDetails['fields']) => MessageDetails['fields'],
+    opts: { resetCounters: boolean; lengthStart: number | null },
+  ): Promise<{ ok: boolean; reason?: string }> => {
+    if (cableJobBusyRef.current) return { ok: false, reason: 'Another job is still being sent' };
+    if (!printer.isAvailable) return { ok: false, reason: `${printer.name} is offline` };
+    if (isMessageProtected(messageName)) return { ok: false, reason: `"${messageName}" is protected` };
+    const stored = getStoredMessageForPrinter(messageName, printer);
+    if (!stored) return { ok: false, reason: `Message "${messageName}" is not in the library for ${printer.name}` };
+    cableJobBusyRef.current = true;
+    setPollingPaused(true);
+    try {
+      await waitForPollingIdle();
+      const fields = mapFields(stored.fields);
+      const res = await replaceMessageWithoutDelete(printer, messageName, {
+        fields, templateValue: stored.templateValue, settings: stored.settings,
+        adjustSettings: stored.adjustSettings, advancedSettings: stored.advancedSettings,
+      }, false);
+      if (!res.success) return { ok: false, reason: `Printer rejected the message (${res.reason})` };
+      await sendCommandToPrinter(printer, '^SV');
+      await new Promise((r) => setTimeout(r, 300));
+      saveMessage(normalizeMessageForPrinter({ ...stored, fields }), printer.id);
+      const selected = await selectMessageOnAnyPrinter(printer, { id: 0, name: messageName });
+      if (!selected) return { ok: false, reason: 'Message written but select (^SM) was not acknowledged' };
+      if (opts.resetCounters) {
+        await new Promise((r) => setTimeout(r, 300));
+        await sendCommandToPrinter(printer, '^CC 0;0'); // Print counter
+      }
+      if (opts.lengthStart != null) {
+        await new Promise((r) => setTimeout(r, 300));
+        await sendCommandToPrinter(printer, `^CC 1;${Math.max(0, Math.round(opts.lengthStart))}`); // Custom counter 1
+      }
+      return { ok: true };
+    } catch (e) {
+      console.error('[sendCableJob]', e);
+      return { ok: false, reason: e instanceof Error ? e.message : 'Send failed' };
+    } finally {
+      setTimeout(() => setPollingPaused(false), 1000);
+      cableJobBusyRef.current = false;
+    }
+  };
+
 
   const getRightPanelContent = (): React.ReactNode | undefined => {
 
@@ -3504,6 +3552,11 @@ const Index = () => {
             printCount={connectionState.status?.printCount ?? 0}
             productCount={connectionState.status?.productCount ?? 0}
             currentMessage={connectionState.status?.currentMessage ? getMessage(connectionState.status.currentMessage) : null}
+            printers={printers}
+            defaultPrinter={selectedPrinter ?? connectionState.connectedPrinter ?? null}
+            getMessagesForPrinter={getMessagesForPrinter}
+            getStoredMessageForPrinter={getStoredMessageForPrinter}
+            onSendJob={sendCableJob}
           />
         );
       case 'clean':

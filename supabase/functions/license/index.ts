@@ -34,7 +34,7 @@ function generatePairingCode(): string {
 const PRODUCT_KEY_RE = /^[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$/;
 const PAIRING_CODE_RE = /^[A-Z0-9]{6}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const ALLOWED_TIERS = new Set(["lite", "full", "database", "demo"]);
+const ALLOWED_TIERS = new Set(["lite", "full", "database", "demo", "twincode", "wirecable"]);
 const MACHINE_ID_RE = /^[A-Za-z0-9._:\-]{6,128}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

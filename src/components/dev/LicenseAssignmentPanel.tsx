@@ -132,6 +132,7 @@ export function LicenseAssignmentPanel() {
                 <SelectItem value="lite">LITE — No Network</SelectItem>
                 <SelectItem value="full">FULL — Network Access</SelectItem>
                 <SelectItem value="database">DATABASE — Full + Database</SelectItem>
+                <SelectItem value="wirecable">WIRE &amp; CABLE — Database + scan-to-print cable jobs</SelectItem>
                 <SelectItem value="demo">DEMO — Full Access, 30-day Trial</SelectItem>
               </SelectContent>
             </Select>
