@@ -40,6 +40,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { getFontInfo } from '@/lib/dotMatrixFonts';
 import { Switch } from '@/components/ui/switch';
 import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
 import type { MessageOrientation } from '@/lib/messageOrientation';
@@ -576,6 +577,23 @@ export function EditMessageScreen({
   const selectedField = message.fields.find((f) => f.id === selectedFieldId);
 
   // Auto-size message width to fit all fields (with some padding)
+  // Rendered width in dots (Tower Print draws each character rotated, so it
+  // advances by font height instead of character width).
+  const renderedFieldWidth = (f: MessageField) => {
+    if (f.type === 'barcode') return f.width;
+    const info = getFontInfo(f.fontSize);
+    const len = Array.from(f.data ?? '').length;
+    const per = (canTowerPrint && message.towerPrint ? info.height : info.charWidth) + (f.gap ?? 1);
+    return Math.max(f.width ?? 0, len * per);
+  };
+  // Place new fields after any existing field sharing the same rows so they
+  // never land hidden underneath another field.
+  const nextFreeX = (fields: MessageField[], y: number, h: number) => {
+    const overlapping = fields.filter(f => f.y < y + h && y < f.y + (f.height || h));
+    if (overlapping.length === 0) return 0;
+    return Math.max(...overlapping.map(f => f.x + renderedFieldWidth(f))) + 2;
+  };
+
   const autoResizeWidth = (fields: MessageField[]) => {
     if (fields.length === 0) return 200; // Default minimum
     const maxRight = Math.max(...fields.map(f => f.x + f.width));
@@ -852,7 +870,7 @@ export function EditMessageScreen({
         : lineIdValue
           ? lineIdValue
           : (promptOptions?.promptBeforePrint ? 'X'.repeat(promptOptions.promptLength || 3) : fieldData),
-      x: 0,
+      x: nextFreeX(message.fields, newY, fontHeight),
       y: newY,
       width: 50,
       height: fontHeight,
@@ -1330,8 +1348,8 @@ export function EditMessageScreen({
 
             {/* Message Canvas - component handles its own horizontal scrolling */}
             {canTowerPrint && (
-              <div className={`mb-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 p-2 ${message.towerPrint ? 'border-primary bg-primary/10' : 'border-border bg-card'}`}>
-                <div className="flex items-center gap-3">
+              <div className={`mb-1 flex flex-wrap items-center justify-between gap-2 rounded-md border px-2 py-1 ${message.towerPrint ? 'border-primary bg-primary/10' : 'border-border bg-card'}`}>
+                <div className="flex items-center gap-2">
                   <Switch
                     id="tower-print"
                     checked={!!message.towerPrint}
@@ -1345,19 +1363,17 @@ export function EditMessageScreen({
                     }))}
                     aria-label="Tower Print"
                   />
-                  <div>
-                    <Label htmlFor="tower-print" className="font-semibold">Tower Print</Label>
-                    <p className="text-[10px] md:text-xs text-muted-foreground">Rotates each character for cable marking.</p>
-                  </div>
+                  <Label htmlFor="tower-print" className="text-xs font-semibold" title="Rotates each character for cable marking">Tower Print</Label>
                 </div>
                 {message.towerPrint && (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Reading direction</span>
+                    <span className="text-[10px] md:text-xs text-muted-foreground">Direction</span>
                     {[false, true].map((rev) => (
                       <Button
                         key={String(rev)}
                         type="button"
                         size="sm"
+                        className="h-6 px-2 text-xs"
                         variant={!!message.towerReverse === rev ? 'default' : 'outline'}
                         onClick={() => setMessage(prev => ({
                           ...prev,
