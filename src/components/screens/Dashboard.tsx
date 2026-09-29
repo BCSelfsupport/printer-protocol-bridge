@@ -95,7 +95,7 @@ export function Dashboard({
 }: DashboardProps) {
   const [countersDialogOpen, setCountersDialogOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
-  const { canDatabase } = useLicense();
+  const { canDatabase, canWireCable } = useLicense();
 
   // Filter status for the gauge
   const filterStatus = useMemo(() => {
@@ -428,7 +428,7 @@ export function Dashboard({
               { id: 'messages' as const, label: 'Messages', icon: <FileText className="w-5 h-5 md:w-6 md:h-6" /> },
               { id: 'datasource' as const, label: 'Data', icon: canDatabase ? <Database className="w-5 h-5 md:w-6 md:h-6" /> : <Lock className="w-5 h-5 md:w-6 md:h-6" />, disabled: !canDatabase },
               { id: 'adjust' as const, label: 'Adjust', icon: <SlidersHorizontal className="w-5 h-5 md:w-6 md:h-6" /> },
-              { id: 'wirecable' as const, label: 'Cable', icon: <Cable className="w-5 h-5 md:w-6 md:h-6" /> },
+              ...(canWireCable ? [{ id: 'wirecable' as const, label: 'Cable', icon: <Cable className="w-5 h-5 md:w-6 md:h-6" /> }] : []),
               { id: 'clean' as const, label: 'Clean', icon: <Brush className="w-5 h-5 md:w-6 md:h-6" />, disabled: true },
               { id: 'setup' as const, label: 'Setup', icon: <Settings className="w-5 h-5 md:w-6 md:h-6" /> },
               { id: 'service' as const, label: 'Service', icon: <Wrench className="w-5 h-5 md:w-6 md:h-6" /> },

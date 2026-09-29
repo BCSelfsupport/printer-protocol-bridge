@@ -13,13 +13,13 @@ interface BottomNavProps {
 }
 
 function useNavItems() {
-  const { canDatabase } = useLicense();
+  const { canDatabase, canWireCable } = useLicense();
   
   const items: { id: NavItem; label: string; icon: React.ReactNode; disabled?: boolean; locked?: boolean }[] = [
     { id: 'messages', label: 'Messages', icon: <FileText className="w-6 h-6" /> },
     { id: 'datasource', label: 'Data', icon: canDatabase ? <Database className="w-6 h-6" /> : <Lock className="w-6 h-6" />, disabled: !canDatabase, locked: !canDatabase },
     { id: 'adjust', label: 'Adjust', icon: <SlidersHorizontal className="w-6 h-6" /> },
-    { id: 'wirecable', label: 'Cable', icon: <Cable className="w-6 h-6" /> },
+    ...(canWireCable ? [{ id: 'wirecable' as NavItem, label: 'Cable', icon: <Cable className="w-6 h-6" /> }] : []),
     { id: 'clean', label: 'Clean', icon: <Brush className="w-6 h-6" />, disabled: true },
     { id: 'setup', label: 'Setup', icon: <Settings className="w-6 h-6" />, disabled: true },
     { id: 'service', label: 'Service', icon: <Wrench className="w-6 h-6" /> },
