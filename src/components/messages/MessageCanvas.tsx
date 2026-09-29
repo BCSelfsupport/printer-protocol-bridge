@@ -489,8 +489,8 @@ export function MessageCanvas({
           chars.forEach((character, index) => {
             ctx.save();
             if (towerReverse) {
-              // 180° turn of the whole tower: characters rotate the other way and order reverses
-              const slot = chars.length - 1 - index;
+              // each character rotates the other way; character order stays the same
+              const slot = index;
               ctx.translate(fieldX + slot * advance, fieldY + fontInfo.charWidth * DOT_SIZE);
               ctx.rotate(-Math.PI / 2);
             } else {
