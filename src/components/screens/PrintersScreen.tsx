@@ -595,7 +595,6 @@ export function PrintersScreen({
               className="h-20 w-auto max-w-[calc(100%-1rem)] object-contain"
             />
             <sup className="text-xs font-semibold text-slate-300 self-start mt-1">TM</sup>
-            </span>
           </div>
         )}
         {/* Header */}
