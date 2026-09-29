@@ -592,7 +592,7 @@ export function PrintersScreen({
             <img
               src={tier === 'twincode' ? twinCodeLogo : wireCableLogo}
               alt={tier === 'twincode' ? 'TwinCode' : 'Wire & Cable'}
-              className="h-16 w-16 object-contain"
+              className="h-20 w-auto max-w-full object-contain"
             />
             <span className="text-xs font-bold tracking-wide">
               <span className="text-blue-400">{tier === 'twincode' ? 'Twin' : 'Wire'}</span>
