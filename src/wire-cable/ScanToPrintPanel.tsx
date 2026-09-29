@@ -98,7 +98,8 @@ export function ScanToPrintPanel({ config, printers, defaultPrinter, onSendJob, 
     }
     setStatus({ kind: 'busy', text: `Looking up ${code}…` });
     const r = await lookupJob(code, config);
-    if (!r.ok) { setStatus({ kind: 'error', text: r.reason }); toast.error(r.reason); return; }
+    if (r.ok === false) { setStatus({ kind: 'error', text: r.reason }); toast.error(r.reason); return; }
+    if (!r.ok) return;
     if (config.requireConfirm) { setPending(r.job); setStatus({ kind: 'idle', text: `Found ${r.job.jobCode} — confirm to send` }); }
     else await send(r.job);
   }, [printers, config, send]);
