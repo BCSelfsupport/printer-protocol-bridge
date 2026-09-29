@@ -155,25 +155,6 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
         </div>
 
         <div className="flex items-center min-w-0 flex-1 justify-end gap-2 ml-2 md:ml-6">
-          {onDateTimeSetup && (
-            <button
-              onClick={onDateTimeSetup}
-              className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0"
-              title="Printer Date / Time (sync clock to PC)"
-            >
-              <CalendarClock className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
-            </button>
-          )}
-          <button
-            onClick={toggleEmulateMode}
-            className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
-              emulateMode ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-muted-foreground/50 hover:bg-muted-foreground/70'
-            }`}
-            title={emulateMode ? 'Emulate Printers ON — tap to choose which printers are online/offline' : 'Emulate Printers OFF — tap to simulate printers'}
-            aria-pressed={emulateMode}
-          >
-            <Printer className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
-          </button>
           <div className="flex-1 min-w-0 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex w-max flex-nowrap items-center gap-1 md:gap-4 pl-2">
 
@@ -287,6 +268,26 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
               )}
             </div>
           </div>
+
+          {onDateTimeSetup && (
+            <button
+              onClick={onDateTimeSetup}
+              className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-muted-foreground/50 flex items-center justify-center hover:bg-muted-foreground/70 transition-colors flex-shrink-0 ml-1 md:ml-2"
+              title="Printer Date / Time (sync clock to PC)"
+            >
+              <CalendarClock className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+            </button>
+          )}
+          <button
+            onClick={toggleEmulateMode}
+            className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
+              emulateMode ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-muted-foreground/50 hover:bg-muted-foreground/70'
+            }`}
+            title={emulateMode ? 'Emulate Printers ON — tap to choose which printers are online/offline' : 'Emulate Printers OFF — tap to simulate printers'}
+            aria-pressed={emulateMode}
+          >
+            <Printer className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+          </button>
 
           <div className="text-right text-foreground min-w-[70px] md:min-w-[120px] flex-shrink-0">
             <div className="text-sm md:text-lg font-medium tabular-nums">
