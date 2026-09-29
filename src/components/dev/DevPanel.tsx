@@ -503,6 +503,7 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   <SelectItem value="full" className="text-xs">Full</SelectItem>
                   <SelectItem value="database" className="text-xs">Database</SelectItem>
                   <SelectItem value="twincode" className="text-xs">TwinCode</SelectItem>
+                  <SelectItem value="wirecable" className="text-xs">Wire &amp; Cable</SelectItem>
                   <SelectItem value="dev" className="text-xs">Dev</SelectItem>
                 </SelectContent>
               </Select>
