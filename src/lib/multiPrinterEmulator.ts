@@ -19,6 +19,10 @@ const createDefaultState = (overrides?: Partial<EmulatorState>): EmulatorState =
   forcePhotoEye: false,
   autoAlign: false,
   isLoggedIn: false,
+  messageTemplate: 4,
+  messageSpeed: 0,
+  messageOrientation: 0,
+  messagePrintMode: 0,
   
   modulation: 160,
   charge: 65,

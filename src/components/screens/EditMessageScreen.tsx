@@ -40,7 +40,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
+import type { MessageOrientation } from '@/lib/messageOrientation';
+import { isTowerOrientation, withTowerRotation } from '@/lib/messageOrientation';
 
 
 export interface MessageField {
@@ -85,7 +88,7 @@ export interface MessageAdjustSettings {
    *  many additional times spaced by Pitch. */
   repeatAmount?: number;
   speed?: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
-  rotation?: 'Normal' | 'Flip' | 'Mirror' | 'Mirror Flip';
+  rotation?: MessageOrientation;
 }
 
 /**
@@ -117,6 +120,7 @@ export interface MessageDetails {
   /** Per-field flags marking which adjustSettings keys the operator explicitly
    *  set for this message. Only these keys override the printer Setup Card. */
   adjustOverrides?: MessageAdjustOverrides;
+  towerPrint?: boolean;
 }
 
 
@@ -186,6 +190,7 @@ interface EditMessageScreenProps {
   onSendCommand?: (command: string) => Promise<any>;
   /** WP-5: read-only per-printer stack view of this message across siblings. */
   otherPrinterRows?: OtherPrinterRow[];
+  canTowerPrint?: boolean;
 }
 
 export function EditMessageScreen({
@@ -206,6 +211,7 @@ export function EditMessageScreen({
   newMessageDefaults,
   onSendCommand,
   otherPrinterRows,
+  canTowerPrint = false,
 }: EditMessageScreenProps) {
   // Filter templates and fonts based on connected printer model + variant
   const capabilities = getModelCapabilities(printerModel, printerVariant);
@@ -302,6 +308,11 @@ export function EditMessageScreen({
     try {
       const messageWithAdjust: MessageDetails = {
         ...message,
+        towerPrint: canTowerPrint && !!message.towerPrint,
+        settings: {
+          ...(message.settings ?? defaultMessageSettings),
+          rotation: withTowerRotation(message.settings?.rotation, canTowerPrint && !!message.towerPrint),
+        },
         adjustSettings: {
           width: localAdjustSettings.width,
           height: localAdjustSettings.height,
@@ -378,6 +389,9 @@ export function EditMessageScreen({
                 }
               : details;
             setMessage(resolvedDetails);
+            if (isTowerOrientation(resolvedDetails.settings?.rotation)) {
+              setMessage(prev => ({ ...prev, towerPrint: true }));
+            }
             // Restore adjust settings from stored message if available
             if (resolvedDetails.adjustSettings) {
               setLocalAdjustSettings(prev => ({
@@ -1352,6 +1366,7 @@ export function EditMessageScreen({
                   lines: currentMultilineTemplate.lines,
                   dotsPerLine: currentMultilineTemplate.dotsPerLine,
                 } : null}
+                towerPrint={canTowerPrint && !!message.towerPrint}
                 onScrollLockChange={setIsCanvasScrollLocked}
               />
               <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click to edit • Click+drag empty space to select multiple fields</p>
@@ -1439,6 +1454,28 @@ export function EditMessageScreen({
                 }));
               }}
             />
+
+            {canTowerPrint && (
+              <div className="mb-3 flex items-center justify-between gap-4 rounded-lg border border-border bg-card p-3">
+                <div>
+                  <Label htmlFor="tower-print">Tower Print</Label>
+                  <p className="mt-1 text-xs text-muted-foreground">Rotates each character for cable marking.</p>
+                </div>
+                <Switch
+                  id="tower-print"
+                  checked={!!message.towerPrint}
+                  onCheckedChange={(checked) => setMessage(prev => ({
+                    ...prev,
+                    towerPrint: checked,
+                    settings: {
+                      ...(prev.settings ?? defaultMessageSettings),
+                      rotation: withTowerRotation(prev.settings?.rotation, checked),
+                    },
+                  }))}
+                  aria-label="Tower Print"
+                />
+              </div>
+            )}
 
           </div>
 
@@ -1735,7 +1772,7 @@ export function EditMessageScreen({
                 <Button
                   onClick={async () => {
                     if (validateMessageName(saveAsName).valid) {
-                      const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch, repeatAmount: localAdjustSettings.repeatAmount, speed: localAdjustSettings.speed, rotation: localAdjustSettings.rotation }, adjustOverrides: { ...localAdjustOverrides } }, true);
+                       const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), towerPrint: canTowerPrint && !!message.towerPrint, settings: { ...(message.settings ?? defaultMessageSettings), rotation: withTowerRotation(message.settings?.rotation, canTowerPrint && !!message.towerPrint) }, adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch, repeatAmount: localAdjustSettings.repeatAmount, speed: localAdjustSettings.speed, rotation: localAdjustSettings.rotation }, adjustOverrides: { ...localAdjustOverrides } }, true);
                       setSaveAsDialogOpen(false);
                       if (result && result.fields.length > 0) {
                         setMessage(prev => ({

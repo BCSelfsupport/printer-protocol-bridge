@@ -14,6 +14,7 @@ interface CanvasField {
   fontSize: string;
   bold?: number;
   gap?: number;
+  rotation?: string;
 }
 
 interface MultilineTemplate {
@@ -50,6 +51,7 @@ interface MessageCanvasProps {
   onFieldError?: (fieldId: number, error: string | null) => void;
   /** Let parent temporarily disable its horizontal scroller while dragging */
   onScrollLockChange?: (locked: boolean) => void;
+  towerPrint?: boolean;
 }
 
 const TOTAL_ROWS = 32;
@@ -70,6 +72,7 @@ export function MessageCanvas({
   multilineTemplate,
   onFieldError,
   onScrollLockChange,
+  towerPrint = false,
 }: MessageCanvasProps) {
   const [scrollX, setScrollX] = useState(0); // derived from scroller scrollLeft (in dots)
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -394,8 +397,8 @@ export function MessageCanvas({
       } else {
         const minChars = 3;
         const textLength = Math.max(field.data.length, minChars);
-        fieldW = textLength * (fontInfo.charWidth + (field.gap ?? 1)) * DOT_SIZE;
-        fieldH = fontInfo.height * DOT_SIZE;
+        fieldW = textLength * ((towerPrint ? fontInfo.height : fontInfo.charWidth) + (field.gap ?? 1)) * DOT_SIZE;
+        fieldH = (towerPrint ? fontInfo.charWidth : fontInfo.height) * DOT_SIZE;
       }
 
       // Skip if field is outside visible viewport (optimization)
@@ -478,7 +481,18 @@ export function MessageCanvas({
       } else {
         // Regular text field
         ctx.fillStyle = '#1a1a1a';
-        renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE, field.gap ?? 1);
+        if (towerPrint) {
+          const advance = (fontInfo.height + (field.gap ?? 1)) * DOT_SIZE;
+          Array.from(field.data).forEach((character, index) => {
+            ctx.save();
+            ctx.translate(fieldX + index * advance + fontInfo.height * DOT_SIZE, fieldY);
+            ctx.rotate(Math.PI / 2);
+            renderText(ctx, character, 0, 0, field.fontSize, DOT_SIZE, 0);
+            ctx.restore();
+          });
+        } else {
+          renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE, field.gap ?? 1);
+        }
       }
 
       // Draw field number badge (e.g., "F1", "F2") in the top-left corner
@@ -538,7 +552,7 @@ export function MessageCanvas({
       ctx.strokeRect(mx, my, mw, mh);
       ctx.setLineDash([]);
     }
-  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, selectedFieldIds, canvasWidth, multilineTemplate, getMultilineLinePositions, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible, barcodeImages, isMarquee, marqueeStart, marqueeEnd]);
+  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, selectedFieldIds, canvasWidth, multilineTemplate, getMultilineLinePositions, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible, barcodeImages, isMarquee, marqueeStart, marqueeEnd, towerPrint]);
   
   const getMousePosition = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -555,8 +569,8 @@ export function MessageCanvas({
       const fontInfo = getFontInfo(field.fontSize);
       const isBarcode = field.type === 'barcode';
       const textLength = Math.max(field.data.length, 3);
-      const w = isBarcode ? field.width : textLength * (fontInfo.charWidth + (field.gap ?? 1));
-      const h = isBarcode ? templateHeight : fontInfo.height;
+      const w = isBarcode ? field.width : textLength * ((towerPrint ? fontInfo.height : fontInfo.charWidth) + (field.gap ?? 1));
+      const h = isBarcode ? templateHeight : (towerPrint ? fontInfo.charWidth : fontInfo.height);
       return x >= field.x && x < field.x + w &&
              y >= field.y && y < field.y + h;
     };

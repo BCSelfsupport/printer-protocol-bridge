@@ -18,6 +18,7 @@ import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
 import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
 import { setPollingPaused, waitForPollingIdle } from '@/lib/pollingPause';
+import { CODE_TO_MESSAGE_ORIENTATION, MESSAGE_ORIENTATION_TO_CODE } from '@/lib/messageOrientation';
 import { beginSaveBusy, waitForSaveIdle } from '@/lib/saveBusy';
 import type { PrinterFault } from '@/components/alerts/FaultAlertDialog';
 
@@ -60,23 +61,8 @@ const defaultSettings: PrintSettings = {
 
 // BestCode HMI rotation order for message/printer orientation.
 // Keep this aligned anywhere we send ^NM or ^CM orientation values.
-const ROTATION_TO_PROTOCOL_CODE: Record<string, number> = {
-  'Normal': 0,
-  'Flip': 1,
-  'Mirror': 2,
-  'Mirror Flip': 3,
-  'Tower': 4,
-  'Tower Flip': 5,
-  'Tower Mirror': 6,
-  'Tower Mirror Flip': 7,
-};
-
-const PROTOCOL_CODE_TO_ROTATION: Record<number, PrintSettings['rotation']> = {
-  0: 'Normal',
-  1: 'Flip',
-  2: 'Mirror',
-  3: 'Mirror Flip',
-};
+const ROTATION_TO_PROTOCOL_CODE = MESSAGE_ORIENTATION_TO_CODE;
+const PROTOCOL_CODE_TO_ROTATION = CODE_TO_MESSAGE_ORIENTATION;
 
 const mockMessages: PrintMessage[] = [];
 

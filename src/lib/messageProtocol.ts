@@ -7,6 +7,7 @@
 
 import type { MessageField, MessageDetails } from '@/components/screens/EditMessageScreen';
 import { PROTOCOL_DATE_TO_FORMAT } from '@/lib/autoCodeProtocol';
+import { CODE_TO_MESSAGE_ORIENTATION, isTowerOrientation } from '@/lib/messageOrientation';
 
 const ALPHA_MONTH_VALUES = new Set([
   'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
@@ -624,7 +625,7 @@ function autoCodeMetaFromProtocol(pf: ParsedField): Pick<MessageField, 'autoCode
 export function buildMessageDetails(
   messageName: string,
   parsedFields: ParsedField[],
-  gmResult: { templateValue: string; templateHeight: number } | null,
+  gmResult: { templateValue: string; templateHeight: number; speed?: number; orientation?: number; printMode?: number } | null,
 ): MessageDetails {
   const templateValue = gmResult?.templateValue ?? '16';
   const templateHeight = gmResult?.templateHeight ?? TEMPLATE_HEIGHTS[templateValue] ?? 16;
@@ -743,5 +744,11 @@ export function buildMessageDetails(
     width: 200,
     fields,
     templateValue,
+    towerPrint: isTowerOrientation(CODE_TO_MESSAGE_ORIENTATION[gmResult?.orientation ?? 0]),
+    settings: {
+      speed: (['Fast', 'Faster', 'Fastest', 'Ultra Fast'] as const)[gmResult?.speed ?? 0] ?? 'Fast',
+      rotation: CODE_TO_MESSAGE_ORIENTATION[gmResult?.orientation ?? 0] ?? 'Normal',
+      printMode: ({ 0: 'Normal', 1: 'Auto', 2: 'Repeat', 3: 'Reverse', 5: 'Auto Encoder', 6: 'Auto Encoder Reverse' } as const)[gmResult?.printMode ?? 0] ?? 'Normal',
+    },
   };
 }

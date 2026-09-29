@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import type { MessageOrientation } from '@/lib/messageOrientation';
 
 // Per-message settings that are STORED with the message via ^CM
 // According to BestCode v2.0 protocol, ^CM parameters are:
@@ -18,7 +19,7 @@ import { Input } from '@/components/ui/input';
 // p = Print Mode (0=Normal, 1=Auto, 2=Repeat, 3=Reverse, 5=Auto Encoder, 6=Auto Encoder Reverse)
 export interface MessageSettings {
   speed: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
-  rotation: 'Normal' | 'Flip' | 'Mirror' | 'Mirror Flip';
+  rotation: MessageOrientation;
   printMode: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
 }
 
@@ -150,9 +151,7 @@ interface MessageSettingsDialogProps {
   onUpdate: (settings: Partial<MessageSettings>) => void;
 }
 
-const rotationValues: MessageSettings['rotation'][] = [
-  'Normal', 'Flip', 'Mirror Flip', 'Mirror'
-];
+const rotationValues: MessageSettings['rotation'][] = ['Normal', 'Flip', 'Mirror', 'Mirror Flip'];
 const speedValues: MessageSettings['speed'][] = ['Fast', 'Faster', 'Fastest', 'Ultra Fast'];
 const printModeValues: MessageSettings['printMode'][] = ['Normal', 'Auto', 'Repeat', 'Reverse', 'Auto Encoder', 'Auto Encoder Reverse'];
 
@@ -164,7 +163,7 @@ export function MessageSettingsDialog({
 }: MessageSettingsDialogProps) {
   const cycleRotation = () => {
     const idx = rotationValues.indexOf(settings.rotation);
-    onUpdate({ rotation: rotationValues[(idx + 1) % rotationValues.length] });
+    onUpdate({ rotation: rotationValues[(Math.max(0, idx) + 1) % rotationValues.length] });
   };
 
   const cycleSpeedUp = () => {

@@ -1,3 +1,5 @@
+import type { MessageOrientation, PrinterRotation } from '@/lib/messageOrientation';
+
 export type PrinterRole = 'none' | 'master' | 'slave';
 
 export interface Printer {
@@ -38,7 +40,7 @@ export interface Printer {
   // into the ^NM header, so lines running in the opposite direction of
   // travel (e.g. R→L vs L→R) always print correctly regardless of what the
   // master message stores.
-  rotation?: 'Normal' | 'Mirror' | 'Flip' | 'Mirror Flip';
+  rotation?: PrinterRotation;
   // Per-printer NEW-message defaults. Different printers on different lines
   // often need different Width / Delay / Speed baselines (photocell distance,
   // head size, product speed). When set, these values seed the editor for any
@@ -127,7 +129,7 @@ export interface PrintSettings {
   width: number;       // 0-1000
   height: number;      // 0-10
   delay: number;       // 0-4,000,000,000
-  rotation: 'Normal' | 'Mirror' | 'Flip' | 'Mirror Flip';
+  rotation: MessageOrientation;
   bold: number;        // 0-9
   speed: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
   gap: number;         // 0-9

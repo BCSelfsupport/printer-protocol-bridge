@@ -1,5 +1,6 @@
 import { ChevronUp, ChevronDown, Pencil, RefreshCw } from 'lucide-react';
 import { PrintSettings } from '@/types/printer';
+import { MESSAGE_ORIENTATION_TO_CODE } from '@/lib/messageOrientation';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import {
@@ -69,10 +70,6 @@ const ROTATION_OPTIONS = [
   { value: 'Mirror Flip', label: 'Mirror Flip' },
   { value: 'Mirror', label: 'Mirror' },
 ] as const;
-
-const ORIENTATION_MAP: Record<string, number> = {
-  'Normal': 0, 'Flip': 1, 'Mirror': 2, 'Mirror Flip': 3,
-};
 
 const SPEED_OPTIONS: { value: PrintSettings['speed']; label: string }[] = [
   { value: 'Fast', label: 'Fast' },
@@ -297,7 +294,7 @@ export function AdjustDialog({
   // Handle rotation change via ^CM command
   const handleRotationChange = async (value: string) => {
     onUpdate({ rotation: value as PrintSettings['rotation'] });
-    const orientationValue = ORIENTATION_MAP[value] ?? 0;
+    const orientationValue = MESSAGE_ORIENTATION_TO_CODE[value as PrintSettings['rotation']] ?? 0;
     await onSendCommand(`^CM o${orientationValue}`);
     scheduleSave();
   };
