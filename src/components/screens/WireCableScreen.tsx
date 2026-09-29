@@ -14,6 +14,14 @@ import { EncoderCalibration, EncoderConfig } from '@/components/wirecable/Encode
 import { FlipFlopConfig, FlipFlopSettings } from '@/components/wirecable/FlipFlopConfig';
 import { PrintSettings } from '@/types/printer';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Printer } from '@/types/printer';
+import { useLicense } from '@/contexts/LicenseContext';
+import { ScanToPrintPanel, type SendJobFn } from '@/wire-cable/ScanToPrintPanel';
+import { JobSetupPanel } from '@/wire-cable/JobSetupPanel';
+import { JobLogPanel } from '@/wire-cable/JobLogPanel';
+import { loadJobConfig, saveJobConfig, type CableJobConfig } from '@/wire-cable/cableJobs';
+import { Lock } from 'lucide-react';
 
 interface WireCableScreenProps {
   onHome: () => void;
@@ -24,6 +32,11 @@ interface WireCableScreenProps {
   printCount?: number;
   productCount?: number;
   currentMessage?: MessageDetails | null;
+  printers?: Printer[];
+  defaultPrinter?: Printer | null;
+  getMessagesForPrinter?: (p: Printer | null | undefined) => { id: number; name: string }[];
+  getStoredMessageForPrinter?: (name: string, p?: Printer | null) => MessageDetails | null;
+  onSendJob?: SendJobFn;
 }
 
 const DEFAULT_ENCODER: EncoderConfig = {
@@ -47,7 +60,17 @@ export function WireCableScreen({
   printCount = 0,
   productCount = 0,
   currentMessage,
+  printers = [],
+  defaultPrinter = null,
+  getMessagesForPrinter,
+  getStoredMessageForPrinter,
+  onSendJob,
 }: WireCableScreenProps) {
+  const { canWireCable } = useLicense();
+  const [tab, setTab] = useState<string>(() => (canWireCable ? 'scan' : 'line'));
+  const [jobConfig, setJobConfigState] = useState<CableJobConfig>(loadJobConfig);
+  const setJobConfig = (c: CableJobConfig) => { setJobConfigState(c); saveJobConfig(c); };
+  const [logRefresh, setLogRefresh] = useState(0);
   const [encoder, setEncoder] = useState<EncoderConfig>(() => {
     const saved = localStorage.getItem('wirecable-encoder');
     return saved ? JSON.parse(saved) : DEFAULT_ENCODER;
@@ -125,6 +148,56 @@ export function WireCableScreen({
       <SubPageHeader title="Wire & Cable" onHome={onHome} />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="w-full sm:w-auto overflow-x-auto justify-start">
+            <TabsTrigger value="scan" className="gap-1">{!canWireCable && <Lock className="w-3 h-3" />}Scan to Print</TabsTrigger>
+            <TabsTrigger value="setup" className="gap-1">{!canWireCable && <Lock className="w-3 h-3" />}Job Setup</TabsTrigger>
+            <TabsTrigger value="line">Line Setup</TabsTrigger>
+            <TabsTrigger value="log" className="gap-1">{!canWireCable && <Lock className="w-3 h-3" />}Job Log</TabsTrigger>
+          </TabsList>
+
+          {(['scan', 'setup', 'log'] as const).map((t) => !canWireCable && (
+            <TabsContent key={t} value={t} className="mt-4">
+              <div className="rounded-lg border border-border bg-card p-6 text-center space-y-2">
+                <Lock className="w-8 h-8 mx-auto text-muted-foreground" />
+                <div className="font-semibold">Wire &amp; Cable licence required</div>
+                <p className="text-sm text-muted-foreground">Scan-to-print jobs, job setup and the job log are part of the Wire &amp; Cable package. Contact BestCode to upgrade.</p>
+              </div>
+            </TabsContent>
+          ))}
+
+          {canWireCable && (
+            <>
+              <TabsContent value="scan" className="mt-4">
+                {onSendJob ? (
+                  <ScanToPrintPanel
+                    config={jobConfig}
+                    printers={printers}
+                    defaultPrinter={defaultPrinter}
+                    onSendJob={onSendJob}
+                    printCount={printCount}
+                    lengthPerPrint={isImperial ? pitchMm / 25.4 / 12 : pitchMm / 1000}
+                    unitLabel={isImperial ? 'ft' : 'm'}
+                    onLogged={() => setLogRefresh((n) => n + 1)}
+                  />
+                ) : null}
+              </TabsContent>
+              <TabsContent value="setup" className="mt-4">
+                <JobSetupPanel
+                  config={jobConfig}
+                  onChange={setJobConfig}
+                  printer={defaultPrinter}
+                  messageNames={(getMessagesForPrinter?.(defaultPrinter) ?? []).map((m) => m.name)}
+                  getStoredMessageForPrinter={getStoredMessageForPrinter ?? (() => null)}
+                />
+              </TabsContent>
+              <TabsContent value="log" className="mt-4">
+                <JobLogPanel refreshKey={logRefresh} />
+              </TabsContent>
+            </>
+          )}
+
+          <TabsContent value="line" className="mt-4 space-y-4">
         {/* Connection status + Unit toggle */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -345,6 +418,8 @@ export function WireCableScreen({
           isConnected={isConnected}
           onSendCommand={onSendCommand}
         />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
