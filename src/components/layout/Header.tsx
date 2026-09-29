@@ -154,7 +154,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
           )}
         </div>
 
-        <div className="flex items-center min-w-0 flex-1 justify-end gap-2">
+        <div className="flex items-center min-w-0 flex-1 justify-end gap-2 ml-2 md:ml-6">
           {onDateTimeSetup && (
             <button
               onClick={onDateTimeSetup}
