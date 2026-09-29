@@ -22,6 +22,7 @@ import { JobSetupPanel } from '@/wire-cable/JobSetupPanel';
 import { JobLogPanel } from '@/wire-cable/JobLogPanel';
 import { loadJobConfig, saveJobConfig, type CableJobConfig } from '@/wire-cable/cableJobs';
 import { Lock } from 'lucide-react';
+import wireCableLogo from '@/assets/wire-cable-logo.png';
 
 interface WireCableScreenProps {
   onHome: () => void;
@@ -146,6 +147,17 @@ export function WireCableScreen({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <SubPageHeader title="Wire & Cable" onHome={onHome} />
+
+      <div className="px-4 pt-3">
+        <img
+          src={wireCableLogo}
+          alt="Wire & Cable"
+          loading="lazy"
+          width={1024}
+          height={1024}
+          className="h-10 w-auto object-contain"
+        />
+      </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <Tabs value={tab} onValueChange={setTab}>
