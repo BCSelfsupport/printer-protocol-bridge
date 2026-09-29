@@ -69,10 +69,6 @@ const ROTATION_OPTIONS = [
   { value: 'Flip', label: 'Flip' },
   { value: 'Mirror Flip', label: 'Mirror Flip' },
   { value: 'Mirror', label: 'Mirror' },
-  { value: 'Tower', label: 'Tower' },
-  { value: 'Tower Flip', label: 'Tower Flip' },
-  { value: 'Tower Mirror', label: 'Tower Mirror' },
-  { value: 'Tower Mirror Flip', label: 'Tower Mirror Flip' },
 ] as const;
 
 const SPEED_OPTIONS: { value: PrintSettings['speed']; label: string }[] = [
