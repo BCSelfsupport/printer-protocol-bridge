@@ -121,6 +121,8 @@ export interface MessageDetails {
    *  set for this message. Only these keys override the printer Setup Card. */
   adjustOverrides?: MessageAdjustOverrides;
   towerPrint?: boolean;
+  /** Tower Print rotated 180° so it reads the other direction. */
+  towerReverse?: boolean;
 }
 
 
@@ -311,7 +313,7 @@ export function EditMessageScreen({
         towerPrint: canTowerPrint && !!message.towerPrint,
         settings: {
           ...(message.settings ?? defaultMessageSettings),
-          rotation: withTowerRotation(message.settings?.rotation, canTowerPrint && !!message.towerPrint),
+          rotation: withTowerRotation(message.settings?.rotation, canTowerPrint && !!message.towerPrint, !!message.towerReverse),
         },
         adjustSettings: {
           width: localAdjustSettings.width,
@@ -1327,6 +1329,52 @@ export function EditMessageScreen({
             )}
 
             {/* Message Canvas - component handles its own horizontal scrolling */}
+            {canTowerPrint && (
+              <div className={`mb-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 p-2 ${message.towerPrint ? 'border-primary bg-primary/10' : 'border-border bg-card'}`}>
+                <div className="flex items-center gap-3">
+                  <Switch
+                    id="tower-print"
+                    checked={!!message.towerPrint}
+                    onCheckedChange={(checked) => setMessage(prev => ({
+                      ...prev,
+                      towerPrint: checked,
+                      settings: {
+                        ...(prev.settings ?? defaultMessageSettings),
+                        rotation: withTowerRotation(prev.settings?.rotation, checked, !!prev.towerReverse),
+                      },
+                    }))}
+                    aria-label="Tower Print"
+                  />
+                  <div>
+                    <Label htmlFor="tower-print" className="font-semibold">Tower Print</Label>
+                    <p className="text-[10px] md:text-xs text-muted-foreground">Rotates each character for cable marking.</p>
+                  </div>
+                </div>
+                {message.towerPrint && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Reading direction</span>
+                    {[false, true].map((rev) => (
+                      <Button
+                        key={String(rev)}
+                        type="button"
+                        size="sm"
+                        variant={!!message.towerReverse === rev ? 'default' : 'outline'}
+                        onClick={() => setMessage(prev => ({
+                          ...prev,
+                          towerReverse: rev,
+                          settings: {
+                            ...(prev.settings ?? defaultMessageSettings),
+                            rotation: withTowerRotation(prev.settings?.rotation, true, rev),
+                          },
+                        }))}
+                      >
+                        {rev ? 'Reversed' : 'Standard'}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div
               ref={canvasScrollerRef}
               className={`mb-2 md:mb-4 -mx-2 px-2 md:mx-0 md:px-0 pb-2 touch-pan-y overflow-x-auto scrollbar-thin`}
@@ -1367,6 +1415,7 @@ export function EditMessageScreen({
                   dotsPerLine: currentMultilineTemplate.dotsPerLine,
                 } : null}
                 towerPrint={canTowerPrint && !!message.towerPrint}
+                towerReverse={!!message.towerReverse}
                 onScrollLockChange={setIsCanvasScrollLocked}
               />
               <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click to edit • Click+drag empty space to select multiple fields</p>
@@ -1455,27 +1504,6 @@ export function EditMessageScreen({
               }}
             />
 
-            {canTowerPrint && (
-              <div className="mb-3 flex items-center justify-between gap-4 rounded-lg border border-border bg-card p-3">
-                <div>
-                  <Label htmlFor="tower-print">Tower Print</Label>
-                  <p className="mt-1 text-xs text-muted-foreground">Rotates each character for cable marking.</p>
-                </div>
-                <Switch
-                  id="tower-print"
-                  checked={!!message.towerPrint}
-                  onCheckedChange={(checked) => setMessage(prev => ({
-                    ...prev,
-                    towerPrint: checked,
-                    settings: {
-                      ...(prev.settings ?? defaultMessageSettings),
-                      rotation: withTowerRotation(prev.settings?.rotation, checked),
-                    },
-                  }))}
-                  aria-label="Tower Print"
-                />
-              </div>
-            )}
 
           </div>
 
@@ -1772,7 +1800,7 @@ export function EditMessageScreen({
                 <Button
                   onClick={async () => {
                     if (validateMessageName(saveAsName).valid) {
-                       const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), towerPrint: canTowerPrint && !!message.towerPrint, settings: { ...(message.settings ?? defaultMessageSettings), rotation: withTowerRotation(message.settings?.rotation, canTowerPrint && !!message.towerPrint) }, adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch, repeatAmount: localAdjustSettings.repeatAmount, speed: localAdjustSettings.speed, rotation: localAdjustSettings.rotation }, adjustOverrides: { ...localAdjustOverrides } }, true);
+                       const result = await onSave({ ...message, name: saveAsName.trim().toUpperCase(), towerPrint: canTowerPrint && !!message.towerPrint, settings: { ...(message.settings ?? defaultMessageSettings), rotation: withTowerRotation(message.settings?.rotation, canTowerPrint && !!message.towerPrint, !!message.towerReverse) }, adjustSettings: { width: localAdjustSettings.width, height: localAdjustSettings.height, delay: localAdjustSettings.delay, bold: localAdjustSettings.bold, gap: localAdjustSettings.gap, pitch: localAdjustSettings.pitch, repeatAmount: localAdjustSettings.repeatAmount, speed: localAdjustSettings.speed, rotation: localAdjustSettings.rotation }, adjustOverrides: { ...localAdjustOverrides } }, true);
                       setSaveAsDialogOpen(false);
                       if (result && result.fields.length > 0) {
                         setMessage(prev => ({
