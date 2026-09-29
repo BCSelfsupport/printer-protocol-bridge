@@ -155,18 +155,6 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
         </div>
 
         <div className="flex items-center min-w-0 flex-1 justify-end gap-2">
-          <button
-            onClick={toggleEmulateMode}
-            className={`h-8 md:h-12 px-2 md:px-3 rounded-full flex items-center gap-1 transition-colors flex-shrink-0 ${
-              emulateMode ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-muted-foreground/50 hover:bg-muted-foreground/70'
-            }`}
-            title={emulateMode ? 'Emulate Printers ON — tap to choose which printers are online/offline' : 'Emulate Printers OFF — tap to simulate printers'}
-            aria-pressed={emulateMode}
-          >
-            <Printer className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
-            <span className="hidden md:inline text-xs font-semibold text-card">Emulate Printers</span>
-            <span className="md:hidden text-[9px] font-semibold text-card">Emulate</span>
-          </button>
           {onDateTimeSetup && (
             <button
               onClick={onDateTimeSetup}
@@ -176,6 +164,16 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
               <CalendarClock className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
             </button>
           )}
+          <button
+            onClick={toggleEmulateMode}
+            className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
+              emulateMode ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-muted-foreground/50 hover:bg-muted-foreground/70'
+            }`}
+            title={emulateMode ? 'Emulate Printers ON — tap to choose which printers are online/offline' : 'Emulate Printers OFF — tap to simulate printers'}
+            aria-pressed={emulateMode}
+          >
+            <Printer className="w-3.5 h-3.5 md:w-5 md:h-5 text-card" />
+          </button>
           <div className="flex-1 min-w-0 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex w-max flex-nowrap items-center gap-1 md:gap-4 pl-2">
 
