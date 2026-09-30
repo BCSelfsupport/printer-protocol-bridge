@@ -33,7 +33,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
     title: 'Firmware Updates Over a PC Cable — No Thumb Drive Needed',
     date: '15 Sep 2026',
     summary:
-      'Firmware updates no longer require copying files to a USB stick. In the password-protected Developer Portal there is a new firmware panel: connect the printer with the PC-to-printer cable, drop in the firmware ZIP (or an already-extracted folder) and CodeSync extracts and uploads it directly. Archive handling is safe — it ignores junk folders like __MACOSX and normalizes paths — so the update reaches the printer exactly as the manufacturer posted it.',
+      'Firmware updates no longer require copying files to a USB stick. A new firmware panel lets you connect the printer with the PC-to-printer cable, drop in the firmware ZIP (or an already-extracted folder) and CodeSync extracts and uploads it directly. Archive handling is safe — it ignores junk folders like __MACOSX and normalizes paths — so the update reaches the printer exactly as the manufacturer posted it.',
   },
   {
     id: 'offline-printer-cards',
@@ -57,7 +57,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
     title: 'Built-In Training Video Recorder and Library',
     date: '21 Aug 2026',
     summary:
-      'Every feature can now have its own training video, recorded by you — real screen recordings, not motion graphics. The new video editor supports trimming (with non-destructive backups and Undo Trim), the recording controls are hidden from the finished video, and each clip opens and closes with the branded CodeSync wordmark. Videos live in a structured library, and only logged-in Developer Portal users can edit or delete them.',
+      'Every feature can now have its own training video, recorded by you — real screen recordings, not motion graphics. The new video editor supports trimming (with non-destructive backups and Undo Trim), the recording controls are hidden from the finished video, and each clip opens and closes with the branded CodeSync wordmark. Videos live in a structured library, and video management is restricted to authorized users.',
   },
   {
     id: 'editor-date-grouping',
