@@ -65,7 +65,7 @@ const DOT_SIZE = 8; // pixels per dot
 export function clampDragX(candidateX: number, offsets: Iterable<{ dx: number }>): number {
   let minOffset = 0;
   for (const { dx } of offsets) minOffset = Math.min(minOffset, dx);
-  return Math.max(-minOffset, candidateX);
+  return Math.max(minOffset < 0 ? -minOffset : 0, candidateX);
 }
 
 export function MessageCanvas({
