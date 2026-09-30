@@ -443,7 +443,7 @@ export function WhatsNewDialog({ open, onOpenChange }: WhatsNewDialogProps) {
 
         <ScrollArea className="max-h-[55vh]">
           <div className="p-4 space-y-4">
-            {RELEASE_NOTES.map((note) => (
+            {SORTED_RELEASE_NOTES.map((note) => (
               <div
                 key={note.id}
                 className={cn(
