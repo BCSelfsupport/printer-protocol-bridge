@@ -383,8 +383,22 @@ const RELEASE_NOTES: ReleaseNote[] = [
 
 const WHATS_NEW_READ_KEY = 'codesync.whatsNewReadId';
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function parseNoteDate(date: string): number {
+  const match = date.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+  if (!match) return 0;
+  const month = MONTHS.indexOf(match[2]);
+  return new Date(Number(match[3]), month === -1 ? 0 : month, Number(match[1])).getTime();
+}
+
+// Newest first; ties keep their insertion order (stable sort).
+const SORTED_RELEASE_NOTES = [...RELEASE_NOTES].sort(
+  (a, b) => parseNoteDate(b.date) - parseNoteDate(a.date)
+);
+
 function getLatestNoteId() {
-  return RELEASE_NOTES[0]?.id ?? '';
+  return SORTED_RELEASE_NOTES[0]?.id ?? '';
 }
 
 function hasUnreadNote() {
@@ -429,7 +443,7 @@ export function WhatsNewDialog({ open, onOpenChange }: WhatsNewDialogProps) {
 
         <ScrollArea className="max-h-[55vh]">
           <div className="p-4 space-y-4">
-            {RELEASE_NOTES.map((note) => (
+            {SORTED_RELEASE_NOTES.map((note) => (
               <div
                 key={note.id}
                 className={cn(
