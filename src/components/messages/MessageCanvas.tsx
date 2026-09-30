@@ -954,7 +954,27 @@ export function MessageCanvas({
     const field = findFieldAtPosition(pos.x, pos.y);
     
     if (field) {
-      const isGroupDrag = selectedFieldIds.size > 1 && selectedFieldIds.has(field.id);
+      const members = groupMemberIds(field);
+      // Ctrl/Cmd/Shift + click toggles the field (and its group) in the selection
+      if (e.ctrlKey || e.metaKey || e.shiftKey) {
+        const next = new Set(selectedFieldIds);
+        if (next.size === 0 && selectedFieldId != null && selectedFieldId !== field.id) {
+          for (const id of groupMemberIds(fields.find(f => f.id === selectedFieldId) ?? field)) next.add(id);
+        }
+        const allIn = members.every(id => next.has(id));
+        for (const id of members) { if (allIn) next.delete(id); else next.add(id); }
+        onSelectionChange?.(next);
+        onCanvasClick?.(pos.x, pos.y, field.id);
+        e.preventDefault();
+        return;
+      }
+
+      // Clicking a grouped piece selects the whole group; clicking inside an
+      // existing multi-selection keeps it so it can be dragged together.
+      const dragSet = selectedFieldIds.size > 1 && selectedFieldIds.has(field.id)
+        ? selectedFieldIds
+        : new Set(members);
+      const isGroupDrag = dragSet.size > 1;
       
       mouseDragMovedRef.current = false;
       mouseDragFieldRef.current = field.id;
@@ -966,20 +986,14 @@ export function MessageCanvas({
       
       // Compute group drag offsets (other selected fields relative to dragged field)
       if (isGroupDrag) {
-        const offsets = new Map<number, { dx: number; dy: number }>();
-        for (const fid of selectedFieldIds) {
-          if (fid === field.id) continue;
-          const f = fields.find(ff => ff.id === fid);
-          if (f) {
-            offsets.set(fid, { dx: f.x - field.x, dy: f.y - field.y });
-          }
-        }
-        groupDragOffsetsRef.current = offsets;
+        groupDragOffsetsRef.current = computeGroupOffsets(field, dragSet);
+        if (dragSet !== selectedFieldIds) onSelectionChange?.(new Set(dragSet));
       } else {
         groupDragOffsetsRef.current.clear();
         // Single click on a field — clear multi-selection
         onSelectionChange?.(new Set([field.id]));
       }
+      
       
       onCanvasClick?.(pos.x, pos.y, field.id);
       e.preventDefault();
@@ -993,6 +1007,20 @@ export function MessageCanvas({
       e.preventDefault();
     }
   };
+
+  function groupMemberIds(field: MessageField): number[] {
+    if (field.groupId == null) return [field.id];
+    return fields.filter(f => f.groupId === field.groupId).map(f => f.id);
+  }
+  function computeGroupOffsets(anchor: MessageField, ids: Set<number>) {
+    const offsets = new Map<number, { dx: number; dy: number }>();
+    for (const fid of ids) {
+      if (fid === anchor.id) continue;
+      const f = fields.find(ff => ff.id === fid);
+      if (f) offsets.set(fid, { dx: f.x - anchor.x, dy: f.y - anchor.y });
+    }
+    return offsets;
+  }
 
   const handleDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const pos = getMousePosition(e);
