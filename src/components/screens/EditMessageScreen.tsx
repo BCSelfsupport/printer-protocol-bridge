@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database, Sliders, Loader2 } from 'lucide-react';
+import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database, Sliders, Loader2, Link2, Unlink } from 'lucide-react';
 import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
@@ -74,6 +74,8 @@ export interface MessageField {
   // Token substitution: by default any field's data is scanned for {TOKEN} placeholders
   // (e.g. {WORK_ORDER}, {COUNTER1}). Set literalText=true to print braces verbatim.
   literalText?: boolean;
+  /** Pieces sharing a groupId (e.g. DD - MM - YYYY) select, move and resize together */
+  groupId?: number;
 }
 
 // Per-message adjust settings (width, height, delay, bold, gap, pitch, speed, rotation)
@@ -585,6 +587,26 @@ export function EditMessageScreen({
     const len = Array.from(f.data ?? '').length;
     const per = (canTowerPrint && message.towerPrint ? info.height : info.charWidth) + (f.gap ?? 1);
     return Math.max(f.width ?? 0, len * per);
+  };
+  // Re-pack grouped pieces edge-to-edge (after a font change their old
+  // widths would otherwise leave big gaps between characters).
+  const repackGroups = (fields: MessageField[], groupIds: Set<number>): MessageField[] => {
+    if (groupIds.size === 0) return fields;
+    const out = fields.map(f => ({ ...f }));
+    for (const gid of groupIds) {
+      const members = out.filter(f => f.groupId === gid).sort((a, b) => a.x - b.x);
+      let x = members[0]?.x ?? 0;
+      for (const m of members) {
+        m.x = x;
+        if (m.type !== 'barcode') {
+          const info = getFontInfo(m.fontSize);
+          const per = (canTowerPrint && message.towerPrint ? info.height : info.charWidth) + (m.gap ?? 1);
+          m.width = Math.max(1, Array.from(m.data ?? '').length * per);
+        }
+        x += m.width;
+      }
+    }
+    return out;
   };
   // Place new fields after any existing field sharing the same rows so they
   // never land hidden underneath another field.
@@ -1109,6 +1131,12 @@ export function EditMessageScreen({
 
     if (newFields.length === 0) return;
 
+    // Link the pieces so they select, move and resize as one date
+    if (newFields.length > 1) {
+      const groupId = newFields[0].id;
+      newFields.forEach(f => { f.groupId = groupId; });
+    }
+
     setMessage((prev) => {
       const updatedFields = [...prev.fields, ...newFields];
       return {
@@ -1118,6 +1146,7 @@ export function EditMessageScreen({
       };
     });
     setSelectedFieldId(newFields[0].id);
+    setSelectedFieldIds(new Set(newFields.map(f => f.id)));
   };
 
   const handleAddUserDefine = (config: UserDefineConfig) => {
@@ -1228,12 +1257,33 @@ export function EditMessageScreen({
   // Update field settings (bold, gap, rotation, autoNumerals)
   const handleUpdateFieldSetting = (key: keyof MessageField, value: any) => {
     if (!selectedFieldId) return;
-    setMessage((prev) => ({
-      ...prev,
-      fields: prev.fields.map((f) =>
-        f.id === selectedFieldId ? { ...f, [key]: value } : f
-      ),
-    }));
+    const targetIds = selectedFieldIds.size > 0 ? selectedFieldIds : new Set([selectedFieldId]);
+    setMessage((prev) => {
+      const updated = prev.fields.map((f) => (targetIds.has(f.id) ? { ...f, [key]: value } : f));
+      const groups = key === 'gap'
+        ? new Set(updated.filter(f => targetIds.has(f.id) && f.groupId != null).map(f => f.groupId!))
+        : new Set<number>();
+      const fields = repackGroups(updated, groups);
+      return { ...prev, fields, width: autoResizeWidth(fields) };
+    });
+  };
+
+  // Group the current multi-selection, or ungroup the selected field's group
+  const selectedGroupId = selectedField?.groupId;
+  const canGroup = selectedFieldIds.size > 1
+    && !(selectedGroupId != null && message.fields.filter(f => f.groupId === selectedGroupId).every(f => selectedFieldIds.has(f.id))
+      && [...selectedFieldIds].every(id => message.fields.find(f => f.id === id)?.groupId === selectedGroupId));
+  const handleToggleGroup = () => {
+    if (canGroup) {
+      const ids = selectedFieldIds;
+      const gid = Math.min(...ids);
+      setMessage(prev => ({ ...prev, fields: prev.fields.map(f => (ids.has(f.id) ? { ...f, groupId: gid } : f)) }));
+      toast.success('Fields grouped — they now move together');
+    } else if (selectedGroupId != null) {
+      setMessage(prev => ({ ...prev, fields: prev.fields.map(f => (f.groupId === selectedGroupId ? { ...f, groupId: undefined } : f)) }));
+      if (selectedFieldId) setSelectedFieldIds(new Set([selectedFieldId]));
+      toast.success('Ungrouped — pieces can now be moved separately');
+    }
   };
 
   /**
@@ -1437,7 +1487,7 @@ export function EditMessageScreen({
                 towerReverse={!!message.towerReverse}
                 onScrollLockChange={setIsCanvasScrollLocked}
               />
-              <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click to edit • Click+drag empty space to select multiple fields</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click to edit • Ctrl/Shift+click or drag across empty space to select several • Grouped dates move together</p>
             </div>
 
             {/* Field Settings Panel - Per-field settings like manual page 49-50 */}
@@ -1456,9 +1506,8 @@ export function EditMessageScreen({
                 const fonts = getAllowedFonts();
                 if (fonts.length === 0) return;
                 const targetIds = selectedFieldIds.size > 0 ? selectedFieldIds : new Set([selectedFieldId!]);
-                setMessage((prev) => ({
-                  ...prev,
-                  fields: prev.fields.map((f) => {
+                setMessage((prev) => {
+                  const resized = prev.fields.map((f) => {
                     if (!targetIds.has(f.id)) return f;
                     const currentIdx = fonts.findIndex(fs => fs.value === f.fontSize);
                     let newFont;
@@ -1477,8 +1526,11 @@ export function EditMessageScreen({
                       message.templateValue ?? String(message.height), message.height, newHeight, f.y,
                     );
                     return { ...f, fontSize: newFont.value, height: newHeight, y: newY };
-                  }),
-                }));
+                  });
+                  const groups = new Set(resized.filter(f => targetIds.has(f.id) && f.groupId != null).map(f => f.groupId!));
+                  const fields = repackGroups(resized, groups);
+                  return { ...prev, fields, width: autoResizeWidth(fields) };
+                });
               }}
               onBoldChange={(v) => handleUpdateFieldSetting('bold', v)}
               onGapChange={(v) => handleUpdateFieldSetting('gap', v)}
@@ -1559,6 +1611,16 @@ export function EditMessageScreen({
                   <Copy className="w-4 h-4" />
                   <span className="text-xs">Copy</span>
                 </button>
+                {(canGroup || selectedGroupId != null) && (
+                  <button
+                    onClick={handleToggleGroup}
+                    className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-1"
+                    title={canGroup ? 'Link selected fields so they move together' : 'Split this group so pieces move separately'}
+                  >
+                    {canGroup ? <Link2 className="w-4 h-4" /> : <Unlink className="w-4 h-4" />}
+                    <span className="text-xs">{canGroup ? 'Group' : 'Ungroup'}</span>
+                  </button>
+                )}
               </div>
 
               {/* Main action buttons */}
