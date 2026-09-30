@@ -821,8 +821,11 @@ export function EditMessageScreen({
       fontHeight = bestFont.height;
       fontSize = bestFont.value;
     } else {
-      fontHeight = Math.min(16, message.height);
-      fontSize = 'Standard16High';
+      // New fields inherit the selected font so row selection uses the final
+      // field height, not a temporary 16-dot field that later gets resized.
+      const inheritedFont = availableFontSizes.find(fs => fs.value === selectedField?.fontSize && fs.height <= message.height);
+      fontHeight = inheritedFont?.height ?? Math.min(16, message.height);
+      fontSize = inheritedFont?.value ?? 'Standard16High';
       // Ensure font fits single-line template height
       if (fontHeight > message.height) {
         const fittingFonts = availableFontSizes.filter(fs => fs.height <= message.height);
@@ -1469,9 +1472,15 @@ export function EditMessageScreen({
                     const is2DCode = isBarcode && f.data && /^\[(QR|QRCODE|DATAMATRIX|DM|DATA MATRIX|DOTCODE)/i.test(f.data);
                     const newHeight = is2DCode ? f.height : isBarcode ? message.height : newFont.height;
                     const blockedRows = 32 - message.height;
-                    const newY = currentMultilineTemplate
-                      ? f.y
-                      : Math.max(blockedRows, 32 - newHeight);
+                    // Keep this field on its existing line. Bottom-anchoring
+                    // every resized field moved both the upper and lower rows
+                    // onto the same Y after changing 16-high to 7-high.
+                    const validYs = getValidCanvasYPositions(
+                      message.templateValue ?? String(message.height), message.height, newHeight,
+                    );
+                    const newY = validYs.length > 0
+                      ? validYs.reduce((closest, y) => Math.abs(y - f.y) < Math.abs(closest - f.y) ? y : closest)
+                      : Math.max(blockedRows, Math.min(32 - newHeight, f.y));
                     return { ...f, fontSize: newFont.value, height: newHeight, y: newY };
                   }),
                 }));
