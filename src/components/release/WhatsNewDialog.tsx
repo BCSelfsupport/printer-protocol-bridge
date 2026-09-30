@@ -20,6 +20,46 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'field-left-edge-hard-stop',
+    type: 'bugfix',
+    title: 'Fields Can No Longer Be Dragged Past the Left Edge',
+    date: '30 Sep 2026',
+    summary:
+      'Fixed a bug where dragging a field (or a grouped date) towards the left of the message canvas could push it past the edge of the printable area, where part of the print would be lost. The left edge is now a hard stop: the field stops exactly at the boundary while grouped fields keep their spacing.',
+  },
+  {
+    id: 'firmware-cable-upload',
+    type: 'feature',
+    title: 'Firmware Updates Over a PC Cable — No Thumb Drive Needed',
+    date: '15 Sep 2026',
+    summary:
+      'Firmware updates no longer require copying files to a USB stick. A new firmware panel lets you connect the printer with the PC-to-printer cable, drop in the firmware ZIP (or an already-extracted folder) and CodeSync extracts and uploads it directly. Archive handling is safe — it ignores junk folders like __MACOSX and normalizes paths — so the update reaches the printer exactly as the manufacturer posted it.',
+  },
+  {
+    id: 'offline-printer-cards',
+    type: 'feature',
+    title: 'Cleaner Printer Cards With a True Offline State',
+    date: '11 Sep 2026',
+    summary:
+      'Printer cards have been tidied up so status is easier to read at a glance. The selection ring is now clearly separate from the connection indicator, offline printers show a clear offline placeholder, and the OK / ink / makeup indicators are hidden when a printer is offline instead of showing stale readings. The CONNECTED chip has been removed, online/offline can be set per printer (with all-online and all-offline shortcuts), and the emulator now mirrors exactly the printers you have configured — no more seeded demo printers.',
+  },
+  {
+    id: 'repeat-print',
+    type: 'feature',
+    title: 'Repeat Print',
+    date: '10 Sep 2026',
+    summary:
+      'Added Repeat Print so a message can be printed multiple times per product or per trigger, using the printer\'s documented repeat functions. The message "Select Code" field has also been renamed "Select ID Code" and is now a clearable numeric input, so picking the right ID code is quick and mistakes are easy to undo.',
+  },
+  {
+    id: 'training-video-studio',
+    type: 'feature',
+    title: 'Built-In Training Video Recorder and Library',
+    date: '21 Aug 2026',
+    summary:
+      'Every feature can now have its own training video, recorded by you — real screen recordings, not motion graphics. The new video editor supports trimming (with non-destructive backups and Undo Trim), the recording controls are hidden from the finished video, and each clip opens and closes with the branded CodeSync wordmark. Videos live in a structured library, and video management is restricted to authorized users.',
+  },
+  {
     id: 'editor-date-grouping',
     type: 'feature',
     title: 'Dates Now Move as One Piece in the Message Editor',
@@ -89,7 +129,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
     title: 'Emulate Printers Toggle in the Main Header',
     date: '17 Aug 2026',
     summary:
-      'The Emulate Printers toggle is no longer hidden behind the Developer Portal. A green button is now pinned in the main top toolbar (desktop) and labelled Emulate on mobile, so sales teams can demo the fleet without opening dev tools.',
+      'The Emulate Printers toggle is now available to everyone. A green button is pinned in the main top toolbar (desktop) and labelled Emulate on mobile, so sales teams can demo the fleet without any extra setup.',
   },
   {
     id: 'start-jet-targets-selected-printer',
