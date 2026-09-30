@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageCanvas } from '@/components/messages/MessageCanvas';
 import { loadTemplate, templateToMultilineConfig, type ParsedTemplate } from '@/lib/templateParser';
-import { TEMPLATE_LINE_Y_POSITIONS, getValidCanvasYPositions } from '@/lib/messageProtocol';
+import { TEMPLATE_LINE_Y_POSITIONS, getValidCanvasYPositions, canvasYAfterFontChange } from '@/lib/messageProtocol';
 import { computeAutoCodeValue } from '@/lib/autoCodeProtocol';
 import { NewFieldDialog } from '@/components/messages/NewFieldDialog';
 import { AutoCodeFieldDialog } from '@/components/messages/AutoCodeFieldDialog';
@@ -1471,16 +1471,11 @@ export function EditMessageScreen({
                     const isBarcode = f.type === 'barcode';
                     const is2DCode = isBarcode && f.data && /^\[(QR|QRCODE|DATAMATRIX|DM|DATA MATRIX|DOTCODE)/i.test(f.data);
                     const newHeight = is2DCode ? f.height : isBarcode ? message.height : newFont.height;
-                    const blockedRows = 32 - message.height;
-                    // Keep this field on its existing line. Bottom-anchoring
-                    // every resized field moved both the upper and lower rows
-                    // onto the same Y after changing 16-high to 7-high.
-                    const validYs = getValidCanvasYPositions(
-                      message.templateValue ?? String(message.height), message.height, newHeight,
+                    // Bottom-anchoring every resized field moved upper fields
+                    // down onto the lower row after changing fonts.
+                    const newY = canvasYAfterFontChange(
+                      message.templateValue ?? String(message.height), message.height, newHeight, f.y,
                     );
-                    const newY = validYs.length > 0
-                      ? validYs.reduce((closest, y) => Math.abs(y - f.y) < Math.abs(closest - f.y) ? y : closest)
-                      : Math.max(blockedRows, Math.min(32 - newHeight, f.y));
                     return { ...f, fontSize: newFont.value, height: newHeight, y: newY };
                   }),
                 }));

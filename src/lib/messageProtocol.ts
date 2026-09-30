@@ -201,6 +201,19 @@ export function getValidCanvasYPositions(
   return [...new Set(canvasPositions)].sort((a, b) => a - b);
 }
 
+/** Keep a resized field on the nearest valid row rather than moving it to Y=0. */
+export function canvasYAfterFontChange(
+  templateValue: string, templateHeight: number, newHeight: number, previousY: number,
+): number {
+  const validYs = getValidCanvasYPositions(templateValue, templateHeight, newHeight);
+  if (validYs.length === 0) {
+    return Math.max(32 - templateHeight, Math.min(32 - newHeight, previousY));
+  }
+  return validYs.reduce((closest, y) =>
+    Math.abs(y - previousY) < Math.abs(closest - previousY) ? y : closest,
+  );
+}
+
 // ── ^LF Field type codes (protocol v2.6 §5.24) ──────────────────────────────
 // The T: value on a Field line is in HEXADECIMAL notation per the spec.
 
