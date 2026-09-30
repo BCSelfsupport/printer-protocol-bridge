@@ -1257,12 +1257,33 @@ export function EditMessageScreen({
   // Update field settings (bold, gap, rotation, autoNumerals)
   const handleUpdateFieldSetting = (key: keyof MessageField, value: any) => {
     if (!selectedFieldId) return;
-    setMessage((prev) => ({
-      ...prev,
-      fields: prev.fields.map((f) =>
-        f.id === selectedFieldId ? { ...f, [key]: value } : f
-      ),
-    }));
+    const targetIds = selectedFieldIds.size > 0 ? selectedFieldIds : new Set([selectedFieldId]);
+    setMessage((prev) => {
+      const updated = prev.fields.map((f) => (targetIds.has(f.id) ? { ...f, [key]: value } : f));
+      const groups = key === 'gap'
+        ? new Set(updated.filter(f => targetIds.has(f.id) && f.groupId != null).map(f => f.groupId!))
+        : new Set<number>();
+      const fields = repackGroups(updated, groups);
+      return { ...prev, fields, width: autoResizeWidth(fields) };
+    });
+  };
+
+  // Group the current multi-selection, or ungroup the selected field's group
+  const selectedGroupId = selectedField?.groupId;
+  const canGroup = selectedFieldIds.size > 1
+    && !(selectedGroupId != null && message.fields.filter(f => f.groupId === selectedGroupId).every(f => selectedFieldIds.has(f.id))
+      && [...selectedFieldIds].every(id => message.fields.find(f => f.id === id)?.groupId === selectedGroupId));
+  const handleToggleGroup = () => {
+    if (canGroup) {
+      const ids = selectedFieldIds;
+      const gid = Math.min(...ids);
+      setMessage(prev => ({ ...prev, fields: prev.fields.map(f => (ids.has(f.id) ? { ...f, groupId: gid } : f)) }));
+      toast.success('Fields grouped — they now move together');
+    } else if (selectedGroupId != null) {
+      setMessage(prev => ({ ...prev, fields: prev.fields.map(f => (f.groupId === selectedGroupId ? { ...f, groupId: undefined } : f)) }));
+      if (selectedFieldId) setSelectedFieldIds(new Set([selectedFieldId]));
+      toast.success('Ungrouped — pieces can now be moved separately');
+    }
   };
 
   /**
