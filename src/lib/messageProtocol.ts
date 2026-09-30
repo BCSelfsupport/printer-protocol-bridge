@@ -747,6 +747,9 @@ export function buildMessageDetails(
       rotation: pf.rotation === 0 ? 'Normal' as const : 'Normal' as const,
       autoCodeFieldType: protocolAutoCodeMeta.autoCodeFieldType ?? inferredAutoCodeMeta.autoCodeFieldType,
       autoCodeFormat: protocolAutoCodeMeta.autoCodeFormat ?? inferredAutoCodeMeta.autoCodeFormat,
+      // Guessed from the printed value only (e.g. "09" could be month OR day) —
+      // cached metadata must win over this when merging.
+      ...(protocolAutoCodeMeta.autoCodeFieldType ? {} : { autoCodeInferred: true }),
       autoNumerals: 0,
     };
   });

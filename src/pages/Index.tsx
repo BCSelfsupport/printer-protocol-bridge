@@ -649,12 +649,16 @@ const Index = () => {
       if (!cachedField) return f;
 
       // Preserve autoCode metadata that ^LF doesn't carry
+      // When the fetched type was only guessed from the value (e.g. "09" → day),
+      // trust the saved metadata (it may be month) instead.
+      const inferred = !!(f as any).autoCodeInferred && !!cachedField.autoCodeFieldType;
+      const { autoCodeInferred: _inf, ...fClean } = f as any;
       const result = {
-        ...f,
+        ...(fClean as typeof f),
         data: isBlankFetchedPlaceholder && cachedField.autoCodeFieldType ? cachedField.data : f.data,
         autoCodeExpiryDays: f.autoCodeExpiryDays ?? cachedField.autoCodeExpiryDays,
-        autoCodeFieldType: f.autoCodeFieldType ?? cachedField.autoCodeFieldType,
-        autoCodeFormat: f.autoCodeFormat ?? cachedField.autoCodeFormat,
+        autoCodeFieldType: inferred ? cachedField.autoCodeFieldType : (f.autoCodeFieldType ?? cachedField.autoCodeFieldType),
+        autoCodeFormat: inferred ? cachedField.autoCodeFormat : (f.autoCodeFormat ?? cachedField.autoCodeFormat),
         dynamicSource: f.dynamicSource ?? cachedField.dynamicSource,
         promptBeforePrint: f.promptBeforePrint ?? cachedField.promptBeforePrint,
         promptLabel: f.promptLabel ?? cachedField.promptLabel,
