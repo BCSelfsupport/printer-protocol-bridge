@@ -1485,9 +1485,8 @@ export function EditMessageScreen({
                 const fonts = getAllowedFonts();
                 if (fonts.length === 0) return;
                 const targetIds = selectedFieldIds.size > 0 ? selectedFieldIds : new Set([selectedFieldId!]);
-                setMessage((prev) => ({
-                  ...prev,
-                  fields: prev.fields.map((f) => {
+                setMessage((prev) => {
+                  const resized = prev.fields.map((f) => {
                     if (!targetIds.has(f.id)) return f;
                     const currentIdx = fonts.findIndex(fs => fs.value === f.fontSize);
                     let newFont;
@@ -1506,8 +1505,11 @@ export function EditMessageScreen({
                       message.templateValue ?? String(message.height), message.height, newHeight, f.y,
                     );
                     return { ...f, fontSize: newFont.value, height: newHeight, y: newY };
-                  }),
-                }));
+                  });
+                  const groups = new Set(resized.filter(f => targetIds.has(f.id) && f.groupId != null).map(f => f.groupId!));
+                  const fields = repackGroups(resized, groups);
+                  return { ...prev, fields, width: autoResizeWidth(fields) };
+                });
               }}
               onBoldChange={(v) => handleUpdateFieldSetting('bold', v)}
               onGapChange={(v) => handleUpdateFieldSetting('gap', v)}
