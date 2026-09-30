@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database, Sliders, Loader2 } from 'lucide-react';
+import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database, Sliders, Loader2, Link2, Unlink } from 'lucide-react';
 import { toast } from 'sonner';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
@@ -1487,7 +1487,7 @@ export function EditMessageScreen({
                 towerReverse={!!message.towerReverse}
                 onScrollLockChange={setIsCanvasScrollLocked}
               />
-              <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click to edit • Click+drag empty space to select multiple fields</p>
+              <p className="text-[10px] md:text-xs text-muted-foreground mt-1">Double-click to edit • Ctrl/Shift+click or drag across empty space to select several • Grouped dates move together</p>
             </div>
 
             {/* Field Settings Panel - Per-field settings like manual page 49-50 */}
@@ -1611,6 +1611,16 @@ export function EditMessageScreen({
                   <Copy className="w-4 h-4" />
                   <span className="text-xs">Copy</span>
                 </button>
+                {(canGroup || selectedGroupId != null) && (
+                  <button
+                    onClick={handleToggleGroup}
+                    className="industrial-button text-white px-3 py-2 rounded-lg flex items-center gap-1"
+                    title={canGroup ? 'Link selected fields so they move together' : 'Split this group so pieces move separately'}
+                  >
+                    {canGroup ? <Link2 className="w-4 h-4" /> : <Unlink className="w-4 h-4" />}
+                    <span className="text-xs">{canGroup ? 'Group' : 'Ungroup'}</span>
+                  </button>
+                )}
               </div>
 
               {/* Main action buttons */}
