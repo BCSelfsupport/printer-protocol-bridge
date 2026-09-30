@@ -74,6 +74,8 @@ export interface MessageField {
   // Token substitution: by default any field's data is scanned for {TOKEN} placeholders
   // (e.g. {WORK_ORDER}, {COUNTER1}). Set literalText=true to print braces verbatim.
   literalText?: boolean;
+  /** Pieces sharing a groupId (e.g. DD - MM - YYYY) select, move and resize together */
+  groupId?: number;
 }
 
 // Per-message adjust settings (width, height, delay, bold, gap, pitch, speed, rotation)
@@ -585,6 +587,26 @@ export function EditMessageScreen({
     const len = Array.from(f.data ?? '').length;
     const per = (canTowerPrint && message.towerPrint ? info.height : info.charWidth) + (f.gap ?? 1);
     return Math.max(f.width ?? 0, len * per);
+  };
+  // Re-pack grouped pieces edge-to-edge (after a font change their old
+  // widths would otherwise leave big gaps between characters).
+  const repackGroups = (fields: MessageField[], groupIds: Set<number>): MessageField[] => {
+    if (groupIds.size === 0) return fields;
+    const out = fields.map(f => ({ ...f }));
+    for (const gid of groupIds) {
+      const members = out.filter(f => f.groupId === gid).sort((a, b) => a.x - b.x);
+      let x = members[0]?.x ?? 0;
+      for (const m of members) {
+        m.x = x;
+        if (m.type !== 'barcode') {
+          const info = getFontInfo(m.fontSize);
+          const per = (canTowerPrint && message.towerPrint ? info.height : info.charWidth) + (m.gap ?? 1);
+          m.width = Math.max(1, Array.from(m.data ?? '').length * per);
+        }
+        x += m.width;
+      }
+    }
+    return out;
   };
   // Place new fields after any existing field sharing the same rows so they
   // never land hidden underneath another field.
@@ -1109,6 +1131,12 @@ export function EditMessageScreen({
 
     if (newFields.length === 0) return;
 
+    // Link the pieces so they select, move and resize as one date
+    if (newFields.length > 1) {
+      const groupId = newFields[0].id;
+      newFields.forEach(f => { f.groupId = groupId; });
+    }
+
     setMessage((prev) => {
       const updatedFields = [...prev.fields, ...newFields];
       return {
@@ -1118,6 +1146,7 @@ export function EditMessageScreen({
       };
     });
     setSelectedFieldId(newFields[0].id);
+    setSelectedFieldIds(new Set(newFields.map(f => f.id)));
   };
 
   const handleAddUserDefine = (config: UserDefineConfig) => {
