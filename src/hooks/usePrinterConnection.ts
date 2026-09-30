@@ -2204,6 +2204,28 @@ export function usePrinterConnection() {
     });
   }, []);
 
+  // A single-line template (e.g. "16", L:1) makes the firmware clamp every
+  // field to Y=0, so stacked lines overlap after save. When the fields sit on
+  // several rows of one font height, promote to the matching multi-line template.
+  const promoteToMultiLineTemplate = (
+    templateValue: string | undefined,
+    fields: Array<{ type: string; y: number; fontSize: string }>,
+  ): string | undefined => {
+    if (!templateValue || !/^\d+$/.test(templateValue)) return templateValue;
+    const textFields = fields.filter(f => f.type !== 'barcode');
+    if (textFields.length !== fields.length || textFields.length < 2) return templateValue;
+    const heights = new Set(textFields.map(f => fontToDotHeight(f.fontSize)));
+    if (heights.size !== 1) return templateValue;
+    const h = [...heights][0];
+    const rows = new Set(textFields.map(f => f.y)).size;
+    if (rows < 2) return templateValue;
+    const table: Record<string, string> = {
+      '16:2:7': 'multi-2x7', '19:2:9': 'multi-2x9', '25:2:12': 'multi-2x12', '11:2:5': 'multi-2x5',
+      '23:3:7': 'multi-3x7', '29:3:9': 'multi-3x9', '31:4:7': 'multi-4x7', '23:4:5': 'multi-4x5', '29:5:5': 'multi-5x5',
+    };
+    return table[`${templateValue}:${rows}:${h}`] ?? templateValue;
+  };
+
   // Template value to protocol template code mapping (per v2.6 spec section 4.2.1)
   const templateToProtocolCode = (templateValue?: string): number => {
     const map: Record<string, number> = {
@@ -2513,6 +2535,7 @@ export function usePrinterConnection() {
     const normalizedMessageName = messageName.trim().toUpperCase();
     // Fast-path save no longer parks on a fallback message before rewriting,
     // so we no longer compute the previously-selected message or a fallback name.
+    templateValue = promoteToMultiLineTemplate(templateValue, fields);
     const templateCode = templateToProtocolCode(templateValue);
     
     // Convert absolute 32-dot canvas Y coordinates to printer Y coordinates.
@@ -2816,6 +2839,7 @@ export function usePrinterConnection() {
   ): Promise<string[] | null> => {
     if (fields.length === 0) return null;
 
+    templateValue = promoteToMultiLineTemplate(templateValue, fields);
     const templateCode = templateToProtocolCode(templateValue);
     const templateHeight = (() => {
       if (!templateValue) return 32;
