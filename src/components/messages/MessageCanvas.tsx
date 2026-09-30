@@ -15,7 +15,10 @@ interface CanvasField {
   bold?: number;
   gap?: number;
   rotation?: string;
+  /** Fields sharing a groupId select and move together (e.g. DD-MM-YYYY pieces) */
+  groupId?: number;
 }
+type MessageField = CanvasField;
 
 interface MultilineTemplate {
   lines: number;
@@ -1075,6 +1078,15 @@ export function MessageCanvas({
         setDragOffset({ x: pos.x - field.x, y: pos.y - field.y });
         setDragPosition({ x: field.x, y: field.y });
         onCanvasClick?.(pos.x, pos.y, field.id); // Select the field
+        // Press-and-hold on a grouped piece picks up the whole group
+        const members = groupMemberIds(field);
+        if (members.length > 1) {
+          const set = new Set(members);
+          groupDragOffsetsRef.current = computeGroupOffsets(field, set);
+          onSelectionChange?.(set);
+        } else {
+          groupDragOffsetsRef.current.clear();
+        }
 
         // Provide haptic feedback if available
         if (navigator.vibrate) {
@@ -1130,7 +1142,14 @@ export function MessageCanvas({
     if (isDragging && dragFieldId !== null && isLongPressActive) {
       // Complete the drag
       const draggedField = fields.find(f => f.id === dragFieldId);
-      if (draggedField && onFieldMove) {
+      if (draggedField && groupDragOffsetsRef.current.size > 0 && onFieldsMove) {
+        const moves = [{ fieldId: dragFieldId, newX: dragPosition.x, newY: dragPosition.y }];
+        for (const [fid, o] of groupDragOffsetsRef.current) {
+          moves.push({ fieldId: fid, newX: dragPosition.x + o.dx, newY: dragPosition.y + o.dy });
+        }
+        onFieldsMove(moves);
+        groupDragOffsetsRef.current.clear();
+      } else if (draggedField && onFieldMove) {
         const fontInfo = getFontInfo(draggedField.fontSize);
 
         // Check if font fits in the target line
