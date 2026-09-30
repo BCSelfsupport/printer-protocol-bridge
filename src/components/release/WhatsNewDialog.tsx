@@ -20,6 +20,46 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'editor-date-grouping',
+    type: 'feature',
+    title: 'Dates Now Move as One Piece in the Message Editor',
+    date: '30 Sep 2026',
+    summary:
+      'Dates built from pieces like DD - MM - YYYY no longer have to be moved one character at a time. A single click on any piece selects the whole date and dragging moves it as one block, so pieces stay perfectly spaced. Double-click a piece to edit just that part, and an Ungroup button (with Group to re-join) splits a date apart for anyone who really wants separate fields. For picking several separate fields at once, Ctrl+click (Cmd+click on Mac) adds fields to the selection, and font size, gap and bold changes now apply to everything selected. On touch screens, press-and-hold selects the whole group.',
+  },
+  {
+    id: 'european-date-readback-fix',
+    type: 'bugfix',
+    title: 'European Dates Keep Day-First Order When Re-Edited',
+    date: '30 Sep 2026',
+    summary:
+      'Fixed a bug where a European date such as DD-MM-YYYY edited and saved correctly, but came back as 30-30-2026 when the message was opened again. The printer reports only the printed numbers, not what each one means, so CodeSync was guessing which pair was the day and picking wrong. The editor now remembers the date parts you set when the message was saved and only guesses when there is nothing saved to go on.',
+  },
+  {
+    id: 'stacked-lines-template-save-fix',
+    type: 'bugfix',
+    title: 'Two-Stacked-Line Messages No Longer Overlap After Saving',
+    date: '29 Sep 2026',
+    summary:
+      'Fixed a bug where a message with a top line and a bottom line (for example a 7-high part number over a 7-high date code) looked correct in the editor, but after saving and reopening every field was stacked on the bottom row, overlapping. The message was being saved on a single-line template, which the printer treats as one row. When all fields use the same font size and sit on separate rows, CodeSync now saves the message on the matching multi-line template instead (2L×7, 3L×7, 2L×9 and so on), so the printer keeps the lines apart. Messages that really are one line are not affected.',
+  },
+  {
+    id: 'tower-print',
+    type: 'feature',
+    title: 'Tower Print: Per-Character Vertical Printing (Wire & Cable)',
+    date: '29 Sep 2026',
+    summary:
+      'Wire & Cable messages can now print each character rotated upright so text reads down the cable like a tower. In the message editor, a slim Tower Print bar sits just above the message preview with Standard and Reversed direction buttons: Standard reads CBA top-to-bottom, Reversed turns each letter the other way so it reads ABC, while keeping the character order. The preview updates live and the choice is saved, copied to other printers and sent with the message. New fields are also placed just to the right of whatever is already on the line, so they never land hidden underneath existing fields.',
+  },
+  {
+    id: 'emulate-button-placement',
+    type: 'bugfix',
+    title: 'Emulate Printers Button Tidied Next to the Clock',
+    date: '29 Sep 2026',
+    summary:
+      'The Emulate Printers button is now a small round icon that matches the other toolbar buttons, with hover text, and sits beside the time and date at the far right of the header on desktop and mobile — with a clear gap from the CodeSync logo.',
+  },
+  {
     id: 'wire-cable-package',
     type: 'feature',
     title: 'New Wire & Cable Package: Scan-to-Print Cable Jobs',
