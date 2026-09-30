@@ -129,7 +129,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
     title: 'Emulate Printers Toggle in the Main Header',
     date: '17 Aug 2026',
     summary:
-      'The Emulate Printers toggle is no longer hidden behind the Developer Portal. A green button is now pinned in the main top toolbar (desktop) and labelled Emulate on mobile, so sales teams can demo the fleet without opening dev tools.',
+      'The Emulate Printers toggle is now available to everyone. A green button is pinned in the main top toolbar (desktop) and labelled Emulate on mobile, so sales teams can demo the fleet without any extra setup.',
   },
   {
     id: 'start-jet-targets-selected-printer',
