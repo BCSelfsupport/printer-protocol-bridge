@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { canvasYAfterFontChange, getValidCanvasYPositions, buildMessageDetails, parseGmResponse, parseLfResponse } from '@/lib/messageProtocol';
+import { clampDragX } from '@/components/messages/MessageCanvas';
+
+describe('field dragging at the left edge', () => {
+  it('stops a single field at column zero', () => {
+    expect(clampDragX(-12, [])).toBe(0);
+    expect(clampDragX(3, [])).toBe(3);
+  });
+
+  it('stops a group when its leftmost piece reaches column zero', () => {
+    const offsets = [{ dx: -18 }, { dx: -6 }, { dx: 10 }];
+    expect(clampDragX(-4, offsets)).toBe(18);
+    expect(clampDragX(12, offsets)).toBe(18);
+    expect(clampDragX(24, offsets)).toBe(24);
+  });
+});
 
 describe('16-dot template with two 7-high lines', () => {
   it('keeps the upper line above the lower line when its font changes', () => {

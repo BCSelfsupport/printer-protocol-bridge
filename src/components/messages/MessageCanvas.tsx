@@ -61,6 +61,13 @@ interface MessageCanvasProps {
 const TOTAL_ROWS = 32;
 const DOT_SIZE = 8; // pixels per dot
 
+/** Keep the leftmost selected field at column zero without breaking group spacing. */
+export function clampDragX(candidateX: number, offsets: Iterable<{ dx: number }>): number {
+  let minOffset = 0;
+  for (const { dx } of offsets) minOffset = Math.min(minOffset, dx);
+  return Math.max(-minOffset, candidateX);
+}
+
 export function MessageCanvas({
   templateHeight = 16,
   templateValue = '16',
@@ -819,8 +826,9 @@ export function MessageCanvas({
       let newX = pos.x - mouseDragOffsetRef.current.x;
       let newY = pos.y - mouseDragOffsetRef.current.y;
 
-      // Clamp to valid area
-      newX = Math.max(0, newX);
+      // Stop the entire selection at the left edge, even when dragging a
+      // piece to the right of another grouped field.
+      newX = clampDragX(newX, groupDragOffsetsRef.current.values());
       newY = Math.max(blockedRows, newY);
       newY = Math.min(TOTAL_ROWS - fieldHeight, newY);
 
@@ -1123,8 +1131,8 @@ export function MessageCanvas({
       let newX = pos.x - dragOffset.x;
       let newY = pos.y - dragOffset.y;
 
-      // Clamp to valid area
-      newX = Math.max(0, newX);
+      // Match desktop drag: no selected piece may cross the left edge.
+      newX = clampDragX(newX, groupDragOffsetsRef.current.values());
       newY = Math.max(blockedRows, newY);
       newY = Math.min(TOTAL_ROWS - fieldHeight, newY);
 
