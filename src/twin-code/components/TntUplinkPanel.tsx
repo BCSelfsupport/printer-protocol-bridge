@@ -113,10 +113,10 @@ export function TntUplinkPanel() {
         </div>
 
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          Phase 1: transport only. Inbound Config/Print/Request frames are
-          logged and surfaced here; wiring into the TwinCode dispatcher lands
-          in Phase 2 once the DJDACP2D-03 byte layout is confirmed against a
-          live pcap.
+          Built to the Authentix Interface Spec: Config is acknowledged, Print
+          messages are decoded, and the 30-second serial check is answered.
+          Fault replies follow once Authentix confirms the return-message
+          layout.
         </p>
       </CardContent>
     </Card>

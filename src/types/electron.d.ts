@@ -48,6 +48,7 @@ interface TntAPI {
   getConfig: () => Promise<TntConfig>;
   setConfig: (cfg: TntConfig) => Promise<{ success: boolean; config: TntConfig }>;
   send: (opcode: number, payload: unknown) => Promise<{ success: boolean; error?: string }>;
+  setLastSerial?: (n: number) => Promise<{ success: boolean }>;
   onFrame: (cb: (entry: TntFrameEntry) => void) => () => void;
   onState: (cb: (state: TntState) => void) => () => void;
 }
