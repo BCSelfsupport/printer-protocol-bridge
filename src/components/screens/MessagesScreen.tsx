@@ -646,7 +646,7 @@ export function MessagesScreen({
                 onClick={() => handleMessageClick(message)}
                 className={`flex items-center py-3 border-b cursor-pointer transition-colors ${
                   selectedMessage?.id === message.id 
-                    ? 'bg-primary/20 border-primary/30' 
+                    ? 'bg-muted border-border' 
                     : 'hover:bg-muted/50'
                 }`}
               >
@@ -680,7 +680,7 @@ export function MessagesScreen({
                     onDoubleClick={() => onEdit(message)}
                     className={`relative flex flex-col rounded-lg border-2 cursor-pointer transition-all overflow-hidden bg-background hover:shadow-md ${
                       isSelected
-                        ? 'border-primary ring-2 ring-primary/30'
+                        ? 'border-muted-foreground/50 ring-2 ring-muted-foreground/20'
                         : isActive
                         ? 'border-primary/50'
                         : 'border-border hover:border-primary/40'
@@ -694,7 +694,7 @@ export function MessagesScreen({
                     )}
                     {/* Selected check */}
                     {isSelected && (
-                      <div className="absolute top-1.5 right-1.5 z-10 bg-primary text-primary-foreground rounded-full p-1 shadow-sm">
+                      <div className="absolute top-1.5 right-1.5 z-10 bg-muted-foreground text-background rounded-full p-1 shadow-sm">
                         <Check className="w-3 h-3" />
                       </div>
                     )}
