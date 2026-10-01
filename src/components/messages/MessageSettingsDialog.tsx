@@ -197,7 +197,7 @@ export function MessageSettingsDialog({
           <div className="space-y-3">
             {/* Speed: Fast, Faster, Fastest, Ultra Fast */}
             <SettingCard
-              label="Speed (s)"
+              label="Speed"
               value={settings.speed}
               onIncrease={cycleSpeedUp}
               onDecrease={cycleSpeedDown}
@@ -206,7 +206,7 @@ export function MessageSettingsDialog({
 
             {/* Rotation: Normal, Flip, Mirror, Mirror Flip + Tower variants */}
             <SettingCard
-              label="Orientation (o)"
+              label="Orientation"
               value={settings.rotation}
               onIncrease={cycleRotation}
               onDecrease={cycleRotation}
@@ -216,7 +216,7 @@ export function MessageSettingsDialog({
 
             {/* Print Mode: Normal, Auto, Repeat, Reverse */}
             <SettingCard
-              label="Print Mode (p)"
+              label="Print Mode"
               value={settings.printMode ?? 'Normal'}
               onIncrease={cyclePrintModeUp}
               onDecrease={cyclePrintModeDown}
@@ -227,10 +227,7 @@ export function MessageSettingsDialog({
           
           {/* Info text */}
           <p className="text-xs text-slate-400 text-center mt-4">
-            These settings are stored with the message via ^CM command
-          </p>
-          <p className="text-[10px] text-slate-500 text-center mt-1">
-            t=Template • s=Speed • o=Orientation • p=Print Mode
+            These settings are stored with the message
           </p>
         </div>
         

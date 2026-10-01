@@ -760,16 +760,6 @@ export function EditMessageScreen({
     ...availableMultilineTemplates.map(t => ({ ...t, type: 'multi' as const })),
   ];
 
-  // Handle template navigation (delta-based: +1 = next, -1 = prev)
-  const handleTemplateNavigate = (delta: number) => {
-    const currentValue = getCurrentTemplateValue();
-    const currentIdx = ALL_TEMPLATES.findIndex(t => t.value === currentValue);
-    const newIdx = Math.max(0, Math.min(ALL_TEMPLATES.length - 1, currentIdx + delta));
-    if (newIdx !== currentIdx) {
-      handleTemplateChange(ALL_TEMPLATES[newIdx].value);
-    }
-  };
-
   // Get the current template value for the dropdown
   const getCurrentTemplateValue = (): string => {
     return message.templateValue || message.height.toString();
@@ -1537,26 +1527,20 @@ export function EditMessageScreen({
               gap={selectedField?.gap ?? 1}
               rotation={selectedField?.rotation ?? 'Normal'}
               autoNumerals={selectedField?.autoNumerals ?? 0}
-              templateLabel={getCurrentTemplateValue().startsWith('multi-') 
-                ? MULTILINE_TEMPLATES.find(t => t.value === getCurrentTemplateValue())?.label || getCurrentTemplateValue()
-                : `${message.height}`
-              }
-              onFontSizeChange={(delta) => {
+              templateValue={getCurrentTemplateValue()}
+              templateOptions={ALL_TEMPLATES.map(t => ({
+                value: t.value,
+                label: t.label,
+                group: t.type === 'multi' ? 'Multi-line' : 'Single line',
+              }))}
+              onFontSizeSelect={(value) => {
                 if (!selectedField) return;
-                const fonts = getAllowedFonts();
-                if (fonts.length === 0) return;
+                const newFont = getAllowedFonts().find(fs => fs.value === value);
+                if (!newFont) return;
                 const targetIds = selectedFieldIds.size > 0 ? selectedFieldIds : new Set([selectedFieldId!]);
                 setMessage((prev) => {
                   const resized = prev.fields.map((f) => {
                     if (!targetIds.has(f.id)) return f;
-                    const currentIdx = fonts.findIndex(fs => fs.value === f.fontSize);
-                    let newFont;
-                    if (currentIdx === -1) {
-                      newFont = fonts[fonts.length - 1];
-                    } else {
-                      const newIdx = Math.max(0, Math.min(fonts.length - 1, currentIdx + delta));
-                      newFont = fonts[newIdx];
-                    }
                     const isBarcode = f.type === 'barcode';
                     const is2DCode = isBarcode && f.data && /^\[(QR|QRCODE|DATAMATRIX|DM|DATA MATRIX|DOTCODE)/i.test(f.data);
                     const newHeight = is2DCode ? f.height : isBarcode ? message.height : newFont.height;
@@ -1576,10 +1560,9 @@ export function EditMessageScreen({
               onGapChange={(v) => handleUpdateFieldSetting('gap', v)}
               onRotationChange={(v) => handleUpdateFieldSetting('rotation', v)}
               onAutoNumeralsChange={(v) => handleUpdateFieldSetting('autoNumerals', v)}
-              onTemplateChange={handleTemplateNavigate}
+              onTemplateSelect={(v) => { void handleTemplateChange(v); }}
               disabled={!selectedFieldId}
               allowedFonts={getAllowedFonts()}
-              currentFontIndex={selectedField ? getAllowedFonts().findIndex(f => f.value === selectedField.fontSize) : -1}
               fieldType={selectedField?.type ?? 'text'}
               promptBeforePrint={selectedField?.promptBeforePrint}
               promptLabel={selectedField?.promptLabel}

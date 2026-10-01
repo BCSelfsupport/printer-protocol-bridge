@@ -1,6 +1,13 @@
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Pencil } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export interface FieldSettings {
   fontSize: string;
@@ -140,6 +147,45 @@ function SettingCard({
   );
 }
 
+interface SelectCardProps {
+  label: string;
+  value: string;
+  options: { value: string; label: string; group?: string }[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}
+
+function SelectCard({ label, value, options, onChange, disabled = false }: SelectCardProps) {
+  const hasValue = options.some(o => o.value === value);
+  const groups = Array.from(new Set(options.map(o => o.group).filter((g): g is string => !!g)));
+  return (
+    <div className={`bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border ${disabled ? 'opacity-50' : ''}`}>
+      <div className="flex flex-col gap-1">
+        <div className="text-[10px] text-muted-foreground font-medium">{label}</div>
+        <Select value={hasValue ? value : undefined} onValueChange={onChange} disabled={disabled}>
+          <SelectTrigger className="h-7 w-full text-xs font-bold px-2">
+            <SelectValue placeholder="Select…" />
+          </SelectTrigger>
+          <SelectContent>
+            {groups.length > 0
+              ? groups.map((g) => (
+                  <div key={g}>
+                    <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground">{g}</div>
+                    {options.filter(o => o.group === g).map(o => (
+                      <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                    ))}
+                  </div>
+                ))
+              : options.map(o => (
+                  <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+}
+
 const rotationValues: FieldSettings['rotation'][] = ['Normal', 'Flip', 'Mirror Flip', 'Mirror'];
 const autoNumeralValues = [0, 1, 2, 3, 4];
 
@@ -149,16 +195,16 @@ interface FieldSettingsPanelProps {
   gap: number;
   rotation: FieldSettings['rotation'];
   autoNumerals: number;
-  templateLabel: string;
-  onFontSizeChange: (delta: number) => void;
+  templateValue: string;
+  templateOptions: { value: string; label: string; group?: string }[];
+  onFontSizeSelect: (value: string) => void;
   onBoldChange: (value: number) => void;
   onGapChange: (value: number) => void;
   onRotationChange: (value: FieldSettings['rotation']) => void;
   onAutoNumeralsChange: (value: number) => void;
-  onTemplateChange?: (delta: number) => void;
+  onTemplateSelect?: (value: string) => void;
   disabled?: boolean;
   allowedFonts: { value: string; label: string; height: number }[];
-  currentFontIndex: number;
   fieldType?: string;
   promptBeforePrint?: boolean;
   promptLabel?: string;
@@ -176,16 +222,16 @@ export function FieldSettingsPanel({
   gap,
   rotation,
   autoNumerals,
-  templateLabel,
-  onFontSizeChange,
+  templateValue,
+  templateOptions,
+  onFontSizeSelect,
   onBoldChange,
   onGapChange,
   onRotationChange,
   onAutoNumeralsChange,
-  onTemplateChange,
+  onTemplateSelect,
   disabled = false,
   allowedFonts,
-  currentFontIndex,
   fieldType,
   promptBeforePrint,
   promptLabel,
@@ -195,8 +241,6 @@ export function FieldSettingsPanel({
   literalText,
   onLiteralTextChange,
 }: FieldSettingsPanelProps) {
-  const fontLabel = allowedFonts.find(f => f.value === fontSize)?.label || fontSize;
-
   const cycleRotation = () => {
     const idx = rotationValues.indexOf(rotation);
     onRotationChange(rotationValues[(idx + 1) % rotationValues.length]);
@@ -211,22 +255,22 @@ export function FieldSettingsPanel({
   return (
     <div className="bg-card rounded-lg p-2 border border-border">
       <div className="grid grid-cols-3 gap-2">
-        {/* Font Size */}
-        <SettingCard
+        {/* Font Size — dropdown so any size is one click away */}
+        <SelectCard
           label="Font Size"
-          value={fontLabel}
-          onIncrease={() => onFontSizeChange(1)}
-          onDecrease={() => onFontSizeChange(-1)}
+          value={fontSize}
+          options={allowedFonts.map(f => ({ value: f.value, label: f.label }))}
+          onChange={onFontSizeSelect}
           disabled={disabled}
         />
         
-        {/* Template - now with navigation */}
-        <SettingCard
+        {/* Template — dropdown, single-line and multi-line grouped */}
+        <SelectCard
           label="Template"
-          value={templateLabel}
-          onIncrease={() => onTemplateChange?.(-1)}
-          onDecrease={() => onTemplateChange?.(1)}
-          disabled={!onTemplateChange}
+          value={templateValue}
+          options={templateOptions}
+          onChange={(v) => onTemplateSelect?.(v)}
+          disabled={!onTemplateSelect || disabled}
         />
         
         {/* Bold / Magnification */}
