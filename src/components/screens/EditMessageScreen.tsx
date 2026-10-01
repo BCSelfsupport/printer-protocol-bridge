@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database, Sliders, Loader2, Link2, Unlink } from 'lucide-react';
 import { toast } from 'sonner';
+import { getCachedGraphic, graphicNameFromFieldData, requestGraphic, subscribeGraphics } from '@/lib/graphicBitmap';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
