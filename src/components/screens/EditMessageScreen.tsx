@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database, Sliders, Loader2, Link2, Unlink } from 'lucide-react';
+import { Save, X, FilePlus, SaveAll, Trash2, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database, Sliders, Loader2, Link2, Unlink } from 'lucide-react';
 import { toast } from 'sonner';
 import { getCachedGraphic, graphicNameFromFieldData, requestGraphic, subscribeGraphics } from '@/lib/graphicBitmap';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
@@ -25,7 +25,7 @@ import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/Ba
 import { estimateBarcodeWidthDots } from '@/lib/barcodeRenderer';
 
 import { GraphicFieldDialog, GraphicFieldConfig } from '@/components/messages/GraphicFieldDialog';
-import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
+import { MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
 import { AdvancedSettingsDialog, AdvancedSettings, defaultAdvancedSettings } from '@/components/messages/AdvancedSettingsDialog';
 import { DataLinkDialog } from '@/components/messages/DataLinkDialog';
 import { AdjustDialog } from '@/components/adjust/AdjustDialog';
@@ -268,7 +268,6 @@ export function EditMessageScreen({
   const [timeCodesDialogOpen, setTimeCodesDialogOpen] = useState(false);
   const [dateCodesDialogOpen, setDateCodesDialogOpen] = useState(false);
   const [dateBuilderOpen, setDateBuilderOpen] = useState(false);
-  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [advancedSettingsDialogOpen, setAdvancedSettingsDialogOpen] = useState(false);
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
   
@@ -1676,14 +1675,6 @@ export function EditMessageScreen({
                 </button>
 
                 <button
-                  onClick={() => setSettingsDialogOpen(true)}
-                  className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
-                >
-                  <Settings className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
-                  <span className="text-[9px] md:text-xs font-medium">Settings</span>
-                </button>
-
-                <button
                   onClick={() => setAdvancedSettingsDialogOpen(true)}
                   className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
                 >
@@ -1850,19 +1841,6 @@ export function EditMessageScreen({
             onBack={() => setNewFieldDialogOpen(true)}
             onAddGraphic={handleAddGraphic}
             onSendCommand={onSendCommand}
-          />
-
-          {/* Message Settings Dialog */}
-          <MessageSettingsDialog
-            open={settingsDialogOpen}
-            onOpenChange={setSettingsDialogOpen}
-            settings={message.settings || defaultMessageSettings}
-            onUpdate={(newSettings) => {
-              setMessage((prev) => ({
-                ...prev,
-                settings: { ...(prev.settings || defaultMessageSettings), ...newSettings },
-              }));
-            }}
           />
 
           {/* Advanced Settings Dialog */}

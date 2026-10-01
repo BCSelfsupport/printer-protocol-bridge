@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'editor-settings-button-removed',
+    type: 'feature',
+    title: 'Settings Button Removed from the Message Editor',
+    date: '1 Oct 2026',
+    summary:
+      'The Settings button is gone from the message editor’s bottom bar. Print speed is already set from the Adjust menu on the main screen, so the duplicate is no longer needed.',
+  },
+  {
     id: 'field-bold-preview-dots',
     type: 'bugfix',
     title: 'Bold Now Shows in the Message Preview',
