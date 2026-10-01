@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, X, FilePlus, SaveAll, Trash2, Settings, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database, Sliders, Loader2, Link2, Unlink } from 'lucide-react';
+import { Save, X, FilePlus, SaveAll, Trash2, AlignHorizontalDistributeCenter, ChevronLeft, ChevronRight, Copy, SlidersHorizontal, Database, Sliders, Loader2, Link2, Unlink } from 'lucide-react';
 import { toast } from 'sonner';
 import { getCachedGraphic, graphicNameFromFieldData, requestGraphic, subscribeGraphics } from '@/lib/graphicBitmap';
 import { SubPageHeader } from '@/components/layout/SubPageHeader';
@@ -25,7 +25,7 @@ import { BarcodeFieldDialog, BarcodeFieldConfig } from '@/components/messages/Ba
 import { estimateBarcodeWidthDots } from '@/lib/barcodeRenderer';
 
 import { GraphicFieldDialog, GraphicFieldConfig } from '@/components/messages/GraphicFieldDialog';
-import { MessageSettingsDialog, MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
+import { MessageSettings, defaultMessageSettings } from '@/components/messages/MessageSettingsDialog';
 import { AdvancedSettingsDialog, AdvancedSettings, defaultAdvancedSettings } from '@/components/messages/AdvancedSettingsDialog';
 import { DataLinkDialog } from '@/components/messages/DataLinkDialog';
 import { AdjustDialog } from '@/components/adjust/AdjustDialog';
@@ -268,7 +268,6 @@ export function EditMessageScreen({
   const [timeCodesDialogOpen, setTimeCodesDialogOpen] = useState(false);
   const [dateCodesDialogOpen, setDateCodesDialogOpen] = useState(false);
   const [dateBuilderOpen, setDateBuilderOpen] = useState(false);
-  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [advancedSettingsDialogOpen, setAdvancedSettingsDialogOpen] = useState(false);
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
   
