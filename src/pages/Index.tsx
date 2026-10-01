@@ -3233,9 +3233,9 @@ const Index = () => {
           onFetchMessageDetails={isConnectedMessageTarget ? fetchMessageContent : undefined}
           onSendCommand={async (cmd) => {
             if (isConnectedMessageTarget) {
-              await sendCommand(cmd);
+              return await sendCommand(cmd);
             } else if (messageTargetPrinter) {
-              await sendCommandToPrinter(messageTargetPrinter, cmd);
+              return await sendCommandToPrinter(messageTargetPrinter, cmd);
             }
           }}
           onApplyPromptValues={(message, updatedDetails) => applyPromptValuesToPrinter(messageTargetPrinter, message, updatedDetails)}
