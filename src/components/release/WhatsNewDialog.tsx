@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'graphics-show-in-preview',
+    type: 'bugfix',
+    title: 'Graphics Now Show in the Message Preview',
+    date: '1 Oct 2026',
+    summary:
+      'Messages containing a graphic showed an empty placeholder in the editor. CodeSync now downloads the picture from the printer and draws it dot-for-dot in the preview, at its real size (up to 32 dots high). Pictures are remembered, so they appear instantly next time.',
+  },
+  {
     id: 'field-bold-sent-to-printer',
     type: 'bugfix',
     title: 'Field Bold Now Reaches the Printer',

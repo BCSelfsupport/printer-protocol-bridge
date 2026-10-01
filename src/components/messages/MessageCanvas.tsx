@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, ChangeEvent } from 'react';
 import { renderText, getFontInfo, PRINTER_FONTS } from '@/lib/dotMatrixFonts';
 import { parseBarcodeLabelData, renderBarcodeToCanvas } from '@/lib/barcodeRenderer';
 import { getValidCanvasYPositions } from '@/lib/messageProtocol';
+import { getCachedGraphic, graphicNameFromFieldData, subscribeGraphics } from '@/lib/graphicBitmap';
 
 interface CanvasField {
   id: number;
@@ -126,6 +127,9 @@ export function MessageCanvas({
   const [cursorPosition, setCursorPosition] = useState(0); // Character position in text
   const [cursorVisible, setCursorVisible] = useState(true); // For blinking effect
   const [editingText, setEditingText] = useState(''); // Current text being edited (for hidden input sync)
+  // Redraw when a printer graphic finishes downloading
+  const [graphicsTick, setGraphicsTick] = useState(0);
+  useEffect(() => subscribeGraphics(() => setGraphicsTick((t) => t + 1)), []);
 
   // Inform parent when we need to lock its horizontal scroll (mobile drag)
   const scrollLock = isLongPressActive && isDragging;
@@ -490,6 +494,28 @@ export function MessageCanvas({
           ctx.fillStyle = '#1a1a1a';
           renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE, field.gap ?? 1);
         }
+      } else if (field.type === 'logo') {
+        const bmp = getCachedGraphic(graphicNameFromFieldData(field.data));
+        if (bmp) {
+          ctx.fillStyle = '#1a1a1a';
+          const r = DOT_SIZE / 2 - 0.5;
+          bmp.dots.forEach((row, dy) => row.forEach((on, dx) => {
+            if (!on) return;
+            ctx.beginPath();
+            ctx.arc(fieldX + dx * DOT_SIZE + DOT_SIZE / 2, fieldY + dy * DOT_SIZE + DOT_SIZE / 2, Math.max(1, r), 0, Math.PI * 2);
+            ctx.fill();
+          }));
+        } else {
+          const w = Math.max(1, field.width) * DOT_SIZE;
+          const h = Math.max(1, field.height) * DOT_SIZE;
+          ctx.strokeStyle = '#888';
+          ctx.setLineDash([4, 3]);
+          ctx.strokeRect(fieldX + 0.5, fieldY + 0.5, w - 1, h - 1);
+          ctx.setLineDash([]);
+          ctx.font = '10px sans-serif';
+          ctx.fillStyle = '#666';
+          ctx.fillText(graphicNameFromFieldData(field.data), fieldX + 3, fieldY + Math.min(h - 3, 12));
+        }
       } else {
         // Regular text field
         ctx.fillStyle = '#1a1a1a';
@@ -572,7 +598,7 @@ export function MessageCanvas({
       ctx.strokeRect(mx, my, mw, mh);
       ctx.setLineDash([]);
     }
-  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, selectedFieldIds, canvasWidth, multilineTemplate, getMultilineLinePositions, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible, barcodeImages, isMarquee, marqueeStart, marqueeEnd, towerPrint, towerReverse]);
+  }, [templateHeight, width, fields, scrollX, blockedRows, selectedFieldId, selectedFieldIds, canvasWidth, multilineTemplate, getMultilineLinePositions, isDragging, dragFieldId, dragPosition, isEditing, editingFieldId, cursorPosition, cursorVisible, barcodeImages, isMarquee, marqueeStart, marqueeEnd, towerPrint, towerReverse, graphicsTick]);
   
   const getMousePosition = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current?.getBoundingClientRect();
