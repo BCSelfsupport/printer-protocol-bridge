@@ -1321,32 +1321,43 @@ export function EditMessageScreen({
    */
   const handleAlignFields = () => {
     if (message.fields.length < 2) return;
-    
-    // Sort fields by X position (leftmost first)
-    const sortedFields = [...message.fields].sort((a, b) => a.x - b.x);
-    
-    // Build new field positions, eliminating overlaps
-    const newFields = sortedFields.map((field, idx) => {
-      if (idx === 0) return field;
-      
-      // Check previous fields for overlaps
-      let newX = field.x;
-      for (let i = 0; i < idx; i++) {
-        const prevField = sortedFields[i];
-        const prevRight = prevField.x + prevField.width;
-        
-        // Check if this field overlaps with previous field (same Y-line)
-        const sameRow = Math.abs(field.y - prevField.y) < field.height;
-        if (sameRow && newX < prevRight) {
-          // Move field to eliminate overlap (add 2 pixel gap)
-          newX = prevRight + 2;
-        }
-      }
-      
-      return { ...field, x: newX };
+
+    // Grouped fields (e.g. a DD-MM-YYYY date) move as one block so their
+    // internal spacing is kept; ungrouped fields are blocks of one.
+    type Block = { ids: number[]; left: number; right: number; top: number; bottom: number };
+    const byKey = new Map<string, MessageField[]>();
+    message.fields.forEach((f) => {
+      const k = (f as any).groupId ? `g:${(f as any).groupId}` : `f:${f.id}`;
+      byKey.set(k, [...(byKey.get(k) ?? []), f]);
     });
-    
-    setMessage((prev) => ({ ...prev, fields: newFields }));
+    const blocks: Block[] = [...byKey.values()].map((fs) => ({
+      ids: fs.map((f) => f.id),
+      left: Math.min(...fs.map((f) => f.x)),
+      right: Math.max(...fs.map((f) => f.x + renderedFieldWidth(f))),
+      top: Math.min(...fs.map((f) => f.y)),
+      bottom: Math.max(...fs.map((f) => f.y + f.height)),
+    })).sort((a, b) => a.left - b.left);
+
+    const shift = new Map<number, number>();
+    const placed: Block[] = [];
+    for (const b of blocks) {
+      let newLeft = b.left;
+      for (const p of placed) {
+        const sameRows = b.top < p.bottom && p.top < b.bottom;
+        if (sameRows && newLeft < p.right) newLeft = p.right + 2;
+      }
+      const dx = newLeft - b.left;
+      b.ids.forEach((id) => shift.set(id, dx));
+      placed.push({ ...b, left: newLeft, right: b.right + dx });
+    }
+
+    setMessage((prev) => {
+      const fields = prev.fields.map((f) => {
+        const dx = shift.get(f.id) ?? 0;
+        return dx ? { ...f, x: f.x + dx } : f;
+      });
+      return { ...prev, fields, width: autoResizeWidth(fields) };
+    });
     setFieldError(null);
   };
 

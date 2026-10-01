@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'align-keeps-groups-together',
+    type: 'bugfix',
+    title: 'Align Moves Grouped Fields Together',
+    date: '1 Oct 2026',
+    summary:
+      'Pressing Align on a message with a grouped date (DD-MM-YYYY) used to move only the first piece, leaving it on top of the others. Align now moves the whole group as one block, keeping the pieces spaced correctly — no need to ungroup and regroup.',
+  },
+  {
     id: 'printer-made-expiry-dates',
     type: 'bugfix',
     title: 'Expiry Dates Made on the Printer Are Now Recognised',
