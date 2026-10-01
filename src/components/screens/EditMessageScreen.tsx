@@ -1676,14 +1676,6 @@ export function EditMessageScreen({
                 </button>
 
                 <button
-                  onClick={() => setSettingsDialogOpen(true)}
-                  className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
-                >
-                  <Settings className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />
-                  <span className="text-[9px] md:text-xs font-medium">Settings</span>
-                </button>
-
-                <button
                   onClick={() => setAdvancedSettingsDialogOpen(true)}
                   className="industrial-button text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex flex-col items-center min-w-[60px] md:min-w-[80px]"
                 >
@@ -1850,19 +1842,6 @@ export function EditMessageScreen({
             onBack={() => setNewFieldDialogOpen(true)}
             onAddGraphic={handleAddGraphic}
             onSendCommand={onSendCommand}
-          />
-
-          {/* Message Settings Dialog */}
-          <MessageSettingsDialog
-            open={settingsDialogOpen}
-            onOpenChange={setSettingsDialogOpen}
-            settings={message.settings || defaultMessageSettings}
-            onUpdate={(newSettings) => {
-              setMessage((prev) => ({
-                ...prev,
-                settings: { ...(prev.settings || defaultMessageSettings), ...newSettings },
-              }));
-            }}
           />
 
           {/* Advanced Settings Dialog */}
