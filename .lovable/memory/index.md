@@ -124,3 +124,4 @@ Updated: today
 - [TwinCode Print Format](mem://features/twin-code-serial-format) — 17-char (no lot) / 24-char (with lot) full message; CodeSync increments serial inside format
 - [TnT Session Controller](mem://features/tnt-session-controller) — Config reseed, Print dispatch, Cat-1 fatal latch, Cat-2 placeholder sub-codes
 - [Wire & Cable package](mem://features/wire-cable-package) — wirecable tier; sheet barcode = job ID lookup → ^NM/^SV/^SM; job log, flip-flop, tower
+- [TnT Interface Spec](mem://integration/tnt-interface-spec-oct-2026.md) — Real TnT framing, 30 s poll, serial rules, faults; open gaps
