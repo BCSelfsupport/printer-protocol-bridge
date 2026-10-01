@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'repeat-print-pitch-mode-gating',
+    type: 'bugfix',
+    title: 'Repeat Print and Pitch Only Appear in the Right Print Modes',
+    date: '1 Oct 2026',
+    summary:
+      'Repeat Print and Pitch could be set while Print Mode was Normal, where they do nothing. Repeat Print now appears only when Print Mode is set to Repeat — it switches on automatically when you choose Repeat and turns off when you leave it. Pitch now shows only in modes that use it (Auto, Repeat, Select ID, Auto Encoder), not in Normal mode.',
+  },
+  {
     id: 'select-id-only-in-select-id-mode',
     type: 'bugfix',
     title: 'Select ID Code Only Appears in Select ID Print Mode',
