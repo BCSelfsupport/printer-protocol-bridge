@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'field-bold-sent-to-printer',
+    type: 'bugfix',
+    title: 'Field Bold Now Reaches the Printer',
+    date: '1 Oct 2026',
+    summary:
+      'Setting Bold on a field showed in the editor but the printer printed it at normal weight. Bold on text fields is now saved into the message itself, and bold date, time, counter and barcode fields are applied as the message is selected.',
+  },
+  {
     id: 'repeat-print-pitch-mode-gating',
     type: 'bugfix',
     title: 'Repeat Print and Pitch Only Appear in the Right Print Modes',

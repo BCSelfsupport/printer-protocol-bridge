@@ -2299,9 +2299,18 @@ export function usePrinterConnection() {
     
     switch (field.type) {
       case 'text':
-      case 'userdefine':
-        // ^AT n; x; y; s; data
+      case 'userdefine': {
+        // ^AT n; x; y; s; [g; b; o; i;] data  (v2.6 §5.33.2)
+        // Per-field Bold is only carried by the optional g;b;o;i block, so
+        // include it whenever the field is bold — otherwise the printer
+        // silently prints the field at bold 0.
+        const fieldBold = Math.max(0, Math.min(9, Math.trunc(field.bold ?? 0)));
+        if (fieldBold > 0) {
+          const fieldGap = Math.max(0, Math.min(9, Math.trunc(field.gap ?? 1)));
+          return `^AT${fieldNum};${field.x};${field.y};${fontCode};${fieldGap};${fieldBold};0;0;${field.data}`;
+        }
         return `^AT${fieldNum};${field.x};${field.y};${fontCode};${field.data}`;
+      }
       case 'date': {
         // Normalize stale builder metadata so legacy saved messages with expiry offsets
         // still use the correct prefix when re-saved.
@@ -2655,6 +2664,13 @@ export function usePrinterConnection() {
     // concurrently with a post-save poll was locking the firmware.
     if (selectAfterSave) {
       commands.push(`^SM ${messageName}`);
+      // Date/time/counter/barcode subcommands have no bold parameter, so
+      // apply per-field Bold with ^SB field;bold once the message is printing.
+      validFields.forEach((field, index) => {
+        if (field.type === 'text' || field.type === 'userdefine') return;
+        const b = Math.max(0, Math.min(9, Math.trunc((field as { bold?: number }).bold ?? 0)));
+        if (b > 0) commands.push(`^SB ${index + 1};${b}`);
+      });
     }
 
     if (shouldUseEmulator()) {
