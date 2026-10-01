@@ -27,7 +27,7 @@ interface UseMasterSlaveSyncOptions {
     messageSettings?: {
       speed?: PrintSettings['speed'];
       rotation?: PrintSettings['rotation'];
-      printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
+      printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Select ID' | 'Auto Encoder' | 'Auto Encoder Reverse';
     },
     counterConfigs?: NonNullable<MessageDetails['advancedSettings']>['counters'],
   ) => Promise<string[] | null> | string[] | null;

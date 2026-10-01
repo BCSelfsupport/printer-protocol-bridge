@@ -1849,10 +1849,24 @@ export function EditMessageScreen({
             onOpenChange={setAdvancedSettingsDialogOpen}
             settings={message.advancedSettings || defaultAdvancedSettings}
             onUpdate={(newSettings) => {
-              setMessage((prev) => ({
-                ...prev,
-                advancedSettings: { ...(prev.advancedSettings || defaultAdvancedSettings), ...newSettings },
-              }));
+              setMessage((prev) => {
+                // Print Mode lives on message.settings (read by ^CM/^NM on save
+                // and select). The Advanced dialog edits it numerically, so map
+                // it back to the named setting here. Select ID (4) also syncs
+                // its Select ID Code.
+                const next = {
+                  ...prev,
+                  advancedSettings: { ...(prev.advancedSettings || defaultAdvancedSettings), ...newSettings },
+                };
+                if (newSettings.printMode !== undefined) {
+                  const codeToName: Record<number, NonNullable<MessageDetails['settings']>['printMode']> = {
+                    0: 'Normal', 1: 'Auto', 2: 'Repeat', 4: 'Select ID', 5: 'Auto Encoder', 6: 'Auto Encoder Reverse',
+                  };
+                  const printModeName = codeToName[newSettings.printMode] ?? 'Normal';
+                  next.settings = { ...(prev.settings ?? defaultMessageSettings), printMode: printModeName };
+                }
+                return next;
+              });
             }}
             onSendCommand={onSendCommand}
           />

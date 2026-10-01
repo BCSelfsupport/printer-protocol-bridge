@@ -860,7 +860,7 @@ export function buildMessageDetails(
     settings: {
       speed: (['Fast', 'Faster', 'Fastest', 'Ultra Fast'] as const)[gmResult?.speed ?? 0] ?? 'Fast',
       rotation: CODE_TO_MESSAGE_ORIENTATION[gmResult?.orientation ?? 0] ?? 'Normal',
-      printMode: ({ 0: 'Normal', 1: 'Auto', 2: 'Repeat', 3: 'Reverse', 5: 'Auto Encoder', 6: 'Auto Encoder Reverse' } as const)[gmResult?.printMode ?? 0] ?? 'Normal',
+      printMode: ({ 0: 'Normal', 1: 'Auto', 2: 'Repeat', 4: 'Select ID', 5: 'Auto Encoder', 6: 'Auto Encoder Reverse' } as const)[gmResult?.printMode ?? 0] ?? 'Normal',
     },
   };
 }

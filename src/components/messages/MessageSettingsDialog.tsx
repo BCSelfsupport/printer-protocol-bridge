@@ -20,7 +20,7 @@ import type { MessageOrientation } from '@/lib/messageOrientation';
 export interface MessageSettings {
   speed: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
   rotation: MessageOrientation;
-  printMode: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
+  printMode: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Select ID' | 'Auto Encoder' | 'Auto Encoder Reverse';
 }
 
 export const defaultMessageSettings: MessageSettings = {

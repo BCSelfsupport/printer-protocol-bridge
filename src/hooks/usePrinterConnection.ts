@@ -2519,7 +2519,7 @@ export function usePrinterConnection() {
     messageSettings?: {
       speed?: PrintSettings['speed'];
       rotation?: string;
-      printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
+      printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Select ID' | 'Auto Encoder' | 'Auto Encoder Reverse';
     },
     counterConfigs?: Array<{ id: number; startCount: number; endCount: number; leadingZeroes: boolean }>,
     selectAfterSave?: boolean,
@@ -2627,6 +2627,7 @@ export function usePrinterConnection() {
       'Auto': 1,
       'Repeat': 2,
       'Reverse': 3,
+      'Select ID': 4,
       'Auto Encoder': 5,
       'Auto Encoder Reverse': 6,
     };
@@ -2849,7 +2850,7 @@ export function usePrinterConnection() {
     messageSettings?: {
       speed?: PrintSettings['speed'];
       rotation?: string;
-      printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
+      printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Select ID' | 'Auto Encoder' | 'Auto Encoder Reverse';
     },
     counterConfigs?: Array<{ id: number; startCount: number; endCount: number; leadingZeroes: boolean }>,
   ): Promise<string[] | null> => {
@@ -2913,6 +2914,7 @@ export function usePrinterConnection() {
       'Auto': 1,
       'Repeat': 2,
       'Reverse': 3,
+      'Select ID': 4,
       'Auto Encoder': 5,
       'Auto Encoder Reverse': 6,
     };
@@ -3592,7 +3594,7 @@ export function usePrinterConnection() {
   const saveMessageSettings = useCallback(async (settings: {
     speed: PrintSettings['speed'];
     rotation: string; // Extended to include tower orientations
-    printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
+    printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Select ID' | 'Auto Encoder' | 'Auto Encoder Reverse';
   }): Promise<boolean> => {
     console.log('[saveMessageSettings] Called with:', settings);
     if (!connectionState.isConnected || !connectionState.connectedPrinter) {
@@ -3614,6 +3616,7 @@ export function usePrinterConnection() {
       'Auto': 1,
       'Repeat': 2,
       'Reverse': 3,
+      'Select ID': 4,
       'Auto Encoder': 5,
       'Auto Encoder Reverse': 6,
     };

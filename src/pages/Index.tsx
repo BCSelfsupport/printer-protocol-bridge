@@ -113,6 +113,7 @@ const PRINT_MODE_TO_PROTOCOL_CODE: Record<string, number> = {
   Auto: 1,
   Repeat: 2,
   Reverse: 3,
+  'Select ID': 4,
   'Auto Encoder': 5,
   'Auto Encoder Reverse': 6,
 };

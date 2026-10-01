@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'print-mode-moved-to-advanced',
+    type: 'feature',
+    title: 'Print Mode Now Lives in Advanced',
+    date: '1 Oct 2026',
+    summary:
+      'With the Settings button gone, Print Mode is set from the Advanced dialog in the message editor, next to Orientation (Adjust menu) and Speed (Adjust menu). Choosing a mode there is now stored with the message and sent to the printer, including Select ID.',
+  },
+  {
     id: 'editor-settings-button-removed',
     type: 'feature',
     title: 'Settings Button Removed from the Message Editor',
