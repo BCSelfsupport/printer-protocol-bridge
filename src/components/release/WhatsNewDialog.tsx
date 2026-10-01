@@ -20,6 +20,22 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'font-template-dropdowns',
+    type: 'feature',
+    title: 'Font Size and Template Are Now Drop-Down Menus',
+    date: '1 Oct 2026',
+    summary:
+      'In the message editor, Font Size and Template are now drop-down menus instead of left/right buttons, so you can jump straight from 1×16 to 2L×7 (or any font size) in one tap — no more stepping through every size and resetting each field by hand.',
+  },
+  {
+    id: 'settings-speed-label',
+    type: 'feature',
+    title: 'Message Settings Labels Tidied',
+    date: '1 Oct 2026',
+    summary:
+      'The message Settings dialog now reads Speed, Orientation and Print Mode, without the technical letter codes after each name. Speed is the same per-message print speed setting as before.',
+  },
+  {
     id: 'align-keeps-groups-together',
     type: 'bugfix',
     title: 'Align Moves Grouped Fields Together',
