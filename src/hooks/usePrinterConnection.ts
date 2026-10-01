@@ -2299,9 +2299,18 @@ export function usePrinterConnection() {
     
     switch (field.type) {
       case 'text':
-      case 'userdefine':
-        // ^AT n; x; y; s; data
+      case 'userdefine': {
+        // ^AT n; x; y; s; [g; b; o; i;] data  (v2.6 §5.33.2)
+        // Per-field Bold is only carried by the optional g;b;o;i block, so
+        // include it whenever the field is bold — otherwise the printer
+        // silently prints the field at bold 0.
+        const fieldBold = Math.max(0, Math.min(9, Math.trunc(field.bold ?? 0)));
+        if (fieldBold > 0) {
+          const fieldGap = Math.max(0, Math.min(9, Math.trunc(field.gap ?? 1)));
+          return `^AT${fieldNum};${field.x};${field.y};${fontCode};${fieldGap};${fieldBold};0;0;${field.data}`;
+        }
         return `^AT${fieldNum};${field.x};${field.y};${fontCode};${field.data}`;
+      }
       case 'date': {
         // Normalize stale builder metadata so legacy saved messages with expiry offsets
         // still use the correct prefix when re-saved.
