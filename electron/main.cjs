@@ -1119,6 +1119,7 @@ ipcMain.handle('tnt:send', (_e, { opcode, payload }) => {
   const ok = tntServer.send(opcode, payload);
   return { success: ok };
 });
+ipcMain.handle('tnt:set-last-serial', (_e, n) => ({ success: tntServer ? tntServer.setLastSerial(n) : false }));
 
 // ============================================================
 // Firmware USB preparation (Dev Portal utility)

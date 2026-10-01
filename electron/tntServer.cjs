@@ -1,51 +1,28 @@
 /**
- * TnT (Track-n-Trace) TCP endpoint — Phase 1
+ * Track-n-Trace TCP endpoint — built to Authentix TrackNTrace_Printer_Interface_Spec (Oct 2026).
  *
- * Implements the network edge described in TnT_Protocol_Compatibility_and_SOW.pdf
- * §4 Phase 1: TCP server bound to port 8101 (configurable), single connection
- * per line, DJDACP2D-03 frame codec, per-line rolling audit log.
+ * TnT is the TCP client, CodeSync is the server (default port 8101), one connection per line.
+ * Flow per spec:
+ *   Order start: TnT sends Config (0x03) → we reply Config-complete ack → TnT sends Print (0x02).
+ *   Every 30 s: TnT sends Request "01" → we reply 0x01 "01" + last serial (6 digits).
+ *   Serial 000000 in Print = continue counting; any other value = restart at that value.
+ *   Rollover: after 999900 the next serial is 1.
  *
- * Phase 2+ (Config → bind, Print → dispatch, Status reporter, fault mapping)
- * will consume `onFrame` events emitted here — this file intentionally does
- * NOT couple to twinDispatcher yet.
+ * Still pending Authentix (see mem://integration/tnt-interface-spec-oct-2026):
+ *   §7 fault return layout, Clear-All-Buffers command code, Qty=3 block→printer mapping.
  */
 
 const net = require('net');
 const fs = require('fs');
 const path = require('path');
 const { EventEmitter } = require('events');
-const { encodeFrame, FrameDecoder, OPCODES, OPCODE_NAMES, parseJsonPayload } = require('./tntCodec.cjs');
+const codec = require('./tntCodec.cjs');
 
 const DEFAULT_PORT = 8101;
-const MAX_LOG_BYTES = 5 * 1024 * 1024; // 5 MB rolling per line
-
-// Inbound opcodes that are acknowledged on RECEIPT (not on physical print).
-const ACK_ON_RECEIPT = new Set([OPCODES.CONFIG, OPCODES.PRINT, OPCODES.REQUEST]);
+const MAX_LOG_BYTES = 5 * 1024 * 1024;
+const POLL_INTERVAL_MS = 30000;
 
 function stamp() { return new Date().toISOString(); }
-
-// ── Config handler stub (Phase 2) ──────────────────────────────────────────
-// PROVISIONAL: field names/offsets pending Interface Spec §4/§5 + pcap.
-// Validates the §5 Print Message shape (17 chars no lot / 24 with lot,
-// uppercase A-Z / 0-9 after stripping spaces) so obviously-malformed Configs
-// are NACKed at the edge instead of poisoning the renderer session.
-// Full end-to-end handling (counter seeding, Category-1 fatal latching) lives
-// in src/twin-code/tntSessionController.ts.
-function validateConfigPayload(json) {
-  if (!json || typeof json !== 'object') return 'Config payload is missing or not an object';
-  const msg = json.printMessage || json.message || json.startMessage || null;
-  if (typeof msg !== 'string' || msg.trim() === '') {
-    return 'Config payload has no printMessage field (provisional name — confirm §4)';
-  }
-  const compact = msg.replace(/\s+/g, '');
-  if (compact.length !== 17 && compact.length !== 24) {
-    return `Print Message must be 17 or 24 chars; got ${compact.length}`;
-  }
-  if (!/^[A-Z0-9]+$/.test(compact)) {
-    return 'Print Message must be uppercase A-Z / 0-9 only';
-  }
-  return null;
-}
 
 class TntServer extends EventEmitter {
   constructor({ port = DEFAULT_PORT, logDir } = {}) {
@@ -53,164 +30,145 @@ class TntServer extends EventEmitter {
     this.port = port;
     this.logDir = logDir;
     this.server = null;
-    /** @type {net.Socket|null} */
     this.activeSocket = null;
-    this.decoder = new FrameDecoder();
+    this.decoder = new codec.FrameDecoder();
+    this.session = { config: null, print: null, configAcked: false, lastSerial: 0 };
     this.state = {
-      listening: false,
-      port,
-      connected: false,
-      peer: null,
-      framesIn: 0,
-      framesOut: 0,
-      lastFrameAt: null,
-      lastError: null,
+      listening: false, port, connected: false, peer: null,
+      framesIn: 0, framesOut: 0, lastFrameAt: null, lastError: null,
+      lastPollAt: null, pollIntervalMs: POLL_INTERVAL_MS,
+      lastSerial: 0, printMessage: null, configured: false,
     };
-    this.recent = []; // [{dir, opcode, name, at, size, json}]
-    if (logDir) {
-      try { fs.mkdirSync(logDir, { recursive: true }); } catch (_) {}
-    }
-  }
-
-  _logPath() {
-    if (!this.logDir) return null;
-    return path.join(this.logDir, 'tnt-uplink.log');
+    this.recent = [];
+    if (logDir) { try { fs.mkdirSync(logDir, { recursive: true }); } catch (_) {} }
   }
 
   _writeLog(line) {
-    const p = this._logPath();
-    if (!p) return;
+    if (!this.logDir) return;
+    const p = path.join(this.logDir, 'tnt-uplink.log');
     try {
       const st = fs.existsSync(p) ? fs.statSync(p) : null;
-      if (st && st.size > MAX_LOG_BYTES) {
-        try { fs.renameSync(p, p + '.1'); } catch (_) {}
-      }
+      if (st && st.size > MAX_LOG_BYTES) { try { fs.renameSync(p, p + '.1'); } catch (_) {} }
       fs.appendFileSync(p, line + '\n');
     } catch (_) {}
   }
 
-  _record(dir, opcode, payload, extra) {
-    const name = OPCODE_NAMES[opcode] || `0x${opcode.toString(16).padStart(2,'0')}`;
-    const json = parseJsonPayload(payload);
-    const entry = {
-      dir, opcode, name, at: stamp(),
-      size: payload ? payload.length : 0,
-      json,
-      ...(extra || {}),
-    };
+  _record(dir, type, raw, json) {
+    const name = codec.MSG_NAMES[type] || `0x${(type || 0).toString(16).padStart(2, '0')}`;
+    const entry = { dir, opcode: type, name, at: stamp(), size: raw ? raw.length : 0, json: json || null,
+      hex: raw ? raw.toString('hex') : '' };
     this.recent.push(entry);
     if (this.recent.length > 100) this.recent.splice(0, this.recent.length - 100);
     this.state.lastFrameAt = entry.at;
     if (dir === 'in') this.state.framesIn++; else this.state.framesOut++;
-    this._writeLog(`${entry.at} ${dir.toUpperCase()} ${name} len=${entry.size} ${json ? JSON.stringify(json) : ''}`);
+    this._writeLog(`${entry.at} ${dir.toUpperCase()} ${name} hex=${entry.hex} ${json ? JSON.stringify(json) : ''}`);
     this.emit('frame', entry);
+    this._emitState();
+  }
+
+  _emitState() {
+    this.state.lastSerial = this.session.lastSerial;
+    this.state.printMessage = this.session.print ? this.session.print.message : null;
+    this.state.configured = !!this.session.config;
     this.emit('state', this.getState());
   }
 
-  getState() {
-    return { ...this.state, recent: this.recent.slice(-25) };
-  }
+  getState() { return { ...this.state, recent: this.recent.slice(-25) }; }
 
   start() {
     if (this.server) return;
-    this.server = net.createServer((socket) => this._onConnection(socket));
-    this.server.on('error', (err) => {
-      this.state.lastError = err.message;
-      this._writeLog(`${stamp()} SERVER-ERROR ${err.message}`);
-      this.emit('state', this.getState());
-    });
-    this.server.listen(this.port, () => {
-      this.state.listening = true;
-      this.state.port = this.port;
-      this._writeLog(`${stamp()} LISTEN port=${this.port}`);
-      this.emit('state', this.getState());
-    });
+    this.server = net.createServer((s) => this._onConnection(s));
+    this.server.on('error', (err) => { this.state.lastError = err.message; this._writeLog(`${stamp()} SERVER-ERROR ${err.message}`); this._emitState(); });
+    this.server.listen(this.port, () => { this.state.listening = true; this._writeLog(`${stamp()} LISTEN port=${this.port}`); this._emitState(); });
   }
 
   stop() {
     if (this.activeSocket) { try { this.activeSocket.destroy(); } catch (_) {} this.activeSocket = null; }
     if (this.server) { try { this.server.close(); } catch (_) {} this.server = null; }
-    this.state.listening = false;
-    this.state.connected = false;
-    this.state.peer = null;
+    Object.assign(this.state, { listening: false, connected: false, peer: null });
     this._writeLog(`${stamp()} STOP`);
-    this.emit('state', this.getState());
+    this._emitState();
   }
 
   _onConnection(socket) {
-    // TnT is one logical line = one connection. Reject a second concurrent client.
     if (this.activeSocket && !this.activeSocket.destroyed) {
       this._writeLog(`${stamp()} REJECT-2ND from=${socket.remoteAddress}:${socket.remotePort}`);
       try { socket.destroy(); } catch (_) {}
       return;
     }
     this.activeSocket = socket;
-    this.decoder = new FrameDecoder();
+    this.decoder = new codec.FrameDecoder();
     this.state.connected = true;
     this.state.peer = `${socket.remoteAddress}:${socket.remotePort}`;
     this._writeLog(`${stamp()} CONNECT peer=${this.state.peer}`);
-    this.emit('state', this.getState());
-
+    this._emitState();
     socket.setKeepAlive(true, 15000);
     socket.setNoDelay(true);
 
     socket.on('data', (chunk) => {
-      const frames = this.decoder.push(chunk);
-      for (const f of frames) {
-        if (f.error) {
-          this._writeLog(`${stamp()} BAD-FRAME ${f.error}`);
-          this._sendNack(f.error);
-          continue;
-        }
-        this._record('in', f.opcode, f.payload);
-        // Config handler stub: validate the §5 shape at the edge. The ACK on
-        // receipt still goes out (Q10: ack = received, not accepted); we log
-        // and flag invalid Configs so the renderer session can latch the
-        // Category 1 (fatal) fault via tntSessionController.
-        if (f.opcode === OPCODES.CONFIG) {
-          const err = validateConfigPayload(parseJsonPayload(f.payload));
-          if (err) {
-            this._writeLog(`${stamp()} CONFIG-INVALID ${err}`);
-            this.emit('config-invalid', { reason: err, at: stamp() });
-          }
-        }
-        // Authentix Q10 (2026-07-17): "The Ack is for Msg received
-        // acknowledgement, and not related to any actual print operation."
-        // So we ack the moment the frame is decoded — never block on the
-        // printer's physical 'C' response.
-        if (ACK_ON_RECEIPT.has(f.opcode)) this.ack(f.opcode, { received: true });
+      for (const f of this.decoder.push(chunk)) {
+        if (f.error) { this._writeLog(`${stamp()} BAD-FRAME ${f.error}`); this.emit('protocol-error', { reason: f.error, at: stamp() }); continue; }
+        this._handle(f);
       }
     });
-
     socket.on('close', () => {
       this._writeLog(`${stamp()} CLOSE peer=${this.state.peer}`);
       if (this.activeSocket === socket) this.activeSocket = null;
-      this.state.connected = false;
-      this.state.peer = null;
-      this.emit('state', this.getState());
+      Object.assign(this.state, { connected: false, peer: null });
+      this._emitState();
     });
-
-    socket.on('error', (err) => {
-      this.state.lastError = err.message;
-      this._writeLog(`${stamp()} SOCKET-ERROR ${err.message}`);
-      this.emit('state', this.getState());
-    });
+    socket.on('error', (err) => { this.state.lastError = err.message; this._writeLog(`${stamp()} SOCKET-ERROR ${err.message}`); this._emitState(); });
   }
 
-  /** Send a frame to the connected TnT client. */
-  send(opcode, payload) {
+  _handle(f) {
+    if (f.type === codec.MSG.CONFIG) {
+      const cfg = codec.parseConfig(f.body);
+      this._record('in', f.type, f.raw, cfg);
+      if (cfg.error) { this.emit('config-invalid', { reason: cfg.error, at: stamp() }); return; }
+      this.session.config = cfg;
+      this.session.configAcked = true;
+      this.emit('config', cfg);
+      this._sendRaw(codec.MSG.CONFIG, codec.encodeConfigAck(), { ack: 'config-complete' });
+      return;
+    }
+    if (f.type === codec.MSG.PRINT) {
+      const p = codec.parsePrint(f.body);
+      this._record('in', f.type, f.raw, p);
+      if (p.error) { this.emit('print-invalid', { reason: p.error, at: stamp() }); return; }
+      if (!this.session.config) this._writeLog(`${stamp()} WARN print-before-config`);
+      if (!p.continueCount) this.session.lastSerial = p.serialValue === 1 ? 0 : p.serialValue - 1;
+      this.session.print = p;
+      this.emit('print', { ...p, startSerial: p.continueCount ? codec.nextSerial(this.session.lastSerial) : p.serialValue });
+      this._emitState();
+      return;
+    }
+    if (f.type === codec.MSG.REQUEST) {
+      this._record('in', f.type, f.raw, { command: f.body });
+      if (f.body === '01') {
+        this.state.lastPollAt = stamp();
+        this._sendRaw(codec.MSG.REQUEST, codec.encodeLastSerial(this.session.lastSerial), { lastSerial: this.session.lastSerial });
+      } else {
+        this.emit('request-unknown', { command: f.body, at: stamp() });
+      }
+    }
+  }
+
+  /** Renderer reports each confirmed print so the 30 s poll returns the true last serial. */
+  setLastSerial(n) {
+    const v = Number(n);
+    if (Number.isInteger(v) && v >= 0 && v <= codec.SERIAL_MAX) { this.session.lastSerial = v; this._emitState(); return true; }
+    return false;
+  }
+
+  _sendRaw(type, frame, json) {
     if (!this.activeSocket || this.activeSocket.destroyed) return false;
-    const frame = encodeFrame(opcode, payload);
     this.activeSocket.write(frame);
-    this._record('out', opcode, Buffer.isBuffer(payload) ? payload : Buffer.from(
-      payload == null ? '' : (typeof payload === 'string' ? payload : JSON.stringify(payload)),
-      'utf8'
-    ));
+    this._record('out', type, frame, json);
     return true;
   }
 
-  ack(refOpcode, extra) { return this.send(OPCODES.ACK, { ref: OPCODE_NAMES[refOpcode] || refOpcode, ...(extra || {}) }); }
-  _sendNack(reason) { return this.send(OPCODES.NACK, { reason }); }
+  /** Generic send: type byte + ASCII body + EOM. */
+  send(type, body) { return this._sendRaw(type, codec.encodeFrame(type, body), { body: body == null ? '' : String(body) }); }
 }
 
-module.exports = { TntServer, DEFAULT_PORT, OPCODES };
+module.exports = { TntServer, DEFAULT_PORT, OPCODES: codec.MSG };

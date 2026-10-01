@@ -1,53 +1,50 @@
-/**
- * Codec round-trip tests for the DJDACP2D-03 placeholder framing.
- * Runs under vitest; imports the .cjs codec directly.
- */
+/** Codec tests against the Authentix TrackNTrace Printer Interface Spec examples. */
 import { describe, it, expect } from 'vitest';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const codec = require('../../electron/tntCodec.cjs');
 
-describe('tnt codec', () => {
-  it('encodes and decodes a Config frame round-trip', () => {
-    const payload = { partType: 'BOTTLE-A', qty: 2, startSerial: 220274 };
-    const frame = codec.encodeFrame(codec.OPCODES.CONFIG, payload);
-    const dec = new codec.FrameDecoder();
-    const out = dec.push(frame);
-    expect(out).toHaveLength(1);
-    expect(out[0].opcode).toBe(codec.OPCODES.CONFIG);
-    expect(codec.parseJsonPayload(out[0].payload)).toEqual(payload);
+const CONFIG_EX = '\x033001005000012003002500005000012003002500005000012003002500\x04';
+
+describe('tnt codec (spec framing)', () => {
+  it('decodes the spec Config example (60 bytes, Qty 3)', () => {
+    const buf = Buffer.from(CONFIG_EX, 'ascii');
+    expect(buf.length).toBe(60);
+    const [f] = new codec.FrameDecoder().push(buf);
+    expect(f.name).toBe('CONFIG');
+    const cfg = codec.parseConfig(f.body);
+    expect(cfg.qty).toBe(3);
+    expect(cfg.partType).toBe('001');
+    expect(cfg.printers[0]).toMatchObject({ aperture: 500, delay: 120, symbolSize: 3, interSymbolSpacing: 25, printMode: 0 });
   });
 
-  it('handles chunked delivery of a single frame', () => {
-    const frame = codec.encodeFrame(codec.OPCODES.PRINT, {});
-    const dec = new codec.FrameDecoder();
-    expect(dec.push(frame.slice(0, 2))).toHaveLength(0);
-    expect(dec.push(frame.slice(2, 4))).toHaveLength(0);
-    const done = dec.push(frame.slice(4));
-    expect(done).toHaveLength(1);
-    expect(done[0].name).toBe('PRINT');
+  it('decodes Print with and without lot code', () => {
+    const d = new codec.FrameDecoder();
+    const out = d.push(Buffer.from('\x02300108A180220274U\x04\x02300108A180220274U1AB1234\x04', 'ascii'));
+    expect(out).toHaveLength(2);
+    const a = codec.parsePrint(out[0].body);
+    expect(a).toMatchObject({ rule: '3', prodLine: '08', alphaYear: 'A', julian: '180', serial: '220274', alphaChar: 'U', lotCode: null });
+    const b = codec.parsePrint(out[1].body);
+    expect(b.lotCode).toBe('AB1234');
   });
 
-  it('decodes multiple back-to-back frames in one chunk', () => {
-    const a = codec.encodeFrame(codec.OPCODES.PRINT, null);
-    const b = codec.encodeFrame(codec.OPCODES.REQUEST, null);
-    const dec = new codec.FrameDecoder();
-    const out = dec.push(Buffer.concat([a, b]));
-    expect(out.map((f: { name: string }) => f.name)).toEqual(['PRINT', 'REQUEST']);
+  it('treats serial 000000 as continue', () => {
+    expect(codec.parsePrint('300108A180000000U').continueCount).toBe(true);
   });
 
-  it('rejects a frame with a bad checksum', () => {
-    const frame = codec.encodeFrame(codec.OPCODES.PRINT, Buffer.from('x'));
-    frame[frame.length - 2] ^= 0xff; // corrupt cksum
-    const dec = new codec.FrameDecoder();
-    const out = dec.push(frame);
-    expect(out.some((f: { error?: string }) => f.error)).toBe(true);
+  it('handles chunked Request and encodes the serial reply', () => {
+    const d = new codec.FrameDecoder();
+    expect(d.push(Buffer.from([0x01, 0x30]))).toHaveLength(0);
+    const [f] = d.push(Buffer.from([0x31, 0x04]));
+    expect(f).toMatchObject({ name: 'REQUEST', body: '01' });
+    expect(codec.encodeLastSerial(220274).toString('ascii')).toBe('\x0101220274\x04');
   });
 
-  it('resyncs on leading garbage', () => {
-    const frame = codec.encodeFrame(codec.OPCODES.REQUEST, null);
-    const dec = new codec.FrameDecoder();
-    const out = dec.push(Buffer.concat([Buffer.from([0xaa, 0xbb, 0xcc]), frame]));
-    expect(out).toHaveLength(1);
-    expect(out[0].name).toBe('REQUEST');
+  it('rolls over after 999900', () => {
+    expect(codec.nextSerial(999900)).toBe(1);
+    expect(codec.nextSerial(5)).toBe(6);
+  });
+
+  it('rejects a Config with the wrong length', () => {
+    expect(codec.parseConfig('3001005').error).toBeTruthy();
   });
 });
