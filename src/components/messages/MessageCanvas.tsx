@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, ChangeEvent } from 'react';
-import { renderText, getFontInfo, PRINTER_FONTS } from '@/lib/dotMatrixFonts';
+import { renderText, getFontInfo, getCharAdvanceDots, PRINTER_FONTS } from '@/lib/dotMatrixFonts';
 import { parseBarcodeLabelData, renderBarcodeToCanvas } from '@/lib/barcodeRenderer';
 import { getValidCanvasYPositions } from '@/lib/messageProtocol';
 import { getCachedGraphic, graphicNameFromFieldData, subscribeGraphics } from '@/lib/graphicBitmap';
@@ -413,8 +413,8 @@ export function MessageCanvas({
       } else {
         const minChars = 3;
         const textLength = Math.max(field.data.length, minChars);
-        fieldW = textLength * ((towerPrint ? fontInfo.height : fontInfo.charWidth) + (field.gap ?? 1)) * DOT_SIZE;
-        fieldH = (towerPrint ? fontInfo.charWidth : fontInfo.height) * DOT_SIZE;
+        fieldW = textLength * (towerPrint ? fontInfo.height + (field.gap ?? 1) : getCharAdvanceDots(field.fontSize, field.gap ?? 1, field.bold ?? 0)) * DOT_SIZE;
+        fieldH = (towerPrint ? fontInfo.charWidth + (field.bold ?? 0) : fontInfo.height) * DOT_SIZE;
       }
 
       // Skip if field is outside visible viewport (optimization)
@@ -492,7 +492,7 @@ export function MessageCanvas({
           }
         } else {
           ctx.fillStyle = '#1a1a1a';
-          renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE, field.gap ?? 1);
+          renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE, field.gap ?? 1, field.bold ?? 0);
         }
       } else if (field.type === 'logo') {
         const bmp = getCachedGraphic(graphicNameFromFieldData(field.data));
@@ -527,17 +527,17 @@ export function MessageCanvas({
             if (towerReverse) {
               // each character rotates the other way; character order stays the same
               const slot = index;
-              ctx.translate(fieldX + slot * advance, fieldY + fontInfo.charWidth * DOT_SIZE);
+              ctx.translate(fieldX + slot * advance, fieldY + (fontInfo.charWidth + (field.bold ?? 0)) * DOT_SIZE);
               ctx.rotate(-Math.PI / 2);
             } else {
               ctx.translate(fieldX + index * advance + fontInfo.height * DOT_SIZE, fieldY);
               ctx.rotate(Math.PI / 2);
             }
-            renderText(ctx, character, 0, 0, field.fontSize, DOT_SIZE, 0);
+            renderText(ctx, character, 0, 0, field.fontSize, DOT_SIZE, 0, field.bold ?? 0);
             ctx.restore();
           });
         } else {
-          renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE, field.gap ?? 1);
+          renderText(ctx, field.data, fieldX, fieldY, field.fontSize, DOT_SIZE, field.gap ?? 1, field.bold ?? 0);
         }
       }
 
@@ -571,7 +571,7 @@ export function MessageCanvas({
 
       // Draw blinking cursor if editing this field (not for barcodes)
       if (isBeingEdited && cursorVisible && !isBarcode) {
-        const charWidth = (fontInfo.charWidth + (field.gap ?? 1)) * DOT_SIZE;
+        const charWidth = getCharAdvanceDots(field.fontSize, field.gap ?? 1, field.bold ?? 0) * DOT_SIZE;
         const cursorX = fieldX + cursorPosition * charWidth;
 
         // Draw red vertical line cursor
@@ -615,8 +615,8 @@ export function MessageCanvas({
       const fontInfo = getFontInfo(field.fontSize);
       const isBarcode = field.type === 'barcode';
       const textLength = Math.max(field.data.length, 3);
-      const w = isBarcode ? field.width : textLength * ((towerPrint ? fontInfo.height : fontInfo.charWidth) + (field.gap ?? 1));
-      const h = isBarcode ? templateHeight : (towerPrint ? fontInfo.charWidth : fontInfo.height);
+      const w = isBarcode ? field.width : textLength * (towerPrint ? fontInfo.height + (field.gap ?? 1) : getCharAdvanceDots(field.fontSize, field.gap ?? 1, field.bold ?? 0));
+      const h = isBarcode ? templateHeight : (towerPrint ? fontInfo.charWidth + (field.bold ?? 0) : fontInfo.height);
       return x >= field.x && x < field.x + w &&
              y >= field.y && y < field.y + h;
     };
@@ -687,7 +687,7 @@ export function MessageCanvas({
     let cursorPos: number;
     if (clickX !== undefined) {
       const fontInfo = getFontInfo(field.fontSize);
-      const charWidth = fontInfo.charWidth + (field.gap ?? 1);
+      const charWidth = getCharAdvanceDots(field.fontSize, field.gap ?? 1, field.bold ?? 0);
       const relativeX = clickX - field.x;
       const charPos = Math.round(relativeX / charWidth);
       cursorPos = Math.max(0, Math.min(charPos, field.data.length));
@@ -879,8 +879,8 @@ export function MessageCanvas({
         fields.forEach((field) => {
           const fontInfo = getFontInfo(field.fontSize);
           const isBarcode = field.type === 'barcode';
-          const fw = isBarcode ? field.width : Math.max(field.data.length, 3) * (fontInfo.charWidth + (field.gap ?? 1));
-          const fh = isBarcode ? (field.height || templateHeight) : fontInfo.height;
+          const fw = isBarcode ? field.width : Math.max(field.data.length, 3) * (towerPrint ? fontInfo.height + (field.gap ?? 1) : getCharAdvanceDots(field.fontSize, field.gap ?? 1, field.bold ?? 0));
+          const fh = isBarcode ? (field.height || templateHeight) : (towerPrint ? fontInfo.charWidth + (field.bold ?? 0) : fontInfo.height);
           // Check if field overlaps with marquee
           if (field.x < x2 && field.x + fw > x1 && field.y < y2 && field.y + fh > y1) {
             selected.add(field.id);
@@ -970,7 +970,7 @@ export function MessageCanvas({
       // If clicking on the same field, just move cursor
       if (field && field.id === editingFieldId) {
         const fontInfo = getFontInfo(field.fontSize);
-        const charWidth = fontInfo.charWidth + (field.gap ?? 1);
+        const charWidth = getCharAdvanceDots(field.fontSize, field.gap ?? 1, field.bold ?? 0);
         const relativeX = pos.x - field.x;
         const charPos = Math.round(relativeX / charWidth);
         const newCursorPos = Math.max(0, Math.min(charPos, field.data.length));

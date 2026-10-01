@@ -123,9 +123,12 @@ export function getFontInfo(fontName: string): FontInfo {
 /**
  * Calculate the width of text in dots for a given font
  */
-export function getTextWidthDots(text: string, fontName: string): number {
-  const font = getFontInfo(fontName);
-  return text.length * (font.charWidth + 1); // +1 for spacing
+export function getCharAdvanceDots(fontName: string, gap = 1, bold = 0): number {
+  return getFontInfo(fontName).charWidth + Math.max(0, bold) + gap;
+}
+
+export function getTextWidthDots(text: string, fontName: string, gap = 1, bold = 0): number {
+  return Array.from(text).length * getCharAdvanceDots(fontName, gap, bold);
 }
 
 /**
@@ -137,7 +140,8 @@ export function renderCharBitmap(
   x: number,
   y: number,
   fontName: string,
-  dotSize: number = 8
+  dotSize: number = 8,
+  bold: number = 0
 ): number {
   const font = getFontInfo(fontName);
   const pattern = getCharPattern(char);
@@ -161,15 +165,15 @@ export function renderCharBitmap(
         const colEnd = Math.ceil(x + (col + 1) * cellW);
         const dotW = Math.max(1, colEnd - colStart);
 
-        ctx.fillRect(colStart, rowStart, dotW, dotH);
+        // Printer Bold extends every lit dot to the right by N dot columns.
+        // A 7×5 glyph with Bold 1 therefore occupies 7×6, not 7×10.
+        ctx.fillRect(colStart, rowStart, dotW + Math.max(0, bold) * dotSize, dotH);
       }
     }
   }
 
   // Return the width consumed (for next character positioning)
-  return font.charWidth * dotSize;
-  // Return the width consumed (for next character positioning)
-  return font.charWidth * dotSize;
+  return (font.charWidth + Math.max(0, bold)) * dotSize;
 }
 
 /**
@@ -182,13 +186,14 @@ export function renderText(
   y: number,
   fontName: string,
   dotSize: number = 8,
-  gap: number = 1
+  gap: number = 1,
+  bold: number = 0
 ): void {
   const font = getFontInfo(fontName);
   let currentX = x;
   
   for (const char of text) {
-    renderCharBitmap(ctx, char, currentX, y, fontName, dotSize);
-    currentX += (font.charWidth + gap) * dotSize;
+    renderCharBitmap(ctx, char, currentX, y, fontName, dotSize, bold);
+    currentX += getCharAdvanceDots(fontName, gap, bold) * dotSize;
   }
 }

@@ -70,6 +70,7 @@ export function MessageThumbnail({ details, dotSize = 2, maxHeight = 80 }: Messa
           field.fontSize || 'Standard16High',
           dotSize,
           field.gap ?? 1,
+          field.bold ?? 0,
         );
       } catch {
         // ignore render errors per-field
