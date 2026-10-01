@@ -470,12 +470,14 @@ export function AdvancedSettingsDialog({
               onIncrease={() => {
                 const modes: (0 | 1 | 2 | 4 | 5 | 6)[] = [0, 1, 2, 4, 5, 6];
                 const idx = modes.indexOf(settings.printMode);
-                onUpdate({ printMode: modes[(idx + 1) % modes.length] });
+                const next = modes[(idx + 1) % modes.length];
+                onUpdate({ printMode: next, selectCode: { ...settings.selectCode, enabled: next === 4 } });
               }}
               onDecrease={() => {
                 const modes: (0 | 1 | 2 | 4 | 5 | 6)[] = [0, 1, 2, 4, 5, 6];
                 const idx = modes.indexOf(settings.printMode);
-                onUpdate({ printMode: modes[(idx + modes.length - 1) % modes.length] });
+                const next = modes[(idx + modes.length - 1) % modes.length];
+                onUpdate({ printMode: next, selectCode: { ...settings.selectCode, enabled: next === 4 } });
               }}
             />
             <SettingRow
@@ -498,6 +500,7 @@ export function AdvancedSettingsDialog({
               min={0}
               max={4000000000}
             />
+            {settings.printMode === 4 && (
             <div className="bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -521,6 +524,7 @@ export function AdvancedSettingsDialog({
                 Used with Print Mode = Select ID. Enter the message ID (1-255) to print.
               </p>
             </div>
+            )}
             <div className="bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

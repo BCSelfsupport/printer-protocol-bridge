@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'select-id-only-in-select-id-mode',
+    type: 'bugfix',
+    title: 'Select ID Code Only Appears in Select ID Print Mode',
+    date: '1 Oct 2026',
+    summary:
+      'The Select ID Code option in Print Mode settings could be switched on while another print mode was chosen, which was confusing. It now appears only when Print Mode is set to Select ID, switches on automatically when you choose that mode, and turns off when you pick a different mode.',
+  },
+  {
     id: 'message-list-selection-highlight',
     type: 'bugfix',
     title: 'Selected Message No Longer Stays Highlighted Green',
