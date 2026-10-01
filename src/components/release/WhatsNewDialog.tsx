@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'printer-made-expiry-dates',
+    type: 'bugfix',
+    title: 'Expiry Dates Made on the Printer Are Now Recognised',
+    date: '1 Oct 2026',
+    summary:
+      'An expiry date created directly on the printer used to open in the editor as an ordinary date. CodeSync now compares the printed date with today and works out the expiry offset (for example +30 days), so the field opens as an expiry date with the right number of days. It also uses this to tell the day and month apart.',
+  },
+  {
     id: 'graphic-list-from-printer',
     type: 'bugfix',
     title: 'Graphic Picker Lists the Printer\'s Real Graphics',

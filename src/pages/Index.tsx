@@ -651,12 +651,14 @@ const Index = () => {
       // Preserve autoCode metadata that ^LF doesn't carry
       // When the fetched type was only guessed from the value (e.g. "09" → day),
       // trust the saved metadata (it may be month) instead.
-      const inferred = !!(f as any).autoCodeInferred && !!cachedField.autoCodeFieldType;
+      // A fetched expiry offset (detected from the printed date) beats a saved copy that has none.
+      const fetchedExpiryOnly = (f.autoCodeExpiryDays ?? 0) > 0 && !((cachedField.autoCodeExpiryDays ?? 0) > 0);
+      const inferred = !!(f as any).autoCodeInferred && !!cachedField.autoCodeFieldType && !fetchedExpiryOnly;
       const { autoCodeInferred: _inf, ...fClean } = f as any;
       const result = {
         ...(fClean as typeof f),
         data: isBlankFetchedPlaceholder && cachedField.autoCodeFieldType ? cachedField.data : f.data,
-        autoCodeExpiryDays: f.autoCodeExpiryDays ?? cachedField.autoCodeExpiryDays,
+        autoCodeExpiryDays: inferred ? (cachedField.autoCodeExpiryDays ?? f.autoCodeExpiryDays) : (f.autoCodeExpiryDays ?? cachedField.autoCodeExpiryDays),
         // Grouping lives only in our saved copy — the printer doesn't know about it
         groupId: (cachedField as any).groupId,
         autoCodeFieldType: inferred ? cachedField.autoCodeFieldType : (f.autoCodeFieldType ?? cachedField.autoCodeFieldType),
