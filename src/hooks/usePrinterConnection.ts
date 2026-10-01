@@ -2664,6 +2664,13 @@ export function usePrinterConnection() {
     // concurrently with a post-save poll was locking the firmware.
     if (selectAfterSave) {
       commands.push(`^SM ${messageName}`);
+      // Date/time/counter/barcode subcommands have no bold parameter, so
+      // apply per-field Bold with ^SB field;bold once the message is printing.
+      validFields.forEach((field, index) => {
+        if (field.type === 'text' || field.type === 'userdefine') return;
+        const b = Math.max(0, Math.min(9, Math.trunc((field as { bold?: number }).bold ?? 0)));
+        if (b > 0) commands.push(`^SB ${index + 1};${b}`);
+      });
     }
 
     if (shouldUseEmulator()) {
