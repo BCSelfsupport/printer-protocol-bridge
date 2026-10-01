@@ -277,6 +277,34 @@ export function EditMessageScreen({
   const [linkedFieldDialogOpen, setLinkedFieldDialogOpen] = useState(false);
   const [dataLinkDialogOpen, setDataLinkDialogOpen] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+
+  // Download each graphic used in the message (^VG) so the preview shows the
+  // real picture, then size the field to the picture's true dot dimensions.
+  const [graphicsVersion, setGraphicsVersion] = useState(0);
+  useEffect(() => subscribeGraphics(() => setGraphicsVersion((v) => v + 1)), []);
+  const logoNamesKey = message.fields
+    .filter((f) => f.type === 'logo')
+    .map((f) => graphicNameFromFieldData(f.data))
+    .join('|');
+  useEffect(() => {
+    if (!onSendCommand || !logoNamesKey) return;
+    logoNamesKey.split('|').forEach((name) => {
+      if (name && getCachedGraphic(name) === undefined) void requestGraphic(name, onSendCommand);
+    });
+  }, [logoNamesKey, onSendCommand]);
+  useEffect(() => {
+    setMessage((prev) => {
+      let changed = false;
+      const fields = prev.fields.map((f) => {
+        if (f.type !== 'logo') return f;
+        const bmp = getCachedGraphic(graphicNameFromFieldData(f.data));
+        if (!bmp || (f.width === bmp.width && f.height === bmp.height)) return f;
+        changed = true;
+        return { ...f, width: bmp.width, height: bmp.height };
+      });
+      return changed ? { ...prev, fields } : prev;
+    });
+  }, [graphicsVersion, logoNamesKey]);
   // Local adjust settings state for the dialog.
   // NEW messages (startEmpty) always start with the fleet's preferred defaults:
   //   Width=2, Delay=500, Speed=Ultra Fast, Bold=0, Gap=0, Pitch=0.
