@@ -2627,6 +2627,7 @@ export function usePrinterConnection() {
       'Auto': 1,
       'Repeat': 2,
       'Reverse': 3,
+      'Select ID': 4,
       'Auto Encoder': 5,
       'Auto Encoder Reverse': 6,
     };
@@ -2913,6 +2914,7 @@ export function usePrinterConnection() {
       'Auto': 1,
       'Repeat': 2,
       'Reverse': 3,
+      'Select ID': 4,
       'Auto Encoder': 5,
       'Auto Encoder Reverse': 6,
     };
@@ -3614,6 +3616,7 @@ export function usePrinterConnection() {
       'Auto': 1,
       'Repeat': 2,
       'Reverse': 3,
+      'Select ID': 4,
       'Auto Encoder': 5,
       'Auto Encoder Reverse': 6,
     };
