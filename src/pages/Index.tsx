@@ -656,7 +656,7 @@ const Index = () => {
       const result = {
         ...(fClean as typeof f),
         data: isBlankFetchedPlaceholder && cachedField.autoCodeFieldType ? cachedField.data : f.data,
-        autoCodeExpiryDays: f.autoCodeExpiryDays ?? cachedField.autoCodeExpiryDays,
+        autoCodeExpiryDays: inferred ? (cachedField.autoCodeExpiryDays ?? f.autoCodeExpiryDays) : (f.autoCodeExpiryDays ?? cachedField.autoCodeExpiryDays),
         // Grouping lives only in our saved copy — the printer doesn't know about it
         groupId: (cachedField as any).groupId,
         autoCodeFieldType: inferred ? cachedField.autoCodeFieldType : (f.autoCodeFieldType ?? cachedField.autoCodeFieldType),

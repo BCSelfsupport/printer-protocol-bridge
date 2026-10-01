@@ -627,6 +627,100 @@ function autoCodeMetaFromProtocol(pf: ParsedField): Pick<MessageField, 'autoCode
   return {};
 }
 
+
+// ── Expiry-date detection on readback ───────────────────────────────────────
+// ^LF never says whether a date field is an expiry date (^AE) or how many days
+// it is offset — it only returns the printed value. For messages built on the
+// printer itself we work it out by comparing the printed date to today.
+
+const DAY_MS = 86400000;
+const MAX_EXPIRY_DAYS = 3650;
+
+function startOfDay(d: Date): number {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+function offsetFromToday(y: number, m: number, d: number, today: Date): number | null {
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const dt = new Date(y, m - 1, d);
+  if (dt.getMonth() !== m - 1 || dt.getDate() !== d) return null;
+  const diff = Math.round((startOfDay(dt) - startOfDay(today)) / DAY_MS);
+  return diff >= 0 && diff <= MAX_EXPIRY_DAYS ? diff : null;
+}
+
+function fullYear(v: number, today: Date): number {
+  if (v >= 100) return v;
+  const century = Math.floor(today.getFullYear() / 100) * 100;
+  return century + v;
+}
+
+type Role = 'D' | 'M' | 'Y';
+
+/** Mutates inferred date fields: resolves day/month pieces and marks expiry offsets. */
+export function detectExpiryDates(fields: MessageField[], today: Date = new Date()): void {
+  const isInferredDate = (f: MessageField) => f.type === 'date' && !!(f as any).autoCodeInferred;
+
+  // 1) Single-field full dates
+  for (const f of fields) {
+    if (!isInferredDate(f) || f.autoCodeFieldType !== 'date_normal') continue;
+    const v = f.data.trim();
+    let off: number | null = null;
+    let m: RegExpMatchArray | null;
+    if ((m = v.match(/^(\d{2})\/(\d{2})\/(\d{2}|\d{4})$/))) {
+      off = offsetFromToday(fullYear(+m[3], today), +m[1], +m[2], today);
+    } else if ((m = v.match(/^(\d{4})\/(\d{2})\/(\d{2})$/))) {
+      off = offsetFromToday(+m[1], +m[2], +m[3], today);
+    }
+    if (off && off > 0) {
+      f.autoCodeFieldType = 'date_expiry';
+      f.autoCodeExpiryDays = off;
+    }
+  }
+
+  // 2) Dates built from pieces (DD - MM - YYYY etc.) on the same row
+  const rows = new Map<number, MessageField[]>();
+  for (const f of fields) {
+    if (!isInferredDate(f)) continue;
+    const t = f.autoCodeFieldType;
+    if (t !== 'date_normal_dom' && t !== 'date_normal_yyyy') continue;
+    const list = rows.get(f.y) ?? [];
+    list.push(f);
+    rows.set(f.y, list);
+  }
+
+  rows.forEach((list) => {
+    const pieces = [...list].sort((a, b) => a.x - b.x);
+    if (pieces.length < 2 || pieces.length > 3) return;
+    const orders: Role[][] = pieces.length === 3
+      ? [['D', 'M', 'Y'], ['M', 'D', 'Y'], ['Y', 'M', 'D']]
+      : [['D', 'M'], ['M', 'D'], ['M', 'Y'], ['Y', 'M']];
+    let best: { order: Role[]; off: number } | null = null;
+    for (const order of orders) {
+      const val = (r: Role) => { const i = order.indexOf(r); return i < 0 ? null : pieces[i]; };
+      const yF = val('Y'), mF = val('M'), dF = val('D');
+      if (!mF) continue;
+      // A 4-digit piece can only be the year
+      if (pieces.some((p, i) => p.data.trim().length === 4 && order[i] !== 'Y')) continue;
+      const y = yF ? fullYear(+yF.data.trim(), today) : today.getFullYear();
+      const mo = +mF.data.trim();
+      const d = dF ? +dF.data.trim() : today.getDate();
+      let off = offsetFromToday(y, mo, d, today);
+      if (off === null && !yF) off = offsetFromToday(y + 1, mo, d, today);
+      if (off === null) continue;
+      if (!best || off < best.off) best = { order, off };
+    }
+    if (!best) return;
+    const prefix = best.off > 0 ? 'date_expiry' : 'date_normal';
+    best.order.forEach((role, i) => {
+      const f = pieces[i];
+      const len = f.data.trim().length;
+      const kind = role === 'D' ? 'dom' : role === 'M' ? 'mm' : len === 4 ? 'yyyy' : 'yy';
+      f.autoCodeFieldType = `${prefix}_${kind}`;
+      if (best!.off > 0) f.autoCodeExpiryDays = best!.off;
+    });
+  });
+}
+
 // ── Message builder ──────────────────────────────────────────────────────────
 
 /**
@@ -753,6 +847,8 @@ export function buildMessageDetails(
       autoNumerals: 0,
     };
   });
+
+  detectExpiryDates(fields);
 
   return {
     name: messageName,
