@@ -127,6 +127,9 @@ export function MessageCanvas({
   const [cursorPosition, setCursorPosition] = useState(0); // Character position in text
   const [cursorVisible, setCursorVisible] = useState(true); // For blinking effect
   const [editingText, setEditingText] = useState(''); // Current text being edited (for hidden input sync)
+  // Redraw when a printer graphic finishes downloading
+  const [graphicsTick, setGraphicsTick] = useState(0);
+  useEffect(() => subscribeGraphics(() => setGraphicsTick((t) => t + 1)), []);
 
   // Inform parent when we need to lock its horizontal scroll (mobile drag)
   const scrollLock = isLongPressActive && isDragging;
