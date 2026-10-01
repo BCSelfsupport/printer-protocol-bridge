@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'message-list-selection-highlight',
+    type: 'bugfix',
+    title: 'Selected Message No Longer Stays Highlighted Green',
+    date: '1 Oct 2026',
+    summary:
+      'Fixed a confusing highlight in the message list: after selecting a message, the row stayed green, which looked the same as the message currently active on the printer. The picked row now shows a neutral grey highlight, and green is reserved for the message that is actually printing on the printer.',
+  },
+  {
     id: 'field-left-edge-hard-stop',
     type: 'bugfix',
     title: 'Fields Can No Longer Be Dragged Past the Left Edge',
