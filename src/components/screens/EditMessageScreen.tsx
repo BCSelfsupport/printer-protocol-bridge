@@ -1855,6 +1855,7 @@ export function EditMessageScreen({
             onOpenChange={setGraphicDialogOpen}
             onBack={() => setNewFieldDialogOpen(true)}
             onAddGraphic={handleAddGraphic}
+            onSendCommand={onSendCommand}
           />
 
           {/* Message Settings Dialog */}

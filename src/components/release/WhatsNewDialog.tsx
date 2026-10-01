@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'graphic-list-from-printer',
+    type: 'bugfix',
+    title: 'Graphic Picker Lists the Printer\'s Real Graphics',
+    date: '1 Oct 2026',
+    summary:
+      'When adding a graphic to a message, the list now comes straight from the graphics uploaded to the connected printer instead of a fixed sample list. Selecting one shows a dot-for-dot preview, and a refresh button re-reads the printer.',
+  },
+  {
     id: 'graphics-show-in-preview',
     type: 'bugfix',
     title: 'Graphics Now Show in the Message Preview',
