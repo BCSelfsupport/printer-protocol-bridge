@@ -535,6 +535,7 @@ export function AdvancedSettingsDialog({
               </p>
             </div>
             )}
+            {settings.printMode === 2 && (
             <div className="bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -555,9 +556,10 @@ export function AdvancedSettingsDialog({
                 )}
               </div>
               <p className="text-[10px] text-muted-foreground mt-1 pl-10">
-                Print Mode must be set to Repeat. Extra prints after the first Print Go.
+                Used with Print Mode = Repeat. Extra prints after the first Print Go.
               </p>
             </div>
+            )}
           </TabsContent>
         </Tabs>
 
