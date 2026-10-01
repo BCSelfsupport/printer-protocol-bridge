@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'field-bold-preview-dots',
+    type: 'bugfix',
+    title: 'Bold Now Shows in the Message Preview',
+    date: '1 Oct 2026',
+    summary:
+      'Changing a field’s Bold now visibly adds dot columns to the right of each printed dot in the editor and message previews. Bold 1 makes a 7×5 character 7×6; field outlines and spacing grow with it.',
+  },
+  {
     id: 'font-template-dropdowns',
     type: 'feature',
     title: 'Font Size and Template Are Now Drop-Down Menus',

@@ -614,7 +614,7 @@ export function EditMessageScreen({
     if (f.type === 'barcode') return f.width;
     const info = getFontInfo(f.fontSize);
     const len = Array.from(f.data ?? '').length;
-    const per = (canTowerPrint && message.towerPrint ? info.height : info.charWidth) + (f.gap ?? 1);
+    const per = (canTowerPrint && message.towerPrint ? info.height : info.charWidth + (f.bold ?? 0)) + (f.gap ?? 1);
     return Math.max(f.width ?? 0, len * per);
   };
   // Re-pack grouped pieces edge-to-edge (after a font change their old
@@ -629,7 +629,7 @@ export function EditMessageScreen({
         m.x = x;
         if (m.type !== 'barcode') {
           const info = getFontInfo(m.fontSize);
-          const per = (canTowerPrint && message.towerPrint ? info.height : info.charWidth) + (m.gap ?? 1);
+          const per = (canTowerPrint && message.towerPrint ? info.height : info.charWidth + (m.bold ?? 0)) + (m.gap ?? 1);
           m.width = Math.max(1, Array.from(m.data ?? '').length * per);
         }
         x += m.width;
@@ -647,7 +647,7 @@ export function EditMessageScreen({
 
   const autoResizeWidth = (fields: MessageField[]) => {
     if (fields.length === 0) return 200; // Default minimum
-    const maxRight = Math.max(...fields.map(f => f.x + f.width));
+    const maxRight = Math.max(...fields.map(f => f.x + renderedFieldWidth(f)));
     return Math.max(200, maxRight + 20); // At least 200, plus 20px padding
   };
 

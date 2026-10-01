@@ -497,7 +497,7 @@ function calculateRequiredWidth(messageContent: MessageDetails | undefined, mess
       // the same length, so length-based math is fine. We add an extra char of
       // slack to absorb any rounding between calc/render gaps.
       const charCount = Math.max(1, field.data.length) + 1;
-      const textWidth = charCount * (fontInfo.charWidth + fieldGap) * dotSize;
+      const textWidth = charCount * (fontInfo.charWidth + (field.bold ?? 0) + fieldGap) * dotSize;
       maxXEnd = Math.max(maxXEnd, x + textWidth);
     });
     // Also respect the printer-reported message width (W: in ^LF) so we never
@@ -765,10 +765,10 @@ function MessagePreviewCanvas({ message, printerTime, messageContent, customCoun
         }
 
         const fieldGap = (field as any).gap ?? 1;
-        renderText(ctx, displayData, x, y, fontName, effectiveDotSize, fieldGap);
+        renderText(ctx, displayData, x, y, fontName, effectiveDotSize, fieldGap, field.bold ?? 0);
 
         // Track the rightmost edge of rendered content
-        const textWidth = displayData.length * (fontInfo.charWidth + fieldGap) * effectiveDotSize;
+        const textWidth = displayData.length * (fontInfo.charWidth + (field.bold ?? 0) + fieldGap) * effectiveDotSize;
         maxXEnd = Math.max(maxXEnd, x + textWidth);
       });
       return;
