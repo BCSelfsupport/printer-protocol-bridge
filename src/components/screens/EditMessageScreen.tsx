@@ -1279,7 +1279,7 @@ export function EditMessageScreen({
     const targetIds = selectedFieldIds.size > 0 ? selectedFieldIds : new Set([selectedFieldId]);
     setMessage((prev) => {
       const updated = prev.fields.map((f) => (targetIds.has(f.id) ? { ...f, [key]: value } : f));
-      const groups = key === 'gap'
+      const groups = key === 'gap' || key === 'bold'
         ? new Set(updated.filter(f => targetIds.has(f.id) && f.groupId != null).map(f => f.groupId!))
         : new Set<number>();
       const fields = repackGroups(updated, groups);
