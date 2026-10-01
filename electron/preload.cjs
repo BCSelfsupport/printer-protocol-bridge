@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getConfig: () => ipcRenderer.invoke('tnt:get-config'),
     setConfig: (cfg) => ipcRenderer.invoke('tnt:set-config', cfg),
     send: (opcode, payload) => ipcRenderer.invoke('tnt:send', { opcode, payload }),
+    setLastSerial: (n) => ipcRenderer.invoke('tnt:set-last-serial', n),
     onFrame: (callback) => {
       const handler = (_e, entry) => callback(entry);
       ipcRenderer.on('tnt:frame', handler);
