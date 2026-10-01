@@ -77,7 +77,7 @@ interface MessagesScreenProps {
     messageSettings?: {
       speed?: 'Fast' | 'Faster' | 'Fastest' | 'Ultra Fast';
       rotation?: string;
-      printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Auto Encoder' | 'Auto Encoder Reverse';
+      printMode?: 'Normal' | 'Auto' | 'Repeat' | 'Reverse' | 'Select ID' | 'Auto Encoder' | 'Auto Encoder Reverse';
     },
     counterConfigs?: Array<{ id: number; startCount: number; endCount: number; leadingZeroes: boolean }>,
     selectAfterSave?: boolean,
