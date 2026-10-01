@@ -471,13 +471,21 @@ export function AdvancedSettingsDialog({
                 const modes: (0 | 1 | 2 | 4 | 5 | 6)[] = [0, 1, 2, 4, 5, 6];
                 const idx = modes.indexOf(settings.printMode);
                 const next = modes[(idx + 1) % modes.length];
-                onUpdate({ printMode: next, selectCode: { ...settings.selectCode, enabled: next === 4 } });
+                onUpdate({
+                  printMode: next,
+                  selectCode: { ...settings.selectCode, enabled: next === 4 },
+                  repeatPrint: { ...settings.repeatPrint, enabled: next === 2 },
+                });
               }}
               onDecrease={() => {
                 const modes: (0 | 1 | 2 | 4 | 5 | 6)[] = [0, 1, 2, 4, 5, 6];
                 const idx = modes.indexOf(settings.printMode);
                 const next = modes[(idx + modes.length - 1) % modes.length];
-                onUpdate({ printMode: next, selectCode: { ...settings.selectCode, enabled: next === 4 } });
+                onUpdate({
+                  printMode: next,
+                  selectCode: { ...settings.selectCode, enabled: next === 4 },
+                  repeatPrint: { ...settings.repeatPrint, enabled: next === 2 },
+                });
               }}
             />
             <SettingRow
@@ -490,6 +498,7 @@ export function AdvancedSettingsDialog({
               min={0}
               max={4000000000}
             />
+            {settings.printMode !== 0 && (
             <SettingRow
               label="Pitch"
               value={settings.pitch}
@@ -500,6 +509,7 @@ export function AdvancedSettingsDialog({
               min={0}
               max={4000000000}
             />
+            )}
             {settings.printMode === 4 && (
             <div className="bg-gradient-to-b from-muted to-muted/60 rounded-lg p-2 border border-border">
               <div className="flex items-center justify-between">
