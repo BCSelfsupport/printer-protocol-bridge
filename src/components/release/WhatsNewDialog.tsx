@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'language-menu-spanish-french',
+    type: 'feature',
+    title: 'Spanish and French Language Options',
+    date: '2 Oct 2026',
+    summary:
+      'The globe button at the top now also offers Español and Français alongside English and Italiano.',
+  },
+  {
     id: 'language-menu-italian',
     type: 'feature',
     title: 'Italian Language Option',
