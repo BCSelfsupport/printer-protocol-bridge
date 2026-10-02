@@ -125,3 +125,4 @@ Updated: today
 - [TnT Session Controller](mem://features/tnt-session-controller) — Config reseed, Print dispatch, Cat-1 fatal latch, Cat-2 placeholder sub-codes
 - [Wire & Cable package](mem://features/wire-cable-package) — wirecable tier; sheet barcode = job ID lookup → ^NM/^SV/^SM; job log, flip-flop, tower
 - [TnT Interface Spec](mem://integration/tnt-interface-spec-oct-2026.md) — Real TnT framing, 30 s poll, serial rules, faults; open gaps
+- [Translation glossary](mem://reference/translation-glossary) — CodeSync_Italian_Glossary_v2.docx in Files is the master lookup for all site translations; extend with new language columns
