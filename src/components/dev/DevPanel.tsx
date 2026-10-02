@@ -1123,11 +1123,34 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                         <p className="text-xs font-semibold text-foreground">{doc.label}</p>
                         <p className="text-[11px] text-muted-foreground truncate">{doc.file} · {doc.note}</p>
                       </div>
-                      <Button asChild size="sm" variant="outline" className="shrink-0">
-                        <a href={`/translations/${doc.file}`} download={doc.file}>
-                          <Upload className="mr-1.5 h-3.5 w-3.5 rotate-180" />
-                          Download
-                        </a>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0"
+                        onClick={async () => {
+                          const url = new URL(`translations/${doc.file}`, window.location.href).href;
+                          try {
+                            const res = await fetch(url, { cache: 'no-store' });
+                            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                            const blob = await res.blob();
+                            const blobUrl = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = blobUrl;
+                            a.download = doc.file;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+                            // Embedded previews can silently block downloads — also open in a new tab.
+                            if (window.self !== window.top) window.open(url, '_blank', 'noopener');
+                          } catch (err) {
+                            console.error('[DevPanel] translation download failed', err);
+                            window.open(url, '_blank', 'noopener');
+                          }
+                        }}
+                      >
+                        <Upload className="mr-1.5 h-3.5 w-3.5 rotate-180" />
+                        Download
                       </Button>
                     </div>
                   ))}
