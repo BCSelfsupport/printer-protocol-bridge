@@ -542,6 +542,10 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   <Usb className="w-3.5 h-3.5" />
                   Firmware
                 </TabsTrigger>
+                <TabsTrigger value="translations" className="text-xs gap-1 flex-shrink-0">
+                  <Globe className="w-3.5 h-3.5" />
+                  Translations
+                </TabsTrigger>
 
                 {isOwnerDeveloper && (
                   <TabsTrigger value="devs" className="text-xs gap-1 flex-shrink-0">
@@ -1088,6 +1092,56 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
             {/* Firmware Tab */}
             <TabsContent value="firmware" className="flex-1 overflow-auto m-0 p-4">
               <FirmwarePanel />
+            </TabsContent>
+
+            {/* Translations Tab */}
+            <TabsContent value="translations" className="flex-1 overflow-auto m-0 p-4">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 rounded-md border border-border bg-card p-3">
+                  <Globe className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold">Translation Glossaries</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Master word lists that drive the language menu. Download a document, have it
+                      reviewed or corrected, then send it back to be loaded into the app. Adding a
+                      new language column adds that language to the menu.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {[
+                    { file: 'CodeSync_Italian_Glossary_FINAL.docx', label: 'Italian (Italiano)', note: 'Verified master copy' },
+                    { file: 'CodeSync_Spanish_Glossary_v1.docx', label: 'Spanish (Español)', note: 'Draft — needs review' },
+                    { file: 'CodeSync_French_Glossary_v1.docx', label: 'French (Français)', note: 'Draft — needs review' },
+                  ].map((doc) => (
+                    <div
+                      key={doc.file}
+                      className="flex items-center justify-between gap-3 rounded-md border border-border bg-card p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-foreground">{doc.label}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{doc.file} · {doc.note}</p>
+                      </div>
+                      <Button asChild size="sm" variant="outline" className="shrink-0">
+                        <a href={`/translations/${doc.file}`} download={doc.file}>
+                          <Upload className="mr-1.5 h-3.5 w-3.5 rotate-180" />
+                          Download
+                        </a>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-md border border-dashed border-border bg-muted/20 p-3">
+                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    <span className="font-semibold text-foreground">How it works:</span>{' '}
+                    each document lists every English word and phrase used on the screens, with the
+                    translation in the next column. Only exact matches are translated on screen;
+                    anything not listed stays in English.
+                  </p>
+                </div>
+              </div>
             </TabsContent>
 
             {/* Training Tab */}
