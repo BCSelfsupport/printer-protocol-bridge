@@ -853,6 +853,66 @@
     {
       "en": "Select Current Day",
       "it": "Seleziona giorno corrente"
+    },
+    {
+      "en": "Adjust Settings (Global)",
+      "it": "Impostazioni di regolazione (Globali)"
+    },
+    {
+      "en": "Adjust Settings (Message)",
+      "it": "Impostazioni di regolazione (Messaggio)"
+    },
+    {
+      "en": "Refresh from printer",
+      "it": "Aggiorna dalla stampante"
+    },
+    {
+      "en": "Reading printer…",
+      "it": "Lettura stampante…"
+    },
+    {
+      "en": "Repeat (Repeat mode)",
+      "it": "Ripetizioni (modalità Ripeti)"
+    },
+    {
+      "en": "Fast",
+      "it": "Veloce"
+    },
+    {
+      "en": "Faster",
+      "it": "Più veloce"
+    },
+    {
+      "en": "Fastest",
+      "it": "Velocissima"
+    },
+    {
+      "en": "Ultra Fast",
+      "it": "Ultra veloce"
+    },
+    {
+      "en": "Mirror Flip",
+      "it": "Specchiato capovolto"
+    },
+    {
+      "en": "Override",
+      "it": "Personalizza"
+    },
+    {
+      "en": "Override for this message",
+      "it": "Personalizza per questo messaggio"
+    },
+    {
+      "en": "Changes are sent to the printer as you make them.",
+      "it": "Le modifiche vengono inviate alla stampante in tempo reale."
+    },
+    {
+      "en": "Done saves the message with these settings.",
+      "it": "Fatto salva il messaggio con queste impostazioni."
+    },
+    {
+      "en": "Changes apply when you press Save in the message editor.",
+      "it": "Le modifiche si applicano premendo Salva nell'editor messaggi."
     }
   ]
 }
