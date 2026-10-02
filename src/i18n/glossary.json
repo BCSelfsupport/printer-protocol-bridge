@@ -737,6 +737,82 @@
     {
       "en": "Help",
       "it": "Aiuto"
+    },
+    {
+      "en": "Primary Metrics",
+      "it": "Parametri principali"
+    },
+    {
+      "en": "Modulation",
+      "it": "Modulazione"
+    },
+    {
+      "en": "Phase Quality",
+      "it": "Qualità di fase"
+    },
+    {
+      "en": "Subsystems",
+      "it": "Sottosistemi"
+    },
+    {
+      "en": "Temperature",
+      "it": "Temperature"
+    },
+    {
+      "en": "Printhead",
+      "it": "Testina di stampa"
+    },
+    {
+      "en": "Electronics",
+      "it": "Elettronica"
+    },
+    {
+      "en": "System Info",
+      "it": "Info di sistema"
+    },
+    {
+      "en": "Allow Errors",
+      "it": "Consenti errori"
+    },
+    {
+      "en": "Error Active",
+      "it": "Errore attivo"
+    },
+    {
+      "en": "HV Deflection",
+      "it": "Deflessione AT"
+    },
+    {
+      "en": "Power Hours",
+      "it": "Ore di accensione"
+    },
+    {
+      "en": "Stream Hours",
+      "it": "Ore getto"
+    },
+    {
+      "en": "Force Print",
+      "it": "Forza stampa"
+    },
+    {
+      "en": "Connect to a printer to view service data",
+      "it": "Connetti una stampante per visualizzare i dati di assistenza"
+    },
+    {
+      "en": "On",
+      "it": "On"
+    },
+    {
+      "en": "Off",
+      "it": "Off"
+    },
+    {
+      "en": "Enabled",
+      "it": "Abilitato"
+    },
+    {
+      "en": "Disabled",
+      "it": "Disabilitato"
     }
   ]
 }
