@@ -7,912 +7,1372 @@
     {
       "code": "it",
       "label": "Italiano"
+    },
+    {
+      "code": "es",
+      "label": "Español"
+    },
+    {
+      "code": "fr",
+      "label": "Français"
     }
   ],
   "entries": [
     {
       "en": "Network Printers",
-      "it": "Stampanti in rete"
+      "it": "Stampanti in rete",
+      "es": "Impresoras de red",
+      "fr": "Imprimantes réseau"
     },
     {
       "en": "Connect",
-      "it": "Connetti"
+      "it": "Connetti",
+      "es": "Conectar",
+      "fr": "Connecter"
     },
     {
       "en": "Disconnect",
-      "it": "Disconnetti"
+      "it": "Disconnetti",
+      "es": "Desconectar",
+      "fr": "Déconnecter"
     },
     {
       "en": "Connect / Disconnect",
-      "it": "Connetti / Disconnetti"
+      "it": "Connetti / Disconnetti",
+      "es": "Conectar / Desconectar",
+      "fr": "Connecter / Déconnecter"
     },
     {
       "en": "Online / Offline",
-      "it": "Online / Offline (In linea / Fuori linea)"
+      "it": "Online / Offline (In linea / Fuori linea)",
+      "es": "En línea / Fuera de línea",
+      "fr": "En ligne / Hors ligne"
     },
     {
       "en": "Emulate Printers",
-      "it": "Simula stampanti"
+      "it": "Simula stampanti",
+      "es": "Emular impresoras",
+      "fr": "Émuler les imprimantes"
     },
     {
       "en": "Sync Clocks",
-      "it": "Sincronizza orologi"
+      "it": "Sincronizza orologi",
+      "es": "Sincronizar relojes",
+      "fr": "Synchroniser les horloges"
     },
     {
       "en": "What's New",
-      "it": "Novità"
+      "it": "Novità",
+      "es": "Novedades",
+      "fr": "Nouveautés"
     },
     {
       "en": "Messages",
-      "it": "Messaggi"
+      "it": "Messaggi",
+      "es": "Mensajes",
+      "fr": "Messages"
     },
     {
       "en": "Data",
-      "it": "Dati"
+      "it": "Dati",
+      "es": "Datos",
+      "fr": "Données"
     },
     {
       "en": "Adjust",
-      "it": "Regolazioni"
+      "it": "Regolazioni",
+      "es": "Ajustar",
+      "fr": "Ajuster"
     },
     {
       "en": "Clean",
-      "it": "Pulizia"
+      "it": "Pulizia",
+      "es": "Limpiar",
+      "fr": "Nettoyer"
     },
     {
       "en": "Setup",
-      "it": "Impostazioni"
+      "it": "Impostazioni",
+      "es": "Configuración",
+      "fr": "Configuration"
     },
     {
       "en": "Service",
-      "it": "Assistenza"
+      "it": "Assistenza",
+      "es": "Servicio",
+      "fr": "Service"
     },
     {
       "en": "Cable",
-      "it": "Cavo"
+      "it": "Cavo",
+      "es": "Cable",
+      "fr": "Câble"
     },
     {
       "en": "Start Print",
-      "it": "Avvia stampa"
+      "it": "Avvia stampa",
+      "es": "Iniciar impresión",
+      "fr": "Démarrer l'impression"
     },
     {
       "en": "Stop Print",
-      "it": "Ferma stampa"
+      "it": "Ferma stampa",
+      "es": "Detener impresión",
+      "fr": "Arrêter l'impression"
     },
     {
       "en": "Start Print / Stop Print",
-      "it": "Avvia stampa / Ferma stampa"
+      "it": "Avvia stampa / Ferma stampa",
+      "es": "Iniciar / Detener impresión",
+      "fr": "Démarrer / Arrêter l'impression"
     },
     {
       "en": "Jet Start",
-      "it": "Avvio getto"
+      "it": "Avvio getto",
+      "es": "Iniciar chorro",
+      "fr": "Démarrer le jet"
     },
     {
       "en": "Jet Stop",
-      "it": "Arresto getto"
+      "it": "Arresto getto",
+      "es": "Detener chorro",
+      "fr": "Arrêter le jet"
     },
     {
       "en": "Jet Start / Jet Stop",
-      "it": "Avvio getto / Arresto getto"
+      "it": "Avvio getto / Arresto getto",
+      "es": "Iniciar / Detener chorro",
+      "fr": "Démarrer / Arrêter le jet"
     },
     {
       "en": "Ink",
-      "it": "Inchiostro"
+      "it": "Inchiostro",
+      "es": "Tinta",
+      "fr": "Encre"
     },
     {
       "en": "Makeup",
-      "it": "Solvente (Makeup)"
+      "it": "Solvente (Makeup)",
+      "es": "Makeup (disolvente)",
+      "fr": "Makeup (Solvant d'appoint)"
     },
     {
       "en": "Ink Low",
-      "it": "Inchiostro basso"
+      "it": "Inchiostro basso",
+      "es": "Tinta baja",
+      "fr": "Niveau d'encre bas"
     },
     {
       "en": "Makeup Low",
-      "it": "Solvente basso"
+      "it": "Solvente basso",
+      "es": "Makeup (disolvente) bajo",
+      "fr": "Niveau de makeup bas"
     },
     {
       "en": "Ink Low / Makeup Low",
-      "it": "Inchiostro basso / Solvente basso"
+      "it": "Inchiostro basso / Solvente basso",
+      "es": "Tinta baja / Makeup (disolvente) bajo",
+      "fr": "Niveau d'encre bas / Niveau de makeup bas"
     },
     {
       "en": "Fault",
-      "it": "Guasto"
+      "it": "Guasto",
+      "es": "Fallo",
+      "fr": "Défaut"
     },
     {
       "en": "Warning",
-      "it": "Avviso"
+      "it": "Avviso",
+      "es": "Advertencia",
+      "fr": "Avertissement"
     },
     {
       "en": "Print Count",
-      "it": "Conteggio stampe"
+      "it": "Conteggio stampe",
+      "es": "Recuento de impresiones",
+      "fr": "Compteur d'impressions"
     },
     {
       "en": "Product:",
-      "it": "Prodotti:"
+      "it": "Prodotti:",
+      "es": "Producto:",
+      "fr": "Produit :"
     },
     {
       "en": "Print:",
-      "it": "Stampe:"
+      "it": "Stampe:",
+      "es": "Impresión:",
+      "fr": "Impression :"
     },
     {
       "en": "Start",
-      "it": "Avvia"
+      "it": "Avvia",
+      "es": "Iniciar",
+      "fr": "Démarrer"
     },
     {
       "en": "Product Count",
-      "it": "Conteggio prodotti"
+      "it": "Conteggio prodotti",
+      "es": "Recuento de productos",
+      "fr": "Compteur de produits"
     },
     {
       "en": "Consumables",
-      "it": "Consumabili"
+      "it": "Consumabili",
+      "es": "Consumibles",
+      "fr": "Consommables"
     },
     {
       "en": "Reports",
-      "it": "Rapporti"
+      "it": "Rapporti",
+      "es": "Informes",
+      "fr": "Rapports"
     },
     {
       "en": "Message",
-      "it": "Messaggio"
+      "it": "Messaggio",
+      "es": "Mensaje",
+      "fr": "Message"
     },
     {
       "en": "New",
-      "it": "Nuovo"
+      "it": "Nuovo",
+      "es": "Nuevo",
+      "fr": "Nouveau"
     },
     {
       "en": "Edit",
-      "it": "Modifica"
+      "it": "Modifica",
+      "es": "Editar",
+      "fr": "Modifier"
     },
     {
       "en": "Delete",
-      "it": "Elimina"
+      "it": "Elimina",
+      "es": "Eliminar",
+      "fr": "Supprimer"
     },
     {
       "en": "Select",
-      "it": "Seleziona"
+      "it": "Seleziona",
+      "es": "Seleccionar",
+      "fr": "Sélectionner"
     },
     {
       "en": "Save",
-      "it": "Salva"
+      "it": "Salva",
+      "es": "Guardar",
+      "fr": "Enregistrer"
     },
     {
       "en": "Save As",
-      "it": "Salva con nome"
+      "it": "Salva con nome",
+      "es": "Guardar como",
+      "fr": "Enregistrer sous"
     },
     {
       "en": "Cancel",
-      "it": "Annulla"
+      "it": "Annulla",
+      "es": "Cancelar",
+      "fr": "Annuler"
     },
     {
       "en": "Save to PC",
-      "it": "Salva su PC"
+      "it": "Salva su PC",
+      "es": "Guardar en PC",
+      "fr": "Enregistrer sur le PC"
     },
     {
       "en": "PC Library",
-      "it": "Libreria PC"
+      "it": "Libreria PC",
+      "es": "Biblioteca de PC",
+      "fr": "Bibliothèque PC"
     },
     {
       "en": "Send to Printer",
-      "it": "Invia alla stampante"
+      "it": "Invia alla stampante",
+      "es": "Enviar a la impresora",
+      "fr": "Envoyer à l'imprimante"
     },
     {
       "en": "Copy to Printers",
-      "it": "Copia sulle stampanti"
+      "it": "Copia sulle stampanti",
+      "es": "Copiar a impresoras",
+      "fr": "Copier vers les imprimantes"
     },
     {
       "en": "Active Message",
-      "it": "Messaggio attivo"
+      "it": "Messaggio attivo",
+      "es": "Mensaje activo",
+      "fr": "Message actif"
     },
     {
       "en": "Field",
-      "it": "Campo"
+      "it": "Campo",
+      "es": "Campo",
+      "fr": "Champ"
     },
     {
       "en": "Text",
-      "it": "Testo"
+      "it": "Testo",
+      "es": "Texto",
+      "fr": "Texte"
     },
     {
       "en": "Date",
-      "it": "Data"
+      "it": "Data",
+      "es": "Fecha",
+      "fr": "Date"
     },
     {
       "en": "Time",
-      "it": "Ora"
+      "it": "Ora",
+      "es": "Hora",
+      "fr": "Heure"
     },
     {
       "en": "Counter",
-      "it": "Contatore"
+      "it": "Contatore",
+      "es": "Contador",
+      "fr": "Compteur"
     },
     {
       "en": "Barcode",
-      "it": "Codice a barre"
+      "it": "Codice a barre",
+      "es": "Código de barras",
+      "fr": "Code-barres"
     },
     {
       "en": "2D Code",
-      "it": "Codice 2D"
+      "it": "Codice 2D",
+      "es": "Código 2D",
+      "fr": "Code 2D"
     },
     {
       "en": "DataMatrix",
-      "it": "DataMatrix"
+      "it": "DataMatrix",
+      "es": "DataMatrix",
+      "fr": "DataMatrix"
     },
     {
       "en": "2D Code / DataMatrix",
-      "it": "Codice 2D / DataMatrix"
+      "it": "Codice 2D / DataMatrix",
+      "es": "Código 2D / DataMatrix",
+      "fr": "Code 2D / DataMatrix"
     },
     {
       "en": "Graphic",
-      "it": "Grafica"
+      "it": "Grafica",
+      "es": "Gráfico",
+      "fr": "Graphique"
     },
     {
       "en": "Logo",
-      "it": "Logo"
+      "it": "Logo",
+      "es": "Logo",
+      "fr": "Logo"
     },
     {
       "en": "Graphic / Logo",
-      "it": "Grafica / Logo"
+      "it": "Grafica / Logo",
+      "es": "Gráfico / Logo",
+      "fr": "Graphique / Logo"
     },
     {
       "en": "User Define",
-      "it": "Definito dall'utente"
+      "it": "Definito dall'utente",
+      "es": "Definido por usuario",
+      "fr": "Défini par l'utilisateur"
     },
     {
       "en": "Shift Code",
-      "it": "Codice turno"
+      "it": "Codice turno",
+      "es": "Código de turno",
+      "fr": "Code de quart"
     },
     {
       "en": "Expiry Date",
-      "it": "Data di scadenza"
+      "it": "Data di scadenza",
+      "es": "Fecha de caducidad",
+      "fr": "Date d'expiration"
     },
     {
       "en": "Font Size",
-      "it": "Font carattere"
+      "it": "Font carattere",
+      "es": "Tamaño de fuente",
+      "fr": "Taille de police"
     },
     {
       "en": "High (dots)",
-      "it": "Altezza (punti) — es. '7 punti'"
+      "it": "Altezza (punti) — es. '7 punti'",
+      "es": "Alto (puntos)",
+      "fr": "Hauteur (points)"
     },
     {
       "en": "Template",
-      "it": "Modello"
+      "it": "Modello",
+      "es": "Plantilla",
+      "fr": "Modèle"
     },
     {
       "en": "Multi-line",
-      "it": "Multilinea"
+      "it": "Multilinea",
+      "es": "Multilínea",
+      "fr": "Multi-ligne"
     },
     {
       "en": "Bold",
-      "it": "Grassetto"
+      "it": "Grassetto",
+      "es": "Negrita",
+      "fr": "Gras"
     },
     {
       "en": "Gap",
-      "it": "Spaziatura"
+      "it": "Spaziatura",
+      "es": "Espacio",
+      "fr": "Espace"
     },
     {
       "en": "Tower Print",
-      "it": "Stampa a torre (Tower Print)"
+      "it": "Stampa a torre (Tower Print)",
+      "es": "Impresión en torre",
+      "fr": "Impression verticale"
     },
     {
       "en": "Direction: Standard",
-      "it": "Direzione: Standard"
+      "it": "Direzione: Standard",
+      "es": "Dirección: Estándar",
+      "fr": "Direction : Standard"
     },
     {
       "en": "Reversed",
-      "it": "Invertita"
+      "it": "Invertita",
+      "es": "Invertido",
+      "fr": "Inversé"
     },
     {
       "en": "Direction: Standard / Reversed",
-      "it": "Direzione: Standard / Invertita"
+      "it": "Direzione: Standard / Invertita",
+      "es": "Dirección: Estándar / Invertido",
+      "fr": "Direction : Standard / Inversé"
     },
     {
       "en": "Align",
-      "it": "Allinea"
+      "it": "Allinea",
+      "es": "Alinear",
+      "fr": "Aligner"
     },
     {
       "en": "Group",
-      "it": "Raggruppa"
+      "it": "Raggruppa",
+      "es": "Agrupar",
+      "fr": "Grouper"
     },
     {
       "en": "Ungroup",
-      "it": "Separa"
+      "it": "Separa",
+      "es": "Desagrupar",
+      "fr": "Dégrouper"
     },
     {
       "en": "Group / Ungroup",
-      "it": "Raggruppa / Separa"
+      "it": "Raggruppa / Separa",
+      "es": "Agrupar / Desagrupar",
+      "fr": "Grouper / Dégrouper"
     },
     {
       "en": "Advanced",
-      "it": "Avanzate"
+      "it": "Avanzate",
+      "es": "Avanzado",
+      "fr": "Avancé"
     },
     {
       "en": "Rotation",
-      "it": "Rotazione"
+      "it": "Rotazione",
+      "es": "Rotación",
+      "fr": "Rotation"
     },
     {
       "en": "Orientation",
-      "it": "Orientamento"
+      "it": "Orientamento",
+      "es": "Orientación",
+      "fr": "Orientation"
     },
     {
       "en": "Rotation / Orientation",
-      "it": "Rotazione / Orientamento"
+      "it": "Rotazione / Orientamento",
+      "es": "Rotación / Orientación",
+      "fr": "Rotation / Orientation"
     },
     {
       "en": "Flip",
-      "it": "Capovolto"
+      "it": "Capovolto",
+      "es": "Voltear",
+      "fr": "Retourner"
     },
     {
       "en": "Mirror",
-      "it": "Specchiato"
+      "it": "Specchiato",
+      "es": "Espejo",
+      "fr": "Miroir"
     },
     {
       "en": "Inverted",
-      "it": "Invertito"
+      "it": "Invertito",
+      "es": "Invertido",
+      "fr": "Inversé"
     },
     {
       "en": "Day",
-      "it": "Giorno"
+      "it": "Giorno",
+      "es": "Día",
+      "fr": "Jour"
     },
     {
       "en": "Month",
-      "it": "Mese"
+      "it": "Mese",
+      "es": "Mes",
+      "fr": "Mois"
     },
     {
       "en": "Year",
-      "it": "Anno"
+      "it": "Anno",
+      "es": "Año",
+      "fr": "Année"
     },
     {
       "en": "Day / Month / Year",
-      "it": "Giorno / Mese / Anno"
+      "it": "Giorno / Mese / Anno",
+      "es": "Día / Mes / Año",
+      "fr": "Jour / Mois / Année"
     },
     {
       "en": "Day of Year (Julian)",
-      "it": "Giorno dell'anno (Giuliano)"
+      "it": "Giorno dell'anno (Giuliano)",
+      "es": "Día del año (Juliano)",
+      "fr": "Jour de l'année (Julien)"
     },
     {
       "en": "Week Number",
-      "it": "Numero settimana"
+      "it": "Numero settimana",
+      "es": "Número de semana",
+      "fr": "Numéro de semaine"
     },
     {
       "en": "Hour",
-      "it": "Ora"
+      "it": "Ora",
+      "es": "Hora",
+      "fr": "Heure"
     },
     {
       "en": "Minute",
-      "it": "Minuto"
+      "it": "Minuto",
+      "es": "Minuto",
+      "fr": "Minute"
     },
     {
       "en": "Hour / Minute",
-      "it": "Ora / Minuto"
+      "it": "Ora / Minuto",
+      "es": "Hora / Minuto",
+      "fr": "Heure / Minute"
     },
     {
       "en": "Start Value",
-      "it": "Valore iniziale"
+      "it": "Valore iniziale",
+      "es": "Valor inicial",
+      "fr": "Valeur de début"
     },
     {
       "en": "End Value",
-      "it": "Valore finale"
+      "it": "Valore finale",
+      "es": "Valor final",
+      "fr": "Valeur de fin"
     },
     {
       "en": "Start Value / End Value",
-      "it": "Valore iniziale / Valore finale"
+      "it": "Valore iniziale / Valore finale",
+      "es": "Valor inicial / Valor final",
+      "fr": "Valeur de début / Valeur de fin"
     },
     {
       "en": "Increment",
-      "it": "Incremento"
+      "it": "Incremento",
+      "es": "Incremento",
+      "fr": "Incrément"
     },
     {
       "en": "Step",
-      "it": "Passo"
+      "it": "Passo",
+      "es": "Paso",
+      "fr": "Pas"
     },
     {
       "en": "Increment / Step",
-      "it": "Incremento / Passo"
+      "it": "Incremento / Passo",
+      "es": "Incremento / Paso",
+      "fr": "Incrément / Pas"
     },
     {
       "en": "Repeat Count",
-      "it": "Numero ripetizioni"
+      "it": "Numero ripetizioni",
+      "es": "Recuento de repeticiones",
+      "fr": "Nombre de répétitions"
     },
     {
       "en": "Leading Zeros",
-      "it": "Zeri iniziali"
+      "it": "Zeri iniziali",
+      "es": "Ceros iniciales",
+      "fr": "Zéros non significatifs"
     },
     {
       "en": "Reset",
-      "it": "Azzera"
+      "it": "Azzera",
+      "es": "Restablecer",
+      "fr": "Réinitialiser"
     },
     {
       "en": "Link Data Source",
-      "it": "Collega sorgente dati"
+      "it": "Collega sorgente dati",
+      "es": "Vincular fuente de datos",
+      "fr": "Lier la source de données"
     },
     {
       "en": "Print Mode",
-      "it": "Modalità di stampa"
+      "it": "Modalità di stampa",
+      "es": "Modo de impresión",
+      "fr": "Mode d'impression"
     },
     {
       "en": "Normal",
-      "it": "Normale"
+      "it": "Normale",
+      "es": "Normal",
+      "fr": "Normal"
     },
     {
       "en": "Auto",
-      "it": "Automatico"
+      "it": "Automatico",
+      "es": "Automático",
+      "fr": "Auto"
     },
     {
       "en": "Repeat",
-      "it": "Ripeti"
+      "it": "Ripeti",
+      "es": "Repetir",
+      "fr": "Répéter"
     },
     {
       "en": "Repeat Print",
-      "it": "Ripetizione stampa"
+      "it": "Ripetizione stampa",
+      "es": "Repetir impresión",
+      "fr": "Impression répétée"
     },
     {
       "en": "Select ID",
-      "it": "Seleziona ID"
+      "it": "Seleziona ID",
+      "es": "Seleccionar ID",
+      "fr": "Sélectionner ID"
     },
     {
       "en": "Select ID Code",
-      "it": "Codice ID messaggio"
+      "it": "Codice ID messaggio",
+      "es": "Seleccionar código ID",
+      "fr": "Sélectionner le code ID"
     },
     {
       "en": "Auto Encoder",
-      "it": "Encoder automatico"
+      "it": "Encoder automatico",
+      "es": "Encoder automático",
+      "fr": "Encodeur auto"
     },
     {
       "en": "Auto Encoder Reverse",
-      "it": "Encoder automatico inverso"
+      "it": "Encoder automatico inverso",
+      "es": "Encoder automático inverso",
+      "fr": "Encodeur auto inversé"
     },
     {
       "en": "Pitch",
-      "it": "Passo"
+      "it": "Passo",
+      "es": "Paso",
+      "fr": "Pas"
     },
     {
       "en": "Speed",
-      "it": "Velocità"
+      "it": "Velocità",
+      "es": "Velocidad",
+      "fr": "Vitesse"
     },
     {
       "en": "Delay",
-      "it": "Ritardo"
+      "it": "Ritardo",
+      "es": "Retardo",
+      "fr": "Délai"
     },
     {
       "en": "Width",
-      "it": "Larghezza"
+      "it": "Larghezza",
+      "es": "Ancho",
+      "fr": "Largeur"
     },
     {
       "en": "Height",
-      "it": "Altezza"
+      "it": "Altezza",
+      "es": "Alto",
+      "fr": "Hauteur"
     },
     {
       "en": "Photocell",
-      "it": "Fotocellula"
+      "it": "Fotocellula",
+      "es": "Fotocélula",
+      "fr": "Cellule photoélectrique"
     },
     {
       "en": "Encoder",
-      "it": "Encoder"
+      "it": "Encoder",
+      "es": "Encoder",
+      "fr": "Encodeur"
     },
     {
       "en": "Trigger",
-      "it": "Segnale Print Go (segnale di avvio)"
+      "it": "Segnale Print Go (segnale di avvio)",
+      "es": "Disparador",
+      "fr": "Déclencheur"
     },
     {
       "en": "Product Detect",
-      "it": "Rilevamento prodotto"
+      "it": "Rilevamento prodotto",
+      "es": "Detección de producto",
+      "fr": "Détection de produit"
     },
     {
       "en": "Nozzle",
-      "it": "Ugello"
+      "it": "Ugello",
+      "es": "Boquilla",
+      "fr": "Buse"
     },
     {
       "en": "Print Head",
-      "it": "Testina di stampa"
+      "it": "Testina di stampa",
+      "es": "Cabezal de impresión",
+      "fr": "Tête d'impression"
     },
     {
       "en": "Gutter",
-      "it": "Gutter (recupero inchiostro)"
+      "it": "Gutter (recupero inchiostro)",
+      "es": "Gutter",
+      "fr": "Gutter (Gouttière)"
     },
     {
       "en": "Flush",
-      "it": "Lavaggio"
+      "it": "Lavaggio",
+      "es": "Purga",
+      "fr": "Rinçage"
     },
     {
       "en": "Back Flush",
-      "it": "Controlavaggio"
+      "it": "Controlavaggio",
+      "es": "Retropurga",
+      "fr": "Contre-rinçage"
     },
     {
       "en": "Viscosity",
-      "it": "Viscosità"
+      "it": "Viscosità",
+      "es": "Viscosidad",
+      "fr": "Viscosité"
     },
     {
       "en": "Pressure",
-      "it": "Pressione"
+      "it": "Pressione",
+      "es": "Presión",
+      "fr": "Pression"
     },
     {
       "en": "Phase",
-      "it": "Fase"
+      "it": "Fase",
+      "es": "Fase",
+      "fr": "Phase"
     },
     {
       "en": "Charge",
-      "it": "Carica"
+      "it": "Carica",
+      "es": "Carga",
+      "fr": "Charge"
     },
     {
       "en": "High Voltage (HV)",
-      "it": "Alta tensione (HV)"
+      "it": "Alta tensione (HV)",
+      "es": "Alto voltaje (AV)",
+      "fr": "Haute Tension (HT)"
     },
     {
       "en": "Filter",
-      "it": "Filtro"
+      "it": "Filtro",
+      "es": "Filtro",
+      "fr": "Filtre"
     },
     {
       "en": "Pump",
-      "it": "Pompa"
+      "it": "Pompa",
+      "es": "Bomba",
+      "fr": "Pompe"
     },
     {
       "en": "Date / Time",
-      "it": "Data / Ora"
+      "it": "Data / Ora",
+      "es": "Fecha / Hora",
+      "fr": "Date / Heure"
     },
     {
       "en": "Sync to PC",
-      "it": "Sincronizza con PC"
+      "it": "Sincronizza con PC",
+      "es": "Sincronizar con PC",
+      "fr": "Synchroniser avec le PC"
     },
     {
       "en": "Language",
-      "it": "Lingua"
+      "it": "Lingua",
+      "es": "Idioma",
+      "fr": "Langue"
     },
     {
       "en": "Units: mm",
-      "it": "Unità: mm"
+      "it": "Unità: mm",
+      "es": "Unidades: mm",
+      "fr": "Unités : mm"
     },
     {
       "en": "inches",
-      "it": "pollici"
+      "it": "pollici",
+      "es": "pulgadas",
+      "fr": "pouces"
     },
     {
       "en": "Units: mm / inches",
-      "it": "Unità: mm / pollici"
+      "it": "Unità: mm / pollici",
+      "es": "Unidades: mm / pulgadas",
+      "fr": "Unités : mm / pouces"
     },
     {
       "en": "Password",
-      "it": "Password"
+      "it": "Password",
+      "es": "Contraseña",
+      "fr": "Mot de passe"
     },
     {
       "en": "Firmware Update",
-      "it": "Aggiornamento firmware"
+      "it": "Aggiornamento firmware",
+      "es": "Actualización de firmware",
+      "fr": "Mise à jour du firmware"
     },
     {
       "en": "Diagnostics",
-      "it": "Diagnostica"
+      "it": "Diagnostica",
+      "es": "Diagnóstico",
+      "fr": "Diagnostics"
     },
     {
       "en": "Scan to Print",
-      "it": "Scansiona e stampa"
+      "it": "Scansiona e stampa",
+      "es": "Escanear para imprimir",
+      "fr": "Scanner pour imprimer"
     },
     {
       "en": "Job",
-      "it": "Commessa"
+      "it": "Commessa",
+      "es": "Trabajo",
+      "fr": "Tâche"
     },
     {
       "en": "Job Setup",
-      "it": "Impostazione commessa"
+      "it": "Impostazione commessa",
+      "es": "Configuración de trabajo",
+      "fr": "Configuration de la tâche"
     },
     {
       "en": "Line Setup",
-      "it": "Impostazione linea"
+      "it": "Impostazione linea",
+      "es": "Configuración de línea",
+      "fr": "Configuration de la ligne"
     },
     {
       "en": "Job Log",
-      "it": "Registro commesse"
+      "it": "Registro commesse",
+      "es": "Registro de trabajos",
+      "fr": "Journal des tâches"
     },
     {
       "en": "Metres",
-      "it": "Metri"
+      "it": "Metri",
+      "es": "Metros",
+      "fr": "Mètres"
     },
     {
       "en": "Feet",
-      "it": "Piedi"
+      "it": "Piedi",
+      "es": "Pies",
+      "fr": "Pieds"
     },
     {
       "en": "Metres / Feet",
-      "it": "Metri / Piedi"
+      "it": "Metri / Piedi",
+      "es": "Metros / Pies",
+      "fr": "Mètres / Pieds"
     },
     {
       "en": "Length Counter",
-      "it": "Contatore di lunghezza"
+      "it": "Contatore di lunghezza",
+      "es": "Contador de longitud",
+      "fr": "Compteur de longueur"
     },
     {
       "en": "Import CSV",
-      "it": "Importa CSV"
+      "it": "Importa CSV",
+      "es": "Importar CSV",
+      "fr": "Importer CSV"
     },
     {
       "en": "Print Job",
-      "it": "Lavoro di stampa"
+      "it": "Lavoro di stampa",
+      "es": "Trabajo de impresión",
+      "fr": "Tâche d'impression"
     },
     {
       "en": "Row",
-      "it": "Riga"
+      "it": "Riga",
+      "es": "Fila",
+      "fr": "Ligne"
     },
     {
       "en": "Column",
-      "it": "Colonna"
+      "it": "Colonna",
+      "es": "Columna",
+      "fr": "Colonne"
     },
     {
       "en": "Pause",
-      "it": "Pausa"
+      "it": "Pausa",
+      "es": "Pausar",
+      "fr": "Pause"
     },
     {
       "en": "Resume",
-      "it": "Riprendi"
+      "it": "Riprendi",
+      "es": "Reanudar",
+      "fr": "Reprendre"
     },
     {
       "en": "Stop",
-      "it": "Stop"
+      "it": "Stop",
+      "es": "Detener",
+      "fr": "Arrêter"
     },
     {
       "en": "Pause / Resume / Stop",
-      "it": "Pausa / Riprendi / Stop"
+      "it": "Pausa / Riprendi / Stop",
+      "es": "Pausar / Reanudar / Detener",
+      "fr": "Pause / Reprendre / Arrêter"
     },
     {
       "en": "Serial Number",
-      "it": "Numero di serie"
+      "it": "Numero di serie",
+      "es": "Número de serie",
+      "fr": "Numéro de série"
     },
     {
       "en": "Lid",
-      "it": "Coperchio"
+      "it": "Coperchio",
+      "es": "Tapa",
+      "fr": "Couvercle"
     },
     {
       "en": "Side",
-      "it": "Fianco"
+      "it": "Fianco",
+      "es": "Lado",
+      "fr": "Côté"
     },
     {
       "en": "Lid / Side",
-      "it": "Coperchio / Fianco"
+      "it": "Coperchio / Fianco",
+      "es": "Tapa / Lado",
+      "fr": "Couvercle / Côté"
     },
     {
       "en": "Lot Code",
-      "it": "Codice lotto"
+      "it": "Codice lotto",
+      "es": "Código de lote",
+      "fr": "Code de lot"
     },
     {
       "en": "Batch",
-      "it": "Lotto"
+      "it": "Lotto",
+      "es": "Lote",
+      "fr": "Lot"
     },
     {
       "en": "Connected",
-      "it": "Connesso"
+      "it": "Connesso",
+      "es": "Conectado",
+      "fr": "Connecté"
     },
     {
       "en": "Not connected — connect a printer first",
-      "it": "Non connesso — connetti prima una stampante"
+      "it": "Non connesso — connetti prima una stampante",
+      "es": "No conectado: conecte una impresora primero",
+      "fr": "Non connecté — connectez d'abord une imprimante"
     },
     {
       "en": "Saved successfully",
-      "it": "Salvato correttamente"
+      "it": "Salvato correttamente",
+      "es": "Guardado correctamente",
+      "fr": "Enregistré avec succès"
     },
     {
       "en": "Are you sure you want to delete this message?",
-      "it": "Sei sicuro di voler eliminare questo messaggio?"
+      "it": "Sei sicuro di voler eliminare questo messaggio?",
+      "es": "¿Está seguro de que desea eliminar este mensaje?",
+      "fr": "Êtes-vous sûr de vouloir supprimer ce message ?"
     },
     {
       "en": "Message sent to printer",
-      "it": "Messaggio inviato alla stampante"
+      "it": "Messaggio inviato alla stampante",
+      "es": "Mensaje enviado a la impresora",
+      "fr": "Message envoyé à l'imprimante"
     },
     {
       "en": "Printer busy, please wait",
-      "it": "Stampante occupata, attendere"
+      "it": "Stampante occupata, attendere",
+      "es": "Impresora ocupada, por favor espere",
+      "fr": "Imprimante occupée, veuillez patienter"
     },
     {
       "en": "Communication error",
-      "it": "Errore di comunicazione"
+      "it": "Errore di comunicazione",
+      "es": "Error de comunicación",
+      "fr": "Erreur de communication"
     },
     {
       "en": "Refresh",
-      "it": "Aggiorna"
+      "it": "Aggiorna",
+      "es": "Actualizar",
+      "fr": "Actualiser"
     },
     {
       "en": "Close",
-      "it": "Chiudi"
+      "it": "Chiudi",
+      "es": "Cerrar",
+      "fr": "Fermer"
     },
     {
       "en": "Done",
-      "it": "Fatto"
+      "it": "Fatto",
+      "es": "Hecho",
+      "fr": "Terminé"
     },
     {
       "en": "OK",
-      "it": "OK"
+      "it": "OK",
+      "es": "Aceptar",
+      "fr": "OK"
     },
     {
       "en": "Close / Done / OK",
-      "it": "Chiudi / Fatto / OK"
+      "it": "Chiudi / Fatto / OK",
+      "es": "Cerrar / Hecho / Aceptar",
+      "fr": "Fermer / Terminé / OK"
     },
     {
       "en": "Yes",
-      "it": "Sì"
+      "it": "Sì",
+      "es": "Sí",
+      "fr": "Oui"
     },
     {
       "en": "No",
-      "it": "No"
+      "it": "No",
+      "es": "No",
+      "fr": "Non"
     },
     {
       "en": "Yes / No",
-      "it": "Sì / No"
+      "it": "Sì / No",
+      "es": "Sí / No",
+      "fr": "Oui / Non"
     },
     {
       "en": "Settings",
-      "it": "Impostazioni"
+      "it": "Impostazioni",
+      "es": "Ajustes",
+      "fr": "Paramètres"
     },
     {
       "en": "Help",
-      "it": "Aiuto"
+      "it": "Aiuto",
+      "es": "Ayuda",
+      "fr": "Aide"
     },
     {
       "en": "Primary Metrics",
-      "it": "Parametri principali"
+      "it": "Parametri principali",
+      "es": "Métricas principales",
+      "fr": "Métriques primaires"
     },
     {
       "en": "Modulation",
-      "it": "Modulazione"
+      "it": "Modulazione",
+      "es": "Modulación",
+      "fr": "Modulation"
     },
     {
       "en": "Phase Quality",
-      "it": "Qualità di fase"
+      "it": "Qualità di fase",
+      "es": "Calidad de fase",
+      "fr": "Qualité de phase"
     },
     {
       "en": "Subsystems",
-      "it": "Sottosistemi"
+      "it": "Sottosistemi",
+      "es": "Subsistemas",
+      "fr": "Sous-systèmes"
     },
     {
       "en": "Temperature",
-      "it": "Temperature"
+      "it": "Temperature",
+      "es": "Temperatura",
+      "fr": "Température"
     },
     {
       "en": "Printhead",
-      "it": "Testina di stampa"
+      "it": "Testina di stampa",
+      "es": "Cabezal de impresión",
+      "fr": "Tête d'impression"
     },
     {
       "en": "Electronics",
-      "it": "Elettronica"
+      "it": "Elettronica",
+      "es": "Electrónica",
+      "fr": "Électronique"
     },
     {
       "en": "System Info",
-      "it": "Info di sistema"
+      "it": "Info di sistema",
+      "es": "Información del sistema",
+      "fr": "Infos système"
     },
     {
       "en": "Allow Errors",
-      "it": "Consenti errori"
+      "it": "Consenti errori",
+      "es": "Permitir errores",
+      "fr": "Autoriser les erreurs"
     },
     {
       "en": "Error Active",
-      "it": "Errore attivo"
+      "it": "Errore attivo",
+      "es": "Error activo",
+      "fr": "Erreur active"
     },
     {
       "en": "HV Deflection",
-      "it": "Deflessione AT"
+      "it": "Deflessione AT",
+      "es": "Deflexión de AV",
+      "fr": "Déflexion HT"
     },
     {
       "en": "Power Hours",
-      "it": "Ore di accensione"
+      "it": "Ore di accensione",
+      "es": "Horas de encendido",
+      "fr": "Heures de fonctionnement"
     },
     {
       "en": "Stream Hours",
-      "it": "Ore getto"
+      "it": "Ore getto",
+      "es": "Horas de chorro",
+      "fr": "Heures de jet"
     },
     {
       "en": "Force Print",
-      "it": "Forza stampa"
+      "it": "Forza stampa",
+      "es": "Forzar impresión",
+      "fr": "Forcer l'impression"
     },
     {
       "en": "Connect to a printer to view service data",
-      "it": "Connetti una stampante per visualizzare i dati di assistenza"
+      "it": "Connetti una stampante per visualizzare i dati di assistenza",
+      "es": "Conéctese a una impresora para ver los datos de servicio",
+      "fr": "Connectez-vous à une imprimante pour voir les données de service"
     },
     {
       "en": "On",
-      "it": "On"
+      "it": "On",
+      "es": "Activado",
+      "fr": "Activé"
     },
     {
       "en": "Off",
-      "it": "Off"
+      "it": "Off",
+      "es": "Desactivado",
+      "fr": "Désactivé"
     },
     {
       "en": "Enabled",
-      "it": "Abilitato"
+      "it": "Abilitato",
+      "es": "Habilitado",
+      "fr": "Activé"
     },
     {
       "en": "Disabled",
-      "it": "Disabilitato"
+      "it": "Disabilitato",
+      "es": "Deshabilitado",
+      "fr": "Désactivé"
     },
     {
       "en": "Setup: Date / Time",
-      "it": "Impostazioni: Data / Ora"
+      "it": "Impostazioni: Data / Ora",
+      "es": "Configuración: Fecha / Hora",
+      "fr": "Configuration : Date / Heure"
     },
     {
       "en": "Sync All Printers…",
-      "it": "Sincronizza tutte le stampanti…"
+      "it": "Sincronizza tutte le stampanti…",
+      "es": "Sincronizar todas las impresoras…",
+      "fr": "Synchroniser toutes les imprimantes…"
     },
     {
       "en": "Format",
-      "it": "Formato"
+      "it": "Formato",
+      "es": "Formato",
+      "fr": "Format"
     },
     {
       "en": "Week Start",
-      "it": "Inizio settimana"
+      "it": "Inizio settimana",
+      "es": "Inicio de semana",
+      "fr": "Début de la semaine"
     },
     {
       "en": "ISO Week Date",
-      "it": "Settimana ISO"
+      "it": "Settimana ISO",
+      "es": "Fecha de semana ISO",
+      "fr": "Date de la semaine ISO"
     },
     {
       "en": "Program Date Codes",
-      "it": "Programma codici data"
+      "it": "Programma codici data",
+      "es": "Programar códigos de fecha",
+      "fr": "Programmer les codes de date"
     },
     {
       "en": "Program Time Codes",
-      "it": "Programma codici ora"
+      "it": "Programma codici ora",
+      "es": "Programar códigos de hora",
+      "fr": "Programmer les codes d'heure"
     },
     {
       "en": "Configure",
-      "it": "Configura"
+      "it": "Configura",
+      "es": "Configurar",
+      "fr": "Configurer"
     },
     {
       "en": "Current PC Time",
-      "it": "Ora attuale del PC"
+      "it": "Ora attuale del PC",
+      "es": "Hora actual del PC",
+      "fr": "Heure PC actuelle"
     },
     {
       "en": "Select Current Day",
-      "it": "Seleziona giorno corrente"
+      "it": "Seleziona giorno corrente",
+      "es": "Seleccionar día actual",
+      "fr": "Sélectionner le jour actuel"
     },
     {
       "en": "Adjust Settings (Global)",
-      "it": "Impostazioni di regolazione (Globali)"
+      "it": "Impostazioni di regolazione (Globali)",
+      "es": "Ajustar configuración (Global)",
+      "fr": "Ajuster les paramètres (Global)"
     },
     {
       "en": "Adjust Settings (Message)",
-      "it": "Impostazioni di regolazione (Messaggio)"
+      "it": "Impostazioni di regolazione (Messaggio)",
+      "es": "Ajustar configuración (Mensaje)",
+      "fr": "Ajuster les paramètres (Message)"
     },
     {
       "en": "Refresh from printer",
-      "it": "Aggiorna dalla stampante"
+      "it": "Aggiorna dalla stampante",
+      "es": "Actualizar desde la impresora",
+      "fr": "Actualiser depuis l'imprimante"
     },
     {
       "en": "Reading printer…",
-      "it": "Lettura stampante…"
+      "it": "Lettura stampante…",
+      "es": "Leyendo impresora…",
+      "fr": "Lecture de l'imprimante…"
     },
     {
       "en": "Repeat (Repeat mode)",
-      "it": "Ripetizioni (modalità Ripeti)"
+      "it": "Ripetizioni (modalità Ripeti)",
+      "es": "Repetir (modo de repetición)",
+      "fr": "Répéter (mode Répétition)"
     },
     {
       "en": "Fast",
-      "it": "Veloce"
+      "it": "Veloce",
+      "es": "Rápido",
+      "fr": "Rapide"
     },
     {
       "en": "Faster",
-      "it": "Più veloce"
+      "it": "Più veloce",
+      "es": "Más rápido",
+      "fr": "Plus rapide"
     },
     {
       "en": "Fastest",
-      "it": "Velocissima"
+      "it": "Velocissima",
+      "es": "El más rápido",
+      "fr": "Le plus rapide"
     },
     {
       "en": "Ultra Fast",
-      "it": "Ultra veloce"
+      "it": "Ultra veloce",
+      "es": "Ultrarrápido",
+      "fr": "Ultra rapide"
     },
     {
       "en": "Mirror Flip",
-      "it": "Specchiato capovolto"
+      "it": "Specchiato capovolto",
+      "es": "Reflejar",
+      "fr": "Miroir et retourner"
     },
     {
       "en": "Override",
-      "it": "Personalizza"
+      "it": "Personalizza",
+      "es": "Anular",
+      "fr": "Forcer"
     },
     {
       "en": "Override for this message",
-      "it": "Personalizza per questo messaggio"
+      "it": "Personalizza per questo messaggio",
+      "es": "Anular para este mensaje",
+      "fr": "Forcer pour ce message"
     },
     {
       "en": "Changes are sent to the printer as you make them.",
-      "it": "Le modifiche vengono inviate alla stampante in tempo reale."
+      "it": "Le modifiche vengono inviate alla stampante in tempo reale.",
+      "es": "Los cambios se envían a la impresora a medida que los realiza.",
+      "fr": "Les modifications sont envoyées à l'imprimante au fur et à mesure."
     },
     {
       "en": "Done saves the message with these settings.",
-      "it": "Fatto salva il messaggio con queste impostazioni."
+      "it": "Fatto salva il messaggio con queste impostazioni.",
+      "es": "Al pulsar 'Hecho' se guarda el mensaje con esta configuración.",
+      "fr": "Terminé enregistre le message avec ces paramètres."
     },
     {
       "en": "Changes apply when you press Save in the message editor.",
-      "it": "Le modifiche si applicano premendo Salva nell'editor messaggi."
+      "it": "Le modifiche si applicano premendo Salva nell'editor messaggi.",
+      "es": "Los cambios se aplican al pulsar Guardar en el editor de mensajes.",
+      "fr": "Les modifications s'appliquent lorsque vous appuyez sur Enregistrer dans l'éditeur de message."
     }
   ]
 }
