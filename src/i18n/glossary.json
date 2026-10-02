@@ -1,734 +1,742 @@
 {
- "languages": [
-  {
-   "code": "en",
-   "label": "English"
-  },
-  {
-   "code": "it",
-   "label": "Italiano"
-  }
- ],
- "entries": [
-  {
-   "en": "Network Printers",
-   "it": "Stampanti in rete"
-  },
-  {
-   "en": "Connect",
-   "it": "Connetti"
-  },
-  {
-   "en": "Disconnect",
-   "it": "Disconnetti"
-  },
-  {
-   "en": "Connect / Disconnect",
-   "it": "Connetti / Disconnetti"
-  },
-  {
-   "en": "Online / Offline",
-   "it": "Online / Offline (In linea / Fuori linea)"
-  },
-  {
-   "en": "Emulate Printers",
-   "it": "Simula stampanti"
-  },
-  {
-   "en": "Sync Clocks",
-   "it": "Sincronizza orologi"
-  },
-  {
-   "en": "What's New",
-   "it": "Novità"
-  },
-  {
-   "en": "Messages",
-   "it": "Messaggi"
-  },
-  {
-   "en": "Data",
-   "it": "Dati"
-  },
-  {
-   "en": "Adjust",
-   "it": "Regolazioni"
-  },
-  {
-   "en": "Clean",
-   "it": "Pulizia"
-  },
-  {
-   "en": "Setup",
-   "it": "Impostazioni"
-  },
-  {
-   "en": "Service",
-   "it": "Assistenza"
-  },
-  {
-   "en": "Cable",
-   "it": "Cavo"
-  },
-  {
-   "en": "Start Print",
-   "it": "Avvia stampa"
-  },
-  {
-   "en": "Stop Print",
-   "it": "Ferma stampa"
-  },
-  {
-   "en": "Start Print / Stop Print",
-   "it": "Avvia stampa / Ferma stampa"
-  },
-  {
-   "en": "Jet Start",
-   "it": "Avvio getto"
-  },
-  {
-   "en": "Jet Stop",
-   "it": "Arresto getto"
-  },
-  {
-   "en": "Jet Start / Jet Stop",
-   "it": "Avvio getto / Arresto getto"
-  },
-  {
-   "en": "Ink",
-   "it": "Inchiostro"
-  },
-  {
-   "en": "Makeup",
-   "it": "Solvente (Makeup)"
-  },
-  {
-   "en": "Ink Low",
-   "it": "Inchiostro basso"
-  },
-  {
-   "en": "Makeup Low",
-   "it": "Solvente basso"
-  },
-  {
-   "en": "Ink Low / Makeup Low",
-   "it": "Inchiostro basso / Solvente basso"
-  },
-  {
-   "en": "Fault",
-   "it": "Guasto"
-  },
-  {
-   "en": "Warning",
-   "it": "Avviso"
-  },
-  {
-   "en": "Print Count",
-   "it": "Conteggio stampe"
-  },
-  {
-   "en": "Product:",
-   "it": "Prodotti:"
-  },
-  {
-   "en": "Print:",
-   "it": "Stampe:"
-  },
-  {
-   "en": "Start",
-   "it": "Avvia"
-  },
-  {
-   "en": "Product Count",
-   "it": "Conteggio prodotti"
-  },
-  {
-   "en": "Message",
-   "it": "Messaggio"
-  },
-  {
-   "en": "New",
-   "it": "Nuovo"
-  },
-  {
-   "en": "Edit",
-   "it": "Modifica"
-  },
-  {
-   "en": "Delete",
-   "it": "Elimina"
-  },
-  {
-   "en": "Select",
-   "it": "Seleziona"
-  },
-  {
-   "en": "Save",
-   "it": "Salva"
-  },
-  {
-   "en": "Save As",
-   "it": "Salva con nome"
-  },
-  {
-   "en": "Cancel",
-   "it": "Annulla"
-  },
-  {
-   "en": "Save to PC",
-   "it": "Salva su PC"
-  },
-  {
-   "en": "PC Library",
-   "it": "Libreria PC"
-  },
-  {
-   "en": "Send to Printer",
-   "it": "Invia alla stampante"
-  },
-  {
-   "en": "Copy to Printers",
-   "it": "Copia sulle stampanti"
-  },
-  {
-   "en": "Active Message",
-   "it": "Messaggio attivo"
-  },
-  {
-   "en": "Field",
-   "it": "Campo"
-  },
-  {
-   "en": "Text",
-   "it": "Testo"
-  },
-  {
-   "en": "Date",
-   "it": "Data"
-  },
-  {
-   "en": "Time",
-   "it": "Ora"
-  },
-  {
-   "en": "Counter",
-   "it": "Contatore"
-  },
-  {
-   "en": "Barcode",
-   "it": "Codice a barre"
-  },
-  {
-   "en": "2D Code",
-   "it": "Codice 2D"
-  },
-  {
-   "en": "DataMatrix",
-   "it": "DataMatrix"
-  },
-  {
-   "en": "2D Code / DataMatrix",
-   "it": "Codice 2D / DataMatrix"
-  },
-  {
-   "en": "Graphic",
-   "it": "Grafica"
-  },
-  {
-   "en": "Logo",
-   "it": "Logo"
-  },
-  {
-   "en": "Graphic / Logo",
-   "it": "Grafica / Logo"
-  },
-  {
-   "en": "User Define",
-   "it": "Definito dall'utente"
-  },
-  {
-   "en": "Shift Code",
-   "it": "Codice turno"
-  },
-  {
-   "en": "Expiry Date",
-   "it": "Data di scadenza"
-  },
-  {
-   "en": "Font Size",
-   "it": "Font carattere"
-  },
-  {
-   "en": "High (dots)",
-   "it": "Altezza (punti) — es. '7 punti'"
-  },
-  {
-   "en": "Template",
-   "it": "Modello"
-  },
-  {
-   "en": "Multi-line",
-   "it": "Multilinea"
-  },
-  {
-   "en": "Bold",
-   "it": "Grassetto"
-  },
-  {
-   "en": "Gap",
-   "it": "Spaziatura"
-  },
-  {
-   "en": "Tower Print",
-   "it": "Stampa a torre (Tower Print)"
-  },
-  {
-   "en": "Direction: Standard",
-   "it": "Direzione: Standard"
-  },
-  {
-   "en": "Reversed",
-   "it": "Invertita"
-  },
-  {
-   "en": "Direction: Standard / Reversed",
-   "it": "Direzione: Standard / Invertita"
-  },
-  {
-   "en": "Align",
-   "it": "Allinea"
-  },
-  {
-   "en": "Group",
-   "it": "Raggruppa"
-  },
-  {
-   "en": "Ungroup",
-   "it": "Separa"
-  },
-  {
-   "en": "Group / Ungroup",
-   "it": "Raggruppa / Separa"
-  },
-  {
-   "en": "Advanced",
-   "it": "Avanzate"
-  },
-  {
-   "en": "Rotation",
-   "it": "Rotazione"
-  },
-  {
-   "en": "Orientation",
-   "it": "Orientamento"
-  },
-  {
-   "en": "Rotation / Orientation",
-   "it": "Rotazione / Orientamento"
-  },
-  {
-   "en": "Flip",
-   "it": "Capovolto"
-  },
-  {
-   "en": "Mirror",
-   "it": "Specchiato"
-  },
-  {
-   "en": "Inverted",
-   "it": "Invertito"
-  },
-  {
-   "en": "Day",
-   "it": "Giorno"
-  },
-  {
-   "en": "Month",
-   "it": "Mese"
-  },
-  {
-   "en": "Year",
-   "it": "Anno"
-  },
-  {
-   "en": "Day / Month / Year",
-   "it": "Giorno / Mese / Anno"
-  },
-  {
-   "en": "Day of Year (Julian)",
-   "it": "Giorno dell'anno (Giuliano)"
-  },
-  {
-   "en": "Week Number",
-   "it": "Numero settimana"
-  },
-  {
-   "en": "Hour",
-   "it": "Ora"
-  },
-  {
-   "en": "Minute",
-   "it": "Minuto"
-  },
-  {
-   "en": "Hour / Minute",
-   "it": "Ora / Minuto"
-  },
-  {
-   "en": "Start Value",
-   "it": "Valore iniziale"
-  },
-  {
-   "en": "End Value",
-   "it": "Valore finale"
-  },
-  {
-   "en": "Start Value / End Value",
-   "it": "Valore iniziale / Valore finale"
-  },
-  {
-   "en": "Increment",
-   "it": "Incremento"
-  },
-  {
-   "en": "Step",
-   "it": "Passo"
-  },
-  {
-   "en": "Increment / Step",
-   "it": "Incremento / Passo"
-  },
-  {
-   "en": "Repeat Count",
-   "it": "Numero ripetizioni"
-  },
-  {
-   "en": "Leading Zeros",
-   "it": "Zeri iniziali"
-  },
-  {
-   "en": "Reset",
-   "it": "Azzera"
-  },
-  {
-   "en": "Link Data Source",
-   "it": "Collega sorgente dati"
-  },
-  {
-   "en": "Print Mode",
-   "it": "Modalità di stampa"
-  },
-  {
-   "en": "Normal",
-   "it": "Normale"
-  },
-  {
-   "en": "Auto",
-   "it": "Automatico"
-  },
-  {
-   "en": "Repeat",
-   "it": "Ripeti"
-  },
-  {
-   "en": "Repeat Print",
-   "it": "Ripetizione stampa"
-  },
-  {
-   "en": "Select ID",
-   "it": "Seleziona ID"
-  },
-  {
-   "en": "Select ID Code",
-   "it": "Codice ID messaggio"
-  },
-  {
-   "en": "Auto Encoder",
-   "it": "Encoder automatico"
-  },
-  {
-   "en": "Auto Encoder Reverse",
-   "it": "Encoder automatico inverso"
-  },
-  {
-   "en": "Pitch",
-   "it": "Passo"
-  },
-  {
-   "en": "Speed",
-   "it": "Velocità"
-  },
-  {
-   "en": "Delay",
-   "it": "Ritardo"
-  },
-  {
-   "en": "Width",
-   "it": "Larghezza"
-  },
-  {
-   "en": "Height",
-   "it": "Altezza"
-  },
-  {
-   "en": "Photocell",
-   "it": "Fotocellula"
-  },
-  {
-   "en": "Encoder",
-   "it": "Encoder"
-  },
-  {
-   "en": "Trigger",
-   "it": "Segnale Print Go (segnale di avvio)"
-  },
-  {
-   "en": "Product Detect",
-   "it": "Rilevamento prodotto"
-  },
-  {
-   "en": "Nozzle",
-   "it": "Ugello"
-  },
-  {
-   "en": "Print Head",
-   "it": "Testina di stampa"
-  },
-  {
-   "en": "Gutter",
-   "it": "Gutter (recupero inchiostro)"
-  },
-  {
-   "en": "Flush",
-   "it": "Lavaggio"
-  },
-  {
-   "en": "Back Flush",
-   "it": "Controlavaggio"
-  },
-  {
-   "en": "Viscosity",
-   "it": "Viscosità"
-  },
-  {
-   "en": "Pressure",
-   "it": "Pressione"
-  },
-  {
-   "en": "Phase",
-   "it": "Fase"
-  },
-  {
-   "en": "Charge",
-   "it": "Carica"
-  },
-  {
-   "en": "High Voltage (HV)",
-   "it": "Alta tensione (HV)"
-  },
-  {
-   "en": "Filter",
-   "it": "Filtro"
-  },
-  {
-   "en": "Pump",
-   "it": "Pompa"
-  },
-  {
-   "en": "Date / Time",
-   "it": "Data / Ora"
-  },
-  {
-   "en": "Sync to PC",
-   "it": "Sincronizza con PC"
-  },
-  {
-   "en": "Language",
-   "it": "Lingua"
-  },
-  {
-   "en": "Units: mm",
-   "it": "Unità: mm"
-  },
-  {
-   "en": "inches",
-   "it": "pollici"
-  },
-  {
-   "en": "Units: mm / inches",
-   "it": "Unità: mm / pollici"
-  },
-  {
-   "en": "Password",
-   "it": "Password"
-  },
-  {
-   "en": "Firmware Update",
-   "it": "Aggiornamento firmware"
-  },
-  {
-   "en": "Diagnostics",
-   "it": "Diagnostica"
-  },
-  {
-   "en": "Scan to Print",
-   "it": "Scansiona e stampa"
-  },
-  {
-   "en": "Job",
-   "it": "Commessa"
-  },
-  {
-   "en": "Job Setup",
-   "it": "Impostazione commessa"
-  },
-  {
-   "en": "Line Setup",
-   "it": "Impostazione linea"
-  },
-  {
-   "en": "Job Log",
-   "it": "Registro commesse"
-  },
-  {
-   "en": "Metres",
-   "it": "Metri"
-  },
-  {
-   "en": "Feet",
-   "it": "Piedi"
-  },
-  {
-   "en": "Metres / Feet",
-   "it": "Metri / Piedi"
-  },
-  {
-   "en": "Length Counter",
-   "it": "Contatore di lunghezza"
-  },
-  {
-   "en": "Import CSV",
-   "it": "Importa CSV"
-  },
-  {
-   "en": "Print Job",
-   "it": "Lavoro di stampa"
-  },
-  {
-   "en": "Row",
-   "it": "Riga"
-  },
-  {
-   "en": "Column",
-   "it": "Colonna"
-  },
-  {
-   "en": "Pause",
-   "it": "Pausa"
-  },
-  {
-   "en": "Resume",
-   "it": "Riprendi"
-  },
-  {
-   "en": "Stop",
-   "it": "Stop"
-  },
-  {
-   "en": "Pause / Resume / Stop",
-   "it": "Pausa / Riprendi / Stop"
-  },
-  {
-   "en": "Serial Number",
-   "it": "Numero di serie"
-  },
-  {
-   "en": "Lid",
-   "it": "Coperchio"
-  },
-  {
-   "en": "Side",
-   "it": "Fianco"
-  },
-  {
-   "en": "Lid / Side",
-   "it": "Coperchio / Fianco"
-  },
-  {
-   "en": "Lot Code",
-   "it": "Codice lotto"
-  },
-  {
-   "en": "Batch",
-   "it": "Lotto"
-  },
-  {
-   "en": "Connected",
-   "it": "Connesso"
-  },
-  {
-   "en": "Not connected — connect a printer first",
-   "it": "Non connesso — connetti prima una stampante"
-  },
-  {
-   "en": "Saved successfully",
-   "it": "Salvato correttamente"
-  },
-  {
-   "en": "Are you sure you want to delete this message?",
-   "it": "Sei sicuro di voler eliminare questo messaggio?"
-  },
-  {
-   "en": "Message sent to printer",
-   "it": "Messaggio inviato alla stampante"
-  },
-  {
-   "en": "Printer busy, please wait",
-   "it": "Stampante occupata, attendere"
-  },
-  {
-   "en": "Communication error",
-   "it": "Errore di comunicazione"
-  },
-  {
-   "en": "Refresh",
-   "it": "Aggiorna"
-  },
-  {
-   "en": "Close",
-   "it": "Chiudi"
-  },
-  {
-   "en": "Done",
-   "it": "Fatto"
-  },
-  {
-   "en": "OK",
-   "it": "OK"
-  },
-  {
-   "en": "Close / Done / OK",
-   "it": "Chiudi / Fatto / OK"
-  },
-  {
-   "en": "Yes",
-   "it": "Sì"
-  },
-  {
-   "en": "No",
-   "it": "No"
-  },
-  {
-   "en": "Yes / No",
-   "it": "Sì / No"
-  },
-  {
-   "en": "Settings",
-   "it": "Impostazioni"
-  },
-  {
-   "en": "Help",
-   "it": "Aiuto"
-  }
- ]
+  "languages": [
+    {
+      "code": "en",
+      "label": "English"
+    },
+    {
+      "code": "it",
+      "label": "Italiano"
+    }
+  ],
+  "entries": [
+    {
+      "en": "Network Printers",
+      "it": "Stampanti in rete"
+    },
+    {
+      "en": "Connect",
+      "it": "Connetti"
+    },
+    {
+      "en": "Disconnect",
+      "it": "Disconnetti"
+    },
+    {
+      "en": "Connect / Disconnect",
+      "it": "Connetti / Disconnetti"
+    },
+    {
+      "en": "Online / Offline",
+      "it": "Online / Offline (In linea / Fuori linea)"
+    },
+    {
+      "en": "Emulate Printers",
+      "it": "Simula stampanti"
+    },
+    {
+      "en": "Sync Clocks",
+      "it": "Sincronizza orologi"
+    },
+    {
+      "en": "What's New",
+      "it": "Novità"
+    },
+    {
+      "en": "Messages",
+      "it": "Messaggi"
+    },
+    {
+      "en": "Data",
+      "it": "Dati"
+    },
+    {
+      "en": "Adjust",
+      "it": "Regolazioni"
+    },
+    {
+      "en": "Clean",
+      "it": "Pulizia"
+    },
+    {
+      "en": "Setup",
+      "it": "Impostazioni"
+    },
+    {
+      "en": "Service",
+      "it": "Assistenza"
+    },
+    {
+      "en": "Cable",
+      "it": "Cavo"
+    },
+    {
+      "en": "Start Print",
+      "it": "Avvia stampa"
+    },
+    {
+      "en": "Stop Print",
+      "it": "Ferma stampa"
+    },
+    {
+      "en": "Start Print / Stop Print",
+      "it": "Avvia stampa / Ferma stampa"
+    },
+    {
+      "en": "Jet Start",
+      "it": "Avvio getto"
+    },
+    {
+      "en": "Jet Stop",
+      "it": "Arresto getto"
+    },
+    {
+      "en": "Jet Start / Jet Stop",
+      "it": "Avvio getto / Arresto getto"
+    },
+    {
+      "en": "Ink",
+      "it": "Inchiostro"
+    },
+    {
+      "en": "Makeup",
+      "it": "Solvente (Makeup)"
+    },
+    {
+      "en": "Ink Low",
+      "it": "Inchiostro basso"
+    },
+    {
+      "en": "Makeup Low",
+      "it": "Solvente basso"
+    },
+    {
+      "en": "Ink Low / Makeup Low",
+      "it": "Inchiostro basso / Solvente basso"
+    },
+    {
+      "en": "Fault",
+      "it": "Guasto"
+    },
+    {
+      "en": "Warning",
+      "it": "Avviso"
+    },
+    {
+      "en": "Print Count",
+      "it": "Conteggio stampe"
+    },
+    {
+      "en": "Product:",
+      "it": "Prodotti:"
+    },
+    {
+      "en": "Print:",
+      "it": "Stampe:"
+    },
+    {
+      "en": "Start",
+      "it": "Avvia"
+    },
+    {
+      "en": "Product Count",
+      "it": "Conteggio prodotti"
+    },
+    {
+      "en": "Consumables",
+      "it": "Consumabili"
+    },
+    {
+      "en": "Reports",
+      "it": "Rapporti"
+    },
+    {
+      "en": "Message",
+      "it": "Messaggio"
+    },
+    {
+      "en": "New",
+      "it": "Nuovo"
+    },
+    {
+      "en": "Edit",
+      "it": "Modifica"
+    },
+    {
+      "en": "Delete",
+      "it": "Elimina"
+    },
+    {
+      "en": "Select",
+      "it": "Seleziona"
+    },
+    {
+      "en": "Save",
+      "it": "Salva"
+    },
+    {
+      "en": "Save As",
+      "it": "Salva con nome"
+    },
+    {
+      "en": "Cancel",
+      "it": "Annulla"
+    },
+    {
+      "en": "Save to PC",
+      "it": "Salva su PC"
+    },
+    {
+      "en": "PC Library",
+      "it": "Libreria PC"
+    },
+    {
+      "en": "Send to Printer",
+      "it": "Invia alla stampante"
+    },
+    {
+      "en": "Copy to Printers",
+      "it": "Copia sulle stampanti"
+    },
+    {
+      "en": "Active Message",
+      "it": "Messaggio attivo"
+    },
+    {
+      "en": "Field",
+      "it": "Campo"
+    },
+    {
+      "en": "Text",
+      "it": "Testo"
+    },
+    {
+      "en": "Date",
+      "it": "Data"
+    },
+    {
+      "en": "Time",
+      "it": "Ora"
+    },
+    {
+      "en": "Counter",
+      "it": "Contatore"
+    },
+    {
+      "en": "Barcode",
+      "it": "Codice a barre"
+    },
+    {
+      "en": "2D Code",
+      "it": "Codice 2D"
+    },
+    {
+      "en": "DataMatrix",
+      "it": "DataMatrix"
+    },
+    {
+      "en": "2D Code / DataMatrix",
+      "it": "Codice 2D / DataMatrix"
+    },
+    {
+      "en": "Graphic",
+      "it": "Grafica"
+    },
+    {
+      "en": "Logo",
+      "it": "Logo"
+    },
+    {
+      "en": "Graphic / Logo",
+      "it": "Grafica / Logo"
+    },
+    {
+      "en": "User Define",
+      "it": "Definito dall'utente"
+    },
+    {
+      "en": "Shift Code",
+      "it": "Codice turno"
+    },
+    {
+      "en": "Expiry Date",
+      "it": "Data di scadenza"
+    },
+    {
+      "en": "Font Size",
+      "it": "Font carattere"
+    },
+    {
+      "en": "High (dots)",
+      "it": "Altezza (punti) — es. '7 punti'"
+    },
+    {
+      "en": "Template",
+      "it": "Modello"
+    },
+    {
+      "en": "Multi-line",
+      "it": "Multilinea"
+    },
+    {
+      "en": "Bold",
+      "it": "Grassetto"
+    },
+    {
+      "en": "Gap",
+      "it": "Spaziatura"
+    },
+    {
+      "en": "Tower Print",
+      "it": "Stampa a torre (Tower Print)"
+    },
+    {
+      "en": "Direction: Standard",
+      "it": "Direzione: Standard"
+    },
+    {
+      "en": "Reversed",
+      "it": "Invertita"
+    },
+    {
+      "en": "Direction: Standard / Reversed",
+      "it": "Direzione: Standard / Invertita"
+    },
+    {
+      "en": "Align",
+      "it": "Allinea"
+    },
+    {
+      "en": "Group",
+      "it": "Raggruppa"
+    },
+    {
+      "en": "Ungroup",
+      "it": "Separa"
+    },
+    {
+      "en": "Group / Ungroup",
+      "it": "Raggruppa / Separa"
+    },
+    {
+      "en": "Advanced",
+      "it": "Avanzate"
+    },
+    {
+      "en": "Rotation",
+      "it": "Rotazione"
+    },
+    {
+      "en": "Orientation",
+      "it": "Orientamento"
+    },
+    {
+      "en": "Rotation / Orientation",
+      "it": "Rotazione / Orientamento"
+    },
+    {
+      "en": "Flip",
+      "it": "Capovolto"
+    },
+    {
+      "en": "Mirror",
+      "it": "Specchiato"
+    },
+    {
+      "en": "Inverted",
+      "it": "Invertito"
+    },
+    {
+      "en": "Day",
+      "it": "Giorno"
+    },
+    {
+      "en": "Month",
+      "it": "Mese"
+    },
+    {
+      "en": "Year",
+      "it": "Anno"
+    },
+    {
+      "en": "Day / Month / Year",
+      "it": "Giorno / Mese / Anno"
+    },
+    {
+      "en": "Day of Year (Julian)",
+      "it": "Giorno dell'anno (Giuliano)"
+    },
+    {
+      "en": "Week Number",
+      "it": "Numero settimana"
+    },
+    {
+      "en": "Hour",
+      "it": "Ora"
+    },
+    {
+      "en": "Minute",
+      "it": "Minuto"
+    },
+    {
+      "en": "Hour / Minute",
+      "it": "Ora / Minuto"
+    },
+    {
+      "en": "Start Value",
+      "it": "Valore iniziale"
+    },
+    {
+      "en": "End Value",
+      "it": "Valore finale"
+    },
+    {
+      "en": "Start Value / End Value",
+      "it": "Valore iniziale / Valore finale"
+    },
+    {
+      "en": "Increment",
+      "it": "Incremento"
+    },
+    {
+      "en": "Step",
+      "it": "Passo"
+    },
+    {
+      "en": "Increment / Step",
+      "it": "Incremento / Passo"
+    },
+    {
+      "en": "Repeat Count",
+      "it": "Numero ripetizioni"
+    },
+    {
+      "en": "Leading Zeros",
+      "it": "Zeri iniziali"
+    },
+    {
+      "en": "Reset",
+      "it": "Azzera"
+    },
+    {
+      "en": "Link Data Source",
+      "it": "Collega sorgente dati"
+    },
+    {
+      "en": "Print Mode",
+      "it": "Modalità di stampa"
+    },
+    {
+      "en": "Normal",
+      "it": "Normale"
+    },
+    {
+      "en": "Auto",
+      "it": "Automatico"
+    },
+    {
+      "en": "Repeat",
+      "it": "Ripeti"
+    },
+    {
+      "en": "Repeat Print",
+      "it": "Ripetizione stampa"
+    },
+    {
+      "en": "Select ID",
+      "it": "Seleziona ID"
+    },
+    {
+      "en": "Select ID Code",
+      "it": "Codice ID messaggio"
+    },
+    {
+      "en": "Auto Encoder",
+      "it": "Encoder automatico"
+    },
+    {
+      "en": "Auto Encoder Reverse",
+      "it": "Encoder automatico inverso"
+    },
+    {
+      "en": "Pitch",
+      "it": "Passo"
+    },
+    {
+      "en": "Speed",
+      "it": "Velocità"
+    },
+    {
+      "en": "Delay",
+      "it": "Ritardo"
+    },
+    {
+      "en": "Width",
+      "it": "Larghezza"
+    },
+    {
+      "en": "Height",
+      "it": "Altezza"
+    },
+    {
+      "en": "Photocell",
+      "it": "Fotocellula"
+    },
+    {
+      "en": "Encoder",
+      "it": "Encoder"
+    },
+    {
+      "en": "Trigger",
+      "it": "Segnale Print Go (segnale di avvio)"
+    },
+    {
+      "en": "Product Detect",
+      "it": "Rilevamento prodotto"
+    },
+    {
+      "en": "Nozzle",
+      "it": "Ugello"
+    },
+    {
+      "en": "Print Head",
+      "it": "Testina di stampa"
+    },
+    {
+      "en": "Gutter",
+      "it": "Gutter (recupero inchiostro)"
+    },
+    {
+      "en": "Flush",
+      "it": "Lavaggio"
+    },
+    {
+      "en": "Back Flush",
+      "it": "Controlavaggio"
+    },
+    {
+      "en": "Viscosity",
+      "it": "Viscosità"
+    },
+    {
+      "en": "Pressure",
+      "it": "Pressione"
+    },
+    {
+      "en": "Phase",
+      "it": "Fase"
+    },
+    {
+      "en": "Charge",
+      "it": "Carica"
+    },
+    {
+      "en": "High Voltage (HV)",
+      "it": "Alta tensione (HV)"
+    },
+    {
+      "en": "Filter",
+      "it": "Filtro"
+    },
+    {
+      "en": "Pump",
+      "it": "Pompa"
+    },
+    {
+      "en": "Date / Time",
+      "it": "Data / Ora"
+    },
+    {
+      "en": "Sync to PC",
+      "it": "Sincronizza con PC"
+    },
+    {
+      "en": "Language",
+      "it": "Lingua"
+    },
+    {
+      "en": "Units: mm",
+      "it": "Unità: mm"
+    },
+    {
+      "en": "inches",
+      "it": "pollici"
+    },
+    {
+      "en": "Units: mm / inches",
+      "it": "Unità: mm / pollici"
+    },
+    {
+      "en": "Password",
+      "it": "Password"
+    },
+    {
+      "en": "Firmware Update",
+      "it": "Aggiornamento firmware"
+    },
+    {
+      "en": "Diagnostics",
+      "it": "Diagnostica"
+    },
+    {
+      "en": "Scan to Print",
+      "it": "Scansiona e stampa"
+    },
+    {
+      "en": "Job",
+      "it": "Commessa"
+    },
+    {
+      "en": "Job Setup",
+      "it": "Impostazione commessa"
+    },
+    {
+      "en": "Line Setup",
+      "it": "Impostazione linea"
+    },
+    {
+      "en": "Job Log",
+      "it": "Registro commesse"
+    },
+    {
+      "en": "Metres",
+      "it": "Metri"
+    },
+    {
+      "en": "Feet",
+      "it": "Piedi"
+    },
+    {
+      "en": "Metres / Feet",
+      "it": "Metri / Piedi"
+    },
+    {
+      "en": "Length Counter",
+      "it": "Contatore di lunghezza"
+    },
+    {
+      "en": "Import CSV",
+      "it": "Importa CSV"
+    },
+    {
+      "en": "Print Job",
+      "it": "Lavoro di stampa"
+    },
+    {
+      "en": "Row",
+      "it": "Riga"
+    },
+    {
+      "en": "Column",
+      "it": "Colonna"
+    },
+    {
+      "en": "Pause",
+      "it": "Pausa"
+    },
+    {
+      "en": "Resume",
+      "it": "Riprendi"
+    },
+    {
+      "en": "Stop",
+      "it": "Stop"
+    },
+    {
+      "en": "Pause / Resume / Stop",
+      "it": "Pausa / Riprendi / Stop"
+    },
+    {
+      "en": "Serial Number",
+      "it": "Numero di serie"
+    },
+    {
+      "en": "Lid",
+      "it": "Coperchio"
+    },
+    {
+      "en": "Side",
+      "it": "Fianco"
+    },
+    {
+      "en": "Lid / Side",
+      "it": "Coperchio / Fianco"
+    },
+    {
+      "en": "Lot Code",
+      "it": "Codice lotto"
+    },
+    {
+      "en": "Batch",
+      "it": "Lotto"
+    },
+    {
+      "en": "Connected",
+      "it": "Connesso"
+    },
+    {
+      "en": "Not connected — connect a printer first",
+      "it": "Non connesso — connetti prima una stampante"
+    },
+    {
+      "en": "Saved successfully",
+      "it": "Salvato correttamente"
+    },
+    {
+      "en": "Are you sure you want to delete this message?",
+      "it": "Sei sicuro di voler eliminare questo messaggio?"
+    },
+    {
+      "en": "Message sent to printer",
+      "it": "Messaggio inviato alla stampante"
+    },
+    {
+      "en": "Printer busy, please wait",
+      "it": "Stampante occupata, attendere"
+    },
+    {
+      "en": "Communication error",
+      "it": "Errore di comunicazione"
+    },
+    {
+      "en": "Refresh",
+      "it": "Aggiorna"
+    },
+    {
+      "en": "Close",
+      "it": "Chiudi"
+    },
+    {
+      "en": "Done",
+      "it": "Fatto"
+    },
+    {
+      "en": "OK",
+      "it": "OK"
+    },
+    {
+      "en": "Close / Done / OK",
+      "it": "Chiudi / Fatto / OK"
+    },
+    {
+      "en": "Yes",
+      "it": "Sì"
+    },
+    {
+      "en": "No",
+      "it": "No"
+    },
+    {
+      "en": "Yes / No",
+      "it": "Sì / No"
+    },
+    {
+      "en": "Settings",
+      "it": "Impostazioni"
+    },
+    {
+      "en": "Help",
+      "it": "Aiuto"
+    }
+  ]
 }
