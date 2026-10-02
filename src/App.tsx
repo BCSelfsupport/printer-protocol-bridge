@@ -19,6 +19,7 @@ import { LicenseProvider } from "./contexts/LicenseContext";
 import { DemoWatermark } from "./components/license/DemoWatermark";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { CompanionScanFab } from "./components/CompanionScanFab";
+import { LanguageProvider } from "./i18n/LanguageProvider";
 
 // Build stamp — bump to force a fresh module graph in the Lovable preview when
 // HMR gets stuck serving an old bundle. Imported (not just a sidecar file) so
@@ -49,6 +50,7 @@ const App = () => {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          <LanguageProvider>
           <LicenseProvider>
             <TooltipProvider>
               <Toaster />
@@ -71,6 +73,7 @@ const App = () => {
               </HashRouter>
             </TooltipProvider>
           </LicenseProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </ErrorBoundary>
