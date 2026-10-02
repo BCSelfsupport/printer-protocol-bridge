@@ -11,6 +11,7 @@ import { UserManualDialog } from '@/components/help/UserManualDialog';
 import { PairMobileDialog } from '@/components/license/PairMobileDialog';
 import { ModelBadge } from '@/components/branding/ModelBadge';
 import { EmulationPrintersDialog } from '@/components/dev/EmulationPrintersDialog';
+import { LanguageMenu } from '@/i18n/LanguageMenu';
 
 declare const __APP_VERSION__: string;
 
@@ -269,6 +270,7 @@ export function Header({ isConnected, connectedIp, onSettings, onHome, printerTi
             </div>
           </div>
 
+          <LanguageMenu />
           {onDateTimeSetup && (
             <button
               onClick={onDateTimeSetup}

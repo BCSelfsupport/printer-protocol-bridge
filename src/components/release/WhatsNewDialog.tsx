@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'language-menu-italian',
+    type: 'feature',
+    title: 'Italian Language Option',
+    date: '2 Oct 2026',
+    summary:
+      'A new globe button at the top of the screen lets you switch the main screen commands between English and Italian. Translations come from the verified CodeSync glossary.',
+  },
+  {
     id: 'print-mode-moved-to-advanced',
     type: 'feature',
     title: 'Print Mode Now Lives in Advanced',
