@@ -27,7 +27,12 @@ function translate(text: string, map: Map<string, string>): string | null {
   const t = text.trim();
   if (!t || t.length > 80) return null;
   const hit = map.get(t.toLowerCase());
-  if (!hit) return null;
+  if (!hit) {
+    // "Label: 12" style counters — translate the label, keep the value.
+    const m = t.match(/^(.+?):\s*(\d[\d.,]*)$/);
+    const lab = m && map.get(m[1].toLowerCase());
+    return lab ? text.replace(t, `${lab}: ${m![2]}`) : null;
+  }
   const out = t === t.toUpperCase() && /[A-Z]/.test(t) ? hit.toUpperCase() : hit;
   return text.replace(t, out);
 }
