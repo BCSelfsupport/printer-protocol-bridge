@@ -813,6 +813,46 @@
     {
       "en": "Disabled",
       "it": "Disabilitato"
+    },
+    {
+      "en": "Setup: Date / Time",
+      "it": "Impostazioni: Data / Ora"
+    },
+    {
+      "en": "Sync All Printers…",
+      "it": "Sincronizza tutte le stampanti…"
+    },
+    {
+      "en": "Format",
+      "it": "Formato"
+    },
+    {
+      "en": "Week Start",
+      "it": "Inizio settimana"
+    },
+    {
+      "en": "ISO Week Date",
+      "it": "Settimana ISO"
+    },
+    {
+      "en": "Program Date Codes",
+      "it": "Programma codici data"
+    },
+    {
+      "en": "Program Time Codes",
+      "it": "Programma codici ora"
+    },
+    {
+      "en": "Configure",
+      "it": "Configura"
+    },
+    {
+      "en": "Current PC Time",
+      "it": "Ora attuale del PC"
+    },
+    {
+      "en": "Select Current Day",
+      "it": "Seleziona giorno corrente"
     }
   ]
 }
