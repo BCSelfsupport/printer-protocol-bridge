@@ -542,6 +542,10 @@ export function DevPanel({ isOpen, onToggle, connectedPrinterIp, connectedPrinte
                   <Usb className="w-3.5 h-3.5" />
                   Firmware
                 </TabsTrigger>
+                <TabsTrigger value="translations" className="text-xs gap-1 flex-shrink-0">
+                  <Globe className="w-3.5 h-3.5" />
+                  Translations
+                </TabsTrigger>
 
                 {isOwnerDeveloper && (
                   <TabsTrigger value="devs" className="text-xs gap-1 flex-shrink-0">
