@@ -4,3 +4,5 @@ description: CodeSync_Italian_Glossary_v2.docx in Files is the master translatio
 type: reference
 ---
 `/mnt/documents/CodeSync_Italian_Glossary_v2.docx` is the standard/master glossary for all CodeSync site translations. It has English term, where/meaning, and the target-language column (Italian first, draft translations pending review by the user's Italian contact). Once the user confirms a translation is verified, use this file as the lookup source when building the language toggle (English/Italian first). Extend the same document with new columns for any future languages rather than creating separate files.
+
+Scope (user decision, 2 Oct 2026): translate the software UI commands only — no manuals or What's New for now. Do NOT build the language toggle until the user uploads the friend-verified glossary; draft translations in the doc are not yet approved.
