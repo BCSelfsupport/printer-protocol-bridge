@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'twincode-tnt-log-alignment',
+    type: 'feature',
+    title: 'TwinCode: Track-n-Trace Code and Printer Settings',
+    date: '12 Oct 2026',
+    summary:
+      'TwinCode now prints the 13-character Track-n-Trace code, applies separate inverted/reversed/bold settings to Printer 1 and Printer 2, keeps both printers two codes ahead, and only moves on once both printers confirm.',
+  },
+  {
     id: 'language-menu-spanish-french',
     type: 'feature',
     title: 'Spanish and French Language Options',

@@ -112,6 +112,24 @@ export function TntUplinkPanel() {
           </div>
         </div>
 
+        {(state.printedCode || state.printerSettings) && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+            <div className="border border-border rounded p-2">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Current code</div>
+              <div className="font-mono font-semibold">{state.printedCode ?? '—'}</div>
+            </div>
+            {(['printer1', 'printer2'] as const).map((k, i) => {
+              const f = state.printerSettings?.[k];
+              return (
+                <div key={k} className="border border-border rounded p-2">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Printer {i + 1}</div>
+                  <div>{f ? [f.inverted && 'Inverted', f.reversed && 'Reversed', f.bold && 'Bold'].filter(Boolean).join(', ') || 'Normal' : '—'}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <p className="text-[11px] text-muted-foreground leading-relaxed">
           Built to the Authentix Interface Spec: Config is acknowledged, Print
           messages are decoded, and the 30-second serial check is answered.
