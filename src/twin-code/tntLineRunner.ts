@@ -125,7 +125,7 @@ export class TwinPairQueue {
     const serial = this.nextToSend;
     const code = buildPrintedCode(this.fields, serial);
     const v = validatePrintedCode(code);
-    if (!v.ok) throw new Error(v.error);
+    if (v.ok === false) throw new Error(v.error);
     this.pending.push({ serial, code, confirmed: new Set() });
     this.nextToSend = nextSerial(serial);
     this.send(1, code, serial);
