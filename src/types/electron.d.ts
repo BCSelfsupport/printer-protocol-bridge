@@ -36,6 +36,13 @@ export interface TntState {
   lastFrameAt: string | null;
   lastError: string | null;
   recent: TntFrameEntry[];
+  /** 13-char code being printed: Line+Year+Julian+Serial+U. */
+  printedCode?: string | null;
+  lastSerial?: number;
+  printerSettings?: {
+    printer1: { inverted: boolean; reversed: boolean; bold: boolean } | null;
+    printer2: { inverted: boolean; reversed: boolean; bold: boolean } | null;
+  } | null;
 }
 
 export interface TntConfig {

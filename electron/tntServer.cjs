@@ -70,6 +70,11 @@ class TntServer extends EventEmitter {
     this.state.lastSerial = this.session.lastSerial;
     this.state.printMessage = this.session.print ? this.session.print.message : null;
     this.state.configured = !!this.session.config;
+    const pr = this.session.print;
+    this.state.printedCode = pr ? `${pr.prodLine}${pr.alphaYear}${pr.julian}${String(this.session.lastSerial || pr.serialValue).padStart(6, '0')}U` : null;
+    const blocks = this.session.config ? this.session.config.printers : [];
+    const flags = (b) => b ? { inverted: b.inverted, reversed: b.reversed, bold: b.bold } : null;
+    this.state.printerSettings = blocks.length ? { printer1: flags(blocks[0]), printer2: flags(blocks[1] || blocks[0]) } : null;
     this.emit('state', this.getState());
   }
 
