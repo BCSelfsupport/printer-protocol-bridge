@@ -65,7 +65,7 @@ export function buildValidationWorkbook(report: ValidationReport): Uint8Array {
 
 export function downloadValidationXlsx(report: ValidationReport, filename: string): void {
   const data = buildValidationWorkbook(report);
-  const blob = new Blob([data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const blob = new Blob([data as Uint8Array<ArrayBuffer>], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
