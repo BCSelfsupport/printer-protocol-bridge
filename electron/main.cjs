@@ -1126,6 +1126,13 @@ ipcMain.handle('tnt:set-config', (_e, cfg) => {
 });
 ipcMain.handle('tnt:send', (_e, { opcode, payload }) => {
   if (!tntServer) return { success: false, error: 'not_running' };
+  // Renderer fault objects (opcode 0x60) become spec §7 fault frames.
+  if (opcode === 0x60 && payload && typeof payload === 'object') {
+    const msgId = Number(payload.msgId) || 0x02;
+    return { success: tntServer.sendCategoryFault(msgId, Number(payload.category), {
+      code: payload.code, faultNumber: payload.subCode, lastMessage: payload.lastMessage, address: payload.address,
+    }) };
+  }
   const ok = tntServer.send(opcode, payload);
   return { success: ok };
 });

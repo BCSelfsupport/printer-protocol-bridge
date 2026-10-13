@@ -161,6 +161,7 @@ class TntServer extends EventEmitter {
         this.emit('clear-buffers', { at: stamp() });
         this._emitState();
       } else {
+        this._sendRaw(codec.MSG.REQUEST, codec.encodeRequestError(f.body), { requestError: f.body });
         this.emit('request-unknown', { command: f.body, at: stamp() });
       }
     }
@@ -180,12 +181,12 @@ class TntServer extends EventEmitter {
     return true;
   }
 
-  /** Fault return to T&T (msgId = message being answered, category = fault category byte). */
-  sendFault(msgId, category, info) {
-    return this._sendRaw(msgId, codec.encodeFault(msgId, category, info), { fault: { msgId, category, info: info || '' } });
+  /** Raw §7 fault: msgId, category 1-4, 13-char message, optional printer IP. */
+  sendFault(msgId, category, message, address) {
+    return this._sendRaw(msgId, codec.encodeFault(msgId, category, message, address), { fault: { msgId, category, message: message || '', address: address || '' } });
   }
 
-  /** Category fault (1 out-of-sync code, 2/4 Section 8 number, 3 zeros). */
+  /** Category fault (1 out-of-sync code, 2 §8 number, 3 last message/zero) with printer IP. */
   sendCategoryFault(msgId, category, opts) {
     return this._sendRaw(msgId, codec.encodeCategoryFault(msgId, category, opts), { fault: { msgId, category, ...(opts || {}) } });
   }
