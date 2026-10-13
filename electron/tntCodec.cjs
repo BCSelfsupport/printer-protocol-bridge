@@ -116,8 +116,33 @@ function encodeFault(msgId, category, info) {
   return encodeFrame(msgId, Buffer.concat([Buffer.from([cat]), text]));
 }
 
+/** Reply to Request "02" Clear-All-Buffers: 0x01 "02" + '1' (success) or other value + optional info. */
+function encodeClearBuffersReply(ok, info) {
+  const extra = info ? String(info).replace(/[\x00-\x1f\x7f-\uffff]/g, ' ') : '';
+  return encodeFrame(MSG.REQUEST, '02' + (ok ? '1' : '0') + extra);
+}
+
+/** Fault categories (Authentix, Oct 2026). Section 8 fault numbers still pending. */
+const FAULT_CATEGORY = Object.freeze({ OUT_OF_SYNC: 1, PRINTER_FAULT: 2, IGNORED: 3, DEVICE_FAULT: 4 });
+
+/**
+ * Category-specific fault content:
+ *   1 → the out-of-sync printed code (or all zeros)
+ *   2/4 → ASCII Section 8 fault number only, no prefix/suffix
+ *   3 → all zeros (content ignored by T&T)
+ */
+function faultContent(category, { code, faultNumber } = {}) {
+  if (category === 1) return code ? String(code) : '0000000000000';
+  if (category === 2 || category === 4) return faultNumber == null ? '0' : String(faultNumber).replace(/\D/g, '') || '0';
+  return '0000000000000';
+}
+
+function encodeCategoryFault(msgId, category, opts) {
+  return encodeFault(msgId, category, faultContent(category, opts));
+}
+
 module.exports = {
-  encodeFault,
+  encodeFault, encodeClearBuffersReply, FAULT_CATEGORY, faultContent, encodeCategoryFault,
   MSG, MSG_NAMES, EOM, SERIAL_MAX,
   encodeFrame, FrameDecoder, parseConfig, parsePrint, encodeLastSerial, encodeConfigAck, nextSerial,
 };
