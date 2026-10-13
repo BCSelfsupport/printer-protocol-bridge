@@ -47,4 +47,13 @@ describe('tnt codec (spec framing)', () => {
   it('rejects a Config with the wrong length', () => {
     expect(codec.parseConfig('3001005').error).toBeTruthy();
   });
+
+  it('Config ack is exactly 03 03 04', () => {
+    expect([...codec.encodeConfigAck()]).toEqual([0x03, 0x03, 0x04]);
+  });
+
+  it('fault return is [MsgId][Category][info][EOM]', () => {
+    expect([...codec.encodeFault(0x02, 1)]).toEqual([0x02, 0x01, 0x04]);
+    expect(codec.encodeFault(0x02, 2, 'B timeout').toString('ascii')).toBe('\x02\x02B timeout\x04');
+  });
 });

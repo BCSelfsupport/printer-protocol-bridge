@@ -99,12 +99,25 @@ function encodeLastSerial(serial) {
   return encodeFrame(MSG.REQUEST, '01' + String(serial).padStart(6, '0'));
 }
 
-/** Config-complete ack. Spec: 0x03 0x03 (+ EOM, since every transmission ends in 0x04 — pending Authentix confirmation). */
+/** Config-complete ack — confirmed by Authentix (Oct 2026): exactly 0x03 0x03 0x04. */
 function encodeConfigAck() {
   return encodeFrame(MSG.CONFIG, Buffer.from([MSG.CONFIG]));
 }
 
+/**
+ * Controller Return / Fault — confirmed by Authentix (Oct 2026):
+ *   [MsgId(1)][FaultCategory(1)][optional ASCII info][EOM 0x04]
+ * MsgId = the message type being answered (e.g. 0x02 Print). Unused value bytes may be 0x00.
+ * T&T logs the whole message on failure, so `info` is free text for the log.
+ */
+function encodeFault(msgId, category, info) {
+  const cat = Number.isInteger(category) && category >= 0 && category <= 255 ? category : 0x00;
+  const text = info ? Buffer.from(String(info).replace(/[\x00-\x1f\x7f-\uffff]/g, ' '), 'ascii') : Buffer.alloc(0);
+  return encodeFrame(msgId, Buffer.concat([Buffer.from([cat]), text]));
+}
+
 module.exports = {
+  encodeFault,
   MSG, MSG_NAMES, EOM, SERIAL_MAX,
   encodeFrame, FrameDecoder, parseConfig, parsePrint, encodeLastSerial, encodeConfigAck, nextSerial,
 };
