@@ -256,7 +256,7 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
             )}
 
             {steps[active].detail && (
-              <div className={`rounded border px-2 py-1.5 text-xs ${steps[active].status === "fail" ? "border-destructive/40 text-destructive" : steps[active].status === "pass" ? "border-primary/40 text-primary" : "border-border text-muted-foreground"}`}>
+              <div className={`whitespace-pre-line rounded border px-2 py-1.5 text-xs ${steps[active].status === "fail" ? "border-destructive/40 text-destructive" : steps[active].status === "pass" ? "border-primary/40 text-primary" : "border-border text-muted-foreground"}`}>
                 {steps[active].detail}
               </div>
             )}
