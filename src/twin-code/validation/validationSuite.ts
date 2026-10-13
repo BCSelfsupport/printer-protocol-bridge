@@ -271,7 +271,7 @@ const CHECKS: Check[] = [
   } },
 
   // ---------- 8. Awaiting Authentix ----------
-  { id: "A1", section: "8. Awaiting Authentix answers", name: "Fault reply format (spec §7)", run: async () => pending("Cannot validate until Authentix defines the fault message bytes and code list.") },
+  { id: "A1", section: "8. Awaiting Authentix answers", name: "Fault reply format (spec §7)", run: async () => pending("Built to spec §7/§8 — confirm against a live Track-n-Trace session.") },
   { id: "A2", section: "8. Awaiting Authentix answers", name: "Clear-All-Buffers command", run: async () => pending("Command code not yet provided by Authentix.") },
 
   // ---------- 9. Isolation ----------

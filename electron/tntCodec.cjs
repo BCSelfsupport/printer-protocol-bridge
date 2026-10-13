@@ -105,44 +105,63 @@ function encodeConfigAck() {
 }
 
 /**
- * Controller Return / Fault — confirmed by Authentix (Oct 2026):
- *   [MsgId(1)][FaultCategory(1)][optional ASCII info][EOM 0x04]
- * MsgId = the message type being answered (e.g. 0x02 Print). Unused value bytes may be 0x00.
- * T&T logs the whole message on failure, so `info` is free text for the log.
+ * Controller Return / Fault — Interface Spec §7:
+ *   [MsgId(1)][Category(1 ASCII digit)][Message(13)][Address(13, optional)][EOM 0x04]
+ * MsgId is not inspected by T&T for faults; we echo the message type being answered.
  */
-function encodeFault(msgId, category, info) {
-  const cat = Number.isInteger(category) && category >= 0 && category <= 255 ? category : 0x00;
-  const text = info ? Buffer.from(String(info).replace(/[\x00-\x1f\x7f-\uffff]/g, ' '), 'ascii') : Buffer.alloc(0);
-  return encodeFrame(msgId, Buffer.concat([Buffer.from([cat]), text]));
+const ascii = (s) => String(s == null ? '' : s).replace(/[\x00-\x1f\x7f-\uffff]/g, ' ');
+
+/** 13-char message field. Numbers are zero-padded on the left so T&T reads the value cleanly. */
+function faultMessageField(text) {
+  const t = ascii(text);
+  if (/^\d+$/.test(t)) return t.slice(-13).padStart(13, '0');
+  return t.slice(0, 13).padEnd(13, ' ');
 }
 
-/** Reply to Request "02" Clear-All-Buffers: 0x01 "02" + '1' (success) or other value + optional info. */
-function encodeClearBuffersReply(ok, info) {
-  const extra = info ? String(info).replace(/[\x00-\x1f\x7f-\uffff]/g, ' ') : '';
-  return encodeFrame(MSG.REQUEST, '02' + (ok ? '1' : '0') + extra);
+/** 13-char address field: leading char + dotted printer IP (e.g. "U192.168.0.91"). */
+function faultAddressField(ip, lead = 'U') {
+  if (!ip) return '';
+  return (String(lead).slice(0, 1) + ascii(ip)).slice(0, 13).padEnd(13, ' ');
 }
 
-/** Fault categories (Authentix, Oct 2026). Section 8 fault numbers still pending. */
-const FAULT_CATEGORY = Object.freeze({ OUT_OF_SYNC: 1, PRINTER_FAULT: 2, IGNORED: 3, DEVICE_FAULT: 4 });
+function encodeFault(msgId, category, message, address) {
+  const cat = Number.isInteger(category) && category >= 1 && category <= 9 ? category : 2;
+  const addr = faultAddressField(address);
+  return encodeFrame(msgId, String(cat) + faultMessageField(message) + addr);
+}
+
+/** Reply to Request "02" Clear-All-Buffers: 0x01 "02" "1" (cleared) or "0" (syntax error). */
+function encodeClearBuffersReply(ok) {
+  return encodeFrame(MSG.REQUEST, '02' + (ok ? '1' : '0'));
+}
+
+/** Syntax-error reply to an unrecognised Request: 0x01 <cmd> "0". */
+function encodeRequestError(cmd) {
+  return encodeFrame(MSG.REQUEST, ascii(cmd).slice(0, 2).padEnd(2, '0') + '0');
+}
+
+/** Fault categories (§7). 4 = laser — not used on BestCode lines. */
+const FAULT_CATEGORY = Object.freeze({ OUT_OF_SYNC: 1, PRINTER_FAULT: 2, COMMS_LOST: 3, LASER_FAULT: 4 });
 
 /**
- * Category-specific fault content:
+ * Category-specific message content:
  *   1 → the out-of-sync printed code (or all zeros)
- *   2/4 → ASCII Section 8 fault number only, no prefix/suffix
- *   3 → all zeros (content ignored by T&T)
+ *   2 → §8 fault number
+ *   3 → last message before comms lost, or 0 if none
  */
-function faultContent(category, { code, faultNumber } = {}) {
+function faultContent(category, { code, faultNumber, lastMessage } = {}) {
   if (category === 1) return code ? String(code) : '0000000000000';
-  if (category === 2 || category === 4) return faultNumber == null ? '0' : String(faultNumber).replace(/\D/g, '') || '0';
-  return '0000000000000';
+  if (category === 3) return lastMessage ? String(lastMessage) : '0';
+  return faultNumber == null ? '0' : String(faultNumber).replace(/\D/g, '') || '0';
 }
 
-function encodeCategoryFault(msgId, category, opts) {
-  return encodeFault(msgId, category, faultContent(category, opts));
+function encodeCategoryFault(msgId, category, opts = {}) {
+  return encodeFault(msgId, category, faultContent(category, opts), opts.address);
 }
 
 module.exports = {
-  encodeFault, encodeClearBuffersReply, FAULT_CATEGORY, faultContent, encodeCategoryFault,
+  encodeFault, encodeClearBuffersReply, encodeRequestError, FAULT_CATEGORY, faultContent, encodeCategoryFault,
+  faultMessageField, faultAddressField,
   MSG, MSG_NAMES, EOM, SERIAL_MAX,
   encodeFrame, FrameDecoder, parseConfig, parsePrint, encodeLastSerial, encodeConfigAck, nextSerial,
 };
