@@ -200,13 +200,18 @@ export async function connectionCheck(printers: Printer[] = []): Promise<LiveSte
   };
 }
 
-export async function sendSingle(code: string, log: (e: LiveLogEntry) => void): Promise<LiveStepResult> {
+/** How each print is released: the real photocell on the line, or a host Print Go (bench, no product). */
+export type TriggerMode = "photocell" | "printgo";
+const dispatchOpts = (t: TriggerMode) => ({ forceTrigger: t === "printgo" });
+const waitNote = (t: TriggerMode) => t === "photocell" ? " — waiting for photocell (send a product past the sensor, max 30 s)" : "";
+
+export async function sendSingle(code: string, log: (e: LiveLogEntry) => void, trigger: TriggerMode = "photocell"): Promise<LiveStepResult> {
   const safety = safetyCheck();
   if (!safety.ok) return safety;
   const v = validatePrintedCode(code);
   if ("error" in v) return { ok: false, detail: v.error };
-  log({ t: now(), dir: "CodeSync→P1+P2", text: code });
-  let r = await twinDispatcher.dispatch(code, { forceTrigger: true });
+  log({ t: now(), dir: "CodeSync→P1+P2", text: code + waitNote(trigger) });
+  let r = await twinDispatcher.dispatch(code, dispatchOpts(trigger));
   if (!r.ok && isDropped(r.reason)) {
     log({ t: now(), dir: "CodeSync", text: `Link dropped (${r.reason}) — reconnecting to both printers and retrying once` });
     await logRecentCommands(log);
@@ -215,7 +220,7 @@ export async function sendSingle(code: string, log: (e: LiveLogEntry) => void): 
       log({ t: now(), dir: "CodeSync", text: `Reconnect failed: ${re.error ?? "unknown"}` });
       return { ok: false, detail: `The printer connection dropped after step 3 and could not be reopened: ${re.error ?? "unknown"}. Re-run step 3, then try again.` };
     }
-    r = await twinDispatcher.dispatch(code, { forceTrigger: true });
+    r = await twinDispatcher.dispatch(code, dispatchOpts(trigger));
   }
   if (!r.ok) await logRecentCommands(log);
   log({ t: now(), dir: "P1+P2→CodeSync", text: r.ok ? `ACK both · A ${r.aMs?.toFixed(0)}ms B ${r.bMs?.toFixed(0)}ms` : `FAIL ${r.reason}` });
@@ -225,10 +230,10 @@ export async function sendSingle(code: string, log: (e: LiveLogEntry) => void): 
 }
 
 /** Send N consecutive codes to both printers, one after another, logging each transmit. */
-export async function sendBatch(codes: string[], log: (e: LiveLogEntry) => void, onSent?: (index: number, code: string, ok: boolean) => void): Promise<LiveStepResult> {
+export async function sendBatch(codes: string[], log: (e: LiveLogEntry) => void, onSent?: (index: number, code: string, ok: boolean) => void, trigger: TriggerMode = "photocell"): Promise<LiveStepResult> {
   const sent: string[] = []; const failed: { code: string; reason: string }[] = [];
   for (let i = 0; i < codes.length; i++) {
-    const r = await sendSingle(codes[i], log);
+    const r = await sendSingle(codes[i], log, trigger);
     onSent?.(i, codes[i], r.ok);
     if (r.ok) sent.push(codes[i]); else { failed.push({ code: codes[i], reason: r.detail }); break; }
   }
@@ -252,7 +257,7 @@ const pct = (xs: number[], p: number) => { if (!xs.length) return 0; const s = [
  * in lockstep — no code is ever skipped).
  */
 export async function runLiveReplay(opts: {
-  startSerial: number; bottles: number; gapMs: number;
+  startSerial: number; bottles: number; gapMs: number; trigger?: TriggerMode;
   log: (e: LiveLogEntry) => void; onProgress: (done: number, total: number) => void; signal?: AbortSignal;
 }): Promise<LiveStepResult & { summary?: LiveRunSummary }> {
   const safety = safetyCheck();
@@ -285,7 +290,9 @@ export async function runLiveReplay(opts: {
   while (printed.length < opts.bottles) {
     if (opts.signal?.aborted) { log({ t: now(), dir: "Operator", text: "Stopped" }); break; }
     const head = q.queued[0];
-    const r: TwinDispatchResult = await twinDispatcher.dispatch(head.code, { forceTrigger: true });
+    const trig = opts.trigger ?? "photocell";
+    if (trig === "photocell") log({ t: now(), dir: "Bridge", text: `${head.code} loaded${waitNote(trig)}` });
+    const r: TwinDispatchResult = await twinDispatcher.dispatch(head.code, dispatchOpts(trig));
     if (!r.aReason) q.confirm(1 as PrinterSlot, head.serial);
     if (!r.bReason) q.confirm(2 as PrinterSlot, head.serial);
     if (!r.ok) {
@@ -297,7 +304,7 @@ export async function runLiveReplay(opts: {
     if (r.skewMs != null) skews.push(r.skewMs);
     log({ t: now(), dir: "P1+P2→Bridge", text: `confirmed ${head.code} (${r.cycleMs?.toFixed(0)} ms)` });
     opts.onProgress(printed.length, opts.bottles);
-    if (opts.gapMs > 0) await new Promise((res) => setTimeout(res, opts.gapMs));
+    if (opts.gapMs > 0 && (opts.trigger ?? "photocell") === "printgo") await new Promise((res) => setTimeout(res, opts.gapMs));
   }
   const elapsed = (performance.now() - t0) / 60000;
 
@@ -322,3 +329,135 @@ export async function runLiveReplay(opts: {
 }
 
 export const MAX_TEST_SERIAL = SERIAL_MAX;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Part 2 — REAL Track-n-Trace data connection.
+// Uses the desktop app's real T&T endpoint: the real T&T PC connects, sends its
+// own Config + Print message, we print N photocell-triggered codes on both
+// printers, report each confirmed serial to the endpoint, then wait for T&T's
+// real 30-s poll and check the reply carries the last serial we printed.
+// The serial catalog, ledger and production run are never touched.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface TntStage { id: "endpoint" | "client" | "config" | "print" | "codes" | "poll"; ok: boolean | null; detail: string }
+
+type TntApi = NonNullable<Window["electronAPI"]>["tnt"];
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function waitFor<T>(fn: () => Promise<T | null | undefined | false>, timeoutMs: number, signal?: AbortSignal): Promise<T | null> {
+  const end = Date.now() + timeoutMs;
+  while (Date.now() < end) {
+    if (signal?.aborted) return null;
+    const v = await fn();
+    if (v) return v as T;
+    await sleep(500);
+  }
+  return null;
+}
+
+interface PrintJson { prodLine?: string; alphaYear?: string; julian?: string; serialValue?: number; continueCount?: boolean; error?: string }
+
+export async function runLiveTnt(opts: {
+  codes: number; trigger?: TriggerMode; waitMs?: number; pollWaitMs?: number;
+  log: (e: LiveLogEntry) => void; onStage: (s: TntStage) => void; onProgress: (done: number, total: number) => void; signal?: AbortSignal;
+}): Promise<LiveStepResult> {
+  const { log, onStage, signal } = opts;
+  const waitMs = opts.waitMs ?? 180_000;
+  const fail = (id: TntStage["id"], detail: string): LiveStepResult => { onStage({ id, ok: false, detail }); return { ok: false, detail }; };
+  const safety = safetyCheck();
+  if (!safety.ok) return safety;
+  if (!twinDispatcher.isBound()) return { ok: false, detail: "The printer pair is not linked — run step 3 first." };
+  const tnt: TntApi | undefined = (typeof window !== "undefined" ? window.electronAPI?.tnt : undefined);
+  if (!tnt) return fail("endpoint", "The real Track-n-Trace connection only exists in the installed desktop app (not in the browser preview).");
+
+  // 1. Endpoint listening
+  let st = await tnt.getState();
+  if (!st.listening) {
+    const cfg = await tnt.getConfig();
+    log({ t: now(), dir: "CodeSync", text: `Track-n-Trace endpoint was off — starting it on port ${cfg.port || 8101}` });
+    await tnt.setConfig({ enabled: true, port: cfg.port || 8101 });
+    st = (await waitFor(async () => { const s = await tnt.getState(); return s.listening ? s : null; }, 5000, signal)) ?? st;
+  }
+  if (!st.listening) return fail("endpoint", `Endpoint could not listen on port ${st.port}${st.lastError ? ` — ${st.lastError}` : ""}. Check nothing else uses that port and the firewall allows it.`);
+  onStage({ id: "endpoint", ok: true, detail: `Listening on port ${st.port}` });
+
+  // 2. Real T&T PC connected
+  onStage({ id: "client", ok: null, detail: `Waiting for the Track-n-Trace PC to connect to this PC on port ${st.port}…` });
+  const conn = await waitFor(async () => { const s = await tnt.getState(); return s.connected ? s : null; }, waitMs, signal);
+  if (!conn) return fail("client", signal?.aborted ? "Stopped by operator" : `No Track-n-Trace connection within ${waitMs / 1000} s. Check the T&T PC points at this PC's IP, port ${st.port}.`);
+  onStage({ id: "client", ok: true, detail: `Connected from ${conn.peer ?? "unknown"}` });
+  log({ t: now(), dir: "T&T→CodeSync", text: `TCP connected from ${conn.peer ?? "?"}` });
+
+  // 3. Config received + acknowledged
+  onStage({ id: "config", ok: null, detail: "Waiting for Track-n-Trace to send its Config message…" });
+  const cfgSt = await waitFor(async () => {
+    const s = await tnt.getState();
+    const ack = s.recent.some((f) => f.dir === "out" && f.name.toUpperCase().includes("CONFIG"));
+    return s.printerSettings && ack ? s : null;
+  }, waitMs, signal);
+  if (!cfgSt) return fail("config", signal?.aborted ? "Stopped by operator" : "No valid Config received/acknowledged. If T&T sent one, it may have been rejected — check the uplink log.");
+  const ps = cfgSt.printerSettings!;
+  const fl = (f: typeof ps.printer1) => f ? [f.inverted && "inverted", f.reversed && "reversed", f.bold && "bold"].filter(Boolean).join("+") || "normal" : "—";
+  onStage({ id: "config", ok: true, detail: `Config received and acknowledged · P1 ${fl(ps.printer1)} · P2 ${fl(ps.printer2)}` });
+  log({ t: now(), dir: "T&T→CodeSync", text: `CONFIG ok · P1 ${fl(ps.printer1)} · P2 ${fl(ps.printer2)} · ACK sent` });
+
+  // 4. Print message received
+  onStage({ id: "print", ok: null, detail: "Waiting for Track-n-Trace to send a Print message (start a test lot on T&T)…" });
+  const pr = await waitFor(async () => {
+    const s = await tnt.getState();
+    const f = [...s.recent].reverse().find((x) => x.dir === "in" && x.name.toUpperCase().includes("PRINT"));
+    const j = f?.json as PrintJson | undefined;
+    return j && !j.error && j.prodLine ? { j, lastSerial: s.lastSerial ?? 0 } : null;
+  }, waitMs, signal);
+  if (!pr) return fail("print", signal?.aborted ? "Stopped by operator" : "No valid Print message received from Track-n-Trace.");
+  const fields = { prodLine: pr.j.prodLine!, alphaYear: pr.j.alphaYear!, julian: pr.j.julian! };
+  const start = pr.j.continueCount ? (pr.lastSerial >= SERIAL_MAX ? 1 : pr.lastSerial + 1) : pr.j.serialValue!;
+  const q = new TwinPairQueue(() => {}, () => {});
+  try { q.start(fields, start); } catch (e) { return fail("print", `Print message gives an invalid code: ${(e as Error).message}`); }
+  const first = q.queued[0].code;
+  const v = validatePrintedCode(first);
+  if ("error" in v) return fail("print", v.error);
+  onStage({ id: "print", ok: true, detail: `Print message valid · line ${fields.prodLine} · year ${fields.alphaYear} · day ${fields.julian} · ${pr.j.continueCount ? "continue count" : "new count"} · first code ${first}` });
+  log({ t: now(), dir: "T&T→CodeSync", text: `PRINT ok · first code ${first}` });
+
+  // 5. Print N real codes (photocell-released by default)
+  const trig = opts.trigger ?? "photocell";
+  onStage({ id: "codes", ok: null, detail: trig === "photocell" ? "Send products past the photocell — one code per product." : "Printing…" });
+  let printed = 0;
+  while (printed < opts.codes) {
+    if (signal?.aborted) return fail("codes", `Stopped by operator after ${printed}/${opts.codes}`);
+    const head = q.queued[0];
+    log({ t: now(), dir: "CodeSync→P1+P2", text: head.code + waitNote(trig) });
+    const r = await twinDispatcher.dispatch(head.code, dispatchOpts(trig));
+    if (!r.aReason) q.confirm(1 as PrinterSlot, head.serial);
+    if (!r.bReason) q.confirm(2 as PrinterSlot, head.serial);
+    if (!r.ok) {
+      await logRecentCommands(log);
+      return fail("codes", `Held at ${head.code}: ${r.reason}${/timeout/i.test(r.reason ?? "") && trig === "photocell" ? " (no product reached the photocell in time?)" : ""}. ${printed}/${opts.codes} printed — nothing skipped.`);
+    }
+    await tnt.setLastSerial?.(head.serial);
+    printed++;
+    opts.onProgress(printed, opts.codes);
+    log({ t: now(), dir: "P1+P2→CodeSync", text: `printed ${head.code} on both · reported serial ${head.serial} to T&T link` });
+  }
+  const last = q.lastSerial;
+  onStage({ id: "codes", ok: true, detail: `${printed} codes printed on both printers · last serial ${last}` });
+
+  // 6. Real 30-s poll returns the last printed serial
+  const pollWait = opts.pollWaitMs ?? 45_000;
+  onStage({ id: "poll", ok: null, detail: `Waiting for Track-n-Trace's status poll (every 30 s, up to ${pollWait / 1000} s)…` });
+  let reply: number | null = null;
+  const off = tnt.onFrame((f) => {
+    if (f.dir === "out" && f.name.toUpperCase().includes("REQUEST")) {
+      const ls = (f.json as { lastSerial?: number } | null)?.lastSerial;
+      if (typeof ls === "number") reply = ls;
+    }
+  });
+  await waitFor(async () => reply !== null, pollWait, signal);
+  off();
+  if (reply === null) return fail("poll", signal?.aborted ? "Stopped by operator" : `No status poll from Track-n-Trace within ${pollWait / 1000} s.`);
+  if (reply !== last) return fail("poll", `Poll reply said last serial ${reply}, but ${last} was printed.`);
+  onStage({ id: "poll", ok: true, detail: `T&T polled and was told last serial ${reply} — matches the printed code` });
+  log({ t: now(), dir: "CodeSync→T&T", text: `LAST SERIAL ${reply} ✓` });
+  return { ok: true, detail: `Real Track-n-Trace link validated: connected, Config + Print accepted, ${printed} codes printed on both printers, poll reply correct (serial ${last}).` };
+}
