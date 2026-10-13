@@ -45,6 +45,24 @@ export function safetyCheck(): LiveStepResult {
 
 /** True when this validation session opened the live link itself (so it closes it again). */
 let validationOwnsLink = false;
+/** Printers + pair used by the last successful connection check, so later steps can reopen a dropped link. */
+let lastPrinters: Printer[] = [];
+
+/** Reopen the live link (e.g. after the printer or the PC dropped the socket between steps). */
+async function reopenLink(): Promise<{ ok: boolean; error?: string }> {
+  const pair = twinPairStore.getState();
+  if (!pair.a || !pair.b) return { ok: false, error: "no bound pair" };
+  if (twinDispatcher.isBound()) await twinDispatcher.unbind().catch(() => {});
+  const res = await twinDispatcher.bind(pair, lastPrinters, {
+    messageNameA: pair.a.messageName, messageNameB: pair.b.messageName,
+    fieldA: pair.a.fieldIndex, fieldB: pair.b.fieldIndex,
+    subcommandA: pair.a.subcommand, subcommandB: pair.b.subcommand,
+    autoCreateA: false, autoCreateB: false, autoCodeMode: false, skipFieldCheck: true,
+  });
+  if (res.ok) validationOwnsLink = true;
+  return { ok: res.ok, error: res.error };
+}
+const isDropped = (reason?: string) => !!reason && /no active connection|not-active|not bound|send-failed/i.test(reason);
 
 /** Close the live link if (and only if) validation opened it. */
 export async function releaseValidationLink(): Promise<void> {
@@ -109,6 +127,7 @@ export async function connectionCheck(printers: Printer[] = []): Promise<LiveSte
   const pair = twinPairStore.getState();
   if (!pair.a || !pair.b) return { ok: false, detail: "No bound pair. Press Bind Pair, choose both printers, then retry." };
 
+  if (printers.length) lastPrinters = printers;
   const findId = (ip: string, port: number) => printers.find(p => p.ipAddress === ip && p.port === port);
   const lines: string[] = [];
   let probes: SideProbe[] | null = null;
@@ -172,7 +191,16 @@ export async function sendSingle(code: string, log: (e: LiveLogEntry) => void): 
   const v = validatePrintedCode(code);
   if ("error" in v) return { ok: false, detail: v.error };
   log({ t: now(), dir: "CodeSync→P1+P2", text: code });
-  const r = await twinDispatcher.dispatch(code, { forceTrigger: true });
+  let r = await twinDispatcher.dispatch(code, { forceTrigger: true });
+  if (!r.ok && isDropped(r.reason)) {
+    log({ t: now(), dir: "CodeSync", text: `Link dropped (${r.reason}) — reconnecting to both printers and retrying once` });
+    const re = await reopenLink();
+    if (!re.ok) {
+      log({ t: now(), dir: "CodeSync", text: `Reconnect failed: ${re.error ?? "unknown"}` });
+      return { ok: false, detail: `The printer connection dropped after step 3 and could not be reopened: ${re.error ?? "unknown"}. Re-run step 3, then try again.` };
+    }
+    r = await twinDispatcher.dispatch(code, { forceTrigger: true });
+  }
   log({ t: now(), dir: "P1+P2→CodeSync", text: r.ok ? `ACK both · A ${r.aMs?.toFixed(0)}ms B ${r.bMs?.toFixed(0)}ms` : `FAIL ${r.reason}` });
   return r.ok
     ? { ok: true, detail: `Sent ${code} · P1 ${r.aMs?.toFixed(0)} ms · P2 ${r.bMs?.toFixed(0)} ms · skew ${r.skewMs?.toFixed(0)} ms`, data: r }
