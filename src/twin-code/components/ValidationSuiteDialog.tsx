@@ -165,7 +165,10 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
               </button>
             ))}
             <div className="pt-2 text-[11px] text-muted-foreground">{passed}/{STEPS.length} steps passed</div>
-            <Button size="sm" variant="outline" className="w-full" onClick={exportReport}><Download className="mr-1 h-4 w-4" /> Export report</Button>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <Button size="sm" variant="outline" onClick={exportReport}><Download className="mr-1 h-4 w-4" /> JSON</Button>
+              <Button size="sm" variant="outline" onClick={exportExcel}><Download className="mr-1 h-4 w-4" /> Excel</Button>
+            </div>
           </div>
 
           <div className="space-y-3 rounded-md border border-border p-3">
