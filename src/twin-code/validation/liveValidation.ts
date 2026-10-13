@@ -66,9 +66,20 @@ const readNumber = (raw: string | undefined, keys: string[]): number | null => {
 };
 
 /** Ask one printer for width + delay over the normal connection, and explain any failure in plain words. */
-async function probeSide(label: string, ip: string, pid: number | undefined): Promise<SideProbe> {
-  if (pid == null) return { label, ip, ok: false, width: null, delay: null, reason: `${ip} is not in the printer list on the home screen` };
+async function probeSide(label: string, ip: string, printer: Printer | undefined): Promise<SideProbe> {
+  if (!printer) return { label, ip, ok: false, width: null, delay: null, reason: `${ip} is not in the printer list on the home screen` };
+  const pid = printer.id;
   const { printerTransport } = await import("@/lib/printerTransport");
+  // The home screen only shows reachability; the command connection is opened on demand.
+  // Open it (or reuse it if already open) before asking anything.
+  try {
+    const c = await printerTransport.connect({ id: printer.id, ipAddress: printer.ipAddress, port: printer.port }) as { success?: boolean; error?: string } | null;
+    if (!c?.success) {
+      return { label, ip, ok: false, width: null, delay: null, reason: `could not open a connection to ${ip}:${printer.port}${c?.error ? ` — ${c.error}` : ""}. Make sure no other program (e.g. a Telnet window) is connected to this printer.` };
+    }
+  } catch (e) {
+    return { label, ip, ok: false, width: null, delay: null, reason: `could not open a connection to ${ip}:${printer.port} — ${String((e as Error)?.message ?? e)}` };
+  }
   const ask = async (cmd: string) => {
     const t0 = performance.now();
     try {
@@ -98,7 +109,7 @@ export async function connectionCheck(printers: Printer[] = []): Promise<LiveSte
   const pair = twinPairStore.getState();
   if (!pair.a || !pair.b) return { ok: false, detail: "No bound pair. Press Bind Pair, choose both printers, then retry." };
 
-  const findId = (ip: string, port: number) => printers.find(p => p.ipAddress === ip && p.port === port)?.id;
+  const findId = (ip: string, port: number) => printers.find(p => p.ipAddress === ip && p.port === port);
   const lines: string[] = [];
   let probes: SideProbe[] | null = null;
 
