@@ -52,35 +52,105 @@ export async function releaseValidationLink(): Promise<void> {
   validationOwnsLink = false;
 }
 
+interface SideProbe { label: string; ip: string; ok: boolean; width: number | null; delay: number | null; reason?: string; raw?: string }
+
+const readNumber = (raw: string | undefined, keys: string[]): number | null => {
+  if (!raw) return null;
+  const cleaned = raw.replace(/^success$/gim, "").trim();
+  for (const k of keys) {
+    const m = cleaned.match(new RegExp(`${k}\\s*[:=]?\\s*(-?\\d+)`, "i"));
+    if (m) return parseInt(m[1], 10);
+  }
+  const line = cleaned.split(/\r?\n/).map(l => l.trim()).find(l => /^-?\d+$/.test(l));
+  return line ? parseInt(line, 10) : null;
+};
+
+/** Ask one printer for width + delay over the normal connection, and explain any failure in plain words. */
+async function probeSide(label: string, ip: string, pid: number | undefined): Promise<SideProbe> {
+  if (pid == null) return { label, ip, ok: false, width: null, delay: null, reason: `${ip} is not in the printer list on the home screen` };
+  const { printerTransport } = await import("@/lib/printerTransport");
+  const ask = async (cmd: string) => {
+    const t0 = performance.now();
+    try {
+      const r = await printerTransport.sendCommand(pid, cmd, { maxWaitMs: 3000 });
+      return { r, ms: Math.round(performance.now() - t0) };
+    } catch (e) {
+      return { r: { success: false, error: String((e as Error)?.message ?? e) } as { success: boolean; response?: string; error?: string }, ms: Math.round(performance.now() - t0) };
+    }
+  };
+  const pw = await ask("^PW");
+  const da = await ask("^DA");
+  const width = pw.r?.success ? readNumber(pw.r.response, ["PW", "Pad\\s*Width", "Print\\s*Width", "Width"]) : null;
+  const delay = da.r?.success ? readNumber(da.r.response, ["DA", "FwdDelay", "Fwd\\s*Delay", "Forward\\s*Delay", "Delay"]) : null;
+  if (width != null || delay != null) return { label, ip, ok: true, width, delay };
+  const describe = (cmd: string, x: { r: { success: boolean; response?: string; error?: string } | null; ms: number }) => {
+    if (!x.r) return `${cmd}: no answer`;
+    if (!x.r.success) return `${cmd}: ${x.r.error || "no answer"} after ${x.ms} ms`;
+    const txt = (x.r.response || "").replace(/\s+/g, " ").trim();
+    return txt ? `${cmd}: replied "${txt.slice(0, 60)}" but no number found` : `${cmd}: connected but empty reply after ${x.ms} ms`;
+  };
+  return { label, ip, ok: false, width, delay, reason: `${describe("^PW", pw)}; ${describe("^DA", da)}`, raw: `${pw.r?.response ?? ""} | ${da.r?.response ?? ""}` };
+}
+
 export async function connectionCheck(printers: Printer[] = []): Promise<LiveStepResult> {
   const safety = safetyCheck();
   if (!safety.ok) return safety;
+  const pair = twinPairStore.getState();
+  if (!pair.a || !pair.b) return { ok: false, detail: "No bound pair. Press Bind Pair, choose both printers, then retry." };
+
+  const findId = (ip: string, port: number) => printers.find(p => p.ipAddress === ip && p.port === port)?.id;
+  const lines: string[] = [];
+  let probes: SideProbe[] | null = null;
+
   if (!twinDispatcher.isBound()) {
-    const pair = twinPairStore.getState();
-    if (!pair.a || !pair.b) return { ok: false, detail: "No bound pair. Press Bind Pair, choose both printers, then retry." };
-    // Pair is saved but the live link isn't open (production not started) — open it for testing only.
+    // 1) Ask each printer directly BEFORE switching them into live (one-to-one) mode —
+    //    in that mode the printers only listen for print data, so settings queries go unanswered.
+    probes = await Promise.all([
+      probeSide("Printer 1 (lid)", pair.a.ip, findId(pair.a.ip, pair.a.port)),
+      probeSide("Printer 2 (side)", pair.b.ip, findId(pair.b.ip, pair.b.port)),
+    ]);
+    for (const p of probes) {
+      lines.push(p.ok
+        ? `✓ ${p.label} ${p.ip}: width ${p.width ?? "?"}, delay ${p.delay ?? "?"}`
+        : `✗ ${p.label} ${p.ip}: ${p.reason}`);
+    }
+    const bad = probes.filter(p => !p.ok);
+    if (bad.length) {
+      return {
+        ok: false,
+        detail: `No reply from ${bad.map(b => b.label).join(" and ")}.\n${lines.join("\n")}\nCheck the printer is switched on, shows as online on the home screen, and the IP/port match the pair.`,
+        data: probes,
+      };
+    }
+
+    // 2) Open the live link (test only — closed again when the window closes).
     const res = await twinDispatcher.bind(pair, printers, {
       messageNameA: pair.a.messageName, messageNameB: pair.b.messageName,
       fieldA: pair.a.fieldIndex, fieldB: pair.b.fieldIndex,
       subcommandA: pair.a.subcommand, subcommandB: pair.b.subcommand,
       autoCreateA: pair.a.autoCreate ?? true, autoCreateB: pair.b.autoCreate ?? true,
       autoCodeMode: false,
-      // Printers in One-to-One mode often don't answer ^LF, which made the
-      // test link fail. Steps 4–7 prove the field prints, so skip it here.
+      // Printers in One-to-One mode don't answer ^LF. Steps 4–7 prove the field prints.
       skipFieldCheck: true,
     });
-    if (!res.ok) return { ok: false, detail: `Pair is bound but the live link could not open: ${res.error ?? "unknown error"}` };
+    if (!res.ok) {
+      return { ok: false, detail: `${lines.join("\n")}\n✗ Both printers answered, but the live print link could not open: ${res.error ?? "unknown error"}`, data: probes };
+    }
     validationOwnsLink = true;
+    lines.push(`✓ Live print link open (messages ${pair.a.messageName} / ${pair.b.messageName})`);
+    const ids = twinDispatcher.getBoundIds();
+    return { ok: true, detail: `Both printers answered and the live link is open (IDs ${ids?.aId}/${ids?.bId}).\n${lines.join("\n")}`, data: probes };
   }
+
+  // Link was already open (e.g. bound elsewhere). Printers may ignore settings queries in live mode,
+  // so a successful bind is the pass condition; width/delay are shown when available.
   const ids = twinDispatcher.getBoundIds();
   const params = await twinDispatcher.fetchLivePrintParams().catch(() => null);
-  if (!params) return { ok: false, detail: "Pair is bound but printers did not answer." };
-  const okA = params.a.widthDots != null || params.a.delayDots != null;
-  const okB = params.b.widthDots != null || params.b.delayDots != null;
-  if (!okA || !okB) return { ok: false, detail: `No reply from ${!okA ? "Printer 1 (lid)" : ""}${!okA && !okB ? " and " : ""}${!okB ? "Printer 2 (side)" : ""}.`, data: params };
+  const fmt = (s?: { widthDots: number | null; delayDots: number | null }) =>
+    s && (s.widthDots != null || s.delayDots != null) ? `width ${s.widthDots ?? "?"}, delay ${s.delayDots ?? "?"}` : "settings not readable in live mode";
   return {
     ok: true,
-    detail: `Both printers answered (IDs ${ids?.aId}/${ids?.bId}). P1 width ${params.a.widthDots ?? "?"} delay ${params.a.delayDots ?? "?"} · P2 width ${params.b.widthDots ?? "?"} delay ${params.b.delayDots ?? "?"}.`,
+    detail: `Live link already open (IDs ${ids?.aId}/${ids?.bId}).\n✓ Printer 1 (lid): ${fmt(params?.a)}\n✓ Printer 2 (side): ${fmt(params?.b)}`,
     data: params,
   };
 }
