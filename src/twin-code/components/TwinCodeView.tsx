@@ -8,7 +8,7 @@
  * bordered panel.
  */
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Download,
@@ -74,6 +74,14 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
   const [config, setConfig] = useState(DEFAULT_GENERATOR_CONFIG);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [bindOpen, setBindOpen] = useState(false);
+  const location = useLocation();
+  // Deep-link: the PrintersScreen "Configure TwinCode pair" hint button navigates
+  // here with { autoBind: true } so the bind dialog opens immediately instead of
+  // the operator hunting for the top-bar bind button.
+  useEffect(() => {
+    if (embedded) return;
+    if ((location.state as { autoBind?: boolean } | null)?.autoBind) setBindOpen(true);
+  }, [location.key, embedded]);
   const pair = useTwinPair();
   const isBound = !!(pair.a && pair.b);
   const [view, setView] = useState<"hud" | "debug">(() => {
