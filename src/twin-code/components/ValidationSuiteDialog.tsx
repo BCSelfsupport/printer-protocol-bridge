@@ -126,7 +126,12 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
     <Dialog open={open} onOpenChange={(v) => { if (!busy) { if (!v) void releaseValidationLink(); onOpenChange(v); } }}>
       <DialogContent className="max-h-[94vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><FlaskConical className="h-5 w-5" /> TwinCode validation — step by step</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <FlaskConical className="h-5 w-5" /> TwinCode validation — step by step
+            <span className="ml-2 rounded bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+              v{typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "?"}
+            </span>
+          </DialogTitle>
           <DialogDescription>
             Test data is built from the old system's recorded Track-n-Trace log (Config, Line 07, Year A, today's Julian day). Test serials start at {TEST_SERIAL_START} so they can't be mistaken for production codes. The serial list, ledger and production runs are never touched.
           </DialogDescription>
