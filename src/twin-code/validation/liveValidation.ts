@@ -67,6 +67,19 @@ export async function sendSingle(code: string, log: (e: LiveLogEntry) => void): 
     : { ok: false, detail: `Send failed: ${r.reason}`, data: r };
 }
 
+/** Send N consecutive codes to both printers, one after another, logging each transmit. */
+export async function sendBatch(codes: string[], log: (e: LiveLogEntry) => void, onSent?: (index: number, code: string, ok: boolean) => void): Promise<LiveStepResult> {
+  const sent: string[] = []; const failed: { code: string; reason: string }[] = [];
+  for (let i = 0; i < codes.length; i++) {
+    const r = await sendSingle(codes[i], log);
+    onSent?.(i, codes[i], r.ok);
+    if (r.ok) sent.push(codes[i]); else { failed.push({ code: codes[i], reason: r.detail }); break; }
+  }
+  return failed.length
+    ? { ok: false, detail: `Stopped at code ${failed[0].code}: ${failed[0].reason} (${sent.length}/${codes.length} sent)`, data: { sent, failed } }
+    : { ok: true, detail: `${sent.length} codes transmitted to both printers`, data: { sent, failed } };
+}
+
 export interface LiveRunSummary {
   configFlags: ReturnType<typeof mapConfigToPrinters>;
   printed: string[]; failures: { code: string; reason: string }[];

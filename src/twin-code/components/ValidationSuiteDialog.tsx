@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CheckCircle2, XCircle, Circle, Loader2, Download, FlaskConical, ChevronRight, AlertTriangle } from "lucide-react";
 import { runValidation, DEFAULT_VALIDATION, TEST_DATA, type CheckResult } from "../validation/validationSuite";
 import {
-  safetyCheck, connectionCheck, sendSingle, runLiveReplay, buildTestPrintMessage, julianToday,
+  safetyCheck, connectionCheck, sendSingle, sendBatch, runLiveReplay, buildTestPrintMessage, julianToday,
   LOG_CONFIG, TEST_SERIAL_START, type LiveLogEntry,
 } from "../validation/liveValidation";
 import { buildPrintedCode } from "../tntLineRunner";
@@ -22,7 +22,7 @@ const STEPS = [
   { id: "software", title: "1. Software checks (no printers)", what: "Runs 33 checks of the Track-n-Trace message handling, code format, queue, rollover and status reply using test data. Nothing is sent to printers." },
   { id: "safety", title: "2. Safety check", what: "Confirms no production run and no live line is active, so test codes cannot mix with real production." },
   { id: "connection", title: "3. Live printer connection", what: "Checks the bound pair and asks both printers for their live settings over the network." },
-  { id: "single", title: "4. Single test code", what: "Sends one test code to both printers and fires a print. Check the result on the printers, then confirm below." },
+  { id: "single", title: "4. Ten test codes", what: "Sends 10 consecutive test codes to both printers, one after another. Then check each printed code on the line and confirm them one at a time below." },
   { id: "replay", title: "5. Track-n-Trace replay to live printers", what: "Plays the old system's recorded Config, then a test Print message, and drives both real printers through the two-code queue. Stops at the first failure." },
   { id: "stall", title: "6. Printer failure test", what: "Stop or disconnect Printer 2 (side), then send. CodeSync must hold the code on both printers. Reconnect and resend the SAME code — nothing must be skipped." },
   { id: "inspect", title: "7. Printed output inspection", what: "Check the physical prints and tick every box." },
@@ -48,7 +48,9 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
   const [bottles, setBottles] = useState(20);
   const [gapMs, setGapMs] = useState(300);
   const [progress, setProgress] = useState(0);
-  const [singleSent, setSingleSent] = useState(false);
+  const BATCH = 10;
+  const [batchSent, setBatchSent] = useState<string[]>([]);
+  const [codeTicks, setCodeTicks] = useState<Record<string, boolean | undefined>>({});
   const [stallPhase, setStallPhase] = useState<"ready" | "held" | "done">("ready");
   const [ticks, setTicks] = useState<boolean[]>(INSPECT.map(() => false));
   const abortRef = useRef<AbortController | null>(null);
@@ -70,9 +72,14 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
   };
   const runSafety = () => { const r = safetyCheck(); set("safety", r.ok ? "pass" : "fail", r.detail); };
   const runConnection = async () => { set("connection", "running", ""); const r = await connectionCheck(); set("connection", r.ok ? "pass" : "fail", r.detail); };
+  const batchCodes = useMemo(
+    () => Array.from({ length: BATCH }, (_, i) => buildPrintedCode({ prodLine: "07", alphaYear: "A", julian: julianToday() }, startSerial + i)),
+    [startSerial],
+  );
   const runSingle = async () => {
-    set("single", "running", ""); const r = await sendSingle(testCode, addLog);
-    setSingleSent(r.ok); set("single", r.ok ? "running" : "fail", r.ok ? `${r.detail} — waiting for your confirmation` : r.detail);
+    set("single", "running", ""); setBatchSent([]); setCodeTicks({});
+    const r = await sendBatch(batchCodes, addLog, (_i, code, ok) => { if (ok) setBatchSent((p) => [...p, code]); });
+    set("single", r.ok ? "running" : "fail", r.ok ? `${r.detail} — now confirm each printed code below` : r.detail);
   };
   const runReplay = async () => {
     set("replay", "running", ""); setProgress(0); abortRef.current = new AbortController();
@@ -172,12 +179,30 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
                     <Input type="number" className="h-8 w-32" value={startSerial} min={900001} max={998000} onChange={(e) => setStartSerial(Math.max(900001, Math.min(998000, Number(e.target.value) || TEST_SERIAL_START)))} /></div>
                   <div className="text-xs">Code to print: <span className="font-mono font-semibold">{testCode}</span></div>
                 </div>
-                <Button size="sm" onClick={runSingle} disabled={busy || liveBlocked}>Send test code to both printers</Button>
-                {singleSent && steps.single.status === "running" && (
-                  <div className="flex flex-wrap gap-2">
-                    <span className="w-full text-xs">Did Printer 1 print a DataMatrix and Printer 2 print <span className="font-mono">{testCode}</span>?</span>
-                    <Button size="sm" onClick={() => set("single", "pass", `${testCode} confirmed on both printers by operator`)}>Yes, both printed</Button>
-                    <Button size="sm" variant="outline" onClick={() => set("single", "fail", "Operator reported wrong or missing print")}>No</Button>
+                <Button size="sm" onClick={runSingle} disabled={busy || liveBlocked}>Send {BATCH} test codes to both printers</Button>
+                {batchSent.length > 0 && steps.single.status === "running" && (
+                  <div className="space-y-1">
+                    <span className="text-xs">Check each printed code on the line and mark it:</span>
+                    {batchSent.map((c) => (
+                      <div key={c} className="flex items-center gap-2 rounded border border-border px-2 py-1 text-xs">
+                        <span className="font-mono font-semibold">{c}</span>
+                        <span className="flex-1" />
+                        {codeTicks[c] === true && <Badge variant="secondary" className="text-[10px]">printed OK</Badge>}
+                        {codeTicks[c] === false && <Badge variant="destructive" className="text-[10px]">wrong / missing</Badge>}
+                        <Button size="sm" variant={codeTicks[c] === true ? "default" : "outline"} className="h-6 px-2 text-[10px]"
+                          onClick={() => setCodeTicks((t) => ({ ...t, [c]: true }))}>OK</Button>
+                        <Button size="sm" variant={codeTicks[c] === false ? "destructive" : "outline"} className="h-6 px-2 text-[10px]"
+                          onClick={() => setCodeTicks((t) => ({ ...t, [c]: false }))}>Fail</Button>
+                      </div>
+                    ))}
+                    {batchSent.every((c) => codeTicks[c] !== undefined) && (
+                      <Button size="sm" className="mt-1"
+                        onClick={() => {
+                          const bad = batchSent.filter((c) => codeTicks[c] === false);
+                          set("single", bad.length ? "fail" : "pass",
+                            bad.length ? `Operator reported problems with: ${bad.join(", ")}` : `All ${batchSent.length} codes confirmed printed on both printers`);
+                        }}>Finish step</Button>
+                    )}
                   </div>
                 )}
               </>
