@@ -110,18 +110,26 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
     set("tnt", r.ok ? "pass" : "fail", r.detail);
   };
 
-  const exportReport = () => {
-    const report = {
+  const buildReport = () => ({
       kind: "TwinCode live validation report", generatedAt: new Date().toISOString(),
       testData: { logConfig: LOG_CONFIG, printMessage: buildTestPrintMessage(startSerial), testCode, stallCode, bottles, gapMs, sandbox: TEST_DATA, trigger, tntCodes, tntStages },
       steps: STEPS.map((s) => ({ step: s.title, ...steps[s.id] })),
       inspection: INSPECT.map((q, i) => ({ check: q, ok: ticks[i] })),
       softwareChecks: softResults, trafficLog: log,
-    };
+  });
+  const reportFilename = (ext: string) => `twincode-validation-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.${ext}`;
+  const exportReport = () => {
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }));
-    a.download = `twincode-validation-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(buildReport(), null, 2)], { type: "application/json" }));
+    a.download = reportFilename("json");
     a.click(); URL.revokeObjectURL(a.href);
+  };
+  const exportExcel = () => {
+    try {
+      downloadValidationXlsx(buildReport() as ValidationReport, reportFilename("xlsx"));
+    } catch (err) {
+      console.error("Excel export failed", err);
+    }
   };
 
   const Icon = ({ s }: { s: Status }) =>
