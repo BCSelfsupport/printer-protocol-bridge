@@ -10,10 +10,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CheckCircle2, XCircle, Circle, Loader2, Download, FlaskConical, ChevronRight, AlertTriangle } from "lucide-react";
 import { runValidation, DEFAULT_VALIDATION, TEST_DATA, type CheckResult } from "../validation/validationSuite";
 import {
-  safetyCheck, connectionCheck, sendSingle, sendBatch, runLiveReplay, buildTestPrintMessage, julianToday,
+  safetyCheck, connectionCheck, releaseValidationLink, sendSingle, sendBatch, runLiveReplay, buildTestPrintMessage, julianToday,
   LOG_CONFIG, TEST_SERIAL_START, type LiveLogEntry,
 } from "../validation/liveValidation";
 import { buildPrintedCode } from "../tntLineRunner";
+import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 
 type Status = "todo" | "running" | "pass" | "fail";
 interface StepState { status: Status; detail: string; at?: string }
@@ -58,6 +59,7 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
 
   const testCode = useMemo(() => buildPrintedCode({ prodLine: "07", alphaYear: "A", julian: julianToday() }, startSerial), [startSerial]);
   const stallCode = useMemo(() => buildPrintedCode({ prodLine: "07", alphaYear: "A", julian: julianToday() }, startSerial + 500), [startSerial]);
+  const { printers } = usePrinterStorage();
   const addLog = (e: LiveLogEntry) => setLog((l) => [...l.slice(-400), e]);
   const set = (id: StepId, status: Status, detail: string) =>
     setSteps((s) => ({ ...s, [id]: { status, detail, at: new Date().toISOString() } }));
@@ -71,7 +73,7 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
     set("software", fail ? "fail" : "pass", `${out.results.length - fail - pend} pass · ${fail} fail · ${pend} waiting on Authentix`);
   };
   const runSafety = () => { const r = safetyCheck(); set("safety", r.ok ? "pass" : "fail", r.detail); };
-  const runConnection = async () => { set("connection", "running", ""); const r = await connectionCheck(); set("connection", r.ok ? "pass" : "fail", r.detail); };
+  const runConnection = async () => { set("connection", "running", ""); const r = await connectionCheck(printers); set("connection", r.ok ? "pass" : "fail", r.detail); };
   const batchCodes = useMemo(
     () => Array.from({ length: BATCH }, (_, i) => buildPrintedCode({ prodLine: "07", alphaYear: "A", julian: julianToday() }, startSerial + i)),
     [startSerial],
@@ -121,7 +123,7 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
   const passed = STEPS.filter((s) => steps[s.id].status === "pass").length;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!busy) onOpenChange(v); }}>
+    <Dialog open={open} onOpenChange={(v) => { if (!busy) { if (!v) void releaseValidationLink(); onOpenChange(v); } }}>
       <DialogContent className="max-h-[94vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><FlaskConical className="h-5 w-5" /> TwinCode validation — step by step</DialogTitle>
