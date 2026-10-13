@@ -208,8 +208,9 @@ const dispatchOpts = (t: TriggerMode) => ({ forceTrigger: t === "printgo", requi
 function watchRawAcks(log: (e: LiveLogEntry) => void): () => void {
   const api = typeof window !== "undefined" ? window.electronAPI?.oneToOne : undefined;
   if (!api?.onAck) return () => {};
-  const pair = twinPairStore.get?.();
-  const label = (id: number) => (pair && id === pair.aId ? "P1" : pair && id === pair.bId ? "P2" : `#${id}`);
+  const pair = twinPairStore.getState();
+  const ipOf = (id: number) => (lastPrinters as { id: number; ipAddress?: string }[]).find((x) => x.id === id)?.ipAddress;
+  const label = (id: number) => { const ip = ipOf(id); return ip && ip === pair.a?.ip ? "P1" : ip && ip === pair.b?.ip ? "P2" : `Printer #${id}`; };
   const meaning: Record<string, string> = { R: "R (code accepted)", T: "T (photocell seen)", C: "C (print complete)" };
   return api.onAck((p) => {
     if (p.kind === "ack" && p.char) log({ t: now(), dir: `${label(p.printerId)}→CodeSync`, text: meaning[p.char] ?? p.char });
