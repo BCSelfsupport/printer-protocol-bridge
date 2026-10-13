@@ -13,6 +13,7 @@
  */
 import {
   MSG, FrameDecoder, encodeFrame, parseConfig, parsePrint, encodeLastSerial, encodeConfigAck, toHex,
+  encodeClearBuffersReply, encodeRequestError, encodeCategoryFault,
   type ParsedPrint,
 } from "./tntCodecBrowser";
 import {
