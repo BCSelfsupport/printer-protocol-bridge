@@ -18,9 +18,7 @@ import {
   Gauge,
   Wrench,
 } from "lucide-react";
-import { ValidationSuiteDialog } from "@/twin-code/components/ValidationSuiteDialog";
-import { useLicense } from "@/contexts/LicenseContext";
-import { FlaskConical } from "lucide-react";
+import { ValidationButton } from "@/twin-code/components/ValidationButton";
 import { TwinPairBindDialog } from "@/twin-code/components/TwinPairBindDialog";
 import { useTwinPair } from "@/twin-code/twinPairStore";
 import { Badge } from "@/components/ui/badge";
@@ -67,8 +65,6 @@ export interface TwinCodeViewProps {
 }
 
 export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
-  const { canTwinCode } = useLicense();
-  const [validationOpen, setValidationOpen] = useState(false);
   const samples = useProfilerSamples();
   const [running, setRunning] = useState(false);
   const [config, setConfig] = useState(DEFAULT_GENERATOR_CONFIG);
@@ -216,11 +212,7 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <TrainingLauncherButton />
-              {canTwinCode && (
-                <Button size="sm" variant="outline" className="h-7 gap-1 px-2.5 text-xs" onClick={() => setValidationOpen(true)} title="Full end-to-end validation using simulated Track-n-Trace and test data — does not affect production">
-                  <FlaskConical className="h-3.5 w-3.5" /> Validate
-                </Button>
-              )}
+              <ValidationButton />
               <Button
                 size="sm"
                 variant="ghost"
@@ -291,7 +283,6 @@ export function TwinCodeView({ embedded = false }: TwinCodeViewProps) {
 
         {/* At-a-glance status ribbon — pinned beneath header in both views */}
         <StatusRibbon />
-        {canTwinCode && <ValidationSuiteDialog open={validationOpen} onOpenChange={setValidationOpen} />}
 
         <main className={mainClass}>
           <FirstLaunchBanner />

@@ -53,6 +53,8 @@ export async function releaseValidationLink(): Promise<void> {
 }
 
 export async function connectionCheck(printers: Printer[] = []): Promise<LiveStepResult> {
+  const safety = safetyCheck();
+  if (!safety.ok) return safety;
   if (!twinDispatcher.isBound()) {
     const pair = twinPairStore.getState();
     if (!pair.a || !pair.b) return { ok: false, detail: "No bound pair. Press Bind Pair, choose both printers, then retry." };
@@ -81,6 +83,8 @@ export async function connectionCheck(printers: Printer[] = []): Promise<LiveSte
 }
 
 export async function sendSingle(code: string, log: (e: LiveLogEntry) => void): Promise<LiveStepResult> {
+  const safety = safetyCheck();
+  if (!safety.ok) return safety;
   const v = validatePrintedCode(code);
   if ("error" in v) return { ok: false, detail: v.error };
   log({ t: now(), dir: "CodeSync→P1+P2", text: code });
@@ -122,6 +126,8 @@ export async function runLiveReplay(opts: {
   startSerial: number; bottles: number; gapMs: number;
   log: (e: LiveLogEntry) => void; onProgress: (done: number, total: number) => void; signal?: AbortSignal;
 }): Promise<LiveStepResult & { summary?: LiveRunSummary }> {
+  const safety = safetyCheck();
+  if (!safety.ok) return safety;
   const { log } = opts;
   const dec = new FrameDecoder();
 
