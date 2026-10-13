@@ -1,6 +1,7 @@
 // Excel (.xlsx) version of the TwinCode validation report.
 // Same content as the JSON report, arranged into readable sheets.
 import * as XLSX from "xlsx";
+import { localDateTime, localDate, localTimeZone } from "./clock";
 
 export interface ValidationReport {
   generatedAt: string;
@@ -14,10 +15,13 @@ export interface ValidationReport {
 export function buildValidationWorkbook(report: ValidationReport): Uint8Array {
   const wb = XLSX.utils.book_new();
 
+  const generated = new Date(report.generatedAt);
   const summary: (string | number | null)[][] = [
     ["TwinCode validation report", null],
-    ["Generated", new Date(report.generatedAt).toLocaleString()],
+    ["Generated (PC clock)", localDateTime(generated)],
+    ["Time zone", localTimeZone(generated)],
     ["Generated (UTC)", report.generatedAt],
+    ["Traffic log times", `PC clock (HH:MM:SS.mmm) on ${localDate(generated)}`],
     ["Steps passed", `${report.steps.filter((s) => s.status === "pass").length} of ${report.steps.length}`],
     ["Software checks passed", `${report.softwareChecks.filter((c) => c.status === "pass").length} of ${report.softwareChecks.length}`],
     ["Inspection checks ticked", `${report.inspection.filter((c) => c.ok).length} of ${report.inspection.length}`],

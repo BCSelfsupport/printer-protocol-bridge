@@ -119,7 +119,7 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
       inspection: INSPECT.map((q, i) => ({ check: q, ok: ticks[i] })),
       softwareChecks: softResults, trafficLog: log,
   });
-  const reportFilename = (ext: string) => `twincode-validation-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.${ext}`;
+  const reportFilename = (ext: string) => `twincode-validation-${fileStamp()}.${ext}`;
   const exportReport = () => {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([JSON.stringify(buildReport(), null, 2)], { type: "application/json" }));

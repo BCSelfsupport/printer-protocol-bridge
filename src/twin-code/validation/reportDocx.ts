@@ -19,7 +19,7 @@ import {
   WidthType,
 } from "docx";
 import type { ValidationReport } from "./reportXlsx";
-import { localDateTime, localDate, localTimeZone } from "./clock";
+import { localDateTime, localDate, localTimeZone, localTime } from "./clock";
 
 const CONTENT_WIDTH = 9360; // US Letter, 1" margins
 const border = { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" } as const;
