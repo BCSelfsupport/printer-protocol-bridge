@@ -23,7 +23,7 @@ describe("messageSeeds — protocol v2.6 conformance", () => {
     expect(cmds[1]).not.toMatch(/\^AT1;0;0;7;/);
   });
 
-  it("Auto-code seed uses ^NM + named ^NF append flow (DOZEN12 pattern), font 2, ^AP type 8", () => {
+  it("Auto-code seed uses ^NM + named ^NF append flow (DOZEN12 pattern), font 2, static year letter", () => {
     const seed = buildAutoCodeSeed({ line: "27", unit: "U", counterSlot: 1 });
     const cmds = buildSeedCommands(seed, "AUTO");
     // ^DM, ^NM (header + first field), ^NF x4 = 6 commands
@@ -35,7 +35,9 @@ describe("messageSeeds — protocol v2.6 conformance", () => {
     expect(cmds[1]).not.toMatch(/\^AD/);
     expect(cmds[1]).not.toMatch(/\^AC/);
     // The remaining four fields each get their own ^NF line
-    expect(cmds[2]).toMatch(/^\^NF AUTO;\^AP2;\d+;0;2;10$/);
+    // Year letter is a static text field baked from the host year map — the
+    // ^AP program-year form left a blank gap on the printer HMI.
+    expect(cmds[2]).toMatch(/^\^NF AUTO;\^AT2;\d+;0;2;[A-Z]$/);
     expect(cmds[3]).toMatch(/^\^NF AUTO;\^AD3;\d+;0;2;4$/);
     expect(cmds[4]).toMatch(/^\^NF AUTO;\^AC4;\d+;0;2;1;6;1$/);
     expect(cmds[5]).toMatch(/^\^NF AUTO;\^AT5;\d+;0;2;U$/);
