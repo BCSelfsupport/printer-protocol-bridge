@@ -22,7 +22,7 @@ const STEPS = [
   { id: "software", title: "1. Software checks (no printers)", what: "Runs 33 checks of the Track-n-Trace message handling, code format, queue, rollover and status reply using test data. Nothing is sent to printers." },
   { id: "safety", title: "2. Safety check", what: "Confirms no production run and no live line is active, so test codes cannot mix with real production." },
   { id: "connection", title: "3. Live printer connection", what: "Checks the bound pair and asks both printers for their live settings over the network." },
-  { id: "single", title: "4. Single test code", what: "Sends one test code to both printers and fires a print. Check the result on the printers, then confirm below." },
+  { id: "single", title: "4. Ten test codes", what: "Sends 10 consecutive test codes to both printers, one after another. Then check each printed code on the line and confirm them one at a time below." },
   { id: "replay", title: "5. Track-n-Trace replay to live printers", what: "Plays the old system's recorded Config, then a test Print message, and drives both real printers through the two-code queue. Stops at the first failure." },
   { id: "stall", title: "6. Printer failure test", what: "Stop or disconnect Printer 2 (side), then send. CodeSync must hold the code on both printers. Reconnect and resend the SAME code — nothing must be skipped." },
   { id: "inspect", title: "7. Printed output inspection", what: "Check the physical prints and tick every box." },
