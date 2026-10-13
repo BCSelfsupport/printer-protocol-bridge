@@ -23,9 +23,11 @@ export const LOG_CONFIG = "2001000800000003000000000800000003000006";
 /** Test serials sit in a reserved high range so they can never be confused with production codes. */
 export const TEST_SERIAL_START = 900001;
 
+/** Day-of-year from the PC's LOCAL calendar date (never UTC). */
 export function julianToday(d = new Date()): string {
-  const start = Date.UTC(d.getUTCFullYear(), 0, 0);
-  return String(Math.floor((Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - start) / 86400000)).padStart(3, "0");
+  // Use UTC arithmetic on the local Y/M/D so DST shifts can't skew the count.
+  const start = Date.UTC(d.getFullYear(), 0, 0);
+  return String(Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - start) / 86400000)).padStart(3, "0");
 }
 
 export function buildTestPrintMessage(startSerial: number, line = "07", year = "A", julian = julianToday()): string {
