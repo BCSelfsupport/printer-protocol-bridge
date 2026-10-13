@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CheckCircle2, XCircle, Circle, Loader2, Download, FlaskConical, ChevronRight, AlertTriangle } from "lucide-react";
 import { runValidation, DEFAULT_VALIDATION, TEST_DATA, type CheckResult } from "../validation/validationSuite";
 import {
-  safetyCheck, connectionCheck, sendSingle, runLiveReplay, buildTestPrintMessage, julianToday,
+  safetyCheck, connectionCheck, sendSingle, sendBatch, runLiveReplay, buildTestPrintMessage, julianToday,
   LOG_CONFIG, TEST_SERIAL_START, type LiveLogEntry,
 } from "../validation/liveValidation";
 import { buildPrintedCode } from "../tntLineRunner";
