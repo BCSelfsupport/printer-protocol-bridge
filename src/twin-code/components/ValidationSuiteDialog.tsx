@@ -48,7 +48,9 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
   const [bottles, setBottles] = useState(20);
   const [gapMs, setGapMs] = useState(300);
   const [progress, setProgress] = useState(0);
-  const [singleSent, setSingleSent] = useState(false);
+  const BATCH = 10;
+  const [batchSent, setBatchSent] = useState<string[]>([]);
+  const [codeTicks, setCodeTicks] = useState<Record<string, boolean | undefined>>({});
   const [stallPhase, setStallPhase] = useState<"ready" | "held" | "done">("ready");
   const [ticks, setTicks] = useState<boolean[]>(INSPECT.map(() => false));
   const abortRef = useRef<AbortController | null>(null);
@@ -70,9 +72,14 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
   };
   const runSafety = () => { const r = safetyCheck(); set("safety", r.ok ? "pass" : "fail", r.detail); };
   const runConnection = async () => { set("connection", "running", ""); const r = await connectionCheck(); set("connection", r.ok ? "pass" : "fail", r.detail); };
+  const batchCodes = useMemo(
+    () => Array.from({ length: BATCH }, (_, i) => buildPrintedCode({ prodLine: "07", alphaYear: "A", julian: julianToday() }, startSerial + i)),
+    [startSerial],
+  );
   const runSingle = async () => {
-    set("single", "running", ""); const r = await sendSingle(testCode, addLog);
-    setSingleSent(r.ok); set("single", r.ok ? "running" : "fail", r.ok ? `${r.detail} — waiting for your confirmation` : r.detail);
+    set("single", "running", ""); setBatchSent([]); setCodeTicks({});
+    const r = await sendBatch(batchCodes, addLog, (_i, code, ok) => { if (ok) setBatchSent((p) => [...p, code]); });
+    set("single", r.ok ? "running" : "fail", r.ok ? `${r.detail} — now confirm each printed code below` : r.detail);
   };
   const runReplay = async () => {
     set("replay", "running", ""); setProgress(0); abortRef.current = new AbortController();
