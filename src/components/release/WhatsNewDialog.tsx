@@ -20,14 +20,6 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
-    id: 'twincode-full-validation',
-    type: 'feature',
-    title: 'TwinCode: Full Validation Button',
-    date: '13 Oct 2026',
-    summary:
-      'A new Validate button on the TwinCode screen walks through a step-by-step check: software checks with test data, a safety check, live printer connection, ten live test codes confirmed one at a time, a replay of the old Track-n-Trace data to the real printers, a printer-failure test and a print inspection checklist. Test codes use serials from 900001, and serials, ledger and production runs are never touched. The report can be exported.',
-  },
-  {
     id: 'twincode-tnt-log-alignment',
     type: 'feature',
     title: 'TwinCode: Track-n-Trace Code and Printer Settings',
