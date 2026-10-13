@@ -947,7 +947,7 @@ export function PrintersScreen({
                       <Button
                         size="sm"
                         className="w-full h-7 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
-                        onClick={() => navigate('/twin-code')}
+                        onClick={() => navigate('/twin-code', { state: { autoBind: true } })}
                       >
                         <Link2 className="w-3 h-3 mr-1.5" />
                         Configure TwinCode pair
