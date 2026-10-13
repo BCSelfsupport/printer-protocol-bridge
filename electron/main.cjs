@@ -991,6 +991,16 @@ async function _sendCommandToSocketImpl(printerId, command, options = {}) {
       console.log(`[sendCommand] cmd="${command}" MAX_WAIT timeout (${MAX_WAIT_MS}ms), gotData=${gotAnyData}`);
       if (gotAnyData) finish();
       else {
+        // In One-to-One (live print) mode BestCode printers stay silent for many
+        // commands. Silence there is normal, NOT a dead socket — destroying it
+        // would silently kill the live link (TwinCode validation step 4 saw
+        // "No active connection" right after a successful bind for this reason).
+        if (oneToOneState.has(printerId) || options?.keepSocketOnTimeout) {
+          console.log(`[sendCommand] cmd="${command}" no reply (live mode) — keeping socket open`);
+          cleanup();
+          resolve({ success: false, error: 'No reply (printer in live print mode)' });
+          return;
+        }
         // No response — socket is likely dead, evict it so watchdog reconnects
         console.log(`[sendCommand] Destroying unresponsive socket for printer ${printerId}`);
         try { socket.destroy(); } catch (_) {}
