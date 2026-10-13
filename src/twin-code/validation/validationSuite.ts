@@ -121,7 +121,7 @@ const CHECKS: Check[] = [
   { id: "C5", section: "2. Config message", name: "Config acknowledgement bytes", run: async (ctx) => {
     const a = encodeConfigAck(); ctx.log({ dir: "Bridge→T&T", label: "CONFIG ACK", hex: toHex(a) });
     assert(toHex(a) === "03 03 04", toHex(a));
-    return ok("03 03 04 sent — format still to be confirmed by Authentix");
+    return ok("03 03 04 sent — confirmed by Authentix (Oct 2026)");
   } },
   { id: "C6", section: "2. Config message", name: "Legacy aperture / delay / spacing ignored", run: async () => {
     const c = parseConfig("1001" + "061430999999999900") as never;
@@ -263,16 +263,71 @@ const CHECKS: Check[] = [
     const [d] = new FrameDecoder().push(after);
     assert(d.body === `01${String(s).padStart(6, "0")}`, d.body ?? "");
     assert(toHex(before) !== toHex(after), "reported half-printed serial");
-    return ok(`reply body "${d.body}" — exact bytes still to be confirmed by Authentix`);
+    return ok(`reply body "${d.body}" — format confirmed by Authentix (Oct 2026)`);
   } },
   { id: "T2", section: "7. 30-second status poll", name: "Poll cadence: 10 polls in simulated 5 minutes", run: async () => {
     let polls = 0; for (let t = 0; t < 300_000; t += 1000) if (t % 30_000 === 0) polls++;
     assert(polls === 10, String(polls)); return ok("30 s interval → 10 polls / 5 min");
   } },
 
-  // ---------- 8. Awaiting Authentix ----------
-  { id: "A1", section: "8. Awaiting Authentix answers", name: "Fault reply format (spec §7)", run: async () => pending("Built to spec §7/§8 — confirm against a live Track-n-Trace session.") },
-  { id: "A2", section: "8. Awaiting Authentix answers", name: "Clear-All-Buffers command", run: async () => pending("Command code not yet provided by Authentix.") },
+  // ---------- 8. Fault & control replies (Charlie's Oct 2026 answers + spec §7/§8) ----------
+  { id: "A1", section: "8. Fault & control replies", name: "Clear-All-Buffers (Request 02) replies 01 '02' '1' 04 on success", run: async (ctx) => {
+    const req = encodeFrame(MSG.REQUEST, "02");
+    const [d] = new FrameDecoder().push(req);
+    assert(d.name === "REQUEST" && d.body === "02", "request 02 not decoded");
+    const okReply = encodeClearBuffersReply(true);
+    ctx.log({ dir: "T&T→Bridge", label: "REQUEST 02 (clear buffers)", hex: toHex(req) });
+    ctx.log({ dir: "Bridge→T&T", label: "CLEARED", hex: toHex(okReply) });
+    assert(toHex(okReply) === "01 30 32 31 04", toHex(okReply));
+    assert(toHex(encodeClearBuffersReply(false)) === "01 30 32 30 04", "fail reply wrong");
+    return ok("success 01 30 32 31 04 · syntax-error 01 30 32 30 04");
+  } },
+  { id: "A2", section: "8. Fault & control replies", name: "Unrecognised Request gets a syntax-error reply", run: async () => {
+    assert(toHex(encodeRequestError("09")) === "01 30 39 30 04", toHex(encodeRequestError("09")));
+    return ok("request 09 → 01 30 39 30 04");
+  } },
+  { id: "A3", section: "8. Fault & control replies", name: "Category 1 fault echoes the 13-char out-of-sync code + printer IP", run: async (ctx) => {
+    const f = encodeCategoryFault(MSG.PRINT, 1, { code: "07A274323442U", address: "192.168.0.91" });
+    ctx.log({ dir: "Bridge→T&T", label: "FAULT cat 1", hex: toHex(f) });
+    const s = String.fromCharCode(...f);
+    assert(f.length === 29, `length ${f.length}`);
+    assert(s.includes("107A274323442UU192.168.0.91"), s);
+    return ok("29 bytes · code echoed · address 'U192.168.0.91'");
+  } },
+  { id: "A4", section: "8. Fault & control replies", name: "Category 2 fault carries the §8 number, zero-padded to 13", run: async () => {
+    const f = encodeCategoryFault(MSG.PRINT, 2, { faultNumber: 16 });
+    const s = String.fromCharCode(...f);
+    assert(s === "\x02" + "2" + "0000000000016" + "\x04", JSON.stringify(s));
+    return ok("make-up empty → 2 + 0000000000016");
+  } },
+  { id: "A5", section: "8. Fault & control replies", name: "Category 3 (comms lost) with no last message is all zeros", run: async () => {
+    const f = encodeCategoryFault(MSG.PRINT, 3, {});
+    const s = String.fromCharCode(...f);
+    assert(s === "\x02" + "3" + "0".repeat(13) + "\x04", JSON.stringify(s));
+    return ok("3 + 13 zeros");
+  } },
+  { id: "A6", section: "8. Fault & control replies", name: "BestCode printer faults map onto §8 codes", run: async () => {
+    const { mapBestCodeFault, SECTION8 } = await import("../tntFaultMap");
+    const cases: Array<[string, number, number | null]> = [
+      ["Make-up cartridge low", 2, SECTION8.MAKEUP_LOW],
+      ["Ink system fault", 2, SECTION8.INK_SYSTEM],
+      ["High voltage fault", 2, SECTION8.HIGH_VOLTAGE],
+      ["connection lost", 3, null],
+      ["something odd", 2, SECTION8.UNDEFINED],
+    ];
+    for (const [text, cat, code] of cases) {
+      const f = mapBestCodeFault(text);
+      assert(f.category === cat && f.code === code, `"${text}" → cat ${f.category} code ${f.code}`);
+    }
+    return ok(`${cases.length} mappings verified (incl. comms-lost → cat 3, unknown → 0)`);
+  } },
+  { id: "A7", section: "8. Fault & control replies", name: "24-char Print with lot code stays intact through the queue", run: async () => {
+    const p = parsePrint(TEST_DATA.printWithLot) as ParsedPrint;
+    const q = new TwinPairQueue(() => {}, () => {});
+    q.start({ prodLine: p.prodLine, alphaYear: p.alphaYear, julian: p.julian }, p.serialValue);
+    assert(q.queued[0].code === "08A180220274U", q.queued[0].code);
+    return ok("lot code carried in message, not in the 13-char printed code");
+  } },
 
   // ---------- 9. Isolation ----------
   { id: "I1", section: "9. Production isolation", name: "Live catalog and production run untouched", run: async () => pending("evaluated at end of run") },
