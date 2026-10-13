@@ -20,6 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLicense } from '@/contexts/LicenseContext';
 import { useTwinPair } from '@/twin-code/twinPairStore';
 import { TwinCodeView } from '@/twin-code/components/TwinCodeView';
+import { ValidationButton } from '@/twin-code/components/ValidationButton';
 import {
   DndContext,
   closestCenter,
@@ -628,6 +629,11 @@ export function PrintersScreen({
           </div>
           
           {/* Consumables & Reports navigation */}
+          {tier === 'twincode' && (
+            <div className="mb-2">
+              <ValidationButton className="w-full h-8 gap-2 text-xs" />
+            </div>
+          )}
           <div className="flex gap-2 mb-2">
             <Button
               onClick={onConsumables}
