@@ -57,3 +57,21 @@ describe('tnt codec (spec framing)', () => {
     expect(codec.encodeFault(0x02, 2, 'B timeout').toString('ascii')).toBe('\x02\x02B timeout\x04');
   });
 });
+
+describe('Authentix Oct 2026 answers', () => {
+  const c = require('../../electron/tntCodec.cjs');
+  it('Clear-All-Buffers reply is 01 "02" "1" 04 on success', () => {
+    expect(c.encodeClearBuffersReply(true).toString('ascii')).toBe('\x0102' + '1\x04');
+    expect(c.encodeClearBuffersReply(false).toString('ascii')).toBe('\x01020\x04');
+  });
+  it('category 1 echoes the out-of-sync code', () => {
+    expect(c.encodeCategoryFault(0x01, 1, { code: '34A180220274U' }).toString('ascii')).toBe('\x01\x0134A180220274U\x04');
+  });
+  it('category 2/4 carry only the fault number', () => {
+    expect(c.encodeCategoryFault(0x01, 2, { faultNumber: 17 }).toString('ascii')).toBe('\x01\x0217\x04');
+    expect(c.encodeCategoryFault(0x01, 4, { faultNumber: '5' }).toString('ascii')).toBe('\x01\x045\x04');
+  });
+  it('category 3 is all zeros', () => {
+    expect(c.faultContent(3)).toMatch(/^0+$/);
+  });
+});

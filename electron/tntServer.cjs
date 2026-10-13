@@ -153,6 +153,13 @@ class TntServer extends EventEmitter {
       if (f.body === '01') {
         this.state.lastPollAt = stamp();
         this._sendRaw(codec.MSG.REQUEST, codec.encodeLastSerial(this.session.lastSerial), { lastSerial: this.session.lastSerial });
+      } else if (f.body === '02') {
+        // Clear-All-Buffers: drop the loaded Print message; T&T re-sends Config/Print.
+        this.session.print = null;
+        this.state.printMessage = null;
+        this._sendRaw(codec.MSG.REQUEST, codec.encodeClearBuffersReply(true), { clearBuffers: 'ok' });
+        this.emit('clear-buffers', { at: stamp() });
+        this._emitState();
       } else {
         this.emit('request-unknown', { command: f.body, at: stamp() });
       }
@@ -176,6 +183,11 @@ class TntServer extends EventEmitter {
   /** Fault return to T&T (msgId = message being answered, category = fault category byte). */
   sendFault(msgId, category, info) {
     return this._sendRaw(msgId, codec.encodeFault(msgId, category, info), { fault: { msgId, category, info: info || '' } });
+  }
+
+  /** Category fault (1 out-of-sync code, 2/4 Section 8 number, 3 zeros). */
+  sendCategoryFault(msgId, category, opts) {
+    return this._sendRaw(msgId, codec.encodeCategoryFault(msgId, category, opts), { fault: { msgId, category, ...(opts || {}) } });
   }
 
   /** Generic send: type byte + ASCII body + EOM. */
