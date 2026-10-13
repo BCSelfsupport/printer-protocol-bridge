@@ -25,7 +25,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
     title: 'TwinCode: Full Validation Button',
     date: '13 Oct 2026',
     summary:
-      'A new Validate button on the TwinCode screen runs a complete end-to-end check using simulated Track-n-Trace messages and two virtual printers. It never touches real printers, serials or production runs, and the report can be exported.',
+      'A new Validate button on the TwinCode screen walks through a step-by-step check: software checks with test data, a safety check, live printer connection, a single test code, a replay of the old Track-n-Trace data to the real printers, a printer-failure test and a print inspection checklist. Test codes use serials from 900001, and serials, ledger and production runs are never touched. The report can be exported.',
   },
   {
     id: 'twincode-tnt-log-alignment',
