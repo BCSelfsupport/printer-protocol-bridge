@@ -90,9 +90,12 @@ export const encodeConfigAck = () => encodeFrame(MSG.CONFIG, new Uint8Array([MSG
 
 export const toHex = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join(" ");
 
-/** Controller Return / Fault: [MsgId][FaultCategory][optional ASCII info][EOM]. Mirrors tntCodec.cjs. */
-export function encodeFault(msgId: number, category: number, info = ""): Uint8Array {
-  const cat = Number.isInteger(category) && category >= 0 && category <= 255 ? category : 0;
-  const text = Array.from(info, (c) => { const n = c.charCodeAt(0); return n < 0x20 || n > 0x7e ? 0x20 : n; });
-  return encodeFrame(msgId, new Uint8Array([cat, ...text]));
+/** Controller Return / Fault §7: [MsgId][Cat ASCII][Message 13][Address 13 opt][EOM]. Mirrors tntCodec.cjs. */
+export function encodeFault(msgId: number, category: number, message = "", address = ""): Uint8Array {
+  const clean = (t: string) => t.replace(/[^\x20-\x7e]/g, " ");
+  const cat = Number.isInteger(category) && category >= 1 && category <= 9 ? category : 2;
+  const m = clean(message);
+  const msg = /^\d+$/.test(m) ? m.slice(-13).padStart(13, "0") : m.slice(0, 13).padEnd(13, " ");
+  const addr = address ? ("U" + clean(address)).slice(0, 13).padEnd(13, " ") : "";
+  return encodeFrame(msgId, new TextEncoder().encode(String(cat) + msg + addr));
 }

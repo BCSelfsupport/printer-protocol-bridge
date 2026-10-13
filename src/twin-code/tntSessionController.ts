@@ -25,6 +25,7 @@
  * `tntPrintMessage.ts` so the fix is localised.
  */
 
+import { mapBestCodeFault } from "./tntFaultMap";
 import {
   PrintMessageCounter,
   parsePrintMessage,
@@ -44,7 +45,7 @@ export const TNT_OPCODES = {
   FAULT: 0x60,
 } as const;
 
-export type TntFaultCategory = 1 | 2;
+export type TntFaultCategory = 1 | 2 | 3;
 
 export interface TntFault {
   category: TntFaultCategory;
@@ -52,6 +53,10 @@ export interface TntFault {
   subCode: number | null;
   message: string;
   at: string;
+  /** Faulty printer's IP — sent in the spec §7 address field. */
+  address?: string;
+  /** Category 1 echo: the out-of-sync printed code. */
+  code?: string;
 }
 
 export interface TntSessionState {
@@ -86,7 +91,7 @@ export interface TntFrameEntryLike {
 }
 
 /** Serial sink: production wires this to twinDispatcher.dispatch(). */
-export type DispatchFn = (serial: string) => Promise<{ ok: boolean; error?: string }>;
+export type DispatchFn = (serial: string) => Promise<{ ok: boolean; error?: string; address?: string }>;
 
 export interface TntSessionControllerOptions {
   api: TntApiLike;
@@ -280,13 +285,14 @@ export class TntSessionController {
 
     const result = await this.dispatchFn(serial);
     if (!result.ok) {
-      // Dispatch failures are line faults; category/sub-code mapping awaits
-      // Interface Spec §8 (Q6) — send as Category 2 placeholder, sub-code 0.
+      // Map the BestCode failure onto Interface Spec §8 (Category 2) or comms-lost (Category 3).
+      const spec = mapBestCodeFault(result.error);
       const fault: TntFault = {
-        category: 2,
-        subCode: 0, // placeholder until §8 lands
-        message: result.error ?? "dispatch failed",
+        category: spec.category,
+        subCode: spec.code,
+        message: result.error ?? spec.description,
         at: new Date().toISOString(),
+        address: result.address,
       };
       this.sendFault(fault);
       return { ok: false, error: result.error };
