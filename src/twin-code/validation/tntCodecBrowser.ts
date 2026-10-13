@@ -99,3 +99,25 @@ export function encodeFault(msgId: number, category: number, message = "", addre
   const addr = address ? ("U" + clean(address)).slice(0, 13).padEnd(13, " ") : "";
   return encodeFrame(msgId, new TextEncoder().encode(String(cat) + msg + addr));
 }
+
+/** Reply to Request "02" Clear-All-Buffers: 0x01 "02" "1" (cleared) or "0" (syntax error). Mirrors tntCodec.cjs. */
+export const encodeClearBuffersReply = (ok: boolean) => encodeFrame(MSG.REQUEST, "02" + (ok ? "1" : "0"));
+
+/** Syntax-error reply to an unrecognised Request: 0x01 <cmd> "0". Mirrors tntCodec.cjs. */
+export const encodeRequestError = (cmd: string) =>
+  encodeFrame(MSG.REQUEST, cmd.replace(/[^\x20-\x7e]/g, " ").slice(0, 2).padEnd(2, "0") + "0");
+
+/** Fault categories (§7). 4 = laser — not used on BestCode lines. */
+export const FAULT_CATEGORY = { OUT_OF_SYNC: 1, PRINTER_FAULT: 2, COMMS_LOST: 3, LASER_FAULT: 4 } as const;
+
+/** Category-specific 13-byte message content (§7). Mirrors tntCodec.cjs faultContent. */
+export function faultContent(category: number, opts: { code?: string; faultNumber?: number; lastMessage?: string } = {}): string {
+  if (category === 1) return opts.code ? String(opts.code) : "0000000000000";
+  if (category === 3) return opts.lastMessage ? String(opts.lastMessage) : "0";
+  return opts.faultNumber == null ? "0" : String(opts.faultNumber).replace(/\D/g, "") || "0";
+}
+
+/** §7 fault frame with category-specific content and optional printer-IP address. Mirrors tntCodec.cjs. */
+export function encodeCategoryFault(msgId: number, category: number, opts: { code?: string; faultNumber?: number; lastMessage?: string; address?: string } = {}): Uint8Array {
+  return encodeFault(msgId, category, faultContent(category, opts), opts.address);
+}
