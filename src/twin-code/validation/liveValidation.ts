@@ -65,6 +65,9 @@ export async function connectionCheck(printers: Printer[] = []): Promise<LiveSte
       subcommandA: pair.a.subcommand, subcommandB: pair.b.subcommand,
       autoCreateA: pair.a.autoCreate ?? true, autoCreateB: pair.b.autoCreate ?? true,
       autoCodeMode: false,
+      // Printers in One-to-One mode often don't answer ^LF, which made the
+      // test link fail. Steps 4–7 prove the field prints, so skip it here.
+      skipFieldCheck: true,
     });
     if (!res.ok) return { ok: false, detail: `Pair is bound but the live link could not open: ${res.error ?? "unknown error"}` };
     validationOwnsLink = true;
