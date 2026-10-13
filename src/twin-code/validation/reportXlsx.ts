@@ -58,15 +58,20 @@ export function buildValidationWorkbook(report: ValidationReport): Uint8Array {
   wsLog["!cols"] = [{ wch: 16 }, { wch: 14 }, { wch: 90 }, { wch: 80 }];
   XLSX.utils.book_append_sheet(wb, wsLog, "Traffic log");
 
-  return XLSX.write(wb, { bookType: "xlsx", type: "array" }) as Uint8Array;
+  // type "array" returns an ArrayBuffer — wrap it so callers always get real bytes.
+  const out = XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+  return new Uint8Array(out);
 }
 
 export function downloadValidationXlsx(report: ValidationReport, filename: string): void {
   const data = buildValidationWorkbook(report);
-  const blob = new Blob([data.slice().buffer as ArrayBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const blob = new Blob([data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
+  a.href = url;
   a.download = filename;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(a.href);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
