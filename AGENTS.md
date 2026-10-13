@@ -2,3 +2,4 @@
 - TwinCode validation entry points share `ValidationButton` and recheck `safetyCheck` before live operations, so home/workspace access uses the same production lock.
 - Tower Print is message-level state: combine it with each target printer's base rotation to emit protocol orientation 4–7.
 - When changing a message field's font height, snap its existing canvas Y to the nearest valid row instead of bottom-anchoring it; this preserves separate lines on 16-dot templates after save and readback.
+- Desktop sendCommand must not destroy a printer socket on no-reply while One-to-One mode is attached (or keepSocketOnTimeout is set) — printers stay silent in live mode and dropping the socket silently kills the TwinCode link.
