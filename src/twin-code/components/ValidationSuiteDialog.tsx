@@ -17,6 +17,7 @@ import { buildPrintedCode } from "../tntLineRunner";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 import { downloadValidationXlsx, type ValidationReport } from "../validation/reportXlsx";
 import { downloadValidationDocx } from "../validation/reportDocx";
+import { fileStamp } from "../validation/clock";
 
 type Status = "todo" | "running" | "pass" | "fail";
 interface StepState { status: Status; detail: string; at?: string }
