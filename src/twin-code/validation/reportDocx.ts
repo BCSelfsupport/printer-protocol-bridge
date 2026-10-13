@@ -19,6 +19,7 @@ import {
   WidthType,
 } from "docx";
 import type { ValidationReport } from "./reportXlsx";
+import { localDateTime, localDate, localTimeZone, localTime } from "./clock";
 
 const CONTENT_WIDTH = 9360; // US Letter, 1" margins
 const border = { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" } as const;
@@ -67,8 +68,10 @@ export async function buildValidationDocx(report: ValidationReport): Promise<Blo
   const checksPassed = report.softwareChecks.filter((c) => c.status === "pass").length;
   const inspected = report.inspection.filter((c) => c.ok).length;
 
+  const generated = new Date(report.generatedAt);
   const summaryRows: string[][] = [
-    ["Generated", new Date(report.generatedAt).toLocaleString()],
+    ["Generated (PC clock)", localDateTime(generated)],
+    ["Time zone", localTimeZone(generated)],
     ["Generated (UTC)", report.generatedAt],
     ["Steps passed", `${stepsPassed} of ${report.steps.length}`],
     ["Software checks passed", `${checksPassed} of ${report.softwareChecks.length}`],
@@ -137,7 +140,7 @@ export async function buildValidationDocx(report: ValidationReport): Promise<Blo
           table(
             ["Step", "Result", "Detail", "Completed at"],
             [2400, 1100, 4160, 1700],
-            report.steps.map((s) => [s.step, statusWord(s.status), s.detail, s.at ? new Date(s.at).toLocaleString() : ""]),
+            report.steps.map((s) => [s.step, statusWord(s.status), s.detail, s.at ? localTime(new Date(s.at)) : ""]),
           ),
 
           heading("3. Software checks"),
@@ -161,7 +164,7 @@ export async function buildValidationDocx(report: ValidationReport): Promise<Blo
           heading("5. Traffic log"),
           new Paragraph({
             spacing: { after: 120 },
-            children: [new TextRun({ text: "Raw communication recorded during validation (printer replies and Track-n-Trace messages).", size: 18, color: "444444" })],
+            children: [new TextRun({ text: `Raw communication recorded during validation (printer replies and Track-n-Trace messages). Times are the PC clock (HH:MM:SS.mmm) on ${localDate(generated)}.`, size: 18, color: "444444" })],
           }),
           table(
             ["Time", "Direction", "Message"],

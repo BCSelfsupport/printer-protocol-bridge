@@ -16,6 +16,7 @@ import type { Printer } from "@/types/printer";
 import { productionRun } from "../productionRun";
 import { TwinPairQueue, mapConfigToPrinters, validatePrintedCode, SERIAL_MAX, type PrinterSlot } from "../tntLineRunner";
 import { encodeFrame, FrameDecoder, MSG, parseConfig, parsePrint, encodeLastSerial, toHex, type ParsedPrint } from "./tntCodecBrowser";
+import { localTime } from "./clock";
 
 /** Exact Config frame body captured in the log at 09:07:39 (P1 normal, P2 inverted+reversed). */
 export const LOG_CONFIG = "2001000800000003000000000800000003000006";
@@ -34,7 +35,8 @@ export function buildTestPrintMessage(startSerial: number, line = "07", year = "
 export interface LiveLogEntry { t: string; dir: string; text: string; hex?: string }
 export interface LiveStepResult { ok: boolean; detail: string; data?: unknown }
 
-const now = () => new Date().toISOString().slice(11, 23);
+/** Traffic-log stamp: the PC's own clock and time zone, never UTC. */
+const now = () => localTime();
 
 /** Log the last few commands each bound printer saw, so a dropped link shows which command lost it. */
 async function logRecentCommands(log: (e: LiveLogEntry) => void): Promise<void> {
@@ -44,7 +46,7 @@ async function logRecentCommands(log: (e: LiveLogEntry) => void): Promise<void> 
   for (const [label, id] of [["P1", ids.aId], ["P2", ids.bId]] as const) {
     const recent = getCommandLog(id).slice(-6);
     for (const c of recent) {
-      const t = new Date(c.startedAt).toISOString().slice(11, 23);
+      const t = localTime(new Date(c.startedAt));
       const outcome = c.ok ? `ok ${c.durationMs}ms` : `FAIL ${c.error ?? "no reply"} (${c.durationMs}ms)`;
       log({ t, dir: `${label} history`, text: `${c.command} → ${outcome}` });
     }
