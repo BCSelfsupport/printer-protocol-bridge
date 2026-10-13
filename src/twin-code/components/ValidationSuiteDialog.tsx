@@ -89,7 +89,7 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
   };
   const runReplay = async () => {
     set("replay", "running", ""); setProgress(0); abortRef.current = new AbortController();
-    const r = await runLiveReplay({ startSerial: startSerial + 1, bottles, gapMs, trigger, log: addLog, onProgress: (d, t) => setProgress((d / t) * 100), signal: abortRef.current.signal });
+    const r = await runLiveReplay({ startSerial, bottles, gapMs, trigger, log: addLog, onProgress: (d, t) => setProgress((d / t) * 100), signal: abortRef.current.signal });
     set("replay", r.ok ? "pass" : "fail", r.detail);
   };
   const runStall = async () => {
@@ -113,7 +113,7 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
   const exportReport = () => {
     const report = {
       kind: "TwinCode live validation report", generatedAt: new Date().toISOString(),
-      testData: { logConfig: LOG_CONFIG, printMessage: buildTestPrintMessage(startSerial + 1), testCode, stallCode, bottles, gapMs, sandbox: TEST_DATA, trigger, tntCodes, tntStages },
+      testData: { logConfig: LOG_CONFIG, printMessage: buildTestPrintMessage(startSerial), testCode, stallCode, bottles, gapMs, sandbox: TEST_DATA, trigger, tntCodes, tntStages },
       steps: STEPS.map((s) => ({ step: s.title, ...steps[s.id] })),
       inspection: INSPECT.map((q, i) => ({ check: q, ok: ticks[i] })),
       softwareChecks: softResults, trafficLog: log,
@@ -237,7 +237,7 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
             {active === "replay" && (
               <>
                 <div className="rounded bg-muted/40 p-2 font-mono text-[10px]">
-                  Config (from log): {LOG_CONFIG}<br />Print (test): {buildTestPrintMessage(startSerial + 1)}
+                  Config (from log): {LOG_CONFIG}<br />Print (test): {buildTestPrintMessage(startSerial)}
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <div className="space-y-1"><Label className="text-xs">Codes to print</Label>
