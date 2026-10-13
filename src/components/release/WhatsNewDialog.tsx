@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'twincode-full-validation',
+    type: 'feature',
+    title: 'TwinCode: Full Validation Button',
+    date: '13 Oct 2026',
+    summary:
+      'A new Validate button on the TwinCode screen runs a complete end-to-end check using simulated Track-n-Trace messages and two virtual printers. It never touches real printers, serials or production runs, and the report can be exported.',
+  },
+  {
     id: 'twincode-tnt-log-alignment',
     type: 'feature',
     title: 'TwinCode: Track-n-Trace Code and Printer Settings',
