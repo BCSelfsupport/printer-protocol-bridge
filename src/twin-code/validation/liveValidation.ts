@@ -202,7 +202,28 @@ export async function connectionCheck(printers: Printer[] = []): Promise<LiveSte
 
 /** How each print is released: the real photocell on the line, or a host Print Go (bench, no product). */
 export type TriggerMode = "photocell" | "printgo";
-const dispatchOpts = (t: TriggerMode) => ({ forceTrigger: t === "printgo" });
+const dispatchOpts = (t: TriggerMode) => ({ forceTrigger: t === "printgo", requireTrigger: t === "photocell" });
+
+/** Log every raw R/T/C byte from the printers while a send is in progress. */
+function watchRawAcks(log: (e: LiveLogEntry) => void): () => void {
+  const api = typeof window !== "undefined" ? window.electronAPI?.oneToOne : undefined;
+  if (!api?.onAck) return () => {};
+  const pair = twinPairStore.get?.();
+  const label = (id: number) => (pair && id === pair.aId ? "P1" : pair && id === pair.bId ? "P2" : `#${id}`);
+  const meaning: Record<string, string> = { R: "R (code accepted)", T: "T (photocell seen)", C: "C (print complete)" };
+  return api.onAck((p) => {
+    if (p.kind === "ack" && p.char) log({ t: now(), dir: `${label(p.printerId)}→CodeSync`, text: meaning[p.char] ?? p.char });
+    else if (p.kind === "fault") log({ t: now(), dir: `${label(p.printerId)}→CodeSync`, text: `FAULT ${p.code ?? ""} ${p.raw ?? ""}` });
+  });
+}
+const explain = (reason?: string) => {
+  if (!reason) return "";
+  const hints: string[] = [];
+  if (/no-photocell/.test(reason)) hints.push("the printer reported 'complete' without ever seeing the photocell — it did not really print. Check the printer is in photocell trigger mode and the jet / high voltage is on");
+  if (/timeout-R/.test(reason)) hints.push("the printer never accepted the code (no R) — buffer full or not in live mode");
+  if (/timeout-C/.test(reason)) hints.push("no print-complete within 30 s — no product reached the photocell, or the printer is not printing");
+  return hints.length ? ` — ${hints.join("; ")}` : "";
+};
 const waitNote = (t: TriggerMode) => t === "photocell" ? " — waiting for photocell (send a product past the sensor, max 30 s)" : "";
 
 export async function sendSingle(code: string, log: (e: LiveLogEntry) => void, trigger: TriggerMode = "photocell"): Promise<LiveStepResult> {
@@ -211,6 +232,8 @@ export async function sendSingle(code: string, log: (e: LiveLogEntry) => void, t
   const v = validatePrintedCode(code);
   if ("error" in v) return { ok: false, detail: v.error };
   log({ t: now(), dir: "CodeSync→P1+P2", text: code + waitNote(trigger) });
+  const stopWatch = watchRawAcks(log);
+  try {
   let r = await twinDispatcher.dispatch(code, dispatchOpts(trigger));
   if (!r.ok && isDropped(r.reason)) {
     log({ t: now(), dir: "CodeSync", text: `Link dropped (${r.reason}) — reconnecting to both printers and retrying once` });
@@ -223,10 +246,12 @@ export async function sendSingle(code: string, log: (e: LiveLogEntry) => void, t
     r = await twinDispatcher.dispatch(code, dispatchOpts(trigger));
   }
   if (!r.ok) await logRecentCommands(log);
-  log({ t: now(), dir: "P1+P2→CodeSync", text: r.ok ? `ACK both · A ${r.aMs?.toFixed(0)}ms B ${r.bMs?.toFixed(0)}ms` : `FAIL ${r.reason}` });
+  const seq = ` [P1 ${r.aAcks || "—"} · P2 ${r.bAcks || "—"}]`;
+  log({ t: now(), dir: "P1+P2→CodeSync", text: r.ok ? `PRINTED both · A ${r.aMs?.toFixed(0)}ms B ${r.bMs?.toFixed(0)}ms${seq}` : `FAIL ${r.reason}${seq}` });
   return r.ok
     ? { ok: true, detail: `Sent ${code} · P1 ${r.aMs?.toFixed(0)} ms · P2 ${r.bMs?.toFixed(0)} ms · skew ${r.skewMs?.toFixed(0)} ms`, data: r }
-    : { ok: false, detail: `Send failed: ${r.reason}`, data: r };
+    : { ok: false, detail: `Send failed: ${r.reason}${explain(r.reason)}`, data: r };
+  } finally { stopWatch(); }
 }
 
 /** Send N consecutive codes to both printers, one after another, logging each transmit. */

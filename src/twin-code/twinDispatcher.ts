@@ -954,7 +954,7 @@ class PrinterSession {
   async sendMD(
     mdCommand: string,
     opts: { onReady?: () => void } = {},
-  ): Promise<{ ok: boolean; rttMs?: number; reason?: string }> {
+  ): Promise<{ ok: boolean; rttMs?: number; reason?: string; sawT?: boolean; acks?: string }> {
     if (!this.active) return { ok: false, reason: 'not-active' };
 
     // Pace
@@ -964,8 +964,8 @@ class PrinterSession {
 
     const id = this.nextId++;
     const tSent = performance.now();
-    let resolve!: (r: { ok: boolean; rttMs?: number; reason?: string }) => void;
-    const promise = new Promise<{ ok: boolean; rttMs?: number; reason?: string }>(r => { resolve = r; });
+    let resolve!: (r: { ok: boolean; rttMs?: number; reason?: string; sawT?: boolean; acks?: string }) => void;
+    const promise = new Promise<{ ok: boolean; rttMs?: number; reason?: string; sawT?: boolean; acks?: string }>(r => { resolve = r; });
 
     const entry: InFlight = {
       id, tSent, resolve,
@@ -1121,6 +1121,9 @@ export interface TwinDispatchResult {
   reason?: string;
   /** Per-side failure reasons — undefined when that side succeeded. */
   aReason?: string;
+  /** Raw ACK chars seen per side, e.g. "RTC" (diagnostics). */
+  aAcks?: string;
+  bAcks?: string;
   bReason?: string;
 }
 
@@ -1857,7 +1860,7 @@ class TwinDispatcher {
     // In autoCode, skip the ^MD push on B (printer auto-counts via ^AC slot).
     // Synthesize a successful side-B result so the bonded result aggregator
     // doesn't fault out and so the conveyor still records a clean print.
-    const pB: Promise<{ ok: boolean; rttMs?: number; reason?: string }> = autoCode
+    const pB: Promise<{ ok: boolean; rttMs?: number; reason?: string; sawT?: boolean; acks?: string }> = autoCode
       ? Promise.resolve({ ok: true, rttMs: 0 })
       : b.sendMD(mdB, { onReady: () => { bReady = true; fireWhenReady(); } });
 
@@ -1878,7 +1881,7 @@ class TwinDispatcher {
     // sit on a 30s C-timeout waiting for an orphaned partner.
     let aborted = false;
     const watchSide = async (
-      p: Promise<{ ok: boolean; rttMs?: number; reason?: string }>,
+      p: Promise<{ ok: boolean; rttMs?: number; reason?: string; sawT?: boolean; acks?: string }>,
       partner: PrinterSession,
     ) => {
       const r = await p;
