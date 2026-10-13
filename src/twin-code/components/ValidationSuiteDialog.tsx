@@ -16,6 +16,7 @@ import {
 import { buildPrintedCode } from "../tntLineRunner";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
 import { downloadValidationXlsx, type ValidationReport } from "../validation/reportXlsx";
+import { downloadValidationDocx } from "../validation/reportDocx";
 
 type Status = "todo" | "running" | "pass" | "fail";
 interface StepState { status: Status; detail: string; at?: string }
@@ -132,6 +133,11 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
       console.error("Excel export failed", err);
     }
   };
+  const exportWord = () => {
+    void downloadValidationDocx(buildReport() as ValidationReport, reportFilename("docx")).catch((err) =>
+      console.error("Word export failed", err),
+    );
+  };
 
   const Icon = ({ s }: { s: Status }) =>
     s === "pass" ? <CheckCircle2 className="h-4 w-4 text-primary" /> : s === "fail" ? <XCircle className="h-4 w-4 text-destructive" />
@@ -168,6 +174,7 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
             <div className="grid grid-cols-2 gap-2 pt-2">
               <Button size="sm" variant="outline" onClick={exportReport}><Download className="mr-1 h-4 w-4" /> JSON</Button>
               <Button size="sm" variant="outline" onClick={exportExcel}><Download className="mr-1 h-4 w-4" /> Excel</Button>
+              <Button size="sm" variant="outline" onClick={exportWord}><Download className="mr-1 h-4 w-4" /> Word</Button>
             </div>
           </div>
 
