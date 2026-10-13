@@ -179,12 +179,30 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
                     <Input type="number" className="h-8 w-32" value={startSerial} min={900001} max={998000} onChange={(e) => setStartSerial(Math.max(900001, Math.min(998000, Number(e.target.value) || TEST_SERIAL_START)))} /></div>
                   <div className="text-xs">Code to print: <span className="font-mono font-semibold">{testCode}</span></div>
                 </div>
-                <Button size="sm" onClick={runSingle} disabled={busy || liveBlocked}>Send test code to both printers</Button>
-                {singleSent && steps.single.status === "running" && (
-                  <div className="flex flex-wrap gap-2">
-                    <span className="w-full text-xs">Did Printer 1 print a DataMatrix and Printer 2 print <span className="font-mono">{testCode}</span>?</span>
-                    <Button size="sm" onClick={() => set("single", "pass", `${testCode} confirmed on both printers by operator`)}>Yes, both printed</Button>
-                    <Button size="sm" variant="outline" onClick={() => set("single", "fail", "Operator reported wrong or missing print")}>No</Button>
+                <Button size="sm" onClick={runSingle} disabled={busy || liveBlocked}>Send {BATCH} test codes to both printers</Button>
+                {batchSent.length > 0 && steps.single.status === "running" && (
+                  <div className="space-y-1">
+                    <span className="text-xs">Check each printed code on the line and mark it:</span>
+                    {batchSent.map((c) => (
+                      <div key={c} className="flex items-center gap-2 rounded border border-border px-2 py-1 text-xs">
+                        <span className="font-mono font-semibold">{c}</span>
+                        <span className="flex-1" />
+                        {codeTicks[c] === true && <Badge variant="secondary" className="text-[10px]">printed OK</Badge>}
+                        {codeTicks[c] === false && <Badge variant="destructive" className="text-[10px]">wrong / missing</Badge>}
+                        <Button size="sm" variant={codeTicks[c] === true ? "default" : "outline"} className="h-6 px-2 text-[10px]"
+                          onClick={() => setCodeTicks((t) => ({ ...t, [c]: true }))}>OK</Button>
+                        <Button size="sm" variant={codeTicks[c] === false ? "destructive" : "outline"} className="h-6 px-2 text-[10px]"
+                          onClick={() => setCodeTicks((t) => ({ ...t, [c]: false }))}>Fail</Button>
+                      </div>
+                    ))}
+                    {batchSent.every((c) => codeTicks[c] !== undefined) && (
+                      <Button size="sm" className="mt-1"
+                        onClick={() => {
+                          const bad = batchSent.filter((c) => codeTicks[c] === false);
+                          set("single", bad.length ? "fail" : "pass",
+                            bad.length ? `Operator reported problems with: ${bad.join(", ")}` : `All ${batchSent.length} codes confirmed printed on both printers`);
+                        }}>Finish step</Button>
+                    )}
                   </div>
                 )}
               </>
