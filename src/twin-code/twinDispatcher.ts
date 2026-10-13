@@ -193,7 +193,9 @@ interface InFlight {
   tC?: number;
   onReady?: () => void;
   readyNotified?: boolean;
-  resolve: (r: { ok: boolean; rttMs?: number; reason?: string }) => void;
+  /** Every ACK char received for this entry, in order (diagnostics). */
+  acks?: string;
+  resolve: (r: { ok: boolean; rttMs?: number; reason?: string; sawT?: boolean; acks?: string }) => void;
   rTimer: ReturnType<typeof setTimeout>;
   cTimer: ReturnType<typeof setTimeout>;
 }
@@ -1060,10 +1062,12 @@ class PrinterSession {
       : this.inFlight.find(e => {
           if (char === 'R') return !e.tR;
           if (char === 'T') return e.tR && !e.tT;
-          if (char === 'C') return !e.tC;
+          // C only counts for a buffer the printer has already accepted (R).
+          if (char === 'C') return e.tR && !e.tC;
           return false;
         });
     if (!entry) return;
+    entry.acks = (entry.acks ?? '') + char;
     const now = performance.now();
     if (char === 'R') {
       entry.tR = now;
@@ -1075,11 +1079,12 @@ class PrinterSession {
     if (char === 'T') entry.tT = now;
     if (char === 'C') {
       entry.tC = now;
-      this.complete(entry, { ok: true, rttMs: now - entry.tSent });
+      this.complete(entry, { ok: true, rttMs: now - entry.tSent, sawT: entry.tT != null, acks: entry.acks });
     }
   }
 
-  private complete(entry: InFlight, result: { ok: boolean; rttMs?: number; reason?: string }) {
+  private complete(entry: InFlight, result: { ok: boolean; rttMs?: number; reason?: string; sawT?: boolean; acks?: string }) {
+    if (result.acks == null) result = { ...result, acks: entry.acks ?? '' };
     const idx = this.inFlight.indexOf(entry);
     if (idx >= 0) this.inFlight.splice(idx, 1);
     clearTimeout(entry.rTimer); clearTimeout(entry.cTimer);
@@ -1121,6 +1126,11 @@ export interface TwinDispatchResult {
 
 export interface TwinDispatchOptions {
   forceTrigger?: boolean;
+  /**
+   * Photocell validation: a C (complete) that arrives without a T (photo eye)
+   * is NOT a real print — fail the side with `no-photocell` instead of OK.
+   */
+  requireTrigger?: boolean;
   /**
    * Auto-Code Mode: SIDE printer auto-counts natively, so we MUST NOT push
    * ^MD to B (would overwrite a static text field). Only LID gets the ^MD^BD
@@ -1880,7 +1890,11 @@ class TwinDispatcher {
       return r;
     };
 
-    const [rA, rB] = await Promise.all([watchSide(pA, b), watchSide(pB, a)]);
+    let [rA, rB] = await Promise.all([watchSide(pA, b), watchSide(pB, a)]);
+    if (opts?.requireTrigger) {
+      const strict = (r: typeof rA) => (r.ok && (r as { sawT?: boolean }).sawT === false ? { ...r, ok: false, reason: 'no-photocell' } : r);
+      rA = strict(rA); if (!autoCode) rB = strict(rB);
+    }
     const tEnd = performance.now();
 
     const ok = rA.ok && rB.ok;
@@ -1898,6 +1912,8 @@ class TwinDispatcher {
       reason: ok ? undefined : [aReason && `A:${aReason}`, bReason && `B:${bReason}`].filter(Boolean).join(' / '),
       aReason,
       bReason,
+      aAcks: (rA as { acks?: string }).acks,
+      bAcks: (rB as { acks?: string }).acks,
     };
   }
 
