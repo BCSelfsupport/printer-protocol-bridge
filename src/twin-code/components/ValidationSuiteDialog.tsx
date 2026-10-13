@@ -15,6 +15,7 @@ import {
 } from "../validation/liveValidation";
 import { buildPrintedCode } from "../tntLineRunner";
 import { usePrinterStorage } from "@/hooks/usePrinterStorage";
+import { downloadValidationXlsx, type ValidationReport } from "../validation/reportXlsx";
 
 type Status = "todo" | "running" | "pass" | "fail";
 interface StepState { status: Status; detail: string; at?: string }
@@ -110,18 +111,26 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
     set("tnt", r.ok ? "pass" : "fail", r.detail);
   };
 
-  const exportReport = () => {
-    const report = {
+  const buildReport = () => ({
       kind: "TwinCode live validation report", generatedAt: new Date().toISOString(),
       testData: { logConfig: LOG_CONFIG, printMessage: buildTestPrintMessage(startSerial), testCode, stallCode, bottles, gapMs, sandbox: TEST_DATA, trigger, tntCodes, tntStages },
       steps: STEPS.map((s) => ({ step: s.title, ...steps[s.id] })),
       inspection: INSPECT.map((q, i) => ({ check: q, ok: ticks[i] })),
       softwareChecks: softResults, trafficLog: log,
-    };
+  });
+  const reportFilename = (ext: string) => `twincode-validation-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.${ext}`;
+  const exportReport = () => {
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }));
-    a.download = `twincode-validation-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(buildReport(), null, 2)], { type: "application/json" }));
+    a.download = reportFilename("json");
     a.click(); URL.revokeObjectURL(a.href);
+  };
+  const exportExcel = () => {
+    try {
+      downloadValidationXlsx(buildReport() as ValidationReport, reportFilename("xlsx"));
+    } catch (err) {
+      console.error("Excel export failed", err);
+    }
   };
 
   const Icon = ({ s }: { s: Status }) =>
@@ -156,7 +165,10 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
               </button>
             ))}
             <div className="pt-2 text-[11px] text-muted-foreground">{passed}/{STEPS.length} steps passed</div>
-            <Button size="sm" variant="outline" className="w-full" onClick={exportReport}><Download className="mr-1 h-4 w-4" /> Export report</Button>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <Button size="sm" variant="outline" onClick={exportReport}><Download className="mr-1 h-4 w-4" /> JSON</Button>
+              <Button size="sm" variant="outline" onClick={exportExcel}><Download className="mr-1 h-4 w-4" /> Excel</Button>
+            </div>
           </div>
 
           <div className="space-y-3 rounded-md border border-border p-3">
