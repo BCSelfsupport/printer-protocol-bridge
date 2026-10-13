@@ -11,6 +11,8 @@
  * while a production run or photocell mirror is active.
  */
 import { twinDispatcher, type TwinDispatchResult } from "../twinDispatcher";
+import { twinPairStore } from "../twinPairStore";
+import type { Printer } from "@/types/printer";
 import { productionRun } from "../productionRun";
 import { TwinPairQueue, mapConfigToPrinters, validatePrintedCode, SERIAL_MAX, type PrinterSlot } from "../tntLineRunner";
 import { encodeFrame, FrameDecoder, MSG, parseConfig, parsePrint, encodeLastSerial, toHex, type ParsedPrint } from "./tntCodecBrowser";
@@ -41,8 +43,30 @@ export function safetyCheck(): LiveStepResult {
   return problems.length ? { ok: false, detail: problems.join("; ") } : { ok: true, detail: "No production run or live line active — safe to send test codes." };
 }
 
-export async function connectionCheck(): Promise<LiveStepResult> {
-  if (!twinDispatcher.isBound()) return { ok: false, detail: "No bound pair. Press Bind Pair, choose both printers, then retry." };
+/** True when this validation session opened the live link itself (so it closes it again). */
+let validationOwnsLink = false;
+
+/** Close the live link if (and only if) validation opened it. */
+export async function releaseValidationLink(): Promise<void> {
+  if (validationOwnsLink && twinDispatcher.isBound()) await twinDispatcher.unbind().catch(() => {});
+  validationOwnsLink = false;
+}
+
+export async function connectionCheck(printers: Printer[] = []): Promise<LiveStepResult> {
+  if (!twinDispatcher.isBound()) {
+    const pair = twinPairStore.getState();
+    if (!pair.a || !pair.b) return { ok: false, detail: "No bound pair. Press Bind Pair, choose both printers, then retry." };
+    // Pair is saved but the live link isn't open (production not started) — open it for testing only.
+    const res = await twinDispatcher.bind(pair, printers, {
+      messageNameA: pair.a.messageName, messageNameB: pair.b.messageName,
+      fieldA: pair.a.fieldIndex, fieldB: pair.b.fieldIndex,
+      subcommandA: pair.a.subcommand, subcommandB: pair.b.subcommand,
+      autoCreateA: pair.a.autoCreate ?? true, autoCreateB: pair.b.autoCreate ?? true,
+      autoCodeMode: false,
+    });
+    if (!res.ok) return { ok: false, detail: `Pair is bound but the live link could not open: ${res.error ?? "unknown error"}` };
+    validationOwnsLink = true;
+  }
   const ids = twinDispatcher.getBoundIds();
   const params = await twinDispatcher.fetchLivePrintParams().catch(() => null);
   if (!params) return { ok: false, detail: "Pair is bound but printers did not answer." };
