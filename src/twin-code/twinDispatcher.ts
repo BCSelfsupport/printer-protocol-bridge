@@ -128,13 +128,17 @@ const ALL_COUNTER_ZERO_COMMANDS = [
 
 const HMI_RUN_COUNTER_ZERO_COMMANDS = ['^CC 0;S0', '^CC 0;0', '^CC 6;S0', '^CC 6;0'] as const;
 
+// Counter-zero often runs after ^MB; printers in live mode may stay silent.
+// Short wait + keep socket so silence never tears down the live link.
+const QUIET_OPTS = { maxWaitMs: 2000, keepSocketOnTimeout: true } as const;
+
 async function forceZeroHmiRunCountersForPrinter(printerId: number, label: 'A' | 'B', phase = 'final') {
   const trace = (step: string, extra?: Record<string, unknown>) => {
     console.info(`[TwinBind:${label}] ${step}`, { printerId, ...extra });
   };
   const sweep = async () => {
     for (const cmd of HMI_RUN_COUNTER_ZERO_COMMANDS) {
-      const r = await printerTransport.sendCommand(printerId, cmd).catch(() => null);
+      const r = await printerTransport.sendCommand(printerId, cmd, QUIET_OPTS).catch(() => null);
       console.info(`[TwinBind:${label}] hmi-counter-zero:cmd`, { printerId, phase, cmd, ok: !!r?.success, response: r?.response?.trim?.()?.slice(0, 120) });
       await new Promise(res => setTimeout(res, 150));
     }
@@ -143,13 +147,13 @@ async function forceZeroHmiRunCountersForPrinter(printerId: number, label: 'A' |
   await sweep();
   await new Promise(res => setTimeout(res, 700));
 
-  let cn = await printerTransport.sendCommand(printerId, '^CN').catch(() => null);
+  let cn = await printerTransport.sendCommand(printerId, '^CN', QUIET_OPTS).catch(() => null);
   let counts = parseCounterCounts(cn?.response || '');
   if (cn?.success && ((counts.product ?? 0) !== 0 || (counts.print ?? 0) !== 0)) {
     trace('hmi-counter-zero:retry', { phase, product: counts.product, print: counts.print });
     await sweep();
     await new Promise(res => setTimeout(res, 700));
-    cn = await printerTransport.sendCommand(printerId, '^CN').catch(() => null);
+    cn = await printerTransport.sendCommand(printerId, '^CN', QUIET_OPTS).catch(() => null);
     counts = parseCounterCounts(cn?.response || '');
   }
   trace('hmi-counter-zero:verify', { phase, ok: !!cn?.success, product: counts.product, print: counts.print });

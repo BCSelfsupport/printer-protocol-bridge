@@ -36,6 +36,21 @@ export interface LiveStepResult { ok: boolean; detail: string; data?: unknown }
 
 const now = () => new Date().toISOString().slice(11, 23);
 
+/** Log the last few commands each bound printer saw, so a dropped link shows which command lost it. */
+async function logRecentCommands(log: (e: LiveLogEntry) => void): Promise<void> {
+  const ids = twinDispatcher.getBoundIds();
+  if (!ids) return;
+  const { getCommandLog } = await import("@/lib/printerCommandLog");
+  for (const [label, id] of [["P1", ids.aId], ["P2", ids.bId]] as const) {
+    const recent = getCommandLog(id).slice(-6);
+    for (const c of recent) {
+      const t = new Date(c.startedAt).toISOString().slice(11, 23);
+      const outcome = c.ok ? `ok ${c.durationMs}ms` : `FAIL ${c.error ?? "no reply"} (${c.durationMs}ms)`;
+      log({ t, dir: `${label} history`, text: `${c.command} → ${outcome}` });
+    }
+  }
+}
+
 export function safetyCheck(): LiveStepResult {
   const problems: string[] = [];
   if (productionRun.getState().active) problems.push("a production run is active — stop it first");
@@ -194,6 +209,7 @@ export async function sendSingle(code: string, log: (e: LiveLogEntry) => void): 
   let r = await twinDispatcher.dispatch(code, { forceTrigger: true });
   if (!r.ok && isDropped(r.reason)) {
     log({ t: now(), dir: "CodeSync", text: `Link dropped (${r.reason}) — reconnecting to both printers and retrying once` });
+    await logRecentCommands(log);
     const re = await reopenLink();
     if (!re.ok) {
       log({ t: now(), dir: "CodeSync", text: `Reconnect failed: ${re.error ?? "unknown"}` });
@@ -201,6 +217,7 @@ export async function sendSingle(code: string, log: (e: LiveLogEntry) => void): 
     }
     r = await twinDispatcher.dispatch(code, { forceTrigger: true });
   }
+  if (!r.ok) await logRecentCommands(log);
   log({ t: now(), dir: "P1+P2→CodeSync", text: r.ok ? `ACK both · A ${r.aMs?.toFixed(0)}ms B ${r.bMs?.toFixed(0)}ms` : `FAIL ${r.reason}` });
   return r.ok
     ? { ok: true, detail: `Sent ${code} · P1 ${r.aMs?.toFixed(0)} ms · P2 ${r.bMs?.toFixed(0)} ms · skew ${r.skewMs?.toFixed(0)} ms`, data: r }

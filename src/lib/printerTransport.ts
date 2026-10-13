@@ -29,6 +29,8 @@ export interface TransportCommandOptions {
   idleAfterDataMs?: number;
   /** Short caller tag recorded to the command log for post-mortem tracing. */
   caller?: string;
+  /** Desktop only: on no reply, keep the socket open instead of treating it as dead (printer may be in live print mode). */
+  keepSocketOnTimeout?: boolean;
 }
 
 let relayConfig: RelayConfig | null = null;
