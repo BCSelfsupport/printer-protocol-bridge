@@ -9,7 +9,8 @@
  *   Rollover: after 999900 the next serial is 1.
  *
  * Still pending Authentix (see mem://integration/tnt-interface-spec-oct-2026):
- *   §7 fault return layout, Clear-All-Buffers command code, Qty=3 block→printer mapping.
+ *   Clear-All-Buffers command code, Qty=3 block→printer mapping.
+ * Confirmed Oct 2026: Config ack = 03 03 04; fault return = [MsgId][Category][info][04].
  */
 
 const net = require('net');
@@ -170,6 +171,11 @@ class TntServer extends EventEmitter {
     this.activeSocket.write(frame);
     this._record('out', type, frame, json);
     return true;
+  }
+
+  /** Fault return to T&T (msgId = message being answered, category = fault category byte). */
+  sendFault(msgId, category, info) {
+    return this._sendRaw(msgId, codec.encodeFault(msgId, category, info), { fault: { msgId, category, info: info || '' } });
   }
 
   /** Generic send: type byte + ASCII body + EOM. */
