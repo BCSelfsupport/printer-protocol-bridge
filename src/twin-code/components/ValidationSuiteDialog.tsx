@@ -306,6 +306,7 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
                   {stallPhase === "ready" ? "Printer 2 is offline — send" : "Printer 2 reconnected — resend same code"}
                 </Button>
                 {stallPhase !== "ready" && <Button size="sm" variant="ghost" onClick={() => { setStallPhase("ready"); set("stall", "todo", ""); }}>Restart this step</Button>}
+                {stallPhase === "done" && <Button size="sm" variant="outline" onClick={() => nextAfter("stall")}>Next step →</Button>}
               </>
             )}
 
