@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CheckCircle2, XCircle, Circle, Loader2, Download, FlaskConical, ChevronRight, AlertTriangle } from "lucide-react";
 import { runValidation, DEFAULT_VALIDATION, TEST_DATA, type CheckResult } from "../validation/validationSuite";
 import {
-  safetyCheck, connectionCheck, releaseValidationLink, sendSingle, sendBatch, runLiveReplay, runLiveTnt, buildTestPrintMessage, julianToday,
+  safetyCheck, connectionCheck, releaseValidationLink, sendSingle, resyncPair, sendBatch, runLiveReplay, runLiveTnt, buildTestPrintMessage, julianToday,
   LOG_CONFIG, TEST_SERIAL_START, type LiveLogEntry, type TriggerMode, type TntStage,
 } from "../validation/liveValidation";
 import { buildPrintedCode } from "../tntLineRunner";
@@ -98,6 +98,10 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
   };
   const runStall = async () => {
     set("stall", "running", "");
+    if (stallPhase === "held") {
+      const rs = await resyncPair(addLog);
+      if (!rs.ok) { set("stall", "running", rs.detail); return; }
+    }
     const r = await sendSingle(stallCode, addLog, trigger);
     if (stallPhase === "ready") {
       if (r.ok) set("stall", "fail", "Code was accepted although Printer 2 should be stopped/disconnected. Make sure it is really offline and retry.");

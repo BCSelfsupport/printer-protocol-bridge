@@ -81,6 +81,18 @@ async function reopenLink(): Promise<{ ok: boolean; error?: string }> {
   if (res.ok) validationOwnsLink = true;
   return { ok: res.ok, error: res.error };
 }
+/**
+ * After a one-sided failure the healthy printer may still hold an unprinted
+ * code and the faulted one can leave 1-1 mode, so a plain resend jams both.
+ * Leave and re-enter 1-1 mode on both printers (^ME/^MB clears their buffers)
+ * before resending the held code.
+ */
+export async function resyncPair(log: (e: LiveLogEntry) => void): Promise<LiveStepResult> {
+  log({ t: now(), dir: "CodeSync", text: "Resync: clearing both printer buffers (leave + re-enter 1-1 mode) before resend" });
+  const re = await reopenLink();
+  log({ t: now(), dir: "CodeSync", text: re.ok ? "Resync OK — both printers empty and in 1-1 mode" : `Resync failed: ${re.error ?? "unknown"}` });
+  return re.ok ? { ok: true, detail: "resynced" } : { ok: false, detail: `Could not resync the pair: ${re.error ?? "unknown"}. Check both printers are online with the jet and HV on.` };
+}
 const isDropped = (reason?: string) => !!reason && /no active connection|not-active|not bound|send-failed/i.test(reason);
 
 /** Close the live link if (and only if) validation opened it. */
