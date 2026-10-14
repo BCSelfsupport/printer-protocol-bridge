@@ -26,6 +26,9 @@ describe("TwinCode validation suite", () => {
     expect(results).toHaveLength(TOTAL_CHECKS);
     expect(results.filter((r) => r.status === "fail")).toEqual([]);
     expect(results.filter((r) => r.status === "pending")).toEqual([]);
+    // every check has a negative control, and every one caught its sabotage
+    const missed = results.filter((r) => !r.negative || !r.negative.caught).map((r) => `${r.id}: ${r.negative?.detail ?? "no negative"}`);
+    expect(missed).toEqual([]);
   }, 30000);
 });
 
