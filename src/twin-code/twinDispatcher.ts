@@ -256,9 +256,11 @@ class PrinterSession {
      * mirror handles ledger updates.
      */
     skipOneToOne?: boolean;
+    /** Fault-recovery resync: re-enter 1-1 without touching printer counters. */
+    keepCounters?: boolean;
   } = {}): Promise<{ ok: boolean; error?: string; seeded?: boolean }> {
     this.isEmulated = this.detectEmulated();
-    const { messageName, seed, preSelectCommands, postSelectCommands, skipOneToOne } = opts;
+    const { messageName, seed, preSelectCommands, postSelectCommands, skipOneToOne, keepCounters } = opts;
     const trace = (step: string, extra?: Record<string, unknown>) => {
       console.info(`[TwinBind:${this.label}] ${step}`, { printerId: this.printerId, ...extra });
     };
@@ -381,7 +383,7 @@ class PrinterSession {
           return { ok: false, error: mb?.error || mb?.response || `${this.label}: ^MB failed (emulator)` };
         }
       }
-      await forceZeroHmiRunCounters('final');
+      if (!keepCounters) await forceZeroHmiRunCounters('final');
       this.active = true;
       this.skipOneToOne = !!skipOneToOne;
       trace('emulator:active');
@@ -506,7 +508,7 @@ class PrinterSession {
       trace('^MB:ok');
     }
 
-    await forceZeroHmiRunCounters('final');
+    if (!keepCounters) await forceZeroHmiRunCounters('final');
 
     this.active = true;
     this.skipOneToOne = !!skipOneToOne;
@@ -1305,6 +1307,12 @@ class TwinDispatcher {
   private a: PrinterSession | null = null;
   private b: PrinterSession | null = null;
   private wasPollingPaused = false;
+  private boundMsgA?: string;
+  private boundMsgB?: string;
+  /** Set after any failed dispatch: a printer may still hold an unprinted
+   *  code or have dropped out of 1-1 mode (e.g. HV off / jet stop), so the
+   *  next dispatch must clear both buffers first or the pair jams. */
+  private needsResync = false;
   private opts: TwinDispatcherOptions = {};
 
   // ---- Hardware photocell mirror (Production mode) ----
@@ -1708,6 +1716,7 @@ class TwinDispatcher {
     // opted in via `autoCreateA` / `autoCreateB`.
     const msgA = opts.messageNameA ?? pair.a.messageName ?? opts.messageName;
     const msgB = opts.messageNameB ?? pair.b.messageName ?? opts.messageName;
+    this.boundMsgA = msgA; this.boundMsgB = msgB; this.needsResync = false;
     const autoCodeSeedA = opts.autoCodeMode && opts.autoCodeOpts ? buildAutoCodeSeed(opts.autoCodeOpts, 'A') : seedForSide('A');
     const autoCodeSeedB = opts.autoCodeMode && opts.autoCodeOpts ? buildAutoCodeSeed(opts.autoCodeOpts, 'B') : seedForSide('B');
 
@@ -1825,9 +1834,43 @@ class TwinDispatcher {
    */
   async dispatch(serial: string, opts?: TwinDispatchOptions): Promise<TwinDispatchResult> {
     if (!this.a || !this.b) return { serial, ok: false, reason: 'not-bound' };
+    if (this.needsResync && !opts?.autoCode) {
+      const rs = await this.resyncBuffers();
+      if (!rs.ok) return { serial, ok: false, reason: `resync-failed: ${rs.error ?? 'unknown'}` };
+    }
+    const res = await this.dispatchOnce(serial, opts);
+    if (!res.ok) this.needsResync = true;
+    return res;
+  }
 
-    const a = this.a;
-    const b = this.b;
+  /** True when the last dispatch failed and the next one will clear both printers first. */
+  isResyncPending() { return this.needsResync; }
+
+  /**
+   * Clear both printers after a one-sided fault: leave and re-enter 1-1 mode
+   * (^ME/^MB empties the print buffer) and re-select the bound message.
+   * Counters are left untouched so the serial sequence is preserved.
+   */
+  async resyncBuffers(): Promise<{ ok: boolean; error?: string }> {
+    if (!this.a || !this.b) return { ok: false, error: 'not-bound' };
+    if (this.opts.autoCodeMode) { this.needsResync = false; return { ok: true }; }
+    const a = this.a, b = this.b;
+    console.info('[TwinDispatcher] resync: clearing both printer buffers');
+    await Promise.all([a.exit(), b.exit()]);
+    const [rA, rB] = await Promise.all([
+      a.enter({ messageName: this.boundMsgA, keepCounters: true }),
+      b.enter({ messageName: this.boundMsgB, keepCounters: true }),
+    ]);
+    if (!rA.ok || !rB.ok) {
+      return { ok: false, error: [!rA.ok && `A: ${rA.error}`, !rB.ok && `B: ${rB.error}`].filter(Boolean).join(' / ') };
+    }
+    this.needsResync = false;
+    return { ok: true };
+  }
+
+  private async dispatchOnce(serial: string, opts?: TwinDispatchOptions): Promise<TwinDispatchResult> {
+    const a = this.a!;
+    const b = this.b!;
     const fieldA = this.opts.fieldA ?? 1;
     const fieldB = this.opts.fieldB ?? 1;
     // Default A (lid) → ^BD (native DataMatrix update per v2.6 §5.28.1).
