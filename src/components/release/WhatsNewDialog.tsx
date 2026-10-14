@@ -21,7 +21,7 @@ export interface ReleaseNote {
 const RELEASE_NOTES: ReleaseNote[] = [
   {
     id: 'twincode-fault-resync',
-    type: 'fix',
+    type: 'bugfix',
     title: 'TwinCode: Printing Resumes Cleanly After a Printer Fault',
     date: '14 Oct 2026',
     summary:
