@@ -62,7 +62,8 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
   const [tntCodes, setTntCodes] = useState(5);
   const [tntStages, setTntStages] = useState<Partial<Record<TntStage["id"], TntStage>>>({});
   const abortRef = useRef<AbortController | null>(null);
-  const busy = Object.values(steps).some((s) => s.status === "running");
+  const [inFlight, setInFlight] = useState(0);
+  const busy = inFlight > 0;
 
   const testCode = useMemo(() => buildPrintedCode({ prodLine: "07", alphaYear: "A", julian: julianToday() }, startSerial), [startSerial]);
   const stallCode = useMemo(() => buildPrintedCode({ prodLine: "07", alphaYear: "A", julian: julianToday() }, startSerial + 500), [startSerial]);
@@ -72,7 +73,8 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
     setSteps((s) => ({ ...s, [id]: { status, detail, at: new Date().toISOString() } }));
   const nextAfter = (id: StepId) => { const i = STEPS.findIndex((s) => s.id === id); if (i < STEPS.length - 1) setActive(STEPS[i + 1].id); };
 
-  const runSoftware = async () => {
+  const runSoftware = async () => { setInFlight((n) => n + 1); try { await runSoftwareInner(); } finally { setInFlight((n) => n - 1); } };
+  const runSoftwareInner = async () => {
     set("software", "running", ""); setSoftResults([]);
     const out = await runValidation(DEFAULT_VALIDATION, (r) => setSoftResults((p) => [...p, r]));
     const fail = out.results.filter((r) => r.status === "fail").length;
@@ -86,17 +88,23 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
     () => Array.from({ length: BATCH }, (_, i) => buildPrintedCode({ prodLine: "07", alphaYear: "A", julian: julianToday() }, startSerial + i)),
     [startSerial],
   );
-  const runSingle = async () => {
+  const runSingle = async () => { setInFlight((n) => n + 1); try { await runSingleInner(); } finally { setInFlight((n) => n - 1); } };
+  const runSingleInner = async () => {
     set("single", "running", ""); setBatchSent([]); setCodeTicks({});
     const r = await sendBatch(batchCodes, addLog, (_i, code, ok) => { if (ok) setBatchSent((p) => [...p, code]); }, trigger);
     set("single", r.ok ? "running" : "fail", r.ok ? `${r.detail} — now confirm each printed code below` : r.detail);
   };
-  const runReplay = async () => {
+  const runReplay = async () => { setInFlight((n) => n + 1); try { await runReplayInner(); } finally { setInFlight((n) => n - 1); } };
+  const runReplayInner = async () => {
     set("replay", "running", ""); setProgress(0); abortRef.current = new AbortController();
     const r = await runLiveReplay({ startSerial, bottles, gapMs, trigger, log: addLog, onProgress: (d, t) => setProgress((d / t) * 100), signal: abortRef.current.signal });
     set("replay", r.ok ? "pass" : "fail", r.detail);
   };
   const runStall = async () => {
+    setInFlight((n) => n + 1);
+    try { await runStallInner(); } finally { setInFlight((n) => n - 1); }
+  };
+  const runStallInner = async () => {
     set("stall", "running", "");
     if (stallPhase === "held") {
       const rs = await resyncPair(addLog);
@@ -112,7 +120,8 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
     }
   };
 
-  const runTnt = async () => {
+  const runTnt = async () => { setInFlight((n) => n + 1); try { await runTntInner(); } finally { setInFlight((n) => n - 1); } };
+  const runTntInner = async () => {
     set("tnt", "running", ""); setProgress(0); setTntStages({}); abortRef.current = new AbortController();
     const r = await runLiveTnt({ codes: tntCodes, trigger, log: addLog, onStage: (st) => setTntStages((p) => ({ ...p, [st.id]: st })), onProgress: (d, t) => setProgress((d / t) * 100), signal: abortRef.current.signal });
     set("tnt", r.ok ? "pass" : "fail", r.detail);
