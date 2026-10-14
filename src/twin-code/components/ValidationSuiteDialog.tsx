@@ -98,6 +98,10 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
   };
   const runStall = async () => {
     set("stall", "running", "");
+    if (stallPhase === "held") {
+      const rs = await resyncPair(addLog);
+      if (!rs.ok) { set("stall", "running", rs.detail); return; }
+    }
     const r = await sendSingle(stallCode, addLog, trigger);
     if (stallPhase === "ready") {
       if (r.ok) set("stall", "fail", "Code was accepted although Printer 2 should be stopped/disconnected. Make sure it is really offline and retry.");
