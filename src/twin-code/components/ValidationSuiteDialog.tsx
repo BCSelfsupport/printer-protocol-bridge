@@ -119,7 +119,7 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
       testData: { logConfig: LOG_CONFIG, printMessage: buildTestPrintMessage(startSerial), testCode, stallCode, bottles, gapMs, sandbox: TEST_DATA, trigger, tntCodes, tntStages },
       steps: STEPS.map((s) => ({ step: s.title, ...steps[s.id] })),
       inspection: INSPECT.map((q, i) => ({ check: q, ok: ticks[i] })),
-      softwareChecks: softResults, trafficLog: log,
+      softwareChecks: softResults.map((c) => ({ ...c, detail: c.negative ? `GOOD: ${c.detail} | BAD (${c.negative.sabotage}): ${c.negative.caught ? "rejected" : "NOT CAUGHT"} – ${c.negative.detail}` : c.detail })), trafficLog: log,
   });
   const reportFilename = (ext: string) => `twincode-validation-${fileStamp()}.${ext}`;
   const exportReport = () => {
