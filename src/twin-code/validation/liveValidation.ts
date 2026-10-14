@@ -89,7 +89,7 @@ async function reopenLink(): Promise<{ ok: boolean; error?: string }> {
  */
 export async function resyncPair(log: (e: LiveLogEntry) => void): Promise<LiveStepResult> {
   log({ t: now(), dir: "CodeSync", text: "Resync: clearing both printer buffers (leave + re-enter 1-1 mode) before resend" });
-  const re = await reopenLink();
+  const re = twinDispatcher.isBound() ? await twinDispatcher.resyncBuffers() : await reopenLink();
   log({ t: now(), dir: "CodeSync", text: re.ok ? "Resync OK — both printers empty and in 1-1 mode" : `Resync failed: ${re.error ?? "unknown"}` });
   return re.ok ? { ok: true, detail: "resynced" } : { ok: false, detail: `Could not resync the pair: ${re.error ?? "unknown"}. Check both printers are online with the jet and HV on.` };
 }
