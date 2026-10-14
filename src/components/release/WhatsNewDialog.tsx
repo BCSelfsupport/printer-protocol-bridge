@@ -20,6 +20,14 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'twincode-fault-resync',
+    type: 'fix',
+    title: 'TwinCode: Printing Resumes Cleanly After a Printer Fault',
+    date: '14 Oct 2026',
+    summary:
+      'If one printer stops mid-run (for example high voltage off or jet stop), both printers used to jam on the next code. TwinCode now clears both printers automatically before sending again, so the held code prints on both and nothing is skipped.',
+  },
+  {
     id: 'twincode-tnt-log-alignment',
     type: 'feature',
     title: 'TwinCode: Track-n-Trace Code and Printer Settings',
