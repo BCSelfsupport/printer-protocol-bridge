@@ -77,7 +77,8 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
     const out = await runValidation(DEFAULT_VALIDATION, (r) => setSoftResults((p) => [...p, r]));
     const fail = out.results.filter((r) => r.status === "fail").length;
     const pend = out.results.filter((r) => r.status === "pending").length;
-    set("software", fail ? "fail" : "pass", `${out.results.length - fail - pend} pass · ${fail} fail · ${pend} waiting on Authentix`);
+    const caught = out.results.filter((r) => r.negative?.caught).length;
+    set("software", fail ? "fail" : "pass", `${out.results.length - fail - pend} pass on good data · ${caught}/${out.results.length} deliberately broken inputs correctly rejected · ${fail} fail`);
   };
   const runSafety = () => { const r = safetyCheck(); set("safety", r.ok ? "pass" : "fail", r.detail); };
   const runConnection = async () => { set("connection", "running", ""); const r = await connectionCheck(printers); set("connection", r.ok ? "pass" : "fail", r.detail); };
@@ -118,7 +119,7 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
       testData: { logConfig: LOG_CONFIG, printMessage: buildTestPrintMessage(startSerial), testCode, stallCode, bottles, gapMs, sandbox: TEST_DATA, trigger, tntCodes, tntStages },
       steps: STEPS.map((s) => ({ step: s.title, ...steps[s.id] })),
       inspection: INSPECT.map((q, i) => ({ check: q, ok: ticks[i] })),
-      softwareChecks: softResults, trafficLog: log,
+      softwareChecks: softResults.map((c) => ({ ...c, detail: c.negative ? `GOOD: ${c.detail} | BAD (${c.negative.sabotage}): ${c.negative.caught ? "rejected" : "NOT CAUGHT"} – ${c.negative.detail}` : c.detail })), trafficLog: log,
   });
   const reportFilename = (ext: string) => `twincode-validation-${fileStamp()}.${ext}`;
   const exportReport = () => {
@@ -204,11 +205,23 @@ export function ValidationSuiteDialog({ open, onOpenChange }: { open: boolean; o
               <>
                 <Button size="sm" onClick={runSoftware} disabled={busy}>Run software checks</Button>
                 {softResults.length > 0 && (
-                  <ScrollArea className="h-56 rounded border border-border">
+                  <ScrollArea className="h-80 rounded border border-border">
                     {softResults.map((r) => (
-                      <div key={r.id} className="flex gap-2 border-b border-border/40 px-2 py-1 text-[11px]">
-                        <Icon s={r.status === "pending" ? "todo" : r.status} />
-                        <div><span className="font-mono text-muted-foreground">{r.id}</span> {r.name}<div className="font-mono text-[10px] text-muted-foreground">{r.detail}</div></div>
+                      <div key={r.id} className="border-b border-border/40 px-2 py-1.5 text-[11px]">
+                        <div className="flex gap-2">
+                          <Icon s={r.status === "pending" ? "todo" : r.status} />
+                          <div className="font-medium"><span className="font-mono text-muted-foreground">{r.id}</span> {r.name} <span className="text-muted-foreground">· {r.ms} ms</span></div>
+                        </div>
+                        <div className="ml-6 mt-1 grid gap-1">
+                          <div className="rounded border-l-2 border-primary bg-primary/5 px-2 py-0.5 font-mono text-[10px]">
+                            <span className="font-sans font-semibold text-primary">GOOD INPUT → accepted:</span> {r.detail}
+                          </div>
+                          {r.negative && (
+                            <div className={`rounded border-l-2 px-2 py-0.5 font-mono text-[10px] ${r.negative.caught ? "border-destructive bg-destructive/5" : "border-destructive bg-destructive/20"}`}>
+                              <span className="font-sans font-semibold text-destructive">BAD INPUT ({r.negative.sabotage}) → {r.negative.caught ? "correctly rejected:" : "NOT CAUGHT:"}</span> {r.negative.detail}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </ScrollArea>

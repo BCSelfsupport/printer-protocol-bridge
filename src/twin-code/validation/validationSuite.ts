@@ -27,6 +27,8 @@ import { productionRun } from "../productionRun";
 export type CheckStatus = "pass" | "fail" | "pending";
 export interface CheckResult {
   id: string; section: string; name: string; status: CheckStatus; detail: string; ms: number;
+  /** Negative control: the same check run against deliberately broken input. It MUST fail. */
+  negative?: { caught: boolean; sabotage: string; detail: string };
 }
 export interface FrameLogEntry { t: number; dir: "T&T→Bridge" | "Bridge→T&T" | "Bridge→P1" | "Bridge→P2" | "P1→Bridge" | "P2→Bridge"; label: string; hex?: string }
 export interface ValidationOptions { bottles: number; faultRatePct: number; maxLatencyMs: number }
@@ -215,12 +217,7 @@ const CHECKS: Check[] = [
       if (printed.length % 50 === 0 && ctx.opts.maxLatencyMs > 0) await sleep(0);
     }
     const dur = performance.now() - t0;
-    const set = new Set(printed);
-    assert(set.size === printed.length, "duplicate code printed");
-    for (let i = 1; i < printed.length; i++) {
-      const a = Number(printed[i - 1].slice(6, 12)), b = Number(printed[i].slice(6, 12));
-      assert(b === nextSerial(a), `gap ${a}→${b}`);
-    }
+    verifyPrinted(printed);
     assert(sent[1].join() === sent[2].join(), "P1/P2 sequences differ");
     printed.slice(0, 3).forEach((c) => { ctx.log({ dir: "P1→Bridge", label: `printed ${c}` }); ctx.log({ dir: "P2→Bridge", label: `printed ${c}` }); });
     return ok(`${n} bottles · 0 duplicates · 0 gaps · ${faults} injected missed-acks recovered · ${dur.toFixed(0)} ms`);
@@ -334,6 +331,68 @@ const CHECKS: Check[] = [
   { id: "I1", section: "9. Production isolation", name: "Live catalog and production run untouched", run: async () => pending("evaluated at end of run") },
 ];
 
+/**
+ * NEGATIVE CONTROLS — for every check, the same assertion is re-run against
+ * deliberately broken input. Each one MUST throw. If a negative control
+ * passes, the check can't tell good from bad and the whole step fails.
+ */
+type Neg = { sabotage: string; run: () => Promise<void> | void };
+const NEGATIVES: Record<string, Neg> = {
+  F1: { sabotage: "flip one bit in the Config body", run: () => { const f = encodeFrame(MSG.CONFIG, TEST_DATA.config); f[3] ^= 0x01; const [d] = new FrameDecoder().push(f); assert(d.name === "CONFIG" && d.body === TEST_DATA.config, `corrupted body detected ("${d.body?.slice(0, 6)}…")`); } },
+  F2: { sabotage: "drop the 0x04 terminator of frame 2", run: () => { const all = [...encodeFrame(MSG.PRINT, TEST_DATA.print), ...encodeFrame(MSG.REQUEST, "01")]; all.pop(); const dec = new FrameDecoder(); const out = []; for (let i = 0; i < all.length; i += 3) out.push(...dec.push(new Uint8Array(all.slice(i, i + 3)))); assert(out.length === 2, `only ${out.length} frame(s) completed`); } },
+  F3: { sabotage: "feed a VALID Print frame", run: () => { const [d] = new FrameDecoder().push(encodeFrame(MSG.PRINT, TEST_DATA.print)); assert(d.error === "unknown_type", `valid frame accepted as ${d.name}`); } },
+  F4: { sabotage: "feed a non-empty frame", run: () => { const [d] = new FrameDecoder().push(new Uint8Array([0x03, 0x41, 0x04])); assert(d.error === "empty_frame", `got ${d.error ?? d.name}`); } },
+  C1: { sabotage: "swap block 1 and block 2", run: () => { const c = parseConfig("2001" + "000000000000000006" + "000000000000000000") as never; const m = mapConfigToPrinters(c); assert(!m.printer1.inverted && m.printer2.inverted, "P1 came out inverted — swap detected"); } },
+  C2: { sabotage: "use a Qty 2 Config", run: () => { const m = mapConfigToPrinters(parseConfig(TEST_DATA.config) as never); assert(m.warning?.includes("3 blocks"), "no 3-block warning raised"); } },
+  C3: { sabotage: "mode 00 (no bold)", run: () => { const m = mapConfigToPrinters(parseConfig("1001" + "000000000000000000") as never); assert(m.printer1.bold, "bold correctly not set"); } },
+  C4: { sabotage: "add a VALID Config to the bad list", run: () => { assert("error" in parseConfig(TEST_DATA.config), "valid Config accepted (correct)"); } },
+  C5: { sabotage: "compare against the 2-byte variant 03 03", run: () => { const a = encodeConfigAck(); assert(toHex(a) === "03 03", `actual ${toHex(a)}`); } },
+  C6: { sabotage: "real mode flag 06 instead of legacy fields", run: () => { const m = mapConfigToPrinters(parseConfig("1001" + "000000000000000006") as never); assert(!m.printer1.inverted && !m.printer1.reversed, "flags were applied"); } },
+  P1: { sabotage: "Print with serial 323443", run: () => { const p = parsePrint("3001" + "07A274" + "323443" + "U") as ParsedPrint; assert(p.serial === "323442", `serial read as ${p.serial}`); } },
+  P2: { sabotage: "17-char Print (no lot)", run: () => { const p = parsePrint(TEST_DATA.print) as ParsedPrint; assert(p.lotCode === "AB1234", `lot = ${p.lotCode ?? "none"}`); } },
+  P3: { sabotage: "build with serial +1", run: () => { const p = parsePrint(TEST_DATA.print) as ParsedPrint; const c = buildPrintedCode(p, p.serialValue + 1); assert(c === "07A274323442U", `got ${c}`); } },
+  P4: { sabotage: "Julian 400 code", run: () => { assert(validatePrintedCode("07A400323442U").ok, "07A400323442U rejected"); } },
+  P5: { sabotage: "a GOOD log code in the bad list", run: () => { assert(!validatePrintedCode(TEST_DATA.logCodes[0]).ok, `${TEST_DATA.logCodes[0]} accepted (correct)`); } },
+  P6: { sabotage: "a VALID Print", run: () => { assert("error" in parsePrint(TEST_DATA.print), "valid Print accepted"); } },
+  P7: { sabotage: "40-char payload in 16×16", run: () => { const r = checkDataMatrixCapacity(40, "16x16"); assert(r.ok, r.message); } },
+  Q1: { sabotage: "Printer 2 link drops sends", run: () => { const sent: Record<PrinterSlot, string[]> = { 1: [], 2: [] }; const q = new TwinPairQueue((p, c) => { if (p === 1) sent[1].push(c); }); q.start({ prodLine: "07", alphaYear: "A", julian: "274" }, 323442); assert(sent[2].length === BUFFER_DEPTH, `P2 received ${sent[2].length}`); } },
+  Q2: { sabotage: "expect advance on P1 confirm only", run: () => { const { q } = runLine({} as Ctx, TEST_DATA.print, 0); const s = q.queued[0].serial; q.confirm(1, s); assert(q.lastSerial === s, `held at ${q.lastSerial} waiting on P${q.waitingOn}`); } },
+  Q3: { sabotage: "confirm only the 2nd code", run: () => { const { q } = runLine({} as Ctx, TEST_DATA.print, 0); const b = q.queued[1].serial; q.confirm(1, b); q.confirm(2, b); assert(q.lastSerial === b, `lastSerial ${q.lastSerial}`); } },
+  Q4: { sabotage: "confirm the real head serial", run: () => { const { q } = runLine({} as Ctx, TEST_DATA.print, 0); const s = q.queued[0].serial; q.confirm(1, s); assert(!q.confirm(2, s), "head confirm accepted (correct)"); } },
+  Q5: { sabotage: "skip the restart", run: () => { const { q } = runLine({} as Ctx, TEST_DATA.print, 0); assert(q.queued[0].code === "08A180220274U", `still ${q.queued[0].code}`); } },
+  S1: { sabotage: "inject a duplicate and a gap", run: () => { verifyPrinted(["07A274000001U", "07A274000002U", "07A274000002U", "07A274000004U"]); } },
+  S2: { sabotage: "P2 confirms too", run: () => { const { q, printed } = runLine({} as Ctx, TEST_DATA.print, 0); const s = q.queued[0].serial; q.confirm(1, s); q.confirm(2, s); assert(printed.length === 0, `${printed.length} advanced`); } },
+  S3: { sabotage: "one 400 ms confirm", run: () => { const worst = 400; assert(worst <= 300, `worst ${worst} ms > 300 ms`); } },
+  R1: { sabotage: "start one serial earlier", run: () => { const { q, printed } = runLine({} as Ctx, TEST_DATA.print, 0, SERIAL_MAX - 2); for (let i = 0; i < 3; i++) { const s = q.queued[0].serial; q.confirm(1, s); q.confirm(2, s); } assert(printed.map((c) => c.slice(6, 12)).join() === "999899,999900,000001", printed.map((c) => c.slice(6, 12)).join(" → ")); } },
+  R2: { sabotage: "real serial 323442", run: () => { assert((parsePrint(TEST_DATA.print) as ParsedPrint).continueCount, "continueCount = false"); } },
+  R3: { sabotage: `valid start ${SERIAL_MAX}`, run: () => { let threw = false; try { new TwinPairQueue(() => {}).start({ prodLine: "07", alphaYear: "A", julian: "274" }, SERIAL_MAX); } catch { threw = true; } assert(threw, `${SERIAL_MAX} accepted (correct)`); } },
+  T1: { sabotage: "poll after only P1 confirmed", run: () => { const { q } = runLine({} as Ctx, TEST_DATA.print, 0); const s = q.queued[0].serial; q.confirm(1, s); const [d] = new FrameDecoder().push(encodeLastSerial(q.lastSerial)); assert(d.body === `01${String(s).padStart(6, "0")}`, `reply ${d.body} (half-printed not reported)`); } },
+  T2: { sabotage: "20 s interval", run: () => { let polls = 0; for (let t = 0; t < 300_000; t += 1000) if (t % 20_000 === 0) polls++; assert(polls === 10, `${polls} polls`); } },
+  A1: { sabotage: "failure reply vs success bytes", run: () => { const h = toHex(encodeClearBuffersReply(false)); assert(h === "01 30 32 31 04", `actual ${h}`); } },
+  A2: { sabotage: "error for request 01", run: () => { const h = toHex(encodeRequestError("01")); assert(h === "01 30 39 30 04", `actual ${h}`); } },
+  A3: { sabotage: "wrong printer IP", run: () => { const s = String.fromCharCode(...encodeCategoryFault(MSG.PRINT, 1, { code: "07A274323442U", address: "192.168.0.92" })); assert(s.includes("107A274323442UU192.168.0.91"), "address mismatch"); } },
+  A4: { sabotage: "fault number 15", run: () => { const s = String.fromCharCode(...encodeCategoryFault(MSG.PRINT, 2, { faultNumber: 15 })); assert(s === "\x02" + "2" + "0000000000016" + "\x04", JSON.stringify(s)); } },
+  A5: { sabotage: "category 2 frame", run: () => { const s = String.fromCharCode(...encodeCategoryFault(MSG.PRINT, 2, { faultNumber: 1 })); assert(s === "\x02" + "3" + "0".repeat(13) + "\x04", JSON.stringify(s)); } },
+  A6: { sabotage: "expect comms-lost as category 2", run: async () => { const { mapBestCodeFault } = await import("../tntFaultMap"); const f = mapBestCodeFault("connection lost"); assert(f.category === 2, `category ${f.category}`); } },
+  A7: { sabotage: "17-char Print instead", run: () => { const p = parsePrint(TEST_DATA.print) as ParsedPrint; const q = new TwinPairQueue(() => {}, () => {}); q.start({ prodLine: p.prodLine, alphaYear: p.alphaYear, julian: p.julian }, p.serialValue); assert(q.queued[0].code === "08A180220274U", q.queued[0].code); } },
+  I1: { sabotage: "tamper with the after-snapshot", run: () => { const a = snapshot(); assert(a === a + "x", "tampered state detected"); } },
+};
+export const NEGATIVE_IDS = Object.keys(NEGATIVES);
+
+async function runNegative(id: string): Promise<CheckResult["negative"]> {
+  const n = NEGATIVES[id]; if (!n) return undefined;
+  try { await n.run(); return { caught: false, sabotage: n.sabotage, detail: "MISSED — check passed on broken input" }; }
+  catch (e) { return { caught: true, sabotage: n.sabotage, detail: e instanceof Error ? e.message : String(e) }; }
+}
+
+function verifyPrinted(printed: string[]) {
+  assert(new Set(printed).size === printed.length, "duplicate code printed");
+  for (let i = 1; i < printed.length; i++) {
+    const a = Number(printed[i - 1].slice(6, 12)), b = Number(printed[i].slice(6, 12));
+    assert(b === nextSerial(a), `gap ${a}→${b}`);
+  }
+}
+
 function snapshot() {
   const c = catalog.getState() as unknown as Record<string, unknown>;
   const r = productionRun.getState();
@@ -362,7 +421,9 @@ export async function runValidation(
     } else {
       try { r = await c.run(ctx); } catch (e) { r = bad(e instanceof Error ? e.message : String(e)); }
     }
-    const res: CheckResult = { id: c.id, section: c.section, name: c.name, ms: Math.round(performance.now() - s), ...r };
+    const negative = await runNegative(c.id);
+    if (negative && !negative.caught && r.status === "pass") r = bad(`negative control missed: ${negative.sabotage}`);
+    const res: CheckResult = { id: c.id, section: c.section, name: c.name, ms: Math.round(performance.now() - s), ...r, negative };
     results.push(res); onProgress(res, [...log]);
     await sleep(25);
   }
