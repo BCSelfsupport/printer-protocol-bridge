@@ -20,6 +20,20 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'emulator-message-deletion-persistence',
+    type: 'bugfix',
+    title: 'Emulated Messages Stay Deleted',
+    date: '17 Oct 2026',
+    summary: 'Deleted messages no longer return when emulated printers are reloaded or recreated.',
+  },
+  {
+    id: 'pc-library-destination-transfer',
+    type: 'bugfix',
+    title: 'PC Library Transfers to Other Printers',
+    date: '17 Oct 2026',
+    summary: 'Push to Printer now sends to the chosen printer rather than the previous connection, and removes the correct PC Library copy only after a successful transfer. Printers without an available swap-slot message can receive their first library message.',
+  },
+  {
     id: 'twincode-fault-resync',
     type: 'bugfix',
     title: 'TwinCode: Printing Resumes Cleanly After a Printer Fault',

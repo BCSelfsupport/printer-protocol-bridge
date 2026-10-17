@@ -150,24 +150,10 @@ class PrinterEmulatorInstance {
       const saved = localStorage.getItem(this.storageKey);
       if (saved) {
         const msgs = JSON.parse(saved) as string[];
-        if (Array.isArray(msgs) && msgs.length > 0) {
-          // Union persisted list with current defaults so newly-added factory
-          // messages (e.g. BC-GEN2) appear even when an older persisted list
-          // exists in localStorage from a previous version.
-          const defaults = this.state.messages;
-          const seen = new Set(msgs.map(m => m.toUpperCase()));
-          const merged = [...msgs];
-          for (const def of defaults) {
-            if (!seen.has(def.toUpperCase())) {
-              merged.push(def);
-              seen.add(def.toUpperCase());
-            }
-          }
-          this.state.messages = this.sortMessages(merged);
-          // Re-persist so subsequent loads are consistent.
-          if (merged.length !== msgs.length) {
-            this.persistMessages();
-          }
+        if (Array.isArray(msgs) && msgs.every(msg => typeof msg === 'string')) {
+          // A saved list is authoritative, including deletions and an empty list.
+          // Factory/sample messages are seeded only for a new emulator.
+          this.state.messages = this.sortMessages(msgs);
         }
       }
     } catch { /* ignore */ }

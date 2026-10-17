@@ -94,7 +94,7 @@ interface MessagesScreenProps {
   printerNameMap?: Record<number, string>;
   pcLibraryMessages?: MessageDetails[];
   onSaveToPcLibrary?: (message: PrintMessage) => void;
-  onPushToprinter?: (libraryMessage: MessageDetails, swapSlotName: string | null) => Promise<boolean>;
+  onPushToprinter?: (libraryMessage: MessageDetails, swapSlotName: string | null, sourcePrinterId?: number) => Promise<boolean>;
   onDeleteFromPcLibrary?: (messageName: string, sourcePrinterId?: number) => void;
   swapSlotName?: string | null;
   onSetSwapSlot?: (messageName: string | null) => void;
@@ -774,13 +774,13 @@ export function MessagesScreen({
                 disabled={!selectedLibraryMessage || isPushing || !onPushToprinter}
                 onClick={async () => {
                   if (!selectedLibraryMessage || !onPushToprinter) return;
-                  if (!swapSlotName) {
+                  if (!swapSlotName && messages.some(m => m.name !== currentMessageName && !isReadOnlyMessage(m.name))) {
                     setSwapSlotDialogOpen(true);
                     return;
                   }
                   setIsPushing(true);
                   try {
-                    const ok = await onPushToprinter(selectedLibraryMessage, swapSlotName);
+                    const ok = await onPushToprinter(selectedLibraryMessage, swapSlotName ?? null, selectedLibrarySourcePrinterId);
                     if (ok) {
                       toast.success(`"${selectedLibraryMessage.name}" pushed to printer`);
                       setSelectedLibraryMessage(null);
