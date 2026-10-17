@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { CountdownType } from '@/hooks/useJetCountdown';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
+import { transferPcLibraryMessage } from '@/lib/pcLibraryTransfer';
 import { getModelCapabilities } from '@/lib/modelCapabilities';
 import { setPollingPaused, waitForPollingIdle } from '@/lib/pollingPause';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -949,17 +950,17 @@ const Index = () => {
         };
       };
 
+      if (emulatorHandles) {
+        // Emulation must win even in the desktop app with a connected card.
+        const success = await sendCommandToPrinter(targetPrinter, command);
+        return { success };
+      }
+
       if (targetPrinter.id === connectionState.connectedPrinter?.id) {
         const result = saveOptions && (window.electronAPI || isRelayMode())
           ? await printerTransport.sendCommand(targetPrinter.id, command, saveOptions)
           : await sendCommand(command);
         return validateResult(result);
-      }
-
-      if (emulatorHandles) {
-        // Route through emulator via sendCommandToPrinter (no TCP needed)
-        const success = await sendCommandToPrinter(targetPrinter, command);
-        return { success };
       }
 
       // Real hardware: use shared session opened below
@@ -1562,16 +1563,19 @@ const Index = () => {
     libraryMessage: MessageDetails,
     swapSlotNameArg: string | null,
     targetPrinter?: Printer | null,
+    sourcePrinterId?: number,
   ): Promise<boolean> => {
     const printer = targetPrinter ?? connectionState.connectedPrinter;
-    if (!printer || !connectionState.isConnected) {
+    const emulatedTarget = printer ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port) : null;
+    const connectedTarget = printer?.id === connectionState.connectedPrinter?.id && connectionState.isConnected;
+    if (!printer || (!emulatedTarget && !connectedTarget && !printer.isAvailable)) {
       toast.error('No printer connected');
       return false;
     }
 
     // Validate template compatibility with target printer model
-    const model = connectionState.status?.printerModel;
-    const variant = connectionState.status?.printerVariant;
+    const model = printer.printerModel ?? (connectedTarget ? connectionState.status?.printerModel : undefined);
+    const variant = printer.printerVariant ?? (connectedTarget ? connectionState.status?.printerVariant : undefined);
     const capabilities = getModelCapabilities(model, variant);
     if (capabilities && libraryMessage.templateValue) {
       const templateId = libraryMessage.templateValue as import('@/lib/modelCapabilities').TemplateId;
@@ -1591,40 +1595,28 @@ const Index = () => {
         }
       }
 
-      // Create the library message on the printer (saveMessageContent handles the ^NM write)
-      const ok = await saveMessageContent(
-        libraryMessage.name,
-        libraryMessage.fields,
-        libraryMessage.templateValue,
-        true, // isNew — create fresh
-        libraryMessage.settings ? {
-          speed: libraryMessage.settings.speed,
-          rotation: libraryMessage.settings.rotation,
-          printMode: libraryMessage.settings.printMode,
-        } : undefined,
-        libraryMessage.advancedSettings?.counters,
-      );
+      const ok = await transferPcLibraryMessage(libraryMessage, printer, sourcePrinterId ?? printer.id, {
+        write: async (target, details) => {
+          const result = await replaceMessageWithoutDelete(target, details.name, details, false);
+          return result.success;
+        },
+        save: saveMessage,
+        remove: deleteFromPcLibrary,
+        setSlot: setSwapSlot,
+      });
 
       if (!ok) {
         toast.error('Failed to push message to printer');
         return false;
       }
 
-      // Save to regular storage too
-      saveMessage(libraryMessage, printer.id);
-
-      // Remove from PC Library since it's now on the printer
-      deleteFromPcLibrary(libraryMessage.name, printer.id);
-
-      // Update swap slot to the new message name
-      setSwapSlot(libraryMessage.name, printer.id);
-
+      if (connectedTarget) refreshPolling();
       return true;
     } catch (e) {
       console.error('[PcLibrary] Failed to push message:', e);
       return false;
     }
-  }, [connectionState.connectedPrinter, connectionState.isConnected, saveMessageContent, getStoredMessageForPrinter, saveToPcLibrary, saveMessage, deleteFromPcLibrary, setSwapSlot]);
+  }, [connectionState.connectedPrinter, connectionState.isConnected, connectionState.status?.printerModel, connectionState.status?.printerVariant, replaceMessageWithoutDelete, getStoredMessageForPrinter, saveToPcLibrary, saveMessage, deleteFromPcLibrary, setSwapSlot, refreshPolling]);
 
   /** Save a printer message to the PC Library */
   const handleSaveToPcLibrary = useCallback(async (message: PrintMessage, targetPrinter?: Printer | null) => {
@@ -3283,7 +3275,7 @@ const Index = () => {
           printerNameMap={Object.fromEntries(printers.map(p => [p.id, p.name]))}
           pcLibraryMessages={getPcLibraryMessages(messageTargetPrinter?.id)}
           onSaveToPcLibrary={(message) => handleSaveToPcLibrary(message, messageTargetPrinter)}
-          onPushToprinter={(libMsg, swapName) => pushPcLibraryToPrinter(libMsg, swapName, messageTargetPrinter)}
+          onPushToprinter={(libMsg, swapName, sourceId) => pushPcLibraryToPrinter(libMsg, swapName, messageTargetPrinter, sourceId)}
           onDeleteFromPcLibrary={(name, sourcePrinterId) => deleteFromPcLibrary(name, sourcePrinterId)}
           swapSlotName={getSwapSlot(messageTargetPrinter?.id)}
           onSetSwapSlot={(name) => setSwapSlot(name, messageTargetPrinter?.id)}
@@ -3539,7 +3531,7 @@ const Index = () => {
             printerNameMap={Object.fromEntries(printers.map(p => [p.id, p.name]))}
             pcLibraryMessages={getPcLibraryMessages((selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
             onSaveToPcLibrary={(message) => handleSaveToPcLibrary(message, selectedPrinter ?? connectionState.connectedPrinter ?? null)}
-            onPushToprinter={(libMsg, swapName) => pushPcLibraryToPrinter(libMsg, swapName, selectedPrinter ?? connectionState.connectedPrinter ?? null)}
+            onPushToprinter={(libMsg, swapName, sourceId) => pushPcLibraryToPrinter(libMsg, swapName, selectedPrinter ?? connectionState.connectedPrinter ?? null, sourceId)}
             onDeleteFromPcLibrary={(name, sourcePrinterId) => deleteFromPcLibrary(name, sourcePrinterId)}
             swapSlotName={getSwapSlot((selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
             onSetSwapSlot={(name) => setSwapSlot(name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
