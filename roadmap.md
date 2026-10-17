@@ -1,5 +1,6 @@
 # Roadmap
 
+- [ ] Remove PC Library swap-slot requirement and protect existing printer messages.
 - [x] Fix all-printer selection when an emulated target does not yet contain a PC-saved message — all-13-printer regression and failure controls pass; preview click-through remains product-key gated.
 
 - [x] Keep deleted emulated messages deleted after reload — regression tests passed.
