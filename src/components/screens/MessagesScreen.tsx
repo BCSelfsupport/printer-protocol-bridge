@@ -94,10 +94,8 @@ interface MessagesScreenProps {
   printerNameMap?: Record<number, string>;
   pcLibraryMessages?: MessageDetails[];
   onSaveToPcLibrary?: (message: PrintMessage) => void;
-  onPushToprinter?: (libraryMessage: MessageDetails, swapSlotName: string | null, sourcePrinterId?: number) => Promise<boolean>;
+  onPushToprinter?: (libraryMessage: MessageDetails, sourcePrinterId?: number) => Promise<boolean>;
   onDeleteFromPcLibrary?: (messageName: string, sourcePrinterId?: number) => void;
-  swapSlotName?: string | null;
-  onSetSwapSlot?: (messageName: string | null) => void;
   /** When true, target printer is a slave — block create/edit/delete (master owns content). */
   isSlave?: boolean;
   /** Called when a blocked action is attempted on a slave (Index renders the explainer dialog). */
@@ -139,8 +137,6 @@ export function MessagesScreen({
   onSaveToPcLibrary,
   onPushToprinter,
   onDeleteFromPcLibrary,
-  swapSlotName,
-  onSetSwapSlot,
   liveCounters,
   isSlave = false,
   onSlaveBlocked,
@@ -194,7 +190,6 @@ export function MessagesScreen({
   const [selectedLibraryMessage, setSelectedLibraryMessage] = useState<MessageDetails | null>(null);
   const [selectedLibrarySourcePrinterId, setSelectedLibrarySourcePrinterId] = useState<number | undefined>(undefined);
   const [isPushing, setIsPushing] = useState(false);
-  const [swapSlotDialogOpen, setSwapSlotDialogOpen] = useState(false);
   const [deleteLibraryConfirmOpen, setDeleteLibraryConfirmOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'tile'>(() => {
     if (typeof window === 'undefined') return 'list';
@@ -774,13 +769,9 @@ export function MessagesScreen({
                 disabled={!selectedLibraryMessage || isPushing || !onPushToprinter}
                 onClick={async () => {
                   if (!selectedLibraryMessage || !onPushToprinter) return;
-                  if (!swapSlotName && messages.some(m => m.name !== currentMessageName && !isReadOnlyMessage(m.name))) {
-                    setSwapSlotDialogOpen(true);
-                    return;
-                  }
                   setIsPushing(true);
                   try {
-                    const ok = await onPushToprinter(selectedLibraryMessage, swapSlotName ?? null, selectedLibrarySourcePrinterId);
+                    const ok = await onPushToprinter(selectedLibraryMessage, selectedLibrarySourcePrinterId);
                     if (ok) {
                       toast.success(`"${selectedLibraryMessage.name}" pushed to printer`);
                       setSelectedLibraryMessage(null);
@@ -1304,43 +1295,6 @@ export function MessagesScreen({
           }}
         />
       )}
-
-      {/* Swap Slot Selection Dialog */}
-      <Dialog open={swapSlotDialogOpen} onOpenChange={setSwapSlotDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Set Swap Slot</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground mb-3">
-              Select a printer message to use as the swap slot. This message will be temporarily replaced when loading overflow messages from the PC Library. It remains safely stored on the PC.
-            </p>
-            <Label>Swap Slot Message</Label>
-            <div className="mt-2 max-h-[200px] overflow-y-auto border rounded-md">
-              {messages
-                .filter(m => m.name !== currentMessageName && !isReadOnlyMessage(m.name))
-                .map((m) => (
-                  <div
-                    key={m.id}
-                    onClick={() => {
-                      onSetSwapSlot?.(m.name);
-                      setSwapSlotDialogOpen(false);
-                      toast.success(`Swap slot set to "${m.name}"`);
-                    }}
-                    className="px-3 py-2 cursor-pointer hover:bg-muted/50 border-b last:border-b-0 text-sm"
-                  >
-                    {m.name}
-                  </div>
-                ))}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSwapSlotDialogOpen(false)}>
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete from PC Library Confirmation */}
       <AlertDialog open={deleteLibraryConfirmOpen} onOpenChange={setDeleteLibraryConfirmOpen}>

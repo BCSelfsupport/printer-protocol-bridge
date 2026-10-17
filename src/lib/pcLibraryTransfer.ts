@@ -7,15 +7,15 @@ export async function transferPcLibraryMessage(
   target: Printer,
   sourcePrinterId: number,
   actions: {
+    existingNames: string[];
     write: (target: Printer, message: MessageDetails) => Promise<boolean>;
     save: (message: MessageDetails, printerId: number) => void;
     remove: (name: string, printerId: number) => void;
-    setSlot: (name: string, printerId: number) => void;
   },
 ): Promise<boolean> {
+  if (actions.existingNames.some(name => name.toUpperCase() === message.name.toUpperCase())) return false;
   if (message.fields.length === 0 || !await actions.write(target, message)) return false;
   actions.save(message, target.id);
   actions.remove(message.name, sourcePrinterId);
-  actions.setSlot(message.name, target.id);
   return true;
 }
