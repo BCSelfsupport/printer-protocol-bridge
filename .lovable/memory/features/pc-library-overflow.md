@@ -1,6 +1,6 @@
 ---
 name: PC Library overflow system
-description: Stores overflow messages on PC when printer memory is full, with swap-slot push mechanism — unified pool visible across all printers
+description: Stores saved messages on PC in a unified pool visible across all printers; pushing retains the original
 type: feature
 ---
 The PC Library stores messages in localStorage (`bestcode-pc-library`) keyed by `printerId:messageName`. When printer memory is full, users can:
@@ -13,7 +13,7 @@ The PC Library stores messages in localStorage (`bestcode-pc-library`) keyed by 
 **Addition mechanism**: No swap slot is required. When pushing:
 - Verify the destination does not already contain the same name.
 - Add the PC Library message using the guarded message write path, without deleting or overwriting another message.
-- The pushed message is removed from PC Library (it's now on the printer)
+- The pushed message stays in PC Library for reuse; only explicit PC Library deletion removes it.
 
 **Storage keys**: `bestcode-pc-library` (messages), `bestcode-swap-slot` (per-printer slot names).
 
