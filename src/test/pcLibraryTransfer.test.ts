@@ -21,6 +21,7 @@ describe('PC Library cross-printer transfers', () => {
     localStorage.setItem('bestcode-pc-library', JSON.stringify({ '1:SHOWCODE': message }));
     try {
       const ok = await transferPcLibraryMessage(message, target, 1, {
+        existingNames: multiPrinterEmulator.getInstanceByIp(target.ipAddress, 23)?.getState().messages ?? [],
         write: async (printer, details) => multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
           ?.processCommand(`^NM 4;0;0;0;${details.name}^AT 0;0;0;0;0;PACK EXPO`).success ?? false,
         save: (details, id) => localStorage.setItem(`saved-${id}`, JSON.stringify(details)),
@@ -29,11 +30,12 @@ describe('PC Library cross-printer transfers', () => {
           delete library[`${id}:${name}`];
           localStorage.setItem('bestcode-pc-library', JSON.stringify(library));
         },
-        setSlot: vi.fn(),
       });
       expect(ok).toBe(true);
       expect(multiPrinterEmulator.getInstanceByIp(source.ipAddress, 23)?.getState().messages).not.toContain('SHOWCODE');
       expect(multiPrinterEmulator.getInstanceByIp(target.ipAddress, 23)?.getState().messages).toContain('SHOWCODE');
+      expect(multiPrinterEmulator.getInstanceByIp(target.ipAddress, 23)?.getState().messages).toContain('SAMPLE');
+      expect(multiPrinterEmulator.getInstanceByIp(target.ipAddress, 23)?.getState().messages).toContain('TEST');
       expect(JSON.parse(localStorage.getItem('saved-2') ?? '{}').fields[0].data).toBe('PACK EXPO');
       expect(JSON.parse(localStorage.getItem('bestcode-pc-library') ?? '{}')).toEqual({});
       multiPrinterEmulator.syncConfiguredPrinters([]);
@@ -45,19 +47,24 @@ describe('PC Library cross-printer transfers', () => {
     }
   });
   it('writes to printer 2 and removes the printer 1 library key only after success', async () => {
-    const actions = { write: vi.fn().mockResolvedValue(true), save: vi.fn(), remove: vi.fn(), setSlot: vi.fn() };
+    const actions = { existingNames: ['SAMPLE', 'TEST'], write: vi.fn().mockResolvedValue(true), save: vi.fn(), remove: vi.fn() };
     expect(await transferPcLibraryMessage(message, target, 1, actions)).toBe(true);
     expect(actions.write).toHaveBeenCalledWith(target, message);
     expect(actions.save).toHaveBeenCalledWith(message, 2);
     expect(actions.remove).toHaveBeenCalledWith('SHOWCODE', 1);
-    expect(actions.setSlot).toHaveBeenCalledWith('SHOWCODE', 2);
     expect(actions.write.mock.invocationCallOrder[0]).toBeLessThan(actions.remove.mock.invocationCallOrder[0]);
   });
   it('keeps the PC copy and destination bookkeeping unchanged when sending fails', async () => {
-    const actions = { write: vi.fn().mockResolvedValue(false), save: vi.fn(), remove: vi.fn(), setSlot: vi.fn() };
+    const actions = { existingNames: ['SAMPLE', 'TEST'], write: vi.fn().mockResolvedValue(false), save: vi.fn(), remove: vi.fn() };
     expect(await transferPcLibraryMessage(message, target, 1, actions)).toBe(false);
     expect(actions.save).not.toHaveBeenCalled();
     expect(actions.remove).not.toHaveBeenCalled();
-    expect(actions.setSlot).not.toHaveBeenCalled();
+  });
+  it('never overwrites an existing same-name message, even with different case', async () => {
+    const actions = { existingNames: ['showcode'], write: vi.fn(), save: vi.fn(), remove: vi.fn() };
+    expect(await transferPcLibraryMessage(message, target, 1, actions)).toBe(false);
+    expect(actions.write).not.toHaveBeenCalled();
+    expect(actions.save).not.toHaveBeenCalled();
+    expect(actions.remove).not.toHaveBeenCalled();
   });
 });

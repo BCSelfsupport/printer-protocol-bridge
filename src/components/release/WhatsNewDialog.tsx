@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'pc-library-add-without-replacement',
+    type: 'bugfix',
+    title: 'Push to Printer Adds Without Replacing',
+    date: '17 Oct 2026',
+    summary: 'PC Library messages can now be added without choosing another message to replace. Existing names are protected from overwriting, and a failed addition leaves other printer messages untouched.',
+  },
+  {
     id: 'emulator-select-all-missing-message',
     type: 'bugfix',
     title: 'Select Saved Messages Across Emulated Printers',

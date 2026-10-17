@@ -224,7 +224,7 @@ const Index = () => {
   
   
   // Local message storage (persists to localStorage, scoped by printer ID)
-  const { messages: allStoredMessages, saveMessage, getMessage, getMessageStrict, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId, saveToPcLibrary, getAllPcLibraryMessages, getPcLibraryMessages, deleteFromPcLibrary, getSwapSlot, setSwapSlot } = useMessageStorage();
+  const { messages: allStoredMessages, saveMessage, getMessage, getMessageStrict, deleteMessage: deleteStoredMessage, setPrinterId: setStoragePrinterId, saveToPcLibrary, getAllPcLibraryMessages, getPcLibraryMessages, deleteFromPcLibrary } = useMessageStorage();
   
   // Consumable storage
   const consumableStorage = useConsumableStorage();
@@ -1559,10 +1559,9 @@ const Index = () => {
     saveMessage,
   ]);
 
-  /** Push a PC Library message to the printer by replacing the swap slot */
+  /** Add a PC Library message without replacing any existing printer message. */
   const pushPcLibraryToPrinter = useCallback(async (
     libraryMessage: MessageDetails,
-    swapSlotNameArg: string | null,
     targetPrinter?: Printer | null,
     sourcePrinterId?: number,
   ): Promise<boolean> => {
@@ -1588,26 +1587,28 @@ const Index = () => {
     }
 
     try {
-      // First, save the current swap slot to PC Library if it exists on the printer
-      if (swapSlotNameArg) {
-        const swapDetails = getStoredMessageForPrinter(swapSlotNameArg, printer);
-        if (swapDetails) {
-          saveToPcLibrary(swapDetails, printer.id);
-        }
+      if (!emulatedTarget && !connectedTarget) {
+        toast.error('Connect to this printer first so its message names can be checked safely');
+        return false;
+      }
+      const existingNames = emulatedTarget?.getState().messages ?? connectionState.messages.map(message => message.name);
+      if (existingNames.some(name => name.toUpperCase() === libraryMessage.name.toUpperCase())) {
+        toast.error(`"${libraryMessage.name}" already exists on this printer — nothing was overwritten`);
+        return false;
       }
 
       const ok = await transferPcLibraryMessage(libraryMessage, printer, sourcePrinterId ?? printer.id, {
+        existingNames,
         write: async (target, details) => {
           const result = await replaceMessageWithoutDelete(target, details.name, details, false);
           return result.success;
         },
         save: saveMessage,
         remove: deleteFromPcLibrary,
-        setSlot: setSwapSlot,
       });
 
       if (!ok) {
-        toast.error('Failed to push message to printer');
+        toast.error('Could not add the message — existing messages were not deleted; check printer memory capacity');
         return false;
       }
 
@@ -1617,7 +1618,7 @@ const Index = () => {
       console.error('[PcLibrary] Failed to push message:', e);
       return false;
     }
-  }, [connectionState.connectedPrinter, connectionState.isConnected, connectionState.status?.printerModel, connectionState.status?.printerVariant, replaceMessageWithoutDelete, getStoredMessageForPrinter, saveToPcLibrary, saveMessage, deleteFromPcLibrary, setSwapSlot, refreshPolling]);
+  }, [connectionState.connectedPrinter, connectionState.isConnected, connectionState.messages, connectionState.status?.printerModel, connectionState.status?.printerVariant, replaceMessageWithoutDelete, saveMessage, deleteFromPcLibrary, refreshPolling]);
 
   /** Save a printer message to the PC Library */
   const handleSaveToPcLibrary = useCallback(async (message: PrintMessage, targetPrinter?: Printer | null) => {
@@ -3293,10 +3294,8 @@ const Index = () => {
           printerNameMap={Object.fromEntries(printers.map(p => [p.id, p.name]))}
           pcLibraryMessages={getPcLibraryMessages(messageTargetPrinter?.id)}
           onSaveToPcLibrary={(message) => handleSaveToPcLibrary(message, messageTargetPrinter)}
-          onPushToprinter={(libMsg, swapName, sourceId) => pushPcLibraryToPrinter(libMsg, swapName, messageTargetPrinter, sourceId)}
+          onPushToprinter={(libMsg, sourceId) => pushPcLibraryToPrinter(libMsg, messageTargetPrinter, sourceId)}
           onDeleteFromPcLibrary={(name, sourcePrinterId) => deleteFromPcLibrary(name, sourcePrinterId)}
-          swapSlotName={getSwapSlot(messageTargetPrinter?.id)}
-          onSetSwapSlot={(name) => setSwapSlot(name, messageTargetPrinter?.id)}
           isSlave={messageTargetPrinter?.role === 'slave'}
           onSlaveBlocked={() => {
             if (messageTargetPrinter) {
@@ -3549,10 +3548,8 @@ const Index = () => {
             printerNameMap={Object.fromEntries(printers.map(p => [p.id, p.name]))}
             pcLibraryMessages={getPcLibraryMessages((selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
             onSaveToPcLibrary={(message) => handleSaveToPcLibrary(message, selectedPrinter ?? connectionState.connectedPrinter ?? null)}
-            onPushToprinter={(libMsg, swapName, sourceId) => pushPcLibraryToPrinter(libMsg, swapName, selectedPrinter ?? connectionState.connectedPrinter ?? null, sourceId)}
+            onPushToprinter={(libMsg, sourceId) => pushPcLibraryToPrinter(libMsg, selectedPrinter ?? connectionState.connectedPrinter ?? null, sourceId)}
             onDeleteFromPcLibrary={(name, sourcePrinterId) => deleteFromPcLibrary(name, sourcePrinterId)}
-            swapSlotName={getSwapSlot((selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
-            onSetSwapSlot={(name) => setSwapSlot(name, (selectedPrinter ?? connectionState.connectedPrinter ?? null)?.id)}
             isSlave={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.role === 'slave'}
             onSlaveBlocked={() => {
               const tp = selectedPrinter ?? connectionState.connectedPrinter ?? null;
