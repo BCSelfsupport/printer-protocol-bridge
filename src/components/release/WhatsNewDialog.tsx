@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'emulator-select-all-missing-message',
+    type: 'bugfix',
+    title: 'Select Saved Messages Across Emulated Printers',
+    date: '17 Oct 2026',
+    summary: 'Selecting a saved message across multiple emulated printers now loads its saved content onto any target that does not yet have it before selecting it. Failed uploads remain marked as failures rather than showing a false success.',
+  },
+  {
     id: 'emulator-message-deletion-persistence',
     type: 'bugfix',
     title: 'Emulated Messages Stay Deleted',

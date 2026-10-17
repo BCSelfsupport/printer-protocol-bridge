@@ -108,7 +108,7 @@ interface MessagesScreenProps {
   /** Other online printers the operator may also apply the message to. */
   siblingPrinters?: Printer[];
   /** Plain ^SM select on the given printer. */
-  onSelectOnPrinter?: (printer: Printer, message: PrintMessage) => Promise<boolean>;
+  onSelectOnPrinter?: (printer: Printer, message: PrintMessage, sourceDetails?: MessageDetails | null) => Promise<boolean>;
   /** Full baked-fields rewrite + ^SM on the given printer (used for prompted messages). */
   onApplyPromptValuesOnPrinter?: (printer: Printer, message: PrintMessage, updatedDetails: MessageDetails) => Promise<boolean>;
   /** Copy a message (full content + settings) from the source printer to the given targets. */
@@ -401,7 +401,7 @@ export function MessagesScreen({
       // WRITES (Copy to Printers), which remain sequential.
       toast.loading(`Selecting "${selectedMessage.name}" on ${targets.length} printer(s)…`, { id: 'multi-select' });
       const results = await Promise.all(
-        targets.map(async (p) => ({ p, ok: await onSelectOnPrinter(p, selectedMessage) }))
+        targets.map(async (p) => ({ p, ok: await onSelectOnPrinter(p, selectedMessage, resolvedStored) }))
       );
       const okCount = results.filter(r => r.ok).length;
       const failCount = results.length - okCount;

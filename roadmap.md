@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Fix all-printer selection when an emulated target does not yet contain a PC-saved message — all-13-printer regression and failure controls pass; preview click-through remains product-key gated.
+
 - [x] Keep deleted emulated messages deleted after reload — regression tests passed.
 - [x] Fix PC Library transfers to another emulated printer — cross-printer emulator test passed; preview click-through blocked by product-key screen.
 

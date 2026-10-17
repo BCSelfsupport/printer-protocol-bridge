@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { CountdownType } from '@/hooks/useJetCountdown';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { transferPcLibraryMessage } from '@/lib/pcLibraryTransfer';
+import { ensureEmulatedMessage } from '@/lib/ensureEmulatedMessage';
 import { getModelCapabilities } from '@/lib/modelCapabilities';
 import { setPollingPaused, waitForPollingIdle } from '@/lib/pollingPause';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -3066,7 +3067,24 @@ const Index = () => {
   // Per-printer ^SM select — hoisted so both desktop and mobile MessagesScreen
   // branches can pass it as onSelectOnPrinter. Handles Line ID rewrite,
   // connected vs background-printer socket paths, and ACK/FAIL pip.
-  const selectMessageOnAnyPrinter = async (printer: Printer, message: PrintMessage): Promise<boolean> => {
+  const selectMessageOnAnyPrinter = async (printer: Printer, message: PrintMessage, sourceDetails?: MessageDetails | null): Promise<boolean> => {
+    const emulator = multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port);
+    if (emulator) {
+      const details = getExactStoredMessageForPrinter(message.name, printer)
+        ?? sourceDetails
+        ?? getStoredMessageForPrinter(message.name, selectedPrinter ?? printer);
+      const prepared = await ensureEmulatedMessage(message.name, emulator.getState().messages, details, async saved => {
+        const result = await replaceMessageWithoutDelete(printer, message.name, saved, false);
+        return result.success;
+      });
+      if (!prepared.ok) {
+        updatePrinter(printer.id, {
+          lastSelectionResult: { messageName: message.name, success: false, reason: prepared.reason, at: Date.now() },
+        });
+        return false;
+      }
+      if (prepared.created && details) saveMessage(details, printer.id);
+    }
     // Auto-capture HMI edits on the currently-selected message before we
     // switch away — preserves any Width/Delay/Speed the operator tweaked at
     // the printer keypad.
