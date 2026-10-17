@@ -1604,7 +1604,6 @@ const Index = () => {
           return result.success;
         },
         save: saveMessage,
-        remove: deleteFromPcLibrary,
       });
 
       if (!ok) {
@@ -1618,7 +1617,7 @@ const Index = () => {
       console.error('[PcLibrary] Failed to push message:', e);
       return false;
     }
-  }, [connectionState.connectedPrinter, connectionState.isConnected, connectionState.messages, connectionState.status?.printerModel, connectionState.status?.printerVariant, replaceMessageWithoutDelete, saveMessage, deleteFromPcLibrary, refreshPolling]);
+  }, [connectionState.connectedPrinter, connectionState.isConnected, connectionState.messages, connectionState.status?.printerModel, connectionState.status?.printerVariant, replaceMessageWithoutDelete, saveMessage, refreshPolling]);
 
   /** Save a printer message to the PC Library */
   const handleSaveToPcLibrary = useCallback(async (message: PrintMessage, targetPrinter?: Printer | null) => {

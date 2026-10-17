@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'pc-library-retain-copy-after-push',
+    type: 'bugfix',
+    title: 'Keep PC Copies After Sending',
+    date: '17 Oct 2026',
+    summary: 'Push to Printer now keeps the original saved message in the PC Library, ready to send to more printers. Only deleting it from the PC Library removes the saved copy.',
+  },
+  {
     id: 'pc-library-add-without-replacement',
     type: 'bugfix',
     title: 'Push to Printer Adds Without Replacing',

@@ -25,11 +25,6 @@ describe('PC Library cross-printer transfers', () => {
         write: async (printer, details) => multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
           ?.processCommand(`^NM 4;0;0;0;${details.name}^AT 0;0;0;0;0;PACK EXPO`).success ?? false,
         save: (details, id) => localStorage.setItem(`saved-${id}`, JSON.stringify(details)),
-        remove: (name, id) => {
-          const library = JSON.parse(localStorage.getItem('bestcode-pc-library') ?? '{}');
-          delete library[`${id}:${name}`];
-          localStorage.setItem('bestcode-pc-library', JSON.stringify(library));
-        },
       });
       expect(ok).toBe(true);
       expect(multiPrinterEmulator.getInstanceByIp(source.ipAddress, 23)?.getState().messages).not.toContain('SHOWCODE');
@@ -37,22 +32,23 @@ describe('PC Library cross-printer transfers', () => {
       expect(multiPrinterEmulator.getInstanceByIp(target.ipAddress, 23)?.getState().messages).toContain('SAMPLE');
       expect(multiPrinterEmulator.getInstanceByIp(target.ipAddress, 23)?.getState().messages).toContain('TEST');
       expect(JSON.parse(localStorage.getItem('saved-2') ?? '{}').fields[0].data).toBe('PACK EXPO');
-      expect(JSON.parse(localStorage.getItem('bestcode-pc-library') ?? '{}')).toEqual({});
+      expect(JSON.parse(localStorage.getItem('bestcode-pc-library') ?? '{}')).toEqual({ '1:SHOWCODE': message });
       multiPrinterEmulator.syncConfiguredPrinters([]);
       multiPrinterEmulator.syncConfiguredPrinters([source, target]);
       expect(multiPrinterEmulator.getInstanceByIp(target.ipAddress, 23)?.getState().messages).toContain('SHOWCODE');
+      expect(JSON.parse(localStorage.getItem('bestcode-pc-library') ?? '{}')).toEqual({ '1:SHOWCODE': message });
     } finally {
       multiPrinterEmulator.syncConfiguredPrinters([]);
       multiPrinterEmulator.enabled = false;
     }
   });
-  it('writes to printer 2 and removes the printer 1 library key only after success', async () => {
+  it('writes to printer 2 without removing the printer 1 PC Library copy', async () => {
     const actions = { existingNames: ['SAMPLE', 'TEST'], write: vi.fn().mockResolvedValue(true), save: vi.fn(), remove: vi.fn() };
     expect(await transferPcLibraryMessage(message, target, 1, actions)).toBe(true);
     expect(actions.write).toHaveBeenCalledWith(target, message);
     expect(actions.save).toHaveBeenCalledWith(message, 2);
-    expect(actions.remove).toHaveBeenCalledWith('SHOWCODE', 1);
-    expect(actions.write.mock.invocationCallOrder[0]).toBeLessThan(actions.remove.mock.invocationCallOrder[0]);
+    expect(actions.remove).not.toHaveBeenCalled();
+    expect(actions.write.mock.invocationCallOrder[0]).toBeLessThan(actions.save.mock.invocationCallOrder[0]);
   });
   it('keeps the PC copy and destination bookkeeping unchanged when sending fails', async () => {
     const actions = { existingNames: ['SAMPLE', 'TEST'], write: vi.fn().mockResolvedValue(false), save: vi.fn(), remove: vi.fn() };
