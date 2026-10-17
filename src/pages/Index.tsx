@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { CountdownType } from '@/hooks/useJetCountdown';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { transferPcLibraryMessage } from '@/lib/pcLibraryTransfer';
+import { resolvePrinterMessageList } from '@/lib/printerMessageList';
 import { ensureEmulatedMessage } from '@/lib/ensureEmulatedMessage';
 import { getModelCapabilities } from '@/lib/modelCapabilities';
 import { setPollingPaused, waitForPollingIdle } from '@/lib/pollingPause';
@@ -281,18 +282,15 @@ const Index = () => {
   /** Get message list for a specific printer — uses emulator state if available, else falls back to connected printer's list */
   const getMessagesForPrinter = useCallback((printer: Printer | null | undefined): { id: number; name: string }[] => {
     if (!printer) return connectionState.messages;
-    // If this is the connected printer, use live data
-    if (printer.id === connectionState.connectedPrinter?.id) return connectionState.messages;
-    // In emulator mode, query the specific emulator instance
-    if (multiPrinterEmulator.enabled) {
-      const instance = multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port);
-      if (instance) {
-        const state = instance.getState();
-        return state.messages.map((name: string, idx: number) => ({ id: idx + 1, name }));
-      }
-    }
-    // For real printers we don't have their message list unless connected
-    return [];
+    // Prefer the emulator's current list over the connection snapshot after writes.
+    const instance = multiPrinterEmulator.enabled
+      ? multiPrinterEmulator.getInstanceByIp(printer.ipAddress, printer.port)
+      : undefined;
+    return resolvePrinterMessageList(
+      instance?.getState().messages,
+      connectionState.messages,
+      printer.id === connectionState.connectedPrinter?.id,
+    );
   }, [connectionState.messages, connectionState.connectedPrinter?.id]);
 
 

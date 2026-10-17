@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'pc-library-push-immediate-emulator-list',
+    type: 'bugfix',
+    title: 'Pushed Messages Show Immediately',
+    date: '17 Oct 2026',
+    summary: 'Messages pushed to an emulated printer now appear immediately in its message list, without switching to another printer and back.',
+  },
+  {
     id: 'pc-library-retain-copy-after-push',
     type: 'bugfix',
     title: 'Keep PC Copies After Sending',
