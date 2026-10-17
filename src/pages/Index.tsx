@@ -950,17 +950,17 @@ const Index = () => {
         };
       };
 
+      if (emulatorHandles) {
+        // Emulation must win even in the desktop app with a connected card.
+        const success = await sendCommandToPrinter(targetPrinter, command);
+        return { success };
+      }
+
       if (targetPrinter.id === connectionState.connectedPrinter?.id) {
         const result = saveOptions && (window.electronAPI || isRelayMode())
           ? await printerTransport.sendCommand(targetPrinter.id, command, saveOptions)
           : await sendCommand(command);
         return validateResult(result);
-      }
-
-      if (emulatorHandles) {
-        // Route through emulator via sendCommandToPrinter (no TCP needed)
-        const success = await sendCommandToPrinter(targetPrinter, command);
-        return { success };
       }
 
       // Real hardware: use shared session opened below
