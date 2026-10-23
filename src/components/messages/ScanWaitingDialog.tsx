@@ -12,6 +12,8 @@ interface ScanWaitingDialogProps {
   requestId: string | null;
   /** Original prompt label (e.g. "WORK ORDER") used as the page title. */
   promptLabel: string;
+  /** Message already chosen — shown so operators know this fills a field in it. */
+  messageName?: string;
   /** Expiry timestamp from the create response — used to count down. */
   expiresAt: string | null;
   /** Product key — needed to authorise the poll edge-function call. */
@@ -28,6 +30,7 @@ export function ScanWaitingDialog({
   open,
   requestId,
   promptLabel,
+  messageName,
   expiresAt,
   onFulfilled,
   onCancel,
@@ -136,7 +139,7 @@ export function ScanWaitingDialog({
         <div className="bg-gradient-to-b from-primary/20 to-primary/5 px-4 py-3 border-b flex items-center gap-3">
           <ScanLine className="w-5 h-5 text-primary" />
           <DialogTitle className="flex-1 text-lg font-semibold">
-            Waiting for mobile scan
+            Scan Into Field
           </DialogTitle>
         </div>
 
@@ -151,7 +154,9 @@ export function ScanWaitingDialog({
           </div>
 
           <div className="text-center space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Scan required</p>
+            {messageName && (
+              <p className="text-xs text-muted-foreground">Message <span className="font-mono font-semibold text-foreground">{messageName}</span> selected — now scan the value for this field</p>
+            )}
             <p className="text-2xl font-bold text-foreground tracking-wide">
               {promptLabel}
             </p>

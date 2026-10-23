@@ -32,6 +32,9 @@ import { Label } from '@/components/ui/label';
 import { validateMessageName, sanitizeMessageName } from '@/lib/messageNameValidation';
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
 import { ScanWaitingDialog } from '@/components/messages/ScanWaitingDialog';
+import { ScanSelectDialog } from '@/components/messages/ScanSelectDialog';
+import { findMessageByScan } from '@/lib/scanPurpose';
+import { ScanLine } from 'lucide-react';
 import { ScanCounterDialog, detectReferencedCounters, type CounterOverrides } from '@/components/messages/ScanCounterDialog';
 import { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
@@ -182,6 +185,9 @@ export function MessagesScreen({
     scannedValue: string;
   } | null>(null);
   const { productKey, isCompanion } = useLicense();
+  const [scanSelectOpen, setScanSelectOpen] = useState(false);
+  // Name chosen by "Scan to Select"; once it is the highlighted message, run Select.
+  const [autoSelectName, setAutoSelectName] = useState<string | null>(null);
   // Protected-message registry: names in here are treated as safety-net messages
   // (e.g. offline backup with a firmware User Prompt field) and CodeSync will
   // refuse to overwrite them anywhere in the fleet.
@@ -326,6 +332,15 @@ export function MessagesScreen({
 
     await runSelectionOnSource();
   };
+
+  // Scan to Select: once the scanned message is highlighted, continue with the
+  // normal Select flow (printer picker, user prompts, scan-into-field).
+  useEffect(() => {
+    if (!autoSelectName || selectedMessage?.name !== autoSelectName) return;
+    setAutoSelectName(null);
+    void handleSelectMessage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSelectName, selectedMessage]);
 
   // Fan out the current selection to a list of target printers chosen from
   // the ApplyToPrintersDialog. Handles the prompt case by opening the
@@ -815,6 +830,16 @@ export function MessagesScreen({
             <span className="font-medium">{isSelecting ? 'Selecting...' : 'Select'}</span>
           </button>
 
+          <button
+            onClick={() => setScanSelectOpen(true)}
+            disabled={isSelecting}
+            title="Scan the work sheet barcode to choose the message with that name"
+            className="industrial-button text-white px-8 py-4 rounded-lg flex flex-col items-center min-w-[120px] disabled:opacity-50"
+          >
+            <ScanLine className="w-8 h-8 mb-1" />
+            <span className="font-medium">Scan to Select</span>
+          </button>
+
           <button 
             onClick={() => {
               if (isSlave) { onSlaveBlocked?.(); return; }
@@ -986,11 +1011,30 @@ export function MessagesScreen({
         </DialogContent>
       </Dialog>
 
+      <ScanSelectDialog
+        open={scanSelectOpen}
+        productKey={productKey ?? null}
+        machineId={getMachineId()}
+        allowPhone={!isCompanion}
+        onClose={() => setScanSelectOpen(false)}
+        onScanned={(value) => {
+          setScanSelectOpen(false);
+          const match = findMessageByScan(messages, value);
+          if (!match) {
+            toast.error(`No message named "${value.trim()}"`);
+            return;
+          }
+          setSelectedMessage(match);
+          setAutoSelectName(match.name);
+        }}
+      />
+
       {/* Mobile-scan waiting modal — opens after selecting a message with scanner-source field */}
       <ScanWaitingDialog
         open={scanWaitingOpen}
         requestId={pendingScanRequestId}
         promptLabel={pendingScanLabel}
+        messageName={pendingScanContext?.message.name}
         expiresAt={pendingScanExpiresAt}
         productKey={productKey ?? null}
         onCancel={async () => {
