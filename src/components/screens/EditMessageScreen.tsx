@@ -665,6 +665,7 @@ export function EditMessageScreen({
   };
 
   const handleTemplateChange = async (value: string) => {
+    if (value === (message.templateValue ?? String(message.height))) return;
     // Check if it's a multi-line template
     const multiTemplate = MULTILINE_TEMPLATES.find(t => t.value === value);
     const singleTemplate = SINGLE_TEMPLATES.find(t => t.value === value);
@@ -710,7 +711,7 @@ export function EditMessageScreen({
       height,
       templateValue: value, // Store the actual template selection
       // Update fields: adjust font if too tall, reposition Y to fit in lines
-      fields: prev.fields.map((f, index) => {
+      fields: prev.fields.map((f) => {
         const currentFontHeight = FONT_SIZES.find(fs => fs.value === f.fontSize)?.height || 16;
         
         // If current font is too tall for the new template, find the largest available font that fits
@@ -728,13 +729,11 @@ export function EditMessageScreen({
         
         // Calculate new Y position
         let newY = f.y;
-        if (multiTemplate && linePositions) {
-          // For multi-line templates, assign fields to lines (distribute them)
-          const lineIndex = Math.min(index, linePositions.length - 1);
-          newY = linePositions[lineIndex];
+        if (f.type === 'barcode' || f.type === 'logo') {
+          newY = Math.max(blockedRows, Math.min(32 - f.height, f.y));
         } else {
-          // For single-line templates, position at the bottom of the template area
-          newY = Math.max(blockedRows, 32 - newFieldHeight);
+          // Keep pieces sharing a row together; field order is not a line number.
+          newY = canvasYAfterFontChange(value, height, newFieldHeight, f.y);
         }
         
         // Barcode fields: 2D codes (QR/DM/DotCode) keep their explicit height

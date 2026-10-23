@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'message-field-position-readback',
+    type: 'bugfix',
+    title: 'Message Field Positioning',
+    date: '23 Oct 2026',
+    summary: 'Message reloads now read the requested message before using printer fields. Font-height calculations are consistent on readback, and changing templates keeps fields on the nearest valid row instead of rearranging them by field order.',
+  },
+  {
     id: 'pc-library-push-immediate-emulator-list',
     type: 'bugfix',
     title: 'Pushed Messages Show Immediately',
