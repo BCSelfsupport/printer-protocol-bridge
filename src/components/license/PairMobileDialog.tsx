@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { useLicense, type CompanionDevice } from '@/contexts/LicenseContext';
 import { QRCodeSVG } from 'qrcode.react';
-import { Smartphone, Loader2, RefreshCw, Timer, Trash2, CheckCircle2, Download, Apple, Copy, Share2, PlusSquare } from 'lucide-react';
+import { Smartphone, Loader2, RefreshCw, Timer, Trash2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PairMobileDialogProps {
@@ -108,7 +108,6 @@ export function PairMobileDialog({ open, onOpenChange }: PairMobileDialogProps) 
     setRevokingId(null);
   };
 
-  const qrValue = pairingCode || '';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -118,103 +117,39 @@ export function PairMobileDialog({ open, onOpenChange }: PairMobileDialogProps) 
             <Smartphone className="w-5 h-5" />
             Pair Mobile Device
           </DialogTitle>
-          <DialogDescription>
-            Have your mobile user install the CodeSync app first, then pair using
-            the code below. You can pair multiple phones to this license.
-          </DialogDescription>
+          <DialogDescription className="sr-only">Scan the QR code with the phone camera</DialogDescription>
         </DialogHeader>
 
-        {/* STEP 1 — Install the mobile PWA */}
-        <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold">1</span>
-            <h3 className="text-sm font-semibold flex items-center gap-1.5">
-              <Download className="w-4 h-4" />
-              Install CodeSync on the phone
-            </h3>
+        {/* One step: the QR opens the app on the phone AND pairs it. */}
+        <div className="flex flex-col items-center gap-4 py-2">
+          <div className="flex items-center gap-3 text-foreground" aria-label="Phone camera to QR code">
+            <Smartphone className="w-10 h-10 text-primary" />
+            <span className="text-3xl font-bold text-primary">→</span>
+            <div className="w-10 h-10 border-4 border-primary rounded-md" />
           </div>
-          <p className="text-xs text-muted-foreground mb-3">
-            Scan this QR with the phone's camera to open the install link — no app store needed.
-          </p>
 
-          <div className="flex flex-col sm:flex-row items-center gap-3 bg-background/60 rounded-md border border-border p-3">
-            <div className="bg-white p-2 rounded shrink-0">
-              <QRCodeSVG value={MOBILE_APP_URL} size={110} level="M" />
+          {isGenerating ? (
+            <div className="flex items-center justify-center w-[260px] h-[260px]">
+              <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
             </div>
-            <div className="flex-1 w-full min-w-0 space-y-2">
-              <div>
-                <p className="text-[11px] text-muted-foreground mb-1">Or open this link manually:</p>
-                <div className="flex items-center gap-1.5">
-                  <code className="flex-1 text-xs font-mono bg-background border border-border rounded px-2 py-1 truncate">
-                    {MOBILE_APP_URL}
-                  </code>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 shrink-0"
-                    onClick={() => {
-                      navigator.clipboard.writeText(MOBILE_APP_URL);
-                      toast.success('Link copied');
-                    }}
-                    title="Copy link"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
+          ) : pairingCode ? (
+            <>
+              <div className="bg-white p-4 rounded-xl">
+                <QRCodeSVG value={`${MOBILE_APP_URL}/?pair=${pairingCode}`} size={240} level="M" />
               </div>
-              <div className="text-[11px] text-muted-foreground space-y-0.5">
-                <p><Apple className="w-3 h-3 inline -mt-0.5" /> <strong>iPhone (Safari):</strong> Share <Share2 className="w-3 h-3 inline -mt-0.5" /> → Add to Home Screen</p>
-                <p><Smartphone className="w-3 h-3 inline -mt-0.5" /> <strong>Android (Chrome):</strong> ⋮ menu → Add to Home screen</p>
+              <div className="flex items-center gap-2 text-lg text-muted-foreground font-mono">
+                <Timer className="w-5 h-5" />
+                {formatTime(secondsLeft)}
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* STEP 2 — Pair the installed app */}
-        <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold">2</span>
-            <h3 className="text-sm font-semibold">
-              Pair with this PC
-            </h3>
-          </div>
-          <p className="text-xs text-muted-foreground mb-3">
-            Open the installed CodeSync app on the phone, tap <strong>"Pair with PC"</strong>,
-            then scan the QR or enter the code below.
-          </p>
-
-          <div className="flex flex-col items-center gap-3">
-            {isGenerating ? (
-              <div className="flex items-center gap-2 py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                <span className="text-muted-foreground">Generating code...</span>
+              <div className="text-xl font-mono font-bold tracking-[0.3em] text-muted-foreground">
+                {pairingCode}
               </div>
-            ) : pairingCode ? (
-              <>
-                <div className="bg-white p-4 rounded-lg">
-                  <QRCodeSVG value={qrValue} size={160} level="M" />
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Or enter this code manually:</p>
-                  <div className="text-3xl font-mono font-bold tracking-[0.3em] text-foreground">
-                    {pairingCode}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Timer className="w-4 h-4" />
-                  <span>Expires in {formatTime(secondsLeft)}</span>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center gap-3 py-6">
-                <p className="text-sm text-muted-foreground">Code expired</p>
-                <Button onClick={generate} variant="outline" size="sm">
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Generate New Code
-                </Button>
-              </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <Button onClick={generate} size="lg" className="h-20 w-20 rounded-full" aria-label="New QR code">
+              <RefreshCw className="w-10 h-10" />
+            </Button>
+          )}
         </div>
 
         {/* Paired Devices List */}

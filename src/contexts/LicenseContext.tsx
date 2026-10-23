@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { toast } from 'sonner';
 import { isDevAccessRuntime } from '@/lib/devAccess';
 
@@ -248,6 +248,29 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
       return false;
     }
   };
+
+  // One-scan pairing: the PC's QR opens the app with ?pair=CODE. Pair
+  // automatically, strip the code from the address, and land on the scan page.
+  const autoPairRef = useRef(false);
+  useEffect(() => {
+    if (autoPairRef.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('pair');
+    if (!code) return;
+    autoPairRef.current = true;
+    params.delete('pair');
+    const rest = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''));
+    pairAsCompanion(code).then(ok => {
+      if (ok) {
+        toast.success('✓');
+        window.location.replace('/scan');
+      } else {
+        toast.error('✗ Pairing failed — scan the new QR on the PC');
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const generatePairingCode = async (): Promise<{ code: string; expiresAt: string } | null> => {
     if (!state.productKey) return null;

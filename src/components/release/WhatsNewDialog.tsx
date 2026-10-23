@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'one-scan-phone-pairing',
+    type: 'feature',
+    title: 'One-Scan Phone Pairing',
+    date: '23 Oct 2026',
+    summary: 'Pairing a phone now uses a single large QR code. Scanning it with the phone camera opens CodeSync and pairs automatically — no separate install step or code entry.',
+  },
+  {
     id: 'message-field-position-readback',
     type: 'bugfix',
     title: 'Message Field Positioning',
