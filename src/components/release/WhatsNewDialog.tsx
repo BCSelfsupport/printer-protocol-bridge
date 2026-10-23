@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'scan-to-select-message',
+    type: 'feature',
+    title: 'Scan to Select Message',
+    date: '23 Oct 2026',
+    summary: 'New Scan to Select button on the Messages screen: scan the work sheet barcode (scanner, keyboard or paired phone) and the message with that name is selected. Field scans are now labelled Scan Into Field and appear after the message is selected, like user prompts.',
+  },
+  {
     id: 'one-scan-phone-pairing',
     type: 'feature',
     title: 'One-Scan Phone Pairing',

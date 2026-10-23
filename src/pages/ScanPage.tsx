@@ -314,7 +314,7 @@ export default function ScanPage() {
           <div className="text-center space-y-3">
             <CheckCircle2 className="w-14 h-14 text-primary mx-auto" />
             <p className="text-base font-semibold text-foreground">Scan sent</p>
-            <p className="text-sm text-muted-foreground">The printer is now printing.</p>
+            <p className="text-sm text-muted-foreground">{pending && isSelectMessageScan(pending.message_name) ? 'The PC is selecting that message.' : 'The printer is now printing.'}</p>
           </div>
         )}
 
