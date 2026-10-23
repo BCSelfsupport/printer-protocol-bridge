@@ -175,7 +175,7 @@ export function getValidCanvasYPositions(
       for (let i = firmwareYs.length - 1; i >= 0; i--) {
         if (fontHeight <= lineHeight) {
           const printerY = firmwareYs[i];
-          const canvasY = templateHeight - printerY - lineHeight + blockedRows;
+          const canvasY = templateHeight - printerY - fontHeight + blockedRows;
           canvasPositions.push(Math.max(blockedRows, canvasY));
         }
       }
@@ -786,8 +786,11 @@ export function buildMessageDetails(
       }
     }
 
-    // Invert Y: printer Y (0=bottom) → canvas Y (0=top)
-    const fieldHeight = pf.height || fontHeight;
+    // Text uses its font height in both drawing and serialization. A reported
+    // field box can differ from an explicit font (S:); using the box here
+    // shifts the text on every save/read cycle. Graphics keep their own size.
+    const fieldHeight = fieldType === 'barcode' || fieldType === 'logo'
+      ? pf.height || fontHeight : fontHeight;
     const templateRelativeY = templateHeight - pf.y - fieldHeight;
     let canvasY = Math.max(0, templateRelativeY + blockedRows);
 

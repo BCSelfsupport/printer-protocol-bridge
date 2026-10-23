@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import '@/types/electron.d.ts';
 import { parseStatusResponse, parseTemperatureResponse, parseVersionResponse, parseErrorListResponse, ErrorListResult } from '@/lib/printerProtocol';
 import { parseGmResponse, parseLfResponse, buildMessageDetails } from '@/lib/messageProtocol';
+import { readNamedMessageFields } from '@/lib/printerMessageRead';
 import type { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { getProtocolFieldInfo } from '@/lib/autoCodeProtocol';
 import { generateDataMatrixCommands, isDataMatrixField, extractDataMatrixData, generateDataMatrixBitmap } from '@/lib/dataMatrixGenerator';
@@ -4249,15 +4250,15 @@ export function usePrinterConnection() {
           if (gmRetry?.success && gmRetry.response) gmRaw = gmRetry.response;
         }
 
-        // Query ^LF (list fields)
-        const lfResult = await printerTransport.sendCommand(printer.id, `^LF ${messageName}`);
-        if (lfResult?.success && lfResult.response && !isProtocolCommandFailure(lfResult.response)) {
-          lfRaw = lfResult.response;
-        } else {
-          // Fallback without name param (assumes message already selected above)
-          const lfRetry = await printerTransport.sendCommand(printer.id, '^LF');
-          if (lfRetry?.success && lfRetry.response) lfRaw = lfRetry.response;
-        }
+        // Named ^GM can succeed while named ^LF is unsupported. Select the
+        // requested message before a bare ^LF or another message's geometry
+        // and fonts will overwrite this message in the local cache.
+        lfRaw = await readNamedMessageFields(
+          messageName,
+          command => printerTransport.sendCommand(printer.id, command),
+          isProtocolCommandFailure,
+          () => new Promise(resolve => setTimeout(resolve, 300)),
+        );
 
         console.log('[fetchMessageContent] ^GM raw:', gmRaw);
         console.log('[fetchMessageContent] ^LF raw:', lfRaw);
