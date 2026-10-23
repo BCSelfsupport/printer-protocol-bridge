@@ -3,6 +3,7 @@ import { ScanLine, CheckCircle2, AlertCircle, Smartphone, X } from 'lucide-react
 import { Html5Qrcode } from 'html5-qrcode';
 import { toast } from 'sonner';
 import { useLicense } from '@/contexts/LicenseContext';
+import { isSelectMessageScan } from '@/lib/scanPurpose';
 
 interface PendingScanRequest {
   id: string;
@@ -113,7 +114,7 @@ export default function ScanPage() {
           value,
         });
         setStatus('sent');
-        toast.success('Scan sent to printer');
+        toast.success(isSelectMessageScan(pending.message_name) ? 'Message chosen on the PC' : 'Scan sent to printer');
         // Reset after 2s so we're ready for the next scan request
         setTimeout(() => {
           setPending(null);
@@ -228,7 +229,7 @@ export default function ScanPage() {
             </div>
             <h2 className="text-lg font-semibold text-foreground">Waiting for the PC</h2>
             <p className="text-sm text-muted-foreground">
-              On the PC, select a message that has a scan field. You'll be prompted to start the camera here.
+              On the PC, tap Scan to Select (work sheet barcode) or select a message with a scan field. The camera button appears here.
             </p>
           </div>
         )}
@@ -236,11 +237,20 @@ export default function ScanPage() {
         {pending && status === 'ready' && (
           <div className="w-full max-w-sm space-y-4 text-center">
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Ready to scan</p>
-              <p className="text-xl font-bold text-foreground">{pending.prompt_label}</p>
-              <p className="text-xs text-muted-foreground">
-                Message: <span className="font-mono">{pending.message_name}</span>
-              </p>
+              {isSelectMessageScan(pending.message_name) ? (
+                <>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Scan to Select Message</p>
+                  <p className="text-xl font-bold text-foreground">Scan the work sheet barcode</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Scan Into Field</p>
+                  <p className="text-xl font-bold text-foreground">{pending.prompt_label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Message: <span className="font-mono">{pending.message_name}</span>
+                  </p>
+                </>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
               Tap below to open the camera. Your browser requires a tap before the camera can turn on.
@@ -263,11 +273,20 @@ export default function ScanPage() {
         {pending && status === 'scanning' && (
           <div className="w-full max-w-sm space-y-4">
             <div className="text-center space-y-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Scanning for</p>
-              <p className="text-xl font-bold text-foreground">{pending.prompt_label}</p>
-              <p className="text-xs text-muted-foreground">
-                Message: <span className="font-mono">{pending.message_name}</span>
-              </p>
+              {isSelectMessageScan(pending.message_name) ? (
+                <>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Scan to Select Message</p>
+                  <p className="text-xl font-bold text-foreground">Scan the work sheet barcode</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Scan Into Field</p>
+                  <p className="text-xl font-bold text-foreground">{pending.prompt_label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Message: <span className="font-mono">{pending.message_name}</span>
+                  </p>
+                </>
+              )}
             </div>
             <div
               id={SCANNER_ELEMENT_ID}

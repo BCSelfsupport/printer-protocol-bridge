@@ -333,6 +333,15 @@ export function MessagesScreen({
     await runSelectionOnSource();
   };
 
+  // Scan to Select: once the scanned message is highlighted, continue with the
+  // normal Select flow (printer picker, user prompts, scan-into-field).
+  useEffect(() => {
+    if (!autoSelectName || selectedMessage?.name !== autoSelectName) return;
+    setAutoSelectName(null);
+    void handleSelectMessage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSelectName, selectedMessage]);
+
   // Fan out the current selection to a list of target printers chosen from
   // the ApplyToPrintersDialog. Handles the prompt case by opening the
   // UserDefineEntryDialog once and baking the entered value into every target.
