@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Fix text-field positioning changes after save/reopen across fonts and templates; add round-trip regression tests and What's New entry.
+
 - [x] Show newly pushed emulated messages without switching printers — list regression and related transfer tests passed (12 tests); preview click-through remains product-key gated.
 - [x] Retain the saved PC Library copy after every Push to Printer — successful transfer and reload retention tests passed; preview click-through remains product-key gated.
 - [x] Remove PC Library swap-slot requirement and protect existing printer messages — additive transfer and same-name refusal tests passed; preview click-through remains product-key gated.
