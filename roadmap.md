@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Put usage in each printer's Messages screen, list available printer messages and retain individual nozzle/solvent settings.
+
 - [x] Add Consumables ink/makeup calculator from the TCO workbook; 22 regression tests and isolated screen entry/result checks pass. Preview-font counts are explicitly unverified; verified dot-count entry is available. Full navigation remains licence-gated in the test browser.
 - [ ] Confirm authentic printer font dot patterns for exact automatic usage counts — waiting for decoded printer glyph data or a verified character dot-count table; current preview fonts are approximations.
 
