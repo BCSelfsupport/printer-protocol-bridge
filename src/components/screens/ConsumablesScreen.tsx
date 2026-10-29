@@ -20,8 +20,11 @@ import {
   parseStreamHoursToNumber,
 } from '@/components/consumables/ConsumablePredictions';
 import { getFilterConfig, getFilterStatus } from '@/lib/filterTracker';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FluidUsageTool, type UsageMessage } from '@/components/consumables/FluidUsageTool';
 
 interface ConsumablesScreenProps {
+  usageMessages?: UsageMessage[];
   consumables: Consumable[];
   assignments: PrinterConsumableAssignment[];
   printers: Printer[];
@@ -63,6 +66,7 @@ const defaultFormData: ConsumableFormData = {
 };
 
 export function ConsumablesScreen({
+  usageMessages = [],
   consumables,
   assignments,
   printers,
@@ -78,6 +82,7 @@ export function ConsumablesScreen({
   onAssignConsumable,
   onHome,
 }: ConsumablesScreenProps) {
+  const [view, setView] = useState('stock');
   const [addEditOpen, setAddEditOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<ConsumableFormData>(defaultFormData);
@@ -495,8 +500,12 @@ export function ConsumablesScreen({
         </div>
       </div>
 
+      <Tabs value={view} onValueChange={setView} className="px-3 py-2 border-b">
+        <TabsList><TabsTrigger value="stock">Stock & Printers</TabsTrigger><TabsTrigger value="usage">Ink & Makeup Usage</TabsTrigger></TabsList>
+      </Tabs>
+      {view === 'usage' && <ScrollArea className="flex-1"><FluidUsageTool messages={usageMessages} /></ScrollArea>}
       {/* Two-panel layout */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className={view === 'stock' ? 'flex-1 flex overflow-hidden' : 'hidden'}>
         {/* LEFT: Printer config cards */}
         <div className="w-1/2 border-r flex flex-col">
           <div className="px-4 py-2.5 border-b bg-muted/20">
