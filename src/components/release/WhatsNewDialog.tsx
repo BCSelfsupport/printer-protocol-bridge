@@ -31,7 +31,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
     type: 'feature',
     title: 'Ink & Makeup Usage',
     date: '29 Oct 2026',
-    summary: 'Consumables now includes ink and makeup estimates using the Series 8 TCO nozzle and temperature tables. Choose a saved message and operating schedule; bitmap counts are labelled unverified until printer font patterns are confirmed, with verified dot-count entry also available. Stock levels are not changed.',
+    summary: 'Consumables now includes ink and makeup estimates using the Series 8 TCO nozzle and temperature tables. Choose a message and operating schedule; estimated dots are counted automatically from its font patterns, without a dot-source choice. A commissioning warning explains first-bottle priming and measuring usage from the next full bottle. Stock levels are not changed.',
   },
   {
     id: 'scan-to-select-message',
