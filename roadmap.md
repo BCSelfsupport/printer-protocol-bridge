@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Add Consumables ink/makeup calculator from the TCO workbook, with formula regression tests — blocked on authentic printer font dot patterns; current preview fonts are approximations and cannot satisfy accurate message dot counts.
+- [x] Add Consumables ink/makeup calculator from the TCO workbook; 22 regression tests and isolated screen entry/result checks pass. Preview-font counts are explicitly unverified; verified dot-count entry is available. Full navigation remains licence-gated in the test browser.
+- [ ] Confirm authentic printer font dot patterns for exact automatic usage counts — waiting for decoded printer glyph data or a verified character dot-count table; current preview fonts are approximations.
 
 - [x] Correct message-read fallback and font-height/template placement inconsistencies; 18 regression checks passed and What's New updated. Exact physical-printer reproduction remains unverified; preview editor access is product-key gated.
 

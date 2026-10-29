@@ -3590,6 +3590,14 @@ const Index = () => {
         );
         return (
           <ConsumablesScreen
+            usageMessages={[
+              ...Object.entries(allStoredMessages).map(([key, message]) => {
+                const printerId = Number(key.split(':')[0]);
+                const printerName = consumablePrinters.find(printer => printer.id === printerId)?.name;
+                return { key: `saved:${key}`, label: `${message.name} — ${printerName ?? 'PC'}`, message, printerId };
+              }).filter(item => item.printerId === 0 || consumablePrinters.some(printer => printer.id === item.printerId)),
+              ...getAllPcLibraryMessages().map(({ message, sourcePrinterId }, index) => ({ key: `library:${sourcePrinterId}:${index}`, label: `${message.name} — PC Library`, message })),
+            ]}
             reorderConfig={consumableStorage.reorderConfig}
             onUpdateReorderConfig={consumableStorage.updateReorderConfig}
             consumables={consumableStorage.consumables}
