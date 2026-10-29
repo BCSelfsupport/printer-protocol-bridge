@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Add Consumables ink/makeup calculator from the TCO workbook, with honest font-dot accuracy and formula regression tests.
+
 - [x] Correct message-read fallback and font-height/template placement inconsistencies; 18 regression checks passed and What's New updated. Exact physical-printer reproduction remains unverified; preview editor access is product-key gated.
 
 - [x] Show newly pushed emulated messages without switching printers — list regression and related transfer tests passed (12 tests); preview click-through remains product-key gated.
