@@ -85,6 +85,14 @@ export function FluidUsageTool({ messages, initialMessageKey, onReadMessage, pro
       {[{ label: 'Ink', icon: Palette, hourly: result?.inkPerHourMl, daily: result?.inkPerDayMl, annual: result?.annualInkMl, bottles: result?.annualInkBottles, hours: result?.inkBottleHours }, { label: 'Makeup', icon: Droplets, hourly: result?.makeupPerHourMl, daily: result?.makeupPerDayMl, annual: result?.annualMakeupMl, bottles: result?.annualMakeupBottles, hours: result?.makeupBottleHours }].map(fluid => <section key={fluid.label} className="space-y-3"><h4 className="flex items-center gap-2 font-semibold"><fluid.icon className="w-5 h-5 text-primary" />{fluid.label}</h4><div className="text-2xl font-semibold tabular-nums">{format(fluid.hourly, 4)} <span className="text-sm font-normal text-muted-foreground">ml / hour</span></div><dl className="text-sm space-y-2">{[['Per day (ml)', fluid.daily], ['Per year (ml)', fluid.annual], ['Bottles / year', fluid.bottles], ['Jet-on hours / bottle', fluid.hours]].map(([label, value]) => <div key={String(label)} className="flex justify-between gap-2"><dt className="text-muted-foreground">{label}</dt><dd className="font-medium tabular-nums">{format(value as number | null | undefined)}</dd></div>)}</dl></section>)}
     </div>
     {!result && <p className="text-sm text-warning">Enter a valid dot count and operating schedule to calculate usage.</p>}
+    <aside role="note" aria-label="Installation and commissioning warning" className="border-l-4 border-warning bg-warning/10 px-4 py-3 flex items-start gap-3">
+      <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+      <div className="space-y-1 text-sm">
+        <h4 className="font-semibold">Installation & Commissioning — First Ink Bottle</h4>
+        <p>Most of the first bottle added is used to prime the printer. Only <strong>146 ml of ink</strong> remains available for printing before the ink-low sensor activates.</p>
+        <p><strong>Measure actual ink usage from the next full bottle added</strong>, not the commissioning bottle. The estimates above use the full bottle volume entered.</p>
+      </div>
+    </aside>
     <p className="text-xs text-muted-foreground">Source: Default TCO Sheet, Series 8. Usage is an estimate; excludes cleaning, startup and shutdown losses. Makeup is calculated for all jet-on hours, including idle time. No stock quantities are changed.</p>
   </div>;
 }
