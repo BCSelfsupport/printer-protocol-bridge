@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { loadFluidUsageProfile, saveFluidUsageProfile } from '@/lib/fluidUsageProfile';
 import { readUsageMessage } from '@/lib/usageMessageRead';
-import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 
 describe('printer usage scope and safety', () => {
   it('remembers different nozzle and solvent choices for different printers', () => {
@@ -13,7 +12,7 @@ describe('printer usage scope and safety', () => {
     expect(loadFluidUsageProfile(storage, 2)).toEqual({ nozzle: 100, solvent: 'Acetone' });
   });
   it('does not select any message when named read fails', async () => {
-    const send = vi.fn(async () => ({ success: false, response: '? 1: ERROR' }));
+    const send = vi.fn(async (_command: string) => ({ success: false, response: '? 1: ERROR' }));
     expect(await readUsageMessage('BC-GEN2', send)).toBeNull();
     expect(send.mock.calls).toEqual([['^LF BC-GEN2']]);
   });

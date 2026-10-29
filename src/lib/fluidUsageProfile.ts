@@ -4,7 +4,7 @@ export interface FluidUsageProfile { nozzle: NozzleSize; solvent: Solvent }
 export function loadFluidUsageProfile(storage: Pick<Storage, 'getItem'>, printerId: number): FluidUsageProfile {
   try {
     const profile = JSON.parse(storage.getItem(`codesync-fluid-profile:${printerId}`) ?? 'null');
-    if (profile && Object.hasOwn(DROPLET_ML, profile.nozzle) && Object.hasOwn(EVAPORATION_ML_HOUR, profile.solvent)) return profile;
+    if (profile && Object.prototype.hasOwnProperty.call(DROPLET_ML, profile.nozzle) && Object.prototype.hasOwnProperty.call(EVAPORATION_ML_HOUR, profile.solvent)) return profile;
   } catch { /* Invalid stored profiles fall back to editable assumptions. */ }
   return { nozzle: 75, solvent: 'MEK' };
 }
