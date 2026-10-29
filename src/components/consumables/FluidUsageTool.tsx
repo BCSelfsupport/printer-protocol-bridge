@@ -1,22 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Droplets, Palette, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { MessageDetails } from '@/components/screens/EditMessageScreen';
 import { calculateFluidUsage, countMessagePreviewDots, DROPLET_ML, TEMPERATURES, type NozzleSize, type Solvent } from '@/lib/fluidUsage';
+import type { FluidUsageProfile } from '@/lib/fluidUsageProfile';
 
-export interface UsageMessage { key: string; label: string; message: MessageDetails }
+export interface UsageMessage { key: string; label: string; message?: MessageDetails }
 
-export function FluidUsageTool({ messages }: { messages: UsageMessage[] }) {
-  const [messageKey, setMessageKey] = useState(messages[0]?.key ?? '');
+export function FluidUsageTool({ messages, initialMessageKey, onReadMessage, profile, onProfileChange }: {
+  messages: UsageMessage[]; initialMessageKey?: string;
+  onReadMessage?: (name: string) => Promise<MessageDetails | null>;
+  profile?: FluidUsageProfile; onProfileChange?: (value: FluidUsageProfile) => void;
+}) {
+  const [messageKey, setMessageKey] = useState(initialMessageKey ?? messages[0]?.key ?? '');
   const [source, setSource] = useState('bitmap');
   const [verifiedDots, setVerifiedDots] = useState('');
-  const [nozzle, setNozzle] = useState<NozzleSize>(75);
-  const [solvent, setSolvent] = useState<Solvent>('MEK');
+  const [nozzle, setNozzle] = useState<NozzleSize>(profile?.nozzle ?? 75);
+  const [solvent, setSolvent] = useState<Solvent>(profile?.solvent ?? 'MEK');
   const [temperature, setTemperature] = useState(25);
   const [schedule, setSchedule] = useState({ printsPerMinute: '100', hoursPerDay: '8', daysPerWeek: '5', weeksPerYear: '50', bottleMl: '946' });
-  const message = messages.find(item => item.key === messageKey)?.message;
+  const [readContent, setReadContent] = useState<{ key: string; message: MessageDetails | null } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const storedMessage = messages.find(item => item.key === messageKey)?.message;
+  useEffect(() => {
+    if (!messages.some(item => item.key === messageKey)) setMessageKey(messages[0]?.key ?? '');
+  }, [messages, messageKey]);
+  useEffect(() => {
+    let cancelled = false;
+    if (!messageKey || !onReadMessage) return;
+    setLoading(true);
+    onReadMessage(messageKey).then(message => { if (!cancelled) setReadContent({ key: messageKey, message }); })
+      .catch(() => { if (!cancelled) setReadContent({ key: messageKey, message: null }); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [messageKey, onReadMessage]);
+  const message = readContent?.key === messageKey ? readContent.message ?? storedMessage : storedMessage;
   const count = message ? countMessagePreviewDots(message) : null;
   const dots = source === 'verified' ? (verifiedDots.trim() ? Number(verifiedDots) : null) : count?.dots ?? null;
   const result = dots === null || Object.values(schedule).some(value => value.trim() === '') ? null : calculateFluidUsage({
@@ -38,7 +58,7 @@ export function FluidUsageTool({ messages }: { messages: UsageMessage[] }) {
     <div className="grid sm:grid-cols-2 gap-4">
       <div className="space-y-2"><Label>Message</Label>
         <Select value={messageKey} onValueChange={value => { setMessageKey(value); setVerifiedDots(''); }}>
-          <SelectTrigger aria-label="Usage message"><SelectValue placeholder="No saved message content" /></SelectTrigger>
+          <SelectTrigger aria-label="Usage message"><SelectValue placeholder="No messages available" /></SelectTrigger>
           <SelectContent>{messages.map(item => <SelectItem key={item.key} value={item.key}>{item.label}</SelectItem>)}</SelectContent>
         </Select>
       </div>
@@ -49,12 +69,14 @@ export function FluidUsageTool({ messages }: { messages: UsageMessage[] }) {
         </Select>
       </div>
     </div>
+    {loading && <p className="text-sm text-muted-foreground">Reading message from printer…</p>}
+    {!loading && !message && messageKey && source === 'bitmap' && <p className="text-sm text-warning">Message content unavailable. Connect this printer or enter a verified dot count. The printing message has not been changed.</p>}
     {source === 'verified' ? <div className="space-y-2 max-w-sm"><Label htmlFor="verified-dots">Verified dots / print</Label><Input id="verified-dots" type="number" min={0} step={1} value={verifiedDots} onChange={e => setVerifiedDots(e.target.value)} /></div> :
       <div className="flex items-start gap-2 text-sm text-warning"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /><p>Font patterns have not been verified against the printer. These counts are estimates, not confirmed printer dots.{count?.dots === null ? ' This message needs a verified dot count for unsupported content.' : ''}{count?.variable ? ' Variable fields use their saved sample values.' : ''}</p></div>}
     {count && source === 'bitmap' && <div className="overflow-x-auto border-y"><table className="w-full text-sm"><thead><tr className="text-muted-foreground text-left"><th className="py-2 font-medium">Field</th><th className="py-2 font-medium">Font</th><th className="py-2 text-right font-medium">Dots</th></tr></thead><tbody>{count.fields.map(field => <tr key={field.id} className="border-t"><td className="py-2 max-w-64 break-words">{field.data || '(empty)'}</td><td className="py-2">{field.font}</td><td className="py-2 text-right tabular-nums">{field.dots ?? 'Unverified'}</td></tr>)}</tbody></table></div>}
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-      <div className="space-y-2"><Label>Nozzle (µm)</Label><Select value={String(nozzle)} onValueChange={value => setNozzle(Number(value) as NozzleSize)}><SelectTrigger aria-label="Nozzle"><SelectValue /></SelectTrigger><SelectContent>{Object.keys(DROPLET_ML).map(size => <SelectItem key={size} value={size}>{size} µm</SelectItem>)}</SelectContent></Select></div>
-      <div className="space-y-2"><Label>Solvent</Label><Select value={solvent} onValueChange={value => setSolvent(value as Solvent)}><SelectTrigger aria-label="Solvent"><SelectValue /></SelectTrigger><SelectContent>{(['MEK', 'Ethanol', 'Acetone'] as const).map(value => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></div>
+      <div className="space-y-2"><Label>Nozzle (µm)</Label><Select value={String(nozzle)} onValueChange={value => { const next = Number(value) as NozzleSize; setNozzle(next); onProfileChange?.({ nozzle: next, solvent }); }}><SelectTrigger aria-label="Nozzle"><SelectValue /></SelectTrigger><SelectContent>{Object.keys(DROPLET_ML).map(size => <SelectItem key={size} value={size}>{size} µm</SelectItem>)}</SelectContent></Select></div>
+      <div className="space-y-2"><Label>Solvent</Label><Select value={solvent} onValueChange={value => { const next = value as Solvent; setSolvent(next); onProfileChange?.({ nozzle, solvent: next }); }}><SelectTrigger aria-label="Solvent"><SelectValue /></SelectTrigger><SelectContent>{(['MEK', 'Ethanol', 'Acetone'] as const).map(value => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></div>
       <div className="space-y-2"><Label>Ambient temperature</Label><Select value={String(temperature)} onValueChange={value => setTemperature(Number(value))}><SelectTrigger aria-label="Ambient temperature"><SelectValue /></SelectTrigger><SelectContent>{TEMPERATURES.map(temp => <SelectItem key={temp} value={String(temp)}>{temp} °C / {temp * 9 / 5 + 32} °F</SelectItem>)}</SelectContent></Select></div>
       {inputs.map(([key, label, min, max]) => <div key={key} className="space-y-2"><Label htmlFor={`usage-${key}`}>{label}</Label><Input id={`usage-${key}`} type="number" min={min} max={max} value={schedule[key]} onChange={e => setSchedule(previous => ({ ...previous, [key]: e.target.value }))} /></div>)}
     </div>
