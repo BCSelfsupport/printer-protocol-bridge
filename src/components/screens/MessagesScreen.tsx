@@ -41,6 +41,8 @@ import { buildTokenMap, resolveAllFields } from '@/lib/tokenResolver';
 import { isReadOnlyMessage } from '@/hooks/useMessageStorage';
 import { MessageThumbnail } from '@/components/messages/MessageThumbnail';
 import { useLicense } from '@/contexts/LicenseContext';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PrinterUsagePanel } from '@/components/consumables/PrinterUsagePanel';
 
 
 const MACHINE_ID_KEY = 'codesync-machine-id';
@@ -54,6 +56,7 @@ function getMachineId(): string {
 }
 
 interface MessagesScreenProps {
+  onReadUsageMessage?: (name: string) => Promise<MessageDetails | null>;
   messages: PrintMessage[];
   currentMessageName: string | null;
   onSelect: (message: PrintMessage) => Promise<boolean>;
@@ -117,6 +120,7 @@ interface MessagesScreenProps {
 }
 
 export function MessagesScreen({ 
+  onReadUsageMessage,
   messages, 
   currentMessageName,
   onSelect, 
@@ -149,6 +153,7 @@ export function MessagesScreen({
   onApplyPromptValuesOnPrinter,
   onCopyMessageToPrinters,
 }: MessagesScreenProps) {
+  const [section, setSection] = useState('messages');
   const [selectedMessage, setSelectedMessage] = useState<PrintMessage | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
@@ -613,8 +618,13 @@ export function MessagesScreen({
         onHome={onHome}
       />
 
+      {sourcePrinter && <Tabs value={section} onValueChange={setSection} className="mb-3 shrink-0">
+        <TabsList><TabsTrigger value="messages">Messages</TabsTrigger><TabsTrigger value="usage">Ink & Makeup Usage</TabsTrigger></TabsList>
+      </Tabs>}
+      {section === 'usage' && sourcePrinter && <PrinterUsagePanel key={sourcePrinter.id} printer={sourcePrinter} messages={messages} selectedName={selectedMessage?.name ?? currentMessageName ?? undefined} getStored={onGetStoredMessage} readMessage={onReadUsageMessage} />}
+
       {/* Message list / tile area */}
-      <div className="flex-1 min-h-0 bg-card rounded-lg p-4 mb-4 flex flex-col">
+      <div className={section === 'messages' ? 'flex-1 min-h-0 bg-card rounded-lg p-4 mb-4 flex flex-col' : 'hidden'}>
         {/* View toggle */}
         <div className="flex items-center justify-end gap-1 mb-3 shrink-0">
           <button
@@ -819,7 +829,7 @@ export function MessagesScreen({
       )}
 
       {/* Action buttons - horizontal scroll on mobile */}
-      <div className="shrink-0 overflow-x-auto -mx-4 px-4 py-2 bg-background/95 backdrop-blur-sm border-t border-border">
+      <div className={section === 'messages' ? 'shrink-0 overflow-x-auto -mx-4 px-4 py-2 bg-background/95 backdrop-blur-sm border-t border-border' : 'hidden'}>
         <div className="flex gap-4 justify-center min-w-max">
           <button
             onClick={handleSelectMessage}

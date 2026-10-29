@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'printer-message-usage',
+    type: 'bugfix',
+    title: 'Usage for Each Printer’s Messages',
+    date: '29 Oct 2026',
+    summary: 'Ink & Makeup Usage is now also beside Messages for each printer. Its message list includes the printer’s available messages, not just saved PC copies. Nozzle and solvent choices are remembered separately per printer. Read-only message queries never change the active printing message.',
+  },
+  {
     id: 'ink-makeup-usage',
     type: 'feature',
     title: 'Ink & Makeup Usage',
