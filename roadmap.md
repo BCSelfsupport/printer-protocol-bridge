@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Put usage in each printer's Messages screen, list available printer messages and retain individual nozzle/solvent settings.
+- [x] Put usage in each printer's Messages screen; printer catalogue entries show without PC copies, named-only content reads preserve selection, and nozzle/solvent profiles persist per printer. 25 tests pass; isolated screen checked. Physical printer/full licensed navigation remains unverified.
 
 - [x] Add Consumables ink/makeup calculator from the TCO workbook; 22 regression tests and isolated screen entry/result checks pass. Preview-font counts are explicitly unverified; verified dot-count entry is available. Full navigation remains licence-gated in the test browser.
 - [ ] Confirm authentic printer font dot patterns for exact automatic usage counts — waiting for decoded printer glyph data or a verified character dot-count table; current preview fonts are approximations.
