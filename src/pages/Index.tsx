@@ -7,6 +7,7 @@ import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { transferPcLibraryMessage } from '@/lib/pcLibraryTransfer';
 import { resolvePrinterMessageList } from '@/lib/printerMessageList';
 import { ensureEmulatedMessage } from '@/lib/ensureEmulatedMessage';
+import { readUsageMessage } from '@/lib/usageMessageRead';
 import { getModelCapabilities } from '@/lib/modelCapabilities';
 import { setPollingPaused, waitForPollingIdle } from '@/lib/pollingPause';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -3207,6 +3208,15 @@ const Index = () => {
   };
 
 
+  const readTargetUsageMessage = useCallback(async (name: string) => {
+    const target = selectedPrinter ?? connectionState.connectedPrinter;
+    if (!target || !getMessagesForPrinter(target).some(message => message.name === name)) return null;
+    const emulator = multiPrinterEmulator.enabled ? multiPrinterEmulator.getInstanceByIp(target.ipAddress, target.port) : null;
+    if (emulator) return readUsageMessage(name, async command => emulator.processCommand(command));
+    if (!connectionState.isConnected || target.id !== connectionState.connectedPrinter?.id) return null;
+    return runPrinterWriteExclusive(target.id, () => readUsageMessage(name, command => printerTransport.sendCommand(target.id, command)));
+  }, [selectedPrinter, connectionState.connectedPrinter, connectionState.isConnected, getMessagesForPrinter]);
+
   const getRightPanelContent = (): React.ReactNode | undefined => {
 
     if (isMobile) return undefined;
@@ -3228,6 +3238,7 @@ const Index = () => {
 
       return (
         <MessagesScreen
+          onReadUsageMessage={readTargetUsageMessage}
           messages={getMessagesForPrinter(messageTargetPrinter)}
           currentMessageName={messageTargetPrinter?.currentMessage ?? connectionState.status?.currentMessage ?? null}
           onSelect={async (message) => {
@@ -3478,6 +3489,7 @@ const Index = () => {
         }
         return (
           <MessagesScreen
+            onReadUsageMessage={readTargetUsageMessage}
             messages={getMessagesForPrinter(selectedPrinter ?? connectionState.connectedPrinter ?? null)}
             currentMessageName={(selectedPrinter ?? connectionState.connectedPrinter ?? null)?.currentMessage ?? connectionState.status?.currentMessage ?? null}
             onSelect={async (message) => {

@@ -1,5 +1,5 @@
 - Wire & Cable package lives in `src/wire-cable/` as tabs inside `WireCableScreen` (not a separate route) — sending needs Index's printer connection helpers (`sendCableJob`).
-- Keep fluid usage formulas in a pure tested module and pass printer-scoped saved message content into Consumables; never fetch or select a live printer message for an estimate, and never silently treat unsupported fields as zero dots.
+- Keep fluid usage formulas in a pure tested module; printer usage lists follow the printer catalogue, and content reads use named-only ^LF/^GM without selection fallbacks. Persist usage profiles per printer and never silently treat unsupported fields as zero dots.
 - PC Library transfers check destination message names, use additive guarded writes, and commit destination bookkeeping through `transferPcLibraryMessage` only after success — preserve the source PC Library entry so pushes remain copies; never use swap slots or delete to free capacity.
 - Persisted emulator message lists are authoritative, including empty lists — merging factory defaults resurrects deleted messages.
 - Displayed emulator message lists resolve through `resolvePrinterMessageList` before connected snapshots — successful writes must show immediately, not wait for reconnection.
