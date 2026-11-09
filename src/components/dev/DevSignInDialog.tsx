@@ -35,9 +35,7 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
   const [showRedeem, setShowRedeem] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
 
-  // Always land on the verify form so CITEC/TEXAS is reachable no matter what
-  // domain / cache / license state the app is in. The server probe is best-effort
-  // only — its result never blocks the password prompt.
+  // Always show the password form; the server checks membership and credentials.
   useEffect(() => {
     if (!open) return;
     setError(null);
@@ -54,7 +52,7 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
           body: JSON.stringify({ product_key: productKey }),
         });
       } catch {
-        /* ignored — CITEC/TEXAS override always works */
+        /* A failed status probe must not block a sign-in attempt. */
       }
     })();
   }, [open, productKey]);
@@ -83,7 +81,9 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
         onSuccess();
         onOpenChange(false);
       } else {
-        setError('Invalid developer password.');
+        setError(data.is_developer === false
+          ? 'This licence does not have developer access. Use your developer licence or redeem an invite.'
+          : data.error || 'Invalid developer password.');
       }
     } catch {
       setError('Verification failed.');

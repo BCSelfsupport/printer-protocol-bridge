@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'licence-access-status',
+    type: 'bugfix',
+    title: 'Clearer Access Errors',
+    date: '9 Nov 2026',
+    summary: 'Sign-in now distinguishes missing licence access from an incorrect password instead of reporting every rejection as a password error.',
+  },
+  {
     id: 'licence-generator-scroll',
     type: 'bugfix',
     title: 'Licence Generator Scrolling',
