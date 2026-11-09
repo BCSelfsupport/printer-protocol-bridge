@@ -1,4 +1,5 @@
 - Wire & Cable package lives in `src/wire-cable/` as tabs inside `WireCableScreen` (not a separate route) — sending needs Index's printer connection helpers (`sendCableJob`).
+- Licence management sends an in-memory, expiring signed session issued by server-verified developer sign-in; the server rechecks active developer membership on each request so client UI access never authorizes licence actions.
 - Keep fluid usage formulas in a pure tested module; printer usage lists follow the printer catalogue, and content reads use named-only ^LF/^GM without selection fallbacks. Persist usage profiles per printer and never silently treat unsupported fields as zero dots.
 - PC Library transfers check destination message names, use additive guarded writes, and commit destination bookkeeping through `transferPcLibraryMessage` only after success — preserve the source PC Library entry so pushes remain copies; never use swap slots or delete to free capacity.
 - Persisted emulator message lists are authoritative, including empty lists — merging factory defaults resurrects deleted messages.

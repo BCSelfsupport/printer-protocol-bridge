@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'licence-access-errors',
+    type: 'bugfix',
+    title: 'Licence Request Recovery',
+    date: '9 Nov 2026',
+    summary: 'Licence requests now carry verified access credentials. Expired access asks for sign-in again instead of leaving a blank or misleading empty list, and unsuccessful changes no longer show success.',
+  },
+  {
     id: 'printer-message-usage',
     type: 'bugfix',
     title: 'Usage for Each Printer’s Messages',

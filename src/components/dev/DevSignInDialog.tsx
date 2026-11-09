@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Shield, Loader2 } from 'lucide-react';
 import { useLicense } from '@/contexts/LicenseContext';
-import { isPreviewDevPassword, normalizeDevPassword } from '@/lib/devAccess';
+import { normalizeDevPassword } from '@/lib/devAccess';
+import { setLicenseAdminSession } from '@/lib/licenseAdminApi';
 
 interface DevSignInDialogProps {
   open: boolean;
@@ -64,15 +65,6 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
     setBusy(true);
     setError(null);
     const normalizedCode = normalizeDevPassword(code);
-    // Unconditional client-side override — CITEC/TEXAS always open the dev panel,
-    // regardless of runtime, license state, or edge function availability.
-    if (isPreviewDevPassword(normalizedCode)) {
-      setCode('');
-      onSuccess();
-      onOpenChange(false);
-      setBusy(false);
-      return;
-    }
     if (!productKey) {
       setBusy(false);
       setError('No license key activated.');
@@ -85,7 +77,9 @@ export function DevSignInDialog({ open, onOpenChange, onSuccess }: DevSignInDial
         body: JSON.stringify({ product_key: productKey, dev_password: normalizedCode }),
       });
       const data = await res.json();
-      if (data.valid) {
+      if (res.ok && data.valid && typeof data.admin_token === 'string') {
+        setLicenseAdminSession(data.admin_token);
+        setCode('');
         onSuccess();
         onOpenChange(false);
       } else {

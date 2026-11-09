@@ -15,6 +15,7 @@
 //     → { valid: bool, is_owner: bool }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { issueAdminSession } from '../_shared/adminSession.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -188,7 +189,9 @@ Deno.serve(async (req) => {
           .from("developer_licenses")
           .update({ last_signin_at: new Date().toISOString() })
           .eq("id", dev.id);
-        return json({ valid: true, is_owner: dev.is_owner, license_id: license.id });
+        const secret = Deno.env.get('DEV_PORTAL_PASSWORD');
+        if (!secret) return json({ error: 'Admin actions are not configured' }, 503);
+        return json({ valid: true, is_owner: dev.is_owner, license_id: license.id, admin_token: await issueAdminSession(license.id, secret) });
       }
       return json({ valid: false }, 401);
     }
@@ -210,14 +213,17 @@ Deno.serve(async (req) => {
 
     // VERIFY
     if (totp_code && enrolled) {
-      const secret = await decrypt(dev.totp_secret_encrypted!);
+      if (!dev.totp_secret_encrypted) return json({ valid: false }, 401);
+      const secret = await decrypt(dev.totp_secret_encrypted);
       const ok = await verifyTotp(secret, String(totp_code).replace(/\s/g, ""));
       if (ok) {
         await supabase
           .from("developer_licenses")
           .update({ last_signin_at: new Date().toISOString() })
           .eq("id", dev.id);
-        return json({ valid: true, is_owner: dev.is_owner, license_id: license.id });
+        const signingSecret = Deno.env.get('DEV_PORTAL_PASSWORD');
+        if (!signingSecret) return json({ error: 'Admin actions are not configured' }, 503);
+        return json({ valid: true, is_owner: dev.is_owner, license_id: license.id, admin_token: await issueAdminSession(license.id, signingSecret) });
       }
       return json({ valid: false }, 401);
     }

@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { Key, Plus, Copy, Loader2, XCircle, CheckCircle2, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { licenseAdminApi as licenseApi, LicenseAdminAccessError } from '@/lib/licenseAdminApi';
+import { DevSignInDialog } from './DevSignInDialog';
 
 interface License {
   id: string;
@@ -19,19 +21,9 @@ interface License {
   license_activations: { machine_id: string; last_seen: string; is_current: boolean }[];
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-async function licenseApi(action: string, body?: Record<string, unknown>) {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/license?action=${action}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  return res.json();
-}
-
 export function LicenseAssignmentPanel() {
+  const [needsSignIn, setNeedsSignIn] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [licenses, setLicenses] = useState<License[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -44,11 +36,13 @@ export function LicenseAssignmentPanel() {
 
   const fetchLicenses = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await licenseApi('list');
       setLicenses(data.licenses || []);
-    } catch {
-      toast.error('Failed to load licenses');
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Failed to load licences');
+      if (error instanceof LicenseAdminAccessError) setNeedsSignIn(true);
     } finally {
       setLoading(false);
     }
@@ -79,23 +73,34 @@ export function LicenseAssignmentPanel() {
         setCompany('');
         fetchLicenses();
       }
-    } catch {
-      toast.error('Failed to create license');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create license');
+      if (error instanceof LicenseAdminAccessError) setNeedsSignIn(true);
     } finally {
       setCreating(false);
     }
   };
 
   const handleDeactivate = async (licenseId: string) => {
-    await licenseApi('deactivate', { license_id: licenseId });
-    toast.success('License deactivated');
-    fetchLicenses();
+    try {
+      await licenseApi('deactivate', { license_id: licenseId });
+      toast.success('License deactivated');
+      fetchLicenses();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to deactivate license');
+      if (error instanceof LicenseAdminAccessError) setNeedsSignIn(true);
+    }
   };
 
   const handleDelete = async (licenseId: string) => {
-    await licenseApi('delete', { license_id: licenseId });
-    toast.success('License deleted');
-    fetchLicenses();
+    try {
+      await licenseApi('delete', { license_id: licenseId });
+      toast.success('License deleted');
+      fetchLicenses();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete license');
+      if (error instanceof LicenseAdminAccessError) setNeedsSignIn(true);
+    }
   };
 
   const copyKey = (key: string) => {
@@ -112,6 +117,8 @@ export function LicenseAssignmentPanel() {
 
   return (
     <div className="flex flex-col h-full">
+      <DevSignInDialog open={needsSignIn} onOpenChange={setNeedsSignIn} onSuccess={() => { setNeedsSignIn(false); fetchLicenses(); }} />
+      {loadError && <div className="p-3 text-sm text-destructive" role="alert">{loadError}<Button variant="outline" size="sm" className="ml-2" onClick={fetchLicenses}>Retry</Button></div>}
       {/* Create License Form */}
       <div className="p-4 border-b border-gray-200 space-y-3">
         <div className="flex items-center gap-2 mb-2">

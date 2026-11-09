@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { verifyAdminSession } from '../_shared/adminSession.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,7 +51,7 @@ function badRequest(msg: string) {
 //     shared secret matching DEV_PORTAL_PASSWORD. Clients send it in the
 //     `x-admin-token` header. Without this gate anyone with the public
 //     anon key could mint or delete licenses. ---
-function requireAdmin(req: Request): Response | null {
+async function requireAdmin(req: Request): Promise<Response | null> {
   const expected = Deno.env.get("DEV_PORTAL_PASSWORD");
   if (!expected) {
     return new Response(
@@ -59,6 +60,13 @@ function requireAdmin(req: Request): Response | null {
     );
   }
   const provided = req.headers.get("x-admin-token") ?? "";
+  const licenseId = await verifyAdminSession(provided, expected);
+  if (licenseId) {
+    const { data: license } = await supabaseAdmin.from('licenses').select('is_active, expires_at').eq('id', licenseId).maybeSingle();
+    const { data: developer } = await supabaseAdmin.from('developer_licenses').select('id').eq('license_id', licenseId).maybeSingle();
+    if (license?.is_active && developer && (!license.expires_at || new Date(license.expires_at).getTime() > Date.now())) return null;
+    return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
   // Constant-time-ish comparison
   if (provided.length !== expected.length) {
     return new Response(
@@ -454,7 +462,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "create") {
-      const adminFail = requireAdmin(req);
+      const adminFail = await requireAdmin(req);
       if (adminFail) return adminFail;
       const body = await req.json();
       const { tier, customer_name, customer_email, customer_company, expires_in_days } = body ?? {};
@@ -531,7 +539,7 @@ Deno.serve(async (req) => {
 
     // ── ADMIN: list licenses ──
     if (action === "list") {
-      const adminFail = requireAdmin(req);
+      const adminFail = await requireAdmin(req);
       if (adminFail) return adminFail;
       const { data: licenses } = await supabaseAdmin
         .from("licenses")
@@ -545,7 +553,7 @@ Deno.serve(async (req) => {
 
     // ── ADMIN: deactivate license ──
     if (action === "deactivate") {
-      const adminFail = requireAdmin(req);
+      const adminFail = await requireAdmin(req);
       if (adminFail) return adminFail;
       const { license_id } = await req.json();
       if (typeof license_id !== "string" || !UUID_RE.test(license_id)) {
@@ -564,7 +572,7 @@ Deno.serve(async (req) => {
 
     // ── ADMIN: delete license ──
     if (action === "delete") {
-      const adminFail = requireAdmin(req);
+      const adminFail = await requireAdmin(req);
       if (adminFail) return adminFail;
       const { license_id } = await req.json();
       if (typeof license_id !== "string" || !UUID_RE.test(license_id)) {
