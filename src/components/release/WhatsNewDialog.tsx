@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'licence-generator-scroll',
+    type: 'bugfix',
+    title: 'Licence Generator Scrolling',
+    date: '9 Nov 2026',
+    summary: 'The complete licence form and issued-key list now scroll together, keeping customer details and Generate Key reachable on shorter screens.',
+  },
+  {
     id: 'licence-access-errors',
     type: 'bugfix',
     title: 'Licence Request Recovery',

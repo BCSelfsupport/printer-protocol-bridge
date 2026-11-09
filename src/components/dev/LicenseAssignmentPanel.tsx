@@ -116,7 +116,7 @@ export function LicenseAssignmentPanel() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <ScrollArea className="h-full min-h-0" type="always" aria-label="Licence generator and issued licences">
       <DevSignInDialog open={needsSignIn} onOpenChange={setNeedsSignIn} onSuccess={() => { setNeedsSignIn(false); fetchLicenses(); }} />
       {loadError && <div className="p-3 text-sm text-destructive" role="alert">{loadError}<Button variant="outline" size="sm" className="ml-2" onClick={fetchLicenses}>Retry</Button></div>}
       {/* Create License Form */}
@@ -173,7 +173,7 @@ export function LicenseAssignmentPanel() {
         </button>
       </div>
 
-      <ScrollArea className="flex-1 px-4 pb-4">
+      <div className="px-4 pb-4">
         {loading && licenses.length === 0 && (
           <div className="text-xs text-gray-400 text-center py-8">Loading...</div>
         )}
@@ -224,7 +224,7 @@ export function LicenseAssignmentPanel() {
             </div>
           ))}
         </div>
-      </ScrollArea>
-    </div>
+      </div>
+    </ScrollArea>
   );
 }
