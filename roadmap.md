@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Prevent left-drag panning in Edit Layout and allow dragging anywhere within the selected object. Browser checks confirm only the selected printer moves, blank left-drag does not pan, and right-drag pans; five tests pass.
+
 - [x] Add a direct line-tag control with editable name/title/ID and movable tags. Verified adding, naming, dragging, scaling and rotating a saved tag in the floor-plan editor; five tests pass.
 
 - [x] Fix overlapping equipment blocking printer selection, dragging, resizing and rotation in the floor plan. Overlap reproduction now passes selection, 150% size, 90° rotation, dragging and overview opening; five floor-plan tests pass. Physical-printer navigation remains unverified.

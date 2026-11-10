@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-object-drag',
+    type: 'bugfix',
+    title: 'Move Individual Floor Objects',
+    date: '10 Nov 2026',
+    summary: 'In Edit Layout, left-drag moves an individual object rather than the whole floor. The selected object can be dragged from anywhere inside its outline; right or middle drag still moves the floor view.',
+  },
+  {
     id: 'floor-line-tags',
     type: 'feature',
     title: 'Production Line Tags',
