@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-line-tags',
+    type: 'feature',
+    title: 'Production Line Tags',
+    date: '10 Nov 2026',
+    summary: 'Edit Layout now includes Add Line Tag. Enter a line name, title or ID, then drag the tag into place; tags can also be resized and rotated and are saved with the floor plan.',
+  },
+  {
     id: 'floor-printer-editing',
     type: 'bugfix',
     title: 'Floor Plan Printer Selection',

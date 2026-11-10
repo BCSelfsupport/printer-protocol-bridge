@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ReactFlow, ReactFlowProvider, Background, BackgroundVariant, useReactFlow, applyNodeChanges, type Node, type NodeProps, type NodeChange } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Factory, Lock, Pencil, Plus, Printer as PrinterIcon, RotateCw, Scan, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
+import { Factory, Lock, Pencil, Plus, Printer as PrinterIcon, RotateCw, Scan, Tag, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -18,11 +18,11 @@ function EquipmentNodeView({ data, selected }: NodeProps<EquipmentNode>) {
   const { item, printer } = data;
   return <div className={cn('floor-node', selected && 'floor-node-selected')} style={{ width: 220 * item.scale / 100, height: (item.kind === 'label' ? 42 : 260) * item.scale / 100 }}>
     <div className="floor-node-content" style={{ transform: `scale(${item.scale / 100})`, width: 220 }}>
-      {(item.kind === 'printer' || item.kind === 'label') && <div className="floor-node-label flex items-center justify-center gap-2 px-1 text-sm font-semibold text-foreground text-center break-words">
+      {(item.kind === 'printer' || item.kind === 'label') && <div className={cn('floor-node-label flex items-center justify-center gap-2 px-1 text-sm font-semibold text-foreground text-center break-words', item.kind === 'label' && 'min-h-10 border rounded bg-card px-3')} style={item.kind === 'label' ? { transform: `rotate(${item.rotation}deg)` } : undefined}>
         {printer && <span title={statusNames[floorPrinterStatus(printer)]} className={cn('h-3 w-3 shrink-0 rounded-full', lightClasses[floorPrinterStatus(printer)])} />}
         <span>{printer ? `${printer.name} · ID ${printer.id}` : item.label}</span>
       </div>}
-      <div className="floor-symbol" style={{ transform: `rotate(${item.rotation}deg)` }}><FloorEquipment kind={item.kind} /></div>
+      {item.kind !== 'label' && <div className="floor-symbol" style={{ transform: `rotate(${item.rotation}deg)` }}><FloorEquipment kind={item.kind} /></div>}
     </div>
   </div>;
 }
@@ -92,11 +92,14 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
           <div className="flex justify-center border-b pb-2 overflow-hidden"><FloorEquipment kind={libraryKind} /></div>
           <Button className="w-full" size="sm" draggable onDragStart={e => e.dataTransfer.setData('application/codesync-floor', libraryKind)} onClick={() => add(libraryKind)}><Plus className="h-4 w-4 mr-2" />Add to Plan</Button>
         </section>
+        <section className="space-y-2"><h3 className="text-xs uppercase text-muted-foreground font-semibold">Line tags</h3>
+          <Button variant="outline" className="w-full" size="sm" draggable onDragStart={e => e.dataTransfer.setData('application/codesync-floor', 'label')} onClick={() => add('label')}><Tag className="h-4 w-4 mr-2" />Add Line Tag</Button>
+        </section>
         <section><h3 className="text-xs uppercase text-muted-foreground font-semibold mb-2">Unplaced printers · {unplaced.length}</h3>
           {unplaced.map(p => <Button key={p.id} className="w-full justify-start h-auto min-h-10 mb-1 whitespace-normal text-left" variant="outline" draggable onDragStart={e => e.dataTransfer.setData('application/codesync-floor', `printer:${p.id}`)} onClick={() => add('printer', p)}><PrinterIcon className="h-4 w-4 mr-2 shrink-0" />{p.name} · ID {p.id}</Button>)}
         </section>
         {selected && <section className="space-y-3 border-t pt-3"><h3 className="font-semibold text-sm">{floorNames[selected.kind]}</h3>
-          {selected.kind !== 'printer' && <label className="block text-xs">Name<Input className="mt-1" value={selected.label} onChange={e => patch({ label: e.target.value })} /></label>}
+          {selected.kind !== 'printer' && <label className="block text-xs">{selected.kind === 'label' ? 'Line name / title / ID' : 'Name'}<Input aria-label={selected.kind === 'label' ? 'Line name / title / ID' : 'Name'} autoFocus={selected.kind === 'label'} key={selected.id} className="mt-1" value={selected.label} onChange={e => patch({ label: e.target.value })} /></label>}
           <label className="block text-xs">Size (%)<Input aria-label="Size percent" type="number" min={25} max={300} step={5} value={selected.scale} onChange={e => { if (e.target.value) patch({ scale: Number(e.target.value) }); }} className="mt-1" /></label>
           <label className="block text-xs">Rotation (°)<div className="flex gap-1 mt-1"><Input aria-label="Rotation degrees" type="number" value={selected.rotation} onChange={e => patch({ rotation: Number(e.target.value) })} /><Button variant="outline" size="icon" title="Rotate 90 degrees" aria-label="Rotate 90 degrees" onClick={() => patch({ rotation: selected.rotation + 90 })}><RotateCw className="h-4 w-4" /></Button></div></label>
           <Button variant="outline" size="sm" className="w-full text-destructive" onClick={() => { setItems(prev => prev.filter(i => i.id !== selected.id)); setSelectedId(null); }}><Trash2 className="h-4 w-4 mr-2" />Remove from plan</Button>

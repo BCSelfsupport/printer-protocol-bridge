@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Add a direct line-tag control with editable name/title/ID and movable tags. Verified adding, naming, dragging, scaling and rotating a saved tag in the floor-plan editor; five tests pass.
+
 - [x] Fix overlapping equipment blocking printer selection, dragging, resizing and rotation in the floor plan. Overlap reproduction now passes selection, 150% size, 90° rotation, dragging and overview opening; five floor-plan tests pass. Physical-printer navigation remains unverified.
 
 - [x] Add production-floor view from printer overview, with draggable ID-linked printers, percentage scaling, rotation, and clickable overviews. All printer/equipment symbols are flat 2D. Five tests and isolated desktop/mobile editing checks pass; real printer status and licensed end-to-end entry remain unverified.
