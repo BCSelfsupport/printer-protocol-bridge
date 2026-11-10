@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'multiline-template-gaps',
+    type: 'bugfix',
+    title: 'Multi-Line Template Spacing',
+    date: '10 Nov 2026',
+    summary: 'Messages read from the printer on 3-line, 4-line and 5-line templates now keep a one-dot space between every line, instead of the top lines touching.',
+  },
+  {
     id: 'licence-access-status',
     type: 'bugfix',
     title: 'Clearer Access Errors',

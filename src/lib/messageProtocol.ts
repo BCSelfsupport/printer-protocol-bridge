@@ -201,6 +201,30 @@ export function getValidCanvasYPositions(
   return [...new Set(canvasPositions)].sort((a, b) => a - b);
 }
 
+function multiLineHeight(templateValue: string): number {
+  const m = templateValue.match(/multi-\d+x(\d+)/);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+/**
+ * Map a ^LF-reported printer Y on a multi-line template to its firmware slot Y.
+ * Firmware may report slots packed without the separator row (line i at
+ * i × lineHeight) or with it (i × (lineHeight + 1)); on 3- and 4-line templates
+ * the packed form drifts by 2+ dots, so nearest-within-1 snapping is not enough.
+ */
+export function multiLineSlotPrinterY(templateValue: string, printerY: number): number | null {
+  const slots = TEMPLATE_LINE_Y_POSITIONS[templateValue];
+  const lineH = multiLineHeight(templateValue);
+  if (!slots || !lineH) return null;
+  let best = 0;
+  let bestDist = Infinity;
+  slots.forEach((slotY, i) => {
+    const d = Math.min(Math.abs(printerY - slotY), Math.abs(printerY - i * lineH));
+    if (d < bestDist) { bestDist = d; best = i; }
+  });
+  return bestDist <= Math.ceil(lineH / 2) ? slots[best] : null;
+}
+
 /** Keep a resized field on the nearest valid row rather than moving it to Y=0. */
 export function canvasYAfterFontChange(
   templateValue: string, templateHeight: number, newHeight: number, previousY: number,
@@ -800,20 +824,9 @@ export function buildMessageDetails(
     // ^LF coordinates back to the authoritative template slots so the one-dot
     // inter-line gap remains visible in CodeSync.
     if (templateValue.startsWith('multi-')) {
-      const validCanvasYs = getValidCanvasYPositions(templateValue, templateHeight, fieldHeight);
-      if (validCanvasYs.length > 0) {
-        let nearestY = validCanvasYs[0];
-        let nearestDistance = Math.abs(canvasY - nearestY);
-        for (const validY of validCanvasYs) {
-          const distance = Math.abs(canvasY - validY);
-          if (distance < nearestDistance) {
-            nearestY = validY;
-            nearestDistance = distance;
-          }
-        }
-        if (nearestDistance <= 1) {
-          canvasY = nearestY;
-        }
+      const slotY = multiLineSlotPrinterY(templateValue, pf.y);
+      if (slotY !== null && fieldHeight <= multiLineHeight(templateValue)) {
+        canvasY = Math.max(blockedRows, templateHeight - slotY - fieldHeight + blockedRows);
       }
     }
 
