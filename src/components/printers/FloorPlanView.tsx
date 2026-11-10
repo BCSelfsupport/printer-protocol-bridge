@@ -18,10 +18,10 @@ function EquipmentNodeView({ data, selected }: NodeProps<EquipmentNode>) {
   const { item, printer } = data;
   return <div className={cn('floor-node', selected && 'floor-node-selected')} style={{ width: 220 * item.scale / 100, height: (item.kind === 'label' ? 42 : 260) * item.scale / 100 }}>
     <div className="floor-node-content" style={{ transform: `scale(${item.scale / 100})`, width: 220 }}>
-      <div className="flex items-center justify-center gap-2 px-1 text-sm font-semibold text-foreground text-center break-words">
+      {(item.kind === 'printer' || item.kind === 'label') && <div className="flex items-center justify-center gap-2 px-1 text-sm font-semibold text-foreground text-center break-words">
         {printer && <span title={statusNames[floorPrinterStatus(printer)]} className={cn('h-3 w-3 shrink-0 rounded-full', lightClasses[floorPrinterStatus(printer)])} />}
         <span>{printer ? `${printer.name} · ID ${printer.id}` : item.label}</span>
-      </div>
+      </div>}
       <div className="floor-symbol" style={{ transform: `rotate(${item.rotation}deg)` }}><FloorEquipment kind={item.kind} /></div>
     </div>
   </div>;
