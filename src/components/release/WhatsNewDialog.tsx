@@ -21,7 +21,7 @@ export interface ReleaseNote {
 const RELEASE_NOTES: ReleaseNote[] = [
   {
     id: 'stop-all-jets-confirm',
-    type: 'improvement',
+    type: 'feature',
     title: 'Stop All Jets Safety Check',
     date: '10 Nov 2026',
     summary: 'Stop All Jets now asks "Are you sure?" with a clear warning that every production line will stop; "No, keep printing" is the default choice.',
