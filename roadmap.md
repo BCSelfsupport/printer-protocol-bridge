@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Restore direct selection and dragging of floor-plan parts. Browser checks confirm conveyor click/drag moves only the conveyor, selected printer drag remains functional, and left-drag does not move the floor; five tests pass.
+
 - [x] Prevent left-drag panning in Edit Layout and allow dragging anywhere within the selected object. Browser checks confirm only the selected printer moves, blank left-drag does not pan, and right-drag pans; five tests pass.
 
 - [x] Add a direct line-tag control with editable name/title/ID and movable tags. Verified adding, naming, dragging, scaling and rotating a saved tag in the floor-plan editor; five tests pass.

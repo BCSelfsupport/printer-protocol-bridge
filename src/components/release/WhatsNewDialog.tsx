@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-parts-click',
+    type: 'bugfix',
+    title: 'Floor Parts Click and Drag',
+    date: '10 Nov 2026',
+    summary: 'Restored direct clicking and dragging on floor-plan parts in Edit Layout while keeping left-drag separate from moving the whole floor.',
+  },
+  {
     id: 'floor-object-drag',
     type: 'bugfix',
     title: 'Move Individual Floor Objects',
