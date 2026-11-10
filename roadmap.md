@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Correct transparent overlapping click areas and verify direct dragging without a preliminary selection click. Reproduced a printer wrapper intercepting a conveyor drag; corrected the library's inline pointer-event override. Exact overlapping-conveyor reproduction, printer controls and line-tag editing pass; full licensed navigation remains unverified.
+
 - [x] Restore direct selection and dragging of floor-plan parts. Browser checks confirm conveyor click/drag moves only the conveyor, selected printer drag remains functional, and left-drag does not move the floor; five tests pass.
 
 - [x] Prevent left-drag panning in Edit Layout and allow dragging anywhere within the selected object. Browser checks confirm only the selected printer moves, blank left-drag does not pan, and right-drag pans; five tests pass.

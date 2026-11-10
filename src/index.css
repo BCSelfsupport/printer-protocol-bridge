@@ -9,11 +9,14 @@
 .floor-node { position: relative; border: 1px solid transparent; border-radius: 4px; }
 .floor-node-selected { border-color: hsl(var(--primary)); background: hsl(var(--primary) / 0.06); }
 .floor-node-content { transform-origin: top left; }
-.floor-surface .react-flow__node-equipment { pointer-events: auto; }
+.floor-surface .react-flow__node-equipment { pointer-events: none !important; }
+.floor-surface .floor-node,
+.floor-surface .floor-node-content,
+.floor-surface .floor-symbol,
+.floor-surface .floor-equipment { pointer-events: none; }
 .floor-surface .react-flow__node-equipment .floor-node { cursor: move; }
 .floor-node-label { pointer-events: auto; }
-.floor-surface .floor-equipment { pointer-events: auto; }
-.floor-surface .floor-equipment * { pointer-events: auto; }
+.floor-surface .floor-equipment * { pointer-events: visiblePainted; }
 .floor-belt { fill: hsl(var(--secondary)); stroke: hsl(var(--muted-foreground)); stroke-width: 2; }
 .floor-machine { fill: hsl(var(--primary) / 0.12); stroke: hsl(var(--primary)); stroke-width: 2; }
 .floor-roller { fill: none; stroke: hsl(var(--muted-foreground) / 0.5); stroke-width: 2; }

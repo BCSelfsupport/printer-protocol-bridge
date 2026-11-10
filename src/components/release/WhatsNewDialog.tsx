@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-visible-part-drag',
+    type: 'bugfix',
+    title: 'Drag the Visible Floor Part',
+    date: '10 Nov 2026',
+    summary: 'Click-and-hold directly on a visible conveyor, machine, printer or line tag to move it in Edit Layout. Transparent space around other objects no longer intercepts the drag.',
+  },
+  {
     id: 'floor-parts-click',
     type: 'bugfix',
     title: 'Floor Parts Click and Drag',
@@ -31,7 +38,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
     type: 'bugfix',
     title: 'Move Individual Floor Objects',
     date: '10 Nov 2026',
-    summary: 'In Edit Layout, left-drag moves an individual object rather than the whole floor. The selected object can be dragged from anywhere inside its outline; right or middle drag still moves the floor view.',
+    summary: 'In Edit Layout, left-drag on a visible part moves that individual object rather than the whole floor; right or middle drag still moves the floor view.',
   },
   {
     id: 'floor-line-tags',

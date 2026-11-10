@@ -70,6 +70,8 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
   };
   const change = useCallback((changes: NodeChange<EquipmentNode>[]) => {
     if (!editing) return;
+    const selection = changes.find(c => c.type === 'select' && c.selected);
+    if (selection?.type === 'select') setSelectedId(selection.id);
     const moved = applyNodeChanges(changes, nodes);
     setItems(prev => prev.map(item => { const node = moved.find(n => n.id === item.id); return node ? { ...item, x: node.position.x, y: node.position.y } : item; }));
   }, [editing, nodes]);
