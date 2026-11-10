@@ -747,15 +747,25 @@ export function PrintersScreen({
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Stop all jets?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will send Stop Jet (^SJ 0) to all {onlineCount} online printer{onlineCount === 1 ? '' : 's'}, one at a time, with a safe delay between each. Each printer will begin its ~2:14 shutdown cycle. Use this for end-of-shift cycle-down.
+                        <AlertDialogTitle>Are you sure you want to stop ALL jets?</AlertDialogTitle>
+                        <AlertDialogDescription asChild>
+                          <div className="space-y-2">
+                            <p className="font-semibold text-destructive">
+                              This will halt printing on all {onlineCount} online printer{onlineCount === 1 ? '' : 's'} and can stop every production line.
+                            </p>
+                            <p>
+                              Each printer begins a ~2:14 shutdown and takes several minutes to restart. Only continue at end of shift or in an emergency.
+                            </p>
+                          </div>
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => { void onStopAllJets(); }}>
-                          Stop All Jets
+                        <AlertDialogCancel autoFocus>No, keep printing</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={() => { void onStopAllJets(); }}
+                        >
+                          Yes, Stop All Jets
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
