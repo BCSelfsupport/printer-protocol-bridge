@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-printer-editing',
+    type: 'bugfix',
+    title: 'Floor Plan Printer Selection',
+    date: '10 Nov 2026',
+    summary: 'Printers remain selectable and draggable above conveyor pieces in Edit Layout. Invisible space around equipment no longer blocks other objects, and selecting a printer exposes its percentage size and rotation controls.',
+  },
+  {
     id: 'production-floor-plan',
     type: 'feature',
     title: '2D Production Floor Plan',

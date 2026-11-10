@@ -18,7 +18,7 @@ function EquipmentNodeView({ data, selected }: NodeProps<EquipmentNode>) {
   const { item, printer } = data;
   return <div className={cn('floor-node', selected && 'floor-node-selected')} style={{ width: 220 * item.scale / 100, height: (item.kind === 'label' ? 42 : 260) * item.scale / 100 }}>
     <div className="floor-node-content" style={{ transform: `scale(${item.scale / 100})`, width: 220 }}>
-      {(item.kind === 'printer' || item.kind === 'label') && <div className="flex items-center justify-center gap-2 px-1 text-sm font-semibold text-foreground text-center break-words">
+      {(item.kind === 'printer' || item.kind === 'label') && <div className="floor-node-label flex items-center justify-center gap-2 px-1 text-sm font-semibold text-foreground text-center break-words">
         {printer && <span title={statusNames[floorPrinterStatus(printer)]} className={cn('h-3 w-3 shrink-0 rounded-full', lightClasses[floorPrinterStatus(printer)])} />}
         <span>{printer ? `${printer.name} · ID ${printer.id}` : item.label}</span>
       </div>}
@@ -50,6 +50,7 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
   }, [items]);
   const nodes = useMemo<EquipmentNode[]>(() => items.filter(i => i.kind !== 'printer' || printers.some(p => p.id === i.printerId)).map(item => ({
     id: item.id, type: 'equipment', position: { x: item.x, y: item.y }, selected: item.id === selectedId,
+    zIndex: item.kind === 'printer' ? 100 : item.kind === 'label' ? 200 : 0,
     data: { item, printer: printers.find(p => p.id === item.printerId) },
     style: { width: 220 * item.scale / 100, height: (item.kind === 'label' ? 42 : 260) * item.scale / 100 },
   })), [items, printers, selectedId]);
@@ -106,7 +107,7 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
         if (value.startsWith('printer:')) { const printer = printers.find(p => p.id === Number(value.split(':')[1])); if (printer) add('printer', printer, position); }
         else if (palette.includes(value as FloorKind)) add(value as FloorKind, undefined, position);
       }}>
-        <ReactFlow<EquipmentNode> nodes={nodes} edges={[]} nodeTypes={nodeTypes} onNodesChange={change} nodesDraggable={editing} nodesConnectable={false} elementsSelectable={editing} deleteKeyCode={null} minZoom={0.2} maxZoom={2.5} fitView fitViewOptions={{ padding: 0.3, maxZoom: 1 }} snapToGrid snapGrid={[10, 10]} onNodeClick={(_, node) => { if (editing) setSelectedId(node.id); else if (node.data.printer) setOverviewId(node.data.printer.id); }} onPaneClick={() => setSelectedId(null)} proOptions={{ hideAttribution: true }}>
+        <ReactFlow<EquipmentNode> nodes={nodes} edges={[]} nodeTypes={nodeTypes} onNodesChange={change} nodesDraggable={editing} nodesConnectable={false} elementsSelectable={editing} elevateNodesOnSelect={false} onNodeDragStart={(_, node) => setSelectedId(node.id)} deleteKeyCode={null} minZoom={0.2} maxZoom={2.5} fitView fitViewOptions={{ padding: 0.3, maxZoom: 1 }} snapToGrid snapGrid={[10, 10]} onNodeClick={(_, node) => { if (editing) setSelectedId(node.id); else if (node.data.printer) setOverviewId(node.data.printer.id); }} onPaneClick={() => setSelectedId(null)} proOptions={{ hideAttribution: true }}>
           <Background variant={BackgroundVariant.Lines} gap={20} size={1} />
         </ReactFlow>
         {items.length === 0 && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-3 text-muted-foreground"><Factory className="h-12 w-12 opacity-40" /><h3 className="font-semibold text-foreground">Production floor</h3>{!editing && <Button className="pointer-events-auto" onClick={() => setEditing(true)}><Plus className="h-4 w-4 mr-2" />Create Layout</Button>}</div>}
