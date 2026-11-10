@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'single-row-top-position',
+    type: 'bugfix',
+    title: 'Raised Single Line Stays Put',
+    date: '10 Nov 2026',
+    summary: 'A single line of smaller text moved to the top of a taller template (for example 7-dot text on 16 dots) no longer drops to the bottom after saving.',
+  },
+  {
     id: 'multiline-template-gaps',
     type: 'bugfix',
     title: 'Multi-Line Template Spacing',

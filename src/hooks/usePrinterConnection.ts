@@ -2214,12 +2214,18 @@ export function usePrinterConnection() {
   ): string | undefined => {
     if (!templateValue || !/^\d+$/.test(templateValue)) return templateValue;
     const textFields = fields.filter(f => f.type !== 'barcode');
-    if (textFields.length !== fields.length || textFields.length < 2) return templateValue;
+    if (textFields.length !== fields.length || textFields.length < 1) return templateValue;
     const heights = new Set(textFields.map(f => fontToDotHeight(f.fontSize)));
     if (heights.size !== 1) return templateValue;
     const h = [...heights][0];
-    const rows = new Set(textFields.map(f => f.y)).size;
-    if (rows < 2) return templateValue;
+    let rows = new Set(textFields.map(f => f.y)).size;
+    // A single raised row (e.g. 7-dot text moved to the top of a 16-dot
+    // template) is also clamped to Y=0 by the firmware; promote it so the
+    // upper line slot keeps it where the operator put it.
+    if (rows === 1) {
+      if (textFields[0].y + h >= 32) return templateValue;
+      rows = 2;
+    }
     const table: Record<string, string> = {
       '16:2:7': 'multi-2x7', '19:2:9': 'multi-2x9', '25:2:12': 'multi-2x12', '11:2:5': 'multi-2x5',
       '23:3:7': 'multi-3x7', '29:3:9': 'multi-3x9', '31:4:7': 'multi-4x7', '23:4:5': 'multi-4x5', '29:5:5': 'multi-5x5',
