@@ -1,5 +1,6 @@
 import { Printer as PrinterIcon, Plus, Trash2, RefreshCw, Shield, Server, GripVertical, Package, BarChart3, Lock, Radio, Link2, ChevronDown, Maximize2, DownloadCloud, PowerOff, Power, X } from 'lucide-react';
 import { StartJetsSelectionDialog } from '@/components/printers/StartJetsSelectionDialog';
+import { FloorPlanView } from '@/components/printers/FloorPlanView';
 import { WhatsNewButton, WhatsNewDialog } from '@/components/release/WhatsNewDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Printer, PrinterStatus, PrinterMetrics } from '@/types/printer';
@@ -320,6 +321,7 @@ export function PrintersScreen({
   const [broadcastDialogOpen, setBroadcastDialogOpen] = useState(false);
   const [broadcastMaster, setBroadcastMaster] = useState<Printer | null>(null);
   const [expandedGridOpen, setExpandedGridOpen] = useState(false);
+  const [floorPlanOpen, setFloorPlanOpen] = useState(false);
   const [updatingExpiryPrinterId, setUpdatingExpiryPrinterId] = useState<number | null>(null);
   const [expiryDialogSource, setExpiryDialogSource] = useState<Printer | null>(null);
   const [expiryDialogCurrentDays, setExpiryDialogCurrentDays] = useState<number>(0);
@@ -1179,7 +1181,7 @@ export function PrintersScreen({
       <Dialog open={expandedGridOpen} onOpenChange={setExpandedGridOpen}>
         <DialogContent className="max-w-[98vw] w-[98vw] h-[95vh] max-h-[95vh] p-0 flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 border-slate-800">
           <DialogHeader className="px-6 pt-5 pb-3 border-b border-slate-800">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
               <DialogTitle className="flex items-center gap-3 text-white">
                 <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center">
                   <PrinterIcon className="w-5 h-5 text-primary" />
@@ -1191,6 +1193,8 @@ export function PrintersScreen({
                   </div>
                 </div>
               </DialogTitle>
+              <div className="flex gap-2 mr-8">
+              <Button size="sm" variant="outline" onClick={() => setFloorPlanOpen(true)}>Floor Plan</Button>
               <Button
                 onClick={() => setExpandedGridOpen(false)}
                 size="sm"
@@ -1202,6 +1206,7 @@ export function PrintersScreen({
                 <span className="hidden sm:inline">Close</span>
                 <span className="sm:hidden">Back</span>
               </Button>
+              </div>
             </div>
           </DialogHeader>
           <ScrollArea className="flex-1">
@@ -1295,6 +1300,13 @@ export function PrintersScreen({
       </Dialog>
 
       {/* Apply expiry offset to multiple printers */}
+      <Dialog open={floorPlanOpen} onOpenChange={setFloorPlanOpen}>
+        <DialogContent className="max-w-[98vw] w-[98vw] h-[95dvh] max-h-[95dvh] p-0 gap-0 flex flex-col overflow-hidden">
+          <DialogHeader className="px-4 py-4 border-b pr-16 shrink-0"><DialogTitle>Network Printers · Floor Plan</DialogTitle></DialogHeader>
+          <FloorPlanView printers={visiblePrinters} onOpenPrinter={printer => { handlePrinterClick(printer); setFloorPlanOpen(false); setExpandedGridOpen(false); }} onService={printer => { setFloorPlanOpen(false); handleOpenService(printer); }} />
+        </DialogContent>
+      </Dialog>
+
       {expiryDialogSource && onSlaveExpiryChange && (() => {
         const getMsgExpiry = (printer: Printer): number | undefined => {
           const msgName = printer.currentMessage || masterMessageMap.get(printer.id);

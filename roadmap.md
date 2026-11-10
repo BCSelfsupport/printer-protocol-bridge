@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Add production-floor view from printer overview, with draggable ID-linked printers, percentage scaling, rotation, and clickable overviews. All printer/equipment symbols are flat 2D. Five tests and isolated desktop/mobile editing checks pass; real printer status and licensed end-to-end entry remain unverified.
+- [x] Add an indexed production-machine dropdown with piece-by-piece insertion and flat symbol previews.
+
 - [x] Put usage in each printer's Messages screen; printer catalogue entries show without PC copies, named-only content reads preserve selection, and nozzle/solvent profiles persist per printer. 25 tests pass; isolated screen checked. Physical printer/full licensed navigation remains unverified.
 
 - [x] Add Consumables ink/makeup calculator from the TCO workbook; automatic estimated message counts, no dot-source selector/manual entry, and commissioning warning. 25 tests and isolated screen checks pass. Full navigation remains licence-gated in the test browser.

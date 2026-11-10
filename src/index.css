@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+.floor-surface { background: hsl(var(--background)); }
+.floor-surface .react-flow__background { color: hsl(var(--border) / 0.3); }
+.floor-surface .react-flow__background-pattern { stroke: hsl(var(--border) / 0.35); }
+.floor-symbol { width: 220px; height: 220px; display: flex; align-items: center; justify-content: center; }
+.floor-node { position: relative; border: 1px solid transparent; border-radius: 4px; }
+.floor-node-selected { border-color: hsl(var(--primary)); background: hsl(var(--primary) / 0.06); }
+.floor-node-content { transform-origin: top left; }
+.floor-belt { fill: hsl(var(--secondary)); stroke: hsl(var(--muted-foreground)); stroke-width: 2; }
+.floor-machine { fill: hsl(var(--primary) / 0.12); stroke: hsl(var(--primary)); stroke-width: 2; }
+.floor-roller { fill: none; stroke: hsl(var(--muted-foreground) / 0.5); stroke-width: 2; }
+.floor-direction { fill: none; stroke: hsl(var(--primary)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
 /* Industrial CIJ Printer Control Theme */
 
 @layer base {

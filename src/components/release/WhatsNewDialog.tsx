@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'production-floor-plan',
+    type: 'feature',
+    title: '2D Production Floor Plan',
+    date: '10 Nov 2026',
+    summary: 'The expanded printer overview now opens a floor plan with a machine-library dropdown for flat conveyor sections, bends, equipment and line labels. Drag configured printers by ID, resize pieces by percentage, rotate them and save the layout on this device. Printer status lights and clickable overviews stay linked to the actual printers.',
+  },
+  {
     id: 'stop-all-jets-confirm',
     type: 'feature',
     title: 'Stop All Jets Safety Check',
