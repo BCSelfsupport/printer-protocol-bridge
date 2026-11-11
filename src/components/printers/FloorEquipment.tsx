@@ -18,11 +18,13 @@ export function FloorEquipment({ kind }: { kind: FloorKind }) {
         {Array.from({ length: 7 }, (_, i) => <path key={i} d={`M${15 + i * 12} 10v50`} className="floor-roller" />)}
         <path d="M115 27q45 10 47 60m-9-10 9 10 9-10" className="floor-direction" />
       </> : <>
-        <rect x="25" y="10" width="170" height="90" rx="6" className="floor-belt" />
-        <rect x="4" y="44" width="212" height="22" rx="2" className="floor-machine" />
-        {kind === 'filler' || kind === 'capper' ? [65, 95, 125, 155].map(x => <g key={x}><circle cx={x} cy="32" r="8" className="floor-machine" /><path d={`M${x} 40v30`} className="floor-direction" /></g>) : <>
-          <rect x="65" y="25" width="90" height="60" rx="4" className="floor-machine" />
-          <path d={kind === 'labeler' ? 'M80 35v40m12-40v40m12-40v40m12-40v40m12-40v40' : 'M80 35h60v40H80Zm0 0 30 20 30-20m-30 20v20'} className="floor-direction" />
+        {/* Same belt as a straight conveyor so machines line up at any matching size. */}
+        <rect x="4" y="25" width="212" height="60" rx="4" className="floor-belt" />
+        {Array.from({ length: 15 }, (_, i) => <path key={i} d={`M${12 + i * 14} 30v50`} className="floor-roller" />)}
+        <rect x="50" y="4" width="120" height="102" rx="6" className="floor-machine" />
+        {kind === 'filler' || kind === 'capper' ? [74, 98, 122, 146].map(x => <g key={x}><circle cx={x} cy="40" r="8" className="floor-machine" /><path d={`M${x} 48v22`} className="floor-direction" /></g>) : <>
+          <rect x="70" y="25" width="80" height="60" rx="4" className="floor-machine" />
+          <path d={kind === 'labeler' ? 'M82 35v40m12-40v40m12-40v40m12-40v40m12-40v40' : 'M80 35h60v40H80Zm0 0 30 20 30-20m-30 20v20'} className="floor-direction" />
         </>}
       </>}
     </svg>

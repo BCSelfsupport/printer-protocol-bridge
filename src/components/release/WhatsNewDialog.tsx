@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-machine-belt-match',
+    type: 'feature',
+    title: 'Machines Match Conveyor Width',
+    date: '11 Nov 2026',
+    summary: 'Fillers, cappers, labelers and packers now carry the same belt width as the conveyors, so at the same size (for example 60%) they line up end to end.',
+  },
+  {
     id: 'floor-select-after-move',
     type: 'bugfix',
     title: 'Keep Selecting After a Move',
