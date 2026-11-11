@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Review and approve Master PC sharing: factory-only, read-only viewer PCs covered by the Master licence; implementation awaits Andy's approval.
+
 - [x] Add draggable walls and doors with hatched walls, independent wall length/thickness, rotation and saved layout. Fifteen floor-plan tests pass; licensed browser flow verifies insertion, resizing, rotation, direct wall dragging and reload retention.
 
 - [x] Correct transparent overlapping click areas and verify direct dragging without a preliminary selection click. Reproduced a printer wrapper intercepting a conveyor drag; corrected the library's inline pointer-event override. Exact overlapping-conveyor reproduction, printer controls and line-tag editing pass; full licensed navigation remains unverified.
