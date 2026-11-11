@@ -15,3 +15,5 @@
 - TwinCode dispatcher resyncs both printers (^ME/^MB, counters kept) before the next dispatch after any failed dispatch — a faulted side can keep an unprinted code or leave 1-1 mode and jam the pair.
 - Printer cards only gain live availability from transport/emulator evidence; saved connections and disabled emulation never establish live status.
 - Desktop and relay Windows ping checks share echo-reply validation for the requested address; a successful process exit can also mean destination unreachable.
+- Master-PC sharing lives in Electron's encrypted, certificate-pinned LAN service; host-side licence checks, per-viewer credentials and IPC/legacy-relay denials enforce read-only access rather than UI visibility.
+- Viewer mode mounts separately from printer-control hooks; share only observed, timestamped service fields and Master-owned paginated reporting history so viewers never open printer sockets or invent missing readings.

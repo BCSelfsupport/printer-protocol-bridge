@@ -21,6 +21,19 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'master-pc-viewers',
+    type: 'feature',
+    title: 'Master PC & Viewing PCs',
+    date: '11 Nov 2026',
+    summary: 'Share read-only screens with other PCs on your factory network from the Windows app.',
+    bullets: [
+      'Pair and approve viewing PCs under the Master PC licence without sharing its key.',
+      'View printer overview, available service readings and the Master’s existing reports.',
+      'Viewers cannot send messages, control jets or change printer settings.',
+      'Encrypted local sharing, removable access and clearly marked out-of-date readings.',
+    ],
+  },
+  {
     id: 'production-floor-plan',
     type: 'feature',
     title: 'Production Floor Plan',

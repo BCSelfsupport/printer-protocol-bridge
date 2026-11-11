@@ -14,7 +14,7 @@ interface PrinterAPI {
 }
 
 interface RelayAPI {
-  getInfo: () => Promise<{ port: number; ips: string[] }>;
+  getInfo: () => Promise<{ port: number; ips: string[]; operatorToken?: string | null }>;
 }
 
 export interface TntFrameEntry {
@@ -92,6 +92,7 @@ interface OneToOneAPI {
 
 interface ElectronAPI {
   isElectron: boolean;
+  sharing?: import('../master-pc/types').SharingAPI;
   printer: PrinterAPI;
   oneToOne: OneToOneAPI;
   relay: RelayAPI;

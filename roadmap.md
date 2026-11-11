@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Review and approve Master PC sharing: factory-only, read-only viewer PCs covered by the Master licence; implementation awaits Andy's approval.
+- [x] Build approved factory-only Master sharing and included read-only viewers: encrypted LAN pairing/approval/revocation, main-process and legacy-relay denials, overview, observed service values and paginated report history. Ten unit/regression tests and a two-viewer TLS integration test pass; viewer screens checked with an injected bridge at desktop/narrow sizes.
+- [ ] Release and validate Master sharing on Windows with real printers — requires the external Windows installer workflow and customer-site access; Windows credential storage, firewall, physical-printer load and full installed-app end-to-end checks remain unverified.
 
 - [x] Add draggable walls and doors with hatched walls, independent wall length/thickness, rotation and saved layout. Fifteen floor-plan tests pass; licensed browser flow verifies insertion, resizing, rotation, direct wall dragging and reload retention.
 

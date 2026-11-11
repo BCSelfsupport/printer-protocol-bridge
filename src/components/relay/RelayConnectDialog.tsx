@@ -15,6 +15,7 @@ interface RelayConnectDialogProps {
 export function RelayConnectDialog({ open, onOpenChange, onConnected }: RelayConnectDialogProps) {
   const [pcIp, setPcIp] = useState('');
   const [port, setPort] = useState('8766');
+  const [operatorToken, setOperatorToken] = useState('');
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; version?: string; error?: string } | null>(null);
 
@@ -25,6 +26,7 @@ export function RelayConnectDialog({ open, onOpenChange, onConnected }: RelayCon
       if (existing) {
         setPcIp(existing.pcIp);
         setPort(String(existing.port || 8766));
+        setOperatorToken(existing.operatorToken ?? '');
       }
       setResult(null);
     }
@@ -34,14 +36,14 @@ export function RelayConnectDialog({ open, onOpenChange, onConnected }: RelayCon
     if (!pcIp.trim()) return;
     setTesting(true);
     setResult(null);
-    const config: RelayConfig = { pcIp: pcIp.trim(), port: parseInt(port) || 8766 };
+    const config: RelayConfig = { pcIp: pcIp.trim(), port: parseInt(port) || 8766, operatorToken: operatorToken.trim() };
     const res = await testRelayConnection(config);
     setResult(res);
     setTesting(false);
   };
 
   const handleConnect = () => {
-    const config: RelayConfig = { pcIp: pcIp.trim(), port: parseInt(port) || 8766 };
+    const config: RelayConfig = { pcIp: pcIp.trim(), port: parseInt(port) || 8766, operatorToken: operatorToken.trim() };
     setRelayConfig(config);
     onOpenChange(false);
     onConnected?.();
@@ -94,6 +96,7 @@ export function RelayConnectDialog({ open, onOpenChange, onConnected }: RelayCon
           </div>
 
           {/* Test result */}
+          <div className="space-y-2"><Label htmlFor="relay-operator-token">Mobile operator token</Label><Input id="relay-operator-token" type="password" value={operatorToken} onChange={e => setOperatorToken(e.target.value)} /></div>
           {result && (
             <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
               result.ok 
@@ -131,7 +134,7 @@ export function RelayConnectDialog({ open, onOpenChange, onConnected }: RelayCon
 
             <Button
               onClick={handleConnect}
-              disabled={!result?.ok}
+              disabled={!result?.ok || !operatorToken.trim()}
               className="flex-1"
             >
               Use This PC

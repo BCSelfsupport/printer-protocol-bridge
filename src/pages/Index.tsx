@@ -61,6 +61,10 @@ import { useLicense } from '@/contexts/LicenseContext';
 import { PrintMessage, Printer } from '@/types/printer';
 import { useMasterSlaveSync } from '@/hooks/useMasterSlaveSync';
 import { useProductionStorage } from '@/hooks/useProductionStorage';
+import { useReportTemplates } from '@/hooks/useReportTemplates';
+import { useMasterPublisher } from '@/master-pc/useMasterPublisher';
+import { ViewerApp } from '@/master-pc/ViewerApp';
+import { MasterSharingDialog } from '@/master-pc/MasterSharingDialog';
 import { logConsumption } from '@/lib/consumptionTracker';
 
 import { UserDefineEntryDialog, UserDefinePrompt } from '@/components/messages/UserDefineEntryDialog';
@@ -185,6 +189,16 @@ const getSaveCommandDelay = (command: string, fieldCount: number) => {
 };
 
 const Index = () => {
+  const [mode, setMode] = useState<'loading' | 'control' | 'viewer'>(window.electronAPI?.sharing ? 'loading' : 'control');
+  const [joining, setJoining] = useState(false);
+  useEffect(() => { const api = window.electronAPI?.sharing; if (api) void api.info().then(info => setMode(info.mode)).catch(() => setMode('control')); }, []);
+  if (mode === 'loading') return <div className="h-dvh bg-background flex items-center justify-center text-muted-foreground">Connecting…</div>;
+  if (mode === 'viewer' || joining) return <ViewerApp paired={mode === 'viewer'} onLeave={() => { setJoining(false); setMode('control'); }} />;
+  return <ControlIndex onJoinMaster={() => setJoining(true)} />;
+};
+
+const ControlIndex = ({ onJoinMaster }: { onJoinMaster: () => void }) => {
+  const [masterSharingOpen, setMasterSharingOpen] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
   const [devPanelOpen, setDevPanelOpen] = useState(false);
 
@@ -233,6 +247,8 @@ const Index = () => {
   
   // Production storage (IndexedDB)
   const productionStorage = useProductionStorage();
+  const sharedTemplates = useReportTemplates();
+  const masterLicense = useLicense();
   
   
   const {
@@ -3900,6 +3916,7 @@ const Index = () => {
   };
 
   const { isActivated, isLoading: licenseLoading, error: licenseError, canNetwork, canWireCable } = useLicense();
+  useMasterPublisher(printers, { runs: productionStorage.runs, snapshots: productionStorage.snapshots, templates: sharedTemplates.templates }, masterLicense.productKey);
 
   // Full lockout: if no valid license, show only the activation dialog
   if (!isActivated && !licenseLoading) {
@@ -3914,6 +3931,7 @@ const Index = () => {
           <Button onClick={() => setLicenseDialogOpen(true)} className="mt-4">
             Enter Product Key
           </Button>
+          <Button variant="outline" onClick={onJoinMaster} className="ml-2 mt-4">Connect to Master PC</Button>
         </div>
         <LicenseActivationDialog
           open={licenseDialogOpen}
@@ -3940,6 +3958,8 @@ const Index = () => {
         onTrainingVideos={() => setCurrentScreen('training')}
         onDateTimeSetup={() => setSetupDialogOpen(true)}
       />
+      <div className="flex justify-end border-b px-4 py-1 gap-2"><Button variant="ghost" size="sm" onClick={onJoinMaster}>Connect to Master PC</Button><Button variant="outline" size="sm" onClick={() => setMasterSharingOpen(true)}>Master PC Sharing</Button></div>
+      <MasterSharingDialog open={masterSharingOpen} onOpenChange={setMasterSharingOpen} />
 
       {/* Floating recording overlay - visible in main screen when recording */}
       {screenRecorder.state.isRecording && (

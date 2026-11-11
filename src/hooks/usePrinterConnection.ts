@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { printerEmulator } from '@/lib/printerEmulator';
 import { multiPrinterEmulator } from '@/lib/multiPrinterEmulator';
 import { printerTransport, isRelayMode } from '@/lib/printerTransport';
+import { recordMasterReply, recordMasterValues } from '@/master-pc/readings';
 import { runFleetWriteExclusive, runPrinterWriteExclusive } from '@/lib/printerWriteQueue';
 import { setPollingPaused, waitForPollingIdle } from '@/lib/pollingPause';
 import { CODE_TO_MESSAGE_ORIENTATION, MESSAGE_ORIENTATION_TO_CODE } from '@/lib/messageOrientation';
@@ -577,6 +578,7 @@ export function usePrinterConnection() {
     const suPrintCount = printCountMatch ? parseInt(printCountMatch[1], 10) : undefined;
 
     if (connectedPrinterId) {
+      recordMasterReply(connectedPrinterId, raw);
       updatePrinterStatus(connectedPrinterId, {
         isAvailable: true,
         status: hvOn ? 'ready' : 'not_ready',
@@ -650,6 +652,7 @@ export function usePrinterConnection() {
 
   // Stable callback for ^TP (temperature) polling
   const handleTemperatureResponse = useCallback((raw: string) => {
+    if (connectedPrinterIdRef.current !== null) recordMasterReply(connectedPrinterIdRef.current, raw);
     const parsed = parseTemperatureResponse(raw);
     if (!parsed) return;
     setConnectionState((prev) => ({
@@ -965,6 +968,7 @@ export function usePrinterConnection() {
 
   // Stable callback for ^TM (Runtime) polling — extracts Power Hours and Stream Hours
   const handleRuntimeResponse = useCallback((raw: string) => {
+    if (connectedPrinterIdRef.current !== null) recordMasterReply(connectedPrinterIdRef.current, raw);
     // Strip non-printable chars, command echo, "Success", prompt
     const sanitized = raw.replace(/[^\x20-\x7E\r\n]/g, '');
     const cleaned = sanitized
@@ -978,6 +982,10 @@ export function usePrinterConnection() {
     // Try the structured parsers first on the full sanitized text (not just cleaned lines)
     let pumpH = parsePumpHours(sanitized);
     let powerH = parsePowerHours(sanitized);
+    if (connectedPrinterIdRef.current !== null) recordMasterValues(connectedPrinterIdRef.current, {
+      ...(pumpH != null ? { streamHours: pumpH.toFixed(2) } : {}),
+      ...(powerH != null ? { powerHours: powerH.toFixed(2) } : {}),
+    });
     console.log('[handleRuntimeResponse] Direct parse — power:', powerH, 'stream:', pumpH);
 
     // Fallback: try to find any HH:MM patterns

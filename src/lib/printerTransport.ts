@@ -16,12 +16,14 @@
 import { recordCommand } from './printerCommandLog';
 import { isSaveBusy } from './saveBusy';
 import { isPrinterWriteExclusiveHeld } from './printerWriteQueue';
+import { recordMasterReply } from '@/master-pc/readings';
 
 const RELAY_STORAGE_KEY = 'relay-config';
 
 export interface RelayConfig {
   pcIp: string;
   port?: number;
+  operatorToken?: string;
 }
 
 export interface TransportCommandOptions {
@@ -87,7 +89,7 @@ async function relayFetch(endpoint: string, body: unknown): Promise<{ printers?:
   if (!base) throw new Error('Relay not configured');
   const res = await fetch(`${base}/relay/${endpoint}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Relay-Token': relayConfig?.operatorToken ?? '' },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(resolveRelayTimeoutMs(body)),
   });
@@ -202,6 +204,7 @@ export const printerTransport = {
       } else {
         result = { success: false, error: 'No transport available' };
       }
+      if (result?.success && result.response && /^\^(SU|TP|TM)\b/i.test(command)) recordMasterReply(printerId, result.response);
       return result;
     } catch (err) {
       thrown = err;

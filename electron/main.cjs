@@ -1,4 +1,5 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, desktopCapturer, safeStorage, powerSaveBlocker } = require('electron');
+const { createMasterSharing } = require('./sharing/master.cjs');
 const net = require('net');
 const http = require('http');
 const os = require('os');
@@ -18,6 +19,23 @@ function logToFile(msg) {
 let mainWindow;
 let pollingPaused = false;
 let isQuitting = false;
+
+const sharing = createMasterSharing({ app, safeStorage, powerSaveBlocker, getIPs: getLocalIPs, onViewerMode: () => {
+  connections.forEach(socket => socket.destroy());
+  connections.clear();
+  stopHotfolderWatcher();
+  if (tntServer) stopTntServer();
+} });
+// Enforce viewing mode in the main process, including legacy IPC paths.
+const registerHandler = ipcMain.handle.bind(ipcMain);
+ipcMain.handle = (channel, handler) => registerHandler(channel, (event, ...args) => {
+  const operational = /^(printer:|oneToOne:|hotfolder:|firmware:)/.test(channel) || /^tnt:(set-|send)/.test(channel);
+  if (sharing.mode() === 'viewer' && operational) throw new Error('View-only access: printer operation denied');
+  return handler(event, ...args);
+});
+for (const action of ['info', 'start', 'stop', 'newCode', 'approve', 'revoke', 'join', 'poll', 'readHistory', 'leave', 'publish', 'authorize', 'shouldResume']) {
+  ipcMain.handle(`sharing:${action}`, (_event, ...args) => sharing[action](...args));
+}
 
 // Safe send to renderer — swallows sends after window/webContents destruction (app quit).
 function safeSend(channel, payload) {
@@ -73,6 +91,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
+      backgroundThrottling: false,
     },
     icon: path.join(__dirname, '../public/codesync-icon.png'),
   });
@@ -98,6 +117,7 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.cjs'),
             contextIsolation: true,
             nodeIntegration: false,
+            backgroundThrottling: false,
           },
           icon: path.join(__dirname, '../public/codesync-icon.png'),
         });
@@ -727,7 +747,7 @@ function startRelayServer() {
     // CORS headers for mobile PWA
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Relay-Token');
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
@@ -746,6 +766,14 @@ function startRelayServer() {
     if (req.method !== 'POST') {
       res.writeHead(405, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    // Legacy mobile operators require the locally displayed operator token.
+    // Viewer tokens never authorise any relay route.
+    if (!sharing.legacyAllowed(req.headers['x-relay-token'])) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Authorised mobile operator access required' }));
       return;
     }
 
@@ -1023,7 +1051,7 @@ async function _sendCommandToSocketImpl(printerId, command, options = {}) {
 
 // IPC handler for relay info
 ipcMain.handle('relay:get-info', () => {
-  return { port: RELAY_PORT, ips: getLocalIPs() };
+  return { port: RELAY_PORT, ips: getLocalIPs(), operatorToken: sharing.legacyToken() };
 });
 
 // ── Hotfolder watcher ──
@@ -1278,11 +1306,12 @@ app.whenReady().then(() => {
   createWindow();
   startRelayServer();
   const tntCfg = readTntConfig();
-  if (tntCfg.enabled) startTntServer(tntCfg);
+  if (tntCfg.enabled && sharing.mode() !== 'viewer') startTntServer(tntCfg);
 });
 
 app.on('before-quit', () => {
   isQuitting = true;
+  sharing.shutdown();
   connections.forEach((socket) => { try { socket.removeAllListeners(); socket.destroy(); } catch (_) {} });
   connections.clear();
 });

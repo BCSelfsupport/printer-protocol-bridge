@@ -5,6 +5,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Check if running in Electron
   isElectron: true,
 
+  sharing: {
+    info: () => ipcRenderer.invoke('sharing:info'),
+    shouldResume: () => ipcRenderer.invoke('sharing:shouldResume'),
+    start: credentials => ipcRenderer.invoke('sharing:start', credentials),
+    authorize: credentials => ipcRenderer.invoke('sharing:authorize', credentials),
+    stop: () => ipcRenderer.invoke('sharing:stop'),
+    newCode: () => ipcRenderer.invoke('sharing:newCode'),
+    approve: id => ipcRenderer.invoke('sharing:approve', id),
+    revoke: id => ipcRenderer.invoke('sharing:revoke', id),
+    join: details => ipcRenderer.invoke('sharing:join', details),
+    poll: () => ipcRenderer.invoke('sharing:poll'),
+    readHistory: (store, offset) => ipcRenderer.invoke('sharing:readHistory', store, offset),
+    leave: () => ipcRenderer.invoke('sharing:leave'),
+    publish: snapshot => ipcRenderer.invoke('sharing:publish', snapshot),
+  },
+
   // Printer operations
   printer: {
     checkStatus: (printers) => ipcRenderer.invoke('printer:check-status', printers),
