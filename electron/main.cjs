@@ -3,6 +3,7 @@ const net = require('net');
 const http = require('http');
 const os = require('os');
 const { execFile } = require('child_process');
+const { hasPingReply } = require('./pingEvidence.cjs');
 const path = require('path');
 const fs = require('fs');
 
@@ -249,10 +250,9 @@ ipcMain.handle('printer:check-status', async (event, printers) => {
         ? ['-n', '1', '-w', String(timeoutMs), ipAddress]
         : ['-c', '1', '-W', String(Math.max(1, Math.round(timeoutMs / 1000))), ipAddress];
 
-      execFile('ping', args, { timeout: timeoutMs + 500 }, (error) => {
+      execFile('ping', args, { timeout: timeoutMs + 500 }, (error, stdout) => {
         const responseTime = Date.now() - start;
-        // exit code 0 => reachable
-        resolve({ ok: !error, responseTime, error: error?.message });
+        resolve({ ok: hasPingReply(ipAddress, stdout, error), responseTime, error: error?.message });
       });
     });
   };
@@ -776,8 +776,8 @@ function startRelayServer() {
             const args = isWin
               ? ['-n', '1', '-w', String(timeoutMs), ipAddress]
               : ['-c', '1', '-W', String(Math.max(1, Math.round(timeoutMs / 1000))), ipAddress];
-            execFile('ping', args, { timeout: timeoutMs + 500 }, (error) => {
-              resolve({ ok: !error });
+            execFile('ping', args, { timeout: timeoutMs + 500 }, (error, stdout) => {
+              resolve({ ok: hasPingReply(ipAddress, stdout, error) });
             });
           });
         };
