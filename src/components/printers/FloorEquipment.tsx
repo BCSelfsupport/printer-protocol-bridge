@@ -3,7 +3,7 @@ import type { FloorKind } from '@/lib/floorPlan';
 export function FloorEquipment({ kind, headSide = 'right' }: { kind: FloorKind; headSide?: 'left' | 'right' }) {
   if (kind === 'label') return null;
   return (
-    <svg viewBox="0 0 220 110" width="220" height="110" className="floor-equipment" aria-hidden="true">
+    <svg viewBox={kind === 'roundtable' ? '0 -55 220 220' : '0 0 220 110'} width="220" height={kind === 'roundtable' ? 220 : 110} className="floor-equipment" aria-hidden="true">
       {kind === 'printer' ? <g transform={headSide === 'left' ? 'translate(220 0) scale(-1 1)' : undefined}>
         <rect x="65" y="14" width="90" height="82" rx="4" className="floor-belt" />
         <rect x="77" y="24" width="66" height="24" rx="2" className="floor-machine" />
@@ -22,10 +22,10 @@ export function FloorEquipment({ kind, headSide = 'right' }: { kind: FloorKind; 
         {[37, 183].flatMap(x => [17, 93].map(y => <circle key={`${x}-${y}`} cx={x} cy={y} r="5" className="floor-roller" />))}
         <path d="M90 55h40m-12-9 12 9-12 9" className="floor-direction" />
       </> : kind === 'roundtable' ? <>
-        <circle cx="110" cy="55" r="52" className="floor-belt" />
-        <circle cx="110" cy="55" r="20" className="floor-machine" />
-        <path d="M110 15a40 40 0 0 1 38 28m-2-11 2 11-10-4" className="floor-direction" />
-        <rect x="4" y="25" width="58" height="60" rx="3" className="floor-belt" />
+        <circle cx="128" cy="55" r="88" className="floor-belt" />
+        <circle cx="128" cy="55" r="30" className="floor-machine" />
+        <path d="M128 -10a65 65 0 0 1 60 40m-2-13 2 13-12-5" className="floor-direction" />
+        <rect x="0" y="25" width="44" height="60" rx="3" className="floor-belt" />
       </> : kind === 'bend' ? <>
         <path d="M5 26h88a100 100 0 0 1 100 100h-58a42 42 0 0 0-42-42H5Z" transform="translate(0 -20)" className="floor-belt" />
         {Array.from({ length: 7 }, (_, i) => <path key={i} d={`M${15 + i * 12} 10v50`} className="floor-roller" />)}
