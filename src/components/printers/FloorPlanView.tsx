@@ -11,18 +11,20 @@ import { addFloorItem, duplicateFloorItems, readFloorPlan, updateFloorItem, floo
 import type { Printer } from '@/types/printer';
 import { cn } from '@/lib/utils';
 
-type EquipmentNode = Node<{ item: FloorItem; printer?: Printer }, 'equipment'>;
+type EquipmentNode = Node<{ item: FloorItem; printer?: Printer; showNames?: boolean }, 'equipment'>;
 const lightClasses = { healthy: 'bg-success', warning: 'bg-warning', fault: 'bg-destructive', offline: 'bg-muted-foreground', unknown: 'bg-muted-foreground' };
 const statusNames = { healthy: 'No reported issues', warning: 'Attention needed', fault: 'Reported fault', offline: 'Offline', unknown: 'Status unknown' };
 function EquipmentNodeView({ data, selected }: NodeProps<EquipmentNode>) {
-  const { item, printer } = data;
-  return <div className={cn('floor-node', selected && 'floor-node-selected')} style={{ width: 220 * item.scale / 100, height: (item.kind === 'label' ? 42 : 260) * item.scale / 100 }}>
-    <div className="floor-node-content" style={{ transform: `scale(${item.scale / 100})`, width: 220 }}>
-      {(item.kind === 'printer' || item.kind === 'label') && <div className={cn('floor-node-label flex items-center justify-center gap-2 px-1 text-sm font-semibold text-foreground text-center break-words', item.kind === 'label' && 'min-h-10 border rounded bg-card px-3')} style={item.kind === 'label' ? { transform: `rotate(${item.rotation}deg)` } : undefined}>
+  const { item, printer, showNames } = data;
+  const machineName = item.kind !== 'printer' && item.kind !== 'label' ? (item.label.trim() || floorNames[item.kind]) : null;
+  return <div title={machineName ? (machineName === floorNames[item.kind] ? machineName : `${machineName} (${floorNames[item.kind]})`) : undefined} className={cn('floor-node', selected && 'floor-node-selected')} style={{ width: 220 * item.scale / 100, height: (item.kind === 'label' ? 42 : 260) * item.scale / 100 }}>
+    <div className="floor-node-content relative" style={{ transform: `scale(${item.scale / 100})`, width: 220 }}>
+      {(item.kind === 'printer' || item.kind === 'label') && <div className={cn('floor-node-label flex items-center justify-center gap-2 px-1 text-sm font-semibold text-foreground text-center break-words', item.kind === 'label' && 'min-h-10 border rounded bg-card px-3')} style={item.kind === 'label' ? { transform: `rotate(${item.rotation}deg)` } : { position: 'relative', zIndex: 1, marginBottom: -62 }}>
         {printer && <span title={statusNames[floorPrinterStatus(printer)]} className={cn('h-3 w-3 shrink-0 rounded-full', lightClasses[floorPrinterStatus(printer)])} />}
         <span>{printer ? `${printer.name} · ID ${printer.id}` : item.label}</span>
       </div>}
       {item.kind !== 'label' && <div className="floor-symbol" style={{ transform: `rotate(${item.rotation}deg)` }}><FloorEquipment kind={item.kind} headSide={item.headSide} width={item.width} /></div>}
+      {showNames && machineName && <div className="floor-machine-name absolute inset-x-0 text-center text-xs font-medium text-muted-foreground px-1" style={{ top: 172 }}>{machineName}</div>}
     </div>
   </div>;
 }
@@ -40,6 +42,8 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const setSelectedId = (id: string | null) => setSelectedIds(id ? [id] : []);
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null;
+  const [showNames, setShowNames] = useState(() => localStorage.getItem('codesync-floor-show-names') === '1');
+  useEffect(() => { try { localStorage.setItem('codesync-floor-show-names', showNames ? '1' : '0'); } catch { /* ignore */ } }, [showNames]);
   const [overviewId, setOverviewId] = useState<number | null>(null);
   const [saveError, setSaveError] = useState(false);
   const flow = useReactFlow<EquipmentNode>();
@@ -53,9 +57,9 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
   const builtNodes = useMemo<EquipmentNode[]>(() => items.filter(i => i.kind !== 'printer' || printers.some(p => p.id === i.printerId)).map(item => ({
     id: item.id, type: 'equipment', position: { x: item.x, y: item.y }, selected: selectedIds.includes(item.id),
     zIndex: item.kind === 'printer' ? 100 : item.kind === 'label' ? 200 : 0,
-    data: { item, printer: printers.find(p => p.id === item.printerId) },
+    data: { item, printer: printers.find(p => p.id === item.printerId), showNames },
     style: { width: 220 * item.scale / 100, height: (item.kind === 'label' ? 42 : 260) * item.scale / 100 },
-  })), [items, printers, selectedIds]);
+  })), [items, printers, selectedIds, showNames]);
   // Keep React Flow's own node state (measured size, dragging flag) between renders; rebuilding nodes mid-drag breaks later selection.
   const [nodes, setNodes] = useState<EquipmentNode[]>(builtNodes);
   useEffect(() => { setNodes(prev => builtNodes.map(n => { const old = prev.find(o => o.id === n.id); return old ? { ...old, ...n, position: old.dragging ? old.position : n.position } : n; })); }, [builtNodes]);
@@ -111,6 +115,7 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
       <div className="flex items-center gap-2 text-sm"><Factory className="h-4 w-4 text-primary" /><strong>Production floor</strong><span className="text-muted-foreground">{items.filter(i => i.kind === 'printer' && printers.some(p => p.id === i.printerId)).length}/{printers.length} printers</span></div>
       <div className="flex items-center gap-1">
         {saveError && <span role="alert" className="text-destructive text-xs">Layout could not be saved</span>}
+        <Button size="sm" variant={showNames ? 'secondary' : 'ghost'} aria-pressed={showNames} title="Show machine names" onClick={() => setShowNames(v => !v)}><Tag className="h-4 w-4 mr-2" />{showNames ? 'Hide names' : 'Show names'}</Button>
         <Button size="icon" variant="ghost" title="Zoom out" aria-label="Zoom out" onClick={() => flow.zoomOut()}><ZoomOut className="h-4 w-4" /></Button>
         <Button size="icon" variant="ghost" title="Zoom in" aria-label="Zoom in" onClick={() => flow.zoomIn()}><ZoomIn className="h-4 w-4" /></Button>
         <Button size="icon" variant="ghost" title="Fit whole floor" aria-label="Fit whole floor" onClick={() => flow.fitView({ padding: 0.25, maxZoom: 1 })}><Scan className="h-4 w-4" /></Button>
@@ -138,7 +143,7 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
           {selectedIds.some(id => items.find(i => i.id === id)?.kind === 'printer') && copyIds.length > 0 && <p className="text-xs text-muted-foreground">Printers are not copied — place them from Unplaced Printers.</p>}
         </section>
         {selected && <section className="space-y-3 border-t pt-3"><h3 className="font-semibold text-sm">{floorNames[selected.kind]}</h3>
-          {selected.kind !== 'printer' && <label className="block text-xs">{selected.kind === 'label' ? 'Line name / title / ID' : 'Name'}<Input aria-label={selected.kind === 'label' ? 'Line name / title / ID' : 'Name'} autoFocus={selected.kind === 'label'} key={selected.id} className="mt-1" value={selected.label} onChange={e => patch({ label: e.target.value })} /></label>}
+          {selected.kind !== 'printer' && <label className="block text-xs">{selected.kind === 'label' ? 'Line name / title / ID' : 'Machine name'}<Input aria-label={selected.kind === 'label' ? 'Line name / title / ID' : 'Machine name'} placeholder={floorNames[selected.kind]} autoFocus={selected.kind === 'label'} key={selected.id} className="mt-1" value={selected.label} onChange={e => patch({ label: e.target.value })} /></label>}
           <label className="block text-xs">Size (%)<Input aria-label="Size percent" type="number" min={25} max={300} step={5} value={selected.scale} onChange={e => { if (e.target.value) patch({ scale: Number(e.target.value) }); }} className="mt-1" /></label>
           <label className="block text-xs">Rotation (°)<div className="flex gap-1 mt-1"><Input aria-label="Rotation degrees" type="number" value={selected.rotation} onChange={e => patch({ rotation: Number(e.target.value) })} /><Button variant="outline" size="icon" title="Rotate 90 degrees" aria-label="Rotate 90 degrees" onClick={() => patch({ rotation: selected.rotation + 90 })}><RotateCw className="h-4 w-4" /></Button></div></label>
           {selected.kind !== 'label' && selected.kind !== 'printer' && <label className="block text-xs">Width across line (%)<Input aria-label="Width percent" type="number" min={30} max={200} step={5} value={selected.width ?? 100} onChange={e => { if (e.target.value) patch({ width: Number(e.target.value) }); }} className="mt-1" /></label>}

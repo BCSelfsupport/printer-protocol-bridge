@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-machine-names',
+    type: 'feature',
+    title: 'Machine Names on the Floor Plan',
+    date: '11 Nov 2026',
+    summary: 'Rest the mouse on any machine to see what it is. Use Show names in the top bar to label every machine (off by default), and give machines your own names such as "Capper – 8 head" in Edit Layout.',
+  },
+  {
     id: 'floor-width-labeler',
     type: 'feature',
     title: 'Narrower Conveyors and New Labeler',
