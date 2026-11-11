@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-filler-capper-symbols',
+    type: 'bugfix',
+    title: 'Distinct Filler and Capper',
+    date: '11 Nov 2026',
+    summary: 'Fillers now show filling nozzles and cappers show a rotating capping head, so they are easy to tell apart on the floor plan.',
+  },
+  {
     id: 'floor-sidegrip-roundtable',
     type: 'feature',
     title: 'Side Grip Conveyor and Round Table',
