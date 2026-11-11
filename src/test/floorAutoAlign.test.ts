@@ -11,6 +11,12 @@ describe('auto align', () => {
     expect(new Set(out.map(cx)).size).toBe(1);
     expect(cx(out[0]) % 20).toBe(0);
   });
+  it('never stacks separate lines on top of each other', () => {
+    const items = [item('a', 0, 0), item('b', 5, 300), item('c', 600, 0), item('d', 606, 300), item('e', 1200, 10), item('f', 1195, 300)];
+    const out = autoAlignFloorItems(items, items.map(i => i.id), 20);
+    expect(new Set(out.map(cx)).size).toBe(3);
+    expect(new Set(out.map(cy)).size).toBe(2);
+  });
   it('snaps a single part centre to the grid and leaves others alone', () => {
     const out = autoAlignFloorItems([item('a', 3, 7), item('b', 5, 5)], ['a'], 50);
     expect([cx(out[0]) % 50, cy(out[0]) % 50]).toEqual([0, 0]);

@@ -73,26 +73,34 @@ export function floorItemBox(item: FloorItem) {
 }
 
 /**
- * Auto align: snaps each target's centre to the grid. When 2+ parts are targeted, they also share one
- * centre line along the direction they're spread out (a vertical line lines up on one X, a horizontal on one Y).
+ * Auto align: snaps each target's centre to the grid, and parts that already sit roughly in the same
+ * up-and-down (or side-to-side) run share one exact centre line. Parts never move along their line,
+ * so separate lines are never stacked on top of each other.
  */
-export function autoAlignFloorItems(items: FloorItem[], ids: string[], grid: number): FloorItem[] {
+export function autoAlignFloorItems(items: FloorItem[], ids: string[], grid: number, tolerance = 60): FloorItem[] {
   const g = grid > 0 ? grid : 10;
   const round = (v: number) => Math.round(v / g) * g;
-  const targets = items.filter(i => ids.includes(i.id));
+  const targets = items.filter(i => ids.includes(i.id) && i.kind !== 'label');
   if (!targets.length) return items;
-  const centres = targets.map(i => { const b = floorItemBox(i); return { id: i.id, cx: i.x + b.w / 2, cy: i.y + b.h / 2 }; });
-  let lineX: number | null = null, lineY: number | null = null;
-  if (centres.length > 1) {
-    const span = (vals: number[]) => Math.max(...vals) - Math.min(...vals);
-    const avg = (vals: number[]) => vals.reduce((a, b) => a + b, 0) / vals.length;
-    if (span(centres.map(c => c.cy)) >= span(centres.map(c => c.cx))) lineX = round(avg(centres.map(c => c.cx)));
-    else lineY = round(avg(centres.map(c => c.cy)));
+  const c = new Map(targets.map(i => { const b = floorItemBox(i); return [i.id, { cx: i.x + b.w / 2, cy: i.y + b.h / 2 }]; }));
+  const out = new Map([...c].map(([id, v]) => [id, { cx: round(v.cx), cy: round(v.cy) }]));
+  const cluster = (axis: 'cx' | 'cy') => {
+    const sorted = [...c].sort((a, b) => a[1][axis] - b[1][axis]);
+    const groups: Array<typeof sorted> = [];
+    for (const e of sorted) { const last = groups[groups.length - 1]; if (last && e[1][axis] - last[last.length - 1][1][axis] <= tolerance) last.push(e); else groups.push([e]); }
+    return groups.filter(gr => gr.length > 1);
+  };
+  const used = new Set<string>();
+  for (const gr of cluster('cx')) { // vertical runs share one X
+    const ys = gr.map(e => e[1].cy); if (Math.max(...ys) - Math.min(...ys) < tolerance) continue;
+    const x = round(gr.reduce((a, e) => a + e[1].cx, 0) / gr.length);
+    gr.forEach(([id]) => { out.get(id)!.cx = x; used.add(id); });
   }
-  return items.map(i => {
-    const c = centres.find(t => t.id === i.id);
-    if (!c) return i;
-    const b = floorItemBox(i);
-    return { ...i, x: (lineX ?? round(c.cx)) - b.w / 2, y: (lineY ?? round(c.cy)) - b.h / 2 };
-  });
+  for (const gr of cluster('cy')) { // horizontal runs share one Y
+    const free = gr.filter(([id]) => !used.has(id)); if (free.length < 2) continue;
+    const xs = free.map(e => e[1].cx); if (Math.max(...xs) - Math.min(...xs) < tolerance) continue;
+    const y = round(free.reduce((a, e) => a + e[1].cy, 0) / free.length);
+    free.forEach(([id]) => { out.get(id)!.cy = y; });
+  }
+  return items.map(i => { const o = out.get(i.id); if (!o) return i; const b = floorItemBox(i); return { ...i, x: o.cx - b.w / 2, y: o.cy - b.h / 2 }; });
 }

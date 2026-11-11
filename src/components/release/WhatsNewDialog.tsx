@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-auto-align-fix',
+    type: 'bugfix',
+    title: 'Auto Align Keeps Lines Apart',
+    date: '11 Nov 2026',
+    summary: 'Auto Align no longer piles separate lines on top of each other. Each line is straightened on its own centre line, and an Undo Auto Align button puts things back.',
+  },
+  {
     id: 'floor-auto-align',
     type: 'feature',
     title: 'Floor Plan Auto Align',

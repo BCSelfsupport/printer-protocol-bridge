@@ -46,6 +46,7 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null;
   const [showNames, setShowNames] = useState(() => localStorage.getItem('codesync-floor-show-names') === '1');
   useEffect(() => { try { localStorage.setItem('codesync-floor-show-names', showNames ? '1' : '0'); } catch { /* ignore */ } }, [showNames]);
+  const [undoItems, setUndoItems] = useState<FloorItem[] | null>(null);
   const [snap, setSnap] = useState(() => Number(localStorage.getItem('codesync-floor-snap') ?? '20'));
   useEffect(() => { try { localStorage.setItem('codesync-floor-snap', String(snap)); } catch { /* ignore */ } }, [snap]);
   const [overviewId, setOverviewId] = useState<number | null>(null);
@@ -141,8 +142,9 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
         </section>
         <section className="space-y-2 border-t pt-3"><h3 className="text-xs uppercase text-muted-foreground font-semibold">Snap to grid</h3>
           <div className="grid grid-cols-4 gap-1">{[0, 10, 20, 50].map(v => <Button key={v} size="sm" variant={snap === v ? 'default' : 'outline'} aria-pressed={snap === v} className="px-1" onClick={() => setSnap(v)}>{v === 0 ? 'Off' : v === 10 ? 'Fine' : v === 20 ? 'Med' : 'Large'}</Button>)}</div>
-          <Button size="sm" variant="outline" className="w-full" disabled={!items.length} onClick={() => setItems(prev => autoAlignFloorItems(prev, selectedIds.length ? selectedIds : prev.map(i => i.id), snap))}>Auto Align {selectedIds.length ? `${selectedIds.length} selected` : 'all'}</Button>
-          <p className="text-xs text-muted-foreground">Select a line's parts first to line them up on one centre line.</p>
+          <Button size="sm" variant="outline" className="w-full" disabled={!items.length} onClick={() => { setUndoItems(items); setItems(prev => autoAlignFloorItems(prev, selectedIds.length ? selectedIds : prev.map(i => i.id), snap)); }}>Auto Align {selectedIds.length ? `${selectedIds.length} selected` : 'all'}</Button>
+          {undoItems && <Button size="sm" variant="ghost" className="w-full" onClick={() => { setItems(undoItems); setUndoItems(null); }}>Undo Auto Align</Button>}
+          <p className="text-xs text-muted-foreground">Lines up parts already roughly in a row onto one exact centre line. Parts never slide along their line.</p>
         </section>
         <section className="space-y-2 border-t pt-3"><h3 className="text-xs uppercase text-muted-foreground font-semibold">Selection · {selectedIds.length}</h3>
           <p className="text-xs text-muted-foreground">Left-click and drag a box over blank floor to select several parts, or Shift-click them. Drag any selected part to move them together.</p>
