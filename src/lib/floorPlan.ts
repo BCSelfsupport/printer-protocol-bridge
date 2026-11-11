@@ -121,3 +121,15 @@ export function floorAlignGuides(item: FloorItem, pos: { x: number; y: number },
   }
   return { x: gx !== null ? gx - b.w / 2 : pos.x, y: gy !== null ? gy - b.h / 2 : pos.y, guideX: gx, guideY: gy };
 }
+
+/** Space 3+ parts evenly: first and last stay put, the rest get equal centre-to-centre spacing along the direction they're spread. */
+export function distributeFloorItems(items: FloorItem[], ids: string[]): FloorItem[] {
+  const t = items.filter(i => ids.includes(i.id)).map(i => { const b = floorItemBox(i); return { i, b, cx: i.x + b.w / 2, cy: i.y + b.h / 2 }; });
+  if (t.length < 3) return items;
+  const span = (k: 'cx' | 'cy') => Math.max(...t.map(e => e[k])) - Math.min(...t.map(e => e[k]));
+  const k: 'cx' | 'cy' = span('cy') >= span('cx') ? 'cy' : 'cx';
+  t.sort((a, b) => a[k] - b[k]);
+  const start = t[0][k], step = (t[t.length - 1][k] - start) / (t.length - 1);
+  const moved = new Map(t.map((e, n) => [e.i.id, k === 'cy' ? { y: start + step * n - e.b.h / 2 } : { x: start + step * n - e.b.w / 2 }]));
+  return items.map(i => moved.has(i.id) ? { ...i, ...moved.get(i.id) } : i);
+}

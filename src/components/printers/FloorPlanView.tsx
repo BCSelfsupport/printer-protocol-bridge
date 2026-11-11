@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FloorEquipment } from './FloorEquipment';
-import { addFloorItem, autoAlignFloorItems, floorAlignGuides, duplicateFloorItems, readFloorPlan, updateFloorItem, floorNames, floorPrinterStatus, FLOOR_STORAGE_KEY, type FloorItem, type FloorKind } from '@/lib/floorPlan';
+import { addFloorItem, autoAlignFloorItems, distributeFloorItems, floorAlignGuides, duplicateFloorItems, readFloorPlan, updateFloorItem, floorNames, floorPrinterStatus, FLOOR_STORAGE_KEY, type FloorItem, type FloorKind } from '@/lib/floorPlan';
 import type { Printer } from '@/types/printer';
 import { cn } from '@/lib/utils';
 
@@ -156,7 +156,8 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
         <section className="space-y-2 border-t pt-3"><h3 className="text-xs uppercase text-muted-foreground font-semibold">Snap to grid</h3>
           <div className="grid grid-cols-4 gap-1">{[0, 10, 20, 50].map(v => <Button key={v} size="sm" variant={snap === v ? 'default' : 'outline'} aria-pressed={snap === v} className="px-1" onClick={() => setSnap(v)}>{v === 0 ? 'Off' : v === 10 ? 'Fine' : v === 20 ? 'Med' : 'Large'}</Button>)}</div>
           <Button size="sm" variant="outline" className="w-full" disabled={!items.length} onClick={() => { setUndoItems(items); setItems(prev => autoAlignFloorItems(prev, selectedIds.length ? selectedIds : prev.map(i => i.id), snap)); }}>Auto Align {selectedIds.length ? `${selectedIds.length} selected` : 'all'}</Button>
-          {undoItems && <Button size="sm" variant="ghost" className="w-full" onClick={() => { setItems(undoItems); setUndoItems(null); }}>Undo Auto Align</Button>}
+          <Button size="sm" variant="outline" className="w-full" disabled={selectedIds.length < 3} onClick={() => { setUndoItems(items); setItems(prev => distributeFloorItems(prev, selectedIds)); }}>Equal Spacing{selectedIds.length < 3 ? ' (select 3+)' : ''}</Button>
+          {undoItems && <Button size="sm" variant="ghost" className="w-full" onClick={() => { setItems(undoItems); setUndoItems(null); }}>Undo</Button>}
           <p className="text-xs text-muted-foreground">Lines up parts already roughly in a row onto one exact centre line. Parts never slide along their line.</p>
         </section>
         <section className="space-y-2 border-t pt-3"><h3 className="text-xs uppercase text-muted-foreground font-semibold">Selection · {selectedIds.length}</h3>

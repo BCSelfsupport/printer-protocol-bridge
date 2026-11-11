@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { autoAlignFloorItems, floorAlignGuides, floorItemBox, type FloorItem } from '@/lib/floorPlan';
+import { autoAlignFloorItems, distributeFloorItems, floorAlignGuides, floorItemBox, type FloorItem } from '@/lib/floorPlan';
 
 const item = (id: string, x: number, y: number, scale = 100): FloorItem => ({ id, kind: 'straight', x, y, scale, rotation: 0, label: '' } as FloorItem);
 const cx = (i: FloorItem) => i.x + floorItemBox(i).w / 2;
@@ -26,5 +26,9 @@ describe('auto align', () => {
     const other = item('o', 100, 0);
     expect(floorAlignGuides(item('d', 0, 0), { x: 106, y: 400 }, [other])).toMatchObject({ x: 100, y: 400, guideX: 210, guideY: null });
     expect(floorAlignGuides(item('d', 0, 0), { x: 115, y: 400 }, [other]).guideX).toBeNull();
+  });
+  it('spaces 3+ parts with equal gaps, keeping the ends in place', () => {
+    const out = distributeFloorItems([item('a', 0, 0), item('b', 0, 50), item('c', 0, 400), item('d', 0, 900)], ['a', 'b', 'c', 'd']);
+    expect(out.map(i => i.y)).toEqual([0, 300, 600, 900]);
   });
 });

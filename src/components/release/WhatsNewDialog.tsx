@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-equal-spacing',
+    type: 'feature',
+    title: 'Floor Plan Equal Spacing',
+    date: '11 Nov 2026',
+    summary: 'Select three or more parts in Edit Layout and press Equal Spacing to space them evenly. The first and last stay where they are, and Undo puts them back.',
+  },
+  {
     id: 'floor-align-guides',
     type: 'feature',
     title: 'Floor Plan Alignment Lines',
