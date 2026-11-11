@@ -16,162 +16,25 @@ export interface ReleaseNote {
   title: string;
   date: string;
   summary: string;
+  bullets?: string[];
 }
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
-    id: 'floor-labeler-align',
-    type: 'bugfix',
-    title: 'Labeler Lines Up With the Conveyor',
-    date: '11 Nov 2026',
-    summary: 'The labeler and round table belts sat off-centre, so they never lined up with the other parts on the grid. Their belts now sit on the same centre line as conveyors and machines, at any rotation.',
-  },
-  {
-    id: 'floor-equal-spacing',
-    type: 'feature',
-    title: 'Floor Plan Equal Spacing',
-    date: '11 Nov 2026',
-    summary: 'Select three or more parts in Edit Layout and press Equal Spacing to space them evenly. The first and last stay where they are, and Undo puts them back.',
-  },
-  {
-    id: 'floor-align-guides',
-    type: 'feature',
-    title: 'Floor Plan Alignment Lines',
-    date: '11 Nov 2026',
-    summary: 'While dragging a part in Edit Layout, a green line shows when it lines up up-and-down with another part and an amber line when it lines up side-to-side. The part clicks onto the line.',
-  },
-  {
-    id: 'floor-auto-align-fix',
-    type: 'bugfix',
-    title: 'Auto Align Keeps Lines Apart',
-    date: '11 Nov 2026',
-    summary: 'Auto Align no longer piles separate lines on top of each other. Each line is straightened on its own centre line, and an Undo Auto Align button puts things back.',
-  },
-  {
-    id: 'floor-auto-align',
-    type: 'feature',
-    title: 'Floor Plan Auto Align',
-    date: '11 Nov 2026',
-    summary: 'A new Auto Align button in Edit Layout snaps parts onto the grid. Select a line first and its conveyors, machines and printer line up on one centre line.',
-  },
-  {
-    id: 'floor-printer-beacon',
-    type: 'feature',
-    title: 'Printer Status Beacons',
-    date: '11 Nov 2026',
-    summary: 'Every printer on the floor plan now shows a large status beacon — green, amber or red — on the printer itself. Amber and red beacons pulse so problems stand out across the floor.',
-  },
-  {
-    id: 'floor-snap-grid',
-    type: 'feature',
-    title: 'Snap to Grid Options',
-    date: '11 Nov 2026',
-    summary: 'In Edit Layout, choose Off, Fine, Med or Large snapping so conveyors and machines line up neatly. Your choice is remembered.',
-  },
-  {
-    id: 'floor-box-select',
-    type: 'feature',
-    title: 'Drag a Box to Select',
-    date: '11 Nov 2026',
-    summary: 'In Edit Layout, left-click and drag over blank floor to draw a box. Every part it touches is selected, then drag any of them to move the group together.',
-  },
-  {
-    id: 'floor-machine-names',
-    type: 'feature',
-    title: 'Machine Names on the Floor Plan',
-    date: '11 Nov 2026',
-    summary: 'Rest the mouse on any machine to see what it is. Use Show names in the top bar to label every machine (off by default), and give machines your own names such as "Capper – 8 head" in Edit Layout.',
-  },
-  {
-    id: 'floor-width-labeler',
-    type: 'feature',
-    title: 'Narrower Conveyors and New Labeler',
-    date: '11 Nov 2026',
-    summary: 'Each conveyor or machine now has a Width across line (%) setting, separate from Size. It narrows only the conveyor belt — machine parts stay the same size. The labeler symbol now shows the frame, bottle separators, labeling engine and label reel.',
-  },
-  {
-    id: 'floor-copy-line',
-    type: 'feature',
-    title: 'Copy a Whole Line',
-    date: '11 Nov 2026',
-    summary: 'In Edit Layout, Shift-click or Shift-drag to select several parts (or use Select All), move them together, and press Copy as New Line to place a copy beside the original. Line tags count up automatically (Line 1 becomes Line 2). Ctrl+C / Ctrl+V also work. Printers are not copied because each printer is placed once.',
-  },
-  {
-    id: 'floor-printhead-side',
-    type: 'feature',
-    title: 'Printhead Side on Floor Plan',
-    date: '11 Nov 2026',
-    summary: 'In Edit Layout, choose whether a printer\'s umbilical and printhead come out on the left or right, so it can sit on either side of the conveyor.',
-  },
-  {
-    id: 'floor-filler-capper-symbols',
-    type: 'bugfix',
-    title: 'Distinct Filler and Capper',
-    date: '11 Nov 2026',
-    summary: 'Fillers now show filling nozzles and cappers show a rotating capping head, so they are easy to tell apart on the floor plan.',
-  },
-  {
-    id: 'floor-sidegrip-roundtable',
-    type: 'feature',
-    title: 'Side Grip Conveyor and Round Table',
-    date: '11 Nov 2026',
-    summary: 'The machine library now includes a side grip conveyor and a collation round table for building your production floor.',
-  },
-  {
-    id: 'floor-machine-belt-match',
-    type: 'feature',
-    title: 'Machines Match Conveyor Width',
-    date: '11 Nov 2026',
-    summary: 'Fillers, cappers, labelers and packers now carry the same belt width as the conveyors, so at the same size (for example 60%) they line up end to end.',
-  },
-  {
-    id: 'floor-select-after-move',
-    type: 'bugfix',
-    title: 'Keep Selecting After a Move',
-    date: '11 Nov 2026',
-    summary: 'After moving a part in Edit Layout it now follows the whole drag and you can immediately select and move other parts.',
-  },
-  {
-    id: 'floor-visible-part-drag',
-    type: 'bugfix',
-    title: 'Drag the Visible Floor Part',
-    date: '10 Nov 2026',
-    summary: 'Click-and-hold directly on a visible conveyor, machine, printer or line tag to move it in Edit Layout. Transparent space around other objects no longer intercepts the drag.',
-  },
-  {
-    id: 'floor-parts-click',
-    type: 'bugfix',
-    title: 'Floor Parts Click and Drag',
-    date: '10 Nov 2026',
-    summary: 'Restored direct clicking and dragging on floor-plan parts in Edit Layout while keeping left-drag separate from moving the whole floor.',
-  },
-  {
-    id: 'floor-object-drag',
-    type: 'bugfix',
-    title: 'Move Individual Floor Objects',
-    date: '10 Nov 2026',
-    summary: 'In Edit Layout, left-drag on a visible part moves that individual object rather than the whole floor; right or middle drag still moves the floor view.',
-  },
-  {
-    id: 'floor-line-tags',
-    type: 'feature',
-    title: 'Production Line Tags',
-    date: '10 Nov 2026',
-    summary: 'Edit Layout now includes Add Line Tag. Enter a line name, title or ID, then drag the tag into place; tags can also be resized and rotated and are saved with the floor plan.',
-  },
-  {
-    id: 'floor-printer-editing',
-    type: 'bugfix',
-    title: 'Floor Plan Printer Selection',
-    date: '10 Nov 2026',
-    summary: 'Printers remain selectable and draggable above conveyor pieces in Edit Layout. Invisible space around equipment no longer blocks other objects, and selecting a printer exposes its percentage size and rotation controls.',
-  },
-  {
     id: 'production-floor-plan',
     type: 'feature',
-    title: '2D Production Floor Plan',
-    date: '10 Nov 2026',
-    summary: 'The expanded printer overview now opens a floor plan with a machine-library dropdown for flat conveyor sections, bends, equipment and line labels. Drag configured printers by ID, resize pieces by percentage, rotate them and save the layout on this device. Printer status lights and clickable overviews stay linked to the actual printers.',
+    title: 'Production Floor Plan',
+    date: '11 Nov 2026',
+    summary: 'A top-down plan of your production floor, opened from Floor Plan on the Network Printers page.',
+    bullets: [
+      'Build lines from the machine library: conveyors, bends, side grip conveyors, round tables, fillers, cappers, labelers and packers.',
+      'Place your printers by ID from Unplaced Printers, with left or right printhead side.',
+      'Live status beacons on each printer (green, amber, red) — click a printer for its full overview.',
+      'Line tags and optional machine names.',
+      'Resize, rotate and narrow the conveyor width of any part.',
+      'Box-select or Shift-click parts to move them together, and copy a whole line as a new line.',
+      'Snap to grid, alignment lines while dragging, Auto Align and Equal Spacing, with Undo.',
+    ],
   },
   {
     id: 'stop-all-jets-confirm',
@@ -890,6 +753,7 @@ export function WhatsNewDialog({ open, onOpenChange }: WhatsNewDialogProps) {
                 <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
                   {note.summary}
                 </p>
+                {note.bullets && <ul className="list-disc pl-5 space-y-0.5 text-xs md:text-sm text-muted-foreground">{note.bullets.map(b => <li key={b}>{b}</li>)}</ul>}
               </div>
             ))}
           </div>
