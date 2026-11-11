@@ -33,3 +33,4 @@
 - [x] Add missing What's New entries (left-edge fix, repeat print, firmware cable upload, offline cards, training videos)
 - [x] Remove Developer Portal mentions from What's New entries (firmware, training videos, emulate toggle)
 - [x] Floor plan: printer ID label closer to printer
+- [x] Floor plan: printer ID spacing — slightly more gap

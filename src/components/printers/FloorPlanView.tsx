@@ -19,7 +19,7 @@ function EquipmentNodeView({ data, selected }: NodeProps<EquipmentNode>) {
   const machineName = item.kind !== 'printer' && item.kind !== 'label' ? (item.label.trim() || floorNames[item.kind]) : null;
   return <div title={machineName ? (machineName === floorNames[item.kind] ? machineName : `${machineName} (${floorNames[item.kind]})`) : undefined} className={cn('floor-node', selected && 'floor-node-selected')} style={{ width: 220 * item.scale / 100, height: (item.kind === 'label' ? 42 : 260) * item.scale / 100 }}>
     <div className="floor-node-content relative" style={{ transform: `scale(${item.scale / 100})`, width: 220 }}>
-      {(item.kind === 'printer' || item.kind === 'label') && <div className={cn('floor-node-label flex items-center justify-center gap-2 px-1 text-sm font-semibold text-foreground text-center break-words', item.kind === 'label' && 'min-h-10 border rounded bg-card px-3')} style={item.kind === 'label' ? { transform: `rotate(${item.rotation}deg)` } : { position: 'relative', zIndex: 1, marginBottom: -62 }}>
+      {(item.kind === 'printer' || item.kind === 'label') && <div className={cn('floor-node-label flex items-center justify-center gap-2 px-1 text-sm font-semibold text-foreground text-center break-words', item.kind === 'label' && 'min-h-10 border rounded bg-card px-3')} style={item.kind === 'label' ? { transform: `rotate(${item.rotation}deg)` } : { position: 'relative', zIndex: 1, marginBottom: -46 }}>
         {printer && <span title={statusNames[floorPrinterStatus(printer)]} className={cn('h-3 w-3 shrink-0 rounded-full', lightClasses[floorPrinterStatus(printer)])} />}
         <span>{printer ? `${printer.name} · ID ${printer.id}` : item.label}</span>
       </div>}
