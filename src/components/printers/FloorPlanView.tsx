@@ -23,7 +23,7 @@ function EquipmentNodeView({ data, selected }: NodeProps<EquipmentNode>) {
         {printer && <span title={statusNames[floorPrinterStatus(printer)]} className={cn('h-3 w-3 shrink-0 rounded-full', lightClasses[floorPrinterStatus(printer)])} />}
         <span>{printer ? `${printer.name} · ID ${printer.id}` : item.label}</span>
       </div>}
-      {item.kind !== 'label' && <div className="floor-symbol relative" style={{ transform: `rotate(${item.rotation}deg)` }}><FloorEquipment kind={item.kind} headSide={item.headSide} width={item.width} status={printer ? floorPrinterStatus(printer) : undefined} />
+      {item.kind !== 'label' && <div className="floor-symbol relative" style={{ transform: `rotate(${item.rotation}deg)`, marginTop: item.kind === 'roundtable' ? -55 : item.kind === 'labeler' ? -35 : undefined }}><FloorEquipment kind={item.kind} headSide={item.headSide} width={item.width} status={printer ? floorPrinterStatus(printer) : undefined} />
         {/* Name turns with the machine so it sits beside the line; flipped when it would read upside down. */}
         {showNames && machineName && <div className="floor-machine-name absolute inset-x-0 text-center text-sm font-medium text-muted-foreground px-1 whitespace-nowrap" style={{ top: item.kind === 'roundtable' ? 222 : item.kind === 'labeler' ? 198 : 168, transform: item.rotation > 90 && item.rotation <= 270 ? 'rotate(180deg)' : undefined }}>{machineName}</div>}
       </div>}

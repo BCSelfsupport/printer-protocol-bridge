@@ -24,7 +24,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
     type: 'bugfix',
     title: 'Labeler Lines Up With the Conveyor',
     date: '11 Nov 2026',
-    summary: 'The labeler belt sat slightly off-centre, so it never lined up with the other parts on the grid. It now sits on the same centre line as conveyors and machines.',
+    summary: 'The labeler and round table belts sat off-centre, so they never lined up with the other parts on the grid. Their belts now sit on the same centre line as conveyors and machines, at any rotation.',
   },
   {
     id: 'floor-equal-spacing',
