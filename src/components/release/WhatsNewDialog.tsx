@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-align-guides',
+    type: 'feature',
+    title: 'Floor Plan Alignment Lines',
+    date: '11 Nov 2026',
+    summary: 'While dragging a part in Edit Layout, a green line shows when it lines up up-and-down with another part and an amber line when it lines up side-to-side. The part clicks onto the line.',
+  },
+  {
     id: 'floor-auto-align-fix',
     type: 'bugfix',
     title: 'Auto Align Keeps Lines Apart',

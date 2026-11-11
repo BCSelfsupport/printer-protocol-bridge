@@ -104,3 +104,20 @@ export function autoAlignFloorItems(items: FloorItem[], ids: string[], grid: num
   }
   return items.map(i => { const o = out.get(i.id); if (!o) return i; const b = floorItemBox(i); return { ...i, x: o.cx - b.w / 2, y: o.cy - b.h / 2 }; });
 }
+
+/**
+ * Drag alignment guides: if the dragged part's centre comes within `tolerance` of another part's centre
+ * on X or Y, it snaps onto that line and the guide position is returned so it can be drawn.
+ */
+export function floorAlignGuides(item: FloorItem, pos: { x: number; y: number }, others: FloorItem[], tolerance = 8) {
+  const b = floorItemBox(item);
+  const cx = pos.x + b.w / 2, cy = pos.y + b.h / 2;
+  let gx: number | null = null, gy: number | null = null, dx = tolerance + 1, dy = tolerance + 1;
+  for (const o of others) {
+    if (o.id === item.id) continue;
+    const ob = floorItemBox(o); const ocx = o.x + ob.w / 2, ocy = o.y + ob.h / 2;
+    if (Math.abs(ocx - cx) < dx) { dx = Math.abs(ocx - cx); gx = ocx; }
+    if (Math.abs(ocy - cy) < dy) { dy = Math.abs(ocy - cy); gy = ocy; }
+  }
+  return { x: gx !== null ? gx - b.w / 2 : pos.x, y: gy !== null ? gy - b.h / 2 : pos.y, guideX: gx, guideY: gy };
+}

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ReactFlow, ReactFlowProvider, Background, BackgroundVariant, SelectionMode, useReactFlow, applyNodeChanges, type Node, type NodeProps, type NodeChange } from '@xyflow/react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactFlow, ReactFlowProvider, Background, BackgroundVariant, SelectionMode, useReactFlow, applyNodeChanges, ViewportPortal, type Node, type NodeProps, type NodeChange } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Copy, Factory, Lock, Pencil, Plus, Printer as PrinterIcon, RotateCw, Scan, Tag, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FloorEquipment } from './FloorEquipment';
-import { addFloorItem, autoAlignFloorItems, duplicateFloorItems, readFloorPlan, updateFloorItem, floorNames, floorPrinterStatus, FLOOR_STORAGE_KEY, type FloorItem, type FloorKind } from '@/lib/floorPlan';
+import { addFloorItem, autoAlignFloorItems, floorAlignGuides, duplicateFloorItems, readFloorPlan, updateFloorItem, floorNames, floorPrinterStatus, FLOOR_STORAGE_KEY, type FloorItem, type FloorKind } from '@/lib/floorPlan';
 import type { Printer } from '@/types/printer';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +46,8 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : null;
   const [showNames, setShowNames] = useState(() => localStorage.getItem('codesync-floor-show-names') === '1');
   useEffect(() => { try { localStorage.setItem('codesync-floor-show-names', showNames ? '1' : '0'); } catch { /* ignore */ } }, [showNames]);
+  const [guides, setGuides] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
+  const itemsRef = useRef<FloorItem[]>([]);
   const [undoItems, setUndoItems] = useState<FloorItem[] | null>(null);
   const [snap, setSnap] = useState(() => Number(localStorage.getItem('codesync-floor-snap') ?? '20'));
   useEffect(() => { try { localStorage.setItem('codesync-floor-snap', String(snap)); } catch { /* ignore */ } }, [snap]);
@@ -55,6 +57,7 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
   const selected = items.find(i => i.id === selectedId);
   const overview = printers.find(p => p.id === overviewId);
   const unplaced = printers.filter(p => !items.some(i => i.kind === 'printer' && i.printerId === p.id));
+  itemsRef.current = items;
   useEffect(() => {
     try { localStorage.setItem(FLOOR_STORAGE_KEY, JSON.stringify(items)); setSaveError(false); }
     catch { setSaveError(true); }
@@ -86,6 +89,16 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
     if (!editing) return;
     const selects = changes.filter(c => c.type === 'select');
     if (selects.length) setSelectedIds(prev => { let next = [...prev]; for (const c of selects) { if (c.type !== 'select') continue; next = next.filter(id => id !== c.id); if (c.selected) next.push(c.id); } return next; });
+    const moving = changes.filter(c => c.type === 'position' && c.dragging && c.position);
+    if (moving.length === 1) {
+      const c = moving[0];
+      const it = c.type === 'position' && itemsRef.current.find(i => i.id === c.id);
+      if (it && c.type === 'position' && c.position) {
+        const g = floorAlignGuides(it, c.position, itemsRef.current);
+        c.position = { x: g.x, y: g.y };
+        setGuides({ x: g.guideX, y: g.guideY });
+      }
+    } else if (!moving.length && changes.some(c => c.type === 'position' && !c.dragging)) setGuides({ x: null, y: null });
     setNodes(prev => applyNodeChanges(changes, prev));
     const ended = changes.filter(c => c.type === 'position' && !c.dragging && c.position);
     if (ended.length) setItems(prev => prev.map(item => { const c = ended.find(e => e.type === 'position' && e.id === item.id); return c?.type === 'position' && c.position ? { ...item, x: c.position.x, y: c.position.y } : item; }));
@@ -168,6 +181,8 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
         else if (palette.includes(value as FloorKind)) add(value as FloorKind, undefined, position);
       }}>
         <ReactFlow<EquipmentNode> nodes={nodes} edges={[]} nodeTypes={nodeTypes} onNodesChange={change} nodesDraggable={editing} nodesConnectable={false} elementsSelectable={editing} panOnDrag={editing ? [1, 2] : true} selectionKeyCode="Shift" multiSelectionKeyCode="Shift" selectionOnDrag={editing} selectionMode={SelectionMode.Partial} elevateNodesOnSelect={false} onNodeDragStart={(_, node) => { if (!selectedIds.includes(node.id)) setSelectedId(node.id); }} onNodeDragStop={(_, _node, dragged) => setItems(prev => prev.map(i => { const n = dragged.find(d => d.id === i.id); return n ? { ...i, x: n.position.x, y: n.position.y } : i; }))} deleteKeyCode={null} minZoom={0.2} maxZoom={2.5} fitView fitViewOptions={{ padding: 0.3, maxZoom: 1 }} snapToGrid={snap > 0} snapGrid={[snap || 1, snap || 1]} onNodeClick={(e, node) => { if (editing) { if (!e.shiftKey) setSelectedId(node.id); } else if (node.data.printer) setOverviewId(node.data.printer.id); }} onPaneClick={() => setSelectedId(null)} proOptions={{ hideAttribution: true }}>
+          {editing && guides.x !== null && <ViewportPortal><div className="pointer-events-none absolute bg-success" style={{ left: guides.x - 1, top: -20000, width: 2, height: 40000 }} /></ViewportPortal>}
+          {editing && guides.y !== null && <ViewportPortal><div className="pointer-events-none absolute bg-warning" style={{ top: guides.y - 1, left: -20000, height: 2, width: 40000 }} /></ViewportPortal>}
           <Background variant={BackgroundVariant.Lines} gap={snap >= 20 ? snap : 20} size={1} />
         </ReactFlow>
         {items.length === 0 && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-3 text-muted-foreground"><Factory className="h-12 w-12 opacity-40" /><h3 className="font-semibold text-foreground">Production floor</h3>{!editing && <Button className="pointer-events-auto" onClick={() => setEditing(true)}><Plus className="h-4 w-4 mr-2" />Create Layout</Button>}</div>}
