@@ -24,7 +24,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
     type: 'feature',
     title: 'Narrower Conveyors and New Labeler',
     date: '11 Nov 2026',
-    summary: 'Each conveyor or machine now has a Width across line (%) setting, separate from Size, so narrow conveyors can be drawn to match. The labeler symbol now shows the frame, bottle separators, labeling engine and label reel.',
+    summary: 'Each conveyor or machine now has a Width across line (%) setting, separate from Size. It narrows only the conveyor belt — machine parts stay the same size. The labeler symbol now shows the frame, bottle separators, labeling engine and label reel.',
   },
   {
     id: 'floor-copy-line',
