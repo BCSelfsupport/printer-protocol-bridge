@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FloorEquipment } from './FloorEquipment';
-import { addFloorItem, autoAlignFloorItems, distributeFloorItems, floorAlignGuides, duplicateFloorItems, readFloorPlan, updateFloorItem, floorNames, floorPrinterStatus, FLOOR_STORAGE_KEY, type FloorItem, type FloorKind } from '@/lib/floorPlan';
+import { addFloorItem, autoAlignFloorItems, distributeFloorItems, floorAlignGuides, duplicateFloorItems, readFloorPlan, updateFloorItem, floorNames, floorPrinterStatus, floorItemBox, floorBuildingSize, isBuildingPart, FLOOR_STORAGE_KEY, type FloorItem, type FloorKind } from '@/lib/floorPlan';
 import type { Printer } from '@/types/printer';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +16,14 @@ const lightClasses = { healthy: 'bg-success', warning: 'bg-warning', fault: 'bg-
 const statusNames = { healthy: 'No reported issues', warning: 'Attention needed', fault: 'Reported fault', offline: 'Offline', unknown: 'Status unknown' };
 function EquipmentNodeView({ data, selected }: NodeProps<EquipmentNode>) {
   const { item, printer, showNames } = data;
+  if (isBuildingPart(item.kind)) {
+    const box = floorItemBox(item), size = floorBuildingSize(item);
+    return <div title={item.label || floorNames[item.kind]} className={cn('floor-node', selected && 'floor-node-selected')} style={{ width: box.w, height: box.h }}>
+      <div className="floor-building-symbol absolute" style={{ left: '50%', top: '50%', width: size.w, height: size.h, transform: `translate(-50%, -50%) rotate(${item.rotation}deg) scale(${item.scale / 100})` }}>
+        <FloorEquipment kind={item.kind} length={size.w} thickness={item.thickness} />
+      </div>
+    </div>;
+  }
   const machineName = item.kind !== 'printer' && item.kind !== 'label' ? (item.label.trim() || floorNames[item.kind]) : null;
   return <div title={machineName ? (machineName === floorNames[item.kind] ? machineName : `${machineName} (${floorNames[item.kind]})`) : undefined} className={cn('floor-node', selected && 'floor-node-selected')} style={{ width: 220 * item.scale / 100, height: (item.kind === 'label' ? 42 : 260) * item.scale / 100 }}>
     <div className="floor-node-content relative" style={{ transform: `scale(${item.scale / 100})`, width: 220 }}>
@@ -64,9 +72,9 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
   }, [items]);
   const builtNodes = useMemo<EquipmentNode[]>(() => items.filter(i => i.kind !== 'printer' || printers.some(p => p.id === i.printerId)).map(item => ({
     id: item.id, type: 'equipment', position: { x: item.x, y: item.y }, selected: selectedIds.includes(item.id),
-    zIndex: item.kind === 'printer' ? 100 : item.kind === 'label' ? 200 : 0,
+    zIndex: item.kind === 'printer' ? 100 : item.kind === 'label' ? 200 : isBuildingPart(item.kind) ? -10 : 0,
     data: { item, printer: printers.find(p => p.id === item.printerId), showNames },
-    style: { width: 220 * item.scale / 100, height: (item.kind === 'label' ? 42 : 260) * item.scale / 100 },
+    style: { width: floorItemBox(item).w, height: floorItemBox(item).h },
   })), [items, printers, selectedIds, showNames]);
   // Keep React Flow's own node state (measured size, dragging flag) between renders; rebuilding nodes mid-drag breaks later selection.
   const [nodes, setNodes] = useState<EquipmentNode[]>(builtNodes);
@@ -147,6 +155,9 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
           <div className="flex justify-center border-b pb-2 overflow-hidden"><FloorEquipment kind={libraryKind} /></div>
           <Button className="w-full" size="sm" draggable onDragStart={e => e.dataTransfer.setData('application/codesync-floor', libraryKind)} onClick={() => add(libraryKind)}><Plus className="h-4 w-4 mr-2" />Add to Plan</Button>
         </section>
+        <section className="space-y-2"><h3 className="text-xs uppercase text-muted-foreground font-semibold">Walls &amp; doors</h3>
+          <div className="grid grid-cols-2 gap-1">{(['wall', 'door'] as const).map(kind => <Button key={kind} variant="outline" size="sm" draggable onDragStart={e => e.dataTransfer.setData('application/codesync-floor', kind)} onClick={() => add(kind)}><Plus className="h-4 w-4 mr-1" />{floorNames[kind]}</Button>)}</div>
+        </section>
         <section className="space-y-2"><h3 className="text-xs uppercase text-muted-foreground font-semibold">Line tags</h3>
           <Button variant="outline" className="w-full" size="sm" draggable onDragStart={e => e.dataTransfer.setData('application/codesync-floor', 'label')} onClick={() => add('label')}><Tag className="h-4 w-4 mr-2" />Add Line Tag</Button>
         </section>
@@ -168,10 +179,14 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
           {selectedIds.some(id => items.find(i => i.id === id)?.kind === 'printer') && copyIds.length > 0 && <p className="text-xs text-muted-foreground">Printers are not copied — place them from Unplaced Printers.</p>}
         </section>
         {selected && <section className="space-y-3 border-t pt-3"><h3 className="font-semibold text-sm">{floorNames[selected.kind]}</h3>
-          {selected.kind !== 'printer' && <label className="block text-xs">{selected.kind === 'label' ? 'Line name / title / ID' : 'Machine name'}<Input aria-label={selected.kind === 'label' ? 'Line name / title / ID' : 'Machine name'} placeholder={floorNames[selected.kind]} autoFocus={selected.kind === 'label'} key={selected.id} className="mt-1" value={selected.label} onChange={e => patch({ label: e.target.value })} /></label>}
+          {selected.kind !== 'printer' && <label className="block text-xs">{selected.kind === 'label' ? 'Line name / title / ID' : isBuildingPart(selected.kind) ? 'Name' : 'Machine name'}<Input aria-label={selected.kind === 'label' ? 'Line name / title / ID' : isBuildingPart(selected.kind) ? 'Name' : 'Machine name'} placeholder={floorNames[selected.kind]} autoFocus={selected.kind === 'label'} key={selected.id} className="mt-1" value={selected.label} onChange={e => patch({ label: e.target.value })} /></label>}
+          {isBuildingPart(selected.kind) && <>
+            <label className="block text-xs">{selected.kind === 'wall' ? 'Wall length' : 'Door opening width'}<Input aria-label={selected.kind === 'wall' ? 'Wall length' : 'Door opening width'} type="number" min={5} max={5000} step={5} value={selected.length ?? (selected.kind === 'wall' ? 300 : 100)} onChange={e => { if (e.target.value) patch({ length: Number(e.target.value) }); }} className="mt-1" /></label>
+            {selected.kind === 'wall' && <label className="block text-xs">Wall width / thickness<Input aria-label="Wall width / thickness" type="number" min={5} max={5000} step={5} value={selected.thickness ?? 20} onChange={e => { if (e.target.value) patch({ thickness: Number(e.target.value) }); }} className="mt-1" /></label>}
+          </>}
           <label className="block text-xs">Size (%)<Input aria-label="Size percent" type="number" min={25} max={300} step={5} value={selected.scale} onChange={e => { if (e.target.value) patch({ scale: Number(e.target.value) }); }} className="mt-1" /></label>
           <label className="block text-xs">Rotation (°)<div className="flex gap-1 mt-1"><Input aria-label="Rotation degrees" type="number" value={selected.rotation} onChange={e => patch({ rotation: Number(e.target.value) })} /><Button variant="outline" size="icon" title="Rotate 90 degrees" aria-label="Rotate 90 degrees" onClick={() => patch({ rotation: selected.rotation + 90 })}><RotateCw className="h-4 w-4" /></Button></div></label>
-          {selected.kind !== 'label' && selected.kind !== 'printer' && <label className="block text-xs">Width across line (%)<Input aria-label="Width percent" type="number" min={30} max={200} step={5} value={selected.width ?? 100} onChange={e => { if (e.target.value) patch({ width: Number(e.target.value) }); }} className="mt-1" /></label>}
+          {selected.kind !== 'label' && selected.kind !== 'printer' && !isBuildingPart(selected.kind) && <label className="block text-xs">Width across line (%)<Input aria-label="Width percent" type="number" min={30} max={200} step={5} value={selected.width ?? 100} onChange={e => { if (e.target.value) patch({ width: Number(e.target.value) }); }} className="mt-1" /></label>}
           {selected.kind === 'printer' && <div className="block text-xs">Umbilical / printhead side<div className="grid grid-cols-2 gap-1 mt-1">{(['left', 'right'] as const).map(side => <Button key={side} size="sm" variant={(selected.headSide ?? 'right') === side ? 'default' : 'outline'} aria-pressed={(selected.headSide ?? 'right') === side} onClick={() => patch({ headSide: side })}>{side === 'left' ? 'Left' : 'Right'}</Button>)}</div></div>}
           <Button variant="outline" size="sm" className="w-full text-destructive" onClick={() => { setItems(prev => prev.filter(i => i.id !== selected.id)); setSelectedId(null); }}><Trash2 className="h-4 w-4 mr-2" />Remove from plan</Button>
         </section>}
@@ -179,7 +194,7 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
       <div className="relative flex-1 min-h-48 floor-surface" onDragOver={e => { if (editing) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; } }} onDrop={e => {
         if (!editing) return; e.preventDefault(); const value = e.dataTransfer.getData('application/codesync-floor'); const position = flow.screenToFlowPosition({ x: e.clientX, y: e.clientY });
         if (value.startsWith('printer:')) { const printer = printers.find(p => p.id === Number(value.split(':')[1])); if (printer) add('printer', printer, position); }
-        else if (palette.includes(value as FloorKind)) add(value as FloorKind, undefined, position);
+        else if (palette.includes(value as FloorKind) || value === 'wall' || value === 'door') add(value as FloorKind, undefined, position);
       }}>
         <ReactFlow<EquipmentNode> nodes={nodes} edges={[]} nodeTypes={nodeTypes} onNodesChange={change} nodesDraggable={editing} nodesConnectable={false} elementsSelectable={editing} panOnDrag={editing ? [1, 2] : true} selectionKeyCode="Shift" multiSelectionKeyCode="Shift" selectionOnDrag={editing} selectionMode={SelectionMode.Partial} elevateNodesOnSelect={false} onNodeDragStart={(_, node) => { if (!selectedIds.includes(node.id)) setSelectedId(node.id); }} onNodeDragStop={(_, _node, dragged) => setItems(prev => prev.map(i => { const n = dragged.find(d => d.id === i.id); return n ? { ...i, x: n.position.x, y: n.position.y } : i; }))} deleteKeyCode={null} minZoom={0.2} maxZoom={2.5} fitView fitViewOptions={{ padding: 0.3, maxZoom: 1 }} snapToGrid={snap > 0} snapGrid={[snap || 1, snap || 1]} onNodeClick={(e, node) => { if (editing) { if (!e.shiftKey) setSelectedId(node.id); } else if (node.data.printer) setOverviewId(node.data.printer.id); }} onPaneClick={() => setSelectedId(null)} proOptions={{ hideAttribution: true }}>
           {editing && guides.x !== null && <ViewportPortal><div className="pointer-events-none absolute bg-success" style={{ left: guides.x - 1, top: -20000, width: 2, height: 40000 }} /></ViewportPortal>}

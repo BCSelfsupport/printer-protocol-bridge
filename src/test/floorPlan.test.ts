@@ -1,8 +1,30 @@
 import { describe, it, expect } from 'vitest';
-import { addFloorItem, updateFloorItem, floorPrinterStatus, readFloorPlan, FLOOR_STORAGE_KEY } from '@/lib/floorPlan';
+import { addFloorItem, updateFloorItem, floorPrinterStatus, readFloorPlan, floorItemBox, FLOOR_STORAGE_KEY } from '@/lib/floorPlan';
 import type { Printer } from '@/types/printer';
 const printer: Printer = { id: 12, name: 'Printer 12', ipAddress: '192.168.0.12', port: 23, isAvailable: true, isConnected: true, status: 'ready', hasActiveErrors: false, jetRunning: true };
 describe('floor plan rules', () => {
+  it('adjusts wall length and thickness independently and retains them after reload', () => {
+    const wall = addFloorItem([], 'wall')[0];
+    const resized = updateFloorItem([wall], wall.id, { length: 600, thickness: 35 });
+    expect(floorItemBox(resized[0])).toEqual({ w: 600, h: 35 });
+    localStorage.setItem(FLOOR_STORAGE_KEY, JSON.stringify(resized));
+    expect(readFloorPlan()[0]).toMatchObject({ kind: 'wall', length: 600, thickness: 35 });
+  });
+  it('rotates a wall without changing its length or thickness', () => {
+    const wall = addFloorItem([], 'wall')[0];
+    const rotated = updateFloorItem([wall], wall.id, { rotation: 90 })[0];
+    expect(floorItemBox(rotated).w).toBeCloseTo(20);
+    expect(floorItemBox(rotated).h).toBeCloseTo(300);
+    expect(rotated).toMatchObject({ length: 300, thickness: 20 });
+  });
+  it('resizes and copies doors while retaining the source', () => {
+    const door = addFloorItem([], 'door')[0];
+    const resized = updateFloorItem([door], door.id, { length: 140 });
+    expect(floorItemBox(resized[0])).toEqual({ w: 140, h: 140 });
+    const copied = duplicateFloorItems(resized, [door.id], () => 'copy');
+    expect(copied.items).toHaveLength(2);
+    expect(copied.copies[0]).toMatchObject({ kind: 'door', length: 140 });
+  });
   it('places a configured printer once by ID', () => {
     const items = addFloorItem([], 'printer', printer);
     expect(items[0].printerId).toBe(12);

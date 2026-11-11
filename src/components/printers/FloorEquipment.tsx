@@ -1,6 +1,19 @@
 import type { FloorKind } from '@/lib/floorPlan';
+import { useId } from 'react';
 
-export function FloorEquipment({ kind, headSide = 'right', width = 100, status }: { kind: FloorKind; headSide?: 'left' | 'right'; width?: number; status?: string }) {
+export function FloorEquipment({ kind, headSide = 'right', width = 100, status, length = 300, thickness = 20 }: { kind: FloorKind; headSide?: 'left' | 'right'; width?: number; status?: string; length?: number; thickness?: number }) {
+  const hatchId = useId().replace(/:/g, '');
+  if (kind === 'wall') return <svg viewBox={`0 0 ${length} ${thickness}`} width={length} height={thickness} className="floor-equipment" aria-hidden="true">
+    <defs><pattern id={hatchId} width="10" height="10" patternUnits="userSpaceOnUse"><path d="M-2 2L2-2M0 10L10 0M8 12L12 8" className="floor-roller" /></pattern></defs>
+    <rect x="1" y="1" width={length - 2} height={thickness - 2} className="floor-belt" />
+    <rect x="1" y="1" width={length - 2} height={thickness - 2} fill={`url(#${hatchId})`} />
+  </svg>;
+  if (kind === 'door') return <svg viewBox={`0 0 ${length} ${length}`} width={length} height={length} className="floor-equipment" aria-hidden="true">
+    <path d={`M2 ${length - 2}V2H${length - 2}V${length - 2}Z`} className="floor-door-hit" />
+    <path d={`M2 2V${length - 2}H${length - 2}`} className="floor-direction" />
+    <path d={`M2 2A${length - 4} ${length - 4} 0 0 1 ${length - 2} ${length - 2}`} className="floor-roller" />
+    <rect x="1" y={length - Math.min(thickness, length / 4)} width="4" height={Math.min(thickness, length / 4) - 1} className="floor-belt" />
+  </svg>;
   // Width changes only the grey belt; machine (blue) parts keep their size.
   const bh = 60 * width / 100, by = 55 - bh / 2;
   const tall = kind === 'roundtable' ? '0 -55 220 220' : kind === 'labeler' ? '0 -35 220 180' : null;

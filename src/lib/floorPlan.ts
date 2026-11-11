@@ -1,6 +1,6 @@
 import type { Printer } from '@/types/printer';
 
-export type FloorKind = 'straight' | 'bend' | 'sidegrip' | 'roundtable' | 'filler' | 'capper' | 'labeler' | 'packer' | 'label' | 'printer';
+export type FloorKind = 'straight' | 'bend' | 'sidegrip' | 'roundtable' | 'filler' | 'capper' | 'labeler' | 'packer' | 'label' | 'printer' | 'wall' | 'door';
 export interface FloorItem {
   id: string;
   kind: FloorKind;
@@ -14,21 +14,27 @@ export interface FloorItem {
   headSide?: 'left' | 'right';
   /** Belt/body width across the line, percent of standard (independent of overall size). */
   width?: number;
+  /** Building parts use independent dimensions in floor-plan units. */
+  length?: number;
+  thickness?: number;
 }
 export const FLOOR_STORAGE_KEY = 'codesync-floor-plan-v1';
 export const floorNames: Record<FloorKind, string> = {
   straight: 'Straight conveyor', bend: '90° conveyor', sidegrip: 'Side grip conveyor', roundtable: 'Collation round table', filler: 'Filler', capper: 'Capper',
-  labeler: 'Labeler', packer: 'Packer', label: 'Line label', printer: 'Printer',
+  labeler: 'Labeler', packer: 'Packer', label: 'Line label', printer: 'Printer', wall: 'Wall', door: 'Door',
 };
 export function addFloorItem(items: FloorItem[], kind: FloorKind, printer?: Printer, position = { x: 180, y: 180 }): FloorItem[] {
   if (kind === 'printer' && (!printer || items.some(i => i.printerId === printer.id))) return items;
   return [...items, { id: crypto.randomUUID(), kind, ...position, scale: 100, rotation: 0,
-    label: printer?.name ?? (kind === 'label' ? 'Line 1' : floorNames[kind]), printerId: printer?.id }];
+    label: printer?.name ?? (kind === 'label' ? 'Line 1' : floorNames[kind]), printerId: printer?.id,
+    ...(kind === 'wall' ? { length: 300, thickness: 20 } : kind === 'door' ? { length: 100, thickness: 20 } : {}) }];
 }
-export function updateFloorItem(items: FloorItem[], id: string, patch: Partial<Pick<FloorItem, 'x' | 'y' | 'scale' | 'rotation' | 'label' | 'headSide' | 'width'>>): FloorItem[] {
+export function updateFloorItem(items: FloorItem[], id: string, patch: Partial<Pick<FloorItem, 'x' | 'y' | 'scale' | 'rotation' | 'label' | 'headSide' | 'width' | 'length' | 'thickness'>>): FloorItem[] {
   return items.map(item => item.id === id ? { ...item, ...patch,
     scale: Math.max(25, Math.min(300, patch.scale ?? item.scale)),
     width: patch.width === undefined ? item.width : Math.max(30, Math.min(200, patch.width)),
+    length: patch.length === undefined ? item.length : dimension(patch.length, item.length ?? 300),
+    thickness: patch.thickness === undefined ? item.thickness : dimension(patch.thickness, item.thickness ?? 20),
     rotation: ((patch.rotation ?? item.rotation) % 360 + 360) % 360,
   } : item);
 }
@@ -37,7 +43,7 @@ export function duplicateFloorItems(items: FloorItem[], ids: string[], makeId: (
   const source = items.filter(i => ids.includes(i.id) && i.kind !== 'printer');
   if (!source.length) return { items, copies: [] };
   const left = Math.min(...source.map(i => i.x));
-  const right = Math.max(...source.map(i => i.x + 220 * i.scale / 100));
+  const right = Math.max(...source.map(i => i.x + floorItemBox(i).w));
   const offset = Math.ceil((right - left + 60) / 10) * 10;
   const copies = source.map(i => ({ ...i, id: makeId(), x: i.x + offset,
     label: i.kind === 'label' ? i.label.replace(/(\d+)(?!.*\d)/, n => String(Number(n) + 1)) : i.label }));
@@ -56,7 +62,8 @@ export function readFloorPlan(): FloorItem[] {
         seen.add(i.printerId);
       }
       return true;
-    }).map(i => ({ ...i, scale: Math.max(25, Math.min(300, i.scale)) }));
+    }).map(i => ({ ...i, scale: Math.max(25, Math.min(300, i.scale)),
+      ...(isBuildingPart(i.kind) ? { length: dimension(i.length, i.kind === 'wall' ? 300 : 100), thickness: dimension(i.thickness, 20) } : {}) }));
   } catch { return []; }
 }
 export function floorPrinterStatus(printer: Printer) {
@@ -68,7 +75,20 @@ export function floorPrinterStatus(printer: Printer) {
   return 'healthy';
 }
 /** Box size React Flow renders for a floor item (rotation happens inside the box). */
+export function isBuildingPart(kind: FloorKind) { return kind === 'wall' || kind === 'door'; }
+function dimension(value: number | undefined, fallback: number) {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.max(5, Math.min(5000, value)) : fallback;
+}
+export function floorBuildingSize(item: FloorItem) {
+  const length = dimension(item.length, item.kind === 'wall' ? 300 : 100);
+  return { w: length, h: item.kind === 'door' ? length : dimension(item.thickness, 20) };
+}
 export function floorItemBox(item: FloorItem) {
+  if (isBuildingPart(item.kind)) {
+    const size = floorBuildingSize(item), angle = item.rotation * Math.PI / 180, scale = item.scale / 100;
+    return { w: (Math.abs(size.w * Math.cos(angle)) + Math.abs(size.h * Math.sin(angle))) * scale,
+      h: (Math.abs(size.w * Math.sin(angle)) + Math.abs(size.h * Math.cos(angle))) * scale };
+  }
   return { w: 220 * item.scale / 100, h: (item.kind === 'label' ? 42 : 260) * item.scale / 100 };
 }
 

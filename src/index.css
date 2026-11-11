@@ -29,6 +29,8 @@
 .floor-machine { fill: hsl(var(--primary) / 0.12); stroke: hsl(var(--primary)); stroke-width: 2; }
 .floor-roller { fill: none; stroke: hsl(var(--muted-foreground) / 0.5); stroke-width: 2; }
 .floor-direction { fill: none; stroke: hsl(var(--primary)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.floor-building-symbol { pointer-events: none; }
+.floor-door-hit { fill: hsl(var(--primary) / 0.04); stroke: none; }
 
 /* Industrial CIJ Printer Control Theme */
 
