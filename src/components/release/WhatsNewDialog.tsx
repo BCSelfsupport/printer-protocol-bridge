@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-sidegrip-roundtable',
+    type: 'feature',
+    title: 'Side Grip Conveyor and Round Table',
+    date: '11 Nov 2026',
+    summary: 'The machine library now includes a side grip conveyor and a collation round table for building your production floor.',
+  },
+  {
     id: 'floor-machine-belt-match',
     type: 'feature',
     title: 'Machines Match Conveyor Width',

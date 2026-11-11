@@ -1,6 +1,6 @@
 import type { Printer } from '@/types/printer';
 
-export type FloorKind = 'straight' | 'bend' | 'filler' | 'capper' | 'labeler' | 'packer' | 'label' | 'printer';
+export type FloorKind = 'straight' | 'bend' | 'sidegrip' | 'roundtable' | 'filler' | 'capper' | 'labeler' | 'packer' | 'label' | 'printer';
 export interface FloorItem {
   id: string;
   kind: FloorKind;
@@ -13,7 +13,7 @@ export interface FloorItem {
 }
 export const FLOOR_STORAGE_KEY = 'codesync-floor-plan-v1';
 export const floorNames: Record<FloorKind, string> = {
-  straight: 'Straight conveyor', bend: '90° conveyor', filler: 'Filler', capper: 'Capper',
+  straight: 'Straight conveyor', bend: '90° conveyor', sidegrip: 'Side grip conveyor', roundtable: 'Collation round table', filler: 'Filler', capper: 'Capper',
   labeler: 'Labeler', packer: 'Packer', label: 'Line label', printer: 'Printer',
 };
 export function addFloorItem(items: FloorItem[], kind: FloorKind, printer?: Printer, position = { x: 180, y: 180 }): FloorItem[] {

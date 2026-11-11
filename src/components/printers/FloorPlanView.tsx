@@ -27,7 +27,7 @@ function EquipmentNodeView({ data, selected }: NodeProps<EquipmentNode>) {
   </div>;
 }
 const nodeTypes = { equipment: EquipmentNodeView };
-const palette: FloorKind[] = ['straight', 'bend', 'filler', 'capper', 'labeler', 'packer', 'label'];
+const palette: FloorKind[] = ['straight', 'bend', 'sidegrip', 'roundtable', 'filler', 'capper', 'labeler', 'packer', 'label'];
 
 interface Props { printers: Printer[]; onOpenPrinter: (printer: Printer) => void; onService: (printer: Printer) => void }
 export function FloorPlanView(props: Props) {
