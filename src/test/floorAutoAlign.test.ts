@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { autoAlignFloorItems, floorItemBox, type FloorItem } from '@/lib/floorPlan';
 
-const item = (id: string, x: number, y: number, scale = 100): FloorItem => ({ id, kind: 'conveyor', x, y, scale, rotation: 0 } as FloorItem);
+const item = (id: string, x: number, y: number, scale = 100): FloorItem => ({ id, kind: 'conveyor', x, y, scale, rotation: 0, label: '' } as FloorItem);
 const cx = (i: FloorItem) => i.x + floorItemBox(i).w / 2;
 const cy = (i: FloorItem) => i.y + floorItemBox(i).h / 2;
 
