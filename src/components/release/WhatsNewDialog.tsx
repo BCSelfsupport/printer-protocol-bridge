@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-snap-grid',
+    type: 'feature',
+    title: 'Snap to Grid Options',
+    date: '11 Nov 2026',
+    summary: 'In Edit Layout, choose Off, Fine, Med or Large snapping so conveyors and machines line up neatly. Your choice is remembered.',
+  },
+  {
     id: 'floor-box-select',
     type: 'feature',
     title: 'Drag a Box to Select',
