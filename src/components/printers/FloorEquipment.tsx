@@ -1,15 +1,15 @@
 import type { FloorKind } from '@/lib/floorPlan';
 
-export function FloorEquipment({ kind }: { kind: FloorKind }) {
+export function FloorEquipment({ kind, headSide = 'right' }: { kind: FloorKind; headSide?: 'left' | 'right' }) {
   if (kind === 'label') return null;
   return (
     <svg viewBox="0 0 220 110" width="220" height="110" className="floor-equipment" aria-hidden="true">
-      {kind === 'printer' ? <>
+      {kind === 'printer' ? <g transform={headSide === 'left' ? 'translate(220 0) scale(-1 1)' : undefined}>
         <rect x="65" y="14" width="90" height="82" rx="4" className="floor-belt" />
         <rect x="77" y="24" width="66" height="24" rx="2" className="floor-machine" />
         <path d="M88 35h42M155 62h25v25h20" className="floor-direction" />
         <rect x="196" y="76" width="18" height="22" rx="2" className="floor-machine" />
-      </> : kind === 'straight' ? <>
+      </g> : kind === 'straight' ? <>
         <rect x="4" y="25" width="212" height="60" rx="4" className="floor-belt" />
         {Array.from({ length: 15 }, (_, i) => <path key={i} d={`M${12 + i * 14} 30v50`} className="floor-roller" />)}
         <path d="M90 55h40m-12-9 12 9-12 9" className="floor-direction" />

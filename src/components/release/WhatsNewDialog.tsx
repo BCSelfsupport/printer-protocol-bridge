@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-printhead-side',
+    type: 'feature',
+    title: 'Printhead Side on Floor Plan',
+    date: '11 Nov 2026',
+    summary: 'In Edit Layout, choose whether a printer\'s umbilical and printhead come out on the left or right, so it can sit on either side of the conveyor.',
+  },
+  {
     id: 'floor-filler-capper-symbols',
     type: 'bugfix',
     title: 'Distinct Filler and Capper',

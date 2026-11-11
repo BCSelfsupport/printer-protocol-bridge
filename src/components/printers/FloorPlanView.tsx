@@ -22,7 +22,7 @@ function EquipmentNodeView({ data, selected }: NodeProps<EquipmentNode>) {
         {printer && <span title={statusNames[floorPrinterStatus(printer)]} className={cn('h-3 w-3 shrink-0 rounded-full', lightClasses[floorPrinterStatus(printer)])} />}
         <span>{printer ? `${printer.name} · ID ${printer.id}` : item.label}</span>
       </div>}
-      {item.kind !== 'label' && <div className="floor-symbol" style={{ transform: `rotate(${item.rotation}deg)` }}><FloorEquipment kind={item.kind} /></div>}
+      {item.kind !== 'label' && <div className="floor-symbol" style={{ transform: `rotate(${item.rotation}deg)` }}><FloorEquipment kind={item.kind} headSide={item.headSide} /></div>}
     </div>
   </div>;
 }
@@ -108,6 +108,7 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
           {selected.kind !== 'printer' && <label className="block text-xs">{selected.kind === 'label' ? 'Line name / title / ID' : 'Name'}<Input aria-label={selected.kind === 'label' ? 'Line name / title / ID' : 'Name'} autoFocus={selected.kind === 'label'} key={selected.id} className="mt-1" value={selected.label} onChange={e => patch({ label: e.target.value })} /></label>}
           <label className="block text-xs">Size (%)<Input aria-label="Size percent" type="number" min={25} max={300} step={5} value={selected.scale} onChange={e => { if (e.target.value) patch({ scale: Number(e.target.value) }); }} className="mt-1" /></label>
           <label className="block text-xs">Rotation (°)<div className="flex gap-1 mt-1"><Input aria-label="Rotation degrees" type="number" value={selected.rotation} onChange={e => patch({ rotation: Number(e.target.value) })} /><Button variant="outline" size="icon" title="Rotate 90 degrees" aria-label="Rotate 90 degrees" onClick={() => patch({ rotation: selected.rotation + 90 })}><RotateCw className="h-4 w-4" /></Button></div></label>
+          {selected.kind === 'printer' && <div className="block text-xs">Umbilical / printhead side<div className="grid grid-cols-2 gap-1 mt-1">{(['left', 'right'] as const).map(side => <Button key={side} size="sm" variant={(selected.headSide ?? 'right') === side ? 'default' : 'outline'} aria-pressed={(selected.headSide ?? 'right') === side} onClick={() => patch({ headSide: side })}>{side === 'left' ? 'Left' : 'Right'}</Button>)}</div></div>}
           <Button variant="outline" size="sm" className="w-full text-destructive" onClick={() => { setItems(prev => prev.filter(i => i.id !== selected.id)); setSelectedId(null); }}><Trash2 className="h-4 w-4 mr-2" />Remove from plan</Button>
         </section>}
       </aside>}
