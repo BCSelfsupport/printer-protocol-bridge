@@ -29,6 +29,17 @@ export function updateFloorItem(items: FloorItem[], id: string, patch: Partial<P
     rotation: ((patch.rotation ?? item.rotation) % 360 + 360) % 360,
   } : item);
 }
+/** Copy floor parts as a new line beside the originals. Printers are skipped: each configured printer appears once. */
+export function duplicateFloorItems(items: FloorItem[], ids: string[], makeId: () => string = () => crypto.randomUUID()): { items: FloorItem[]; copies: FloorItem[] } {
+  const source = items.filter(i => ids.includes(i.id) && i.kind !== 'printer');
+  if (!source.length) return { items, copies: [] };
+  const left = Math.min(...source.map(i => i.x));
+  const right = Math.max(...source.map(i => i.x + 220 * i.scale / 100));
+  const offset = Math.ceil((right - left + 60) / 10) * 10;
+  const copies = source.map(i => ({ ...i, id: makeId(), x: i.x + offset,
+    label: i.kind === 'label' ? i.label.replace(/(\d+)(?!.*\d)/, n => String(Number(n) + 1)) : i.label }));
+  return { items: [...items, ...copies], copies };
+}
 export function readFloorPlan(): FloorItem[] {
   try {
     const data: unknown = JSON.parse(localStorage.getItem(FLOOR_STORAGE_KEY) ?? '[]');

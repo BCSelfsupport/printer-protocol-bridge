@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-copy-line',
+    type: 'feature',
+    title: 'Copy a Whole Line',
+    date: '11 Nov 2026',
+    summary: 'In Edit Layout, Shift-click or Shift-drag to select several parts (or use Select All), move them together, and press Copy as New Line to place a copy beside the original. Line tags count up automatically (Line 1 becomes Line 2). Ctrl+C / Ctrl+V also work. Printers are not copied because each printer is placed once.',
+  },
+  {
     id: 'floor-printhead-side',
     type: 'feature',
     title: 'Printhead Side on Floor Plan',

@@ -30,3 +30,19 @@ describe('floor plan rules', () => {
     expect(floorPrinterStatus({ ...printer, isConnected: false, jetRunning: undefined })).toBe('unknown');
   });
 });
+import { duplicateFloorItems } from '@/lib/floorPlan';
+describe('duplicateFloorItems', () => {
+  const base = [
+    { id: 'a', kind: 'straight' as const, x: 0, y: 0, scale: 100, rotation: 90, label: 'Straight conveyor' },
+    { id: 't', kind: 'label' as const, x: 0, y: -60, scale: 100, rotation: 0, label: 'Line 1' },
+    { id: 'p', kind: 'printer' as const, x: 50, y: 50, scale: 100, rotation: 0, label: 'P1', printerId: 1 },
+  ];
+  it('copies selected parts beside the originals, skipping printers and numbering line tags', () => {
+    let n = 0;
+    const { items, copies } = duplicateFloorItems(base, ['a', 't', 'p'], () => `c${n++}`);
+    expect(items).toHaveLength(5);
+    expect(copies.map(c => c.kind)).toEqual(['straight', 'label']);
+    expect(copies[0]).toMatchObject({ x: 280, y: 0, rotation: 90 });
+    expect(copies[1].label).toBe('Line 2');
+  });
+});

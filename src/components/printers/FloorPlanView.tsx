@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ReactFlow, ReactFlowProvider, Background, BackgroundVariant, useReactFlow, applyNodeChanges, type Node, type NodeProps, type NodeChange } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Factory, Lock, Pencil, Plus, Printer as PrinterIcon, RotateCw, Scan, Tag, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
+import { Copy, Factory, Lock, Pencil, Plus, Printer as PrinterIcon, RotateCw, Scan, Tag, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FloorEquipment } from './FloorEquipment';
-import { addFloorItem, readFloorPlan, updateFloorItem, floorNames, floorPrinterStatus, FLOOR_STORAGE_KEY, type FloorItem, type FloorKind } from '@/lib/floorPlan';
+import { addFloorItem, duplicateFloorItems, readFloorPlan, updateFloorItem, floorNames, floorPrinterStatus, FLOOR_STORAGE_KEY, type FloorItem, type FloorKind } from '@/lib/floorPlan';
 import type { Printer } from '@/types/printer';
 import { cn } from '@/lib/utils';
 
@@ -37,7 +37,9 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
   const [items, setItems] = useState<FloorItem[]>(readFloorPlan);
   const [editing, setEditing] = useState(false);
   const [libraryKind, setLibraryKind] = useState<FloorKind>('straight');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const setSelectedId = (id: string | null) => setSelectedIds(id ? [id] : []);
+  const selectedId = selectedIds.length === 1 ? selectedIds[0] : null;
   const [overviewId, setOverviewId] = useState<number | null>(null);
   const [saveError, setSaveError] = useState(false);
   const flow = useReactFlow<EquipmentNode>();
@@ -49,11 +51,11 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
     catch { setSaveError(true); }
   }, [items]);
   const builtNodes = useMemo<EquipmentNode[]>(() => items.filter(i => i.kind !== 'printer' || printers.some(p => p.id === i.printerId)).map(item => ({
-    id: item.id, type: 'equipment', position: { x: item.x, y: item.y }, selected: item.id === selectedId,
+    id: item.id, type: 'equipment', position: { x: item.x, y: item.y }, selected: selectedIds.includes(item.id),
     zIndex: item.kind === 'printer' ? 100 : item.kind === 'label' ? 200 : 0,
     data: { item, printer: printers.find(p => p.id === item.printerId) },
     style: { width: 220 * item.scale / 100, height: (item.kind === 'label' ? 42 : 260) * item.scale / 100 },
-  })), [items, printers, selectedId]);
+  })), [items, printers, selectedIds]);
   // Keep React Flow's own node state (measured size, dragging flag) between renders; rebuilding nodes mid-drag breaks later selection.
   const [nodes, setNodes] = useState<EquipmentNode[]>(builtNodes);
   useEffect(() => { setNodes(prev => builtNodes.map(n => { const old = prev.find(o => o.id === n.id); return old ? { ...old, ...n, position: old.dragging ? old.position : n.position } : n; })); }, [builtNodes]);
@@ -73,12 +75,36 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
   };
   const change = useCallback((changes: NodeChange<EquipmentNode>[]) => {
     if (!editing) return;
-    const selection = changes.find(c => c.type === 'select' && c.selected);
-    if (selection?.type === 'select') setSelectedId(selection.id);
+    const selects = changes.filter(c => c.type === 'select');
+    if (selects.length) setSelectedIds(prev => { let next = [...prev]; for (const c of selects) { if (c.type !== 'select') continue; next = next.filter(id => id !== c.id); if (c.selected) next.push(c.id); } return next; });
     setNodes(prev => applyNodeChanges(changes, prev));
     const ended = changes.filter(c => c.type === 'position' && !c.dragging && c.position);
     if (ended.length) setItems(prev => prev.map(item => { const c = ended.find(e => e.type === 'position' && e.id === item.id); return c?.type === 'position' && c.position ? { ...item, x: c.position.x, y: c.position.y } : item; }));
   }, [editing]);
+  const copyIds = selectedIds.filter(id => items.some(i => i.id === id && i.kind !== 'printer'));
+  const duplicate = () => {
+    const { items: next, copies } = duplicateFloorItems(items, copyIds);
+    if (!copies.length) return;
+    setItems(next); setSelectedIds(copies.map(c => c.id));
+    requestAnimationFrame(() => flow.fitView({ padding: 0.25, maxZoom: 1 }));
+  };
+  const [clipboard, setClipboard] = useState<string[]>([]);
+  useEffect(() => {
+    if (!editing) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.closest('input, textarea, [contenteditable="true"]')) return;
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const key = e.key.toLowerCase();
+      if (key === 'a') { e.preventDefault(); setSelectedIds(items.map(i => i.id)); }
+      else if (key === 'c' && copyIds.length) { e.preventDefault(); setClipboard(copyIds); }
+      else if (key === 'v' && clipboard.length) {
+        e.preventDefault();
+        const { items: next, copies } = duplicateFloorItems(items, clipboard);
+        if (copies.length) { setItems(next); setSelectedIds(copies.map(c => c.id)); setClipboard(copies.map(c => c.id)); }
+      }
+    };
+    window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
+  }, [editing, items, copyIds, clipboard]);
   const patch = (values: Parameters<typeof updateFloorItem>[2]) => { if (selected) setItems(prev => updateFloorItem(prev, selected.id, values)); };
   return <div className="flex flex-col flex-1 min-h-0 bg-background text-foreground">
     <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-b">
@@ -104,6 +130,13 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
         <section><h3 className="text-xs uppercase text-muted-foreground font-semibold mb-2">Unplaced printers · {unplaced.length}</h3>
           {unplaced.map(p => <Button key={p.id} className="w-full justify-start h-auto min-h-10 mb-1 whitespace-normal text-left" variant="outline" draggable onDragStart={e => e.dataTransfer.setData('application/codesync-floor', `printer:${p.id}`)} onClick={() => add('printer', p)}><PrinterIcon className="h-4 w-4 mr-2 shrink-0" />{p.name} · ID {p.id}</Button>)}
         </section>
+        <section className="space-y-2 border-t pt-3"><h3 className="text-xs uppercase text-muted-foreground font-semibold">Selection · {selectedIds.length}</h3>
+          <p className="text-xs text-muted-foreground">Shift-click parts, or hold Shift and drag a box, to select several. Drag any selected part to move them together.</p>
+          <div className="grid grid-cols-2 gap-1"><Button size="sm" variant="outline" onClick={() => setSelectedIds(items.map(i => i.id))}>Select All</Button><Button size="sm" variant="outline" disabled={!selectedIds.length} onClick={() => setSelectedIds([])}>Clear</Button></div>
+          <Button size="sm" className="w-full" disabled={!copyIds.length} onClick={duplicate}><Copy className="h-4 w-4 mr-2" />Copy as New Line</Button>
+          {selectedIds.length > 1 && <Button variant="outline" size="sm" className="w-full text-destructive" onClick={() => { setItems(prev => prev.filter(i => !selectedIds.includes(i.id))); setSelectedIds([]); }}><Trash2 className="h-4 w-4 mr-2" />Remove {selectedIds.length} parts</Button>}
+          {selectedIds.some(id => items.find(i => i.id === id)?.kind === 'printer') && copyIds.length > 0 && <p className="text-xs text-muted-foreground">Printers are not copied — place them from Unplaced Printers.</p>}
+        </section>
         {selected && <section className="space-y-3 border-t pt-3"><h3 className="font-semibold text-sm">{floorNames[selected.kind]}</h3>
           {selected.kind !== 'printer' && <label className="block text-xs">{selected.kind === 'label' ? 'Line name / title / ID' : 'Name'}<Input aria-label={selected.kind === 'label' ? 'Line name / title / ID' : 'Name'} autoFocus={selected.kind === 'label'} key={selected.id} className="mt-1" value={selected.label} onChange={e => patch({ label: e.target.value })} /></label>}
           <label className="block text-xs">Size (%)<Input aria-label="Size percent" type="number" min={25} max={300} step={5} value={selected.scale} onChange={e => { if (e.target.value) patch({ scale: Number(e.target.value) }); }} className="mt-1" /></label>
@@ -117,7 +150,7 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
         if (value.startsWith('printer:')) { const printer = printers.find(p => p.id === Number(value.split(':')[1])); if (printer) add('printer', printer, position); }
         else if (palette.includes(value as FloorKind)) add(value as FloorKind, undefined, position);
       }}>
-        <ReactFlow<EquipmentNode> nodes={nodes} edges={[]} nodeTypes={nodeTypes} onNodesChange={change} nodesDraggable={editing} nodesConnectable={false} elementsSelectable={editing} panOnDrag={editing ? [1, 2] : true} selectionKeyCode={null} multiSelectionKeyCode={null} elevateNodesOnSelect={false} onNodeDragStart={(_, node) => setSelectedId(node.id)} onNodeDragStop={(_, node) => setItems(prev => prev.map(i => i.id === node.id ? { ...i, x: node.position.x, y: node.position.y } : i))} deleteKeyCode={null} minZoom={0.2} maxZoom={2.5} fitView fitViewOptions={{ padding: 0.3, maxZoom: 1 }} snapToGrid snapGrid={[10, 10]} onNodeClick={(_, node) => { if (editing) setSelectedId(node.id); else if (node.data.printer) setOverviewId(node.data.printer.id); }} onPaneClick={() => setSelectedId(null)} proOptions={{ hideAttribution: true }}>
+        <ReactFlow<EquipmentNode> nodes={nodes} edges={[]} nodeTypes={nodeTypes} onNodesChange={change} nodesDraggable={editing} nodesConnectable={false} elementsSelectable={editing} panOnDrag={editing ? [1, 2] : true} selectionKeyCode="Shift" multiSelectionKeyCode="Shift" selectionOnDrag={false} elevateNodesOnSelect={false} onNodeDragStart={(_, node) => { if (!selectedIds.includes(node.id)) setSelectedId(node.id); }} onNodeDragStop={(_, _node, dragged) => setItems(prev => prev.map(i => { const n = dragged.find(d => d.id === i.id); return n ? { ...i, x: n.position.x, y: n.position.y } : i; }))} deleteKeyCode={null} minZoom={0.2} maxZoom={2.5} fitView fitViewOptions={{ padding: 0.3, maxZoom: 1 }} snapToGrid snapGrid={[10, 10]} onNodeClick={(e, node) => { if (editing) { if (!e.shiftKey) setSelectedId(node.id); } else if (node.data.printer) setOverviewId(node.data.printer.id); }} onPaneClick={() => setSelectedId(null)} proOptions={{ hideAttribution: true }}>
           <Background variant={BackgroundVariant.Lines} gap={20} size={1} />
         </ReactFlow>
         {items.length === 0 && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-3 text-muted-foreground"><Factory className="h-12 w-12 opacity-40" /><h3 className="font-semibold text-foreground">Production floor</h3>{!editing && <Button className="pointer-events-auto" onClick={() => setEditing(true)}><Plus className="h-4 w-4 mr-2" />Create Layout</Button>}</div>}
