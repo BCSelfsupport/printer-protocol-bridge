@@ -100,16 +100,16 @@ export function EmulationPrintersDialog({
 
         {/* Printer grid */}
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain -mx-2 px-2" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="py-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div className="py-2 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
             {rows.map(row => {
               const online = !row.offline;
               return (
-                <div key={`${row.ipAddress}:${row.port}`} className="flex gap-1">
+                <div key={`${row.ipAddress}:${row.port}`} className="flex gap-1 min-w-0">
                 <button
                   type="button"
                   onClick={() => toggle(row)}
                   className={cn(
-                    'w-full text-left p-2 rounded-md border-2 transition-all flex items-center gap-2',
+                    'flex-1 min-w-0 text-left p-2 rounded-md border-2 transition-all flex items-center gap-2',
                     online
                       ? 'bg-emerald-500/15 border-emerald-500'
                       : 'bg-slate-800/40 border-slate-700 hover:border-slate-500',
