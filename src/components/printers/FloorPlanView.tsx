@@ -48,12 +48,15 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
     try { localStorage.setItem(FLOOR_STORAGE_KEY, JSON.stringify(items)); setSaveError(false); }
     catch { setSaveError(true); }
   }, [items]);
-  const nodes = useMemo<EquipmentNode[]>(() => items.filter(i => i.kind !== 'printer' || printers.some(p => p.id === i.printerId)).map(item => ({
+  const builtNodes = useMemo<EquipmentNode[]>(() => items.filter(i => i.kind !== 'printer' || printers.some(p => p.id === i.printerId)).map(item => ({
     id: item.id, type: 'equipment', position: { x: item.x, y: item.y }, selected: item.id === selectedId,
     zIndex: item.kind === 'printer' ? 100 : item.kind === 'label' ? 200 : 0,
     data: { item, printer: printers.find(p => p.id === item.printerId) },
     style: { width: 220 * item.scale / 100, height: (item.kind === 'label' ? 42 : 260) * item.scale / 100 },
   })), [items, printers, selectedId]);
+  // Keep React Flow's own node state (measured size, dragging flag) between renders; rebuilding nodes mid-drag breaks later selection.
+  const [nodes, setNodes] = useState<EquipmentNode[]>(builtNodes);
+  useEffect(() => { setNodes(prev => builtNodes.map(n => { const old = prev.find(o => o.id === n.id); return old ? { ...old, ...n, position: old.dragging ? old.position : n.position } : n; })); }, [builtNodes]);
   const add = (kind: FloorKind, printer?: Printer, position?: { x: number; y: number }) => {
     const center = position ?? flow.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
     setItems(prev => {
@@ -72,9 +75,10 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
     if (!editing) return;
     const selection = changes.find(c => c.type === 'select' && c.selected);
     if (selection?.type === 'select') setSelectedId(selection.id);
-    const moved = applyNodeChanges(changes, nodes);
-    setItems(prev => prev.map(item => { const node = moved.find(n => n.id === item.id); return node ? { ...item, x: node.position.x, y: node.position.y } : item; }));
-  }, [editing, nodes]);
+    setNodes(prev => applyNodeChanges(changes, prev));
+    const ended = changes.filter(c => c.type === 'position' && !c.dragging && c.position);
+    if (ended.length) setItems(prev => prev.map(item => { const c = ended.find(e => e.type === 'position' && e.id === item.id); return c?.type === 'position' && c.position ? { ...item, x: c.position.x, y: c.position.y } : item; }));
+  }, [editing]);
   const patch = (values: Parameters<typeof updateFloorItem>[2]) => { if (selected) setItems(prev => updateFloorItem(prev, selected.id, values)); };
   return <div className="flex flex-col flex-1 min-h-0 bg-background text-foreground">
     <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-b">
@@ -112,7 +116,7 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
         if (value.startsWith('printer:')) { const printer = printers.find(p => p.id === Number(value.split(':')[1])); if (printer) add('printer', printer, position); }
         else if (palette.includes(value as FloorKind)) add(value as FloorKind, undefined, position);
       }}>
-        <ReactFlow<EquipmentNode> nodes={nodes} edges={[]} nodeTypes={nodeTypes} onNodesChange={change} nodesDraggable={editing} nodesConnectable={false} elementsSelectable={editing} panOnDrag={editing ? [1, 2] : true} selectionKeyCode={null} multiSelectionKeyCode={null} elevateNodesOnSelect={false} onNodeDragStart={(_, node) => setSelectedId(node.id)} deleteKeyCode={null} minZoom={0.2} maxZoom={2.5} fitView fitViewOptions={{ padding: 0.3, maxZoom: 1 }} snapToGrid snapGrid={[10, 10]} onNodeClick={(_, node) => { if (editing) setSelectedId(node.id); else if (node.data.printer) setOverviewId(node.data.printer.id); }} onPaneClick={() => setSelectedId(null)} proOptions={{ hideAttribution: true }}>
+        <ReactFlow<EquipmentNode> nodes={nodes} edges={[]} nodeTypes={nodeTypes} onNodesChange={change} nodesDraggable={editing} nodesConnectable={false} elementsSelectable={editing} panOnDrag={editing ? [1, 2] : true} selectionKeyCode={null} multiSelectionKeyCode={null} elevateNodesOnSelect={false} onNodeDragStart={(_, node) => setSelectedId(node.id)} onNodeDragStop={(_, node) => setItems(prev => prev.map(i => i.id === node.id ? { ...i, x: node.position.x, y: node.position.y } : i))} deleteKeyCode={null} minZoom={0.2} maxZoom={2.5} fitView fitViewOptions={{ padding: 0.3, maxZoom: 1 }} snapToGrid snapGrid={[10, 10]} onNodeClick={(_, node) => { if (editing) setSelectedId(node.id); else if (node.data.printer) setOverviewId(node.data.printer.id); }} onPaneClick={() => setSelectedId(null)} proOptions={{ hideAttribution: true }}>
           <Background variant={BackgroundVariant.Lines} gap={20} size={1} />
         </ReactFlow>
         {items.length === 0 && <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-3 text-muted-foreground"><Factory className="h-12 w-12 opacity-40" /><h3 className="font-semibold text-foreground">Production floor</h3>{!editing && <Button className="pointer-events-auto" onClick={() => setEditing(true)}><Plus className="h-4 w-4 mr-2" />Create Layout</Button>}</div>}

@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-select-after-move',
+    type: 'bugfix',
+    title: 'Keep Selecting After a Move',
+    date: '11 Nov 2026',
+    summary: 'After moving a part in Edit Layout it now follows the whole drag and you can immediately select and move other parts.',
+  },
+  {
     id: 'floor-visible-part-drag',
     type: 'bugfix',
     title: 'Drag the Visible Floor Part',
