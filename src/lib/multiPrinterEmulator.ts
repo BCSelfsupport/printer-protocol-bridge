@@ -793,7 +793,7 @@ class MultiPrinterEmulatorManager {
    * Every emulated printer regardless of the enabled flag — used by the
    * Emulate menu so online/offline can be picked before/while emulating.
    */
-  listAll(): Array<{ id: number; name: string; ipAddress: string; port: number; offline: boolean; inkLevel: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' }> {
+  listAll(): Array<{ id: number; name: string; ipAddress: string; port: number; offline: boolean; inkLevel: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY'; makeupLevel: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' }> {
     return Array.from(this.instances.values()).map(inst => ({
       id: inst.config.id,
       name: inst.config.name,
@@ -801,12 +801,18 @@ class MultiPrinterEmulatorManager {
       port: inst.config.port,
       offline: inst.simulateOffline,
       inkLevel: inst.getState().inkLevel,
+      makeupLevel: inst.getState().makeupLevel,
     }));
   }
 
   /** Step one emulated printer's ink level FULL → GOOD → LOW → EMPTY (demo / testing). */
   cycleInk(ipAddress: string, port: number) {
     this.instances.get(`${ipAddress}:${port}`)?.cycleInkLevel();
+  }
+
+  /** Step one emulated printer's makeup level FULL → GOOD → LOW → EMPTY (demo / testing). */
+  cycleMakeup(ipAddress: string, port: number) {
+    this.instances.get(`${ipAddress}:${port}`)?.cycleMakeupLevel();
   }
 
   /** Mark a single emulated printer online/offline. */
