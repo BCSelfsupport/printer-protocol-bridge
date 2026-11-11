@@ -66,7 +66,7 @@ export function EmulationPrintersDialog({
             Emulated Printers — online / offline
           </DialogTitle>
           <p className="text-xs text-slate-400">
-            Tap a printer to switch it between online and offline. Offline printers act like a
+            Tap a printer to switch it between online and offline. Tap INK to step its ink level (LOW shows amber). Offline printers act like a
             powered-off machine — they can't be connected to and the jet can't be started.
           </p>
         </DialogHeader>
@@ -104,8 +104,8 @@ export function EmulationPrintersDialog({
             {rows.map(row => {
               const online = !row.offline;
               return (
+                <div key={`${row.ipAddress}:${row.port}`} className="flex gap-1">
                 <button
-                  key={`${row.ipAddress}:${row.port}`}
                   type="button"
                   onClick={() => toggle(row)}
                   className={cn(
@@ -140,6 +140,12 @@ export function EmulationPrintersDialog({
                     {online ? 'Online' : 'Offline'}
                   </span>
                 </button>
+                <button type="button" title="Cycle ink level" onClick={() => { multiPrinterEmulator.cycleInk(row.ipAddress, row.port); refresh(); }}
+                  className={cn('shrink-0 px-2 rounded-md border-2 text-[10px] font-bold leading-tight',
+                    row.inkLevel === 'LOW' ? 'border-amber-500 text-amber-300 bg-amber-500/15' : row.inkLevel === 'EMPTY' ? 'border-red-500 text-red-300 bg-red-500/15' : 'border-slate-600 text-slate-300')}>
+                  INK<br />{row.inkLevel}
+                </button>
+                </div>
               );
             })}
           </div>

@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-printer-beacon',
+    type: 'feature',
+    title: 'Printer Status Beacons',
+    date: '11 Nov 2026',
+    summary: 'Every printer on the floor plan now shows a large status beacon — green, amber or red — on the printer itself. Amber and red beacons pulse so problems stand out across the floor.',
+  },
+  {
     id: 'floor-snap-grid',
     type: 'feature',
     title: 'Snap to Grid Options',

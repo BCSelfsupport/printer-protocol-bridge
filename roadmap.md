@@ -34,3 +34,4 @@
 - [x] Remove Developer Portal mentions from What's New entries (firmware, training videos, emulate toggle)
 - [x] Floor plan: printer ID label closer to printer
 - [x] Floor plan: printer ID spacing — slightly more gap
+- [x] Floor plan: printer status beacon + emulator ink control for demo

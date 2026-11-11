@@ -23,7 +23,7 @@ function EquipmentNodeView({ data, selected }: NodeProps<EquipmentNode>) {
         {printer && <span title={statusNames[floorPrinterStatus(printer)]} className={cn('h-3 w-3 shrink-0 rounded-full', lightClasses[floorPrinterStatus(printer)])} />}
         <span>{printer ? `${printer.name} · ID ${printer.id}` : item.label}</span>
       </div>}
-      {item.kind !== 'label' && <div className="floor-symbol relative" style={{ transform: `rotate(${item.rotation}deg)` }}><FloorEquipment kind={item.kind} headSide={item.headSide} width={item.width} />
+      {item.kind !== 'label' && <div className="floor-symbol relative" style={{ transform: `rotate(${item.rotation}deg)` }}><FloorEquipment kind={item.kind} headSide={item.headSide} width={item.width} status={printer ? floorPrinterStatus(printer) : undefined} />
         {/* Name turns with the machine so it sits beside the line; flipped when it would read upside down. */}
         {showNames && machineName && <div className="floor-machine-name absolute inset-x-0 text-center text-sm font-medium text-muted-foreground px-1 whitespace-nowrap" style={{ top: item.kind === 'roundtable' ? 222 : item.kind === 'labeler' ? 198 : 168, transform: item.rotation > 90 && item.rotation <= 270 ? 'rotate(180deg)' : undefined }}>{machineName}</div>}
       </div>}
@@ -171,7 +171,7 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
     </div>
     <div className="border-t flex flex-wrap gap-4 px-4 py-2 text-xs text-muted-foreground">{(['healthy', 'warning', 'fault', 'offline'] as const).map(s => <span key={s} className="flex items-center gap-1.5"><i className={cn('w-2 h-2 rounded-full', lightClasses[s])} />{s === 'offline' ? 'Offline / unknown' : statusNames[s]}</span>)}</div>
     <Dialog open={!!overview} onOpenChange={open => { if (!open) setOverviewId(null); }}><DialogContent className="max-h-[85vh] overflow-auto"><DialogHeader><DialogTitle>{overview?.name} · ID {overview?.id}</DialogTitle></DialogHeader>{overview && <>
-      <div className="flex justify-center"><FloorEquipment kind="printer" /></div>
+      <div className="flex justify-center"><FloorEquipment kind="printer" status={floorPrinterStatus(overview)} /></div>
       <div className="flex items-center gap-2"><i className={cn('h-3 w-3 rounded-full', lightClasses[floorPrinterStatus(overview)])} />{statusNames[floorPrinterStatus(overview)]}</div>
       <dl className="grid grid-cols-2 gap-x-5 gap-y-3 text-sm">{[['Address', `${overview.ipAddress}:${overview.port}`], ['Line', overview.lineId ?? '—'], ['Selected message', overview.currentMessage ?? 'Unknown'], ['Jet', overview.jetRunning === undefined ? 'Unknown' : overview.jetRunning ? 'Running' : 'Stopped'], ['Ink', overview.isAvailable ? overview.inkLevel ?? 'Unknown' : 'Unknown'], ['Makeup', overview.isAvailable ? overview.makeupLevel ?? 'Unknown' : 'Unknown'], ['Print count', overview.isAvailable ? overview.printCount?.toLocaleString() ?? 'Unknown' : 'Unknown'], ['Model', overview.printerModel ?? 'Unknown']].map(([label, value]) => <div key={label}><dt className="text-muted-foreground text-xs">{label}</dt><dd className="font-medium break-words">{value}</dd></div>)}</dl>
       {overview.syncLastFailure && <p className="text-destructive text-sm">{overview.syncLastFailure.reason}</p>}

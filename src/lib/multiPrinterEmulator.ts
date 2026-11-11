@@ -800,7 +800,13 @@ class MultiPrinterEmulatorManager {
       ipAddress: inst.config.ipAddress,
       port: inst.config.port,
       offline: inst.simulateOffline,
+      inkLevel: inst.getState().inkLevel,
     }));
+  }
+
+  /** Step one emulated printer's ink level FULL → GOOD → LOW → EMPTY (demo / testing). */
+  cycleInk(ipAddress: string, port: number) {
+    this.instances.get(`${ipAddress}:${port}`)?.cycleInkLevel();
   }
 
   /** Mark a single emulated printer online/offline. */

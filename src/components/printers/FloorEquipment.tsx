@@ -1,6 +1,6 @@
 import type { FloorKind } from '@/lib/floorPlan';
 
-export function FloorEquipment({ kind, headSide = 'right', width = 100 }: { kind: FloorKind; headSide?: 'left' | 'right'; width?: number }) {
+export function FloorEquipment({ kind, headSide = 'right', width = 100, status }: { kind: FloorKind; headSide?: 'left' | 'right'; width?: number; status?: string }) {
   // Width changes only the grey belt; machine (blue) parts keep their size.
   const bh = 60 * width / 100, by = 55 - bh / 2;
   const tall = kind === 'roundtable' ? '0 -55 220 220' : kind === 'labeler' ? '0 -25 220 170' : null;
@@ -12,6 +12,10 @@ export function FloorEquipment({ kind, headSide = 'right', width = 100 }: { kind
         <rect x="77" y="24" width="66" height="24" rx="2" className="floor-machine" />
         <path d="M88 35h42M155 62h25v25h20" className="floor-direction" />
         <rect x="196" y="76" width="18" height="22" rx="2" className="floor-machine" />
+        {status && <g className={`floor-beacon floor-beacon-${status}`}>
+          <circle cx="110" cy="72" r="24" className="floor-beacon-halo" />
+          <circle cx="110" cy="72" r="13" className="floor-beacon-light" />
+        </g>}
       </g> : kind === 'straight' ? <>
         <rect x="4" y={by} width="212" height={bh} rx="4" className="floor-belt" />
         {Array.from({ length: 15 }, (_, i) => <path key={i} d={`M${12 + i * 14} ${by + 5}v${Math.max(0, bh - 10)}`} className="floor-roller" />)}
