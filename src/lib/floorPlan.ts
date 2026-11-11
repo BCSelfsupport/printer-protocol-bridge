@@ -67,3 +67,32 @@ export function floorPrinterStatus(printer: Printer) {
   if (printer.jetRunning === undefined && !printer.isConnected) return 'unknown';
   return 'healthy';
 }
+/** Box size React Flow renders for a floor item (rotation happens inside the box). */
+export function floorItemBox(item: FloorItem) {
+  return { w: 220 * item.scale / 100, h: (item.kind === 'label' ? 42 : 260) * item.scale / 100 };
+}
+
+/**
+ * Auto align: snaps each target's centre to the grid. When 2+ parts are targeted, they also share one
+ * centre line along the direction they're spread out (a vertical line lines up on one X, a horizontal on one Y).
+ */
+export function autoAlignFloorItems(items: FloorItem[], ids: string[], grid: number): FloorItem[] {
+  const g = grid > 0 ? grid : 10;
+  const round = (v: number) => Math.round(v / g) * g;
+  const targets = items.filter(i => ids.includes(i.id));
+  if (!targets.length) return items;
+  const centres = targets.map(i => { const b = floorItemBox(i); return { id: i.id, cx: i.x + b.w / 2, cy: i.y + b.h / 2 }; });
+  let lineX: number | null = null, lineY: number | null = null;
+  if (centres.length > 1) {
+    const span = (vals: number[]) => Math.max(...vals) - Math.min(...vals);
+    const avg = (vals: number[]) => vals.reduce((a, b) => a + b, 0) / vals.length;
+    if (span(centres.map(c => c.cy)) >= span(centres.map(c => c.cx))) lineX = round(avg(centres.map(c => c.cx)));
+    else lineY = round(avg(centres.map(c => c.cy)));
+  }
+  return items.map(i => {
+    const c = centres.find(t => t.id === i.id);
+    if (!c) return i;
+    const b = floorItemBox(i);
+    return { ...i, x: (lineX ?? round(c.cx)) - b.w / 2, y: (lineY ?? round(c.cy)) - b.h / 2 };
+  });
+}

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FloorEquipment } from './FloorEquipment';
-import { addFloorItem, duplicateFloorItems, readFloorPlan, updateFloorItem, floorNames, floorPrinterStatus, FLOOR_STORAGE_KEY, type FloorItem, type FloorKind } from '@/lib/floorPlan';
+import { addFloorItem, autoAlignFloorItems, duplicateFloorItems, readFloorPlan, updateFloorItem, floorNames, floorPrinterStatus, FLOOR_STORAGE_KEY, type FloorItem, type FloorKind } from '@/lib/floorPlan';
 import type { Printer } from '@/types/printer';
 import { cn } from '@/lib/utils';
 
@@ -141,6 +141,8 @@ function FloorPlanEditor({ printers, onOpenPrinter, onService }: Props) {
         </section>
         <section className="space-y-2 border-t pt-3"><h3 className="text-xs uppercase text-muted-foreground font-semibold">Snap to grid</h3>
           <div className="grid grid-cols-4 gap-1">{[0, 10, 20, 50].map(v => <Button key={v} size="sm" variant={snap === v ? 'default' : 'outline'} aria-pressed={snap === v} className="px-1" onClick={() => setSnap(v)}>{v === 0 ? 'Off' : v === 10 ? 'Fine' : v === 20 ? 'Med' : 'Large'}</Button>)}</div>
+          <Button size="sm" variant="outline" className="w-full" disabled={!items.length} onClick={() => setItems(prev => autoAlignFloorItems(prev, selectedIds.length ? selectedIds : prev.map(i => i.id), snap))}>Auto Align {selectedIds.length ? `${selectedIds.length} selected` : 'all'}</Button>
+          <p className="text-xs text-muted-foreground">Select a line's parts first to line them up on one centre line.</p>
         </section>
         <section className="space-y-2 border-t pt-3"><h3 className="text-xs uppercase text-muted-foreground font-semibold">Selection · {selectedIds.length}</h3>
           <p className="text-xs text-muted-foreground">Left-click and drag a box over blank floor to select several parts, or Shift-click them. Drag any selected part to move them together.</p>

@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-auto-align',
+    type: 'feature',
+    title: 'Floor Plan Auto Align',
+    date: '11 Nov 2026',
+    summary: 'A new Auto Align button in Edit Layout snaps parts onto the grid. Select a line first and its conveyors, machines and printer line up on one centre line.',
+  },
+  {
     id: 'floor-printer-beacon',
     type: 'feature',
     title: 'Printer Status Beacons',
