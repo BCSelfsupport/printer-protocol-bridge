@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Prepare customer-ready Master PC implementation review and step-by-step setup guide in editable Word and PDF formats. Nine pages visually inspected; contents numbering and sign-off spacing corrected. Ten unit/regression checks and the two-viewer integration test rechecked; Windows/site commissioning remains an explicit release gate.
+
 - [x] Build approved factory-only Master sharing and included read-only viewers: encrypted LAN pairing/approval/revocation, main-process and legacy-relay denials, overview, observed service values and paginated report history. Ten unit/regression tests and a two-viewer TLS integration test pass; viewer screens checked with an injected bridge at desktop/narrow sizes.
 - [ ] Release and validate Master sharing on Windows with real printers — requires the external Windows installer workflow and customer-site access; Windows credential storage, firewall, physical-printer load and full installed-app end-to-end checks remain unverified.
 
