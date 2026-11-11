@@ -1254,6 +1254,7 @@ export function usePrinterConnection() {
         if (!cancelled) {
           if (result.success) {
             hasEverConnected.current = true;
+            updatePrinter(connectedPrinterId, { isConnected: true, isAvailable: true, status: 'not_ready' });
             setSocketReady(true);
             console.log('[socket] Ready — polling will start');
           } else {
@@ -1277,7 +1278,7 @@ export function usePrinterConnection() {
       clearTimeout(timer);
       connectingRef.current = false;
     };
-  }, [connectionState.isConnected, connectedPrinterId, socketReady, retryTick]);
+  }, [connectionState.isConnected, connectedPrinterId, socketReady, retryTick, updatePrinter]);
 
 
   // Query printer status (^SU) and update state - used on connect and after commands
@@ -1474,6 +1475,11 @@ export function usePrinterConnection() {
   }, [socketReady, connectionState.connectedPrinter, queryMessageList]);
 
   const connect = useCallback(async (printer: Printer) => {
+    if (!shouldUseEmulator() && !isElectron && !isRelayMode()) {
+      updatePrinter(printer.id, { isConnected: false, isAvailable: false, status: 'offline' });
+      toast.error('No printer connection available. Connect through the desktop app or PC relay.');
+      return;
+    }
     // If using emulator, simulate connection
     if (shouldUseEmulator()) {
       console.log('[connect] Using emulator for printer:', printer.id, printer.ipAddress);
@@ -1650,10 +1656,9 @@ export function usePrinterConnection() {
       }
     }
 
-    // Reflect connection immediately in the printers list (so returning to the printers page doesn't look disconnected)
+    // Selection is not proof of a live socket; the lifecycle confirms availability.
      updatePrinter(printer.id, {
-       isConnected: true,
-       isAvailable: true,
+       isConnected: false,
        // Default to NOT READY until we confirm HV state via ^SU
        status: 'not_ready',
        hasActiveErrors: false,
@@ -1733,6 +1738,17 @@ export function usePrinterConnection() {
 
   // Keep ref in sync so polling can auto-disconnect without circular deps
   disconnectRef.current = disconnect;
+
+  useEffect(() => {
+    let wasEnabled = multiPrinterEmulator.enabled;
+    return multiPrinterEmulator.subscribeToEnabled((enabled) => {
+      if (wasEnabled && !enabled) {
+        pendingReconnectRef.current = null;
+        void disconnectRef.current();
+      }
+      wasEnabled = enabled;
+    });
+  }, []);
 
   const startPrint = useCallback(async () => {
     console.log('[startPrint] Called, isConnected:', connectionState.isConnected, 'printer:', connectionState.connectedPrinter?.id);

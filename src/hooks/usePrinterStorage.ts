@@ -32,6 +32,7 @@ export function usePrinterStorage() {
         // Not in emulator mode: reset all printers to offline on load.
         return parsed.map(p => ({
           ...p,
+          isConnected: false,
           isAvailable: false,
           status: 'offline' as const,
           hasActiveErrors: false,
@@ -109,13 +110,12 @@ export function usePrinterStorage() {
         // Immediately update all matching printers
         updateFromEmulators();
       } else {
-        // Mark all emulated printers as offline
+        // Emulation mirrors the configured fleet, including custom IPs.
+        // No simulated connection or availability survives switching it off.
         setPrinters(prev => prev.map(p => {
-        // Check against known emulated IPs
-          const isEmulated = EMULATED_PRINTER_IPS.includes(p.ipAddress);
-          if (isEmulated && !p.isConnected) {
             return {
               ...p,
+              isConnected: false,
               isAvailable: false,
               status: 'offline' as const,
               hasActiveErrors: false,
@@ -123,9 +123,8 @@ export function usePrinterStorage() {
               makeupLevel: undefined,
               currentMessage: undefined,
               printCount: undefined,
+              jetRunning: undefined,
             };
-          }
-          return p;
         }));
       }
     });

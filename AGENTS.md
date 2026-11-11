@@ -13,3 +13,4 @@
 - Message reads must select the requested name before falling back to bare ^LF, and text readback must use the font height used by serialization; otherwise another message's geometry or a different field-box height moves saved fields.
 - Desktop sendCommand must not destroy a printer socket on no-reply while One-to-One mode is attached (or keepSocketOnTimeout is set) — printers stay silent in live mode and dropping the socket silently kills the TwinCode link.
 - TwinCode dispatcher resyncs both printers (^ME/^MB, counters kept) before the next dispatch after any failed dispatch — a faulted side can keep an unprinted code or leave 1-1 mode and jam the pair.
+- Printer cards only gain live availability from transport/emulator evidence; saved connections and disabled emulation never establish live status.
