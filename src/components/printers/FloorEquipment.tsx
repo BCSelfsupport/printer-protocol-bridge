@@ -3,7 +3,7 @@ import type { FloorKind } from '@/lib/floorPlan';
 export function FloorEquipment({ kind, headSide = 'right', width = 100, status }: { kind: FloorKind; headSide?: 'left' | 'right'; width?: number; status?: string }) {
   // Width changes only the grey belt; machine (blue) parts keep their size.
   const bh = 60 * width / 100, by = 55 - bh / 2;
-  const tall = kind === 'roundtable' ? '0 -55 220 220' : kind === 'labeler' ? '0 -25 220 170' : null;
+  const tall = kind === 'roundtable' ? '0 -55 220 220' : kind === 'labeler' ? '0 -35 220 180' : null;
   if (kind === 'label') return null;
   return (
     <svg viewBox={tall ?? '0 0 220 110'} width="220" height={tall ? Number(tall.split(' ')[3]) : 110} className="floor-equipment" aria-hidden="true">

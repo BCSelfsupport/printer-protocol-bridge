@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-labeler-align',
+    type: 'bugfix',
+    title: 'Labeler Lines Up With the Conveyor',
+    date: '11 Nov 2026',
+    summary: 'The labeler belt sat slightly off-centre, so it never lined up with the other parts on the grid. It now sits on the same centre line as conveyors and machines.',
+  },
+  {
     id: 'floor-equal-spacing',
     type: 'feature',
     title: 'Floor Plan Equal Spacing',
