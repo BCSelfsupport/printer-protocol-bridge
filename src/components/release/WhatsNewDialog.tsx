@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-width-labeler',
+    type: 'feature',
+    title: 'Narrower Conveyors and New Labeler',
+    date: '11 Nov 2026',
+    summary: 'Each conveyor or machine now has a Width across line (%) setting, separate from Size, so narrow conveyors can be drawn to match. The labeler symbol now shows the frame, bottle separators, labeling engine and label reel.',
+  },
+  {
     id: 'floor-copy-line',
     type: 'feature',
     title: 'Copy a Whole Line',

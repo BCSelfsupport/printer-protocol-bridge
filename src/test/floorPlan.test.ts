@@ -46,3 +46,12 @@ describe('duplicateFloorItems', () => {
     expect(copies[1].label).toBe('Line 2');
   });
 });
+
+describe('width across line', () => {
+  it('clamps width between 30% and 200% without touching size', () => {
+    const items = [{ id: 'a', kind: 'straight' as const, x: 0, y: 0, scale: 60, rotation: 0, label: 'a' }];
+    expect(updateFloorItem(items, 'a', { width: 50 })[0]).toMatchObject({ width: 50, scale: 60 });
+    expect(updateFloorItem(items, 'a', { width: 10 })[0].width).toBe(30);
+    expect(updateFloorItem(items, 'a', { width: 500 })[0].width).toBe(200);
+  });
+});

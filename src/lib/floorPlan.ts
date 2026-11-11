@@ -12,6 +12,8 @@ export interface FloorItem {
   printerId?: number;
   /** Printer only: which side of the conveyor the umbilical and printhead leave from. */
   headSide?: 'left' | 'right';
+  /** Belt/body width across the line, percent of standard (independent of overall size). */
+  width?: number;
 }
 export const FLOOR_STORAGE_KEY = 'codesync-floor-plan-v1';
 export const floorNames: Record<FloorKind, string> = {
@@ -23,9 +25,10 @@ export function addFloorItem(items: FloorItem[], kind: FloorKind, printer?: Prin
   return [...items, { id: crypto.randomUUID(), kind, ...position, scale: 100, rotation: 0,
     label: printer?.name ?? (kind === 'label' ? 'Line 1' : floorNames[kind]), printerId: printer?.id }];
 }
-export function updateFloorItem(items: FloorItem[], id: string, patch: Partial<Pick<FloorItem, 'x' | 'y' | 'scale' | 'rotation' | 'label' | 'headSide'>>): FloorItem[] {
+export function updateFloorItem(items: FloorItem[], id: string, patch: Partial<Pick<FloorItem, 'x' | 'y' | 'scale' | 'rotation' | 'label' | 'headSide' | 'width'>>): FloorItem[] {
   return items.map(item => item.id === id ? { ...item, ...patch,
     scale: Math.max(25, Math.min(300, patch.scale ?? item.scale)),
+    width: patch.width === undefined ? item.width : Math.max(30, Math.min(200, patch.width)),
     rotation: ((patch.rotation ?? item.rotation) % 360 + 360) % 360,
   } : item);
 }

@@ -1,9 +1,10 @@
 import type { FloorKind } from '@/lib/floorPlan';
 
-export function FloorEquipment({ kind, headSide = 'right' }: { kind: FloorKind; headSide?: 'left' | 'right' }) {
+export function FloorEquipment({ kind, headSide = 'right', width = 100 }: { kind: FloorKind; headSide?: 'left' | 'right'; width?: number }) {
+  const tall = kind === 'roundtable' ? '0 -55 220 220' : kind === 'labeler' ? '0 -25 220 170' : null;
   if (kind === 'label') return null;
   return (
-    <svg viewBox={kind === 'roundtable' ? '0 -55 220 220' : '0 0 220 110'} width="220" height={kind === 'roundtable' ? 220 : 110} className="floor-equipment" aria-hidden="true">
+    <svg viewBox={tall ?? '0 0 220 110'} width="220" height={tall ? Number(tall.split(' ')[3]) : 110} style={width !== 100 ? { transform: `scaleY(${width / 100})` } : undefined} className="floor-equipment" aria-hidden="true">
       {kind === 'printer' ? <g transform={headSide === 'left' ? 'translate(220 0) scale(-1 1)' : undefined}>
         <rect x="65" y="14" width="90" height="82" rx="4" className="floor-belt" />
         <rect x="77" y="24" width="66" height="24" rx="2" className="floor-machine" />
@@ -26,6 +27,19 @@ export function FloorEquipment({ kind, headSide = 'right' }: { kind: FloorKind; 
         <circle cx="128" cy="55" r="30" className="floor-machine" />
         <path d="M128 -10a65 65 0 0 1 60 40m-2-13 2 13-12-5" className="floor-direction" />
         <rect x="0" y="25" width="44" height="60" rx="3" className="floor-belt" />
+      </> : kind === 'labeler' ? <>
+        {/* Top-down labeler: frame, bottle separators/trimmers, labeling engine with reel, brush */}
+        <rect x="92" y="0" width="112" height="78" rx="8" className="floor-machine" />
+        <rect x="172" y="6" width="22" height="16" rx="2" className="floor-belt" />
+        <rect x="4" y="25" width="212" height="60" rx="4" className="floor-belt" />
+        {Array.from({ length: 15 }, (_, i) => <path key={i} d={`M${12 + i * 14} 30v50`} className="floor-roller" />)}
+        {[24, 62].flatMap(x => [6, 86].map(y => <g key={`${x}-${y}`}><rect x={x} y={y} width="30" height="18" rx="3" className="floor-machine" /><circle cx={x + 22} cy={y + 9} r="4" className="floor-roller" /></g>))}
+        <path d="M100 85l42-6 14 28-30 22-34-12Z" className="floor-machine" />
+        <circle cx="124" cy="100" r="9" className="floor-roller" />
+        <circle cx="78" cy="122" r="22" className="floor-belt" />
+        <circle cx="78" cy="122" r="7" className="floor-machine" />
+        <rect x="152" y="78" width="6" height="18" rx="1" className="floor-machine" />
+        <path d="M90 55h40m-12-9 12 9-12 9" className="floor-direction" />
       </> : kind === 'bend' ? <>
         <path d="M5 26h88a100 100 0 0 1 100 100h-58a42 42 0 0 0-42-42H5Z" transform="translate(0 -20)" className="floor-belt" />
         {Array.from({ length: 7 }, (_, i) => <path key={i} d={`M${15 + i * 12} 10v50`} className="floor-roller" />)}
@@ -42,7 +56,7 @@ export function FloorEquipment({ kind, headSide = 'right' }: { kind: FloorKind; 
           <path d="M98 55a12 12 0 1 1 12 12m-6-6 6 6-6 6" className="floor-direction" />
         </> : <>
           <rect x="70" y="25" width="80" height="60" rx="4" className="floor-machine" />
-          <path d={kind === 'labeler' ? 'M82 35v40m12-40v40m12-40v40m12-40v40m12-40v40' : 'M80 35h60v40H80Zm0 0 30 20 30-20m-30 20v20'} className="floor-direction" />
+          <path d={'M80 35h60v40H80Zm0 0 30 20 30-20m-30 20v20'} className="floor-direction" />
         </>}
       </>}
     </svg>
