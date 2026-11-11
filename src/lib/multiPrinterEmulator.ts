@@ -793,7 +793,7 @@ class MultiPrinterEmulatorManager {
    * Every emulated printer regardless of the enabled flag — used by the
    * Emulate menu so online/offline can be picked before/while emulating.
    */
-  listAll(): Array<{ id: number; name: string; ipAddress: string; port: number; offline: boolean }> {
+  listAll(): Array<{ id: number; name: string; ipAddress: string; port: number; offline: boolean; inkLevel: 'FULL' | 'GOOD' | 'LOW' | 'EMPTY' }> {
     return Array.from(this.instances.values()).map(inst => ({
       id: inst.config.id,
       name: inst.config.name,
