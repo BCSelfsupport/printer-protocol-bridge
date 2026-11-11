@@ -20,6 +20,13 @@ export interface ReleaseNote {
 
 const RELEASE_NOTES: ReleaseNote[] = [
   {
+    id: 'floor-box-select',
+    type: 'feature',
+    title: 'Drag a Box to Select',
+    date: '11 Nov 2026',
+    summary: 'In Edit Layout, left-click and drag over blank floor to draw a box. Every part it touches is selected, then drag any of them to move the group together.',
+  },
+  {
     id: 'floor-machine-names',
     type: 'feature',
     title: 'Machine Names on the Floor Plan',
